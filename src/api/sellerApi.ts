@@ -1,15 +1,13 @@
 import axios from 'axios';
 
-// Ensure VITE_API_URL ends with /api but doesn't have a trailing slash
-const getApiBaseUrl = () => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-  // Remove trailing slash if exists
-  const cleanUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
-  // Add /api if not already in the URL
-  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
-};
+// Get the base URL from environment variables
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3002/api').replace(/\/$/, '');
+const isDevelopment = import.meta.env.DEV;
 
-const API_URL = getApiBaseUrl();
+// For development, we'll use the proxy if VITE_API_URL is not set
+const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
+  ? '/api'  // Use proxy in development when VITE_API_URL is not set
+  : API_URL; // Otherwise use the provided API_URL or default
 
 // Interfaces
 export interface Seller {
@@ -71,7 +69,7 @@ interface SellerAnalytics {
 
 // Create axios instance for seller API
 const sellerApiInstance = axios.create({
-  baseURL: API_URL,
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

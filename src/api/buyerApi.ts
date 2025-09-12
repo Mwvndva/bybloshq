@@ -55,15 +55,18 @@ interface RegisterData {
   confirmPassword: string;
 }
 
-// Use relative path in development to work with Vite proxy
+// Get the base URL from environment variables
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3002/api').replace(/\/$/, '');
 const isDevelopment = import.meta.env.DEV;
-const API_URL = isDevelopment 
-  ? '/api'  // This will be proxied to the backend by Vite
-  : (import.meta.env.VITE_API_URL || 'http://localhost:3002/api').replace(/\/$/, '');
+
+// For development, we'll use the proxy if VITE_API_URL is not set
+const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
+  ? '/api'  // Use proxy in development when VITE_API_URL is not set
+  : API_URL; // Otherwise use the provided API_URL or default
 
 // Create axios instance for buyer API
 const buyerApiInstance = axios.create({
-  baseURL: API_URL,
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

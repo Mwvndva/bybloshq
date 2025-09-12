@@ -20,7 +20,8 @@ import {
   User,
   ShoppingCart,
   BarChart3,
-  Bike
+  Bike,
+  LogOut
 } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 
@@ -91,6 +92,22 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const [sellerProfile, setSellerProfile] = useState<{ fullName: string; shopName: string } | null>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [activeSection, setActiveSection] = useState<'overview' | 'products' | 'orders' | 'settings'>('overview');
+  
+  // Handle seller logout
+  const handleLogout = () => {
+    // Clear seller token and user data from localStorage
+    localStorage.removeItem('sellerToken');
+    localStorage.removeItem('seller');
+    
+    // Redirect to login page
+    navigate('/seller/login');
+    
+    // Show success message
+    toast({
+      title: 'Logged out successfully',
+      description: 'You have been logged out of your seller account.',
+    });
+  };
 
   // Fetch data function
   const fetchData = useCallback(async (): Promise<{
@@ -749,61 +766,21 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
               <p className="text-gray-600 text-lg font-medium">Manage your store configuration and preferences</p>
             </div>
             
-            {/* Quick Actions */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h3 className="text-3xl font-black text-black">Settings Actions</h3>
-                  <p className="text-gray-600 font-medium mt-2">Configure your store settings</p>
-                </div>
-              </div>
-              
-              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            <Button 
-              variant="outline" 
-                  className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
-              onClick={() => navigate('/seller/settings')}
-            >
-                  <Settings className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <div>
-                    <p className="font-semibold">Store Settings</p>
-                    <p className="text-sm text-gray-500">Configure your store</p>
-                  </div>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
-                  onClick={() => navigate('/seller/profile')}
-                >
-                  <User className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <div>
-                    <p className="font-semibold">Profile Settings</p>
-                    <p className="text-sm text-gray-500">Update your profile</p>
-                  </div>
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
-                  onClick={() => navigate('/seller/notifications')}
-                >
-                  <CheckCircle className="h-6 w-6" />
-                  <div>
-                    <p className="font-semibold">Notifications</p>
-                    <p className="text-sm text-gray-500">Manage notifications</p>
-                  </div>
-            </Button>
-              </div>
-            </div>
-
-            {/* Store Information */}
+{/* Store Information */}
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-3xl font-black text-black">Store Information</h3>
                   <p className="text-gray-600 font-medium mt-2">Your current store details</p>
                 </div>
+                <Button 
+                  variant="destructive"
+                  onClick={handleLogout}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Logout
+                </Button>
               </div>
               
               <div className="grid gap-6 md:grid-cols-2">
