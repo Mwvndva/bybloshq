@@ -36,7 +36,7 @@ const Header = () => {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
             <a 
-              href="https://www.instagram.com/byblos.exp" 
+              href="https://www.instagram.com/bybloshq" 
               target="_blank" 
               rel="noopener noreferrer"
               className="p-2 text-pink-600 hover:text-pink-500 transition-colors"
