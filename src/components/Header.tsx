@@ -80,7 +80,7 @@ const Header = () => {
         >
           <div className="flex flex-col space-y-4 py-4 border-t border-gray-200 mt-4">
             <a 
-              href="https://www.instagram.com/byblos.exp" 
+              href="https://www.instagram.com/bybloshq" 
               target="_blank" 
               rel="noopener noreferrer"
               className="flex items-center text-pink-600 hover:text-pink-500 px-2 py-2 text-base"
