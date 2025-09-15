@@ -8,10 +8,6 @@
         "distDir": "dist",
         "cleanDistDir": true
       }
-    },
-    {
-      "src": "src/pages/api/sitemap.xml.ts",
-      "use": "@vercel/node"
     }
   ],
   "buildCommand": "vite build",
@@ -81,22 +77,18 @@
       ]
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/sitemap.xml",
-      "dest": "/api/sitemap.xml"
+      "source": "/api/sellers/(.*)",
+      "destination": "https://byblos-atelier-api.onrender.com/api/sellers/$1"
     },
     {
-      "src": "/api/sellers/(.*)",
-      "dest": "https://byblos-atelier-api.onrender.com/api/sellers/$1"
+      "source": "/api/(.*)",
+      "destination": "https://byblos-atelier-api.onrender.com/api/$1"
     },
     {
-      "src": "/api/(.*)",
-      "dest": "https://byblos-atelier-api.onrender.com/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
