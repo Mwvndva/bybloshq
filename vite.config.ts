@@ -9,7 +9,7 @@ export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   
   // Base URL for the application
-  const base = '/';
+  const base = isProduction ? 'https://bybloshq.space/' : '/';
   
   // Determine if we're building for production
   const isProduction = mode === 'production';
@@ -24,6 +24,9 @@ export default defineConfig(({ command, mode }) => {
       port: 3000,
       strictPort: true,
       headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         '/sitemap.xml': 'Content-Type: application/xml',
       },
       proxy: {
