@@ -23,6 +23,9 @@ export default defineConfig(({ command, mode }) => {
       host: '::',
       port: 3000,
       strictPort: true,
+      headers: {
+        '/sitemap.xml': 'Content-Type: application/xml',
+      },
       proxy: {
         '^/api': {
           target: env.VITE_API_URL || 'http://localhost:3002',

@@ -79,6 +79,10 @@
   ],
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap.xml"
+    },
+    {
       "source": "/api/sellers/(.*)",
       "destination": "https://byblos-atelier-api.onrender.com/api/sellers/$1"
     },
