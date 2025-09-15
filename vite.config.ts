@@ -50,6 +50,8 @@ export default defineConfig(({ command, mode }) => {
       sourcemap: !isProduction,
       minify: isProduction ? 'esbuild' : false,
       cssMinify: isProduction,
+      // Ensure sitemap.xml is copied to the output directory
+      copyPublicDir: true,
       rollupOptions: {
         output: {
           manualChunks: {
