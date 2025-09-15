@@ -1,7 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /api/
 
 Sitemap: https://bybloshq.space/sitemap.xml
-
-User-agent: *
-Allow: /

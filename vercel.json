@@ -77,6 +77,14 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "https://www.bybloshq.space/(.*)",
+      "destination": "https://bybloshq.space/$1",
+      "permanent": true,
+      "statusCode": 308
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/sellers/(.*)",

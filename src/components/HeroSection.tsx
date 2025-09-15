@@ -40,9 +40,21 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
           
         
           {/* Main Heading */}
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-yellow-500 mb-8 sm:mb-12 font-mono">
-            HAVE YOU EVER BEEN TO BYBLOS?
+          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-yellow-500 mb-4 sm:mb-6 font-mono">
+            BYBLOS - KENYA'S #1 ONLINE THRIFT STORE
           </h1>
+          
+          {/* SEO Description */}
+          <div className="mb-8 sm:mb-12 max-w-3xl mx-auto">
+            <p className="text-white text-lg sm:text-xl mb-4">
+              Discover amazing second-hand fashion at unbeatable prices. Shop vintage, streetwear, and unique finds from Nairobi's best thrift stores.
+            </p>
+            <div className="text-yellow-400 text-sm sm:text-base">
+              <p>✓ 100% Authentic Pre-Loved Items</p>
+              <p>✓ Same Day Delivery in Nairobi</p>
+              <p>✓ Secure Online Payments</p>
+            </div>
+          </div>
           
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 w-full">
