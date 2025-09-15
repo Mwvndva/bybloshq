@@ -79,10 +79,15 @@
   ],
   "redirects": [
     {
-      "source": "https://www.bybloshq.space/(.*)",
-      "destination": "https://bybloshq.space/$1",
-      "permanent": true,
-      "statusCode": 308
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.bybloshq.space"
+        }
+      ],
+      "destination": "https://bybloshq.space/:path*",
+      "permanent": true
     }
   ],
   "rewrites": [
