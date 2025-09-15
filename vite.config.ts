@@ -8,11 +8,11 @@ export default defineConfig(({ command, mode }) => {
   // Load env file based on `mode` in the current directory.
   const env = loadEnv(mode, process.cwd(), '');
   
-  // Base URL for the application
-  const base = isProduction ? 'https://bybloshq.space/' : '/';
-  
   // Determine if we're building for production
   const isProduction = mode === 'production';
+  
+  // Base URL for the application
+  const base = isProduction ? 'https://bybloshq.space/' : '/';
   
   return {
     base,
@@ -50,20 +50,19 @@ export default defineConfig(({ command, mode }) => {
     build: {
       outDir: 'dist',
       assetsDir: 'assets',
-      sourcemap: !isProduction,
+      sourcemap: isProduction ? false : 'inline',
       minify: isProduction ? 'esbuild' : false,
       cssMinify: isProduction,
-      // Ensure sitemap.xml is copied to the output directory
       copyPublicDir: true,
+      chunkSizeWarningLimit: 1000,
       rollupOptions: {
         output: {
           manualChunks: {
             react: ['react', 'react-dom', 'react-router-dom'],
-            vendor: ['@tanstack/react-query'],
+            vendor: ['@tanstack/react-query', 'lodash', 'date-fns', 'axios'],
           },
         },
       },
-      chunkSizeWarningLimit: 1000,
     },
     preview: {
       port: 3000,

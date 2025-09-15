@@ -10,9 +10,10 @@
       }
     }
   ],
-  "buildCommand": "vite build",
+  "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "regions": ["iad1"],
   "headers": [
     {
       "source": "/sitemap.xml",
