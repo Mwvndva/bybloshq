@@ -92,6 +92,25 @@
       ]
     },
     {
+      "source": "/(.*)",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.bybloshq.space"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS, HEAD"
+        }
+      ]
+    },
+    {
       "source": "/_next/(.*)",
       "headers": [
         {
@@ -147,20 +166,6 @@
       ],
       "destination": "https://bybloshq.space/:path*",
       "statusCode": 308
-    },
-    {
-      "source": "/assets/:path*",
-      "has": [
-        {
-          "type": "host",
-          "value": "www.bybloshq.space"
-        }
-      ],
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS"
-      },
-      "continue": true
     }
   ],
   "rewrites": [
