@@ -126,6 +126,11 @@
         {
           "type": "host",
           "value": "www.bybloshq.space"
+        },
+        {
+          "type": "header",
+          "key": "accept",
+          "value": "text/html"
         }
       ],
       "destination": "https://bybloshq.space/:path*",
@@ -142,6 +147,20 @@
       ],
       "destination": "https://bybloshq.space/:path*",
       "statusCode": 308
+    },
+    {
+      "source": "/assets/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.bybloshq.space"
+        }
+      ],
+      "headers": {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "GET, OPTIONS"
+      },
+      "continue": true
     }
   ],
   "rewrites": [

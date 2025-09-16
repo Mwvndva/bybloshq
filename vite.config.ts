@@ -18,6 +18,7 @@ export default defineConfig(({ command, mode }) => {
     base,
     define: {
       __APP_ENV__: JSON.stringify(env.APP_ENV || 'production'),
+      'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
     },
     server: {
       host: '::',
