@@ -129,7 +129,6 @@
         }
       ],
       "destination": "https://bybloshq.space/:path*",
-      "permanent": true,
       "statusCode": 308
     },
     {
@@ -142,7 +141,6 @@
         }
       ],
       "destination": "https://bybloshq.space/:path*",
-      "permanent": true,
       "statusCode": 308
     }
   ],
