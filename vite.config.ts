@@ -20,6 +20,23 @@ export default defineConfig(({ command, mode }) => {
       __APP_ENV__: JSON.stringify(env.APP_ENV || 'production'),
       'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
     },
+    plugins: [
+      // Add any Vite plugins here
+    ],
+    build: {
+      target: 'esnext',
+      minify: isProduction ? 'esbuild' : false,
+      sourcemap: isProduction ? false : 'inline',
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            react: ['react', 'react-dom', 'react-router-dom'],
+            vendor: ['@tanstack/react-query', 'lodash', 'date-fns'],
+          },
+        },
+      },
+      chunkSizeWarningLimit: 1000,
+    },
     server: {
       host: '::',
       port: 3000,
