@@ -11,8 +11,8 @@ export default defineConfig(({ command, mode }) => {
   // Determine if we're building for production
   const isProduction = mode === 'production';
   
-  // Base URL for the application
-  const base = isProduction ? 'https://bybloshq.space/' : '/';
+  // Base URL for the application - always use relative paths to avoid CORS
+  const base = '/';
   
   return {
     base,

@@ -25,6 +25,10 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600, must-revalidate"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
     },
@@ -38,11 +42,15 @@
         {
           "key": "Cache-Control",
           "value": "public, max-age=3600, must-revalidate"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
     },
     {
-      "source": "/assets/:path*",
+      "source": "/assets/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
@@ -50,7 +58,15 @@
         },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
+          "value": "GET, OPTIONS, HEAD"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "Content-Type, Authorization"
+        },
+        {
+          "key": "Access-Control-Allow-Credentials",
+          "value": "true"
         },
         {
           "key": "Cache-Control",
@@ -64,6 +80,10 @@
         {
           "key": "Access-Control-Allow-Origin",
           "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS, HEAD"
         },
         {
           "key": "Cache-Control",
@@ -109,7 +129,8 @@
         }
       ],
       "destination": "https://bybloshq.space/:path*",
-      "permanent": true
+      "permanent": true,
+      "statusCode": 308
     },
     {
       "source": "/:path*",
@@ -121,7 +142,8 @@
         }
       ],
       "destination": "https://bybloshq.space/:path*",
-      "permanent": true
+      "permanent": true,
+      "statusCode": 308
     }
   ],
   "rewrites": [
