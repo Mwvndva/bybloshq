@@ -21,7 +21,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat" 
         style={{
-          backgroundImage: 'url(/herowallpaper/blackboredapewallpaper.png)',
+          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(/herowallpaper/blackboredapewallpaper.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundAttachment: 'fixed',

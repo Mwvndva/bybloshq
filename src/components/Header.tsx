@@ -14,7 +14,10 @@ const Header = () => {
   }, [location]);
 
   return (
-    <header className="border-b border-gray-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+    <header className={cn(
+      'border-b border-yellow-300 sticky top-0 z-50',
+      location.pathname === '/' ? 'bg-yellow-300' : 'bg-white/80 backdrop-blur-sm'
+    )}>
       <div className="container mx-auto px-4 py-3 sm:py-4">
         <div className="flex items-center justify-between w-full">
           {/* Mobile menu button */}
