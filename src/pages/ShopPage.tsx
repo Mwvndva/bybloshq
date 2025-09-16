@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -24,6 +24,7 @@ const ShopPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [sellerInfo, setSellerInfo] = useState<SellerInfo | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchShopData = async () => {
@@ -86,6 +87,18 @@ const ShopPage = () => {
       setIsLoading(false);
     }
   }, [shopName]);
+
+  // Filter products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!searchQuery.trim()) return true;
+    
+    const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
+    const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
+    
+    return searchTerms.every(term => 
+      productText.includes(term)
+    );
+  });
 
   if (isLoading) {
     return (
@@ -151,7 +164,7 @@ const ShopPage = () => {
             </div>
             <div className="flex items-center gap-3">
               <div className="bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-4 py-2 rounded-xl font-bold text-sm">
-                {products.length} {products.length === 1 ? 'Product' : 'Products'}
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'Product' : 'Products'}
               </div>
             </div>
           </div>
@@ -160,7 +173,24 @@ const ShopPage = () => {
 
       {/* Products */}
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {products.length > 0 ? (
+        <div className="mb-8">
+          <div className="relative max-w-md mx-auto">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {filteredProducts.length > 0 ? (
           <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
             <div className="flex justify-between items-center mb-8">
               <div>
@@ -174,7 +204,7 @@ const ShopPage = () => {
               </div>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {products.map((product) => (
+              {filteredProducts.map((product) => (
                 <ProductCard 
                   key={product.id}
                   product={{
@@ -196,6 +226,7 @@ const ShopPage = () => {
                       socialMedia: {}
                     } : undefined
                   } as ProductType}
+                  hideWishlist={true}
                 />
               ))}
             </div>

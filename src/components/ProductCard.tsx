@@ -12,9 +12,10 @@ import { useToast } from '@/components/ui/use-toast';
 interface ProductCardProps {
   product: Product;
   seller?: Seller;
+  hideWishlist?: boolean;
 }
 
-export function ProductCard({ product, seller }: ProductCardProps) {
+export function ProductCard({ product, seller, hideWishlist = false }: ProductCardProps) {
   const { toast } = useToast();
   const { addToWishlist, removeFromWishlist, isInWishlist, isLoading: isWishlistLoading } = useWishlist();
   const [isSellerDialogOpen, setIsSellerDialogOpen] = useState(false);
@@ -95,26 +96,28 @@ export function ProductCard({ product, seller }: ProductCardProps) {
       )}
       aria-label={`Product: ${product.name}`}
     >
-      {/* Wishlist Button */}
-      <button
-        onClick={toggleWishlist}
-        className={cn(
-          "absolute top-4 right-4 z-10 p-3 rounded-2xl transition-all duration-300",
-          'bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm',
-          wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110'
-        )}
-        aria-label="Add to wishlist"
-        disabled={isSold || wishlistActionLoading || isWishlistLoading}
-        aria-busy={wishlistActionLoading}
-      >
-        {wishlistActionLoading || isWishlistLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
-        ) : (
-          <Heart 
-            className="h-5 w-5 text-gray-600 hover:text-red-500 transition-colors"
-          />
-        )}
-      </button>
+      {/* Wishlist Button - Conditionally Rendered */}
+      {!hideWishlist && (
+        <button
+          onClick={toggleWishlist}
+          className={cn(
+            "absolute top-4 right-4 z-10 p-3 rounded-2xl transition-all duration-300",
+            'bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm',
+            wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110'
+          )}
+          aria-label="Add to wishlist"
+          disabled={isSold || wishlistActionLoading || isWishlistLoading}
+          aria-busy={wishlistActionLoading}
+        >
+          {wishlistActionLoading || isWishlistLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
+          ) : (
+            <Heart 
+              className="h-5 w-5 text-gray-600 hover:text-red-500 transition-colors"
+            />
+          )}
+        </button>
+      )}
 
       {/* SOLD Badge */}
       {isSold && (

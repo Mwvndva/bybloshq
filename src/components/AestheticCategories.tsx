@@ -10,19 +10,21 @@ export interface AestheticCategory {
   color: string;
   hoverColor: string;
   accent: string;
+  featured?: boolean;
 }
 
 export const aestheticCategories: AestheticCategory[] = [
   {
-    id: 'nairobi noir',
-    title: 'Nairobi Noir',
-    description: 'All-black outfits, trench coats, sunglasses, Doc Martens',
-    wornBy: 'Poets, alt creatives, photographers, moody Tumblr kids',
-    vibe: 'Nairobi goth. Think deep, silent power',
-    color: 'bg-gray-900 text-white',
-    hoverColor: 'hover:bg-gray-800',
-    accent: 'border-gray-600'
+    id: 'casual',
+    title: 'Casual',
+    description: 'Comfortable and relaxed everyday styles',
+    wornBy: 'Everyone',
+    vibe: 'Relaxed and casual',
+    color: 'bg-blue-500 text-white',
+    hoverColor: 'hover:bg-blue-600',
+    accent: 'border-blue-600'
   },
+
   {
     id: 'earth girl/boy',
     title: 'Earth Girl/Boy',
@@ -84,15 +86,16 @@ export const aestheticCategories: AestheticCategory[] = [
     accent: 'border-yellow-300'
   },
   {
-    id: 'old money',
-    title: 'Old Money',
-    description: 'Classic silhouettes, luxury fabrics, timeless pieces',
+    id: 'vintage',
+    title: 'Vintage',
+    description: 'Classic, timeless, and sophisticated styles',
     wornBy: 'Sophisticated dressers, classic style lovers',
     vibe: 'Elegant and timeless',
-    color: 'bg-gradient-to-r from-navy-900 to-brown-800 text-white',
-    hoverColor: 'hover:scale-105',
-    accent: 'border-gold-500'
+    color: 'bg-amber-100 text-amber-900',
+    hoverColor: 'hover:bg-amber-200',
+    accent: 'border-amber-500'
   },
+
   {
     id: 'gothic',
     title: 'Gothic',
@@ -102,6 +105,17 @@ export const aestheticCategories: AestheticCategory[] = [
     color: 'bg-gradient-to-r from-black to-purple-900 text-white',
     hoverColor: 'hover:scale-105',
     accent: 'border-purple-500'
+  },
+  {
+    id: 'made in kenya',
+    title: 'Made in Kenya',
+    description: 'Locally designed and manufactured Kenyan fashion',
+    wornBy: 'Supporters of local artisans and designers',
+    vibe: 'Proudly Kenyan, authentic, and unique',
+    color: 'bg-gradient-to-r from-green-500 to-red-500 text-white',
+    hoverColor: 'hover:scale-105',
+    accent: 'border-yellow-500',
+    featured: true
   }
 ];
 

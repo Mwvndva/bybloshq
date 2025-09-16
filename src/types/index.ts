@@ -1,15 +1,16 @@
 
 export type Aesthetic = 
   | 'all'
-  | 'nairobi noir'
+  | 'casual'
   | 'earth girl/boy'
   | 'brands'
   | 'corporate'
   | 'street wear'
   | 'baddie'
   | 'island boy/girl'
-  | 'old money'
-  | 'gothic';
+  | 'vintage'
+  | 'gothic'
+  | 'made in kenya';
 
 export interface Seller {
   id: string;
