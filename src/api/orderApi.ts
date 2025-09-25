@@ -119,26 +119,41 @@ export interface OrderResponse {
 /**
  * Fetch orders with filtering and pagination
  */
-export const fetchBuyerOrders = async (
-  filters: Partial<OrderFilters> = {}
-): Promise<OrderListResponse> => {
-  const {
-    status,
-    paymentStatus,
-    startDate,
-    endDate,
-    searchQuery,
-    page = 1,
-    limit = 10,
-    sortBy = 'created_at',
-    sortOrder = 'desc',
-  } = filters;
+export const fetchBuyerOrders = async ({
+  page = 1,
+  limit = 10,
+  status,
+  sortBy = 'created_at',
+  sortOrder = 'desc',
+  startDate,
+  endDate,
+  searchQuery,
+  paymentStatus
+}: OrderFilters = {}): Promise<OrderListResponse> => {
+  // Get the current user's ID from localStorage
+  const userString = localStorage.getItem('user');
+  let buyerId = '';
+  
+  try {
+    if (userString) {
+      const user = JSON.parse(userString);
+      buyerId = user.id || '';
+    }
+  } catch (error) {
+    console.error('Error parsing user data:', error);
+    throw new Error('Failed to parse user data');
+  }
+
+  if (!buyerId) {
+    console.error('No buyer ID found in localStorage');
+    throw new Error('Authentication required. Please log in again.');
+  }
 
   const params = new URLSearchParams({
     page: page.toString(),
     limit: limit.toString(),
     sortBy,
-    sortOrder,
+    sortOrder
   });
 
   if (status && status !== 'all') params.append('status', status);
@@ -147,7 +162,7 @@ export const fetchBuyerOrders = async (
   if (endDate) params.append('endDate', new Date(endDate).toISOString());
   if (searchQuery) params.append('search', searchQuery);
 
-  const apiUrl = `/buyers/orders?${params.toString()}`;
+  const apiUrl = `/buyers/${buyerId}/orders?${params.toString()}`;
   console.log('Making API request to:', apiUrl);
   
   try {
