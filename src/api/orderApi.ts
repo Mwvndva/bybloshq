@@ -147,11 +147,12 @@ export const fetchBuyerOrders = async (
   if (endDate) params.append('endDate', new Date(endDate).toISOString());
   if (searchQuery) params.append('search', searchQuery);
 
-  console.log('Making API request to:', `/buyers/orders?${params.toString()}`);
+  const apiUrl = `/buyer/orders?${params.toString()}`;
+  console.log('Making API request to:', apiUrl);
   
   try {
     const { data: responseData } = await apiRequest<OrderListBackendResponse>({
-      url: `/buyers/orders?${params.toString()}`,
+      url: apiUrl,
       method: 'GET',
     });
 
