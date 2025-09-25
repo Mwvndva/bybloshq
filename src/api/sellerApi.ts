@@ -442,7 +442,7 @@ export const sellerApi = {
   // Update seller profile
   updateProfile: async (data: { city?: string; location?: string }): Promise<Seller> => {
     try {
-      const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/me', data);
+      const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
       return transformSeller(response.data.data);
     } catch (error) {
       console.error('Error updating profile:', error);
