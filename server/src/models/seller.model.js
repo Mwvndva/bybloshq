@@ -93,7 +93,7 @@ export const findSellerById = async (id) => {
 };
 
 export const updateSeller = async (id, updates) => {
-  const { fullName, shopName, email, phone, password } = updates;
+  const { fullName, shopName, email, phone, password, city, location } = updates;
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -128,6 +128,18 @@ export const updateSeller = async (id, updates) => {
     updatesList.push(`password = $${paramCount}`);
     values.push(hashedPassword);
   }
+  
+  if (city) {
+    paramCount++;
+    updatesList.push(`city = $${paramCount}`);
+    values.push(city);
+  }
+  
+  if (location) {
+    paramCount++;
+    updatesList.push(`location = $${paramCount}`);
+    values.push(location);
+  }
 
   if (updatesList.length === 0) {
     throw new Error('No valid fields to update');
@@ -137,7 +149,7 @@ export const updateSeller = async (id, updates) => {
     UPDATE sellers
     SET ${updatesList.join(', ')}
     WHERE id = $1
-    RETURNING id, full_name AS "fullName", shop_name AS "shopName", email, phone, created_at AS "createdAt"
+    RETURNING id, full_name AS "fullName", shop_name AS "shopName", email, phone, city, location, created_at AS "createdAt"
   `;
 
   const result = await query(queryText, values);
