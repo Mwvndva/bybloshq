@@ -379,24 +379,20 @@ const buyerApi = {
     }
   },
 
-  // Wishlist methods
-  getWishlist: async (): Promise<WishlistItem[]> => {
+  // Wishlist methods with retry logic
+  getWishlist: async (maxRetries = 2, retryCount = 0): Promise<WishlistItem[]> => {
     try {
-      console.log('🔍 API - Fetching wishlist...');
-      const token = localStorage.getItem('buyer_token');
-      console.log('🔑 API - Current auth token:', token ? `Exists (${token.substring(0, 20)}...)` : 'Missing');
-      console.log('🌐 API - Request headers:', buyerApiInstance.defaults.headers.common);
+      console.log(`🔍 API - Fetching wishlist (attempt ${retryCount + 1}/${maxRetries + 1})...`);
       
       const response = await buyerApiInstance.get<ApiResponse<{ items: WishlistItem[] }>>('/buyers/wishlist', {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache',
           'Expires': '0',
-        }
+        },
+        timeout: 15000, // Increase timeout to 15 seconds
+        timeoutErrorMessage: 'Request timed out. Please check your connection and try again.'
       });
-      
-      console.log('📦 API - Wishlist response status:', response.status);
-      console.log('📦 API - Wishlist response data:', response.data);
       
       // Check if the response has the expected structure
       if (!response.data?.success || !response.data.data?.items) {
@@ -406,28 +402,34 @@ const buyerApi = {
           hasItems: !!response.data?.data?.items,
           fullResponse: response.data
         });
-        return [];
+        throw new Error('Invalid response format from server');
       }
       
       // Return the items array
       const items = Array.isArray(response.data.data.items) ? response.data.data.items : [];
-      console.log('✅ API - Returning wishlist items:', items.map(item => ({ id: item.id, name: item.name })));
+      console.log('✅ API - Successfully fetched wishlist items:', items.length);
       return items;
-    } catch (error: any) {
-      console.error('Error fetching wishlist:', error);
       
-      if (error.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
-        
-        if (error.response.status === 401) {
-          console.log('Authentication failed, clearing token and redirecting to login');
-          localStorage.removeItem('buyer_token');
-          delete buyerApiInstance.defaults.headers.common['Authorization'];
-          window.location.href = '/buyer/login';
-        }
+    } catch (error: any) {
+      console.error(`❌ Attempt ${retryCount + 1} failed:`, error.message);
+      
+      // Handle timeout specifically
+      if ((error.code === 'ECONNABORTED' || error.message.includes('timeout')) && retryCount < maxRetries) {
+        console.log(`🔄 Retrying... (${retryCount + 1}/${maxRetries})`);
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+        return buyerApi.getWishlist(maxRetries, retryCount + 1);
       }
       
+      // Handle 401 Unauthorized
+      if (error.response?.status === 401) {
+        console.log('🔒 Authentication failed, clearing token and redirecting to login');
+        localStorage.removeItem('buyer_token');
+        delete buyerApiInstance.defaults.headers.common['Authorization'];
+        window.location.href = '/buyer/login';
+      }
+      
+      // For other errors, return empty array but don't retry
       return [];
     }
   },

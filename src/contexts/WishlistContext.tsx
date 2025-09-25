@@ -3,6 +3,7 @@ import { Product, Aesthetic, Seller } from '@/types';
 import { useBuyerAuth } from './BuyerAuthContext';
 import buyerApi, { WishlistItem } from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
+import { useToast } from '@/components/ui/use-toast';
 
 interface WishlistContextType {
   wishlist: Product[];
@@ -10,6 +11,8 @@ interface WishlistContextType {
   removeFromWishlist: (productId: string) => Promise<void>;
   isInWishlist: (productId: string) => boolean;
   isLoading: boolean;
+  error: Error | null;
+  refreshWishlist: () => Promise<void>;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
@@ -18,60 +21,15 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const { user } = useBuyerAuth();
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+  const { toast } = useToast();
   
   console.log('🔄 WishlistProvider render:', {
     user: user ? { id: user.id, email: user.email } : null,
     wishlistLength: wishlist.length,
-    isLoading
+    isLoading,
+    hasError: !!error
   });
-
-  // Always provide the context, even if there's no user
-  const contextValue: WishlistContextType = {
-    wishlist,
-    addToWishlist: async (product: Product) => {
-      if (!user) throw new Error('User must be logged in');
-      if (!product?.id) throw new Error('Invalid product data');
-      
-      console.log('➕ Adding to wishlist:', { productId: product.id, productName: product.name });
-
-      try {
-        await buyerApi.addToWishlist({ id: product.id });
-        setWishlist(prev => {
-          console.log('✅ Wishlist updated, adding product:', product.id);
-          return [...prev, product];
-        });
-      } catch (error) {
-        console.error('❌ Error adding to wishlist:', error);
-        throw error;
-      }
-    },
-    removeFromWishlist: async (productId: string) => {
-      if (!user) throw new Error('User must be logged in');
-      
-      console.log('➖ Removing from wishlist:', productId);
-      
-      try {
-        await buyerApi.removeFromWishlist(productId);
-        setWishlist(prev => {
-          console.log('✅ Wishlist updated, removing product:', productId);
-          return prev.filter(item => item.id !== productId);
-        });
-      } catch (error) {
-        console.error('❌ Error removing from wishlist:', error);
-        throw error;
-      }
-    },
-    isInWishlist: (productId: string) => {
-      const result = wishlist.some(item => item.id === productId);
-      console.log(`isInWishlist(${productId}): ${result}, wishlist length: ${wishlist.length}`, {
-        wishlist: wishlist.map(item => ({ id: item.id, name: item.name })),
-        productId,
-        user: user ? { id: user.id, email: user.email } : null
-      });
-      return result;
-    },
-    isLoading
-  };
 
   // Convert WishlistItem to Product with seller information
   const mapWishlistItemToProduct = async (item: WishlistItem): Promise<Product> => {
@@ -144,6 +102,72 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     }
   }, [user, loadWishlist]);
 
+  // Always provide the context, even if there's no user
+  const contextValue: WishlistContextType = {
+    wishlist,
+    addToWishlist: async (product: Product) => {
+      if (!user) throw new Error('User must be logged in');
+      if (!product?.id) throw new Error('Invalid product data');
+      
+      console.log('➕ Adding to wishlist:', { productId: product.id, productName: product.name });
+
+      try {
+        setError(null);
+        await buyerApi.addToWishlist({ id: product.id });
+        
+        // Refresh the wishlist to ensure we have the latest data
+        await loadWishlist();
+        
+        toast({
+          title: 'Added to wishlist',
+          description: `${product.name} has been added to your wishlist.`,
+        });
+        
+      } catch (error) {
+        console.error('❌ Error adding to wishlist:', error);
+        toast({
+          title: 'Failed to add to wishlist',
+          description: 'There was an error adding this item to your wishlist. Please try again.',
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    removeFromWishlist: async (productId: string) => {
+      if (!user) throw new Error('User must be logged in');
+      
+      console.log('➖ Removing from wishlist:', productId);
+      
+      try {
+        setError(null);
+        await buyerApi.removeFromWishlist(productId);
+        
+        // Refresh the wishlist to ensure we have the latest data
+        await loadWishlist();
+        
+        toast({
+          title: 'Removed from wishlist',
+          description: 'The item has been removed from your wishlist.',
+        });
+        
+      } catch (error) {
+        console.error('❌ Error removing from wishlist:', error);
+        toast({
+          title: 'Failed to remove from wishlist',
+          description: 'There was an error removing this item from your wishlist. Please try again.',
+          variant: 'destructive',
+        });
+        throw error;
+      }
+    },
+    isInWishlist: (productId: string) => {
+      return wishlist.some(item => item.id === productId);
+    },
+    refreshWishlist: loadWishlist,
+    isLoading,
+    error,
+  };
+
   return (
     <WishlistContext.Provider value={contextValue}>
       {children}
@@ -151,7 +175,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useWishlist = (): WishlistContextType => {
+export function useWishlist(): WishlistContextType {
   const context = useContext(WishlistContext);
   if (context === undefined) {
     throw new Error('useWishlist must be used within a WishlistProvider');
