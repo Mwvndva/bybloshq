@@ -93,7 +93,14 @@ export const findSellerById = async (id) => {
 };
 
 export const updateSeller = async (id, updates) => {
-  const { fullName, shopName, email, phone, password, city, location } = updates;
+  console.log('Updating seller:', { id, updates });
+  
+  if (!id) {
+    console.error('No ID provided for update');
+    throw new Error('Seller ID is required for update');
+  }
+  
+  const { fullName, shopName, email, phone, password, city, location } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -145,6 +152,11 @@ export const updateSeller = async (id, updates) => {
     throw new Error('No valid fields to update');
   }
 
+  if (updatesList.length === 0) {
+    console.log('No valid fields to update');
+    throw new Error('No valid fields to update');
+  }
+
   const queryText = `
     UPDATE sellers
     SET ${updatesList.join(', ')}
@@ -152,8 +164,28 @@ export const updateSeller = async (id, updates) => {
     RETURNING id, full_name AS "fullName", shop_name AS "shopName", email, phone, city, location, created_at AS "createdAt"
   `;
 
-  const result = await query(queryText, values);
-  return result.rows[0];
+  console.log('Executing update query:', { queryText, values });
+
+  try {
+    const result = await query(queryText, values);
+    
+    if (!result.rows || result.rows.length === 0) {
+      console.error('No rows returned from update query');
+      throw new Error('No seller found with the given ID');
+    }
+    
+    console.log('Successfully updated seller:', result.rows[0].id);
+    return result.rows[0];
+  } catch (error) {
+    console.error('Database error in updateSeller:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      query: queryText,
+      values
+    });
+    throw error; // Re-throw to be caught by the controller
+  }
 };
 
 export const generateAuthToken = (seller) => {

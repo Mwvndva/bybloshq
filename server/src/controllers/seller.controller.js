@@ -248,13 +248,35 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
+    console.log('Update profile request received:', {
+      sellerId: req.seller?.id,
+      body: req.body
+    });
+    
     // Remove password field if it's included in the request body
     if (req.body.password) {
       delete req.body.password;
     }
     
+    if (!req.seller?.id) {
+      console.error('No seller ID in request');
+      return res.status(400).json({
+        status: 'error',
+        message: 'Seller ID is required'
+      });
+    }
+    
     const seller = await updateSeller(req.seller.id, req.body);
     
+    if (!seller) {
+      console.error('Failed to update seller:', req.seller.id);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to update profile: no seller returned'
+      });
+    }
+    
+    console.log('Profile updated successfully:', seller.id);
     res.status(200).json({
       status: 'success',
       data: {
@@ -262,10 +284,16 @@ export const updateProfile = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error updating profile:', error);
+    console.error('Error updating profile:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      details: error.detail || 'No additional details'
+    });
     res.status(500).json({
       status: 'error',
-      message: 'Failed to update profile'
+      message: 'Failed to update profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
