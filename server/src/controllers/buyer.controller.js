@@ -217,6 +217,9 @@ export const getProfile = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
+    console.log('Updating profile for user:', req.user.id);
+    console.log('Update data:', req.body);
+    
     // 1) Filter out unwanted fields that are not allowed to be updated
     const { password, passwordConfirm, ...updateData } = req.body;
 
@@ -228,25 +231,45 @@ export const updateProfile = async (req, res, next) => {
       await Buyer.updatePassword(req.user.id, password);
     }
 
-    // 3) Update other buyer data
+    // 3) If there's nothing else to update, return early
+    if (Object.keys(updateData).length === 0) {
+      const currentUser = await Buyer.findById(req.user.id);
+      delete currentUser.password;
+      delete currentUser.resetPasswordToken;
+      delete currentUser.resetPasswordExpires;
+      
+      return res.status(200).json({
+        status: 'success',
+        message: 'No profile updates provided',
+        data: {
+          buyer: currentUser
+        }
+      });
+    }
+
+    // 4) Update other buyer data
     const updatedBuyer = await Buyer.update(req.user.id, updateData);
+    console.log('Updated buyer data:', updatedBuyer);
 
     if (!updatedBuyer) {
+      console.error('Failed to update buyer profile');
       return next(new AppError('Error updating profile', 500));
     }
 
-    // 4) Remove sensitive data from output
+    // 5) Remove sensitive data from output
     delete updatedBuyer.password;
     delete updatedBuyer.resetPasswordToken;
     delete updatedBuyer.resetPasswordExpires;
 
     res.status(200).json({
       status: 'success',
+      message: 'Profile updated successfully',
       data: {
         buyer: updatedBuyer,
       },
     });
   } catch (error) {
+    console.error('Error in updateProfile:', error);
     next(error);
   }
 };

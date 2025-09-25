@@ -58,11 +58,24 @@ class Buyer {
     const values = [];
     let paramIndex = 1;
 
+    // Field name mapping from camelCase to snake_case
+    const fieldMap = {
+      fullName: 'full_name',
+      phone: 'phone',
+      city: 'city',
+      location: 'location',
+      isVerified: 'is_verified',
+      profileImage: 'profile_image'
+      // Add other fields as needed
+    };
+
     for (const [key, value] of Object.entries(updateData)) {
       // Skip password updates here - handle separately with updatePassword
       if (key === 'password') continue;
       
-      fields.push(`${key} = $${paramIndex}`);
+      // Convert camelCase to snake_case for database columns
+      const dbField = fieldMap[key] || key;
+      fields.push(`${dbField} = $${paramIndex}`);
       values.push(value);
       paramIndex++;
     }
