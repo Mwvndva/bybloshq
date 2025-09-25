@@ -249,7 +249,8 @@ export const getProfile = async (req, res) => {
 export const updateProfile = async (req, res) => {
   try {
     console.log('Update profile request received:', {
-      sellerId: req.seller?.id,
+      userId: req.user?.id,
+      userType: req.user?.userType,
       body: req.body
     });
     
@@ -258,15 +259,24 @@ export const updateProfile = async (req, res) => {
       delete req.body.password;
     }
     
-    if (!req.seller?.id) {
-      console.error('No seller ID in request');
-      return res.status(400).json({
+    // Verify the user is a seller
+    if (!req.user || req.user.userType !== 'seller') {
+      console.error('Unauthorized: User is not a seller');
+      return res.status(403).json({
         status: 'error',
-        message: 'Seller ID is required'
+        message: 'Only sellers can update seller profiles'
       });
     }
     
-    const seller = await updateSeller(req.seller.id, req.body);
+    if (!req.user.id) {
+      console.error('No user ID in request');
+      return res.status(400).json({
+        status: 'error',
+        message: 'User ID is required'
+      });
+    }
+    
+    const seller = await updateSeller(req.user.id, req.body);
     
     if (!seller) {
       console.error('Failed to update seller:', req.seller.id);
