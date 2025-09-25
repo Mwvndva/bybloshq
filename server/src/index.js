@@ -268,6 +268,11 @@ const testConnection = async () => {
 // Add request logging and fix API prefix middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  console.log('Request headers:', {
+    'authorization': req.headers.authorization ? '***' : 'none',
+    'content-type': req.headers['content-type'],
+    'user-agent': req.headers['user-agent']
+  });
   next();
 });
 
@@ -282,19 +287,25 @@ import models from './models/index.js';
 const { Payment } = models;
 
 // Mount public routes (no authentication required)
-app.use('/api/organizers', organizerRoutes);
-app.use('/api/sellers', sellerRoutes);
+// Mount more specific routes first
 app.use('/api/sellers/orders', sellerOrderRoutes);
 app.use('/api/buyers', buyerRoutes);
+
+// Mount general routes
+app.use('/api/organizers', organizerRoutes);
+app.use('/api/sellers', sellerRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/payments', paymentRoutes);
+
 // Mount Pesapal routes
 app.use('/api/pesapal', pesapalRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/events', eventRoutes);
+
+// Mount general order routes last to avoid conflicts
 app.use('/api/orders', orderRoutes);
 
 // Debug: Log all registered routes in development

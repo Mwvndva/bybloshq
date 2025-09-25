@@ -29,7 +29,22 @@ router.patch('/update-profile', buyerController.updateProfile);
 router.use('/wishlist', wishlistRoutes);
 
 // Order routes
-router.get('/orders', orderController.getBuyerOrders);
+router.get('/orders', (req, res, next) => {
+  console.log('GET /buyers/orders route hit');
+  console.log('Request URL:', req.originalUrl);
+  console.log('Request method:', req.method);
+  console.log('Request headers:', req.headers);
+  next();
+}, orderController.getBuyerOrders);
+
+// Log all registered routes
+console.log('Registered buyer routes:');
+router.stack.forEach(layer => {
+  if (layer.route) {
+    const methods = Object.keys(layer.route.methods).filter(method => layer.route.methods[method]);
+    console.log(`${methods.join(', ').toUpperCase()} /api/buyers${layer.route.path}`);
+  }
+});
 
 export default router;
 

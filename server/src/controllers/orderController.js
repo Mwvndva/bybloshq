@@ -26,6 +26,11 @@ export const getBuyerOrders = async (req, res) => {
   console.log('Request URL:', req.originalUrl);
   console.log('Request query params:', req.query);
   console.log('Authenticated user:', req.user);
+  console.log('Request headers:', req.headers);
+  console.log('Request method:', req.method);
+  console.log('Request path:', req.path);
+  console.log('Request baseUrl:', req.baseUrl);
+  console.log('Request originalUrl:', req.originalUrl);
   
   try {
     const buyerId = req.user.id; // Use authenticated user's ID
