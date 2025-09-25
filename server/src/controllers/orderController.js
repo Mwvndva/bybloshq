@@ -45,7 +45,7 @@ export const getBuyerOrders = async (req, res) => {
     const countQuery = `
       SELECT COUNT(*) as total 
       FROM orders 
-      WHERE customer_id = $1
+      WHERE buyer_id = $1
       ${status ? 'AND LOWER(status) = $2' : ''}
     `;
     console.log('Count query:', countQuery);
@@ -79,7 +79,7 @@ export const getBuyerOrders = async (req, res) => {
     const orderIdsQuery = `
       SELECT id 
       FROM orders 
-      WHERE customer_id = $1
+      WHERE buyer_id = $1
       ${status ? 'AND LOWER(status) = $2' : ''}
       ORDER BY ${sortBy} ${sortOrder.toUpperCase()}
       LIMIT $${status ? '3' : '2'} OFFSET $${status ? '4' : '3'}
