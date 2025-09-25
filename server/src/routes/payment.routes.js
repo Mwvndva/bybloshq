@@ -23,6 +23,25 @@ publicRouter.post(
   paymentController.initiatePayment
 );
 
+// Product payment initiation (public) — same flow as tickets, but for products
+publicRouter.post(
+  '/initiate-product',
+  [
+    body('phone').trim().notEmpty().withMessage('Phone number is required'),
+    body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+    body('amount').isNumeric().withMessage('Valid amount is required'),
+    body('productId').notEmpty().withMessage('Product ID is required'),
+    // Optional metadata
+    body('sellerId').optional(),
+    body('productName').optional(),
+    body('customerName').optional(),
+    body('narrative').optional(),
+    body('paymentMethod').optional().isIn(['mpesa','card','bank']).withMessage('Invalid payment method'),
+    validate
+  ],
+  paymentController.initiateProductPayment
+);
+
 // Webhook endpoint (public)
 publicRouter.post(
   '/webhook',
@@ -90,6 +109,7 @@ protectedRouter.use(protect);
 // Add protected payment routes here if needed
 
 // Mount protected routes
-router.use(protectedRouter);
+// Note: No protected payment routes at the moment. Keep public endpoints open for checkout + webhooks.
+// router.use(protectedRouter);
 
 export default router;

@@ -5,29 +5,36 @@ dotenv.config();
 
 const { Pool } = pg;
 
+// Database connection configuration
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',  // Default to localhost if not specified
+  port: parseInt(process.env.DB_PORT, 10) || 5432,  // Default to 5432 if not specified
+  database: process.env.DB_NAME || 'byblos6',
+  user: process.env.DB_USER || 'postgres',
+  password: process.env.DB_PASSWORD || 'nurubot',
+  connectionTimeoutMillis: 5000,  // 5 seconds timeout for connection
+  idleTimeoutMillis: 30000,      // 30 seconds idle timeout
+  max: 20,                       // max number of clients in the pool
+};
+
 // Log database connection details (without password)
-console.log('Connecting to database:', {
-  host: process.env.DB_HOST,
-  port: process.env.DB_PORT,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD ? '***' : undefined,
+console.log('Database connection details:', {
+  host: dbConfig.host,
+  port: dbConfig.port,
+  database: dbConfig.database,
+  user: dbConfig.user,
+  hasPassword: !!dbConfig.password,
 });
 
-export const pool = new Pool({
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT, 10),
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  connectionTimeoutMillis: 5000, // 5 seconds timeout for connection
-  idleTimeoutMillis: 30000, // 30 seconds idle timeout
-  max: 20, // max number of clients in the pool
-});
+export const pool = new Pool(dbConfig);
 
-// Test the connection when the pool is created
+// Event listeners for the pool
 pool.on('connect', () => {
-  console.log('Successfully connected to the database');
+  console.log('Successfully connected to the database');});
+
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle client', err);
+  process.exit(-1);
 });
 
 pool.on('error', (err) => {

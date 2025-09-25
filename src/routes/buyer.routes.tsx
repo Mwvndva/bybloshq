@@ -2,13 +2,15 @@ import { lazy, Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { BuyerRoute } from './BuyerRoute';
 import { Loader2 } from 'lucide-react';
+import { WishlistProvider } from '@/contexts/WishlistContext';
 
 // Lazy load components with default exports
 const BuyerLogin = lazy(() => import('@/components/buyer/BuyerLogin').then(module => ({ default: module.BuyerLogin })));
 const BuyerRegister = lazy(() => import('@/components/buyer/BuyerRegister').then(module => ({ default: module.BuyerRegister })));
 const BuyerForgotPassword = lazy(() => import('@/components/buyer/BuyerForgotPassword').then(module => ({ default: module.BuyerForgotPassword })));
 const BuyerResetPassword = lazy(() => import('@/components/buyer/BuyerResetPassword').then(module => ({ default: module.BuyerResetPassword })));
-const BuyerDashboard = lazy(() => import('@/components/buyer/BuyerDashboard').then(module => ({ default: module.BuyerDashboard })));
+const BuyerDashboard = lazy(() => import('@/components/buyer/BuyerDashboard').then(module => ({ default: module.default })));
+const CheckoutPage = lazy(() => import('@/pages/checkout').then(module => ({ default: module.default })));
 
 // Simple loading component
 const Loader = () => (
@@ -20,6 +22,14 @@ const Loader = () => (
 // Buyer routes
 export const buyerRoutes = [
   // Public routes - don't require authentication
+  {
+    path: '/checkout',
+    element: (
+      <Suspense fallback={<Loader />}>
+        <CheckoutPage />
+      </Suspense>
+    ),
+  },
   {
     path: '/buyer/register',
     element: (

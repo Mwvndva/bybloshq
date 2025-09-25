@@ -8,6 +8,8 @@ interface User {
   fullName: string;
   email: string;
   phone: string;
+  city?: string;
+  location?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -341,6 +343,8 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     phone: string;
     password: string;
     confirmPassword: string;
+    city: string;
+    location: string;
   }) => {
     setIsLoading(true);
     try {

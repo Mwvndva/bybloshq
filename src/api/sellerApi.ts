@@ -1,4 +1,18 @@
 import axios from 'axios';
+import { Order as BaseOrder, OrderStatus } from './orderApi';
+
+// Extend the base Order interface to include seller-specific fields
+export interface SellerOrder extends Omit<BaseOrder, 'items'> {
+  items: Array<{
+    id: number;
+    product_id: string | number;
+    product_name: string;
+    product_image?: string;
+    quantity: number;
+    price: number;
+    subtotal: number;
+  }>;
+}
 
 // Get the base URL from environment variables
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3002/api').replace(/\/$/, '');
@@ -18,6 +32,8 @@ export interface Seller {
   shop_name?: string;
   email: string;
   phone: string;
+  city?: string;
+  location?: string;
   createdAt: string;
   created_at?: string;
   updatedAt?: string;
@@ -35,27 +51,6 @@ export interface Product {
   isSold: boolean;
   status: 'available' | 'sold';
   soldAt?: string | null;
-  createdAt: string;
-  updatedAt?: string;
-}
-
-export interface OrderItem {
-  id: string;
-  productName: string;
-  quantity: number;
-  price: number;
-  productId: string;
-}
-
-export interface Order {
-  id: string;
-  orderNumber: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  items: OrderItem[];
-  total: number;
-  customerName: string;
-  customerEmail: string;
-  shippingAddress: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -123,6 +118,8 @@ const transformSeller = (data: any): Seller => {
     shopName: seller.shopName || seller.shop_name || '',
     email: seller.email || '',
     phone: seller.phone || '',
+    city: seller.city || '',
+    location: seller.location || '',
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
   };
@@ -176,14 +173,6 @@ interface SellerResponse {
   data: any; // Will be transformed to Seller type
 }
 
-interface OrdersResponse {
-  data: Order[];
-}
-
-interface OrderResponse {
-  data: Order;
-}
-
 interface AnalyticsResponse {
   data: SellerAnalytics;
 }
@@ -232,6 +221,8 @@ export const sellerApi = {
     phone: string;
     password: string;
     confirmPassword: string;
+    city?: string;
+    location?: string;
   }): Promise<{ seller: Seller; token: string }> => {
     try {
       const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
@@ -240,7 +231,9 @@ export const sellerApi = {
         email: data.email,
         phone: data.phone,
         password: data.password,
-        confirmPassword: data.confirmPassword
+        confirmPassword: data.confirmPassword,
+        city: data.city,
+        location: data.location
       });
       
       // The response data structure is { data: { seller, token } }
@@ -370,30 +363,6 @@ export const sellerApi = {
     }
   },
 
-  // Orders
-  async getOrders(): Promise<Order[]> {
-    try {
-      const response = await sellerApiInstance.get<OrdersResponse>('/sellers/orders');
-      return response.data.data;
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      throw error;
-    }
-  },
-
-  async updateOrderStatus(orderId: string, status: string): Promise<Order> {
-    try {
-      const response = await sellerApiInstance.put<OrderResponse>(
-        `/sellers/orders/${orderId}/status`, 
-        { status }
-      );
-      return response.data.data;
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      throw error;
-    }
-  },
-
   // Analytics
   getAnalytics: async (): Promise<SellerAnalytics> => {
     try {
@@ -467,6 +436,45 @@ export const sellerApi = {
         throw new Error(error.message);
       }
       throw new Error('An unknown error occurred while resetting your password.');
+    }
+  },
+
+  // Update seller profile
+  updateProfile: async (data: { city?: string; location?: string }): Promise<Seller> => {
+    try {
+      const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/me', data);
+      return transformSeller(response.data.data);
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw error;
+    }
+  },
+
+  // Orders
+  getSellerOrders: async (): Promise<SellerOrder[]> => {
+    try {
+      const response = await sellerApiInstance.get<{ data: SellerOrder[] }>('/sellers/orders');
+      return response.data?.data || [];
+    } catch (error: any) {
+      console.error('Error fetching seller orders:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
+  },
+
+  // Mark an order as delivered
+  markOrderAsDelivered: async (orderId: string | number): Promise<{ success: boolean; message: string; order?: any }> => {
+    try {
+      const response = await sellerApiInstance.post<{ success: boolean; message: string; order?: any }>(`/sellers/orders/${orderId}/delivered`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error marking order as delivered:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
     }
   },
 };

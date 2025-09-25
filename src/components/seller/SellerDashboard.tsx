@@ -1,29 +1,50 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { toast } from '@/components/ui/use-toast';
 import { 
   ArrowLeft, 
+  BarChart3,
+  Bike, 
+  Check, 
+  CheckCircle,
+  Copy, 
+  DollarSign,
+  Edit, 
+  Link as LinkIcon, 
+  LogOut, 
   Package, 
   Plus, 
-  Settings, 
-  DollarSign, 
   RefreshCw,
-  CheckCircle,
-  Link as LinkIcon,
-  Check,
+  Settings,
+  ShoppingBag,
   TrendingUp,
   User,
-  ShoppingCart,
-  BarChart3,
-  Bike,
-  LogOut
+  Clock,
+  Truck,
+  XCircle,
+  Loader2
 } from 'lucide-react';
-import { sellerApi } from '@/api/sellerApi';
+import { sellerApi, SellerOrder } from '@/api/sellerApi';
+import { updateOrderStatus, OrderStatus } from '@/api/orderApi';
+import { useToast } from '@/components/ui/use-toast';
+import SellerOrdersTab from './SellerOrdersTab';
+
 
 interface Product {
   id: string;
@@ -58,22 +79,33 @@ interface SellerDashboardProps {
   }) => React.ReactNode;
 }
 
-const StatsCard = ({ icon: Icon, title, value, subtitle }: {
+const StatsCard = ({ 
+  icon: Icon, 
+  title, 
+  value, 
+  subtitle, 
+  iconColor = 'text-white',
+  bgColor = 'bg-gradient-to-br from-yellow-400 to-yellow-500',
+  textColor = 'text-black'
+}: {
   icon: any;
   title: string;
   value: string | number;
   subtitle: string;
+  iconColor?: string;
+  bgColor?: string;
+  textColor?: string;
 }) => (
-  <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-    <CardContent className="p-8">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2">
-          <p className="text-sm font-semibold text-gray-700 uppercase tracking-wide">{title}</p>
-          <p className="text-4xl font-black text-black">{value}</p>
-          <p className="text-sm text-gray-600 font-medium">{subtitle}</p>
+  <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 sm:hover:-translate-y-1 h-full">
+    <CardContent className="p-4 sm:p-6 md:p-8">
+      <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4">
+        <div className="space-y-1 sm:space-y-2 flex-1 min-w-0">
+          <p className="text-[10px] xs:text-xs sm:text-sm font-medium text-gray-600 uppercase tracking-wide truncate">{title}</p>
+          <p className={`text-2xl xs:text-3xl sm:text-4xl font-black ${textColor} truncate`}>{value}</p>
+          <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">{subtitle}</p>
         </div>
-        <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg">
-          <Icon className="h-8 w-8 text-white" />
+        <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ${bgColor} rounded-2xl flex-shrink-0 flex items-center justify-center shadow-lg`}>
+          <Icon className={`h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 ${iconColor}`} />
         </div>
       </div>
     </CardContent>
@@ -84,15 +116,131 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
+  const [totalSales, setTotalSales] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const [sellerProfile, setSellerProfile] = useState<{ fullName: string; shopName: string } | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [sellerProfile, setSellerProfile] = useState<{
+    fullName?: string;
+    shopName?: string;
+    email?: string;
+    phone?: string;
+    city?: string;
+    location?: string;
+  }>({});
   const [isCopied, setIsCopied] = useState(false);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [orders, setOrders] = useState<SellerOrder[]>([]);
   const [activeSection, setActiveSection] = useState<'overview' | 'products' | 'orders' | 'settings'>('overview');
   
+  // Withdrawal modal state
+  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
+  const [withdrawalData, setWithdrawalData] = useState({
+    mpesaNumber: '',
+    registeredName: '',
+    amount: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Fetch seller's orders
+  const fetchOrders = useCallback(async () => {
+    console.log('[SellerDashboard] Starting to fetch orders...');
+    const startTime = Date.now();
+    
+    try {
+      setIsLoadingOrders(true);
+      console.log('[SellerDashboard] Calling sellerApi.getSellerOrders()...');
+      
+      const data = await sellerApi.getSellerOrders();
+      const endTime = Date.now();
+      
+      console.log(`[SellerDashboard] Orders fetched in ${endTime - startTime}ms`);
+      console.log(`[SellerDashboard] Received ${data.length} orders`);
+      
+      if (data.length > 0) {
+        console.log('[SellerDashboard] First order details:', {
+          id: data[0].id,
+          status: data[0].status,
+          total: data[0].total_amount,
+          customer: `${data[0].shipping_address.first_name} ${data[0].shipping_address.last_name}`,
+          itemCount: data[0].items?.length || 0,
+          createdAt: data[0].created_at
+        });
+      }
+      
+      setOrders(data);
+      console.log('[SellerDashboard] Orders state updated');
+    } catch (error) {
+      const errorTime = Date.now();
+      console.error(`[SellerDashboard] Error fetching orders after ${errorTime - startTime}ms:`, {
+        message: error.message,
+        stack: error.stack,
+        response: error.response?.data
+      });
+      
+      toast({
+        title: 'Error',
+        description: 'Failed to load orders. Please try again later.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoadingOrders(false);
+      console.log('[SellerDashboard] Finished processing orders fetch');
+    }
+  }, [toast]);
+  
+  // Fetch orders when the orders tab is selected
+  useEffect(() => {
+    if (activeSection === 'orders') {
+      console.log('[SellerDashboard] Orders tab selected, fetching orders...');
+      fetchOrders();
+    }
+  }, [activeSection, fetchOrders]);
+  
+  const [formData, setFormData] = useState({
+    city: '',
+    location: ''
+  });
+  const isMissingLocation = !sellerProfile?.city || !sellerProfile?.location;
+
+  // Define cities and their locations
+  const cities = {
+    'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
+    'Mombasa': ['Mombasa Island', 'Nyali', 'Bamburi', 'Kisauni', 'Changamwe', 'Likoni', 'Mtongwe', 'Tudor', 'Shanzu', 'Diani'],
+    'Kisumu': ['Kisumu Central', 'Milimani', 'Mamboleo', 'Dunga', 'Kondele', 'Manyatta', 'Nyalenda'],
+    'Nakuru': ['Nakuru Town', 'Lanet', 'Kaptembwa', 'Shabab', 'Free Area', 'Section 58', 'Milimani', 'Kiamunyi'],
+    'Eldoret': ['Eldoret Town', 'Kapsoya', 'Langas', 'Huruma', 'Kipkaren', 'Kimumu', 'Maili Nne']
+  };
+
+  // Get locations for the selected city
+  const getLocations = useCallback(() => {
+    return formData.city && cities[formData.city as keyof typeof cities] 
+      ? cities[formData.city as keyof typeof cities] 
+      : [];
+  }, [formData.city]);
+
+  // Handle city selection
+  const handleCityChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    const city = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      city,
+      location: '' // Reset location when city changes
+    }));
+  }, []);
+
+  // Handle location selection
+  const handleLocationChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      location: e.target.value
+    }));
+  }, []);
+
   // Handle seller logout
   const handleLogout = () => {
     // Clear seller token and user data from localStorage
@@ -108,6 +256,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       description: 'You have been logged out of your seller account.',
     });
   };
+
 
   // Fetch data function
   const fetchData = useCallback(async (): Promise<{
@@ -188,24 +337,228 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     }
   }, [navigate, toast, location.pathname]);
 
-  // Fetch seller profile
-  const fetchSellerProfile = useCallback(async () => {
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await sellerApi.getProducts();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load products. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
+
+  const toggleEdit = useCallback(() => {
+    setIsEditing(prev => {
+      // When entering edit mode, populate form with current values
+      if (!prev) {
+        setFormData({
+          city: sellerProfile?.city || '',
+          location: sellerProfile?.location || ''
+        });
+      }
+      return !prev;
+    });
+  }, [sellerProfile]);
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!formData.city || !formData.location) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    
+    try {
+      const updatedProfile = await sellerApi.updateProfile({
+        city: formData.city,
+        location: formData.location
+      });
+      
+      setSellerProfile(prev => ({
+        ...prev,
+        city: formData.city,
+        location: formData.location
+      }));
+      
+      setIsEditing(false);
+      
+      toast({
+        title: 'Success',
+        description: 'Profile updated successfully',
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update profile. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [formData, toast]);
+
+  const fetchProfile = useCallback(async () => {
     try {
       const profile = await sellerApi.getProfile();
       setSellerProfile({
         fullName: profile.fullName || profile.full_name,
-        shopName: profile.shopName || profile.shop_name
+        shopName: profile.shopName || profile.shop_name,
+        email: profile.email,
+        phone: profile.phone,
+        city: profile.city,
+        location: profile.location
       });
-    } catch (err) {
-      console.error('Error fetching seller profile:', err);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load profile. Please try again.',
+        variant: 'destructive',
+      });
     }
-  }, []);
+  }, [toast]);
 
-  // Initial data fetch
+  // Get status badge component
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      pending: {
+        bg: 'bg-yellow-100 text-yellow-800',
+        text: 'Pending',
+        icon: <Clock className="h-3.5 w-3.5 mr-1.5" />
+      },
+      processing: {
+        bg: 'bg-blue-100 text-blue-800',
+        text: 'Processing',
+        icon: <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+      },
+      shipped: {
+        bg: 'bg-purple-100 text-purple-800',
+        text: 'Shipped',
+        icon: <Truck className="h-3.5 w-3.5 mr-1.5" />
+      },
+      delivered: {
+        bg: 'bg-green-100 text-green-800',
+        text: 'Delivered',
+        icon: <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+      },
+      cancelled: {
+        bg: 'bg-red-100 text-red-800',
+        text: 'Cancelled',
+        icon: <XCircle className="h-3.5 w-3.5 mr-1.5" />
+      },
+      refunded: {
+        bg: 'bg-gray-100 text-gray-800',
+        text: 'Refunded',
+        icon: <XCircle className="h-3.5 w-3.5 mr-1.5" />
+      }
+    };
+
+    const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || {
+      bg: 'bg-gray-100 text-gray-800',
+      text: status.charAt(0).toUpperCase() + status.slice(1),
+      icon: null
+    };
+
+    return (
+      <div className="flex items-center">
+        {config.icon}
+        <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${config.bg}`}>
+          {config.text}
+        </span>
+      </div>
+    );
+  };
+
+  // Handle order status update
+  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
+    try {
+      console.log(`[SellerDashboard] Updating order ${orderId} status to ${status}`);
+      await updateOrderStatus(parseInt(orderId, 10), status as OrderStatus, 'Status updated by seller');
+      
+      // Refresh orders after update
+      await fetchOrders();
+      
+      toast({
+        title: 'Success',
+        description: `Order status updated to ${status}.`,
+      });
+    } catch (error) {
+      console.error(`[SellerDashboard] Error updating order status:`, error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update order status. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   useEffect(() => {
-    fetchData();
-    fetchSellerProfile();
-  }, [fetchData, fetchSellerProfile]);
+    console.log(`[SellerDashboard] Tab changed to: ${activeTab}`);
+    
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const [productsData, analyticsData] = await Promise.all([
+          sellerApi.getProducts(),
+          sellerApi.getAnalytics()
+        ]);
+        setProducts(productsData);
+        
+        // Calculate total sales and revenue from analytics data
+        if (analyticsData) {
+          const salesTotal = analyticsData.monthlySales.reduce(
+            (sum, monthData) => sum + monthData.sales, 0
+          );
+          
+          // Ensure totalRevenue is set, fallback to calculated salesTotal if not present
+          const updatedAnalytics = {
+            ...analyticsData,
+            totalRevenue: analyticsData.totalRevenue || salesTotal
+          };
+          
+          setAnalytics(updatedAnalytics);
+          setTotalSales(salesTotal);
+          
+          console.log('Updated analytics data:', {
+            salesTotal,
+            totalRevenue: updatedAnalytics.totalRevenue,
+            calculatedRevenue: updatedAnalytics.totalRevenue * 0.91
+          });
+        } else {
+          setAnalytics(analyticsData);
+        }
+      } catch (err) {
+        setError('Failed to load data. Please try again later.');
+        console.error('Error fetching data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    if (activeTab === 'products') {
+      console.log('[SellerDashboard] Fetching products...');
+      fetchProducts();
+    } else if (activeTab === 'dashboard') {
+      console.log('[SellerDashboard] Fetching dashboard data...');
+      fetchData();
+      fetchProfile();
+    } else if (activeTab === 'orders') {
+      console.log('[SellerDashboard] Fetching orders...');
+      fetchOrders();
+    }
+  }, [activeTab, fetchProducts, fetchProfile, fetchOrders]);
 
   // Handle product deletion
   const handleDeleteProduct = async (productId: string) => {
@@ -251,10 +604,15 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
         <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-20">
-              <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-10 w-24" />
+          <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+            <div className="flex items-center justify-between space-y-2">
+              <h2 className="text-3xl font-bold tracking-tight">
+                {activeTab === 'dashboard' ? 'Dashboard' : 
+                 activeTab === 'products' ? 'Products' : 
+                 activeTab === 'orders' ? 'Orders' :
+                 activeTab === 'settings' ? 'Settings' : 'Seller Dashboard'}
+              </h2>
+              <Skeleton className="h-10 w-24" />
             </div>
           </div>
         </div>
@@ -267,14 +625,14 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           <div className="flex space-x-2 mb-12 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-gray-200/50 w-fit mx-auto">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-12 w-24 rounded-xl" />
-          ))}
-        </div>
-        
+            ))}
+          </div>
+          
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-              {[1, 2, 3].map((i) => (
+            {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-64 rounded-2xl" />
-              ))}
-            </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -292,19 +650,33 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
             <h3 className="text-2xl font-black text-black mb-3">Unable to load dashboard</h3>
             <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
               {error || 'Something went wrong while loading your dashboard data. Please try again.'}
-        </p>
-        <Button 
-          onClick={fetchData}
+            </p>
+            <Button 
+              onClick={fetchData}
               className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
-        >
+            >
               <RefreshCw className="h-5 w-5 mr-2" />
               Try Again
-        </Button>
+            </Button>
           </div>
         </div>
       </div>
     );
   }
+
+  // Calculate total sales and net revenue (91% of total sales)
+  const salesTotal = analytics.totalRevenue || 0;
+  const netRevenue = salesTotal * 0.91;
+
+  // Calculate number of delivered orders and total items
+  const deliveredOrders = orders.filter(order => 
+    order.status === 'delivered'
+  );
+  
+  // Calculate total number of delivered items across all orders
+  const totalDeliveredItems = deliveredOrders.reduce((total, order) => {
+    return total + (order.items?.length || 0);
+  }, 0);
 
   const stats = [
     {
@@ -312,6 +684,21 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       title: 'Total Products',
       value: analytics.totalProducts,
       subtitle: 'Products in your store'
+    },
+    {
+      icon: DollarSign,
+      title: 'Total Sales',
+      value: formatCurrency(salesTotal),
+      subtitle: 'All time'
+    },
+    {
+      icon: ShoppingBag,
+      title: 'PENDING',
+      value: totalDeliveredItems,
+      subtitle: `across ${deliveredOrders.length} ${deliveredOrders.length === 1 ? 'order' : 'orders'}`,
+      iconColor: 'text-green-500',
+      bgColor: 'bg-green-100',
+      textColor: 'text-green-800'
     }
   ];
 
@@ -319,219 +706,194 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:py-0 sm:h-20 space-y-4 sm:space-y-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-3 sm:py-0 sm:h-16 md:h-20 space-y-3 sm:space-y-0">
             {/* Mobile: Stack vertically, Desktop: Horizontal */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 w-full sm:w-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 md:space-x-6 w-full sm:w-auto">
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => navigate('/')}
-                className="text-gray-600 hover:text-black hover:bg-gray-100/80 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
+                className="text-gray-600 hover:text-black hover:bg-gray-100/80 transition-all duration-200 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm h-8 sm:h-9"
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                 <span className="hidden sm:inline">Back to Home</span>
                 <span className="sm:hidden">Back</span>
               </Button>
-              <div className="hidden sm:block h-8 w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
+              <div className="hidden sm:block h-6 sm:h-8 w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
               <div className="flex-1 sm:flex-none">
-                <h1 className="text-xl sm:text-2xl font-black text-black tracking-tight">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-black text-black tracking-tight">
                   {sellerProfile?.shopName ? (
                     <span className="block sm:inline">
                       <span className="hidden sm:inline">{sellerProfile.shopName}'s Dashboard</span>
-                      <span className="sm:hidden">{sellerProfile.shopName}</span>
+                      <span className="sm:hidden text-base">{sellerProfile.shopName}</span>
                     </span>
                   ) : 'Seller Dashboard'}
-          </h1>
-                <p className="text-xs sm:text-sm text-gray-500 font-medium">
-                  Welcome back, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
-                </p>
+                </h1>
+                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                  <p className="text-xs text-gray-500 font-medium">
+                    Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
+                  </p>
+                  {isMissingLocation && (
+                    <span className="inline-flex items-center text-[10px] sm:text-xs text-red-600 font-medium">
+                      Add city & location
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             
             {/* Mobile: Stack buttons vertically, Desktop: Horizontal */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 w-full sm:w-auto">
-          {sellerProfile?.shopName && (
-              <Button
-                variant="outline"
-                size="sm"
-                  className="text-xs h-9 sm:h-10 bg-white border-gray-300 text-black hover:bg-yellow-50 hover:border-yellow-300 flex items-center justify-center gap-2 rounded-xl"
-                onClick={async () => {
-                  const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
-                  try {
-                    await navigator.clipboard.writeText(shopUrl);
-                    setIsCopied(true);
-                    toast({
-                      title: 'Link copied!',
-                      description: 'Your shop link has been copied to clipboard.',
-                    });
-                    setTimeout(() => setIsCopied(false), 2000);
-                  } catch (err) {
-                    toast({
-                      title: 'Error',
-                      description: 'Failed to copy link. Please try again.',
-                      variant: 'destructive',
-                    });
-                  }
-                }}
-              >
-                {isCopied ? (
-                  <>
-                      <Check className="h-4 w-4" />
-                      <span className="hidden sm:inline">Link Copied!</span>
-                      <span className="sm:hidden">Copied!</span>
-                  </>
-                ) : (
-                  <>
-                      <LinkIcon className="h-4 w-4" />
-                      <span className="hidden sm:inline">Copy Shop Link</span>
-                      <span className="sm:hidden">Copy Link</span>
-                  </>
-                )}
-              </Button>
-              )}
-              <div className="flex items-center justify-between sm:justify-end space-x-4">
-                <a 
-                  href="https://wa.me/254748137819"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 px-4 py-2 rounded-xl font-medium transition-colors duration-200 shadow-sm"
+            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+              {sellerProfile?.shopName && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8 sm:h-9 md:h-10 bg-white border-gray-300 text-black hover:bg-yellow-50 hover:border-yellow-300 flex items-center justify-center gap-1 sm:gap-2 rounded-xl px-2 sm:px-3"
+                  onClick={async () => {
+                    const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
+                    try {
+                      await navigator.clipboard.writeText(shopUrl);
+                      setIsCopied(true);
+                      toast({
+                        title: 'Link copied!',
+                        description: 'Your shop link has been copied to clipboard.',
+                      });
+                      setTimeout(() => setIsCopied(false), 2000);
+                    } catch (err) {
+                      toast({
+                        title: 'Error',
+                        description: 'Failed to copy link. Please try again.',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
                 >
-                  <Bike className="h-4 w-4" />
-                  <span>Delivery</span>
-                </a>
+                  {isCopied ? (
+                    <>
+                      <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Link Copied!</span>
+                      <span className="sm:hidden text-xs">Copied</span>
+                    </>
+                  ) : (
+                    <>
+                      <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">Copy Shop Link</span>
+                      <span className="sm:hidden text-xs">Copy Link</span>
+                    </>
+                  )}
+                </Button>
+              )}
+              <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setWithdrawalData({
+                      mpesaNumber: '',
+                      registeredName: sellerProfile?.fullName || '',
+                      amount: netRevenue.toFixed(2)
+                    });
+                    setIsWithdrawalModalOpen(true);
+                  }}
+                  className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 border-0 rounded-xl h-8 sm:h-9 md:h-10 px-2 sm:px-3 py-1.5 sm:py-2 font-medium shadow-sm"
+                >
+                  <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline text-sm">Withdraw</span>
+                  <span className="sm:hidden text-xs">Withdraw</span>
+                </Button>
                 <Button
                   variant="outline"
                   onClick={fetchData}
-                  className="flex items-center gap-2 bg-white border-gray-300 text-black hover:bg-yellow-50 hover:border-yellow-300 rounded-xl h-9 sm:h-10 px-3 sm:px-4"
+                  className="flex items-center gap-1 sm:gap-2 bg-white border-gray-300 text-black hover:bg-yellow-50 hover:border-yellow-300 rounded-xl h-8 sm:h-9 md:h-10 px-2 sm:px-3 py-1.5 sm:py-2"
                   disabled={isLoading}
                 >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline">Refresh</span>
+                  <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden sm:inline text-sm">Refresh</span>
+                  <span className="sm:hidden text-xs">Refresh</span>
                 </Button>
-                <a 
-                  href="https://wa.me/254748137819"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sm:hidden flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl shadow-sm"
-                  title="Delivery"
-                >
-                  <Bike className="h-5 w-5" />
-                </a>
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg">
-                  <User className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 md:py-8">
         {/* Stats Overview */}
-        <div className="flex justify-center mb-12">
-          <div className="w-full max-w-sm">
-            {stats.map((stat, index) => (
-              <StatsCard key={index} {...stat} />
-            ))}
-          </div>
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10 md:mb-12">
+          {stats.map((stat, index) => (
+            <div key={index} className="col-span-1">
+              <StatsCard {...stat} />
+            </div>
+          ))}
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex flex-wrap justify-center gap-2 mb-8 sm:mb-12 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-gray-200/50 w-full sm:w-fit mx-auto">
-          <Button
-            variant={activeSection === 'overview' ? 'default' : 'ghost'}
-            onClick={() => setActiveSection('overview')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'overview' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
-          >
-            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
-            <span className="truncate">Overview</span>
-          </Button>
-          <Button
-            variant={activeSection === 'products' ? 'default' : 'ghost'}
-            onClick={() => setActiveSection('products')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'products' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
-          >
-            <Package className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
-            <span className="truncate">Products</span>
-          </Button>
-          <Button
-            variant={activeSection === 'orders' ? 'default' : 'ghost'}
-            onClick={() => setActiveSection('orders')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'orders' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
-          >
-            <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
-            <span className="truncate">Orders</span>
-          </Button>
-          <Button
-            variant={activeSection === 'settings' ? 'default' : 'ghost'}
-            onClick={() => setActiveSection('settings')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'settings' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
-          >
-            <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
-            <span className="truncate">Settings</span>
-          </Button>
-      </div>
+        {/* Navigation Tabs - Mobile Responsive */}
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-6 sm:mb-8 bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-gray-200/50">
+          {[
+            { id: 'overview', label: 'Overview', icon: BarChart3 },
+            { id: 'products', label: 'Products', icon: Package },
+            { id: 'orders', label: 'Orders', icon: ShoppingBag },
+            { id: 'settings', label: 'Settings', icon: Settings },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveSection(id as any)}
+              className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${
+                activeSection === id
+                  ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
+                  : 'text-gray-600 hover:text-black hover:bg-white/80'
+              }`}
+            >
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span>{label}</span>
+            </button>
+          ))}
+        </div>
 
         {/* Content Sections */}
         {activeSection === 'overview' && (
-          <div className="space-y-12">
-            <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Store Overview</h2>
-              <p className="text-gray-600 text-lg font-medium max-w-2xl mx-auto">Manage your products and track your store performance</p>
-      </div>
-
-      {/* Recent Products */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-              <div className="flex justify-between items-center mb-8">
-            <div>
-                  <h3 className="text-3xl font-black text-black">Recent Products</h3>
-                  <p className="text-gray-600 font-medium mt-2">Your most recently added products</p>
+          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+            <div className="text-center px-2 sm:px-0">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Store Overview</h2>
+              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">Manage your products and track your store performance</p>
             </div>
-            <Button 
-              size="sm" 
-              onClick={() => navigate('/seller/add-product')}
-                  className="gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
-            >
-              <Plus className="h-4 w-4" />
-              Add Product
-            </Button>
-          </div>
+
+            {/* Recent Products */}
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+                <div>
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Recent Products</h3>
+                  <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Your most recently added products</p>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => navigate('/seller/add-product')}
+                  className="gap-1.5 sm:gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-medium sm:font-semibold text-xs sm:text-sm w-full sm:w-auto"
+                >
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Add Product
+                </Button>
+              </div>
               
-          {products.length > 0 ? (
+              {products.length > 0 ? (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {products.slice(0, 6).map((product) => (
                     <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
                       <div className="relative overflow-hidden rounded-t-2xl">
                         <img
                           src={product.image_url || product.imageUrl || '/placeholder-image.jpg'}
-                        alt={product.name}
+                          alt={product.name}
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <Badge 
+                        <Badge 
                           variant={product.status === 'sold' || product.isSold ? 'destructive' : 'secondary'}
                           className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
-                    >
-                      {product.status === 'sold' || product.isSold ? 'Sold' : 'Available'}
-                    </Badge>
-                  </div>
+                        >
+                          {product.status === 'sold' || product.isSold ? 'Sold' : 'Available'}
+                        </Badge>
+                      </div>
                       <CardContent className="p-6">
                         <h3 className="font-bold text-black mb-2 line-clamp-1 text-lg">{product.name}</h3>
                         <p className="text-yellow-600 font-black text-xl mb-3">
@@ -556,98 +918,98 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 <div className="text-center py-20">
                   <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
                     <Package className="h-12 w-12 text-yellow-600" />
-            </div>
+                  </div>
                   <h3 className="text-2xl font-black text-black mb-3">No products found</h3>
                   <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
-              <Button 
-                onClick={() => navigate('/seller/add-product')}
+                  <Button 
+                    onClick={() => navigate('/seller/add-product')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
-              >
+                  >
                     <Plus className="h-5 w-5 mr-2" />
                     Add Your First Product
-              </Button>
-            </div>
-          )}
+                  </Button>
+                </div>
+              )}
             </div>
 
-                  {/* Store Performance */}
+            {/* Store Performance */}
             <div className="flex justify-center">
-              <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl max-w-md w-full">
-                <CardHeader>
-                  <CardTitle className="text-2xl font-black text-black flex items-center">
-                    <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
-                      <TrendingUp className="h-6 w-6 text-white" />
+              <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl w-full max-w-xs sm:max-w-sm md:max-w-md">
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="text-xl sm:text-2xl font-black text-black flex items-center">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 sm:mr-4 shadow-lg">
+                      <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
                     Store Performance
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
                     <div>
-                      <p className="text-sm font-semibold text-gray-700">Active Products</p>
-                      <p className="text-2xl font-black text-black">{analytics.totalProducts - totalSold}</p>
+                      <p className="text-xs sm:text-sm font-medium sm:font-semibold text-gray-700">Active Products</p>
+                      <p className="text-xl sm:text-2xl font-black text-black">{analytics.totalProducts - totalSold}</p>
                     </div>
-                    <Package className="h-8 w-8 text-blue-600" />
+                    <Package className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
                     <div>
-                      <p className="text-sm font-semibold text-gray-700">Products Sold</p>
-                      <p className="text-2xl font-black text-black">{totalSold}</p>
+                      <p className="text-xs sm:text-sm font-medium sm:font-semibold text-gray-700">Products Sold</p>
+                      <p className="text-xl sm:text-2xl font-black text-black">{totalSold}</p>
                     </div>
-                    <CheckCircle className="h-8 w-8 text-green-600" />
+                    <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-green-600" />
                   </div>
-        </CardContent>
-      </Card>
+                </CardContent>
+              </Card>
             </div>
           </div>
         )}
 
         {activeSection === 'products' && (
-          <div className="space-y-12">
-            <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Product Management</h2>
-              <p className="text-gray-600 text-lg font-medium">Manage all your products in one place</p>
+          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+            <div className="text-center px-2 sm:px-0">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Product Management</h2>
+              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium">Manage all your products in one place</p>
             </div>
-
-      {/* Quick Actions */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-              <div className="flex justify-between items-center mb-8">
+            
+            {/* Quick Actions */}
+            <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                 <div>
-                  <h3 className="text-3xl font-black text-black">Quick Actions</h3>
-                  <p className="text-gray-600 font-medium mt-2">Common tasks for your products</p>
+                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Quick Actions</h3>
+                  <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Common tasks for your products</p>
                 </div>
                 <Button 
                   size="sm" 
                   onClick={() => navigate('/seller/add-product')}
-                  className="gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
+                  className="gap-1.5 sm:gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-medium sm:font-semibold text-xs sm:text-sm w-full sm:w-auto"
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Add Product
                 </Button>
               </div>
               
-              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            <Button 
-              variant="outline" 
-                  className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
-              onClick={() => navigate('/seller/products')}
-            >
-                  <Package className="h-6 w-6" />
-                  <div>
-                    <p className="font-semibold">View All Products</p>
-                    <p className="text-sm text-gray-500">See all your products</p>
+              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                <Button 
+                  variant="outline" 
+                  className="h-12 sm:h-14 md:h-16 justify-start gap-2 sm:gap-3 md:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-lg sm:rounded-xl px-3 sm:px-4"
+                  onClick={() => navigate('/seller/products')}
+                >
+                  <Package className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium sm:font-semibold text-sm sm:text-base truncate">View All Products</p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">See all your products</p>
                   </div>
                 </Button>
                 
                 <Button 
                   variant="outline" 
-                  className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
+                  className="h-12 sm:h-14 md:h-16 justify-start gap-2 sm:gap-3 md:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-lg sm:rounded-xl px-3 sm:px-4"
                   onClick={() => navigate('/seller/add-product')}
                 >
-                  <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
-                  <div>
-                    <p className="font-semibold">Add New Product</p>
-                    <p className="text-sm text-gray-500">Create a new listing</p>
+                  <Plus className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium sm:font-semibold text-sm sm:text-base truncate">Add New Product</p>
+                    <p className="text-xs sm:text-sm text-gray-500 truncate">Create a new listing</p>
                   </div>
                 </Button>
                 
@@ -714,7 +1076,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   >
                     <Plus className="h-5 w-5 mr-2" />
                     Add Your First Product
-            </Button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -725,83 +1087,161 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           <div className="space-y-12">
             <div className="text-center">
               <h2 className="text-4xl font-black text-black mb-4">Order Management</h2>
-              <p className="text-gray-600 text-lg font-medium">Coming soon - Manage your customer orders</p>
+              <p className="text-gray-600 text-lg font-medium">View and manage your orders</p>
             </div>
-            
-            {/* Coming Soon Card */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-              <div className="text-center py-20">
-                <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
-                  <ShoppingCart className="h-12 w-12 text-yellow-600" />
-                </div>
-                <h3 className="text-2xl font-black text-black mb-3">Coming Soon</h3>
-                <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
-                  We're working hard to bring you a comprehensive order management system. 
-                  You'll soon be able to view, track, and manage all your customer orders in one place.
-                </p>
-                <div className="flex justify-center space-x-4">
-            <Button 
-              variant="outline" 
-                    className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
-                    onClick={() => setActiveSection('products')}
-                  >
-                    Manage Products
-                  </Button>
-                  <Button 
-                    className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
-                    onClick={() => setActiveSection('overview')}
-                  >
-                    Back to Dashboard
-            </Button>
-                </div>
-              </div>
-            </div>
+            <SellerOrdersTab />
           </div>
         )}
 
         {activeSection === 'settings' && (
-          <div className="space-y-12">
-            <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Store Settings</h2>
-              <p className="text-gray-600 text-lg font-medium">Manage your store configuration and preferences</p>
+          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+            <div className="text-center px-2 sm:px-0">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Store Settings</h2>
+              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium">Manage your store configuration and preferences</p>
             </div>
-            
-{/* Store Information */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-              <div className="flex justify-between items-center mb-8">
-                <div>
-                  <h3 className="text-3xl font-black text-black">Store Information</h3>
-                  <p className="text-gray-600 font-medium mt-2">Your current store details</p>
-                </div>
-                <Button 
-                  variant="destructive"
-                  onClick={handleLogout}
-                  className="bg-red-500 hover:bg-red-600 text-white"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Logout
-                </Button>
-              </div>
+            <div>
               
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm font-semibold text-gray-700">Store Name</p>
-                    <p className="text-lg font-bold text-black">{sellerProfile?.shopName || 'Not set'}</p>
+              {/* Store Information */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+                  <div className="mb-4 sm:mb-0">
+                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Store Information</h3>
+                    <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Your current store details</p>
                   </div>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm font-semibold text-gray-700">Owner Name</p>
-                    <p className="text-lg font-bold text-black">{sellerProfile?.fullName || 'Not set'}</p>
+                  <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+                    {isEditing ? (
+                      <>
+                        <Button 
+                          variant="outline"
+                          onClick={toggleEdit}
+                          disabled={isSaving}
+                          className="text-xs sm:text-sm border-gray-300 hover:bg-gray-50 flex-1 sm:flex-none"
+                        >
+                          Cancel
+                        </Button>
+                        <Button 
+                          onClick={handleSaveProfile}
+                          disabled={isSaving}
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none"
+                        >
+                          {isSaving ? 'Saving...' : 'Save Changes'}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        onClick={toggleEdit}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none"
+                      >
+                        <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                        Edit Profile
+                      </Button>
+                    )}
+                    <Button 
+                      variant="destructive"
+                      onClick={handleLogout}
+                      className="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm flex-1 sm:flex-none"
+                    >
+                      <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                      Logout
+                    </Button>
                   </div>
-                    </div>
+                </div>
+
+                {/* Stats Grid - Full width on mobile, 2 columns on sm, 5 on lg+ */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                  <StatsCard
+                    icon={ShoppingBag}
+                    title="Total Products"
+                    value={analytics?.totalProducts || 0}
+                    subtitle="In your store"
+                  />
+                  <StatsCard
+                    icon={TrendingUp}
+                    title="Total Revenue"
+                    value={formatCurrency(analytics?.totalRevenue || 0)}
+                    subtitle="All time sales"
+                  />
+                  <StatsCard
+                    icon={BarChart3}
+                    title="Monthly Sales"
+                    value={analytics?.monthlySales?.[analytics.monthlySales.length - 1]?.sales || 0}
+                    subtitle="This month"
+                  />
+                  <StatsCard
+                    icon={Package}
+                    title="Tickets Sold"
+                    value={analytics?.totalTicketsSold || 0}
+                    subtitle="Total tickets"
+                  />
+                  <StatsCard
+                    icon={DollarSign}
+                    title="Total Sales"
+                    value={formatCurrency(totalSales)}
+                    subtitle="All time"
+                  />
+                </div>
+                
+                {/* Profile Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 sm:mb-8">
+                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</p>
+                    <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.fullName || 'Not set'}</p>
+                  </div>
+                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</p>
+                    <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.email || 'Not set'}</p>
+                  </div>
+                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone Number</p>
+                    <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.phone || 'Not set'}</p>
+                  </div>
+                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Active Products</p>
+                    <p className="text-sm sm:text-base font-semibold text-black">{(analytics?.totalProducts || 0) - totalSold}</p>
+                  </div>
+                </div>
+
+                {/* Location Settings */}
                 <div className="space-y-4">
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm font-semibold text-gray-700">Total Products</p>
-                    <p className="text-lg font-bold text-black">{analytics?.totalProducts || 0}</p>
-                    </div>
-                  <div className="p-4 bg-gray-50 rounded-xl">
-                    <p className="text-sm font-semibold text-gray-700">Active Products</p>
-                    <p className="text-lg font-bold text-black">{(analytics?.totalProducts || 0) - totalSold}</p>
+                  <h4 className="text-lg sm:text-xl font-bold text-black">Location Settings</h4>
+                  
+                  <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">City</p>
+                    {isEditing ? (
+                      <select
+                        name="city"
+                        value={formData.city}
+                        onChange={handleCityChange}
+                        className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                      >
+                        <option value="">Select a city</option>
+                        {Object.keys(cities).map(city => (
+                          <option key={city} value={city}>{city}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.city || 'Not set'}</p>
+                    )}
+                  </div>
+                  
+                  <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border border-gray-200">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Location/Area</p>
+                    {isEditing ? (
+                      <select
+                        name="location"
+                        value={formData.location}
+                        onChange={handleLocationChange}
+                        className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                        disabled={!formData.city}
+                      >
+                        <option value="">Select a location</option>
+                        {getLocations().map(location => (
+                          <option key={location} value={location}>{location}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.location || 'Not set'}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -809,6 +1249,147 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           </div>
         )}
       </div>
+
+      {/* Withdrawal Modal */}
+      <Dialog open={isWithdrawalModalOpen} onOpenChange={setIsWithdrawalModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Request Withdrawal</DialogTitle>
+            <DialogDescription>
+              Please fill in your withdrawal details. Net revenue is 91% of your total sales.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="mpesaNumber">M-Pesa Number</Label>
+              <Input
+                id="mpesaNumber"
+                type="tel"
+                placeholder="e.g., 254712345678"
+                value={withdrawalData.mpesaNumber}
+                onChange={(e) => setWithdrawalData({...withdrawalData, mpesaNumber: e.target.value})}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="registeredName">Name as Registered on M-Pesa</Label>
+              <Input
+                id="registeredName"
+                type="text"
+                placeholder="Your full name"
+                value={withdrawalData.registeredName}
+                onChange={(e) => setWithdrawalData({...withdrawalData, registeredName: e.target.value})}
+                disabled={isSubmitting}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="amount">Amount to Withdraw (Ksh)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="Enter amount"
+                value={withdrawalData.amount}
+                onChange={(e) => setWithdrawalData({...withdrawalData, amount: e.target.value})}
+                disabled={isSubmitting}
+              />
+              <p className="text-xs text-gray-500">Available: Ksh {netRevenue.toFixed(2)} (91% of total sales)</p>
+            </div>
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    Withdrawal requests are processed within 24-48 hours. A 9% commission fee applies to all withdrawals.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsWithdrawalModalOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!withdrawalData.mpesaNumber || !withdrawalData.registeredName || !withdrawalData.amount) {
+                  toast({
+                    title: 'Error',
+                    description: 'Please fill in all fields',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+
+                if (parseFloat(withdrawalData.amount) > netRevenue) {
+                  toast({
+                    title: 'Error',
+                    description: 'Withdrawal amount cannot exceed your net revenue',
+                    variant: 'destructive',
+                  });
+                  return;
+                }
+
+                try {
+                  setIsSubmitting(true);
+                  
+                  // Send withdrawal request to the server
+                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${localStorage.getItem('sellerToken')}`
+                    },
+                    body: JSON.stringify({
+                      mpesaNumber: withdrawalData.mpesaNumber,
+                      registeredName: withdrawalData.registeredName,
+                      amount: parseFloat(withdrawalData.amount)
+                    })
+                  });
+
+                  const responseData = await response.json();
+                  
+                  if (!response.ok) {
+                    throw new Error(responseData.message || 'Failed to process withdrawal request');
+                  }
+
+                  toast({
+                    title: 'Success',
+                    description: 'Your withdrawal request has been submitted successfully!',
+                  });
+                  
+                  setIsWithdrawalModalOpen(false);
+                } catch (error) {
+                  console.error('Error submitting withdrawal request:', error);
+                  toast({
+                    title: 'Error',
+                    description: 'Failed to submit withdrawal request. Please try again.',
+                    variant: 'destructive',
+                  });
+                } finally {
+                  setIsSubmitting(false);
+                }
+              }}
+              disabled={isSubmitting}
+              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Submitting...
+                </>
+              ) : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

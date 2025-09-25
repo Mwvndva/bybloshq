@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { mkdir } from 'fs/promises';
+import { existsSync } from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -19,24 +20,30 @@ import publicRoutes from './routes/public.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import ticketRoutes from './routes/ticket.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import pesapalRoutes from './routes/pesapal.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import sellerOrderRoutes from './routes/sellerOrderRoutes.js';
 import * as eventController from './controllers/event.controller.js';
 import { pool, testConnection as testDbConnection } from './config/database.js';
 import { globalErrorHandler, notFoundHandler } from './utils/errorHandler.js';
 import { protect } from './middleware/auth.js';
 import requestId from './middleware/requestId.js';
+import fixApiPrefix from './middleware/fixApiPrefix.js';
 import { schedulePaymentProcessing } from './cron/paymentCron.js';
 
 // Get the current directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables
-const envPath = process.env.NODE_ENV === 'production' 
-  ? path.resolve(__dirname, '../.env.production')
-  : path.resolve(__dirname, '../../.env');
+// Load environment variables (prefer server/.env, then repo root .env, then .env.production)
+const candidateEnvPaths = [
+  path.resolve(__dirname, '../.env'),                 // server/.env
+  path.resolve(__dirname, '../../.env'),              // repo root .env
+  process.env.NODE_ENV === 'production' ? path.resolve(__dirname, '../.env.production') : null,
+].filter(Boolean);
 
-dotenv.config({ path: envPath });
+const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
+dotenv.config({ path: chosenEnvPath });
 
 // Debug log environment variables (without sensitive data)
 console.log('Environment variables loaded:');
@@ -47,7 +54,8 @@ console.log({
   DB_PORT: process.env.DB_PORT,
   DB_NAME: process.env.DB_NAME,
   DB_USER: process.env.DB_USER,
-  DB_PASSWORD: process.env.DB_PASSWORD ? '***' : undefined
+  DB_PASSWORD: process.env.DB_PASSWORD ? '***' : undefined,
+  ENV_PATH: chosenEnvPath
 });
 
 // Create Express app
@@ -55,7 +63,10 @@ const app = express();
 
 // Mount test routes first - completely public
 import testRoutes from './controllers/test.controller.js';
+import testOrderRoutes from './routes/test.routes.js';
+
 app.use('/test', testRoutes);
+app.use('/api/test', testOrderRoutes);
 
 // Add request ID middleware
 app.use(requestId);
@@ -254,37 +265,79 @@ const testConnection = async () => {
   }
 };
 
-// Add request logging middleware
+// Add request logging and fix API prefix middleware
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
   next();
 });
 
+// Fix double /api prefixes in URLs
+app.use(fixApiPrefix);
+
 // Import remaining routes
 import eventRoutes from './routes/event.routes.js';
 import protectedOrganizerRoutes from './routes/protectedOrganizer.routes.js';
+import orderRoutes from './routes/orderRoutes.js';
 import models from './models/index.js';
 const { Payment } = models;
 
 // Mount public routes (no authentication required)
-app.use('/api/health', healthRoutes);
-app.use('/api', publicRoutes);
-app.use('/api/sellers', sellerRoutes);
-console.log('Mounting buyer routes at /api/buyers');
-app.use('/api/buyers', buyerRoutes);
-app.use('/api/admin', adminRoutes);
-
-// Mount the event routes
-app.use('/api/events', eventRoutes);
-
-// Mount public ticket routes (validation, confirmation emails)
-app.use('/api/tickets', ticketRoutes);
-
-// Mount payment routes (including webhook) - must be before any authentication
-app.use('/api/payments', paymentRoutes);
-
-// Mount organizer public routes (login, register, etc.)
 app.use('/api/organizers', organizerRoutes);
+app.use('/api/sellers', sellerRoutes);
+app.use('/api/sellers/orders', sellerOrderRoutes);
+app.use('/api/buyers', buyerRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/health', healthRoutes);
+app.use('/api/tickets', ticketRoutes);
+app.use('/api/payments', paymentRoutes);
+// Mount Pesapal routes
+app.use('/api/pesapal', pesapalRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/orders', orderRoutes);
+
+// Debug: Log all registered routes in development
+if (process.env.NODE_ENV === 'development') {
+  console.log('\n=== Registered Routes ===');
+  
+  // Simple route printing function
+  const printRoutes = (router, prefix = '') => {
+    if (!router || !router.stack) return;
+    
+    router.stack.forEach(layer => {
+      if (layer.route) {
+        // Routes registered directly on the app
+        const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
+        console.log(`${methods.padEnd(7)} ${prefix}${layer.route.path}`);
+      } else if (layer.name === 'router' && layer.handle) {
+        // Nested router - just print the routes without the prefix for now
+        printRoutes(layer.handle, '');
+      }
+    });
+  };
+  
+  // Print all routes
+  app._router.stack.forEach(middleware => {
+    if (middleware.route) {
+      // Direct routes
+      const methods = Object.keys(middleware.route.methods).join(',').toUpperCase();
+      console.log(`${methods.padEnd(7)} ${middleware.route.path}`);
+    } else if (middleware.name === 'router' && middleware.handle) {
+      // Router middleware - print the routes
+      printRoutes(middleware.handle, '');
+    }
+  });
+  
+  // Manually log the Pesapal routes we expect
+  console.log('\n=== Expected Pesapal Routes ===');
+  console.log('POST    /api/pesapal/initialize');
+  console.log('POST    /api/pesapal/checkout');
+  console.log('GET     /api/pesapal/callback');
+  console.log('POST    /api/pesapal/ipn');
+  console.log('GET     /api/pesapal/status/:orderId');
+  console.log('GET     /api/pesapal/test');
+}
 
 // Organizer protected routes
 const protectedRouter = express.Router();
@@ -295,6 +348,9 @@ protectedRouter.use(protect);
 // Mount protected routes
 protectedRouter.use('/dashboard', dashboardRoutes);
 protectedRouter.use('/tickets', ticketRoutes); // This will be mounted at /api/organizers/tickets
+
+// Mount order routes
+app.use('/api', orderRoutes);
 
 // Mount protected organizer routes (payouts, etc.)
 protectedRouter.use('/', protectedOrganizerRoutes);

@@ -71,8 +71,10 @@
     "nodemailer-smtp-transport": "^2.7.4",
     "pg": "^8.16.3",
     "qrcode": "^1.5.4",
+    "qrcode-terminal": "^0.12.0",
     "sequelize": "^6.37.7",
     "uuid": "^9.0.1",
+    "whatsapp-web.js": "^1.34.1",
     "winston": "^3.11.0",
     "zod": "^3.25.67"
   },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,168 +16,16 @@ import {
   Mail,
   X
 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { updateBuyerProfile } from '@/api/buyerApi';
 import { useNavigate } from 'react-router-dom';
+import { WishlistProvider, useWishlist } from '@/contexts/WishlistContext';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
-import { useWishlist } from '@/contexts/WishlistContext';
 import AestheticCategories from '@/components/AestheticCategories';
 import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
-
-const WishlistSection = () => {
-  const { wishlist, removeFromWishlist } = useWishlist();
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-
-  const handleImageClick = (product: Product) => {
-    setSelectedProduct(product);
-    setIsImageDialogOpen(true);
-  };
-
-  if (wishlist.length === 0) {
-    return (
-      <div className="text-center py-12 sm:py-16 lg:py-20">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-lg">
-          <Heart className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-yellow-600" />
-        </div>
-        <h3 className="text-lg sm:text-xl lg:text-2xl font-black text-black mb-2 sm:mb-3">Your wishlist is empty</h3>
-        <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium max-w-md mx-auto px-4">Start adding items you love to your wishlist and they'll appear here</p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-      {wishlist.map((product, index) => {
-        const displaySeller = product.seller;
-        const displaySellerName = displaySeller?.fullName || 'Unknown Seller';
-        const hasContactInfo = Boolean(displaySeller?.phone || displaySeller?.email);
-
-        return (
-          <Card key={`wishlist-${product.id}-${index}`} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
-            <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl">
-            <img 
-              src={product.image_url} 
-              alt={product.name} 
-                className="w-full h-40 sm:h-48 lg:h-56 object-cover group-hover:scale-110 transition-transform duration-500"
-            />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            
-            {/* Image click handler */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleImageClick(product);
-              }}
-              className="absolute inset-0 w-full h-full bg-transparent cursor-pointer"
-              aria-label="View full size image"
-            />
-            
-            <Button
-              variant="ghost"
-              size="icon"
-                className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-white/90 hover:bg-white rounded-xl sm:rounded-2xl h-8 w-8 sm:h-10 sm:w-10 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110 z-10"
-              onClick={() => removeFromWishlist(product.id)}
-            >
-                <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 fill-current" />
-            </Button>
-          </div>
-            <CardContent className="p-4 sm:p-6">
-              <h3 className="font-bold text-black mb-2 line-clamp-1 text-sm sm:text-base lg:text-lg">{product.name}</h3>
-              <p className="text-yellow-600 font-black text-lg sm:text-xl mb-2 sm:mb-3">
-              KSh {product.price.toLocaleString()}
-            </p>
-              <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3 sm:mb-4">
-              {product.description}
-            </p>
-              
-              {/* Contact Button */}
-              {hasContactInfo && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-full bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-blue-200 text-blue-700 hover:text-blue-800 rounded-lg sm:rounded-xl font-semibold transition-all duration-200 text-xs sm:text-sm py-2"
-                    >
-                      <User className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                      Contact Seller
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md mx-4">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center space-x-2 text-sm sm:text-base">
-                        <User className="h-4 w-4 sm:h-5 sm:w-5" />
-                        <span className="truncate">Contact {displaySellerName}</span>
-                      </DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-3 sm:space-y-4">
-                      {displaySeller?.phone && (
-                        <div className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-gray-50 rounded-lg">
-                          <Phone className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs sm:text-sm font-medium text-gray-900">Phone</p>
-                            <a 
-                              href={`tel:${displaySeller.phone}`}
-                              className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 transition-colors break-all"
-                            >
-                              {displaySeller.phone}
-                            </a>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {displaySeller?.email && (
-                        <div className="flex items-center space-x-2 sm:space-x-3 p-2 sm:p-3 bg-gray-50 rounded-lg">
-                          <Mail className="h-4 w-4 text-gray-600 flex-shrink-0" />
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs sm:text-sm font-medium text-gray-900">Email</p>
-                            <a 
-                              href={`mailto:${displaySeller.email}`}
-                              className="text-xs sm:text-sm text-blue-600 hover:text-blue-800 transition-colors break-all"
-                            >
-                              {displaySeller.email}
-                            </a>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-          </CardContent>
-        </Card>
-        );
-      })}
-    </div>
-
-    {/* Image Dialog */}
-    <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-      <DialogContent className="sm:max-w-4xl mx-4">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between text-sm sm:text-base">
-            <span className="truncate pr-2">{selectedProduct?.name}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsImageDialogOpen(false)}
-              className="h-8 w-8 p-0 flex-shrink-0"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </DialogTitle>
-        </DialogHeader>
-        <div className="flex justify-center">
-          <img
-            src={selectedProduct?.image_url || '/placeholder-image.jpg'}
-            alt={selectedProduct?.name}
-            className="max-w-full max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] object-contain rounded-lg"
-          />
-        </div>
-      </DialogContent>
-    </Dialog>
-  </>
-  );
-};
+import WishlistSection from './WishlistSection';
+import OrdersSection from './OrdersSection';
 
 const StatsCard = ({ icon: Icon, title, value, subtitle }: {
   icon: any;
@@ -193,7 +41,7 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
           <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-black">{value}</p>
           <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">{subtitle}</p>
         </div>
-        <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ml-2">
+        <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
           <Icon className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
         </div>
       </div>
@@ -201,13 +49,72 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
   </Card>
 );
 
-export function BuyerDashboard() {
+// Wrapper component to provide WishlistContext to the dashboard
+const BuyerDashboard = () => {
+  return (
+    <WishlistProvider>
+      <BuyerDashboardInner />
+    </WishlistProvider>
+  );
+}
+
+// Main dashboard component
+function BuyerDashboardInner() {
   const navigate = useNavigate();
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
-  const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('');
-  const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'profile'>('shop');
+  const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('casual');
+  const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>('shop');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterCity, setFilterCity] = useState<string>(user?.city || '');
+  const [filterArea, setFilterArea] = useState<string>('');
+  const [priceMin, setPriceMin] = useState<string>('');
+  const [priceMax, setPriceMax] = useState<string>('');
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [city, setCity] = useState<string>(user?.city || '');
+  const [locationArea, setLocationArea] = useState<string>(user?.location || '');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  const isMissingLocation = !user?.city || !user?.location;
+
+  const locationData: Record<string, string[]> = {
+    'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
+    'Mombasa': ['Mombasa Island', 'Nyali', 'Bamburi', 'Kisauni', 'Changamwe', 'Likoni', 'Mtongwe', 'Tudor', 'Shanzu', 'Diani'],
+    'Kisumu': ['Kisumu Central', 'Milimani', 'Mamboleo', 'Dunga', 'Kondele', 'Manyatta', 'Nyalenda'],
+    'Nakuru': ['Nakuru Town', 'Lanet', 'Kaptembwa', 'Shabab', 'Free Area', 'Section 58', 'Milimani', 'Kiamunyi'],
+    'Eldoret': ['Eldoret Town', 'Kapsoya', 'Langas', 'Huruma', 'Kipkaren', 'Kimumu', 'Maili Nne'],
+  };
+
+  const handleSaveProfile = async () => {
+    if (!city || !locationArea) return;
+    setIsSavingProfile(true);
+    try {
+      await updateBuyerProfile({ city, location: locationArea });
+      // Update the filter city when profile is updated
+      setFilterCity(city);
+      window.location.reload();
+    } catch (e) {
+      console.error('Failed to update profile', e);
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+  
+  // Update filterCity and filterArea when user's city and location change
+  useEffect(() => {
+    console.log('User location updated:', { city: user?.city, location: user?.location });
+    if (user?.city) {
+      setFilterCity(user.city);
+    }
+    if (user?.location) {
+      setFilterArea(user.location);
+    }
+  }, [user?.city, user?.location]);
+  
+  // Log when filter values change
+  useEffect(() => {
+    console.log('Filters updated:', { filterCity, filterArea });
+  }, [filterCity, filterArea]);
 
   const handleBackToHome = () => {
     navigate('/');
@@ -256,17 +163,15 @@ export function BuyerDashboard() {
                   <h1 className="text-lg sm:text-xl lg:text-2xl font-black text-black truncate">Welcome back!</h1>
                   <p className="text-sm sm:text-base text-gray-600 font-medium truncate">{user?.fullName || 'Buyer'}</p>
                 </div>
+                {(!user?.city || !user?.location) && (
+                  <span className="ml-2 inline-flex items-center text-xs text-red-600 font-medium">
+                    Please add your city and location
+                  </span>
+                )}
               </div>
             </div>
             
-            <Button 
-              variant="ghost" 
-              onClick={handleLogout}
-              className="text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl sm:rounded-2xl px-2 sm:px-4 py-1.5 sm:py-2 font-semibold transition-all duration-200 text-sm sm:text-base"
-            >
-              <LogOut className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
+            {/* Header logout button removed as requested */}
           </div>
         </div>
       </div>
@@ -283,13 +188,14 @@ export function BuyerDashboard() {
         <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-6 sm:mb-8 bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-gray-200/50">
           {[
             { id: 'shop', label: 'Shop', icon: Package },
-            { id: 'wishlist', label: 'Wishlist', icon: Heart },
+                        { id: 'wishlist', label: 'Wishlist', icon: Heart },
+            { id: 'orders', label: 'Orders', icon: Package },
             { id: 'profile', label: 'Profile', icon: User },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveSection(id as any)}
-              className={`flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg transition-all duration-300 ${
+              className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg transition-all duration-300 ${
                 activeSection === id
                   ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                   : 'text-gray-600 hover:text-black hover:bg-white/80'
@@ -297,6 +203,9 @@ export function BuyerDashboard() {
             >
               <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>{label}</span>
+              {id === 'profile' && isMissingLocation && (
+                <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500" aria-label="Action required" />
+              )}
             </button>
           ))}
         </div>
@@ -311,13 +220,81 @@ export function BuyerDashboard() {
               </p>
               
               <div className="mb-6 sm:mb-8">
+                {/* Filters */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+                  <div>
+                    <Select
+                      value={filterCity || '__all__'}
+                      onValueChange={(val) => {
+                        if (val === '__all__') {
+                          setFilterCity('');
+                          setFilterArea('');
+                        } else {
+                          setFilterCity(val);
+                          setFilterArea('');
+                        }
+                      }}
+                      defaultValue={user?.city || ''}
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder="City" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All Cities</SelectItem>
+                        {Object.keys(locationData).map((c) => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Select
+                      value={filterArea || '__all__'}
+                      onValueChange={(val) => {
+                        if (val === '__all__') setFilterArea(''); else setFilterArea(val);
+                      }}
+                      disabled={!filterCity}
+                    >
+                      <SelectTrigger className="h-10">
+                        <SelectValue placeholder={filterCity ? 'Area' : 'Select city first'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">All Areas</SelectItem>
+                        {(locationData[filterCity] || []).map((a) => (
+                          <SelectItem key={a} value={a}>{a}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Min Price"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
+                      value={priceMin}
+                      onChange={(e) => setPriceMin(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <input
+                      type="number"
+                      min={0}
+                      placeholder="Max Price"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
+                      value={priceMax}
+                      onChange={(e) => setPriceMax(e.target.value)}
+                    />
+                  </div>
+                </div>
+                
                 <AestheticCategories 
                   selectedAesthetic={selectedAesthetic} 
                   onAestheticChange={handleAestheticChange} 
                 />
                 
                 {/* Search Bar */}
-                <div className="mt-4 relative">
+                <div className="relative mt-6">
                   <div className="relative">
                     <input
                       type="text"
@@ -382,6 +359,10 @@ export function BuyerDashboard() {
             <ProductGrid 
               selectedAesthetic={selectedAesthetic} 
               searchQuery={searchQuery}
+              locationCity={filterCity}
+              locationArea={filterArea}
+              priceMin={priceMin ? Number(priceMin) : undefined}
+              priceMax={priceMax ? Number(priceMax) : undefined}
             />
           </div>
         )}
@@ -398,7 +379,16 @@ export function BuyerDashboard() {
           </div>
         )}
 
-        {activeSection === 'profile' && (
+        {activeSection === 'orders' && (
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 space-y-2 sm:space-y-0">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-black">Your Orders</h2>
+            </div>
+            <OrdersSection />
+          </div>
+        )}
+
+{activeSection === 'profile' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             <div className="space-y-6 sm:space-y-8">
               {/* Profile Card */}
@@ -411,6 +401,38 @@ export function BuyerDashboard() {
                     <div className="min-w-0 flex-1">
                       <CardTitle className="text-lg sm:text-xl lg:text-2xl font-black text-black">Profile Information</CardTitle>
                       <p className="text-gray-600 font-medium text-sm sm:text-base">Your account details</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {!isEditingProfile ? (
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setCity(user?.city || '');
+                            setLocationArea(user?.location || '');
+                            setIsEditingProfile(true);
+                          }}
+                          className="text-sm"
+                        >
+                          Edit
+                        </Button>
+                      ) : (
+                        <>
+                          <Button
+                            onClick={handleSaveProfile}
+                            disabled={!city || !locationArea || isSavingProfile}
+                            className="text-sm"
+                          >
+                            {isSavingProfile ? 'Saving...' : 'Save'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            onClick={() => setIsEditingProfile(false)}
+                            className="text-sm"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </CardHeader>
@@ -428,6 +450,61 @@ export function BuyerDashboard() {
                       <label className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wide">Phone</label>
                       <p className="text-sm sm:text-base lg:text-lg font-bold text-black mt-1 truncate">{user?.phone || 'Not available'}</p>
                     </div>
+                    {!isEditingProfile ? (
+                      <>
+                        <div className="bg-white/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-200/50">
+                          <label className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wide">City</label>
+                          <p className="text-sm sm:text-base lg:text-lg font-bold text-black mt-1 truncate">{user?.city || 'Not available'}</p>
+                        </div>
+                        <div className="bg-white/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-200/50">
+                          <label className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wide">Location</label>
+                          <p className="text-sm sm:text-base lg:text-lg font-bold text-black mt-1 truncate">{user?.location || 'Not available'}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="bg-white/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-200/50">
+                          <label className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wide">City</label>
+                          <div className="mt-2">
+                            <Select
+                              value={city}
+                              onValueChange={(val) => {
+                                setCity(val);
+                                setLocationArea('');
+                              }}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue placeholder="Select your city" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.keys(locationData).map((c) => (
+                                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                        <div className="bg-white/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-200/50">
+                          <label className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wide">Location</label>
+                          <div className="mt-2">
+                            <Select
+                              value={locationArea}
+                              onValueChange={setLocationArea}
+                              disabled={!city}
+                            >
+                              <SelectTrigger className="h-10">
+                                <SelectValue placeholder={city ? 'Select your area' : 'Select city first'} />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(locationData[city] || []).map((area) => (
+                                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </>
+                    )}
                     <div className="bg-white/80 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-200/50">
                       <label className="text-xs sm:text-sm font-bold text-gray-700 uppercase tracking-wide">Member Since</label>
                       <p className="text-sm sm:text-base lg:text-lg font-bold text-black mt-1">
@@ -470,3 +547,5 @@ export function BuyerDashboard() {
     </div>
   );
 }
+
+export default BuyerDashboard;

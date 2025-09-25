@@ -3,13 +3,24 @@ import logger from '../utils/logger.js';
 
 class PaymentService {
   constructor() {
+    // Resolve environment flags for IntaSend (sandbox vs live)
+    const isLive = (
+      (process.env.INTASEND_ENV && process.env.INTASEND_ENV.toLowerCase() === 'live') ||
+      process.env.INTASEND_LIVE === 'true' ||
+      process.env.NODE_ENV === 'production'
+    );
+    const testMode = !isLive; // third arg expects test flag
+
     // Debug log environment variables (don't log full tokens in production)
     logger.info('IntaSend Configuration:', {
       hasToken: !!process.env.INTASEND_API_TOKEN,
       hasPubKey: !!process.env.INTASEND_PUB_KEY,
-      env: process.env.NODE_ENV,
+      nodeEnv: process.env.NODE_ENV,
+      chosenMode: isLive ? 'live' : 'sandbox',
       backendUrl: process.env.BACKEND_URL,
-      frontendUrl: process.env.FRONTEND_URL
+      frontendUrl: process.env.FRONTEND_URL,
+      envHint: process.env.INTASEND_ENV,
+      liveFlag: process.env.INTASEND_LIVE
     });
 
     if (!process.env.INTASEND_API_TOKEN || !process.env.INTASEND_PUB_KEY) {
@@ -25,11 +36,11 @@ class PaymentService {
       this.intaSend = new IntaSend(
         process.env.INTASEND_PUB_KEY,
         process.env.INTASEND_API_TOKEN,
-        process.env.NODE_ENV !== 'production'
+        testMode
       );
       
       this.collection = this.intaSend.collection();
-      logger.info('IntaSend client initialized successfully');
+      logger.info('IntaSend client initialized successfully', { mode: isLive ? 'live' : 'sandbox' });
     } catch (error) {
       logger.error('Failed to initialize IntaSend client:', error);
       throw new Error(`Failed to initialize payment service: ${error.message}`);
@@ -79,22 +90,21 @@ class PaymentService {
       try {
         response = await this.collection.mpesaStkPush(paymentData);
       } catch (apiError) {
+        const responseData = apiError?.response?.data;
+        const detail = responseData?.detail || responseData?.message || (typeof responseData === 'string' ? responseData : undefined);
         logger.error('IntaSend API Error:', {
           message: apiError.message,
           status: apiError.response?.status,
           statusText: apiError.response?.statusText,
-          data: apiError.response?.data,
+          data: responseData,
+          code: apiError.code,
           config: {
             url: apiError.config?.url,
             method: apiError.config?.method,
-            headers: apiError.config?.headers ? {
-              ...apiError.config.headers,
-              // Don't log full authorization header
-              Authorization: apiError.config.headers.Authorization ? '[REDACTED]' : undefined
-            } : undefined
+            // minimize header logging
           }
         });
-        throw new Error(`Payment API error: ${apiError.message}`);
+        throw new Error(`Payment API error: ${detail || apiError.message}`);
       }
 
       // Log the full response for debugging

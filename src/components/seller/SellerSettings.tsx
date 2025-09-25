@@ -9,7 +9,9 @@ function SellerSettings() {
   const [profile, setProfile] = useState({
     fullName: '',
     email: '',
-    phone: ''
+    phone: '',
+    city: '',
+    location: ''
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -20,7 +22,9 @@ function SellerSettings() {
         setProfile({
           fullName: profileData.fullName || profileData.full_name || '',
           email: profileData.email || '',
-          phone: profileData.phone || ''
+          phone: profileData.phone || '',
+          city: profileData.city || '',
+          location: profileData.location || ''
         });
       } catch (error) {
         console.error('Failed to fetch profile:', error);
@@ -69,6 +73,20 @@ function SellerSettings() {
               <Label>Phone Number</Label>
               <div className="text-sm py-2 px-3 border rounded-md bg-black">
                 {profile.phone || 'Not provided'}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>City</Label>
+              <div className="text-sm py-2 px-3 border rounded-md bg-black">
+                {profile.city || 'Not provided'}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Location</Label>
+              <div className="text-sm py-2 px-3 border rounded-md bg-black">
+                {profile.location || 'Not provided'}
               </div>
             </div>
           </div>

@@ -5,6 +5,8 @@ interface Buyer {
   fullName: string;
   email: string;
   phone: string;
+  city?: string;
+  location?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -53,6 +55,8 @@ interface RegisterData {
   phone: string;
   password: string;
   confirmPassword: string;
+  city: string;
+  location: string;
 }
 
 // Get the base URL from environment variables
@@ -164,6 +168,8 @@ const transformBuyer = (data: any): Buyer => {
     fullName: buyer.fullName || buyer.full_name || '',
     email: buyer.email || '',
     phone: buyer.phone || '',
+    city: buyer.city || '',
+    location: buyer.location || '',
     createdAt: buyer.createdAt || buyer.created_at || new Date().toISOString(),
     updatedAt: buyer.updatedAt || buyer.updated_at
   };
@@ -504,6 +510,21 @@ const buyerApi = {
     }
   },
 
+  getOrders: async (): Promise<any[]> => {
+    try {
+      const response = await buyerApiInstance.get('/buyers/orders');
+      const orders = response.data?.data?.orders;
+      return Array.isArray(orders) ? orders : [];
+    } catch (error: any) {
+      console.error('Error fetching buyer orders:', error);
+      if (error.response?.status === 401) {
+        localStorage.removeItem('buyer_token');
+        delete buyerApiInstance.defaults.headers.common['Authorization'];
+        window.location.href = '/buyer/login';
+      }
+      throw error;
+    }
+  },
   syncWishlist: async (items: WishlistItem[]): Promise<boolean> => {
     try {
       console.log('Syncing wishlist with server:', items);
@@ -533,3 +554,5 @@ const buyerApi = {
 };
 
 export default buyerApi;
+
+

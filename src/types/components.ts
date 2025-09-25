@@ -5,6 +5,10 @@ export type AestheticWithNone = Aesthetic | '';
 export interface ProductGridProps {
   selectedAesthetic: AestheticWithNone;
   searchQuery?: string;
+  locationCity?: string;
+  locationArea?: string;
+  priceMin?: number;
+  priceMax?: number;
 }
 
 export interface AestheticCategoriesProps {

@@ -28,6 +28,133 @@ class PaymentController {
     throw new Error('Invalid phone number format. Please use a valid Kenyan number (e.g., 0712345678 or 254712345678)');
   };
 
+  // Initiate payment for a product purchase (no event/ticket required)
+  initiateProductPayment = async (req, res) => {
+    const client = await pool.connect();
+    try {
+      logger.info('Product payment initiation request:', { body: req.body });
+
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        logger.error('Validation errors (product):', { errors: errors.array() });
+        return res.status(400).json({ success: false, errors: errors.array() });
+      }
+
+      const {
+        phone,
+        email,
+        amount,
+        productId,
+        productName,
+        sellerId,
+        customerName,
+        narrative,
+        paymentMethod = 'mpesa'
+      } = req.body;
+
+      // Basic missing fields safety (validators already cover required ones)
+      const missing = [];
+      if (!phone) missing.push('phone');
+      if (!email) missing.push('email');
+      if (!amount) missing.push('amount');
+      if (!productId) missing.push('productId');
+      if (missing.length) {
+        return res.status(400).json({ success: false, message: `Missing required fields: ${missing.join(', ')}` });
+      }
+
+      await client.query('BEGIN');
+
+      try {
+        const formattedPhone = this.formatPhoneNumber(phone);
+        const timestamp = Date.now();
+        const randomNum = Math.floor(Math.random() * 1000);
+        const invoiceId = `INV-PROD-${timestamp}-${randomNum}`;
+
+        // Prepare metadata for reconciliation
+        const metadata = {
+          kind: 'product',
+          product_id: productId,
+          product_name: productName,
+          seller_id: sellerId,
+          customer_name: customerName,
+          narrative: narrative || (productName ? `Payment for ${productName}` : 'Product payment'),
+          payment_method: paymentMethod,
+          timestamp: new Date().toISOString()
+        };
+
+        // Insert product transaction row
+        const insertTx = await client.query(
+          `INSERT INTO product_transactions (
+             invoice_id, product_id, seller_id, buyer_email, buyer_phone, buyer_name,
+             amount, currency, status, payment_method, metadata
+           ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'pending',$9,$10)
+           RETURNING *`,
+          [
+            invoiceId,
+            String(productId),
+            sellerId ? String(sellerId) : null,
+            email,
+            formattedPhone,
+            customerName || null,
+            amount,
+            'KES',
+            paymentMethod,
+            JSON.stringify(metadata)
+          ]
+        );
+
+        let productTx = insertTx.rows[0];
+
+        // Trigger provider payment (IntaSend)
+        const paymentResponse = await paymentService.initiateMpesaPayment({
+          amount: amount,
+          phone: formattedPhone,
+          email: email,
+          invoice_id: invoiceId,
+          firstName: customerName?.split(' ')[0] || 'Customer',
+          lastName: customerName?.split(' ').slice(1).join(' ') || '',
+          narrative: metadata.narrative
+        });
+
+        if (paymentResponse) {
+          const apiRef = paymentResponse.invoice_id || invoiceId;
+          await client.query(
+            `UPDATE product_transactions
+             SET provider_reference = $1, api_ref = $2, updated_at = NOW()
+             WHERE id = $3`,
+            [paymentResponse.reference || null, apiRef, productTx.id]
+          );
+          const refetched = await client.query('SELECT * FROM product_transactions WHERE id = $1', [productTx.id]);
+          productTx = refetched.rows[0];
+        }
+
+        await client.query('COMMIT');
+        return res.status(200).json({
+          success: true,
+          message: 'Product payment initiated successfully',
+          data: {
+            transaction: {
+              id: productTx.id,
+              invoiceId: productTx.invoice_id,
+              amount: productTx.amount,
+              status: productTx.status,
+              productId: productTx.product_id,
+              sellerId: productTx.seller_id
+            },
+            payment_provider_response: paymentResponse,
+            invoiceId: productTx.invoice_id
+          }
+        });
+      } catch (err) {
+        await client.query('ROLLBACK');
+        logger.error('Error initiating product payment:', { message: err.message, stack: err.stack });
+        return res.status(400).json({ success: false, message: err.message || 'Failed to initiate product payment' });
+      }
+    } finally {
+      client.release();
+    }
+  };
+
   initiatePayment = async (req, res) => {
     const client = await pool.connect();
     
@@ -293,19 +420,75 @@ class PaymentController {
         }
         
         if (result.rows.length === 0) {
-          logger.warn(`Payment not found for ID: ${paymentId}`);
-          // Log all recent payments for debugging
-          const recentPayments = await client.query(
-            'SELECT id, invoice_id, status, created_at FROM payments ORDER BY created_at DESC LIMIT 5'
-          );
-          logger.info('Recent payments:', recentPayments.rows);
-          
-          return res.status(200).json({
-            success: true,
-            status: 'not_found',
-            message: 'Payment not found or not yet processed',
-            data: null
-          });
+          logger.warn(`Payment not found in payments for ID: ${paymentId}`);
+
+          // Try product transactions by invoice_id
+          const prodQuery = `SELECT * FROM product_transactions WHERE invoice_id = $1 LIMIT 1`;
+          const prodRes = await client.query(prodQuery, [paymentId]);
+
+          if (prodRes.rows.length > 0) {
+            let prodTx = prodRes.rows[0];
+            logger.info('Found product transaction for invoice:', { id: prodTx.id, status: prodTx.status });
+
+            // If not terminal, query provider status and update
+            const statusResp = await paymentService.checkPaymentStatus(paymentId);
+            const mapped = this.mapPaymentStatus(statusResp.state || statusResp.status || 'pending');
+
+            // Normalize to enum (no 'processing' in enum)
+            const mappedEnum = (mapped === 'completed' || mapped === 'failed' || mapped === 'cancelled') ? mapped : 'pending';
+
+            const providerRef = statusResp.mpesa_reference || prodTx.provider_reference;
+            const metaUpdate = {
+              last_status_check: new Date().toISOString(),
+              provider_data: statusResp
+            };
+
+            await client.query(
+              `UPDATE product_transactions
+               SET status = $1,
+                   provider_reference = COALESCE($2, provider_reference),
+                   metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+                   updated_at = NOW()
+               WHERE id = $4`,
+              [mappedEnum, providerRef || null, JSON.stringify(metaUpdate), prodTx.id]
+            );
+
+            // Commit and return
+            await client.query('COMMIT');
+            // If completed, also create order and mark product sold
+            if (mappedEnum === "completed") {
+              try {
+                const txRowRes = await client.query('SELECT * FROM product_transactions WHERE invoice_id = $1', [paymentId]);
+                const txRow = txRowRes.rows[0];
+                if (txRow) {
+                  const exists = await client.query('SELECT id FROM product_orders WHERE invoice_id = $1', [paymentId]);
+                  if (exists.rows.length === 0) {
+                    const productIdInt = isNaN(parseInt(txRow.product_id)) ? null : parseInt(txRow.product_id);
+                    const sellerIdInt = isNaN(parseInt(txRow.seller_id)) ? null : parseInt(txRow.seller_id);
+                    await client.query(`INSERT INTO product_orders (
+                      transaction_id, invoice_id, product_id, seller_id, buyer_email, buyer_phone, buyer_name,
+                      amount, currency, status, metadata
+) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'paid',$10)`,
+                      [txRow.id, txRow.invoice_id, productIdInt, sellerIdInt, txRow.buyer_email, txRow.buyer_phone, txRow.buyer_name, txRow.amount, txRow.currency || 'KES', JSON.stringify({ source: 'status_poll' })]
+                    );
+                  }
+                  const productIdInt2 = isNaN(parseInt(txRow.product_id)) ? null : parseInt(txRow.product_id);
+                  if (productIdInt2) {
+                    try {
+                      await client.query(`UPDATE products SET status = 'sold', sold_at = COALESCE(sold_at, NOW()), updated_at = NOW() WHERE id = $1 AND status <> 'sold'`, [productIdInt2]);
+                    } catch (e) { /* ignore */ }
+                  }
+                }
+              } catch (e) {
+                logger.error('Error creating product order during status poll:', { error: e.message, invoice: paymentId });
+              }
+            }
+            return res.json({ success: true, status: mappedEnum, message: `Payment is ${mappedEnum}`, data: { invoice_id: paymentId } });
+          }
+
+          // Not found anywhere
+          await client.query('COMMIT');
+          return res.status(404).json({ success: false, status: 'not_found', message: 'Payment not found' });
         }
         
         const payment = result.rows[0];
@@ -655,6 +838,90 @@ class PaymentController {
       const effectiveInvoiceId = invoice_id || invoiceIdAlias || mergedData.invoice_id || mergedData.invoiceId || '';
       const effectiveApiRef = api_ref || apiRefAlias || mergedData.api_ref || mergedData.apiRef || reference || transaction_id || payment_id || '';
       
+      // First, attempt to match a product transaction directly by invoice id
+      if (effectiveInvoiceId) {
+        try {
+          const prodRes = await client.query(
+            'SELECT * FROM product_transactions WHERE invoice_id = $1 FOR UPDATE',
+            [effectiveInvoiceId]
+          );
+          if (prodRes.rows.length > 0) {
+            const prodTx = prodRes.rows[0];
+            const mapped = this.mapPaymentStatus(effectiveState);
+            const mappedEnum = (mapped === 'completed' || mapped === 'failed' || mapped === 'cancelled') ? mapped : 'pending';
+
+            const providerRef = mpesa_reference || reference || transaction_id || prodTx.provider_reference;
+            const metaUpdate = {
+              webhook: webhookData,
+              last_webhook_status: effectiveState,
+              last_webhook_received: new Date().toISOString()
+            };
+
+            await client.query(
+              `UPDATE product_transactions
+               SET status = $1,
+                   provider_reference = COALESCE($2, provider_reference),
+                   metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb,
+                   updated_at = NOW()
+               WHERE id = $4`,
+              [mappedEnum, providerRef || null, JSON.stringify(metaUpdate), prodTx.id]
+            );
+
+            // On completed payment, create order and mark product sold
+            if (mappedEnum === 'completed') {
+              // Create order if it doesn't exist
+              const orderExists = await client.query(
+                'SELECT id FROM product_orders WHERE invoice_id = $1',
+                [effectiveInvoiceId]
+              );
+              if (orderExists.rows.length === 0) {
+                const productIdInt = isNaN(parseInt(prodTx.product_id)) ? null : parseInt(prodTx.product_id);
+                const sellerIdInt = isNaN(parseInt(prodTx.seller_id)) ? null : parseInt(prodTx.seller_id);
+                await client.query(
+                  `INSERT INTO product_orders (
+                    transaction_id, invoice_id, product_id, seller_id, buyer_email, buyer_phone, buyer_name,
+                    amount, currency, status, metadata
+                   ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,'paid',$10)`,
+                  [
+                    prodTx.id,
+                    prodTx.invoice_id,
+                    productIdInt,
+                    sellerIdInt,
+                    prodTx.buyer_email,
+                    prodTx.buyer_phone,
+                    prodTx.buyer_name,
+                    prodTx.amount,
+                    prodTx.currency || 'KES',
+                    JSON.stringify({ source: 'webhook' })
+                  ]
+                );
+              }
+
+              // Mark product as sold (best effort)
+              const productIdInt = isNaN(parseInt(prodTx.product_id)) ? null : parseInt(prodTx.product_id);
+              if (productIdInt) {
+                try {
+                  await client.query(
+                    `UPDATE products
+                     SET status = 'sold', sold_at = COALESCE(sold_at, NOW()), updated_at = NOW()
+                     WHERE id = $1 AND status <> 'sold'`,
+                    [productIdInt]
+                  );
+                } catch (e) {
+                  logger.error('Failed to mark product as sold:', { error: e.message, productId: productIdInt });
+                }
+              }
+            }
+
+            await client.query('COMMIT');
+            return res.json({ success: true, message: 'Product transaction updated from webhook', invoice_id: effectiveInvoiceId, status: mappedEnum });
+          }
+        } catch (e) {
+          logger.error('Error processing product transaction webhook path:', { error: e.message });
+          // Continue to payment path
+        }
+      }
+
       // Try to find payment by multiple identifiers
       const searchValues = [
         effectiveInvoiceId,      // Try invoice ID first
@@ -995,3 +1262,4 @@ class PaymentController {
 }
 
 export default new PaymentController();
+

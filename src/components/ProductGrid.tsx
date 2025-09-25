@@ -21,7 +21,7 @@ interface Product {
   aesthetic: Aesthetic;
 }
 
-const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) => {
+const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locationArea, priceMin, priceMax }: ProductGridProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +39,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) 
       throw new Error('Product is missing required image');
     }
     
-    return {
+    const transformedProduct: any = {
       id: String(product.id || ''),
       name: String(product.name || 'Unnamed Product'),
       description: String(product.description || ''),
@@ -52,93 +52,145 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) 
       createdAt: product.createdAt || product.created_at || new Date().toISOString(),
       updatedAt: product.updatedAt || product.updated_at || new Date().toISOString(),
       aesthetic: (product.aesthetic || 'noir') as Aesthetic,
-      seller: product.seller ? {
+    };
+
+    // Add seller information if available
+    if (product.seller) {
+      transformedProduct.seller = {
         id: String(product.seller.id || ''),
         fullName: product.seller.fullName || product.seller.full_name || 'Unknown Seller',
         email: product.seller.email || '',
         phone: product.seller.phone || '',
+        location: product.seller.location || null,
         createdAt: product.seller.createdAt || product.seller.created_at || new Date().toISOString(),
         updatedAt: product.seller.updatedAt || product.seller.updated_at,
         ...(product.seller.bio && { bio: product.seller.bio }),
         ...(product.seller.avatarUrl && { avatarUrl: product.seller.avatarUrl }),
-        ...(product.seller.location && { location: product.seller.location }),
         ...(product.seller.website && { website: product.seller.website }),
         ...(product.seller.socialMedia && { socialMedia: product.seller.socialMedia })
-      } : undefined
-    };
+      };
+    }
+
+    return transformedProduct;
   };
 
+  // Simplified product fetching logic
   const fetchProducts = useCallback(async () => {
-    console.log('fetchProducts called with selectedAesthetic:', selectedAesthetic);
+    console.log('Fetching products with filters:', { 
+      locationCity, 
+      locationArea, 
+      selectedAesthetic 
+    });
     
-    if (!selectedAesthetic) {
-      console.log('No aesthetic selected, clearing products');
+    // Don't fetch if no city is selected
+    if (!locationCity) {
+      console.log('No location selected, skipping fetch');
       setProducts([]);
       setLoading(false);
       return;
     }
-
+    
     try {
       setLoading(true);
       setError('');
       
-      // Fetch products using the public API service
-      console.log('Fetching products for aesthetic:', selectedAesthetic);
-      const fetchedProducts = await publicApiService.getProducts(
-        selectedAesthetic === 'all' ? undefined : selectedAesthetic
-      );
+      // Build query parameters - always include city, optionally include location
+      const queryParams = { 
+        city: locationCity 
+      };
       
-      console.log('Fetched products:', {
+      // Only include location (area) if it's not empty
+      if (locationArea) {
+        (queryParams as any).location = locationArea;
+      }
+      
+      console.log('API Request Params:', queryParams);
+      
+      // Fetch products from the API
+      let fetchedProducts = await publicApiService.getProducts(queryParams);
+      
+      console.log('API Response:', { 
         count: fetchedProducts.length,
-        firstProduct: fetchedProducts[0] ? {
-          id: fetchedProducts[0].id,
-          name: fetchedProducts[0].name,
-          aesthetic: fetchedProducts[0].aesthetic
-        } : 'No products'
+        firstProduct: fetchedProducts[0] || 'No products',
+        hasSeller: !!fetchedProducts[0]?.seller
+      });
+      
+      // Filter by aesthetic if one is selected
+      if (selectedAesthetic && selectedAesthetic !== 'all') {
+        fetchedProducts = fetchedProducts.filter(
+          (product: any) => product.aesthetic === selectedAesthetic
+        );
+        console.log('After aesthetic filter:', { 
+          count: fetchedProducts.length,
+          hasSeller: fetchedProducts[0]?.seller ? 'Yes' : 'No'
+        });
+      }
+      
+      console.log('Filtered products:', {
+        count: fetchedProducts.length,
+        firstProduct: fetchedProducts[0] || 'No products',
+        hasSeller: fetchedProducts[0]?.seller ? 'Yes' : 'No'
       });
       
       // Transform and set products
       const transformedProducts = fetchedProducts.map(transformProduct);
-      console.log('Transformed products:', transformedProducts);
-      setProducts(transformedProducts);
-
-      // Fetch seller info for each unique seller
-      const uniqueSellerIds = [...new Set(transformedProducts
-        .map(p => p.sellerId)
-        .filter((id): id is string => !!id)
-      )];
       
-      if (uniqueSellerIds.length > 0) {
-        const sellerPromises = uniqueSellerIds.map(async (id) => {
-          try {
-            const seller = await publicApiService.getSellerInfo(id);
-            return seller ? { id, ...seller } : null;
-          } catch (error) {
-            console.error(`Failed to fetch seller ${id}:`, error);
-            return null;
-          }
-        });
-
-        const sellerResults = await Promise.all(sellerPromises);
-        const sellerMap = sellerResults.reduce<Record<string, Seller>>((acc, seller) => {
-          if (!seller) return acc;
-          
-          return {
-            ...acc,
-            [seller.id]: {
-              id: seller.id,
-              fullName: seller.fullName || `Seller ${seller.id.slice(0, 6)}`,
-              email: seller.email || '',
-              phone: seller.phone || '',
-              createdAt: seller.createdAt || new Date().toISOString(),
-              updatedAt: seller.updatedAt || new Date().toISOString()
-            }
-          };
-        }, {});
-        
-        setSellers(sellerMap);
+      // Extract sellers from the products that have them
+      const sellersFromProducts = transformedProducts.reduce<Record<string, Seller>>((acc, product) => {
+        if (product.seller) {
+          acc[product.seller.id] = product.seller;
+        }
+        return acc;
+      }, {});
+      
+      // Set the products with their sellers
+      setProducts(transformedProducts);
+      
+      // If we already have sellers from the products, use them
+      if (Object.keys(sellersFromProducts).length > 0) {
+        console.log('Using sellers from products:', Object.keys(sellersFromProducts));
+        setSellers(sellersFromProducts);
       } else {
-        setSellers({});
+        // Fall back to fetching seller info individually
+        const uniqueSellerIds = [...new Set(transformedProducts
+          .map(p => p.sellerId)
+          .filter((id): id is string => !!id)
+        )];
+        
+        if (uniqueSellerIds.length > 0) {
+          console.log('Fetching seller info for:', uniqueSellerIds);
+          const sellerPromises = uniqueSellerIds.map(async (id) => {
+            try {
+              const seller = await publicApiService.getSellerInfo(id);
+              return seller ? { id, ...seller } : null;
+            } catch (error) {
+              console.error(`Failed to fetch seller ${id}:`, error);
+              return null;
+            }
+          });
+
+          const sellerResults = await Promise.all(sellerPromises);
+          const sellerMap = sellerResults.reduce<Record<string, Seller>>((acc, seller) => {
+            if (!seller) return acc;
+            
+            return {
+              ...acc,
+              [seller.id]: {
+                id: seller.id,
+                fullName: seller.fullName || `Seller ${seller.id.slice(0, 6)}`,
+                email: seller.email || '',
+                phone: seller.phone || '',
+                location: seller.location || null,
+                createdAt: seller.createdAt || new Date().toISOString(),
+                updatedAt: seller.updatedAt || new Date().toISOString()
+              }
+            };
+          }, {});
+          
+          setSellers(sellerMap);
+        } else {
+          setSellers({});
+        }
       }
     } catch (err) {
       console.error('Failed to fetch products:', err);
@@ -148,9 +200,9 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) 
     } finally {
       setLoading(false);
     }
-  }, [selectedAesthetic]);
+  }, [selectedAesthetic, locationCity, locationArea, publicApiService]);
 
-  // Fetch products when selectedAesthetic changes
+  // Fetch products when any filter changes
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchProducts().catch(err => {
@@ -166,27 +218,58 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) 
     return () => {
       clearTimeout(timer);
     };
-  }, [fetchProducts]);
+    // We need to include all dependencies that affect the product listing
+  }, [fetchProducts, locationCity, locationArea, selectedAesthetic]);
 
-  // Filter products based on search query and selected aesthetic
+  // Filter products based on search query, price, and area (city filtering is now done server-side)
   const filteredProducts = products.filter(product => {
-    // Filter by aesthetic if one is selected
-    const matchesAesthetic = !selectedAesthetic || 
-                           selectedAesthetic === 'all' || 
-                           product.aesthetic === selectedAesthetic;
+    // Filter by price
+    const matchesPrice =
+      (priceMin == null || product.price >= priceMin) &&
+      (priceMax == null || product.price <= priceMax);
+
+    // Filter by area (if specified and not empty)
+    const sellerLocationText = (product.seller?.location || '').toLowerCase();
+    const locationAreaLower = (locationArea || '').toLowerCase().trim();
+    const matchesArea = !locationAreaLower || sellerLocationText.includes(locationAreaLower);
+
+    // If there's a search query, check if it matches product name or description
+    if (searchQuery.trim()) {
+      const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
+      const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
+      const matchesSearch = searchTerms.every(term => productText.includes(term));
+      
+      const matches = matchesPrice && matchesArea && matchesSearch;
+      
+      if (matches) {
+        console.log('Product matches all filters (with search):', {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          sellerLocation: product.seller?.location,
+          matchesPrice,
+          matchesArea,
+          matchesSearch
+        });
+      }
+      
+      return matches;
+    }
     
-    // If there's no search query, just filter by aesthetic
-    if (!searchQuery.trim()) return matchesAesthetic;
+    const matches = matchesPrice && matchesArea;
     
-    // If there is a search query, check if it matches product name or description
-    const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
-    const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
+    if (matches) {
+      console.log('Product matches all filters (without search):', {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        sellerLocation: product.seller?.location,
+        matchesPrice,
+        matchesArea
+      });
+    }
     
-    const matchesSearch = searchTerms.every(term => 
-      productText.includes(term)
-    );
-    
-    return matchesAesthetic && matchesSearch;
+    return matches;
   });
     
   // Function to handle image loading errors
@@ -272,8 +355,8 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) 
     );
   }
 
-  // Group products by aesthetic
-  const productsByAesthetic = products.reduce<Record<string, Product[]>>((acc, product) => {
+  // Group filtered products by aesthetic
+  const productsByAesthetic = filteredProducts.reduce<Record<string, Product[]>>((acc, product) => {
     const aesthetic = product.aesthetic || 'uncategorized';
     if (!acc[aesthetic]) {
       acc[aesthetic] = [];
@@ -309,7 +392,20 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) 
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {filteredProducts.map((product) => {
+            // Use the seller from the product if available, otherwise try to get it from the sellers map
             const productSeller = product.seller || sellers[product.sellerId];
+            
+            // Debug log to check seller information
+            if (!productSeller) {
+              console.warn(`No seller found for product ${product.id} (${product.name})`);
+            } else {
+              console.log(`Product ${product.id} (${product.name}) has seller:`, {
+                sellerId: productSeller.id,
+                sellerName: productSeller.fullName,
+                sellerLocation: productSeller.location
+              });
+            }
+            
             return (
               <ProductCard
                 key={product.id}
@@ -353,7 +449,20 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '' }: ProductGridProps) 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {productsByAesthetic[id].slice(0, 4).map((product) => {
+              // Use the seller from the product if available, otherwise try to get it from the sellers map
               const productSeller = product.seller || sellers[product.sellerId];
+              
+              // Debug log to check seller information
+              if (!productSeller) {
+                console.warn(`No seller found for product ${product.id} (${product.name}) in aesthetic ${id}`);
+              } else {
+                console.log(`Product ${product.id} (${product.name}) in aesthetic ${id} has seller:`, {
+                  sellerId: productSeller.id,
+                  sellerName: productSeller.fullName,
+                  sellerLocation: productSeller.location
+                });
+              }
+              
               return (
                 <ProductCard
                   key={product.id}

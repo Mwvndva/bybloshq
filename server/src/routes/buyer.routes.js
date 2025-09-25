@@ -1,6 +1,8 @@
 import express from 'express';
 import * as buyerController from '../controllers/buyer.controller.js';
+import * as orderController from '../controllers/orderController.js';
 import { protect } from '../middleware/auth.middleware.js';
+import AppError from '../utils/appError.js';
 import wishlistRoutes from './wishlist.routes.js';
 
 const router = express.Router();
@@ -14,13 +16,20 @@ router.post('/login', buyerController.login);
 router.post('/forgot-password', buyerController.forgotPassword);
 router.post('/reset-password', buyerController.resetPassword);
 
-// Protected routes
+// Protected routes - require buyer authentication
 router.use(protect(['buyer']));
 
+// Get current buyer's profile
 router.get('/profile', buyerController.getProfile);
+
+// Update profile
 router.patch('/update-profile', buyerController.updateProfile);
 
 // Wishlist routes
 router.use('/wishlist', wishlistRoutes);
 
+// Order routes
+router.get('/orders', orderController.getBuyerOrders);
+
 export default router;
+

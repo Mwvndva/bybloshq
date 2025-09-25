@@ -1,5 +1,17 @@
 import jwt from 'jsonwebtoken';
-import { createSeller, findSellerByEmail, findSellerById, findSellerByShopName, updateSeller, generateAuthToken, verifyPassword, verifyPasswordResetToken, updatePassword, isShopNameAvailable } from '../models/seller.model.js';
+import { query } from '../config/database.js';
+import { 
+  createSeller, 
+  findSellerByEmail, 
+  findSellerById, 
+  findSellerByShopName, 
+  updateSeller, 
+  generateAuthToken, 
+  verifyPassword, 
+  verifyPasswordResetToken, 
+  updatePassword, 
+  isShopNameAvailable
+} from '../models/seller.model.js';
 
 // Email validation regex
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -33,10 +45,10 @@ export const checkShopNameAvailability = async (req, res) => {
 };
 
 export const register = async (req, res) => {
-  const { fullName, shopName, email, phone, password, confirmPassword } = req.body;
+  const { fullName, shopName, email, phone, password, confirmPassword, city, location } = req.body;
 
   // Validate required fields
-  if (!fullName || !shopName || !email || !phone || !password || !confirmPassword) {
+  if (!fullName || !shopName || !email || !phone || !password || !confirmPassword || !city || !location) {
     return res.status(400).json({
       status: 'error',
       message: 'All fields are required'
@@ -86,7 +98,7 @@ export const register = async (req, res) => {
   }
 
   try {
-    const seller = await createSeller({ fullName, shopName, email, phone, password });
+    const seller = await createSeller({ fullName, shopName, email, phone, password, city, location });
     const token = generateAuthToken(seller);
     
     res.status(201).json({
@@ -379,6 +391,119 @@ export const forgotPassword = async (req, res) => {
   }
 };
 
+// @desc    Search sellers by city and location
+// @route   GET /api/sellers/search
+// @access  Public
+export const searchSellers = async (req, res) => {
+  try {
+    const { city, location } = req.query;
+    
+    if (!city) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'City is required for search'
+      });
+    }
+    
+    const sellers = await searchSellersInDB(city, location || null);
+    
+    res.status(200).json({
+      status: 'success',
+      data: sellers
+    });
+    
+  } catch (error) {
+    console.error('Error searching for sellers:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Internal function to search sellers in database
+async function searchSellersInDB(city, location = null) {
+  let queryText = `
+    SELECT 
+      id, 
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      phone, 
+      city, 
+      location,
+      created_at AS "createdAt"
+    FROM sellers 
+    WHERE LOWER(city) = LOWER($1)
+  `;
+  
+  const queryParams = [city];
+  
+  if (location) {
+    queryText += ' AND LOWER(location) LIKE LOWER($2)';
+    queryParams.push(`%${location}%`);
+  }
+  
+  queryText += ' ORDER BY created_at DESC';
+  
+  const result = await query(queryText, queryParams);
+  return result.rows;
+}
+
+// @desc    Get products for a specific seller
+// @route   GET /api/sellers/:sellerId/products
+// @access  Public
+export const getSellerProducts = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    
+    if (!sellerId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Seller ID is required'
+      });
+    }
+    
+    const products = await getSellerProductsFromDB(sellerId);
+    
+    res.status(200).json({
+      status: 'success',
+      data: products
+    });
+    
+  } catch (error) {
+    console.error('Error fetching seller products:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Internal server error'
+    });
+  }
+};
+
+// Internal function to get products for a specific seller
+async function getSellerProductsFromDB(sellerId) {
+  const result = await query(
+    `SELECT 
+      p.id,
+      p.name,
+      p.description,
+      p.price,
+      p.image_url AS "imageUrl",
+      p.aesthetic,
+      p.seller_id AS "sellerId",
+      p.status = 'sold' AS "isSold",
+      p.status,
+      p.created_at AS "createdAt",
+      p.updated_at AS "updatedAt",
+      s.shop_name AS "sellerName"
+    FROM products p
+    JOIN sellers s ON p.seller_id = s.id
+    WHERE p.seller_id = $1 AND p.status = 'available'`,
+    [sellerId]
+  );
+  return result.rows;
+}
+
 export const getSellerById = async (req, res) => {
   try {
     const seller = await findSellerById(req.params.id);
@@ -396,6 +521,7 @@ export const getSellerById = async (req, res) => {
       fullName: seller.full_name || seller.fullName,
       email: seller.email,
       phone: seller.phone,
+      location: seller.location || null,
       createdAt: seller.created_at || seller.createdAt,
       updatedAt: seller.updated_at || seller.updatedAt
     };

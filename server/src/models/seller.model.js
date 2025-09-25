@@ -5,14 +5,14 @@ import { query } from '../config/database.js';
 const SALT_ROUNDS = 10;
 
 export const createSeller = async (sellerData) => {
-  const { fullName, shopName, email, phone, password } = sellerData;
+  const { fullName, shopName, email, phone, password, city, location } = sellerData;
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
   
   const result = await query(
-    `INSERT INTO sellers (full_name, shop_name, email, phone, password)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING id, full_name AS "fullName", shop_name AS "shopName", email, phone, created_at AS "createdAt"`,
-    [fullName, shopName, email, phone, hashedPassword]
+    `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
+     RETURNING id, full_name AS "fullName", shop_name AS "shopName", email, phone, city, location, created_at AS "createdAt"`,
+    [fullName, shopName, email, phone, hashedPassword, city, location]
   );
   
   return result.rows[0];
@@ -83,8 +83,10 @@ export const isShopNameAvailable = async (shopName) => {
 
 export const findSellerById = async (id) => {
   const result = await query(
-    `SELECT id, full_name AS "fullName", shop_name AS "shopName", email, phone, created_at AS "createdAt"
-     FROM sellers WHERE id = $1`,
+    `SELECT id, full_name AS "fullName", shop_name AS "shopName", email, phone, location, 
+            city, created_at AS "createdAt", updated_at AS "updatedAt"
+     FROM sellers 
+     WHERE id = $1`,
     [id]
   );
   return result.rows[0];
@@ -203,13 +205,9 @@ export const verifyPasswordResetToken = async (email, token) => {
 
 export const updatePassword = async (email, newPassword) => {
   const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-  
   await query(
-    `UPDATE sellers 
-     SET password = $1, 
-         password_reset_token = NULL, 
-         password_reset_expires = NULL 
-     WHERE email = $2`,
+    'UPDATE sellers SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE email = $2',
     [hashedPassword, email]
   );
+  return true;
 };

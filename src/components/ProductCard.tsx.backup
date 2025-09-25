@@ -1,0 +1,310 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { User, Phone, Image as ImageIcon, Mail, X, MapPin, Globe, Heart, Loader2, CreditCard } from 'lucide-react';
+import { Product, Seller } from '@/types';
+import { useWishlist } from '@/contexts/WishlistContext';
+import { cn, formatCurrency } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useToast } from '@/components/ui/use-toast';
+
+// Hook to safely use wishlist context
+const useWishlistSafe = () => {
+  try {
+    return useWishlist();
+  } catch (error) {
+    // Return mock functions when not in buyer context
+    return {
+      addToWishlist: async () => {},
+      removeFromWishlist: async () => {},
+      isInWishlist: () => false,
+      isLoading: false,
+    } as any;
+  }
+};
+
+interface ProductCardProps {
+  product: Product;
+  seller?: Seller;
+  hideWishlist?: boolean;
+}
+
+export function ProductCard({ product, seller, hideWishlist = false }: ProductCardProps) {
+  const { toast } = useToast();
+  const { addToWishlist, isInWishlist, isLoading: isWishlistLoading } = useWishlistSafe();
+  const [isSellerDialogOpen, setIsSellerDialogOpen] = useState(false);
+  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+
+  // Use seller from product if not provided as prop
+  const displaySeller = seller || product.seller;
+  const displaySellerName = displaySeller?.fullName || 'Unknown Seller';
+  const hasContactInfo = Boolean(displaySeller?.phone || displaySeller?.email);
+  const sellerLocation = displaySeller?.location;
+  const isSold = product.status === 'sold' || product.isSold;
+
+  // Check if product is in wishlist
+  const isWishlisted = isInWishlist(product.id);
+
+  useEffect(() => {
+    // Debugging aid
+    console.log(`ProductCard ${product.id}: isWishlisted=${isWishlisted}`);
+  }, [product.id, isWishlisted]);
+
+  // Toggle wishlist status (add only, original behavior)
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isWishlistLoading || wishlistActionLoading || isSold) return;
+    setWishlistActionLoading(true);
+    try {
+      await addToWishlist(product);
+      toast({ title: 'Added to Wishlist', description: `${product.name} added to your wishlist.` });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to add item to wishlist.', variant: 'destructive' });
+    } finally {
+      setWishlistActionLoading(false);
+    }
+  };
+
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const target = e.target as HTMLImageElement;
+    target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
+    setIsImageLoading(false);
+  };
+
+  const handleImageLoad = () => setIsImageLoading(false);
+
+  // IntaSend WebSDK loader (latest inline popup per docs)
+  const ensureIntaSendSdk = async (): Promise<any> => {
+    if ((window as any).IntaSend) return (window as any).IntaSend;
+    try {
+      const mod: any = await import('intasend-inlinejs-sdk');
+      const IntaSend = mod?.default || (window as any).IntaSend || mod;
+      if (IntaSend) return IntaSend;
+    } catch (e) {
+      // Fallback to CDN
+    }
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://unpkg.com/intasend-inlinejs-sdk@4.0.6/build/intasend-inline.js';
+      script.async = true;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load IntaSend SDK'));
+      document.body.appendChild(script);
+    });
+    if ((window as any).IntaSend) return (window as any).IntaSend;
+    throw new Error('IntaSend SDK not available');
+  };
+
+  const handleBuy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSold || isPaying) return;
+    try {
+      const pubKey = (import.meta as any).env?.VITE_INTASEND_PUB_KEY as string | undefined;
+      const liveFlag = String((import.meta as any).env?.VITE_INTASEND_LIVE || '').toLowerCase() === 'true';
+      if (!pubKey) {
+        toast({ title: 'Payment unavailable', description: 'Missing IntaSend public key (VITE_INTASEND_PUB_KEY).', variant: 'destructive' });
+        return;
+      }
+      setIsPaying(true);
+      const IntaSend = await ensureIntaSendSdk();
+      const checkout = new (IntaSend as any)({ publicAPIKey: pubKey, live: liveFlag })
+        .on('COMPLETE', () => {
+          setIsPaying(false);
+          toast({ title: 'Payment Complete', description: 'Thank you! Your payment was successful.' });
+        })
+        .on('FAILED', () => {
+          setIsPaying(false);
+          toast({ title: 'Payment Failed', description: 'Payment was not completed.', variant: 'destructive' });
+        })
+        .on('IN-PROGRESS', () => {});
+
+      checkout.run({
+        amount: Number(product.price) || 0,
+        currency: 'KES',
+        api_ref: `product_${product.id}_${Date.now()}`,
+      });
+    } catch (err: any) {
+      console.error('Buy error:', err);
+      setIsPaying(false);
+      toast({ title: 'Payment Error', description: err?.message || 'Failed to start payment.', variant: 'destructive' });
+    }
+  };
+
+  return (
+    <Card
+      className={cn(
+        'group relative overflow-hidden transition-all duration-500 bg-white/80 backdrop-blur-sm border-0 shadow-lg',
+        isSold ? 'opacity-60' : 'hover:shadow-2xl hover:-translate-y-2'
+      )}
+      aria-label={`Product: ${product.name}`}
+      onClick={() => setIsImageDialogOpen(true)}
+    >
+      {/* Wishlist Button */}
+      {!hideWishlist && (
+        <button
+          onClick={toggleWishlist}
+          className={cn(
+            'absolute top-4 right-4 z-10 p-3 rounded-2xl bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm transition-all duration-300',
+            wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110'
+          )}
+          aria-label="Add to wishlist"
+          disabled={isSold || wishlistActionLoading || isWishlistLoading}
+          aria-busy={wishlistActionLoading}
+        >
+          {wishlistActionLoading || isWishlistLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
+          ) : (
+            <Heart className={cn('h-5 w-5', isWishlisted ? 'text-red-500 fill-current' : 'text-gray-600')} />
+          )}
+        </button>
+      )}
+
+      {/* Image */}
+      <div className="relative overflow-hidden rounded-t-xl">
+        {isImageLoading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            <ImageIcon className="h-8 w-8 text-gray-300 animate-pulse" />
+          </div>
+        )}
+        <img
+          src={product.image_url}
+          alt={product.name}
+          className={cn('w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110', isImageLoading ? 'opacity-0' : 'opacity-100')}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+        />
+      </div>
+
+      <CardContent className="p-4">
+        <div className="mb-2">
+          <h3 className="font-bold text-lg text-gray-900 line-clamp-2 group-hover:text-gray-700 transition-colors">
+            {product.name}
+          </h3>
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-bold text-yellow-600">{formatCurrency(product.price)}</span>
+            {product.aesthetic && (
+              <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
+                {product.aesthetic}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {product.description && (
+          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">{product.description}</p>
+        )}
+
+        {/* Seller Info + Buy */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-3">
+          <div className="flex items-center space-x-2">
+            <User className="h-4 w-4 text-gray-500" />
+            <span className="text-sm text-gray-700 font-medium">{displaySellerName}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            {hasContactInfo && (
+              <Dialog open={isSellerDialogOpen} onOpenChange={setIsSellerDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-white/80 hover:bg-white border-gray-200 hover:border-gray-300 transition-all duration-200"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Contact
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center space-x-2">
+                      <User className="h-5 w-5" />
+                      <span>Contact {displaySellerName}</span>
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {displaySeller?.phone && (
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <Phone className="h-4 w-4 text-gray-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Phone</p>
+                          <a href={`tel:${displaySeller.phone}`} className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                            {displaySeller.phone}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    {displaySeller?.email && (
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <Mail className="h-4 w-4 text-gray-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Email</p>
+                          <a href={`mailto:${displaySeller.email}`} className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                            {displaySeller.email}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    {sellerLocation && (
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <MapPin className="h-4 w-4 text-gray-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Location</p>
+                          <p className="text-sm text-gray-700">{sellerLocation}</p>
+                        </div>
+                      </div>
+                    )}
+                    {displaySeller?.website && (
+                      <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                        <Globe className="h-4 w-4 text-gray-600" />
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Website</p>
+                          <a href={displaySeller.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:text-blue-800 transition-colors">
+                            {displaySeller.website}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isSold || isPaying}
+              onClick={handleBuy}
+              className="text-xs bg-yellow-500 text-white hover:bg-yellow-600 border-yellow-500 hover:border-yellow-600 transition-all duration-200"
+            >
+              {isPaying ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><CreditCard className="h-4 w-4 mr-2" /> Buy</>)}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+
+      {/* Image Dialog */}
+      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
+        <DialogContent className="sm:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>{product.name}</span>
+              <Button variant="ghost" size="sm" onClick={() => setIsImageDialogOpen(false)} className="h-8 w-8 p-0">
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <img
+              src={product.image_url || '/placeholder-image.jpg'}
+              alt={product.name}
+              className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              onError={handleImageError}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}

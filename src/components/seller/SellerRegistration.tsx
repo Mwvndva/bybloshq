@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Mail, Phone, Lock, Loader2, Eye, EyeOff, ArrowLeft, Store } from 'lucide-react';
+import { User, Mail, Phone, Lock, Loader2, Eye, EyeOff, ArrowLeft, Store, MapPin } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
 
@@ -21,7 +22,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     email: '',
     phone: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    city: '',
+    location: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingShopName, setIsCheckingShopName] = useState(false);
@@ -114,10 +117,10 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     e.preventDefault();
     
     // Validate form
-    if (!formData.fullName || !formData.shopName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+    if (!formData.fullName || !formData.shopName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields including location",
         variant: 'destructive',
       });
       return;
@@ -157,7 +160,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
-        confirmPassword: formData.confirmPassword
+        confirmPassword: formData.confirmPassword,
+        city: formData.city,
+        location: formData.location
       });
       
       // Store the token in localStorage
@@ -325,6 +330,58 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                   required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                 />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-bold text-black">City</Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Select
+                    value={formData.city}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, location: '' }))}
+                  >
+                    <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
+                      <SelectValue placeholder="Select your city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Nairobi">Nairobi</SelectItem>
+                      <SelectItem value="Mombasa">Mombasa</SelectItem>
+                      <SelectItem value="Kisumu">Kisumu</SelectItem>
+                      <SelectItem value="Nakuru">Nakuru</SelectItem>
+                      <SelectItem value="Eldoret">Eldoret</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm font-bold text-black">Area/Location</Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Select
+                    value={formData.location}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+                    disabled={!formData.city}
+                  >
+                    <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
+                      <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(formData.city === 'Nairobi' ? ['CBD','Westlands','Kilimani','Karen','Runda'] :
+                        formData.city === 'Mombasa' ? ['Nyali','Bamburi','Kisauni','Likoni'] :
+                        formData.city === 'Kisumu' ? ['Milimani','Kondele','Nyalenda','Manyatta'] :
+                        formData.city === 'Nakuru' ? ['Milimani','Kiamunyi','Lanet','Section 58'] :
+                        formData.city === 'Eldoret' ? ['Kapsoya','Langas','Kimumu','Huruma'] :
+                        []).map((area) => (
+                          <SelectItem key={area} value={area}>{area}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

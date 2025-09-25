@@ -3,13 +3,15 @@ import { pool } from '../config/database.js';
 // Get all products (public)
 export const getProducts = async (req, res) => {
   try {
-    const { aesthetic } = req.query;
+    const { aesthetic, city, location } = req.query;
     
     let query = `
       SELECT p.*, 
              s.full_name as seller_name,
              s.phone as seller_phone,
-             s.email as seller_email
+             s.email as seller_email,
+             s.city as seller_city,
+             s.location as seller_location
       FROM products p
       JOIN sellers s ON p.seller_id = s.id
       WHERE p.status = $1
@@ -18,9 +20,22 @@ export const getProducts = async (req, res) => {
     const queryParams = ['available']; // Only show available products
     let paramCount = 2; // Start from 2 since we already have one parameter
     
+    // Add aesthetic filter if provided
     if (aesthetic && aesthetic !== 'all') {
       query += ` AND p.aesthetic = $${paramCount++}`;
       queryParams.push(aesthetic);
+    }
+    
+    // Add city filter if provided
+    if (city) {
+      query += ` AND LOWER(s.city) = LOWER($${paramCount++})`;
+      queryParams.push(city);
+      
+      // Add location filter if provided and city is also provided
+      if (location) {
+        query += ` AND LOWER(s.location) = LOWER($${paramCount++})`;
+        queryParams.push(location);
+      }
     }
     
     query += ' ORDER BY p.created_at DESC';

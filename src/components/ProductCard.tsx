@@ -2,107 +2,265 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Phone, Image as ImageIcon, Mail, X, MapPin, Globe, Heart, Loader2 } from 'lucide-react';
+import { User, Image as ImageIcon, X, Heart, Loader2, ShoppingCart } from 'lucide-react';
+import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { cn, formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 
 interface ProductCardProps {
-  product: Product;
+  product: Product & {
+    seller?: Seller;
+    isSold?: boolean;
+  };
   seller?: Seller;
   hideWishlist?: boolean;
 }
 
+// Hook to safely use wishlist context
+const useWishlistSafe = () => {
+  try {
+    return useWishlist();
+  } catch (error) {
+    return {
+      addToWishlist: async () => {},
+      removeFromWishlist: async () => {},
+      isInWishlist: () => false,
+      isLoading: false,
+    } as any;
+  }
+};
+
 export function ProductCard({ product, seller, hideWishlist = false }: ProductCardProps) {
   const { toast } = useToast();
-  const { addToWishlist, removeFromWishlist, isInWishlist, isLoading: isWishlistLoading } = useWishlist();
-  const [isSellerDialogOpen, setIsSellerDialogOpen] = useState(false);
+  const { addToWishlist, isInWishlist, isLoading: isWishlistLoading } = useWishlistSafe();
+  
+  // Dialog state
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  
+  // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
+  const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
   
-  // Use seller from product if not provided as prop
+  // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.fullName || 'Unknown Seller';
-  const hasContactInfo = Boolean(displaySeller?.phone || displaySeller?.email);
   const sellerLocation = displaySeller?.location;
   const isSold = product.status === 'sold' || product.isSold;
-
-  // Check if product is in wishlist
-  const isWishlisted = isInWishlist(product.id);
   
-  // Debug logging
-  useEffect(() => {
-    console.log(`ProductCard ${product.id}: isWishlisted = ${isWishlisted}, isLoading = ${isWishlistLoading}`);
-  }, [product.id, isWishlisted, isWishlistLoading]);
+  const hasContactInfo = Boolean(
+    displaySeller?.phone || 
+    displaySeller?.email || 
+    displaySeller?.website || 
+    sellerLocation
+  );
+  
+  const isWishlisted = isInWishlist(product.id);
 
-  // Toggle wishlist status
+
+
+  useEffect(() => {
+    console.log(`ProductCard ${product.id}: isWishlisted=${isWishlisted}`);
+  }, [product.id, isWishlisted]);
+
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    if (isWishlistLoading || wishlistActionLoading) return;
-    
+    if (isWishlistLoading || wishlistActionLoading || isSold) return;
     setWishlistActionLoading(true);
-    
     try {
       await addToWishlist(product);
-      toast({
-        title: 'Added to Wishlist',
-        description: `${product.name} has been added to your wishlist.`,
-        duration: 2000
-      });
+      toast({ title: 'Added to Wishlist', description: `${product.name} added to your wishlist.` });
     } catch (error) {
-      console.error('Wishlist error:', error);
-      
-      if (error instanceof Error) {
-        if (error.message === 'Product already in wishlist') {
-          toast({
-            title: 'Already in Wishlist',
-            description: `${product.name} has already been added to your wishlist.`,
-            duration: 3000
-          });
-        } else {
-          toast({
-            title: 'Error',
-            description: `Failed to add item to wishlist. Please try again.`,
-            variant: 'destructive',
-            duration: 2000
-          });
-        }
-      }
+      toast({ title: 'Error', description: 'Failed to add item to wishlist.', variant: 'destructive' });
     } finally {
       setWishlistActionLoading(false);
+    }
+  };
+  
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't open image dialog if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    const isInteractiveElement = 
+      target.closest('button') || 
+      target.closest('a') ||
+      target.closest('[role="button"]');
+    
+    if (!isInteractiveElement) {
+      setIsImageDialogOpen(true);
+    }
+  };
+  
+  const { isAuthenticated, user: userData, isLoading } = useBuyerAuth();
+  
+  const handleBuyClick = async (e: React.MouseEvent) => {
+    // 1. Prevent default behavior and stop propagation
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    e?.nativeEvent?.stopImmediatePropagation?.();
+    
+    // 2. Set loading state
+    setIsProcessingPurchase(true);
+    
+    try {
+      console.debug('Auth Debug:', { isAuthenticated, userData, isLoading, product });
+      
+      // 3. Check authentication status
+      if (isLoading) {
+        toast({
+          title: 'Please wait',
+          description: 'Checking your authentication status...',
+          variant: 'default',
+          duration: 2000
+        });
+        return;
+      }
+      
+      // 4. Verify user is authenticated
+      if (!isAuthenticated || !userData) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please sign in to complete your purchase.',
+          variant: 'destructive',
+          action: (
+            <button 
+              onClick={() => {
+                // Store current URL for redirect after login
+                localStorage.setItem('post_login_redirect', window.location.pathname);
+                window.location.href = '/buyer/login';
+              }}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+            >
+              Sign In
+            </button>
+          )
+        });
+        return;
+      }
+      
+      // 5. Validate required user data
+      if (!userData.email) {
+        toast({
+          title: 'Profile Incomplete',
+          description: 'Please complete your profile information before making a purchase.',
+          variant: 'destructive',
+          action: (
+            <button 
+              onClick={() => {
+                window.location.href = '/buyer/profile';
+              }}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
+            >
+              Complete Profile
+            </button>
+          )
+        });
+        return;
+      }
+      
+      // 6. Prepare payment payload
+      const [firstName = 'Customer', ...lastNameParts] = userData.fullName?.split(' ') || [];
+      const lastName = lastNameParts.join(' ') || 'User';
+      
+      const payload = {
+        amount: product.price.toString(),
+        description: `Purchase of ${product.name}`,
+        customer: {
+          id: String(userData.id || 'N/A'),
+          email: userData.email,
+          phone: userData.phone || '',
+          firstName: firstName,
+          lastName: lastName,
+        },
+        items: [
+          {
+            productId: String(product.id),
+            productName: product.name,
+            quantity: 1,
+            price: product.price,
+          },
+        ],
+      };
+      
+      console.debug('Checkout Request:', { payload });
+      
+      // 7. Get authentication token
+      const token = localStorage.getItem('buyer_token');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+      
+      // 8. Call checkout API
+      const response = await fetch('/api/pesapal/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload),
+      });
+      
+      // 9. Handle API response
+      const responseData = await response.json().catch(() => ({}));
+      
+      if (!response.ok) {
+        const errorMessage = responseData.message || 'Failed to initiate payment';
+        console.error('Checkout API Error:', { status: response.status, responseData });
+        throw new Error(errorMessage);
+      }
+      
+      // Extract redirect URL from the nested data object
+      const redirectUrl = responseData.data?.redirect_url;
+      
+      if (!redirectUrl) {
+        console.error('Invalid response format from payment gateway:', responseData);
+        throw new Error('Invalid response from payment gateway');
+      }
+      
+      // 10. Redirect to payment page
+      console.debug('Redirecting to payment gateway:', redirectUrl);
+      window.location.href = redirectUrl;
+      
+    } catch (error) {
+      console.error('Checkout error:', error);
+      toast({
+        title: 'Checkout Failed',
+        description: error.message || 'Failed to process your payment. Please try again.',
+        variant: 'destructive',
+        duration: 5000
+      });
+    } finally {
+      // 11. Always reset loading state
+      setIsProcessingPurchase(false);
     }
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
-    target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQiIDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNkMGQwZDAiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBjbGFzcz0ibHVjaWRlIGx1Y2lkZS1pbWFnZSI+PHJlY3QgeD0iMyIgeT0iMyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjE4IiByeD0iMiIgcnk9IjIiLz48Y2lyY2xlIGN4PSI4LjUiIGN5PSI4LjUiIHI9IjEuNSIvPjxwb2x5bGluZSBwb2ludHM9IjIxIDE1IDE2IDEwIDUgMjEiLz48L3N2Zz4=';
-    setIsImageLoading(false);
-  };
-  
-  const handleImageLoad = () => {
+    target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
     setIsImageLoading(false);
   };
 
+  const handleImageLoad = () => setIsImageLoading(false);
+
   return (
-    <Card 
+    <Card
       className={cn(
-        "group relative overflow-hidden transition-all duration-500 hover:shadow-2xl",
-        isSold ? 'opacity-60' : 'hover:shadow-2xl',
-        "bg-white/80 backdrop-blur-sm border-0 shadow-lg transform hover:-translate-y-2"
+        'group relative overflow-hidden transition-all duration-500 bg-white/80 backdrop-blur-sm border-0 shadow-lg',
+        isSold ? 'opacity-60' : 'hover:shadow-2xl hover:-translate-y-2',
+        'cursor-pointer'
       )}
       aria-label={`Product: ${product.name}`}
+      onClick={handleCardClick}
     >
-      {/* Wishlist Button - Conditionally Rendered */}
+      {/* Wishlist Button */}
       {!hideWishlist && (
         <button
           onClick={toggleWishlist}
           className={cn(
-            "absolute top-4 right-4 z-10 p-3 rounded-2xl transition-all duration-300",
-            'bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm',
+            'absolute top-4 right-4 z-10 p-3 rounded-2xl bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm transition-all duration-300',
             wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110'
           )}
           aria-label="Add to wishlist"
@@ -112,64 +270,38 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
           {wishlistActionLoading || isWishlistLoading ? (
             <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
           ) : (
-            <Heart 
-              className="h-5 w-5 text-gray-600 hover:text-red-500 transition-colors"
-            />
+            <Heart className={cn('h-5 w-5', isWishlisted ? 'text-red-500 fill-current' : 'text-gray-600')} />
           )}
         </button>
       )}
 
-      {/* SOLD Badge */}
-      {isSold && (
-        <div className="absolute top-4 left-4 z-10">
-          <Badge className="bg-gradient-to-r from-gray-600 to-gray-700 text-white text-xs font-bold px-4 py-2 rounded-2xl shadow-lg">
-            SOLD
-          </Badge>
-          </div>
-      )}
-
-      
-      {/* Product Image */}
-      <div className="relative overflow-hidden rounded-t-2xl">
+      {/* Image */}
+      <div className="relative overflow-hidden rounded-t-xl">
         {isImageLoading && (
-          <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
-            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+            <ImageIcon className="h-8 w-8 text-gray-300 animate-pulse" />
           </div>
         )}
-        
         <img
-          src={product.image_url || '/placeholder-image.jpg'}
+          src={product.image_url}
           alt={product.name}
-          className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110"
-          onError={handleImageError}
+          className={cn('w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110 cursor-zoom-in', isImageLoading ? 'opacity-0' : 'opacity-100')}
           onLoad={handleImageLoad}
-        />
-        
-        {/* Image overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        
-        {/* Image dialog trigger */}
-        <button
+          onError={handleImageError}
           onClick={(e) => {
             e.stopPropagation();
             setIsImageDialogOpen(true);
           }}
-          className="absolute inset-0 w-full h-full bg-transparent"
-          aria-label="View full size image"
         />
       </div>
 
-      {/* Product Content */}
-      <CardContent className="p-6 space-y-4">
-        {/* Product Name and Price */}
-        <div className="space-y-2">
+      <CardContent className="p-4">
+        <div className="mb-2">
           <h3 className="font-bold text-lg text-gray-900 line-clamp-2 group-hover:text-gray-700 transition-colors">
-              {product.name}
-            </h3>
+            {product.name}
+          </h3>
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-yellow-600">
-              {formatCurrency(product.price)}
-            </span>
+            <span className="text-2xl font-bold text-yellow-600">{formatCurrency(product.price)}</span>
             {product.aesthetic && (
               <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
                 {product.aesthetic}
@@ -178,131 +310,83 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
           </div>
         </div>
 
-        {/* Product Description */}
         {product.description && (
-          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">
-            {product.description}
-          </p>
+          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">{product.description}</p>
         )}
 
-        {/* Seller Info */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+        {/* Seller and Buy Button */}
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-3">
           <div className="flex items-center space-x-2">
             <User className="h-4 w-4 text-gray-500" />
-            <span className="text-sm text-gray-700 font-medium">
-              {displaySellerName}
-            </span>
+            <span className="text-sm text-gray-700 font-medium">{displaySellerName}</span>
           </div>
-          
-          {hasContactInfo && (
-          <Dialog open={isSellerDialogOpen} onOpenChange={setIsSellerDialogOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                  className="text-xs bg-white/80 hover:bg-white border-gray-200 hover:border-gray-300 transition-all duration-200"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Contact
-              </Button>
-            </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                  <DialogTitle className="flex items-center space-x-2">
-                    <User className="h-5 w-5" />
-                    <span>Contact {displaySellerName}</span>
-                  </DialogTitle>
-              </DialogHeader>
-                <div className="space-y-4">
-                {displaySeller?.phone && (
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <Phone className="h-4 w-4 text-gray-600" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Phone</p>
-                        <a 
-                          href={`tel:${displaySeller.phone}`}
-                          className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      {displaySeller.phone}
-                        </a>
-                      </div>
-                  </div>
-                )}
-                  
-                {displaySeller?.email && (
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <Mail className="h-4 w-4 text-gray-600" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Email</p>
-                        <a 
-                          href={`mailto:${displaySeller.email}`}
-                          className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      {displaySeller.email}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {sellerLocation && (
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <MapPin className="h-4 w-4 text-gray-600" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Location</p>
-                        <p className="text-sm text-gray-700">{sellerLocation}</p>
-                      </div>
-                  </div>
-                )}
-                  
-                {displaySeller?.website && (
-                    <div className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                      <Globe className="h-4 w-4 text-gray-600" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Website</p>
-                        <a 
-                          href={displaySeller.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          {displaySeller.website}
-                        </a>
-                      </div>
-                  </div>
-                )}
-              </div>
-            </DialogContent>
-          </Dialog>
-          )}
+          <button
+            type="button"
+            className={cn(
+              'text-xs bg-yellow-600 hover:bg-yellow-700 text-white transition-all duration-200',
+              'flex items-center justify-center space-x-1 px-3 py-2 rounded-md',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              'focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2',
+              'h-8 text-sm font-medium'
+            )}
+            onClick={(e) => {
+              // Stop all event propagation
+              e.preventDefault();
+              e.stopPropagation();
+              if (e.nativeEvent) {
+                e.nativeEvent.stopImmediatePropagation();
+              }
+              
+              // Call the handler
+              handleBuyClick(e);
+            }}
+            disabled={isSold || isProcessingPurchase}
+            aria-busy={isProcessingPurchase}
+          >
+            {isProcessingPurchase ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                <span>Processing...</span>
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
+                <span>Buy Now</span>
+              </>
+            )}
+          </button>
         </div>
       </CardContent>
 
       {/* Image Dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              <span>{product.name}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-              onClick={() => setIsImageDialogOpen(false)}
-                className="h-8 w-8 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex justify-center">
-            <img
-              src={product.image_url || '/placeholder-image.jpg'}
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-0 shadow-none">
+          <div className="relative w-full h-full bg-black/90 flex items-center justify-center">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsImageDialogOpen(false);
+              }}
+              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
+              aria-label="Close image"
+            >
+              <X className="h-6 w-6 text-white" />
+            </button>
+            <div className="w-full h-full flex items-center justify-center p-4">
+              <img
+                src={product.image_url}
                 alt={product.name}
-              className="max-w-full max-h-[70vh] object-contain rounded-lg"
-                onError={handleImageError}
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
+                }}
               />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
     </Card>
   );
 }
+

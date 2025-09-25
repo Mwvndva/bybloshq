@@ -3,34 +3,52 @@ import AppError from '../utils/appError.js';
 import { signToken } from '../utils/jwt.js';
 import crypto from 'crypto';
 import { sendPasswordResetEmail } from '../utils/email.js';
+import { pool } from '../config/database.js';
 
 export const register = async (req, res, next) => {
   try {
-    const { fullName, email, phone, password, confirmPassword } = req.body;
+    const { fullName, email, phone, password, confirmPassword, city, location } = req.body;
+
+    // Debug log to verify payload during integration
+    // Remove or lower log level in production if too noisy
+    console.log('Buyer register payload:', {
+      fullName,
+      email,
+      phone,
+      city,
+      location
+    });
 
     // 1) Check if passwords match
     if (password !== confirmPassword) {
       return next(new AppError('Passwords do not match', 400));
     }
 
-    // 2) Check if user already exists
+    // 2) Validate required location fields
+    if (!city || !location) {
+      return next(new AppError('City and location are required', 400));
+    }
+
+    // 3) Check if user already exists
     const existingBuyer = await Buyer.findByEmail(email);
     if (existingBuyer) {
       return next(new AppError('Email already in use', 400));
     }
 
-    // 3) Create new buyer (no email verification required)
+    // 4) Create new buyer (no email verification required)
     const newBuyer = await Buyer.create({
       fullName,
       email,
       phone,
       password,
+      city,
+      location,
     });
 
-    // 4) Generate JWT token with buyer role
+    // 5) Generate JWT token with buyer role
     const token = signToken(newBuyer.id, 'buyer');
 
-    // 5) Remove sensitive data from output
+    // 6) Remove sensitive data from output
     delete newBuyer.password;
     delete newBuyer.resetPasswordToken;
     delete newBuyer.resetPasswordExpires;
@@ -171,6 +189,8 @@ export const resetPassword = async (req, res, next) => {
   }
 };
 
+// Order fetching functionality has been removed
+
 export const getProfile = async (req, res, next) => {
   try {
     const buyer = await Buyer.findById(req.user.id);
@@ -230,3 +250,6 @@ export const updateProfile = async (req, res, next) => {
     next(error);
   }
 };
+
+
+
