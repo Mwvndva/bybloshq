@@ -128,13 +128,8 @@ export const fetchBuyerOrders = async ({
   startDate,
   endDate,
   searchQuery,
-  paymentStatus,
-  buyerId // Expect buyerId to be passed from the component using useBuyerAuth
-}: OrderFilters & { buyerId?: string } = {}): Promise<OrderListResponse> => {
-  if (!buyerId) {
-    console.error('No buyer ID provided to fetchBuyerOrders');
-    throw new Error('Authentication required. Please log in again.');
-  }
+  paymentStatus
+}: OrderFilters = {}): Promise<OrderListResponse> => {
 
   const params = new URLSearchParams({
     page: page.toString(),
@@ -149,7 +144,7 @@ export const fetchBuyerOrders = async ({
   if (endDate) params.append('endDate', new Date(endDate).toISOString());
   if (searchQuery) params.append('search', searchQuery);
 
-  const apiUrl = `/buyers/${buyerId}/orders?${params.toString()}`;
+  const apiUrl = `/buyers/orders?${params.toString()}`;
   console.log('Making API request to:', apiUrl);
   
   try {
