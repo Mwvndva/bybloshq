@@ -156,7 +156,8 @@ const OrdersSection = () => {
             page: 1,
             limit: 10,
             sortBy: 'created_at',
-            sortOrder: 'desc'
+            sortOrder: 'desc',
+            buyerId: user.id.toString()
           });
           
           if (updatedOrders.data) {
@@ -212,7 +213,8 @@ const OrdersSection = () => {
           page: 1,
           limit: 10,
           sortBy: 'created_at',
-          sortOrder: 'desc'
+          sortOrder: 'desc',
+          buyerId: user.id.toString()
         });
         
         if (!isMounted.current) return;

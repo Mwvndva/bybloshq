@@ -128,24 +128,11 @@ export const fetchBuyerOrders = async ({
   startDate,
   endDate,
   searchQuery,
-  paymentStatus
-}: OrderFilters = {}): Promise<OrderListResponse> => {
-  // Get the current user's ID from localStorage
-  const userString = localStorage.getItem('user');
-  let buyerId = '';
-  
-  try {
-    if (userString) {
-      const user = JSON.parse(userString);
-      buyerId = user.id || '';
-    }
-  } catch (error) {
-    console.error('Error parsing user data:', error);
-    throw new Error('Failed to parse user data');
-  }
-
+  paymentStatus,
+  buyerId // Expect buyerId to be passed from the component using useBuyerAuth
+}: OrderFilters & { buyerId?: string } = {}): Promise<OrderListResponse> => {
   if (!buyerId) {
-    console.error('No buyer ID found in localStorage');
+    console.error('No buyer ID provided to fetchBuyerOrders');
     throw new Error('Authentication required. Please log in again.');
   }
 
