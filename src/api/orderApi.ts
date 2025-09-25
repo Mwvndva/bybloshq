@@ -147,7 +147,7 @@ export const fetchBuyerOrders = async (
   if (endDate) params.append('endDate', new Date(endDate).toISOString());
   if (searchQuery) params.append('search', searchQuery);
 
-  const apiUrl = `/buyer/orders?${params.toString()}`;
+  const apiUrl = `/buyers/orders?${params.toString()}`;
   console.log('Making API request to:', apiUrl);
   
   try {
