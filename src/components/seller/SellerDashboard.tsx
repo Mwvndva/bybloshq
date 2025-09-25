@@ -1094,19 +1094,23 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         )}
 
         {activeSection === 'settings' && (
-          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+          <div className="space-y-6 sm:space-y-8 lg:space-y-10">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Store Settings</h2>
-              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium">Manage your store configuration and preferences</p>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-black mb-2 sm:mb-3">Store Settings</h2>
+              <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium max-w-3xl mx-auto">
+                Manage your store configuration and preferences. Update your store details, location, and view important metrics.
+              </p>
             </div>
-            <div>
+            <div className="w-full max-w-7xl mx-auto">
               
               {/* Store Information */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
-                  <div className="mb-4 sm:mb-0">
-                    <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Store Information</h3>
-                    <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Your current store details</p>
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 lg:mb-8">
+                  <div className="mb-4 lg:mb-0">
+                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-black">Store Information</h3>
+                    <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 lg:mt-2">
+                      Your store details and contact information
+                    </p>
                   </div>
                   <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
                     {isEditing ? (
@@ -1147,101 +1151,88 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   </div>
                 </div>
 
-                {/* Stats Grid - Full width on mobile, 2 columns on sm, 5 on lg+ */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
-                  <StatsCard
-                    icon={ShoppingBag}
-                    title="Total Products"
-                    value={analytics?.totalProducts || 0}
-                    subtitle="In your store"
-                  />
-                  <StatsCard
-                    icon={TrendingUp}
-                    title="Total Revenue"
-                    value={formatCurrency(analytics?.totalRevenue || 0)}
-                    subtitle="All time sales"
-                  />
-                  <StatsCard
-                    icon={BarChart3}
-                    title="Monthly Sales"
-                    value={analytics?.monthlySales?.[analytics.monthlySales.length - 1]?.sales || 0}
-                    subtitle="This month"
-                  />
-                  <StatsCard
-                    icon={Package}
-                    title="Tickets Sold"
-                    value={analytics?.totalTicketsSold || 0}
-                    subtitle="Total tickets"
-                  />
-                  <StatsCard
-                    icon={DollarSign}
-                    title="Total Sales"
-                    value={formatCurrency(totalSales)}
-                    subtitle="All time"
-                  />
-                </div>
+
                 
                 {/* Profile Information */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 sm:mb-8">
-                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</p>
-                    <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.fullName || 'Not set'}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 lg:mb-8">
+                  <div className="p-4 sm:p-5 bg-gray-50 rounded-lg lg:rounded-xl">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Full Name</p>
+                    <p className="text-base font-semibold text-black truncate" title={sellerProfile?.fullName || 'Not set'}>
+                      {sellerProfile?.fullName || 'Not set'}
+                    </p>
                   </div>
-                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</p>
-                    <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.email || 'Not set'}</p>
+                  <div className="p-4 sm:p-5 bg-gray-50 rounded-lg lg:rounded-xl">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Email</p>
+                    <p className="text-base font-semibold text-black truncate" title={sellerProfile?.email || 'Not set'}>
+                      {sellerProfile?.email || 'Not set'}
+                    </p>
                   </div>
-                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone Number</p>
-                    <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.phone || 'Not set'}</p>
-                  </div>
-                  <div className="p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Active Products</p>
-                    <p className="text-sm sm:text-base font-semibold text-black">{(analytics?.totalProducts || 0) - totalSold}</p>
+                  <div className="p-4 sm:p-5 bg-gray-50 rounded-lg lg:rounded-xl">
+                    <p className="text-sm font-medium text-gray-700 mb-1">Phone Number</p>
+                    <p className="text-base font-semibold text-black">
+                      {sellerProfile?.phone || 'Not set'}
+                    </p>
                   </div>
                 </div>
 
                 {/* Location Settings */}
                 <div className="space-y-4">
-                  <h4 className="text-lg sm:text-xl font-bold text-black">Location Settings</h4>
-                  
-                  <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border border-gray-200">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">City</p>
-                    {isEditing ? (
-                      <select
-                        name="city"
-                        value={formData.city}
-                        onChange={handleCityChange}
-                        className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg sm:text-xl font-bold text-black">Location Settings</h4>
+                    {!isEditing && (
+                      <button 
+                        onClick={toggleEdit}
+                        className="text-xs sm:text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1"
                       >
-                        <option value="">Select a city</option>
-                        {Object.keys(cities).map(city => (
-                          <option key={city} value={city}>{city}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.city || 'Not set'}</p>
+                        <Edit className="h-3.5 w-3.5" />
+                        Edit Location
+                      </button>
                     )}
                   </div>
                   
-                  <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl border border-gray-200">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Location/Area</p>
-                    {isEditing ? (
-                      <select
-                        name="location"
-                        value={formData.location}
-                        onChange={handleLocationChange}
-                        className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
-                        disabled={!formData.city}
-                      >
-                        <option value="">Select a location</option>
-                        {getLocations().map(location => (
-                          <option key={location} value={location}>{location}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <p className="text-sm sm:text-base font-semibold text-black">{sellerProfile?.location || 'Not set'}</p>
-                    )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-3 sm:p-4 bg-white rounded-lg lg:rounded-xl border border-gray-200">
+                      <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">City</p>
+                      {isEditing ? (
+                        <select
+                          name="city"
+                          value={formData.city}
+                          onChange={handleCityChange}
+                          className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                        >
+                          <option value="">Select a city</option>
+                          {Object.keys(cities).map(city => (
+                            <option key={city} value={city}>{city}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-sm sm:text-base font-semibold text-black">
+                          {sellerProfile?.city || 'Not set'}
+                        </p>
+                      )}
+                    </div>
+                    
+                    <div className="p-3 sm:p-4 bg-white rounded-lg lg:rounded-xl border border-gray-200">
+                      <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Location/Area</p>
+                      {isEditing ? (
+                        <select
+                          name="location"
+                          value={formData.location}
+                          onChange={handleLocationChange}
+                          className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                          disabled={!formData.city}
+                        >
+                          <option value="">Select a location</option>
+                          {getLocations().map(location => (
+                            <option key={location} value={location}>{location}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <p className="text-sm sm:text-base font-semibold text-black">
+                          {sellerProfile?.location || 'Not set'}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
