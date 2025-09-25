@@ -23,21 +23,22 @@ const queryClient = new QueryClient({
 const AppWrapper = ({ children }: { children: React.ReactNode }) => (
   <TooltipProvider>
     <Toaster />
-    <BuyerAuthProvider>
-      <WishlistProvider>
-        <OrganizerAuthProvider>
-          {children}
-        </OrganizerAuthProvider>
-      </WishlistProvider>
-    </BuyerAuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <BuyerAuthProvider>
+        <WishlistProvider>
+          <OrganizerAuthProvider>
+            <AdminAuthProvider>
+              {children}
+            </AdminAuthProvider>
+          </OrganizerAuthProvider>
+        </WishlistProvider>
+      </BuyerAuthProvider>
+    </QueryClientProvider>
   </TooltipProvider>
 );
 
 // Create the main app router with both admin and main app routes
 const router = createBrowserRouter([
-  // Admin routes (already have AdminAuthProvider in their layout)
-  ...adminRouter.routes,
-  
   // Main app routes
   {
     element: (
@@ -47,6 +48,8 @@ const router = createBrowserRouter([
     ),
     children: [
       ...routes,
+      // Include admin routes as children to ensure they have access to all providers
+      ...adminRouter.routes,
       {
         path: '*',
         element: <div>Page not found</div>,
