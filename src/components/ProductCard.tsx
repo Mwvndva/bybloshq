@@ -165,7 +165,7 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
       const lastName = lastNameParts.join(' ') || 'User';
       
       const payload = {
-        amount: product.price.toString(),
+        amount: product.price,
         description: `Purchase of ${product.name}`,
         customer: {
           id: String(userData.id || 'N/A'),
@@ -176,12 +176,26 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
         },
         items: [
           {
-            productId: String(product.id),
-            productName: product.name,
+            id: String(product.id),
+            name: product.name,
             quantity: 1,
-            price: product.price,
+            unitPrice: product.price,
+            totalPrice: product.price,
+            description: product.description || '',
+            category: product.category || 'General',
+            currency: 'KES'
           },
         ],
+        currency: 'KES',
+        callbackUrl: `${window.location.origin}/orders`,
+        cancelUrl: `${window.location.origin}/products/${product.id}`,
+        notificationId: process.env.VITE_PESAPAL_IPN_ID || '',
+        billingAddress: {
+          emailAddress: userData.email,
+          phoneNumber: userData.phone || '',
+          firstName: firstName,
+          lastName: lastName,
+        }
       };
       
       console.debug('Checkout Request:', { payload });
@@ -193,7 +207,8 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
       }
       
       // 8. Call checkout API
-      const response = await fetch('/api/pesapal/checkout', {
+      const apiUrl = import.meta.env.VITE_API_URL || ''
+      const response = await fetch(`${apiUrl}/api/pesapal/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

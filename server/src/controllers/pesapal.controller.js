@@ -37,19 +37,29 @@ class PesapalController {
     const client = await pool.connect();
     
     try {
-      // Log the complete request body for debugging
-      logger.info('Pesapal checkout request body:', JSON.stringify(req.body, null, 2));
+      // Log complete request details for debugging
+      logger.info('=== PESAPAL CHECKOUT REQUEST ===');
+      logger.info('Request Method:', req.method);
+      logger.info('Request Headers:', JSON.stringify(req.headers, null, 2));
+      logger.info('Request Body:', JSON.stringify(req.body, null, 2));
       
-      const { amount, description, customer, items } = req.body; // Changed productId to items array
+      const { amount, description, customer, items } = req.body;
       
-      // Log the items array structure
-      if (Array.isArray(items)) {
-        logger.info('Items array contains:', items.length, 'items');
-        items.forEach((item, index) => {
-          logger.info(`Item ${index + 1} keys:`, Object.keys(item));
-          logger.info(`Item ${index + 1} data:`, JSON.stringify(item, null, 2));
+      // Validate required fields
+      if (!amount || !description || !customer || !items || !Array.isArray(items) || items.length === 0) {
+        logger.error('Invalid request payload:', { amount, description, customer, items });
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid request. Please provide amount, description, customer, and items.'
         });
       }
+      
+      // Log the items array structure
+      logger.info(`Items array contains: ${items.length} items`);
+      items.forEach((item, index) => {
+        logger.info(`Item ${index + 1} keys:`, Object.keys(item));
+        logger.info(`Item ${index + 1} data:`, JSON.stringify(item, null, 2));
+      });
       
       // Basic validation
       if (!amount || !description || !customer || !customer.email || !Array.isArray(items) || items.length === 0) {

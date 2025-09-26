@@ -31,8 +31,9 @@ export default defineConfig(({ command, mode }) => {
       strictPort: true,
       headers: {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Access-Control-Allow-Credentials': 'true',
       },
       proxy: {
         '^/api': {
@@ -40,6 +41,18 @@ export default defineConfig(({ command, mode }) => {
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path.replace(/^\/api/, '/api'),
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.error('Proxy error:', err);
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log('Sending Request to the Target:', {
+                method: req.method,
+                url: req.url,
+                headers: req.headers,
+              });
+            });
+          }
         },
       },
       // Enable serving static files from public directory
