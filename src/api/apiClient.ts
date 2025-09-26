@@ -1,5 +1,6 @@
 // Simple API client using fetch
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+console.log('Environment variables:', import.meta.env);
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
 
 export interface ApiResponse<T> {
   data: T;
