@@ -14,6 +14,7 @@ class PesapalController {
       }
 
       const ipnUrl = `${publicUrl}/api/pesapal/ipn`;
+      logger.info('Using IPN URL:', ipnUrl);
       
       const result = await pesapalService.registerIPN(ipnUrl);
       
@@ -75,12 +76,15 @@ class PesapalController {
       const merchantReference = `ORD-${uuidv4()}`;
       
       // Prepare the order payload for Pesapal
+      const callbackUrl = new URL('/api/pesapal/callback', process.env.VITE_API_URL || process.env.PUBLIC_BASE_URL).toString();
+      logger.info('Using callback URL:', callbackUrl);
+      
       const orderPayload = {
         id: merchantReference,
         currency: 'KES',
         amount: parseFloat(amount).toFixed(2),
         description: description.substring(0, 100), // Max 100 chars
-        callback_url: `${process.env.PUBLIC_BASE_URL}/api/pesapal/callback`,
+        callback_url: callbackUrl,
         notification_id: process.env.PESAPAL_NOTIFICATION_ID,
         billing_address: {
           email_address: customer.email,
@@ -241,7 +245,7 @@ class PesapalController {
   callback = async (req, res) => {
     try {
       const { OrderTrackingId, OrderMerchantReference } = req.query;
-      const frontendUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
+      const frontendUrl = process.env.VITE_BASE_URL || process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
       
       if (!OrderTrackingId || !OrderMerchantReference) {
         return res.redirect(`${frontendUrl}/checkout?status=error&message=Missing required parameters`);
@@ -283,7 +287,7 @@ class PesapalController {
       
     } catch (error) {
       logger.error('Callback error:', error);
-      const frontendUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
+      const frontendUrl = process.env.VITE_BASE_URL || process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
       const redirectUrl = new URL(`${frontendUrl}/checkout`);
       redirectUrl.searchParams.append('status', 'error');
       redirectUrl.searchParams.append('message', error.message || 'An unexpected error occurred');

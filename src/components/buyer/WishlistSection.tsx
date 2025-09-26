@@ -119,7 +119,8 @@ export default function WishlistSection() {
       }
       
       // 8. Call checkout API
-      const response = await fetch('/api/pesapal/checkout', {
+      const apiUrl = import.meta.env.VITE_API_URL || '';
+      const response = await fetch(`${apiUrl}/pesapal/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
