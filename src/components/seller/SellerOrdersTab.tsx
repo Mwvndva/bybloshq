@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { sellerApi, SellerOrder } from '@/api/sellerApi';
-import { OrderStatus } from '@/api/orderApi';
+import { OrderStatus } from '@/types/order';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';

@@ -3,6 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { updateOrderStatus } from '@/api/simpleOrderApi';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -41,7 +42,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { sellerApi, SellerOrder } from '@/api/sellerApi';
-import { updateOrderStatus, OrderStatus } from '@/api/orderApi';
+import { OrderStatus } from '@/types/order';
 import { useToast } from '@/components/ui/use-toast';
 import SellerOrdersTab from './SellerOrdersTab';
 
@@ -485,15 +486,23 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const handleOrderStatusUpdate = async (orderId: string, status: string) => {
     try {
       console.log(`[SellerDashboard] Updating order ${orderId} status to ${status}`);
-      await updateOrderStatus(parseInt(orderId, 10), status as OrderStatus, 'Status updated by seller');
-      
-      // Refresh orders after update
-      await fetchOrders();
-      
-      toast({
-        title: 'Success',
-        description: `Order status updated to ${status}.`,
+      const result = await updateOrderStatus({
+        orderId: parseInt(orderId, 10), 
+        status: status as OrderStatus, 
+        note: 'Status updated by seller' 
       });
+      
+      if (result.success) {
+        // Refresh orders after update
+        await fetchOrders();
+        
+        toast({
+          title: 'Success',
+          description: `Order status updated to ${status}.`,
+        });
+      } else {
+        throw new Error(result.message || 'Failed to update order status');
+      }
     } catch (error) {
       console.error(`[SellerDashboard] Error updating order status:`, error);
       toast({

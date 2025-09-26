@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Order as BaseOrder, OrderStatus } from './orderApi';
+import { Order as BaseOrder, OrderStatus } from '@/types/order';
 
 // Extend the base Order interface to include seller-specific fields
 export interface SellerOrder extends Omit<BaseOrder, 'items'> {
