@@ -2,17 +2,39 @@ import axios from 'axios';
 import { Order as BaseOrder, OrderStatus } from '@/types/order';
 
 // Extend the base Order interface to include seller-specific fields
-export interface SellerOrder extends Omit<BaseOrder, 'items'> {
+export interface SellerOrder extends Omit<BaseOrder, 'items' | 'total_amount' | 'subtotal' | 'shipping_cost' | 'tax_amount' | 'discount_amount'> {
+  total_amount: number | string;
+  subtotal: number | string;
+  shipping_cost: number | string;
+  tax_amount: number | string;
+  discount_amount: number | string;
   items: Array<{
     id: number;
     product_id: string | number;
     product_name: string;
     product_image?: string;
     quantity: number;
-    price: number;
-    subtotal: number;
+    price: number | string;
+    subtotal: number | string;
   }>;
 }
+
+// Helper function to transform order data from API
+const transformOrder = (order: any): SellerOrder => {
+  return {
+    ...order,
+    total_amount: typeof order.total_amount === 'string' ? parseFloat(order.total_amount) : order.total_amount,
+    subtotal: typeof order.subtotal === 'string' ? parseFloat(order.subtotal) : order.subtotal,
+    shipping_cost: typeof order.shipping_cost === 'string' ? parseFloat(order.shipping_cost) : order.shipping_cost,
+    tax_amount: typeof order.tax_amount === 'string' ? parseFloat(order.tax_amount) : order.tax_amount,
+    discount_amount: typeof order.discount_amount === 'string' ? parseFloat(order.discount_amount) : order.discount_amount,
+    items: order.items?.map((item: any) => ({
+      ...item,
+      price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
+      subtotal: typeof item.subtotal === 'string' ? parseFloat(item.subtotal) : item.subtotal
+    })) || []
+  };
+};
 
 // Get the base URL from environment variables
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3002/api').replace(/\/$/, '');
@@ -453,8 +475,20 @@ export const sellerApi = {
   // Orders
   getSellerOrders: async (): Promise<SellerOrder[]> => {
     try {
+      console.log('Fetching seller orders...');
       const response = await sellerApiInstance.get<{ data: SellerOrder[] }>('/sellers/orders');
-      return response.data?.data || [];
+      const orders = response.data?.data || [];
+      
+      // Log raw data from API
+      console.log('Raw orders from API:', JSON.stringify(orders, null, 2));
+      
+      // Transform string amounts to numbers
+      const transformedOrders = orders.map(transformOrder);
+      
+      // Log transformed data
+      console.log('Transformed orders:', JSON.stringify(transformedOrders, null, 2));
+      
+      return transformedOrders;
     } catch (error: any) {
       console.error('Error fetching seller orders:', error);
       if (error.response?.data?.message) {

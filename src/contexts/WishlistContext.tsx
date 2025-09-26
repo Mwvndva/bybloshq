@@ -123,13 +123,29 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
           description: `${product.name} has been added to your wishlist.`,
         });
         
-      } catch (error) {
-        console.error('❌ Error adding to wishlist:', error);
-        toast({
-          title: 'Failed to add to wishlist',
-          description: 'There was an error adding this item to your wishlist. Please try again.',
-          variant: 'destructive',
+      } catch (error: any) {
+        console.error('❌ Error adding to wishlist:', {
+          error,
+          message: error.message,
+          code: error.code,
+          response: error.response?.data
         });
+        
+        if (error.code === 'DUPLICATE_WISHLIST_ITEM' || error.response?.status === 409) {
+          const errorMessage = error.response?.data?.message || error.message || 'This item is already in your wishlist.';
+          toast({
+            title: 'Already in wishlist',
+            description: errorMessage,
+            variant: 'default',
+          });
+        } else {
+          const errorMessage = error.response?.data?.message || 'There was an error adding this item to your wishlist. Please try again.';
+          toast({
+            title: 'Failed to add to wishlist',
+            description: errorMessage,
+            variant: 'destructive',
+          });
+        }
         throw error;
       }
     },

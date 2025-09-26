@@ -92,7 +92,12 @@ export const getSellerOrders = async (req, res) => {
         // Format the order to match frontend expectations
         ordersMap.set(orderId, {
           ...order,
-          total_amount: order.total_amount || 0,
+          // Ensure numeric values are numbers
+          total_amount: order.total_amount ? Number(order.total_amount) : 0,
+          subtotal: order.subtotal ? Number(order.subtotal) : 0,
+          shipping_cost: order.shipping_cost ? Number(order.shipping_cost) : 0,
+          tax_amount: order.tax_amount ? Number(order.tax_amount) : 0,
+          discount_amount: order.discount_amount ? Number(order.discount_amount) : 0,
           status: order.status || 'pending',
           created_at: order.created_at || new Date().toISOString(),
           updated_at: order.updated_at || new Date().toISOString(),
@@ -121,9 +126,9 @@ export const getSellerOrders = async (req, res) => {
           product_id: row.product_id,
           product_name: row.product_name,
           product_image: row.product_image,
-          quantity: row.quantity,
-          price: row.price,
-          subtotal: row.subtotal
+          quantity: Number(row.quantity) || 0,
+          price: row.price ? Number(row.price) : 0,
+          subtotal: row.subtotal ? Number(row.subtotal) : 0
         });
       }
     }

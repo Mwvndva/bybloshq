@@ -390,8 +390,7 @@ const buyerApi = {
           'Pragma': 'no-cache',
           'Expires': '0',
         },
-        timeout: 15000, // Increase timeout to 15 seconds
-        timeoutErrorMessage: 'Request timed out. Please check your connection and try again.'
+        timeout: 15000 // Increase timeout to 15 seconds
       });
       
       // Check if the response has the expected structure
@@ -465,7 +464,9 @@ const buyerApi = {
       // Handle duplicate entry (409) - throw error to be caught by frontend
       if (error.response?.status === 409) {
         const errorMessage = error.response?.data?.message || 'Product already in wishlist';
-        throw new Error(errorMessage);
+        const err = new Error(errorMessage) as Error & { code?: string };
+        err.code = 'DUPLICATE_WISHLIST_ITEM';
+        throw err;
       }
       
       return false;
@@ -514,12 +515,17 @@ const buyerApi = {
 
   getOrders: async (): Promise<any[]> => {
     try {
-      const response = await buyerApiInstance.get('/buyers/orders');
+      interface OrdersResponse {
+        data?: {
+          orders?: any[];
+        };
+      }
+      const response = await buyerApiInstance.get<OrdersResponse>('/buyers/orders');
       const orders = response.data?.data?.orders;
       return Array.isArray(orders) ? orders : [];
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching buyer orders:', error);
-      if (error.response?.status === 401) {
+      if ((error as any)?.response?.status === 401) {
         localStorage.removeItem('buyer_token');
         delete buyerApiInstance.defaults.headers.common['Authorization'];
         window.location.href = '/buyer/login';
@@ -538,16 +544,10 @@ const buyerApi = {
     } catch (error: any) {
       console.error('Error syncing wishlist:', error);
       
-      if (error.response) {
-        console.error('Response status:', error.response.status);
-        console.error('Response data:', error.response.data);
-        
-        if (error.response.status === 401) {
-          console.log('Authentication failed, clearing token and redirecting to login');
-          localStorage.removeItem('buyer_token');
-          delete buyerApiInstance.defaults.headers.common['Authorization'];
-          window.location.href = '/buyer/login';
-        }
+      if ((error as any).response?.status === 401) {
+        localStorage.removeItem('buyer_token');
+        delete buyerApiInstance.defaults.headers.common['Authorization'];
+        window.location.href = '/buyer/login';
       }
       
       return false;

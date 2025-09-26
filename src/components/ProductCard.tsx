@@ -72,9 +72,24 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
     setWishlistActionLoading(true);
     try {
       await addToWishlist(product);
-      toast({ title: 'Added to Wishlist', description: `${product.name} added to your wishlist.` });
-    } catch (error) {
-      toast({ title: 'Error', description: 'Failed to add item to wishlist.', variant: 'destructive' });
+      toast({ 
+        title: 'Added to Wishlist', 
+        description: `${product.name} added to your wishlist.` 
+      });
+    } catch (error: any) {
+      if (error.code === 'DUPLICATE_WISHLIST_ITEM' || error.response?.status === 409) {
+        toast({ 
+          title: 'Already in Wishlist', 
+          description: 'Product already in wishlist',
+          variant: 'default'
+        });
+      } else {
+        toast({ 
+          title: 'Error', 
+          description: 'Failed to add item to wishlist.', 
+          variant: 'destructive' 
+        });
+      }
     } finally {
       setWishlistActionLoading(false);
     }

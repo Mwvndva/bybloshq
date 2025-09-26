@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { fetchBuyerOrders, fetchOrderDetails } from '@/api/simpleOrderApi';
 import { Order, OrderStatus } from '@/types/order';
+import { formatCurrency } from '@/lib/utils';
 
 // Status variant mapping for consistent styling
 const statusVariantMap: Record<OrderStatus, string> = {
@@ -101,20 +102,76 @@ const useOrderConfirmation = (order: OrderWithConfirmation, onConfirm: (orderId:
   return { isConfirming, setIsConfirming };
 };
 
-const OrderRow = ({ order, onConfirm }: { order: OrderWithConfirmation, onConfirm: (orderId: number) => void }) => {
-  const { isConfirming, setIsConfirming } = useOrderConfirmation(order, onConfirm);
+// Transform order data to ensure numeric values
+const transformOrder = (order: OrderWithConfirmation): OrderWithConfirmation => ({
+  ...order,
+  total_amount: typeof order.total_amount === 'string' 
+    ? parseFloat(order.total_amount) 
+    : order.total_amount || 0,
+  subtotal: typeof order.subtotal === 'string' 
+    ? parseFloat(order.subtotal) 
+    : order.subtotal || 0,
+  shipping_cost: typeof (order as any).shipping_cost === 'string'
+    ? parseFloat((order as any).shipping_cost)
+    : (order as any).shipping_cost || 0,
+  tax_amount: typeof (order as any).tax_amount === 'string'
+    ? parseFloat((order as any).tax_amount)
+    : (order as any).tax_amount || 0,
+  discount_amount: typeof (order as any).discount_amount === 'string'
+    ? parseFloat((order as any).discount_amount)
+    : (order as any).discount_amount || 0,
+  items: order.items?.map(item => ({
+    ...item,
+    subtotal: typeof item.subtotal === 'string' 
+      ? parseFloat(item.subtotal) 
+      : item.subtotal || 0,
+    product_price: typeof (item as any).product_price === 'string'
+      ? parseFloat((item as any).product_price)
+      : (item as any).product_price || 0
+  })) || []
+});
 
-  // Ensure total_amount is a number before calling toFixed
-  const totalAmount = typeof order.total_amount === 'number' 
-    ? order.total_amount 
-    : parseFloat(order.total_amount) || 0;
+const OrderRow = ({ order: originalOrder, onConfirm }: { order: OrderWithConfirmation, onConfirm: (orderId: number) => void }) => {
+  const { isConfirming, setIsConfirming } = useOrderConfirmation(originalOrder, onConfirm);
+  
+  // Transform the order data to ensure all numeric fields are numbers
+  const order = transformOrder(originalOrder);
+  
+  // Calculate the total amount, using the transformed values
+  const totalAmount = Number(order.total_amount || 
+                           order.subtotal || 
+                           order.items.reduce((sum, item) => sum + (Number(item.subtotal) || 0), 0));
+  
+  // Ensure we have a valid number
+  const displayAmount = isNaN(totalAmount) ? 0 : totalAmount;
+
+  // Debug log
+  console.log('Order details:', { 
+    orderId: order.id,
+    orderNumber: order.order_number,
+    total_amount: order.total_amount,
+    subtotal: order.subtotal,
+    calculatedTotal: order.items.reduce((sum, item) => sum + (item.subtotal || 0), 0),
+    items: order.items.map(item => ({
+      id: item.id,
+      product_name: item.product_name,
+      quantity: item.quantity,
+      subtotal: item.subtotal,
+      product_price: (item as any).product_price
+    }))
+  });
 
   return (
     <TableRow key={order.id}>
       <TableCell>{order.order_number}</TableCell>
       <TableCell>{new Date(order.created_at).toLocaleDateString()}</TableCell>
       <TableCell>{order.items.length} items</TableCell>
-      <TableCell>${totalAmount.toFixed(2)}</TableCell>
+      <TableCell className="font-medium">
+        {formatCurrency(displayAmount)}
+        <div className="text-xs text-muted-foreground">
+          {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+        </div>
+      </TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <Badge variant={order.status === 'confirmed' ? 'default' : 'outline'}>
@@ -396,7 +453,7 @@ const OrdersSection = () => {
                     <TableCell className="font-medium">{order.order_number}</TableCell>
                     <TableCell>{formatDate(order.created_at)}</TableCell>
                     <TableCell>{order.items?.length || 0} items</TableCell>
-                    <TableCell>${typeof order.total_amount === 'number' ? order.total_amount.toFixed(2) : '0.00'}</TableCell>
+                    <TableCell>{formatCurrency(order.total_amount)}</TableCell>
                     <TableCell>
                       <Badge className={statusVariantMap[order.status as OrderStatus] || 'bg-gray-100'}>
                         {order.status}

@@ -51,6 +51,25 @@ const SellerOrdersTab = () => {
         setLoading(true);
         setError(null);
         const data = await sellerApi.getSellerOrders();
+        
+        // Log the complete order data structure
+        console.log('Orders data received:', {
+          count: data.length,
+          sampleOrder: data[0] ? {
+            id: data[0].id,
+            order_number: data[0].order_number,
+            total_amount: data[0].total_amount,
+            total_amount_type: typeof data[0].total_amount,
+            items: data[0].items?.map(item => ({
+              id: item.id,
+              product_name: item.product_name,
+              price: item.price,
+              quantity: item.quantity,
+              subtotal: item.subtotal
+            }))
+          } : 'No orders'
+        });
+        
         setOrders(data);
       } catch (err: any) {
         console.error('Error fetching orders:', err);
@@ -175,7 +194,14 @@ const SellerOrdersTab = () => {
                       ))}
                     </div>
                   </TableCell>
-                  <TableCell>{formatCurrency(order.total_amount)}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex flex-col">
+                      <div>{formatCurrency(Number(order.total_amount))}</div>
+                      <div className="text-xs text-gray-500">
+                        Raw: {order.total_amount} ({typeof order.total_amount})
+                      </div>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge className={`${statusVariantMap[order.status] || 'bg-gray-100 text-gray-800'} text-xs`}>
                       {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
