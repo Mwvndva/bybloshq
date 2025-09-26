@@ -62,7 +62,7 @@ export const fetchBuyerOrders = async ({
 
     // Make the API request
     const response = await apiRequest<SimpleOrderResponse>({
-      url: `/api/buyers/orders?${params.toString()}`,
+      url: `/buyers/orders?${params.toString()}`,
       method: 'GET',
     });
 
