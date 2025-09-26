@@ -76,8 +76,13 @@ class PesapalController {
       const merchantReference = `ORD-${uuidv4()}`;
       
       // Prepare the order payload for Pesapal
-      const callbackUrl = new URL('/api/pesapal/callback', process.env.VITE_API_URL || process.env.PUBLIC_BASE_URL).toString();
+      // Ensure we're using the API URL for the callback, not the frontend URL
+      const apiBaseUrl = process.env.VITE_API_URL || process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
+      const callbackUrl = new URL('/api/pesapal/callback', apiBaseUrl).toString();
+      
       logger.info('Using callback URL:', callbackUrl);
+      logger.info('VITE_API_URL:', process.env.VITE_API_URL);
+      logger.info('PUBLIC_BASE_URL:', process.env.PUBLIC_BASE_URL);
       
       const orderPayload = {
         id: merchantReference,

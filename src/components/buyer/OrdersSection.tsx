@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { CheckCircle2, Clock } from 'lucide-react';
+import { CheckCircle2, Clock, Truck, AlertTriangle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { fetchBuyerOrders, fetchOrderDetails } from '@/api/simpleOrderApi';
 import { Order, OrderStatus } from '@/types/order';
+
+// Status variant mapping for consistent styling
+const statusVariantMap: Record<OrderStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  processing: 'bg-blue-100 text-blue-800',
+  shipped: 'bg-purple-100 text-purple-800',
+  delivered: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800',
+  completed: 'bg-green-100 text-green-800',
+  confirmed: 'bg-blue-100 text-blue-800',
+};
+
+// Format date to a readable format
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
 
 interface OrderWithConfirmation {
   id: number;
@@ -349,28 +371,64 @@ const OrdersSection = () => {
       </CardHeader>
       <CardContent>
         {orders.length === 0 ? (
-          <p>You have no orders yet.</p>
+          <div className="text-center py-8">
+            <p className="text-muted-foreground">You haven't placed any orders yet.</p>
+            <Button className="mt-4" onClick={() => window.location.href = '/products'}>
+              Browse Products
+            </Button>
+          </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <OrderRow 
-                  key={order.id} 
-                  order={order} 
-                  onConfirm={handleConfirmOrder} 
-                />
-              ))}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order #</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Items</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orders.map((order) => (
+                  <TableRow key={order.id}>
+                    <TableCell className="font-medium">{order.order_number}</TableCell>
+                    <TableCell>{formatDate(order.created_at)}</TableCell>
+                    <TableCell>{order.items?.length || 0} items</TableCell>
+                    <TableCell>${typeof order.total_amount === 'number' ? order.total_amount.toFixed(2) : '0.00'}</TableCell>
+                    <TableCell>
+                      <Badge className={statusVariantMap[order.status as OrderStatus] || 'bg-gray-100'}>
+                        {order.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {order.status === 'delivered' && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleConfirmOrder(order.id)}
+                          disabled={order._isConfirming}
+                        >
+                          {order._isConfirming ? (
+                            <>
+                              <Clock className="h-4 w-4 mr-2 animate-spin" />
+                              Confirming...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Confirm Receipt
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
     </Card>
