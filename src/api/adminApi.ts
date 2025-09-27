@@ -1,6 +1,24 @@
 import axios from 'axios';
 import { EventTicketsResponse } from '@/types/ticket';
 
+// Type for axios instance
+type AxiosInstance = any; // Simplified type for Axios 1.12.2 compatibility
+
+// Type definitions for error handling
+interface ApiError {
+  message: string;
+  response?: {
+    data?: {
+      message?: string;
+      error?: string;
+    };
+    status?: number;
+  };
+  config?: any;
+  code?: string;
+  request?: any;
+}
+
 // Default API configuration
 // Include /api in the base URL since our routes are prefixed with /api
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
@@ -40,7 +58,7 @@ function getEventStatus(
 }
 
 // Create axios instance with default config
-const api = axios.create({
+const api: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // Important for sending cookies with requests
   headers: {
@@ -95,8 +113,10 @@ export const adminApi = {
       }
       
       return response.data;
-    } catch (error: any) {
-      console.error('Login error:', error);
+    } catch (error) {
+      // Type assertion for the error object
+      const err = error as ApiError;
+      console.error('Login error:', err.response?.data?.message || err.message);
       throw error;
     }
   },
@@ -136,11 +156,13 @@ export const adminApi = {
         email: String(seller.email || ''),
         phone: seller.phone ? String(seller.phone) : undefined,
         status: String(seller.status || 'Active'),
+        city: seller.city || 'N/A',
+        location: seller.location || 'N/A',
         // Use camelCase for consistency
         createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
       }));
       
-      console.log(`Fetched ${sellers.length} sellers`);
+      console.log(`Fetched ${sellers.length} sellers with location data`);
       return sellers;
     } catch (error) {
       console.error('Error fetching sellers:', error);
@@ -337,11 +359,13 @@ export const adminApi = {
         email: String(buyer.email || ''),
         phone: buyer.phone ? String(buyer.phone) : undefined,
         status: String(buyer.status || 'Active'),
+        city: buyer.city || 'N/A',
+        location: buyer.location || 'N/A',
         // Transform snake_case to camelCase for the frontend
         createdAt: buyer.created_at || buyer.createdAt || new Date().toISOString()
       }));
       
-      console.log(`Fetched ${buyers.length} buyers`);
+      console.log(`Fetched ${buyers.length} buyers with location data`);
       return buyers;
     } catch (error) {
       console.error('Error fetching buyers:', error);

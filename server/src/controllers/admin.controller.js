@@ -203,7 +203,17 @@ const getAllSellers = async (req, res, next) => {
   try {
     console.log('Fetching all sellers...');
     const result = await pool.query(
-      'SELECT id, full_name as name, email, phone, status, created_at FROM sellers ORDER BY created_at DESC'
+      `SELECT 
+        id, 
+        full_name as name, 
+        email, 
+        phone, 
+        status, 
+        city,
+        location,
+        created_at 
+      FROM sellers 
+      ORDER BY created_at DESC`
     );
     
     console.log('Raw sellers data from database:', result.rows);
@@ -211,7 +221,9 @@ const getAllSellers = async (req, res, next) => {
     const sellers = result.rows.map(seller => ({
       ...seller,
       status: seller.status || 'Active',
-      createdAt: seller.created_at
+      createdAt: seller.created_at,
+      city: seller.city || 'N/A',
+      location: seller.location || 'N/A'
     }));
     
     console.log('Processed sellers data:', sellers);
@@ -821,6 +833,8 @@ const getAllBuyers = async (req, res, next) => {
         email,
         phone,
         status,
+        city,
+        location,
         created_at
       FROM buyers 
       ORDER BY created_at DESC
@@ -828,9 +842,18 @@ const getAllBuyers = async (req, res, next) => {
     
     const result = await pool.query(query);
     
+    // Process the rows to include default values for city and location
+    const buyers = result.rows.map(buyer => ({
+      ...buyer,
+      city: buyer.city || 'N/A',
+      location: buyer.location || 'N/A',
+      status: buyer.status || 'Active',
+      createdAt: buyer.created_at
+    }));
+    
     res.status(200).json({
       status: 'success',
-      data: result.rows
+      data: buyers
     });
   } catch (error) {
     console.error('Error fetching buyers:', error);

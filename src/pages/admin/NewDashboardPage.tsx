@@ -91,6 +91,8 @@ interface DashboardState {
     email: string;
     status: string;
     phone?: string;
+    city: string;
+    location: string;
     createdAt: string;
   }>;
   organizers: Array<{
@@ -107,6 +109,8 @@ interface DashboardState {
     email: string;
     phone?: string;
     status: string;
+    city: string;
+    location: string;
     createdAt: string;
   }>;
   monthlyEvents: MonthlyEventData[];
@@ -1322,7 +1326,9 @@ const NewAdminDashboard = () => {
                         <th className="pb-4 font-semibold">Name</th>
                         <th className="pb-4 font-semibold">Email</th>
                         <th className="pb-4 font-semibold">Phone</th>
+                        <th className="pb-4 font-semibold">Location</th>
                         <th className="pb-4 font-semibold">Status</th>
+                        <th className="pb-4 font-semibold">Joined</th>
                         <th className="pb-4 font-semibold text-right">Actions</th>
                       </tr>
                     </thead>
@@ -1332,6 +1338,12 @@ const NewAdminDashboard = () => {
                           <td className="py-4 text-black font-bold">{seller.name}</td>
                           <td className="py-4 text-gray-700">{seller.email}</td>
                           <td className="py-4 text-gray-700">{seller.phone || 'N/A'}</td>
+                          <td className="py-4">
+                            <div className="flex flex-col">
+                              <span className="text-gray-700">{seller.city}</span>
+                              <span className="text-xs text-gray-500">{seller.location}</span>
+                            </div>
+                          </td>
                           <td className="py-4">
                             <Badge 
                               variant="outline"
@@ -1343,6 +1355,9 @@ const NewAdminDashboard = () => {
                             >
                               {seller.status}
                             </Badge>
+                          </td>
+                          <td className="py-4 text-gray-600 text-sm">
+                            {new Date(seller.createdAt).toLocaleDateString()}
                           </td>
                           <td className="py-4 text-right">
                             <Button variant="ghost" size="sm" className="text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700 rounded-xl px-3 py-2">
@@ -1382,6 +1397,7 @@ const NewAdminDashboard = () => {
                         <th className="pb-4 font-semibold">Name</th>
                         <th className="pb-4 font-semibold">Email</th>
                         <th className="pb-4 font-semibold">Phone</th>
+                        <th className="pb-4 font-semibold">Location</th>
                         <th className="pb-4 font-semibold">Status</th>
                         <th className="pb-4 font-semibold">Joined</th>
                         <th className="pb-4 font-semibold text-right">Actions</th>
@@ -1394,6 +1410,12 @@ const NewAdminDashboard = () => {
                           <td className="py-4 text-gray-700">{buyer.email}</td>
                           <td className="py-4 text-gray-700">{buyer.phone || 'N/A'}</td>
                           <td className="py-4">
+                            <div className="flex flex-col">
+                              <span className="text-gray-700">{buyer.city}</span>
+                              <span className="text-xs text-gray-500">{buyer.location}</span>
+                            </div>
+                          </td>
+                          <td className="py-4">
                             <Badge 
                               variant="outline"
                               className={
@@ -1405,8 +1427,8 @@ const NewAdminDashboard = () => {
                               {buyer.status}
                             </Badge>
                           </td>
-                          <td className="py-4 text-gray-700">
-                            {formatDate(buyer.createdAt)}
+                          <td className="py-4 text-gray-600 text-sm">
+                            {new Date(buyer.createdAt).toLocaleDateString()}
                           </td>
                           <td className="py-4 text-right">
                             <Button variant="ghost" size="sm" className="text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700 rounded-xl px-3 py-2">
