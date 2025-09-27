@@ -530,18 +530,23 @@ export const adminApi = {
   },
 
   // Mark event as paid (withdrawal processed)
-  markEventAsPaid: async (eventId: string, withdrawalMethod?: string, withdrawalDetails?: any) => {
-    try {
-      const response = await api.patch(`/admin/events/${eventId}/mark-paid`, {
-        withdrawalMethod: withdrawalMethod || 'manual',
-        withdrawalDetails: withdrawalDetails || {}
-      });
-      
-      return response.data;
-    } catch (error) {
-      console.error('Error marking event as paid:', error);
-      throw error;
-    }
+  markEventAsPaid(eventId: string, withdrawalMethod?: string, withdrawalDetails?: any) {
+    return api.patch(`/admin/events/${eventId}/mark-paid`, { withdrawalMethod, ...withdrawalDetails });
+  },
+  
+  // Update organizer status
+  updateOrganizerStatus(organizerId: string, data: { status: string }) {
+    return api.patch(`/admin/organizers/${organizerId}/status`, data);
+  },
+  
+  // Update seller status
+  updateSellerStatus(sellerId: string, data: { status: string }) {
+    return api.patch(`/admin/sellers/${sellerId}/status`, data);
+  },
+  
+  // Update buyer status
+  updateBuyerStatus(buyerId: string, data: { status: string }) {
+    return api.patch(`/admin/buyers/${buyerId}/status`, data);
   }
 };
 

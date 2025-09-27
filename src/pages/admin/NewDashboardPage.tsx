@@ -1,18 +1,20 @@
-
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import { Search } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, Clock, Users, Ticket, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle } from 'lucide-react';
+import { Calendar, Clock, Users, Ticket, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin } from 'lucide-react';
 import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
+import { Lock, Unlock } from 'lucide-react';
 
 // Custom tooltip for the events chart
 const EventsTooltip = ({ active, payload, label }: any) => {
@@ -562,21 +564,130 @@ const NewAdminDashboard = () => {
               ? { 
                   ...event, 
                   withdrawal_status: 'paid',
-                  withdrawal_date: response.data.event.withdrawal_date,
-                  withdrawal_amount: response.data.event.withdrawal_amount
-                }
+                  withdrawal_date: response.data.withdrawal_date,
+                  withdrawal_amount: response.data.withdrawal_amount
+                } 
               : event
           )
         }));
-        
-        // Show success message (you can add a toast here if needed)
-        console.log('Event marked as paid successfully');
+        toast.success('Event marked as paid successfully');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error marking event as paid:', error);
-      // Show error message (you can add a toast here if needed)
+      toast.error('Failed to mark event as paid');
     } finally {
       setIsMarkingPaid(null);
+    }
+  };
+
+  // Handle viewing organizer details
+  const handleViewOrganizer = (organizerId: string) => {
+    // Navigate to organizer details page or show a modal
+    // For now, we'll just log the ID and show a toast
+    console.log('Viewing organizer:', organizerId);
+    toast.info(`Viewing organizer ID: ${organizerId}`);
+    
+    // If you have a dedicated organizer details page, you can navigate there:
+    // navigate(`/admin/organizers/${organizerId}`);
+  };
+
+  // Handle toggling organizer status (active/inactive)
+  const handleToggleOrganizerStatus = async (organizerId: string, newStatus: 'active' | 'inactive') => {
+    try {
+      // Call the API to update the organizer status
+      const response = await adminApi.updateOrganizerStatus(organizerId, { status: newStatus });
+      
+      if (response.status === 'success') {
+        // Update the UI to reflect the new status
+        setDashboardState(prevState => ({
+          ...prevState,
+          organizers: prevState.organizers.map(organizer => 
+            organizer.id === organizerId 
+              ? { ...organizer, status: newStatus }
+              : organizer
+          )
+        }));
+        
+        // Show success message
+        toast.success(`Organizer has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
+      }
+    } catch (error) {
+      console.error('Error updating organizer status:', error);
+      toast.error('Failed to update organizer status');
+    }
+  };
+
+  // Handle viewing seller details
+  const handleViewSeller = (sellerId: string) => {
+    // Navigate to seller details page or show a modal
+    // For now, we'll just log the ID and show a toast
+    console.log('Viewing seller:', sellerId);
+    toast.info(`Viewing seller ID: ${sellerId}`);
+    
+    // If you have a dedicated seller details page, you can navigate there:
+    // navigate(`/admin/sellers/${sellerId}`);
+  };
+
+  // Handle toggling seller status (active/inactive)
+  const handleToggleSellerStatus = async (sellerId: string, newStatus: 'active' | 'inactive') => {
+    try {
+      // Call the API to update the seller status
+      const response = await adminApi.updateSellerStatus(sellerId, { status: newStatus });
+      
+      if (response.status === 'success') {
+        // Update the UI to reflect the new status
+        setDashboardState(prevState => ({
+          ...prevState,
+          sellers: prevState.sellers.map(seller => 
+            seller.id === sellerId 
+              ? { ...seller, status: newStatus }
+              : seller
+          )
+        }));
+        
+        // Show success message
+        toast.success(`Seller has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
+      }
+    } catch (error) {
+      console.error('Error updating seller status:', error);
+      toast.error('Failed to update seller status');
+    }
+  };
+
+  // Handle viewing buyer details
+  const handleViewBuyer = (buyerId: string) => {
+    // Navigate to buyer details page or show a modal
+    // For now, we'll just log the ID and show a toast
+    console.log('Viewing buyer:', buyerId);
+    toast.info(`Viewing buyer ID: ${buyerId}`);
+    
+    // If you have a dedicated buyer details page, you can navigate there:
+    // navigate(`/admin/buyers/${buyerId}`);
+  };
+
+  // Handle toggling buyer status (active/inactive)
+  const handleToggleBuyerStatus = async (buyerId: string, newStatus: 'active' | 'inactive') => {
+    try {
+      // Call the API to update the buyer status
+      const response = await adminApi.updateBuyerStatus(buyerId, { status: newStatus });
+      
+      if (response.status === 'success') {
+        // Update the UI to reflect the new status
+        setDashboardState(prevState => ({
+          ...prevState,
+          buyers: prevState.buyers.map(buyer => 
+            buyer.id === buyerId 
+              ? { ...buyer, status: newStatus }
+              : buyer
+          )
+        }));
+        
+        // Show success message
+        toast.success(`Buyer has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
+      }
+    } catch (error) {
+      console.error('Error updating buyer status:', error);
+      toast.error('Failed to update buyer status');
     }
   };
 
@@ -743,7 +854,13 @@ const NewAdminDashboard = () => {
                               <td className="px-6 py-4 text-center">
                                 <Badge 
                                   variant="outline" 
-                                  className="bg-yellow-100 text-yellow-800 border-yellow-200 font-medium"
+                                  className={
+                              buyer.ticketType === 'General Admission' 
+                                      ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                : buyer.ticketType === 'VIP'
+                                      ? 'bg-purple-100 text-purple-800 border-purple-200'
+                                      : 'bg-gray-100 text-gray-600 border-gray-200'
+                                  }
                                 >
                               {buyer.ticketType}
                             </Badge>
@@ -813,70 +930,72 @@ const NewAdminDashboard = () => {
         </div>
       )}
 
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Modern Header */}
-        <div className="mb-8">
-          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div>
-                <div className="flex items-center gap-4 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg">
-                    <Shield className="h-6 w-6 text-white" />
+        <div className="mb-6 sm:mb-8">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-0">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                    <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                   </div>
                   <div>
-                    <h1 className="text-4xl font-black text-black mb-2">Admin Dashboard</h1>
-                    <p className="text-gray-600 text-lg font-medium">Welcome back, Administrator</p>
+                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-1 sm:mb-2">Admin Dashboard</h1>
+                    <p className="text-sm sm:text-base text-gray-600 font-medium">Welcome back, Administrator</p>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="px-4 py-2 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+              <div className="mt-4 sm:mt-0 flex items-center gap-3">
+                <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-100 text-yellow-800 rounded-full text-xs sm:text-sm font-semibold">
                   System Admin
                 </div>
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-pulse"></div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid gap-4 mb-8 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {statsCards.map((stat, index) => (
-            <StatsCard key={index} {...stat} />
+            <div key={index} className="w-full">
+              <StatsCard {...stat} />
+            </div>
           ))}
         </div>
 
         {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-2 shadow-xl">
-            <TabsList className="bg-transparent border-0 p-0 h-auto">
-            <TabsTrigger 
-              value="overview" 
-                className="rounded-2xl px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold"
-            >
-              Overview
-            </TabsTrigger>
-            <TabsTrigger 
-              value="events" 
-                className="rounded-2xl px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold"
-            >
-              Events
-            </TabsTrigger>
-            <TabsTrigger 
-              value="organizers" 
-                className="rounded-2xl px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold"
-            >
-              Organizers
-            </TabsTrigger>
-            <TabsTrigger 
-              value="sellers" 
-                className="rounded-2xl px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold"
-            >
-              Sellers
-            </TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+          <div className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl p-1 sm:p-2 shadow-xl overflow-x-auto">
+            <TabsList className="bg-transparent border-0 p-0 h-auto w-max min-w-full">
+              <TabsTrigger 
+                value="overview" 
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
+              >
+                Overview
+              </TabsTrigger>
+              <TabsTrigger 
+                value="events" 
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
+              >
+                Events
+              </TabsTrigger>
+              <TabsTrigger 
+                value="organizers" 
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
+              >
+                Organizers
+              </TabsTrigger>
+              <TabsTrigger 
+                value="sellers" 
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
+              >
+                Sellers
+              </TabsTrigger>
               <TabsTrigger 
                 value="buyers" 
-                className="rounded-2xl px-6 py-3 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold"
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
               >
                 Buyers
               </TabsTrigger>
@@ -884,20 +1003,20 @@ const NewAdminDashboard = () => {
           </div>
 
           {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {/* Events Chart */}
                 <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center justify-between">
+                  <CardHeader className="pb-3 sm:pb-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <div>
-                        <CardTitle className="text-black text-xl font-bold">Monthly Event Counts</CardTitle>
-                        <CardDescription className="text-gray-600 text-sm">Monthly event counts performance</CardDescription>
+                        <CardTitle className="text-black text-lg sm:text-xl font-bold">Monthly Event Counts</CardTitle>
+                        <CardDescription className="text-xs sm:text-sm text-gray-600">Monthly event counts performance</CardDescription>
                       </div>
                       <div className="flex items-center space-x-2">
                         <div className="flex items-center">
-                          <div className="w-3 h-3 rounded-full bg-blue-500 mr-2"></div>
+                          <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-blue-500 mr-1.5 sm:mr-2"></div>
                           <span className="text-xs text-gray-600 font-medium">Events</span>
                         </div>
                       </div>
@@ -1114,116 +1233,99 @@ const NewAdminDashboard = () => {
           </TabsContent>
 
           {/* Events Tab */}
-          <TabsContent value="events" className="space-y-6">
+          <TabsContent value="events" className="space-y-4 sm:space-y-6">
             <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <CardTitle className="text-black text-xl font-bold">Events Overview</CardTitle>
-                    <CardDescription className="text-gray-600 text-sm">Manage all events in the platform</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl font-bold text-black">Events</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-gray-600">Manage all events in the system</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="flex items-center gap-2 bg-yellow-100 border-yellow-200 text-yellow-800 rounded-full px-3 py-1">
-                      <Calendar className="h-3 w-3" />
-                      <span className="text-xs font-semibold">Last 12 months</span>
-                    </Badge>
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search events..."
+                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-600 border-b border-gray-200">
-                        <th className="pb-4 font-semibold">Event</th>
-                        <th className="pb-4 font-semibold">Date & Time</th>
-                        <th className="pb-4 font-semibold">Location</th>
-                        <th className="pb-4 font-semibold">Status</th>
-                        <th className="pb-4 font-semibold text-right">Attendees</th>
-                        <th className="pb-4 font-semibold text-right">Revenue</th>
-                        <th className="pb-4 font-semibold text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {dashboardState.recentEvents?.map((event) => (
-                        <tr key={event.id} className="hover:bg-yellow-50/50 transition-colors">
-                          <td className="py-4">
-                            <div className="font-bold text-black">{event.title}</div>
-                            <div className="text-xs text-gray-600">{event.organizer_name || 'No Organizer'}</div>
-                          </td>
-                          <td className="py-4">
-                            <div className="text-black font-medium">{format(new Date(event.date), 'MMM d, yyyy')}</div>
-                            <div className="text-xs text-gray-600">
-                              {(event.date && !isNaN(new Date(event.date).getTime())) ? format(new Date(event.date), 'h:mm a') : 'Invalid time'}
-                              {event.end_date && !isNaN(new Date(event.end_date).getTime()) ? ` - ${format(new Date(event.end_date), 'h:mm a')}` : ''}
-                            </div>
-                          </td>
-                          <td className="py-4 text-gray-700">
-                            {event.location || 'N/A'}
-                          </td>
-                          <td className="py-4">
-                            <Badge 
-                              variant="outline"
-                              className={
-                                event.status === 'Active' || event.status === 'Ongoing'
-                                  ? 'bg-green-100 text-green-800 border-green-200'
-                                  : event.status === 'Upcoming'
-                                  ? 'bg-blue-100 text-blue-800 border-blue-200'
-                                  : 'bg-gray-100 text-gray-600 border-gray-200'
-                              }
-                            >
-                              {event.status}
-                            </Badge>
-                          </td>
-                          <td className="py-4 text-right text-gray-700 font-medium">
-                            {event.attendees_count?.toLocaleString() || '0'}
-                          </td>
-                          <td className="py-4 text-right">
-                            <div className="font-bold text-black">
-                              ${event.revenue?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                            </div>
-                          </td>
-                          <td className="py-4 text-right">
-                            <div className="flex items-center justify-end space-x-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                                className="text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700 rounded-xl px-3 py-2"
-                              onClick={() => handleViewEvent({id: event.id, title: event.title})}
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
-                              {event.withdrawal_status !== 'paid' && (
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr className="border-b border-gray-200">
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Event</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Organizer</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Date</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {dashboardState.recentEvents?.map((event) => (
+                          <tr key={event.id} className="hover:bg-yellow-50/50 transition-colors">
+                            <td className="py-4 text-black font-bold">{event.title}</td>
+                            <td className="py-4 text-gray-700 hidden sm:table-cell">{event.organizer_name || 'N/A'}</td>
+                            <td className="py-4 text-gray-700 whitespace-nowrap">{format(new Date(event.date), 'MMM d, yyyy')}</td>
+                            <td className="py-4 hidden md:table-cell">
+                              <Badge 
+                                variant="outline"
+                                className={
+                                  event.status === 'active' 
+                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                                }
+                              >
+                                {event.status}
+                              </Badge>
+                            </td>
+                            <td className="py-4 text-right">
+                              <div className="flex items-center justify-end space-x-2">
                                 <Button 
                                   variant="ghost" 
                                   size="sm" 
-                                  className="text-green-600 hover:bg-green-100 hover:text-green-700 rounded-xl px-3 py-2"
-                                  onClick={() => handleMarkAsPaid(event.id)}
-                                  disabled={isMarkingPaid === event.id}
+                                  className="text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700 rounded-xl px-3 py-2"
+                                  onClick={() => handleViewEvent({id: event.id, title: event.title})}
                                 >
-                                  {isMarkingPaid === event.id ? (
-                                    <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                                  ) : (
-                                    <DollarSign className="w-4 h-4 mr-1" />
-                                  )}
-                                  Paid
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View
                                 </Button>
-                              )}
-                              {event.withdrawal_status === 'paid' && (
-                                <Badge 
-                                  variant="outline" 
-                                  className="bg-green-100 text-green-800 border-green-200 font-medium"
-                                >
-                                  Paid
-                                </Badge>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                                {event.withdrawal_status !== 'paid' && (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-green-600 hover:bg-green-100 hover:text-green-700 rounded-xl px-3 py-2"
+                                    onClick={() => handleMarkAsPaid(event.id)}
+                                    disabled={isMarkingPaid === event.id}
+                                  >
+                                    {isMarkingPaid === event.id ? (
+                                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                    ) : (
+                                      <DollarSign className="w-4 h-4 mr-1" />
+                                    )}
+                                    Paid
+                                  </Button>
+                                )}
+                                {event.withdrawal_status === 'paid' && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="bg-green-100 text-green-800 border-green-200 font-medium"
+                                  >
+                                    Paid
+                                  </Badge>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </CardContent>
               <CardFooter className="border-t border-gray-200 px-6 py-4">
@@ -1248,202 +1350,422 @@ const NewAdminDashboard = () => {
           </TabsContent>
 
           {/* Organizers Tab */}
-          <TabsContent value="organizers" className="space-y-6">
+          <TabsContent value="organizers" className="space-y-4 sm:space-y-6">
             <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
-              <CardHeader className="pb-4">
-                <div>
-                  <CardTitle className="text-black text-xl font-bold">Organizers</CardTitle>
-                  <CardDescription className="text-gray-600 text-sm">
-                    Manage all event organizers in the platform
-                  </CardDescription>
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl font-bold text-black">Organizers</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-gray-600">
+                      Manage all event organizers in the platform
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search organizers..."
+                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-600 border-b border-gray-200">
-                        <th className="pb-4 font-semibold">Name</th>
-                        <th className="pb-4 font-semibold">Email</th>
-                        <th className="pb-4 font-semibold">Phone</th>
-                        <th className="pb-4 font-semibold">Status</th>
-                        <th className="pb-4 font-semibold text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {dashboardState.organizers?.map((organizer) => (
-                        <tr key={organizer.id} className="hover:bg-yellow-50/50 transition-colors">
-                          <td className="py-4 text-black font-bold">{organizer.name}</td>
-                          <td className="py-4 text-gray-700">{organizer.email}</td>
-                          <td className="py-4 text-gray-700">{organizer.phone || 'N/A'}</td>
-                          <td className="py-4">
-                            <Badge 
-                              variant="outline"
-                              className={
-                                organizer.status === 'Active' 
-                                  ? 'bg-green-100 text-green-800 border-green-200'
-                                  : 'bg-gray-100 text-gray-600 border-gray-200'
-                              }
-                            >
-                              {organizer.status}
-                            </Badge>
-                          </td>
-                          <td className="py-4 text-right">
-                            <Button variant="ghost" size="sm" className="text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700 rounded-xl px-3 py-2">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </td>
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr className="border-b border-gray-200">
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Organizer</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {dashboardState.organizers?.map((organizer) => (
+                          <tr key={organizer.id} className="hover:bg-yellow-50/50 transition-colors">
+                            <td className="py-3 px-3 sm:px-4">
+                              <div className="font-medium text-gray-900">{organizer.name}</div>
+                              <div className="sm:hidden text-xs text-gray-500 mt-1">
+                                <div>{organizer.email}</div>
+                                {organizer.phone && <div>{organizer.phone}</div>}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                              <div>{organizer.email}</div>
+                              {organizer.phone && (
+                                <div className="text-xs text-gray-500">{organizer.phone}</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 hidden md:table-cell">
+                              <Badge 
+                                variant="outline"
+                                className={
+                                  organizer.status === 'active' 
+                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                                }
+                              >
+                                {organizer.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 pr-3 sm:pr-4 text-right">
+                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-yellow-600 hover:text-yellow-900 h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                                  onClick={() => handleViewOrganizer(organizer.id)}
+                                >
+                                  <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                  <span className="hidden sm:inline">View</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${
+                                    organizer.status === 'active'
+                                      ? 'text-red-600 hover:text-red-900'
+                                      : 'text-green-600 hover:text-green-900'
+                                  }`}
+                                  onClick={() => handleToggleOrganizerStatus(organizer.id, organizer.status === 'active' ? 'inactive' : 'active')}
+                                >
+                                  {organizer.status === 'active' ? (
+                                    <>
+                                      <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Block</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Unlock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Unblock</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-gray-200 px-6 py-4">
-                <div className="text-sm text-gray-600">
-                  Showing <span className="text-black font-bold">{dashboardState.organizers?.length || 0}</span> {dashboardState.organizers?.length === 1 ? 'organizer' : 'organizers'}
+              <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-sm text-gray-500">
+                    Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.organizers?.length || 0}</span> of{' '}
+                    <span className="font-medium">{dashboardState.organizers?.length || 0}</span> organizers
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Previous
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Next
+                    </Button>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
           </TabsContent>
 
           {/* Sellers Tab */}
-          <TabsContent value="sellers" className="space-y-6">
+          <TabsContent value="sellers" className="space-y-4 sm:space-y-6">
             <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
-              <CardHeader className="pb-4">
-                <div>
-                  <CardTitle className="text-black text-xl font-bold">Sellers</CardTitle>
-                  <CardDescription className="text-gray-600 text-sm">
-                    Manage all sellers in the platform
-                  </CardDescription>
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl font-bold text-black">Sellers</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-gray-600">
+                      Manage all sellers in the platform
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search sellers..."
+                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-600 border-b border-gray-200">
-                        <th className="pb-4 font-semibold">Name</th>
-                        <th className="pb-4 font-semibold">Email</th>
-                        <th className="pb-4 font-semibold">Phone</th>
-                        <th className="pb-4 font-semibold">Location</th>
-                        <th className="pb-4 font-semibold">Status</th>
-                        <th className="pb-4 font-semibold">Joined</th>
-                        <th className="pb-4 font-semibold text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {dashboardState.sellers?.map((seller) => (
-                        <tr key={seller.id} className="hover:bg-yellow-50/50 transition-colors">
-                          <td className="py-4 text-black font-bold">{seller.name}</td>
-                          <td className="py-4 text-gray-700">{seller.email}</td>
-                          <td className="py-4 text-gray-700">{seller.phone || 'N/A'}</td>
-                          <td className="py-4">
-                            <div className="flex flex-col">
-                              <span className="text-gray-700">{seller.city}</span>
-                              <span className="text-xs text-gray-500">{seller.location}</span>
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <Badge 
-                              variant="outline"
-                              className={
-                                seller.status === 'Active' 
-                                  ? 'bg-green-100 text-green-800 border-green-200'
-                                  : 'bg-gray-100 text-gray-600 border-gray-200'
-                              }
-                            >
-                              {seller.status}
-                            </Badge>
-                          </td>
-                          <td className="py-4 text-gray-600 text-sm">
-                            {new Date(seller.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-4 text-right">
-                            <Button variant="ghost" size="sm" className="text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700 rounded-xl px-3 py-2">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </td>
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr className="border-b border-gray-200">
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Seller</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Location</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {dashboardState.sellers?.map((seller) => (
+                          <tr key={seller.id} className="hover:bg-yellow-50/50 transition-colors">
+                            <td className="py-3 px-3 sm:px-4">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-yellow-600" />
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-gray-900">{seller.name}</div>
+                                  <div className="text-xs text-gray-500">ID: {seller.id}</div>
+                                  <div className="sm:hidden text-xs text-gray-500 mt-1">
+                                    <div>{seller.email}</div>
+                                    {seller.phone && <div>{seller.phone}</div>}
+                                    <div className="flex items-center mt-1">
+                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-400" />
+                                      <span>{seller.city || 'N/A'}</span>
+                                    </div>
+                                    {seller.location && (
+                                      <div className="text-xs text-gray-500 truncate">{seller.location}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                              <div className="font-medium text-gray-900">{seller.email}</div>
+                              <div className="text-xs text-gray-500">{seller.phone || 'N/A'}</div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden md:table-cell">
+                              <div className="flex items-center">
+                                <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                                <span>{seller.city || 'N/A'}</span>
+                              </div>
+                              {seller.location && (
+                                <div className="text-xs text-gray-500 truncate max-w-[200px]" title={seller.location}>
+                                  {seller.location}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3 px-2 sm:px-3">
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  seller.status === 'active' 
+                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                                }
+                              >
+                                {seller.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 pr-3 sm:pr-4 text-right">
+                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-yellow-600 hover:text-yellow-900 h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                                  onClick={() => handleViewSeller(seller.id)}
+                                >
+                                  <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                  <span className="hidden sm:inline">View</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${
+                                    seller.status === 'active'
+                                      ? 'text-red-600 hover:text-red-900'
+                                      : 'text-green-600 hover:text-green-900'
+                                  }`}
+                                  onClick={() => handleToggleSellerStatus(seller.id, seller.status === 'active' ? 'inactive' : 'active')}
+                                >
+                                  {seller.status === 'active' ? (
+                                    <>
+                                      <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Block</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Unlock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Unblock</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-gray-200 px-6 py-4">
-                <div className="text-sm text-gray-600">
-                  Showing <span className="text-black font-bold">{dashboardState.sellers?.length || 0}</span> {dashboardState.sellers?.length === 1 ? 'seller' : 'sellers'}
+              <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-sm text-gray-500">
+                    Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.sellers?.length || 0}</span> of{' '}
+                    <span className="font-medium">{dashboardState.sellers?.length || 0}</span> sellers
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Previous
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Next
+                    </Button>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
           </TabsContent>
 
           {/* Buyers Tab */}
-          <TabsContent value="buyers" className="space-y-6">
+          <TabsContent value="buyers" className="space-y-4 sm:space-y-6">
             <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
-              <CardHeader className="pb-4">
-                <div>
-                  <CardTitle className="text-black text-xl font-bold">Buyers</CardTitle>
-                  <CardDescription className="text-gray-600 text-sm">
-                    Manage all buyers in the platform
-                  </CardDescription>
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl font-bold text-black">Buyers</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-gray-600">
+                      Manage all buyers in the platform
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search buyers..."
+                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="text-left text-sm text-gray-600 border-b border-gray-200">
-                        <th className="pb-4 font-semibold">Name</th>
-                        <th className="pb-4 font-semibold">Email</th>
-                        <th className="pb-4 font-semibold">Phone</th>
-                        <th className="pb-4 font-semibold">Location</th>
-                        <th className="pb-4 font-semibold">Status</th>
-                        <th className="pb-4 font-semibold">Joined</th>
-                        <th className="pb-4 font-semibold text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {dashboardState.buyers?.map((buyer) => (
-                        <tr key={buyer.id} className="hover:bg-yellow-50/50 transition-colors">
-                          <td className="py-4 text-black font-bold">{buyer.name}</td>
-                          <td className="py-4 text-gray-700">{buyer.email}</td>
-                          <td className="py-4 text-gray-700">{buyer.phone || 'N/A'}</td>
-                          <td className="py-4">
-                            <div className="flex flex-col">
-                              <span className="text-gray-700">{buyer.city}</span>
-                              <span className="text-xs text-gray-500">{buyer.location}</span>
-                            </div>
-                          </td>
-                          <td className="py-4">
-                            <Badge 
-                              variant="outline"
-                              className={
-                                buyer.status === 'Active' 
-                                  ? 'bg-green-100 text-green-800 border-green-200'
-                                  : 'bg-gray-100 text-gray-600 border-gray-200'
-                              }
-                            >
-                              {buyer.status}
-                            </Badge>
-                          </td>
-                          <td className="py-4 text-gray-600 text-sm">
-                            {new Date(buyer.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="py-4 text-right">
-                            <Button variant="ghost" size="sm" className="text-yellow-600 hover:bg-yellow-100 hover:text-yellow-700 rounded-xl px-3 py-2">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </td>
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr className="border-b border-gray-200">
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Buyer</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Location</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {dashboardState.buyers?.map((buyer) => (
+                          <tr key={buyer.id} className="hover:bg-yellow-50/50 transition-colors">
+                            <td className="py-3 px-3 sm:px-4">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                  <User className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-gray-900">{buyer.name}</div>
+                                  <div className="text-xs text-gray-500">ID: {buyer.id}</div>
+                                  <div className="sm:hidden text-xs text-gray-500 mt-1">
+                                    <div>{buyer.email}</div>
+                                    {buyer.phone && <div>{buyer.phone}</div>}
+                                    <div className="flex items-center mt-1">
+                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-400" />
+                                      <span>{buyer.city || 'N/A'}</span>
+                                    </div>
+                                    {buyer.location && (
+                                      <div className="text-xs text-gray-500 truncate">{buyer.location}</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                              <div className="font-medium text-gray-900">{buyer.email}</div>
+                              <div className="text-xs text-gray-500">{buyer.phone || 'N/A'}</div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden md:table-cell">
+                              <div className="flex items-center">
+                                <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                                <span>{buyer.city || 'N/A'}</span>
+                              </div>
+                              {buyer.location && (
+                                <div className="text-xs text-gray-500 truncate max-w-[200px]" title={buyer.location}>
+                                  {buyer.location}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3 px-2 sm:px-3">
+                              <Badge 
+                                variant="outline" 
+                                className={
+                                  buyer.status === 'active' 
+                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    : 'bg-gray-100 text-gray-600 border-gray-200'
+                                }
+                              >
+                                {buyer.status}
+                              </Badge>
+                            </td>
+                            <td className="py-3 pr-3 sm:pr-4 text-right">
+                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-yellow-600 hover:text-yellow-900 h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                                  onClick={() => handleViewBuyer(buyer.id)}
+                                >
+                                  <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                  <span className="hidden sm:inline">View</span>
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${
+                                    buyer.status === 'active'
+                                      ? 'text-red-600 hover:text-red-900'
+                                      : 'text-green-600 hover:text-green-900'
+                                  }`}
+                                  onClick={() => handleToggleBuyerStatus(buyer.id, buyer.status === 'active' ? 'inactive' : 'active')}
+                                >
+                                  {buyer.status === 'active' ? (
+                                    <>
+                                      <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Block</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Unlock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Unblock</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-gray-200 px-6 py-4">
-                <div className="text-sm text-gray-600">
-                  Showing <span className="text-black font-bold">{dashboardState.buyers?.length || 0}</span> {dashboardState.buyers?.length === 1 ? 'buyer' : 'buyers'}
+              <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-sm text-gray-500">
+                    Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.buyers?.length || 0}</span> of{' '}
+                    <span className="font-medium">{dashboardState.buyers?.length || 0}</span> buyers
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Previous
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Next
+                    </Button>
+                  </div>
                 </div>
               </CardFooter>
             </Card>
