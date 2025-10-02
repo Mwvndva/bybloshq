@@ -13,6 +13,28 @@ const createOrder = async (req, res) => {
     const { items, shippingAddress, paymentMethod, sellerId } = req.body;
     const userId = req.user.id;
 
+    // Verify seller exists and is active
+    console.log(`[Order] Verifying seller ID: ${sellerId}`);
+    const sellerCheck = await pool.query('SELECT id, email, status FROM sellers WHERE id = $1', [sellerId]);
+    
+    if (sellerCheck.rows.length === 0) {
+      console.error(`[Order] Seller not found: ID ${sellerId}`);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid seller. The specified seller does not exist.'
+      });
+    }
+    
+    if (sellerCheck.rows[0].status !== 'active') {
+      console.error(`[Order] Seller is not active:`, sellerCheck.rows[0]);
+      return res.status(400).json({
+        success: false,
+        message: 'This seller account is not active. Please contact support for assistance.'
+      });
+    }
+    
+    console.log(`[Order] Verified seller:`, sellerCheck.rows[0].email);
+
     // Prepare order data for the model
     const orderData = {
       buyerId: userId,

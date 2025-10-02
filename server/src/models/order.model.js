@@ -20,6 +20,16 @@ class Order {
       logger.info('Starting order creation with data:', JSON.stringify(orderData, null, 2));
       await client.query('BEGIN');
 
+      // Verify seller exists and is active (double-check)
+      const sellerCheck = await client.query(
+        'SELECT id FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+        [sellerId, 'active']
+      );
+      
+      if (sellerCheck.rows.length === 0) {
+        throw new Error(`Seller with ID ${sellerId} not found or inactive`);
+      }
+
       // Process and validate order items
       const items = metadata.items || [];
       logger.info('Processing order items:', JSON.stringify(items, null, 2));
