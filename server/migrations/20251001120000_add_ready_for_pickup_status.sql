@@ -1,6 +1,26 @@
 -- First, create a new enum type with READY_FOR_PICKUP added
 DO $$
+DECLARE
+    trigger_record RECORD;
+    trigger_sql TEXT;
 BEGIN
+    -- First, drop any triggers that reference the status column
+    FOR trigger_record IN 
+        SELECT tgname, tgisinternal 
+        FROM pg_trigger 
+        WHERE tgrelid = 'product_orders'::regclass
+    LOOP
+        -- Only drop non-internal triggers
+        IF NOT trigger_record.tgisinternal THEN
+            EXECUTE format('DROP TRIGGER IF EXISTS %I ON product_orders', 
+                          trigger_record.tgname);
+        END IF;
+    END LOOP;
+
+    -- Drop the default constraint if it exists
+    ALTER TABLE product_orders 
+        ALTER COLUMN status DROP DEFAULT;
+
     -- Create a new enum type with all the values including READY_FOR_PICKUP
     CREATE TYPE order_status_new AS ENUM (
         'PENDING',
@@ -24,6 +44,10 @@ BEGIN
             ELSE 'PENDING'::order_status_new
         END);
     
+    -- Set the default value explicitly
+    ALTER TABLE product_orders 
+        ALTER COLUMN status SET DEFAULT 'PENDING'::order_status_new;
+    
     -- Drop the old type
     DROP TYPE order_status;
     
@@ -35,10 +59,12 @@ BEGIN
     SET status = UPPER(status::text)::order_status
     WHERE status::text != UPPER(status::text);
     
-    -- Update the application's validTransitions in order.controller.js
-    -- to use the uppercase status values
-    RAISE NOTICE 'Successfully updated order_status enum to include READY_FOR_PICKUP';
+    -- Note: The triggers will need to be recreated manually if they're essential
+    -- as we don't have the original trigger definitions in this migration
     
+    RAISE NOTICE 'Successfully updated order_status enum to include READY_FOR_PICKUP';
+    RAISE NOTICE 'IMPORTANT: Any triggers on product_orders were dropped and need to be recreated';
+
 EXCEPTION WHEN OTHERS THEN
     RAISE EXCEPTION 'Error updating order_status enum: %', SQLERRM;
 END $$;

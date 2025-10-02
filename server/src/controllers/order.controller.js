@@ -276,11 +276,63 @@ const getSellerOrders = async (req, res) => {
     `;
     
     // Complete the WITH clause
-    query += `
+    query = `
+      WITH order_with_items AS (
+        SELECT 
+          o.id,
+          o.order_number as "orderNumber",
+          o.status,
+          o.payment_status as "paymentStatus",
+          o.total_amount as "totalAmount",
+          o.platform_fee_amount as "platformFeeAmount",
+          o.seller_payout_amount as "sellerPayoutAmount",
+          o.shipping_address as "shippingAddress",
+          o.payment_method as "paymentMethod",
+          o.payment_reference as "paymentReference",
+          o.buyer_name as "buyerName",
+          o.buyer_email as "buyerEmail",
+          o.buyer_phone as "buyerPhone",
+          o.notes,
+          o.metadata,
+          o.created_at as "createdAt",
+          o.updated_at as "updatedAt",
+          o.paid_at as "paidAt",
+          o.completed_at as "completedAt",
+          o.cancelled_at as "cancelledAt",
+          (
+            SELECT json_agg(
+              json_build_object(
+                'id', oi.id,
+                'productId', oi.product_id,
+                'name', oi.product_name,
+                'price', oi.product_price,
+                'quantity', oi.quantity,
+                'imageUrl', p.image_url,
+                'subtotal', oi.subtotal,
+                'metadata', COALESCE(oi.metadata, '{}'::jsonb)
+              )
+            )
+            FROM order_items oi
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = o.id
+          ) as items,
+          (
+            SELECT json_build_object(
+              'id', b.id,
+              'name', b.full_name,
+              'email', b.email,
+              'phone', b.phone,
+              'city', b.city,
+              'location', b.location
+            )
+            FROM buyers b
+            WHERE b.id = o.buyer_id
+          ) as customer
+        FROM product_orders o
+        WHERE o.seller_id = $1
+        ${status ? 'AND o.status = $2' : ''}
       )
       SELECT * FROM order_with_items
-      WHERE 1=1
-      ${status ? 'AND status = $2' : ''}
       ORDER BY "createdAt" DESC
       LIMIT $${status ? 3 : 2} OFFSET $${status ? 4 : 3}
     `;
@@ -293,8 +345,9 @@ const getSellerOrders = async (req, res) => {
     // Add pagination parameters
     queryParams.push(parseInt(limit), offset);
     
-    console.log('Executing query:', query);
-    console.log('With params:', queryParams);
+    // Debug: Log the final query and parameters
+    console.log('Final query:', query);
+    console.log('Query parameters:', queryParams);
     
     const result = await pool.query(query, queryParams);
     
