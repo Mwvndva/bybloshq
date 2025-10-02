@@ -12,45 +12,22 @@ const __dirname = dirname(__filename);
 const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
 const tempDir = path.join(process.cwd(), 'temp');
 
-console.log('Upload middleware initialized');
-console.log('Current working directory:', process.cwd());
-console.log('Uploads directory path:', uploadsDir);
-console.log('Temp directory path:', tempDir);
-
 const mkdir = promisify(fs.mkdir);
 
 // Create directories if they don't exist
 const ensureDirsExist = async () => {
   try {
-    console.log('Ensuring upload directories exist...');
     await mkdir(uploadsDir, { recursive: true });
     await mkdir(tempDir, { recursive: true });
-    
-    // Verify directories exist
-    const uploadsExists = fs.existsSync(uploadsDir);
-    const tempExists = fs.existsSync(tempDir);
-    
-    console.log(`Uploads directory ${uploadsExists ? 'exists' : 'does not exist'}: ${uploadsDir}`);
-    console.log(`Temp directory ${tempExists ? 'exists' : 'does not exist'}: ${tempDir}`);
-    
-    if (!uploadsExists || !tempExists) {
-      throw new Error('Failed to create one or more directories');
-    }
-    
-    console.log('Upload directories ready');
+    console.log(`Uploads directory ready at: ${uploadsDir}`);
+    console.log(`Temp directory ready at: ${tempDir}`);
   } catch (error) {
     console.error('Error creating directories:', error);
-    throw error; // Re-throw to prevent the server from starting with invalid config
   }
 };
 
 // Run this on server start
-try {
-  ensureDirsExist();
-} catch (error) {
-  console.error('Failed to initialize upload directories:', error);
-  process.exit(1);
-}
+ensureDirsExist();
 
 // Configure memory storage to handle file buffers
 const storage = multer.memoryStorage();

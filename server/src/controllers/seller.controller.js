@@ -1,20 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import fs from 'fs';
-
-// Get the current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Define uploads directory
-const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
-
-// Ensure uploads directory exists
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
 import { 
   createSeller, 
   findSellerByEmail, 
@@ -574,95 +559,49 @@ async function getSellerProductsFromDB(sellerId) {
 // @route   POST /api/sellers/upload-banner
 // @access  Private
 export const uploadBanner = async (req, res) => {
-  console.log('Upload banner request received');
-  console.log('Request files:', req.files);
-  console.log('Request file:', req.file);
-  console.log('Request body:', req.body);
-  
   try {
     const sellerId = req.user?.id;
     
     if (!sellerId) {
-      console.error('No seller ID in request');
       return res.status(401).json({
         status: 'error',
         message: 'Authentication required'
       });
     }
 
-    // Check if file was uploaded
-    if (!req.file) {
-      console.error('No file in request');
+    const { bannerImage } = req.body;
+
+    if (!bannerImage) {
       return res.status(400).json({
         status: 'error',
-        message: 'No file uploaded. Please upload a valid image file.'
+        message: 'Banner image is required'
       });
     }
 
-    console.log('Processing file upload for seller:', sellerId);
-    console.log('Original filename:', req.file.originalname);
-    console.log('File size:', req.file.size);
-    console.log('File mimetype:', req.file.mimetype);
+    // Update the seller's banner image
+    const result = await query(
+      `UPDATE sellers 
+       SET banner_image = $1 
+       WHERE id = $2 
+       RETURNING id, banner_image AS "bannerImage"`,
+      [bannerImage, sellerId]
+    );
 
-    // Get the file buffer and generate a unique filename
-    const fileBuffer = req.file.buffer;
-    const fileExt = path.extname(req.file.originalname).toLowerCase();
-    const filename = `banner-${sellerId}-${Date.now()}${fileExt}`;
-    const filepath = path.join(uploadsDir, filename);
-
-    console.log('Saving file to:', filepath);
-
-    try {
-      // Ensure the uploads directory exists
-      if (!fs.existsSync(uploadsDir)) {
-        console.log('Uploads directory does not exist, creating...');
-        await fs.promises.mkdir(uploadsDir, { recursive: true });
-      }
-
-      // Save the file to the uploads directory
-      await fs.promises.writeFile(filepath, fileBuffer);
-      console.log('File saved successfully');
-      
-      // Update the seller's banner image path in the database
-      const bannerUrl = `/uploads/${filename}`;
-      console.log('Updating database with banner URL:', bannerUrl);
-      
-      const result = await query(
-        `UPDATE sellers 
-         SET banner_image = $1, 
-             updated_at = NOW()
-         WHERE id = $2 
-         RETURNING id, banner_image AS "bannerImage"`,
-        [bannerUrl, sellerId]
-      );
-
-      if (!result.rows[0]) {
-        // Clean up the uploaded file if database update fails
-        console.error('Seller not found in database, cleaning up file');
-        await fs.promises.unlink(filepath).catch(console.error);
-        return res.status(404).json({
-          status: 'error',
-          message: 'Seller not found'
-        });
-      }
-
-      console.log('Banner upload successful');
-      res.status(200).json({
-        status: 'success',
-        data: {
-          bannerUrl: result.rows[0].bannerImage
-        }
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Seller not found'
       });
-    } catch (error) {
-      console.error('Error processing file upload:', error);
-      // Clean up the uploaded file if there's an error
-      if (fs.existsSync(filepath)) {
-        await fs.promises.unlink(filepath).catch(console.error);
-      }
-      throw error;
     }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        bannerUrl: result.rows[0].bannerImage
+      }
+    });
   } catch (error) {
-    console.error('Error in uploadBanner:', error);
+    console.error('Error uploading banner:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to upload banner',

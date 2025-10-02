@@ -6,10 +6,6 @@ import * as orderController from '../controllers/order.controller.js';
 import * as withdrawalController from '../controllers/withdrawal.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
-import { restrictTo } from '../middleware/role.js';
-
-// Log when the upload middleware is imported
-console.log('Upload middleware imported successfully');
 
 const router = express.Router();
 
@@ -30,18 +26,10 @@ router.get('/:sellerId/products', sellerController.getSellerProducts);
 // Protected routes (require authentication)
 router.use(protect);
 
-// Restrict all following routes to sellers only
-router.use(restrictTo('seller', 'admin'));
-
 // Seller profile routes
 router.get('/profile', sellerController.getProfile);
 router.patch('/profile', sellerController.updateProfile);
-
-// Upload banner image (using multer for file upload)
-router.post('/upload-banner', 
-  upload.single('banner'), // 'banner' is the field name in the form data
-  sellerController.uploadBanner
-);
+router.post('/upload-banner', sellerController.uploadBanner);
 
 // Seller analytics
 router.get('/analytics', analyticsController.getSellerAnalytics);

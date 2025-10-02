@@ -47,13 +47,7 @@ export const protect = async (req, res, next) => {
     const decoded = verifyToken(token);
     console.log('Auth middleware - Token verified. User ID:', decoded.id, 'Role:', decoded.role);
 
-    // 3) Set user info on request object
-    req.user = {
-      id: decoded.id,
-      role: decoded.role
-    };
-
-    // 4) Find user based on token role/type
+    // 3) Find user based on token role/type
     let user = null;
     const userType = decoded.role || decoded.type; // Handle both 'role' and 'type' for backward compatibility
     
