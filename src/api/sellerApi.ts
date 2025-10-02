@@ -1,40 +1,5 @@
 import axios from 'axios';
-import { Order as BaseOrder, OrderStatus } from '@/types/order';
-
-// Extend the base Order interface to include seller-specific fields
-export interface SellerOrder extends Omit<BaseOrder, 'items' | 'total_amount' | 'subtotal' | 'shipping_cost' | 'tax_amount' | 'discount_amount'> {
-  total_amount: number | string;
-  subtotal: number | string;
-  shipping_cost: number | string;
-  tax_amount: number | string;
-  discount_amount: number | string;
-  items: Array<{
-    id: number;
-    product_id: string | number;
-    product_name: string;
-    product_image?: string;
-    quantity: number;
-    price: number | string;
-    subtotal: number | string;
-  }>;
-}
-
-// Helper function to transform order data from API
-const transformOrder = (order: any): SellerOrder => {
-  return {
-    ...order,
-    total_amount: typeof order.total_amount === 'string' ? parseFloat(order.total_amount) : order.total_amount,
-    subtotal: typeof order.subtotal === 'string' ? parseFloat(order.subtotal) : order.subtotal,
-    shipping_cost: typeof order.shipping_cost === 'string' ? parseFloat(order.shipping_cost) : order.shipping_cost,
-    tax_amount: typeof order.tax_amount === 'string' ? parseFloat(order.tax_amount) : order.tax_amount,
-    discount_amount: typeof order.discount_amount === 'string' ? parseFloat(order.discount_amount) : order.discount_amount,
-    items: order.items?.map((item: any) => ({
-      ...item,
-      price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
-      subtotal: typeof item.subtotal === 'string' ? parseFloat(item.subtotal) : item.subtotal
-    })) || []
-  };
-};
+import { Order, OrderStatus } from '@/types/order';
 
 // Get the base URL from environment variables
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3002/api').replace(/\/$/, '');
@@ -46,6 +11,8 @@ const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
   : API_URL; // Otherwise use the provided API_URL or default
 
 // Interfaces
+export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
+
 export interface Seller {
   id: number;
   fullName: string;
@@ -56,6 +23,12 @@ export interface Seller {
   phone: string;
   city?: string;
   location?: string;
+  bannerImage?: string;
+  banner_image?: string;
+  theme?: Theme;
+  balance?: number;
+  total_sales?: number;
+  net_revenue?: number;
   createdAt: string;
   created_at?: string;
   updatedAt?: string;
@@ -77,11 +50,28 @@ export interface Product {
   updatedAt?: string;
 }
 
+// Order types are now imported from '@/types/order'
+
 interface SellerAnalytics {
   totalProducts: number;
-  publishedProducts: number;
+  totalSales: number;
   totalRevenue: number;
+  totalPayout: number;
+  balance: number;
   monthlySales: Array<{ month: string; sales: number }>;
+  recentOrders?: Array<{
+    id: number;
+    orderNumber: string;
+    status: string;
+    totalAmount: number;
+    createdAt: string;
+    items: Array<{
+      id: number;
+      product_name: string;
+      quantity: number;
+      price: number;
+    }>;
+  }>;
 }
 
 // Create axios instance for seller API
@@ -142,6 +132,8 @@ const transformSeller = (data: any): Seller => {
     phone: seller.phone || '',
     city: seller.city || '',
     location: seller.location || '',
+    bannerImage: seller.bannerImage || seller.banner_image || null,
+    theme: seller.theme || 'default',
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
   };
@@ -462,7 +454,7 @@ export const sellerApi = {
   },
 
   // Update seller profile
-  updateProfile: async (data: { city?: string; location?: string }): Promise<Seller> => {
+  updateProfile: async (data: { city?: string; location?: string; theme?: Theme }): Promise<Seller> => {
     try {
       const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
       return transformSeller(response.data.data);
@@ -472,45 +464,58 @@ export const sellerApi = {
     }
   },
 
-  // Orders
-  getSellerOrders: async (): Promise<SellerOrder[]> => {
-    try {
-      console.log('Fetching seller orders...');
-      const response = await sellerApiInstance.get<{ data: SellerOrder[] }>('/sellers/orders');
-      const orders = response.data?.data || [];
-      
-      // Log raw data from API
-      console.log('Raw orders from API:', JSON.stringify(orders, null, 2));
-      
-      // Transform string amounts to numbers
-      const transformedOrders = orders.map(transformOrder);
-      
-      // Log transformed data
-      console.log('Transformed orders:', JSON.stringify(transformedOrders, null, 2));
-      
-      return transformedOrders;
-    } catch (error: any) {
-      console.error('Error fetching seller orders:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw error;
-    }
+  // Update seller theme
+  async updateTheme(theme: Theme): Promise<Seller> {
+    const response = await sellerApiInstance.put<{ data: any }>('/sellers/theme', { theme });
+    return transformSeller(response.data.data);
   },
 
-  // Mark an order as delivered
-  markOrderAsDelivered: async (orderId: string | number): Promise<{ success: boolean; message: string; order?: any }> => {
-    try {
-      const response = await sellerApiInstance.post<{ success: boolean; message: string; order?: any }>(`/sellers/orders/${orderId}/delivered`);
-      return response.data;
-    } catch (error: any) {
-      console.error('Error marking order as delivered:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw error;
-    }
+  // Orders
+  async getOrders(params?: { status?: OrderStatus }): Promise<Order[]> {
+    const response = await sellerApiInstance.get<{ data: Order[] }>('/sellers/orders', { params });
+    return response.data.data;
   },
+
+  async getOrder(orderId: string): Promise<Order> {
+    const response = await sellerApiInstance.get<{ data: Order }>(`/sellers/orders/${orderId}`);
+    return response.data.data;
+  },
+
+  async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
+    const response = await sellerApiInstance.patch<{ data: Order }>(
+      `/sellers/orders/${orderId}`, 
+      { status }
+    );
+    return response.data.data;
+  },
+
+  async cancelOrder(orderId: string): Promise<Order> {
+    return this.updateOrderStatus(orderId, 'cancelled');
+  },
+
+  async getOrdersAnalytics(): Promise<{
+    total: number;
+    pending: number;
+    processing: number;
+    shipped: number;
+    delivered: number;
+    cancelled: number;
+    revenue: number;
+  }> {
+    const response = await sellerApiInstance.get<{ 
+      data: {
+        total: number;
+        pending: number;
+        processing: number;
+        shipped: number;
+        delivered: number;
+        cancelled: number;
+        revenue: number;
+      } 
+    }>('/sellers/orders/analytics');
+    return response.data.data;
+  },
+
 };
 
 export default sellerApi;

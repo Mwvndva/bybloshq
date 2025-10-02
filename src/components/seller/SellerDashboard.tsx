@@ -3,7 +3,6 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { updateOrderStatus } from '@/api/simpleOrderApi';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -38,14 +37,28 @@ import {
   User,
   Clock,
   Truck,
+  Wallet,
   XCircle,
   Loader2
 } from 'lucide-react';
-import { sellerApi, SellerOrder } from '@/api/sellerApi';
-import { OrderStatus } from '@/types/order';
+import { sellerApi } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
-import SellerOrdersTab from './SellerOrdersTab';
+import { BannerUpload } from './BannerUpload';
+import { ThemeSelector } from './ThemeSelector';
+import SellerOrdersSection from './SellerOrdersSection';
 
+type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
+
+interface SellerProfile {
+  fullName?: string;
+  shopName?: string;
+  email?: string;
+  phone?: string;
+  city?: string;
+  location?: string;
+  bannerImage?: string;
+  theme?: Theme;
+}
 
 interface Product {
   id: string;
@@ -62,33 +75,39 @@ interface Product {
   isSold?: boolean;
 }
 
+interface OrderItem {
+  id: number;
+  product_name: string;
+  quantity: number;
+  price: number;
+}
+
+interface RecentOrder {
+  id: number;
+  orderNumber: string;
+  status: string;
+  totalAmount: number;
+  createdAt: string;
+  items: OrderItem[];
+}
+
 interface AnalyticsData {
   totalProducts: number;
+  totalSales: number;
   totalRevenue: number;
+  totalPayout: number;
+  balance: number;  // Made required since it's now always provided by the backend
   monthlySales: Array<{ month: string; sales: number }>;
-  totalTicketsSold?: number;
+  recentOrders?: RecentOrder[];
 }
 
 interface SellerDashboardProps {
   children?: (props: { 
-    fetchData: () => Promise<{
-      totalProducts: number;
-      totalRevenue: number;
-      monthlySales: Array<{ month: string; sales: number }>;
-      totalTicketsSold: number;
-    }> 
+    fetchData: () => Promise<AnalyticsData> 
   }) => React.ReactNode;
 }
 
-const StatsCard = ({ 
-  icon: Icon, 
-  title, 
-  value, 
-  subtitle, 
-  iconColor = 'text-white',
-  bgColor = 'bg-gradient-to-br from-yellow-400 to-yellow-500',
-  textColor = 'text-black'
-}: {
+interface StatsCardProps {
   icon: any;
   title: string;
   value: string | number;
@@ -96,17 +115,31 @@ const StatsCard = ({
   iconColor?: string;
   bgColor?: string;
   textColor?: string;
+  className?: string;
+}
+
+const StatsCard: React.FC<StatsCardProps> = ({ 
+  icon: Icon, 
+  title, 
+  value, 
+  subtitle, 
+  iconColor = 'text-white',
+  bgColor = 'bg-gradient-to-br from-yellow-400 to-yellow-500',
+  textColor = 'text-black',
+  className = ''
 }) => (
-  <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5 sm:hover:-translate-y-1 h-full">
-    <CardContent className="p-4 sm:p-6 md:p-8">
-      <div className="flex items-start sm:items-center justify-between gap-2 sm:gap-4">
-        <div className="space-y-1 sm:space-y-2 flex-1 min-w-0">
-          <p className="text-[10px] xs:text-xs sm:text-sm font-medium text-gray-600 uppercase tracking-wide truncate">{title}</p>
-          <p className={`text-2xl xs:text-3xl sm:text-4xl font-black ${textColor} truncate`}>{value}</p>
-          <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">{subtitle}</p>
+  <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md transition-all duration-300 h-full">
+    <CardContent className="p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className={`space-y-0.5 flex-1 min-w-0 ${className}`}>
+          <p className="text-[9px] xs:text-[10px] font-medium text-gray-500 uppercase tracking-wide truncate">{title}</p>
+          <p className={`text-xl xs:text-2xl font-bold ${textColor} break-words leading-tight`}>
+            {value}
+          </p>
+          <p className="text-[10px] xs:text-xs text-gray-500 font-medium truncate">{subtitle}</p>
         </div>
-        <div className={`w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 ${bgColor} rounded-2xl flex-shrink-0 flex items-center justify-center shadow-lg`}>
-          <Icon className={`h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8 ${iconColor}`} />
+        <div className={`w-10 h-10 sm:w-12 sm:h-12 ${bgColor} rounded-xl flex-shrink-0 flex items-center justify-center shadow`}>
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
         </div>
       </div>
     </CardContent>
@@ -117,96 +150,32 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
-  const [totalSales, setTotalSales] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [sellerProfile, setSellerProfile] = useState<{
-    fullName?: string;
-    shopName?: string;
-    email?: string;
-    phone?: string;
-    city?: string;
-    location?: string;
-  }>({});
-  const [isCopied, setIsCopied] = useState(false);
-  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
-  const [orders, setOrders] = useState<SellerOrder[]>([]);
-  const [activeSection, setActiveSection] = useState<'overview' | 'products' | 'orders' | 'settings'>('overview');
-  
-  // Withdrawal modal state
-  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState(false);
-  const [withdrawalData, setWithdrawalData] = useState({
-    mpesaNumber: '',
-    registeredName: '',
-    amount: '',
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Fetch seller's orders
-  const fetchOrders = useCallback(async () => {
-    console.log('[SellerDashboard] Starting to fetch orders...');
-    const startTime = Date.now();
-    
-    try {
-      setIsLoadingOrders(true);
-      console.log('[SellerDashboard] Calling sellerApi.getSellerOrders()...');
-      
-      const data = await sellerApi.getSellerOrders();
-      const endTime = Date.now();
-      
-      console.log(`[SellerDashboard] Orders fetched in ${endTime - startTime}ms`);
-      console.log(`[SellerDashboard] Received ${data.length} orders`);
-      
-      if (data.length > 0) {
-        console.log('[SellerDashboard] First order details:', {
-          id: data[0].id,
-          status: data[0].status,
-          total: data[0].total_amount,
-          customer: `${data[0].shipping_address.first_name} ${data[0].shipping_address.last_name}`,
-          itemCount: data[0].items?.length || 0,
-          createdAt: data[0].created_at
-        });
-      }
-      
-      setOrders(data);
-      console.log('[SellerDashboard] Orders state updated');
-    } catch (error) {
-      const errorTime = Date.now();
-      console.error(`[SellerDashboard] Error fetching orders after ${errorTime - startTime}ms:`, {
-        message: error.message,
-        stack: error.stack,
-        response: error.response?.data
-      });
-      
-      toast({
-        title: 'Error',
-        description: 'Failed to load orders. Please try again later.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoadingOrders(false);
-      console.log('[SellerDashboard] Finished processing orders fetch');
-    }
-  }, [toast]);
-  
-  // Fetch orders when the orders tab is selected
-  useEffect(() => {
-    if (activeSection === 'orders') {
-      console.log('[SellerDashboard] Orders tab selected, fetching orders...');
-      fetchOrders();
-    }
-  }, [activeSection, fetchOrders]);
-  
+  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
+
   const [formData, setFormData] = useState({
     city: '',
     location: ''
   });
-  const isMissingLocation = !sellerProfile?.city || !sellerProfile?.location;
+
+  // Withdrawal modal state
+  const [isWithdrawalModalOpen, setIsWithdrawalModalOpen] = useState<boolean>(false);
+  const [withdrawalData, setWithdrawalData] = useState<{
+    mpesaNumber: string;
+    registeredName: string;
+    amount: string;
+  }>({
+    mpesaNumber: '',
+    registeredName: '',
+    amount: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Define cities and their locations
   const cities = {
@@ -258,14 +227,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     });
   };
 
-
   // Fetch data function
-  const fetchData = useCallback(async (): Promise<{
-    totalProducts: number;
-    totalRevenue: number;
-    monthlySales: Array<{ month: string; sales: number }>;
-    totalTicketsSold: number;
-  }> => {
+  const fetchData = useCallback(async (): Promise<AnalyticsData> => {
     setIsLoading(true);
     setError(null);
 
@@ -276,30 +239,45 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         throw new Error('No authentication token found');
       }
 
-      // Fetch products
-      const productsData = await sellerApi.getProducts();
+      // Fetch products and analytics data in parallel
+      const [productsData, analyticsData] = await Promise.all([
+        sellerApi.getProducts(),
+        sellerApi.getAnalytics()
+      ]);
+      
+      console.log('Analytics data received:', {
+        totalProducts: analyticsData.totalProducts,
+        totalSales: analyticsData.totalSales,
+        totalRevenue: analyticsData.totalRevenue,
+        balance: analyticsData.balance,
+        monthlySales: analyticsData.monthlySales,
+        recentOrders: analyticsData.recentOrders
+      });
+      
       setProducts(productsData);
 
-      // Filter sold products
-      const soldProducts = productsData.filter(p => p.isSold || p.status === 'sold');
-      const totalSoldProducts = soldProducts.length;
-      
-      // Calculate analytics
-      const totalRevenue = soldProducts.reduce((sum, p) => sum + p.price, 0);
-      
       // Create analytics data structure
       const processedAnalytics = {
-        totalProducts: productsData.length,
-        totalRevenue: totalRevenue,
-        monthlySales: [], // We don't have date data for monthly sales
-        publishedProducts: productsData.length - totalSoldProducts // Assuming non-sold are published
+        totalProducts: analyticsData.totalProducts,
+        totalSales: analyticsData.totalSales,
+        totalRevenue: analyticsData.totalRevenue,
+        totalPayout: analyticsData.totalRevenue * 0.85, // Assuming 15% platform fee
+        balance: analyticsData.balance || 0,
+        monthlySales: analyticsData.monthlySales || [],
+        recentOrders: analyticsData.recentOrders || []
       };
       
-      const result = {
+      console.log('Processed analytics data:', processedAnalytics);
+      
+      // Return the analytics data with the correct type
+      const result: AnalyticsData = {
         totalProducts: processedAnalytics.totalProducts,
+        totalSales: processedAnalytics.totalSales,
         totalRevenue: processedAnalytics.totalRevenue,
+        totalPayout: processedAnalytics.totalPayout,
+        balance: processedAnalytics.balance,
         monthlySales: processedAnalytics.monthlySales,
-        totalTicketsSold: totalSoldProducts || 0
+        recentOrders: processedAnalytics.recentOrders
       };
       
       setAnalytics(processedAnalytics);
@@ -329,9 +307,12 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       // Return default values in case of error
       return {
         totalProducts: 0,
+        totalSales: 0,
         totalRevenue: 0,
+        totalPayout: 0,
+        balance: 0,
         monthlySales: [],
-        totalTicketsSold: 0,
+        recentOrders: []
       };
     } finally {
       setIsLoading(false);
@@ -431,88 +412,6 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     }
   }, [toast]);
 
-  // Get status badge component
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: {
-        bg: 'bg-yellow-100 text-yellow-800',
-        text: 'Pending',
-        icon: <Clock className="h-3.5 w-3.5 mr-1.5" />
-      },
-      processing: {
-        bg: 'bg-blue-100 text-blue-800',
-        text: 'Processing',
-        icon: <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-      },
-      shipped: {
-        bg: 'bg-purple-100 text-purple-800',
-        text: 'Shipped',
-        icon: <Truck className="h-3.5 w-3.5 mr-1.5" />
-      },
-      delivered: {
-        bg: 'bg-green-100 text-green-800',
-        text: 'Delivered',
-        icon: <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-      },
-      cancelled: {
-        bg: 'bg-red-100 text-red-800',
-        text: 'Cancelled',
-        icon: <XCircle className="h-3.5 w-3.5 mr-1.5" />
-      },
-      refunded: {
-        bg: 'bg-gray-100 text-gray-800',
-        text: 'Refunded',
-        icon: <XCircle className="h-3.5 w-3.5 mr-1.5" />
-      }
-    };
-
-    const config = statusConfig[status.toLowerCase() as keyof typeof statusConfig] || {
-      bg: 'bg-gray-100 text-gray-800',
-      text: status.charAt(0).toUpperCase() + status.slice(1),
-      icon: null
-    };
-
-    return (
-      <div className="flex items-center">
-        {config.icon}
-        <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full ${config.bg}`}>
-          {config.text}
-        </span>
-      </div>
-    );
-  };
-
-  // Handle order status update
-  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
-    try {
-      console.log(`[SellerDashboard] Updating order ${orderId} status to ${status}`);
-      const result = await updateOrderStatus({
-        orderId: parseInt(orderId, 10), 
-        status: status as OrderStatus, 
-        note: 'Status updated by seller' 
-      });
-      
-      if (result.success) {
-        // Refresh orders after update
-        await fetchOrders();
-        
-        toast({
-          title: 'Success',
-          description: `Order status updated to ${status}.`,
-        });
-      } else {
-        throw new Error(result.message || 'Failed to update order status');
-      }
-    } catch (error) {
-      console.error(`[SellerDashboard] Error updating order status:`, error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update order status. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  };
-
   useEffect(() => {
     console.log(`[SellerDashboard] Tab changed to: ${activeTab}`);
     
@@ -527,26 +426,104 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         
         // Calculate total sales and revenue from analytics data
         if (analyticsData) {
+          // Calculate revenue from monthly sales data
           const salesTotal = analyticsData.monthlySales.reduce(
             (sum, monthData) => sum + monthData.sales, 0
           );
           
-          // Ensure totalRevenue is set, fallback to calculated salesTotal if not present
-          const updatedAnalytics = {
+          let totalRevenue = 0;
+          let calculatedPayout = 0;
+          
+          // Calculate revenue from recent orders if available
+          const ordersData = (analyticsData as any).recentOrders;
+          console.log('Raw orders data:', JSON.parse(JSON.stringify(ordersData)));
+          
+          if (Array.isArray(ordersData) && ordersData.length > 0) {
+            const completedOrders = ordersData.filter((order: any) => {
+              const isCompleted = order.status === 'COMPLETED';
+              console.log(`Order ${order.orderNumber} status: ${order.status}, isCompleted: ${isCompleted}`);
+              return isCompleted;
+            });
+            
+            console.log('Completed orders:', completedOrders.length);
+            
+            totalRevenue = completedOrders.reduce((sum: number, order: any) => {
+              let orderTotal = 0;
+              
+              if (Array.isArray(order.items) && order.items.length > 0) {
+                const itemsTotal = order.items.reduce((itemSum: number, item: any) => {
+                  const itemPrice = item.price || 0;
+                  const itemQty = item.quantity || 1;
+                  const itemTotal = itemPrice * itemQty;
+                  console.log(`Item ${item.id}: ${itemPrice} x ${itemQty} = ${itemTotal}`);
+                  return itemSum + itemTotal;
+                }, 0);
+                orderTotal = itemsTotal;
+                console.log(`Order ${order.orderNumber} items total: ${itemsTotal}`);
+              } else {
+                orderTotal = order.totalAmount || 0;
+                console.log(`Order ${order.orderNumber} using totalAmount: ${orderTotal}`);
+              }
+              
+              console.log(`Adding to totalRevenue: ${sum} + ${orderTotal} = ${sum + orderTotal}`);
+              return sum + orderTotal;
+            }, 0);
+            
+            console.log('Final calculated revenue from orders:', totalRevenue);
+          }
+          
+          // If no revenue from orders, use monthly sales as fallback
+          if (totalRevenue === 0) {
+            totalRevenue = salesTotal;
+          }
+          
+          // Only use the API's totalRevenue if we couldn't calculate from orders or monthly sales
+          if (totalRevenue === 0 && analyticsData.totalRevenue) {
+            totalRevenue = analyticsData.totalRevenue;
+          }
+          
+          // Use the full revenue amount for payout
+          calculatedPayout = totalRevenue;
+          
+          console.log('Revenue calculation:', {
+            fromOrders: ordersData ? ordersData.filter((o: any) => o.status === 'COMPLETED').map((o: any) => ({
+              orderNumber: o.orderNumber,
+              totalAmount: o.totalAmount,
+              items: o.items?.map((i: any) => ({
+                price: i.price,
+                quantity: i.quantity,
+                subtotal: (i.price || 0) * (i.quantity || 1)
+              }))
+            })) : [],
+            calculatedRevenue: totalRevenue,
+            apiRevenue: analyticsData.totalRevenue,
+            finalRevenue: totalRevenue
+          });
+          
+          const updatedAnalytics: AnalyticsData = {
             ...analyticsData,
-            totalRevenue: analyticsData.totalRevenue || salesTotal
+            totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
+            totalRevenue: totalRevenue,
+            totalPayout: calculatedPayout,
+            recentOrders: (analyticsData as any).recentOrders || [] // Handle recentOrders if it exists
           };
           
           setAnalytics(updatedAnalytics);
-          setTotalSales(salesTotal);
           
           console.log('Updated analytics data:', {
             salesTotal,
             totalRevenue: updatedAnalytics.totalRevenue,
-            calculatedRevenue: updatedAnalytics.totalRevenue * 0.91
+            totalPayout: updatedAnalytics.totalPayout
           });
         } else {
-          setAnalytics(analyticsData);
+          // Transform SellerAnalytics to AnalyticsData by adding missing required properties
+          const transformedData: AnalyticsData = {
+            ...analyticsData,
+            totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
+            totalPayout: analyticsData.totalRevenue * 0.91, // Calculate payout as 91% of revenue (9% platform fee)
+            recentOrders: [] // Initialize as empty array since we don't have this data
+          };
+          setAnalytics(transformedData);
         }
       } catch (err) {
         setError('Failed to load data. Please try again later.');
@@ -559,40 +536,20 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     if (activeTab === 'products') {
       console.log('[SellerDashboard] Fetching products...');
       fetchProducts();
-    } else if (activeTab === 'dashboard') {
+    } else if (activeTab === 'overview' || activeTab === 'dashboard') {
       console.log('[SellerDashboard] Fetching dashboard data...');
       fetchData();
       fetchProfile();
     } else if (activeTab === 'orders') {
-      console.log('[SellerDashboard] Fetching orders...');
-      fetchOrders();
+      console.log('[SellerDashboard] Orders tab selected');
+      // Orders data will be fetched by the SellerOrdersSection component
     }
-  }, [activeTab, fetchProducts, fetchProfile, fetchOrders]);
-
-  // Handle product deletion
-  const handleDeleteProduct = async (productId: string) => {
-    try {
-      await sellerApi.deleteProduct(productId);
-      toast({
-        title: 'Success',
-        description: 'Product deleted successfully',
-      });
-      // Refresh the products list
-      fetchData();
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete product',
-        variant: 'destructive',
-      });
-    }
-  };
+  }, [activeTab, fetchProducts, fetchProfile]);
 
   // Create context value to pass to child routes
   const outletContext = {
     products,
-    onDeleteProduct: handleDeleteProduct,
+    onDeleteProduct: () => {},
     fetchData,
   };
 
@@ -605,9 +562,6 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     );
   }
 
-  // Calculate total sold products
-  const totalSold = products.filter(p => p.isSold || p.status === 'sold').length;
-
   // Loading state
   if (isLoading) {
     return (
@@ -618,8 +572,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
               <h2 className="text-3xl font-bold tracking-tight">
                 {activeTab === 'dashboard' ? 'Dashboard' : 
                  activeTab === 'products' ? 'Products' : 
-                 activeTab === 'orders' ? 'Orders' :
-                 activeTab === 'settings' ? 'Settings' : 'Seller Dashboard'}
+                 'Seller Dashboard'}
               </h2>
               <Skeleton className="h-10 w-24" />
             </div>
@@ -673,20 +626,6 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     );
   }
 
-  // Calculate total sales and net revenue (91% of total sales)
-  const salesTotal = analytics.totalRevenue || 0;
-  const netRevenue = salesTotal * 0.91;
-
-  // Calculate number of delivered orders and total items
-  const deliveredOrders = orders.filter(order => 
-    order.status === 'delivered'
-  );
-  
-  // Calculate total number of delivered items across all orders
-  const totalDeliveredItems = deliveredOrders.reduce((total, order) => {
-    return total + (order.items?.length || 0);
-  }, 0);
-
   const stats = [
     {
       icon: Package,
@@ -697,17 +636,59 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     {
       icon: DollarSign,
       title: 'Total Sales',
-      value: formatCurrency(salesTotal),
-      subtitle: 'All time'
+      value: formatCurrency(analytics.totalRevenue || 0),
+      subtitle: 'Gross sales amount',
+      iconColor: 'text-white',
+      bgColor: 'bg-gradient-to-br from-blue-500 to-blue-600',
+      textColor: 'text-black'
     },
     {
-      icon: ShoppingBag,
-      title: 'PENDING',
-      value: totalDeliveredItems,
-      subtitle: `across ${deliveredOrders.length} ${deliveredOrders.length === 1 ? 'order' : 'orders'}`,
-      iconColor: 'text-green-500',
-      bgColor: 'bg-green-100',
-      textColor: 'text-green-800'
+      icon: Wallet,
+      title: 'Available Balance',
+      // Format balance as a simple string with fixed decimal places
+      value: `KSh ${(Math.round(analytics.balance * 100) / 100).toFixed(2)}`,
+      subtitle: 'Available for withdrawal',
+      iconColor: 'text-white',
+      bgColor: 'bg-gradient-to-br from-purple-500 to-purple-600',
+      textColor: 'text-black',
+      className: 'whitespace-nowrap' // Prevent line breaks
+    },
+    {
+      icon: DollarSign,
+      title: 'Net Sales',
+      value: (() => {
+        const totalSales = parseFloat(((analytics as any).totalSales || 0).toFixed(2));
+        const platformFeeRate = 0.09; // 9%
+        const platformFee = parseFloat((totalSales * platformFeeRate).toFixed(2));
+        const netSales = parseFloat((totalSales - platformFee).toFixed(2));
+        
+        console.log('Net Sales Calculation:', {
+          rawTotalSales: (analytics as any).totalSales,
+          parsedTotalSales: totalSales,
+          platformFeeRate: '9%',
+          calculatedPlatformFee: platformFee,
+          calculatedNetSales: netSales,
+          formattedNetSales: formatCurrency(netSales),
+          formattedWithDecimals: new Intl.NumberFormat('en-KE', {
+            style: 'currency',
+            currency: 'KES',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+          }).format(netSales)
+        });
+        
+        // Force 2 decimal places in the display
+        return new Intl.NumberFormat('en-KE', {
+          style: 'currency',
+          currency: 'KES',
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        }).format(netSales);
+      })(),
+      subtitle: 'After 9% platform fee',
+      iconColor: 'text-white',
+      bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
+      textColor: 'text-black'
     }
   ];
 
@@ -743,11 +724,6 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   <p className="text-xs text-gray-500 font-medium">
                     Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
                   </p>
-                  {isMissingLocation && (
-                    <span className="inline-flex items-center text-[10px] sm:text-xs text-red-600 font-medium">
-                      Add city & location
-                    </span>
-                  )}
                 </div>
               </div>
             </div>
@@ -763,12 +739,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                     const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
                     try {
                       await navigator.clipboard.writeText(shopUrl);
-                      setIsCopied(true);
                       toast({
                         title: 'Link copied!',
                         description: 'Your shop link has been copied to clipboard.',
                       });
-                      setTimeout(() => setIsCopied(false), 2000);
                     } catch (err) {
                       toast({
                         title: 'Error',
@@ -778,19 +752,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                     }
                   }}
                 >
-                  {isCopied ? (
-                    <>
-                      <Check className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className="hidden sm:inline">Link Copied!</span>
-                      <span className="sm:hidden text-xs">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                      <span className="hidden sm:inline">Copy Shop Link</span>
-                      <span className="sm:hidden text-xs">Copy Link</span>
-                    </>
-                  )}
+                  <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Copy Shop Link</span>
+                  <span className="sm:hidden text-xs">Copy Link</span>
                 </Button>
               )}
               <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
@@ -798,10 +762,13 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 <Button
                   variant="outline"
                   onClick={() => {
+                    // Use totalRevenue from analytics for withdrawal amount
+                    // Default to 0 if analytics data is not available yet
+                    const availableBalance = analytics?.totalRevenue || 0;
                     setWithdrawalData({
                       mpesaNumber: '',
                       registeredName: sellerProfile?.fullName || '',
-                      amount: netRevenue.toFixed(2)
+                      amount: availableBalance > 0 ? availableBalance.toFixed(2) : '0.00'
                     });
                     setIsWithdrawalModalOpen(true);
                   }}
@@ -838,7 +805,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-6 sm:mb-8 bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-gray-200/50">
+        <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-2 mb-6 sm:mb-8 bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-gray-200/50 max-w-4xl mx-auto w-full">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'products', label: 'Products', icon: Package },
@@ -847,9 +814,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveSection(id as any)}
+              onClick={() => setActiveTab(id)}
               className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${
-                activeSection === id
+                activeTab === id
                   ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                   : 'text-gray-600 hover:text-black hover:bg-white/80'
               }`}
@@ -861,7 +828,17 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         </div>
 
         {/* Content Sections */}
-        {activeSection === 'overview' && (
+        {activeTab === 'orders' && (
+          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+            <div className="text-center px-2 sm:px-0">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Order Management</h2>
+              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">View and manage customer orders</p>
+            </div>
+            <SellerOrdersSection />
+          </div>
+        )}
+        
+        {activeTab === 'overview' && (
           <div className="space-y-6 sm:space-y-8 md:space-y-12">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Store Overview</h2>
@@ -897,10 +874,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         <Badge 
-                          variant={product.status === 'sold' || product.isSold ? 'destructive' : 'secondary'}
+                          variant="secondary"
                           className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
                         >
-                          {product.status === 'sold' || product.isSold ? 'Sold' : 'Available'}
+                          Available
                         </Badge>
                       </div>
                       <CardContent className="p-6">
@@ -956,16 +933,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
                     <div>
                       <p className="text-xs sm:text-sm font-medium sm:font-semibold text-gray-700">Active Products</p>
-                      <p className="text-xl sm:text-2xl font-black text-black">{analytics.totalProducts - totalSold}</p>
+                      <p className="text-xl sm:text-2xl font-black text-black">{analytics.totalProducts}</p>
                     </div>
                     <Package className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
-                  </div>
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
-                    <div>
-                      <p className="text-xs sm:text-sm font-medium sm:font-semibold text-gray-700">Products Sold</p>
-                      <p className="text-xl sm:text-2xl font-black text-black">{totalSold}</p>
-                    </div>
-                    <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-green-600" />
                   </div>
                 </CardContent>
               </Card>
@@ -973,7 +943,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           </div>
         )}
 
-        {activeSection === 'products' && (
+        {activeTab === 'products' && (
           <div className="space-y-6 sm:space-y-8 md:space-y-12">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Product Management</h2>
@@ -1046,10 +1016,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         <Badge 
-                          variant={product.status === 'sold' || product.isSold ? 'destructive' : 'secondary'}
+                          variant="secondary"
                           className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
                         >
-                          {product.status === 'sold' || product.isSold ? 'Sold' : 'Available'}
+                          Available
                         </Badge>
                       </div>
                       <CardContent className="p-6">
@@ -1092,26 +1062,36 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           </div>
         )}
 
-        {activeSection === 'orders' && (
-          <div className="space-y-12">
-            <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Order Management</h2>
-              <p className="text-gray-600 text-lg font-medium">View and manage your orders</p>
-            </div>
-            <SellerOrdersTab />
-          </div>
-        )}
-
-        {activeSection === 'settings' && (
+        {activeTab === 'settings' && (
           <div className="space-y-6 sm:space-y-8 lg:space-y-10">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-black mb-2 sm:mb-3">Store Settings</h2>
               <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium max-w-3xl mx-auto">
-                Manage your store configuration and preferences. Update your store details, location, and view important metrics.
+                Manage your store configuration and preferences. Update your store details, location, and appearance.
               </p>
             </div>
-            <div className="w-full max-w-7xl mx-auto">
-              
+            
+            <div className="w-full max-w-7xl mx-auto space-y-6">
+              {/* Banner Upload Section */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
+                <BannerUpload 
+                  currentBannerUrl={sellerProfile?.bannerImage} 
+                  onBannerUploaded={(bannerUrl) => {
+                    setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
+                  }} 
+                />
+              </div>
+
+              {/* Theme Selection */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
+                <ThemeSelector 
+                  currentTheme={sellerProfile?.theme as any || 'default'}
+                  onThemeChange={(theme) => {
+                    setSellerProfile(prev => prev ? { ...prev, theme } : { theme });
+                  }}
+                />
+              </div>
+
               {/* Store Information */}
               <div className="bg-white/60 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 lg:mb-8">
@@ -1292,7 +1272,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 onChange={(e) => setWithdrawalData({...withdrawalData, amount: e.target.value})}
                 disabled={isSubmitting}
               />
-              <p className="text-xs text-gray-500">Available: Ksh {netRevenue.toFixed(2)} (91% of total sales)</p>
+              <p className="text-xs text-gray-500">
+                Available: Ksh {analytics?.totalRevenue ? analytics.totalRevenue.toFixed(2) : '0.00'}
+              </p>
             </div>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
               <div className="flex">
@@ -1328,10 +1310,11 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   return;
                 }
 
-                if (parseFloat(withdrawalData.amount) > netRevenue) {
+                const availableBalance = analytics?.totalRevenue || 0;
+                if (parseFloat(withdrawalData.amount) > availableBalance) {
                   toast({
                     title: 'Error',
-                    description: 'Withdrawal amount cannot exceed your net revenue',
+                    description: `Withdrawal amount cannot exceed your available balance of Ksh ${availableBalance.toFixed(2)}`,
                     variant: 'destructive',
                   });
                   return;

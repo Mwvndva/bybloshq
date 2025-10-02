@@ -108,41 +108,38 @@ class PesapalController {
 
       // Save the order to the database with all required fields
       const orderQuery = `
-        INSERT INTO orders (
-          merchant_reference, total_amount, currency, status, 
-          customer_email, customer_phone, payment_method, metadata,
-          order_tracking_id, customer_id, customer_first_name, customer_last_name,
-          description, callback_url, notification_id, ipn_notification_type,
-          billing_address, payment_method_description, buyer_id, status_updated_by
+        INSERT INTO product_orders (
+          order_number, total_amount, buyer_id, seller_id, 
+          buyer_email, buyer_phone, payment_method, metadata,
+          payment_reference, buyer_name, 
+          notes, status, payment_status
         ) VALUES (
-          $1, $2, $3, $4, $5, $6, 'pesapal', $7,
-          $8, $9, $10, $11, $12, $13, $14, $15,
-          $16, $17, $18, $19
+          $1, $2, $3, $4, $5, $6, 'card', $7,
+          $8, $9, $10, 'PENDING', 'pending'
         )
-        RETURNING id, merchant_reference, total_amount as amount, currency, status, created_at
+        RETURNING id, order_number as merchant_reference, total_amount as amount, 'KES' as currency, status, created_at
       `;
       
       const orderValues = [
-        merchantReference,                    // $1
-        orderPayload.amount,                 // $2
-        orderPayload.currency,               // $3
-        'PENDING',                           // $4
-        customer.email,                      // $5
-        customer.phone || null,              // $6
-        JSON.stringify(orderPayload.metadata), // $7
-        orderPayload.id,                     // $8 - order_tracking_id (using the same as merchant reference for now)
-        customer.id || null,                 // $9 - customer_id
-        customer.firstName || 'Customer',    // $10 - customer_first_name
-        customer.lastName || 'Byblos',       // $11 - customer_last_name
-        orderPayload.description,            // $12 - description
-        orderPayload.callback_url,           // $13 - call_back_url
-        orderPayload.notification_id,        // $14 - notification_id
-        'POST',                             // $15 - ipn_notification_type
-        JSON.stringify(orderPayload.billing_address) || null, // $16 - billing_address
-        'PesaPal Payment',                  // $17 - payment_method_description
-        customer.id || null,                 // $18 - buyer_id (same as customer_id)
-        'system'                            // $19 - status_updated_by
+        merchantReference,                    // $1 - order_number
+        parseFloat(orderPayload.amount),      // $2 - total_amount
+        customer.id,                          // $3 - buyer_id
+        1,                                    // $4 - seller_id (default to 1 or get from items)
+        customer.email,                       // $5 - buyer_email
+        customer.phone || '',                 // $6 - buyer_phone
+        JSON.stringify({
+          ...orderPayload.metadata,
+          callback_url: orderPayload.callback_url,
+          notification_id: orderPayload.notification_id,
+          billing_address: orderPayload.billing_address
+        }),                                   // $7 - metadata
+        orderPayload.id,                      // $8 - payment_reference
+        `${customer.firstName || 'Customer'} ${customer.lastName || ''}`.trim(), // $9 - buyer_name
+        orderPayload.description || 'Order from Byblos' // $10 - notes
       ];
+      
+      // Log the values being inserted
+      logger.info('Inserting order with values:', JSON.stringify(orderValues, null, 2));
 
       const orderResult = await client.query(orderQuery, orderValues);
       const order = orderResult.rows[0];
@@ -154,8 +151,55 @@ class PesapalController {
           const productId = item.productId || item.id || null;
           const productName = item.productName || item.name || 'Unnamed Product';
           const productDescription = item.productDescription || item.description || null;
-          const price = parseFloat(item.price) || 0;
-          const quantity = parseInt(item.quantity, 10) || 1;
+          
+          // Log the raw item data for debugging
+          logger.info('Raw item data:', JSON.stringify(item, null, 2));
+          
+          // Ensure we have a valid product ID
+          if (!productId) {
+            throw new Error('Product ID is required for all order items');
+          }
+          
+          // Fetch product details from database if price is not provided
+          let price = 0;
+          if (item.price !== undefined) {
+            // Use provided price if available
+            if (typeof item.price === 'number') {
+              price = item.price;
+            } else if (typeof item.price === 'string') {
+              price = parseFloat(item.price) || 0;
+            } else if (item.price && typeof item.price === 'object' && 'amount' in item.price) {
+              price = parseFloat(item.price.amount) || 0;
+            }
+          } else {
+            // Fetch price from database if not provided
+            try {
+              const productQuery = 'SELECT price FROM products WHERE id = $1';
+              const productResult = await client.query(productQuery, [productId]);
+              
+              if (productResult.rows.length > 0) {
+                price = parseFloat(productResult.rows[0].price) || 0;
+                logger.info(`Fetched price ${price} from database for product ${productId}`);
+              } else {
+                logger.warn(`Product ${productId} not found in database`);
+              }
+            } catch (dbError) {
+              logger.error(`Error fetching price for product ${productId}:`, dbError);
+              // Continue with price as 0, will be caught by validation
+            }
+          }
+          
+          // Safely parse quantity with fallback to 1
+          let quantity = 1;
+          if (typeof item.quantity === 'number') {
+            quantity = Math.max(1, Math.floor(item.quantity));
+          } else if (typeof item.quantity === 'string') {
+            quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+          }
+          
+
+          
+          // Calculate subtotal
           const subtotal = parseFloat((price * quantity).toFixed(2));
           
           // Log the final values being inserted
@@ -163,35 +207,72 @@ class PesapalController {
             order_id: order.id,
             product_id: productId,
             product_name: productName,
-            product_description: productDescription,
             price: price,
             quantity: quantity,
             subtotal: subtotal
           });
 
-          // Ensure we have a valid product_id
-          if (!productId) {
-            logger.error('Missing product_id in item:', JSON.stringify(item, null, 2));
-            throw new Error('Product ID is required for all order items');
+          // Log the parsed values for debugging
+          logger.info(`Parsed values for product ${productId}:`, {
+            originalPrice: item.price,
+            parsedPrice: price,
+            originalQuantity: item.quantity,
+            parsedQuantity: quantity
+          });
+          
+          // Validate price and quantity after parsing
+          if (price <= 0) {
+            throw new Error(`Invalid price (${price}) for product ${productId}. Please ensure the product has a valid price.`);
+          }
+          
+          if (quantity <= 0) {
+            throw new Error(`Invalid quantity (${quantity}) for product ${productId}. Quantity must be at least 1.`);
           }
 
-          await client.query(
-            `INSERT INTO order_items 
-             (order_id, product_id, product_name, product_description, product_price, quantity, subtotal, status)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')`,
-            [
-              order.id,
-              productId,
-              productName,
-              productDescription,
-              price,
-              quantity,
-              subtotal
-            ]
-          );
+          // Insert order item with explicit column types
+          const insertQuery = `
+            INSERT INTO order_items (
+              order_id, 
+              product_id, 
+              product_name, 
+              product_price, 
+              quantity, 
+              subtotal, 
+              metadata, 
+              created_at, 
+              updated_at
+            ) VALUES ($1, $2, $3, $4::numeric, $5, $6::numeric, $7::jsonb, NOW(), NOW())
+            RETURNING id, product_price, subtotal
+          `;
           
-          logger.info(`Successfully inserted order item for product ${productId}`);
+          const insertValues = [
+            order.id,                     // order_id
+            productId,                   // product_id
+            productName,                 // product_name
+            price.toFixed(2),            // product_price (as string to ensure proper numeric conversion)
+            quantity,                    // quantity
+            subtotal.toFixed(2),         // subtotal (as string to ensure proper numeric conversion)
+            JSON.stringify({
+              description: productDescription,
+              original_price: price,
+              original_quantity: quantity,
+              original_item: item
+            })
+          ];
           
+          logger.info('Executing order item insert with values:', JSON.stringify(insertValues, null, 2));
+          
+          const result = await client.query(insertQuery, insertValues);
+          
+          // Verify the inserted values
+          const insertedItem = result.rows[0];
+          logger.info('Successfully inserted order item:', {
+            id: insertedItem.id,
+            product_id: productId,
+            product_price: insertedItem.product_price,
+            quantity: quantity,
+            subtotal: insertedItem.subtotal
+          });
         } catch (error) {
           logger.error('Error inserting order item:', {
             error: error.message,
@@ -209,7 +290,7 @@ class PesapalController {
       
       // Update the order with the Pesapal tracking ID
       await client.query(
-        'UPDATE orders SET payment_reference = $1 WHERE id = $2',
+        'UPDATE product_orders SET payment_reference = $1, updated_at = NOW() WHERE id = $2',
         [pesapalResponse.order_tracking_id, order.id]
       );
 
@@ -248,6 +329,7 @@ class PesapalController {
 
   // Handle Pesapal callback
   callback = async (req, res) => {
+    const client = await pool.connect();
     try {
       const { OrderTrackingId, OrderMerchantReference } = req.query;
       const frontendUrl = process.env.VITE_BASE_URL || process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -259,16 +341,93 @@ class PesapalController {
       // Get the latest status from Pesapal
       const status = await pesapalService.getOrderStatus(OrderTrackingId);
       
-      // Ensure status is uppercase for consistency
+      // Log the incoming status for debugging
+      logger.info('Received payment status from Pesapal:', {
+        rawStatus: status,
+        payment_status_description: status.payment_status_description
+      });
+
+      // Start transaction
+      await client.query('BEGIN');
+      
+      // First, get the current order to check its status
+      const orderResult = await client.query(
+        'SELECT id, status, payment_status FROM product_orders WHERE order_number = $1 FOR UPDATE',
+        [OrderMerchantReference]
+      );
+      
+      if (orderResult.rows.length === 0) {
+        throw new Error(`Order not found: ${OrderMerchantReference}`);
+      }
+      
+      const currentOrder = orderResult.rows[0];
+      logger.info('Current order status:', currentOrder);
+      
+      // Get the actual enum values from the database
+      const enumResult = await client.query(
+        "SELECT unnest(enum_range(NULL::payment_status)) AS status"
+      );
+      
+      const paymentStatusValues = enumResult.rows.map(row => row.status);
+      logger.info('Available payment status values:', paymentStatusValues);
+      
+      // Determine the new status based on Pesapal status
       const upperStatus = status.payment_status_description 
         ? status.payment_status_description.toUpperCase() 
         : 'PENDING';
       
-      // Update the order status and payment status in the database
-      await pool.query(
-        'UPDATE orders SET status = $1, payment_status = $1, payment_reference = $2, updated_at = NOW() WHERE merchant_reference = $3 RETURNING id',
-        [upperStatus, OrderTrackingId, OrderMerchantReference]
+      let newStatus = 'PENDING';
+      let newPaymentStatus = 'PENDING';
+      
+      // Log the available payment status values for debugging
+      logger.info('Available payment status values:', paymentStatusValues);
+      
+      // Map status based on what's actually in the database
+      if (upperStatus === 'COMPLETED' || upperStatus === 'PAID') {
+        // Keep the order as PENDING even if payment is completed
+        // The status will be updated to PROCESSING/COMPLETED later in the workflow
+        newStatus = 'PENDING';
+        newPaymentStatus = paymentStatusValues.includes('PAID') ? 'PAID' : 
+                          paymentStatusValues.includes('COMPLETED') ? 'COMPLETED' :
+                          paymentStatusValues[0]; // Fallback to first available status
+      } else if (upperStatus === 'FAILED' || upperStatus === 'INVALID') {
+        newStatus = 'FAILED';
+        newPaymentStatus = paymentStatusValues.includes('FAILED') ? 'FAILED' : 
+                          paymentStatusValues[0];
+      } else if (upperStatus === 'CANCELLED') {
+        newStatus = 'CANCELLED';
+        newPaymentStatus = paymentStatusValues.includes('CANCELLED') ? 'CANCELLED' :
+                          paymentStatusValues.includes('FAILED') ? 'FAILED' :
+                          paymentStatusValues[0];
+      }
+      
+      // Ensure we're using a valid payment status
+      if (!paymentStatusValues.includes(newPaymentStatus)) {
+        logger.warn(`Payment status '${newPaymentStatus}' not in allowed values, using first available`);
+        newPaymentStatus = paymentStatusValues[0];
+      }
+      
+      logger.info('Updating order with status:', { 
+        newStatus, 
+        newPaymentStatus,
+        orderId: currentOrder.id 
+      });
+      
+      // Update the order with the new status
+      await client.query(
+        `UPDATE product_orders 
+         SET status = $1::order_status,
+             payment_status = $2::payment_status,
+             payment_reference = $3,
+             updated_at = NOW(),
+             paid_at = CASE WHEN $2::text = ANY(ARRAY['PAID', 'COMPLETED']::text[]) THEN COALESCE(paid_at, NOW()) ELSE paid_at END
+         WHERE id = $4`,
+        [newStatus, newPaymentStatus, OrderTrackingId, currentOrder.id]
       );
+      
+      logger.info('Successfully updated order status');
+      
+      await client.query('COMMIT');
       
       // Determine the status parameter based on Pesapal status
       let statusParam = 'pending';
@@ -319,7 +478,7 @@ class PesapalController {
       
       // Get the order first to check current status
       const orderResult = await client.query(
-        'SELECT * FROM orders WHERE merchant_reference = $1 FOR UPDATE',
+        'SELECT * FROM product_orders WHERE merchant_reference = $1 FOR UPDATE',
         [OrderMerchantReference]
       );
       
@@ -343,7 +502,7 @@ class PesapalController {
       
       // Update the order status and payment status in the database, and capture the result
       const updatedOrderResult = await client.query(
-        `UPDATE orders 
+        `UPDATE product_orders 
          SET status = $1, 
              payment_status = $1, 
              payment_reference = $2, 
@@ -357,14 +516,15 @@ class PesapalController {
       );
       const updatedOrder = updatedOrderResult.rows[0];
       
-      // If the payment is completed, update the status of the order items as well
+      // If the payment is completed, update the payment status but keep order as PENDING
+      // The order status will be updated to PROCESSING/COMPLETED later in the workflow
       if (upperStatus === 'COMPLETED' || upperStatus === 'PAID') {
+        // Only update payment status, not order status
         await client.query(
-          "UPDATE order_items SET status = 'COMPLETED', updated_at = NOW() WHERE order_id = $1",
+          "UPDATE order_items SET status = 'PENDING', updated_at = NOW() WHERE order_id = $1",
           [updatedOrder.id] // Use the ID from the updated order
         );
-        logger.info(`Updated order items to COMPLETED for order ${updatedOrder.id}`);
-        logger.info(`Updated order items to COMPLETED for order ${order.id}`);
+        logger.info(`Updated order items to PENDING for order ${updatedOrder.id}`);
       }
       
       await client.query('COMMIT');
@@ -399,7 +559,7 @@ class PesapalController {
       
       // Get order from database
       const orderResult = await pool.query(
-        'SELECT * FROM orders WHERE id = $1',
+        'SELECT * FROM product_orders WHERE id = $1',
         [orderId]
       );
       
@@ -422,13 +582,13 @@ class PesapalController {
             ? status.payment_status_description.toUpperCase() 
             : 'PENDING';
           
-          // Update the order status in the database if it has changed
-          if (upperStatus !== order.status) {
+          // Update the payment status but keep the order as PENDING
+          // The order status will be updated to PROCESSING/COMPLETED later in the workflow
+          if (upperStatus !== order.payment_status) {
             await pool.query(
-              'UPDATE orders SET status = $1, payment_status = $1, updated_at = NOW() WHERE id = $2',
+              'UPDATE product_orders SET payment_status = $1, updated_at = NOW() WHERE id = $2',
               [upperStatus, order.id]
             );
-            order.status = upperStatus;
             order.payment_status = upperStatus;
           }
           

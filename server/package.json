@@ -14,6 +14,7 @@
     "build": "npm install && npm run migrate",
     "migrate": "node -r dotenv/config scripts/migrate.js",
     "migrate:create": "node-pg-migrate create",
+    "migrate:pesapal-v2": "node -r dotenv/config scripts/run-pesapal-v2-migration.js",
     "seed": "node --experimental-json-modules -r dotenv/config scripts/seed-db.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint . --ext .js,.ts",

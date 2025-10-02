@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { AestheticWithNone } from '@/types/components';
+
+// Lazy load the OrdersSection component
+const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +29,6 @@ import AestheticCategories from '@/components/AestheticCategories';
 import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
-import OrdersSection from './OrdersSection';
 
 const StatsCard = ({ icon: Icon, title, value, subtitle }: {
   icon: any;
@@ -185,11 +188,11 @@ function BuyerDashboardInner() {
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
-        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 mb-6 sm:mb-8 bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-gray-200/50">
+        <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-2 mb-6 sm:mb-8 bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-gray-200/50 max-w-4xl mx-auto w-full">
           {[
             { id: 'shop', label: 'Shop', icon: Package },
-                        { id: 'wishlist', label: 'Wishlist', icon: Heart },
             { id: 'orders', label: 'Orders', icon: Package },
+            { id: 'wishlist', label: 'Wishlist', icon: Heart },
             { id: 'profile', label: 'Profile', icon: User },
           ].map(({ id, label, icon: Icon }) => (
             <button
@@ -384,7 +387,15 @@ function BuyerDashboardInner() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 space-y-2 sm:space-y-0">
               <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-black">Your Orders</h2>
             </div>
-            <OrdersSection />
+            <Suspense fallback={
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-20 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            }>
+              <OrdersSection />
+            </Suspense>
           </div>
         )}
 

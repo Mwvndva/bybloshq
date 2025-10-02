@@ -196,19 +196,32 @@ export const login = async (req, res) => {
 export const getSellerByShopName = async (req, res) => {
   try {
     const { shopName } = req.params;
+    console.log('Fetching seller by shop name:', shopName);
+    
     const seller = await findSellerByShopName(shopName);
     
     if (!seller) {
+      console.log('Seller not found for shop name:', shopName);
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
       });
     }
     
+    console.log('Found seller:', {
+      id: seller.id,
+      shopName: seller.shop_name,
+      hasBannerImage: !!seller.banner_image,
+      bannerImageLength: seller.banner_image ? seller.banner_image.length : 0
+    });
+    
     res.status(200).json({
       status: 'success',
       data: {
-        seller
+        seller: {
+          ...seller,
+          banner_image: seller.banner_image || null
+        }
       }
     });
   } catch (error) {
@@ -541,6 +554,61 @@ async function getSellerProductsFromDB(sellerId) {
   );
   return result.rows;
 }
+
+// @desc    Upload a banner image for the seller
+// @route   POST /api/sellers/upload-banner
+// @access  Private
+export const uploadBanner = async (req, res) => {
+  try {
+    const sellerId = req.user?.id;
+    
+    if (!sellerId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    const { bannerImage } = req.body;
+
+    if (!bannerImage) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Banner image is required'
+      });
+    }
+
+    // Update the seller's banner image
+    const result = await query(
+      `UPDATE sellers 
+       SET banner_image = $1 
+       WHERE id = $2 
+       RETURNING id, banner_image AS "bannerImage"`,
+      [bannerImage, sellerId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Seller not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        bannerUrl: result.rows[0].bannerImage
+      }
+    });
+  } catch (error) {
+    console.error('Error uploading banner:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to upload banner',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
 
 export const getSellerById = async (req, res) => {
   try {

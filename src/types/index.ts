@@ -13,6 +13,8 @@ export type Aesthetic =
   | 'made in kenya';
 
 export interface Seller {
+  bannerUrl: any;
+  shopName: string;
   id: string;
   fullName: string;
   email: string;

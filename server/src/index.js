@@ -2,14 +2,15 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
+import { mkdir } from 'fs/promises';
+import { promises as fs } from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoSanitize from 'express-mongo-sanitize';
-import { xss } from 'express-xss-sanitizer';
+import xss from 'express-xss-sanitizer';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import organizerRoutes from './routes/organizer.routes.js';
@@ -22,7 +23,6 @@ import ticketRoutes from './routes/ticket.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import pesapalRoutes from './routes/pesapal.routes.js';
 import adminRoutes from './routes/admin.routes.js';
-import sellerOrderRoutes from './routes/sellerOrderRoutes.js';
 import * as eventController from './controllers/event.controller.js';
 import { pool, testConnection as testDbConnection } from './config/database.js';
 import { globalErrorHandler, notFoundHandler } from './utils/errorHandler.js';
@@ -37,9 +37,9 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables (prefer server/.env, then repo root .env, then .env.production)
 const candidateEnvPaths = [
-  path.resolve(__dirname, '../.env'),                 // server/.env
-  path.resolve(__dirname, '../../.env'),              // repo root .env
-  process.env.NODE_ENV === 'production' ? path.resolve(__dirname, '../.env.production') : null,
+  path.join(__dirname, '.env'),                 // server/.env
+  path.join(process.cwd(), '.env'),             // repo root .env
+  process.env.NODE_ENV === 'production' ? path.join(__dirname, '.env.production') : null,
 ].filter(Boolean);
 
 const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
@@ -102,10 +102,14 @@ console.log('Serving static files from:', uploadsDir);
 // Ensure the uploads directory exists
 const ensureUploadsDir = async () => {
   try {
-    await mkdir(uploadsDir, { recursive: true });
-    console.log('Uploads directory is ready');
+    if (!existsSync(uploadsDir)) {
+      await mkdir(uploadsDir, { recursive: true });
+      console.log('Uploads directory created successfully');
+    } else {
+      console.log('Uploads directory already exists');
+    }
   } catch (error) {
-    console.error('Error creating uploads directory:', error);
+    console.error('Error handling uploads directory:', error);
   }
 };
 
@@ -283,29 +287,29 @@ app.use(fixApiPrefix);
 import eventRoutes from './routes/event.routes.js';
 import protectedOrganizerRoutes from './routes/protectedOrganizer.routes.js';
 import orderRoutes from './routes/orderRoutes.js';
+import pesapalV2Routes from './routes/pesapal-v2.routes.js';
 import models from './models/index.js';
 const { Payment } = models;
 
 // Mount public routes (no authentication required)
-// Mount more specific routes first
-app.use('/api/sellers/orders', sellerOrderRoutes);
-app.use('/api/buyers', buyerRoutes);
-
-// Mount general routes
+// Mount routes
 app.use('/api/organizers', organizerRoutes);
 app.use('/api/sellers', sellerRoutes);
+app.use('/api/buyers', buyerRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/public', publicRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/payments', paymentRoutes);
-
-// Mount Pesapal routes
 app.use('/api/pesapal', pesapalRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/v2/payments/pesapal', pesapalV2Routes); // New Pesapal V2 routes
 app.use('/api/events', eventRoutes);
 
-// Mount general order routes last to avoid conflicts
+// Mount protected organizer routes
+app.use('/api/organizers', protectedOrganizerRoutes);
+
+// Mount order routes
 app.use('/api/orders', orderRoutes);
 
 // Debug: Log all registered routes in development

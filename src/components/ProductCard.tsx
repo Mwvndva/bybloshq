@@ -7,8 +7,10 @@ import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { cn, formatCurrency } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+
+type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
 interface ProductCardProps {
   product: Product & {
@@ -17,6 +19,7 @@ interface ProductCardProps {
   };
   seller?: Seller;
   hideWishlist?: boolean;
+  theme?: Theme; // Add theme prop
 }
 
 // Hook to safely use wishlist context
@@ -33,7 +36,7 @@ const useWishlistSafe = () => {
   }
 };
 
-export function ProductCard({ product, seller, hideWishlist = false }: ProductCardProps) {
+export function ProductCard({ product, seller, hideWishlist = false, theme = 'default' }: ProductCardProps) {
   const { toast } = useToast();
   const { addToWishlist, isInWishlist, isLoading: isWishlistLoading } = useWishlistSafe();
   
@@ -222,8 +225,8 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
       }
       
       // 8. Call checkout API
-      const apiUrl = import.meta.env.VITE_API_URL || ''
-      const response = await fetch(`${apiUrl}/pesapal/checkout`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiUrl}/api/pesapal/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -275,47 +278,122 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
 
   const handleImageLoad = () => setIsImageLoading(false);
 
+  // Get theme classes based on the theme prop
+  const themeClasses = (() => {
+    switch (theme) {
+      case 'black':
+        return {
+          card: 'bg-gray-900/80 text-white border-gray-800 hover:shadow-2xl hover:shadow-gray-900/20',
+          price: 'text-yellow-400',
+          button: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+          seller: 'text-gray-300',
+          description: 'text-gray-300/80',
+          icon: 'text-yellow-400',
+        };
+      case 'pink':
+        return {
+          card: 'bg-pink-50/90 border-pink-100 hover:shadow-2xl hover:shadow-pink-100',
+          price: 'text-pink-600',
+          button: 'bg-pink-600 hover:bg-pink-700 text-white',
+          seller: 'text-pink-900',
+          description: 'text-pink-900/80',
+          icon: 'text-pink-600',
+        };
+      case 'orange':
+        return {
+          card: 'bg-orange-50/90 border-orange-100 hover:shadow-2xl hover:shadow-orange-100',
+          price: 'text-orange-600',
+          button: 'bg-orange-600 hover:bg-orange-700 text-white',
+          seller: 'text-orange-900',
+          description: 'text-orange-900/80',
+          icon: 'text-orange-600',
+        };
+      case 'green':
+        return {
+          card: 'bg-green-50/90 border-green-100 hover:shadow-2xl hover:shadow-green-100',
+          price: 'text-green-600',
+          button: 'bg-green-600 hover:bg-green-700 text-white',
+          seller: 'text-green-900',
+          description: 'text-green-900/80',
+          icon: 'text-green-600',
+        };
+      case 'red':
+        return {
+          card: 'bg-red-50/90 border-red-100 hover:shadow-2xl hover:shadow-red-100',
+          price: 'text-red-600',
+          button: 'bg-red-600 hover:bg-red-700 text-white',
+          seller: 'text-red-900',
+          description: 'text-red-900/80',
+          icon: 'text-red-600',
+        };
+      case 'yellow':
+        return {
+          card: 'bg-yellow-50/90 border-yellow-100 hover:shadow-2xl hover:shadow-yellow-100',
+          price: 'text-yellow-600',
+          button: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+          seller: 'text-yellow-900',
+          description: 'text-yellow-900/80',
+          icon: 'text-yellow-600',
+        };
+      default: // default theme
+        return {
+          card: 'bg-white/80 border-gray-100 hover:shadow-2xl hover:shadow-gray-100',
+          price: 'text-yellow-600',
+          button: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+          seller: 'text-gray-900',
+          description: 'text-gray-700/80',
+          icon: 'text-gray-600',
+        };
+    }
+  })();
+
   return (
-    <Card
+    <Card 
       className={cn(
-        'group relative overflow-hidden transition-all duration-500 bg-white/80 backdrop-blur-sm border-0 shadow-lg',
-        isSold ? 'opacity-60' : 'hover:shadow-2xl hover:-translate-y-2',
-        'cursor-pointer'
+        'group relative overflow-hidden transition-all duration-500 backdrop-blur-sm border-0',
+        isSold ? 'opacity-60' : 'hover:-translate-y-2',
+        'cursor-pointer',
+        themeClasses.card
       )}
       aria-label={`Product: ${product.name}`}
-      onClick={handleCardClick}
     >
       {/* Wishlist Button */}
       {!hideWishlist && (
         <button
           onClick={toggleWishlist}
           className={cn(
-            'absolute top-4 right-4 z-10 p-3 rounded-2xl bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm transition-all duration-300',
-            wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110'
+            'absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2 rounded-xl sm:rounded-2xl bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm transition-all duration-300',
+            'h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center',
+            wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110',
+            isWishlisted ? 'text-red-500' : 'text-gray-600'
           )}
-          aria-label="Add to wishlist"
+          aria-label={isWishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
           disabled={isSold || wishlistActionLoading || isWishlistLoading}
           aria-busy={wishlistActionLoading}
         >
           {wishlistActionLoading || isWishlistLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
+            <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
           ) : (
-            <Heart className={cn('h-5 w-5', isWishlisted ? 'text-red-500 fill-current' : 'text-gray-600')} />
+            <Heart className={cn('h-4 w-4 sm:h-5 sm:w-5', isWishlisted ? 'fill-current' : '')} />
           )}
         </button>
       )}
 
       {/* Image */}
-      <div className="relative overflow-hidden rounded-t-xl">
+      <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl">
         {isImageLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
             <ImageIcon className="h-8 w-8 text-gray-300 animate-pulse" />
           </div>
         )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <img
           src={product.image_url}
           alt={product.name}
-          className={cn('w-full h-56 object-cover transition-transform duration-500 group-hover:scale-110 cursor-zoom-in', isImageLoading ? 'opacity-0' : 'opacity-100')}
+          className={cn(
+            'w-full h-40 sm:h-48 lg:h-56 object-cover transition-transform duration-500 group-hover:scale-110',
+            isImageLoading ? 'opacity-0' : 'opacity-100'
+          )}
           onLoad={handleImageLoad}
           onError={handleImageError}
           onClick={(e) => {
@@ -325,49 +403,48 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
         />
       </div>
 
-      <CardContent className="p-4">
-        <div className="mb-2">
-          <h3 className="font-bold text-lg text-gray-900 line-clamp-2 group-hover:text-gray-700 transition-colors">
-            {product.name}
-          </h3>
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-yellow-600">{formatCurrency(product.price)}</span>
-            {product.aesthetic && (
-              <Badge variant="secondary" className="text-xs bg-yellow-100 text-yellow-800 border-yellow-200">
-                {product.aesthetic}
-              </Badge>
-            )}
-          </div>
-        </div>
-
+      <CardContent className="p-4 sm:p-6">
+        <h3 className={cn("font-bold mb-2 line-clamp-1 text-sm sm:text-base lg:text-lg", 
+          theme === 'black' ? 'text-white' : 'text-gray-900'
+        )}>
+          {product.name}
+        </h3>
+        <p className={cn("font-black text-lg sm:text-xl mb-2 sm:mb-3", themeClasses.price)}>
+          {formatCurrency(product.price)}
+        </p>
+        
         {product.description && (
-          <p className="text-gray-600 text-sm line-clamp-3 leading-relaxed">{product.description}</p>
+          <p className={cn("text-xs sm:text-sm line-clamp-2 leading-relaxed mb-3 sm:mb-4", themeClasses.description)}>
+            {product.description}
+          </p>
         )}
 
         {/* Seller and Buy Button */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-3">
+        <div className={cn("flex items-center justify-between pt-2 border-t mt-3", 
+          theme === 'black' ? 'border-gray-800' : 'border-gray-100'
+        )}>
           <div className="flex items-center space-x-2">
-            <User className="h-4 w-4 text-gray-500" />
-            <span className="text-sm text-gray-700 font-medium">{displaySellerName}</span>
+            <User className={cn("h-4 w-4", themeClasses.icon)} />
+            <span className={cn("text-sm font-medium", themeClasses.seller)}>{displaySellerName}</span>
           </div>
-          <button
-            type="button"
+          <Button
+            variant="default"
+            size="sm"
             className={cn(
-              'text-xs bg-yellow-600 hover:bg-yellow-700 text-white transition-all duration-200',
-              'flex items-center justify-center space-x-1 px-3 py-2 rounded-md',
-              'disabled:opacity-50 disabled:cursor-not-allowed',
-              'focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2',
-              'h-8 text-sm font-medium'
+              'text-xs font-medium transition-colors',
+              'focus-visible:ring-2 focus-visible:ring-offset-2',
+              'flex items-center space-x-1.5',
+              'disabled:opacity-50 disabled:pointer-events-none',
+              'h-8 px-3 py-1.5 rounded-md',
+              isSold ? 'bg-gray-400 hover:bg-gray-400' : themeClasses.button,
+              themeClasses.button
             )}
             onClick={(e) => {
-              // Stop all event propagation
               e.preventDefault();
               e.stopPropagation();
               if (e.nativeEvent) {
                 e.nativeEvent.stopImmediatePropagation();
               }
-              
-              // Call the handler
               handleBuyClick(e);
             }}
             disabled={isSold || isProcessingPurchase}
@@ -381,38 +458,39 @@ export function ProductCard({ product, seller, hideWishlist = false }: ProductCa
             ) : (
               <>
                 <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                <span>Buy Now</span>
+                <span>{isSold ? 'Sold Out' : 'Buy Now'}</span>
               </>
             )}
-          </button>
+          </Button>
         </div>
       </CardContent>
 
       {/* Image Dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 bg-transparent border-0 shadow-none">
-          <div className="relative w-full h-full bg-black/90 flex items-center justify-center">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsImageDialogOpen(false);
+        <DialogContent className="sm:max-w-4xl mx-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between text-sm sm:text-base">
+              <span className="truncate pr-2">{product.name}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsImageDialogOpen(false)}
+                className="h-8 w-8 p-0 flex-shrink-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex justify-center">
+            <img
+              src={product.image_url}
+              alt={product.name}
+              className="max-w-full max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] object-contain rounded-lg"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
               }}
-              className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 hover:bg-black/70 transition-colors"
-              aria-label="Close image"
-            >
-              <X className="h-6 w-6 text-white" />
-            </button>
-            <div className="w-full h-full flex items-center justify-center p-4">
-              <img
-                src={product.image_url}
-                alt={product.name}
-                className="max-w-full max-h-full object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
-                }}
-              />
-            </div>
+            />
           </div>
         </DialogContent>
       </Dialog>

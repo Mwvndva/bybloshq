@@ -21,9 +21,9 @@ const queryClient = new QueryClient({
 
 // Create a wrapper component for the main app
 const AppWrapper = ({ children }: { children: React.ReactNode }) => (
-  <TooltipProvider>
-    <Toaster />
-    <QueryClientProvider client={queryClient}>
+  <QueryClientProvider client={queryClient}>
+    <TooltipProvider>
+      <Toaster />
       <BuyerAuthProvider>
         <WishlistProvider>
           <OrganizerAuthProvider>
@@ -33,8 +33,8 @@ const AppWrapper = ({ children }: { children: React.ReactNode }) => (
           </OrganizerAuthProvider>
         </WishlistProvider>
       </BuyerAuthProvider>
-    </QueryClientProvider>
-  </TooltipProvider>
+    </TooltipProvider>
+  </QueryClientProvider>
 );
 
 // Create the main app router with both admin and main app routes
@@ -60,9 +60,7 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} fallbackElement={<div>Loading...</div>} />
-    </QueryClientProvider>
+    <RouterProvider router={router} fallbackElement={<div>Loading...</div>} />
   );
 }
 

@@ -18,11 +18,12 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  const { user } = useBuyerAuth();
+  // Use optional chaining and provide a default empty object to prevent errors
+  const { user } = useBuyerAuth?.() || {};
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const { toast } = useToast();
+  const { toast } = useToast?.() || {};
   
   console.log('🔄 WishlistProvider render:', {
     user: user ? { id: user.id, email: user.email } : null,
@@ -30,15 +31,61 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     isLoading,
     hasError: !!error
   });
+  
+  // If useBuyerAuth is not available, provide a default context value
+  if (!useBuyerAuth) {
+    return (
+      <WishlistContext.Provider
+        value={{
+          wishlist: [],
+          addToWishlist: async () => {},
+          removeFromWishlist: async () => {},
+          isInWishlist: () => false,
+          isLoading: false,
+          error: null,
+          refreshWishlist: async () => {},
+        }}
+      >
+        {children}
+      </WishlistContext.Provider>
+    );
+  }
 
   // Convert WishlistItem to Product with seller information
   const mapWishlistItemToProduct = async (item: WishlistItem): Promise<Product> => {
-    let seller: Seller | undefined;
+    // Create a default seller object with all required fields
+    const defaultSeller: Seller = {
+      id: item.sellerId,
+      fullName: 'Unknown Seller',
+      email: '',
+      phone: '',
+      bannerUrl: '',
+      shopName: 'My Shop',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    
+    let seller: Seller = { ...defaultSeller };
     
     try {
-      seller = await publicApiService.getSellerInfo(item.sellerId);
+      const sellerInfo = await publicApiService.getSellerInfo(item.sellerId);
+      if (sellerInfo) {
+        // Get the banner URL from either camelCase or snake_case property
+        const bannerUrl = (sellerInfo as any).bannerUrl || (sellerInfo as any).banner_url || '';
+        const shopName = (sellerInfo as any).shopName || (sellerInfo as any).shop_name || 'My Shop';
+        
+        // Merge the fetched seller info with default values
+        seller = {
+          ...defaultSeller,
+          ...sellerInfo,
+          // Ensure required fields are not overridden with undefined
+          bannerUrl,
+          shopName
+        };
+      }
     } catch (error) {
       console.error(`Error fetching seller info for ${item.sellerId}:`, error);
+      // Use default seller if there's an error
     }
     
     return {
@@ -48,7 +95,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       price: item.price,
       image_url: item.image_url,
       sellerId: item.sellerId,
-      seller: seller,
+      seller: seller, // Use the seller variable which is guaranteed to have all required fields
       isSold: item.isSold,
       status: item.status,
       createdAt: item.createdAt,

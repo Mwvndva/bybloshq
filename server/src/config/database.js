@@ -7,9 +7,9 @@ const { Pool } = pg;
 
 // Database connection configuration
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',  // Default to localhost if not specified
-  port: parseInt(process.env.DB_PORT, 10) || 5432,  // Default to 5432 if not specified
-  database: process.env.DB_NAME || 'byblos6',
+  host: process.env.DB_HOST || 'localhost',
+  port: parseInt(process.env.DB_PORT, 10) || 5432,
+  database: process.env.DB_NAME || 'byblos7',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'nurubot',
   connectionTimeoutMillis: 5000,  // 5 seconds timeout for connection

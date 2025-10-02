@@ -10,7 +10,7 @@ router.get('/orders', async (req, res) => {
     const dbResult = await pool.query('SELECT NOW() as time');
     
     // Get count of orders and order items
-    const ordersCount = await pool.query('SELECT COUNT(*) FROM orders');
+    const ordersCount = await pool.query('SELECT COUNT(*) FROM product_orders');
     const orderItemsCount = await pool.query('SELECT COUNT(*) FROM order_items');
     
     // Get the latest order with its items
@@ -25,7 +25,7 @@ router.get('/orders', async (req, res) => {
                  ORDER BY created_at DESC 
                  LIMIT 5
                ) oi) as items
-       FROM orders o
+       FROM product_orders o
        ORDER BY o.created_at DESC
        LIMIT 1`
     );
@@ -58,7 +58,7 @@ router.post('/orders', async (req, res) => {
     
     // Create a test order
     const orderResult = await client.query(
-      `INSERT INTO orders (
+      `INSERT INTO product_orders (
         merchant_reference, amount, currency, status, payment_status,
         customer_email, customer_phone, customer_first_name, customer_last_name
       ) VALUES (
@@ -112,7 +112,7 @@ router.post('/orders', async (req, res) => {
               (SELECT json_agg(oi.*) 
                FROM order_items oi 
                WHERE oi.order_id = o.id) as items
-       FROM orders o
+       FROM product_orders o
        WHERE o.id = $1`,
       [order.id]
     );

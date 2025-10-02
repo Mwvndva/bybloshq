@@ -11,7 +11,18 @@ export const createSeller = async (sellerData) => {
   const result = await query(
     `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location)
      VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING id, full_name AS "fullName", shop_name AS "shopName", email, phone, city, location, created_at AS "createdAt"`,
+     RETURNING 
+       id, 
+       full_name AS "fullName", 
+       shop_name AS "shopName", 
+       email, 
+       phone, 
+       city, 
+       location, 
+       total_sales AS "totalSales",
+       net_revenue AS "netRevenue",
+       balance,
+       created_at AS "createdAt"`,
     [fullName, shopName, email, phone, hashedPassword, city, location]
   );
   
@@ -20,19 +31,58 @@ export const createSeller = async (sellerData) => {
 
 export const findSellerByEmail = async (email) => {
   const result = await query(
-    `SELECT id, full_name AS "fullName", shop_name AS "shopName", email, phone, password, created_at AS "createdAt"
-     FROM sellers WHERE email = $1`,
+    `SELECT 
+      id, 
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      phone, 
+      password, 
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      created_at AS "createdAt"
+     FROM sellers 
+     WHERE email = $1`,
     [email]
   );
   return result.rows[0];
 };
 
 export const findSellerByShopName = async (shopName) => {
-  const result = await query(
-    `SELECT id, full_name AS "fullName", shop_name AS "shopName", email, phone, created_at AS "createdAt"
-     FROM sellers WHERE slug = $1`,
-    [shopName.toLowerCase()]
-  );
+  console.log('Executing findSellerByShopName query for:', shopName);
+  
+  const queryText = `
+    SELECT 
+      id, 
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      phone, 
+      city,
+      location,
+      banner_image,
+      theme,
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      created_at AS "createdAt"
+    FROM sellers 
+    WHERE slug = $1 OR shop_name = $1
+  `;
+  
+  console.log('SQL Query:', queryText);
+  
+  const result = await query(queryText, [shopName.toLowerCase()]);
+  
+  console.log('Query result:', {
+    rowCount: result.rowCount,
+    hasBannerImage: result.rows[0] ? !!result.rows[0].banner_image : false,
+    bannerImageLength: result.rows[0] && result.rows[0].banner_image 
+      ? result.rows[0].banner_image.length 
+      : 0
+  });
+  
   return result.rows[0];
 };
 
@@ -83,8 +133,20 @@ export const isShopNameAvailable = async (shopName) => {
 
 export const findSellerById = async (id) => {
   const result = await query(
-    `SELECT id, full_name AS "fullName", shop_name AS "shopName", email, phone, location, 
-            city, created_at AS "createdAt", updated_at AS "updatedAt"
+    `SELECT 
+      id, 
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      phone, 
+      location, 
+      city, 
+      theme, 
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      created_at AS "createdAt", 
+      updated_at AS "updatedAt"
      FROM sellers 
      WHERE id = $1`,
     [id]
@@ -100,7 +162,7 @@ export const updateSeller = async (id, updates) => {
     throw new Error('Seller ID is required for update');
   }
   
-  const { fullName, shopName, email, phone, password, city, location } = updates || {};
+  const { fullName, shopName, email, phone, password, city, location, bannerImage, banner_image, theme } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -147,6 +209,21 @@ export const updateSeller = async (id, updates) => {
     updatesList.push(`location = $${paramCount}`);
     values.push(location);
   }
+  
+  // Handle banner image (accept both bannerImage and banner_image for backward compatibility)
+  const bannerImageToUpdate = bannerImage || banner_image;
+  if (bannerImageToUpdate) {
+    paramCount++;
+    updatesList.push(`banner_image = $${paramCount}`);
+    values.push(bannerImageToUpdate);
+  }
+  
+  // Handle theme update
+  if (theme !== undefined) {
+    paramCount++;
+    updatesList.push(`theme = $${paramCount}`);
+    values.push(theme);
+  }
 
   if (updatesList.length === 0) {
     throw new Error('No valid fields to update');
@@ -161,7 +238,19 @@ export const updateSeller = async (id, updates) => {
     UPDATE sellers
     SET ${updatesList.join(', ')}
     WHERE id = $1
-    RETURNING id, full_name AS "fullName", shop_name AS "shopName", email, phone, city, location, created_at AS "createdAt"
+    RETURNING 
+      id, 
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      phone, 
+      city, 
+      location, 
+      theme, 
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      created_at AS "createdAt"
   `;
 
   console.log('Executing update query:', { queryText, values });

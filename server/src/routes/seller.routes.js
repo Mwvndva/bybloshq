@@ -2,7 +2,9 @@ import express from 'express';
 import * as sellerController from '../controllers/seller.controller.js';
 import * as productController from '../controllers/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
+import * as orderController from '../controllers/order.controller.js';
 import * as withdrawalController from '../controllers/withdrawal.controller.js';
+import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -27,9 +29,19 @@ router.use(protect);
 // Seller profile routes
 router.get('/profile', sellerController.getProfile);
 router.patch('/profile', sellerController.updateProfile);
+router.post('/upload-banner', sellerController.uploadBanner);
 
 // Seller analytics
 router.get('/analytics', analyticsController.getSellerAnalytics);
+
+// Seller orders
+router.route('/orders')
+  .get(orderController.getSellerOrders)  // Get all orders for the current seller
+  .post(orderController.createOrder);    // Create a new order
+
+router.route('/orders/:id')
+  .get(orderController.getOrderById)     // Get a specific order
+  .patch(orderController.updateOrderStatus); // Update order status
 
 // Get seller by ID (protected)
 // This must come after other specific routes to avoid conflicts

@@ -37,14 +37,17 @@ export function formatCurrency(amount: number | string | null | undefined): stri
   
   try {
     // Format as Kenyan Shillings
+    // For balance, we want to show 2 decimal places
+    const isBalance = new Error().stack?.includes('balance');
+    
     const formatted = new Intl.NumberFormat('en-KE', {
       style: 'currency',
       currency: 'KES',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: isBalance ? 2 : 0,
+      maximumFractionDigits: isBalance ? 2 : 0
     }).format(numericAmount);
     
-    console.log('formatCurrency formatted:', formatted);
+    console.log('formatCurrency formatted:', formatted, { isBalance });
     return formatted;
   } catch (error) {
     console.error('Error formatting currency:', error);

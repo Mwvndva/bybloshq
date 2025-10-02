@@ -1,0 +1,349 @@
+import { useEffect, useState, useCallback } from 'react';
+import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { format } from 'date-fns';
+import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw } from 'lucide-react';
+import { Order, OrderStatus, PaymentStatus } from '@/types/order';
+import buyerApi from '@/api/buyerApi';
+import { toast } from 'sonner';
+
+export default function OrdersSection() {
+  const { user } = useBuyerAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchOrders = useCallback(async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const orders = await buyerApi.getOrders();
+      setOrders(orders);
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+      setError('Failed to load orders. Please try again later.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const handleCancelOrder = async (orderId: string) => {
+    if (!window.confirm('Are you sure you want to cancel this order?')) {
+      return;
+    }
+
+    try {
+      const result = await buyerApi.cancelOrder(orderId);
+      if (result.success) {
+        toast.success('Order cancelled successfully');
+        // Refresh orders after cancellation
+        fetchOrders();
+      } else {
+        toast.error(result.message || 'Failed to cancel order');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error('An error occurred while cancelling the order');
+    }
+  };
+
+  // Mock data for development
+  const mockOrders: Order[] = [
+    {
+      id: 'order-1',
+      orderNumber: 'ORD-12345',
+      status: 'processing',
+      totalAmount: 12500,
+      currency: 'KES',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      paymentStatus: 'completed',
+      items: [
+        {
+          id: 'item-1',
+          productId: 'prod-1',
+          name: 'Designer Handbag',
+          price: 12000,
+          quantity: 1,
+          imageUrl: '/placeholder-handbag.jpg',
+          subtotal: 12000,
+          metadata: {}
+        },
+        {
+          id: 'item-2',
+          productId: 'prod-2',
+          name: 'Leather Wallet',
+          price: 500,
+          quantity: 1,
+          imageUrl: '/placeholder-wallet.jpg',
+          subtotal: 500,
+          metadata: {}
+        }
+      ],
+      seller: {
+        id: 'seller-1',
+        name: 'Fashion Haven',
+        shopName: 'Fashion Haven',
+        email: 'fashion@example.com',
+        phone: '+254700000000'
+      },
+      customer: {
+        id: 'customer-1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '+254712345678'
+      },
+      shippingAddress: {
+        address: '123 Main St',
+        city: 'Nairobi',
+        country: 'Kenya',
+        postalCode: '00100',
+        recipientName: 'John Doe',
+        recipientPhone: '+254712345678'
+      },
+      metadata: {}
+    },
+    {
+      id: 'order-2',
+      orderNumber: 'ORD-12346',
+      status: 'delivered',
+      totalAmount: 8500,
+      currency: 'KES',
+      createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      paymentStatus: 'completed',
+      items: [
+        {
+          id: 'item-3',
+          productId: 'prod-3',
+          name: 'Casual Sneakers',
+          price: 4500,
+          quantity: 1,
+          imageUrl: '/placeholder-sneakers.jpg',
+          subtotal: 4500,
+          metadata: {}
+        },
+        {
+          id: 'item-4',
+          productId: 'prod-4',
+          name: 'Cotton Socks',
+          price: 400,
+          quantity: 10,
+          imageUrl: '/placeholder-socks.jpg',
+          subtotal: 4000,
+          metadata: {}
+        }
+      ],
+      seller: {
+        id: 'seller-2',
+        name: 'Shoe Palace',
+        shopName: 'Shoe Palace',
+        email: 'shoes@example.com',
+        phone: '+254711111111'
+      },
+      customer: {
+        id: 'customer-1',
+        name: 'John Doe',
+        email: 'john@example.com',
+        phone: '+254712345678'
+      },
+      shippingAddress: {
+        address: '123 Main St',
+        city: 'Nairobi',
+        country: 'Kenya',
+        postalCode: '00100',
+        recipientName: 'John Doe',
+        recipientPhone: '+254712345678'
+      },
+      metadata: {}
+    }
+  ];
+
+  // Use mock data in development, real data in production
+  const displayOrders = import.meta.env.DEV ? mockOrders : orders;
+
+  const getStatusBadge = (status: OrderStatus) => {
+    switch (status) {
+      case 'processing':
+        return (
+          <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+            <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+            Processing
+          </Badge>
+        );
+      case 'shipped':
+        return (
+          <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
+            <Truck className="h-3 w-3 mr-1" />
+            Shipped
+          </Badge>
+        );
+      case 'delivered':
+        return (
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Delivered
+          </Badge>
+        );
+      case 'cancelled':
+        return (
+          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+            <XCircle className="h-3 w-3 mr-1" />
+            Cancelled
+          </Badge>
+        );
+      case 'refunded':
+        return (
+          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+            <Package className="h-3 w-3 mr-1" />
+            Refunded
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        );
+    }
+  };
+
+  const getPaymentStatusBadge = (status: PaymentStatus) => {
+    switch (status) {
+      case 'completed':
+        return (
+          <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Paid
+          </Badge>
+        );
+      case 'failed':
+        return (
+          <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+            <XCircle className="h-3 w-3 mr-1" />
+            Failed
+          </Badge>
+        );
+      case 'refunded':
+        return (
+          <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+            <Package className="h-3 w-3 mr-1" />
+            Refunded
+          </Badge>
+        );
+      default:
+        return (
+          <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+            <Clock className="h-3 w-3 mr-1" />
+            Pending
+          </Badge>
+        );
+    }
+  };
+
+  }
+];
+
+// Use mock data in development, real data in production
+const displayOrders = import.meta.env.DEV ? mockOrders : orders;
+
+const getStatusBadge = (status: OrderStatus) => {
+  switch (status) {
+    case 'processing':
+      return (
+        <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+          <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+          Processing
+        </Badge>
+      );
+    case 'shipped':
+      return (
+        <Badge className="bg-purple-100 text-purple-800 hover:bg-purple-100">
+          <Truck className="h-3 w-3 mr-1" />
+          Shipped
+        </Badge>
+      );
+    case 'delivered':
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Delivered
+        </Badge>
+      );
+    case 'cancelled':
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+          <XCircle className="h-3 w-3 mr-1" />
+          Cancelled
+        </Badge>
+      );
+    case 'refunded':
+      return (
+        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+          <Package className="h-3 w-3 mr-1" />
+          Refunded
+        </Badge>
+      );
+    default:
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          <Clock className="h-3 w-3 mr-1" />
+          Pending
+        </Badge>
+      );
+  }
+};
+
+const getPaymentStatusBadge = (status: PaymentStatus) => {
+  switch (status) {
+    case 'completed':
+      return (
+        <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Paid
+        </Badge>
+      );
+    case 'failed':
+      return (
+        <Badge className="bg-red-100 text-red-800 hover:bg-red-100">
+          <XCircle className="h-3 w-3 mr-1" />
+          Failed
+        </Badge>
+      );
+    case 'refunded':
+      return (
+        <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">
+          <Package className="h-3 w-3 mr-1" />
+          Refunded
+        </Badge>
+      );
+    default:
+      return (
+        <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">
+          <Clock className="h-3 w-3 mr-1" />
+          Pending
+        </Badge>
+      );
+  }
+};
+
+if (isLoading) {
+  return (
+    <div className="space-y-4">
+      {[1, 2, 3].map((i) => (
+        <Skeleton key={i} className="h-40 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}

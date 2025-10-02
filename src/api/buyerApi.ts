@@ -74,9 +74,12 @@ const buyerApiInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
   },
   withCredentials: true, // Important for sending/receiving cookies
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // Increase timeout to 30 seconds
 });
 
 // Helper function to get the token
@@ -176,6 +179,7 @@ const transformBuyer = (data: any): Buyer => {
 };
 
 import api from './api';
+import { Order, OrderStatus, OrderItem, PaymentStatus } from '@/types/order';
 
 export const getBuyerProfile = () => buyerApiInstance.get('/buyers/profile');
 export const updateBuyerProfile = (data: any) => buyerApiInstance.patch('/buyers/update-profile', data);
@@ -513,26 +517,6 @@ const buyerApi = {
     }
   },
 
-  getOrders: async (): Promise<any[]> => {
-    try {
-      interface OrdersResponse {
-        data?: {
-          orders?: any[];
-        };
-      }
-      const response = await buyerApiInstance.get<OrdersResponse>('/buyers/orders');
-      const orders = response.data?.data?.orders;
-      return Array.isArray(orders) ? orders : [];
-    } catch (error: unknown) {
-      console.error('Error fetching buyer orders:', error);
-      if ((error as any)?.response?.status === 401) {
-        localStorage.removeItem('buyer_token');
-        delete buyerApiInstance.defaults.headers.common['Authorization'];
-        window.location.href = '/buyer/login';
-      }
-      throw error;
-    }
-  },
   syncWishlist: async (items: WishlistItem[]): Promise<boolean> => {
     try {
       console.log('Syncing wishlist with server:', items);
@@ -551,6 +535,85 @@ const buyerApi = {
       }
       
       return false;
+    }
+  },
+
+  // Order methods
+  getOrders: async (): Promise<Order[]> => {
+    try {
+      const response = await buyerApiInstance.get<ApiResponse<any[]>>('/orders/user');
+      // Transform the response to match the Order type
+      return response.data.data.map(order => ({
+        ...order,
+        // Map snake_case to camelCase for the frontend
+        orderNumber: order.order_number,
+        totalAmount: order.total_amount,
+        paymentMethod: order.payment_method,
+        shippingAddress: order.shipping_address,
+        // Ensure items is always an array
+        items: order.items || [],
+        // Ensure status is in uppercase to match backend
+        status: order.status?.toUpperCase() || 'PENDING',
+        // Ensure paymentStatus is in uppercase to match backend
+        paymentStatus: order.payment_status?.toUpperCase() || 'PENDING'
+      }));
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      throw error;
+    }
+  },
+
+  getOrder: async (orderId: string): Promise<Order> => {
+    try {
+      const response = await buyerApiInstance.get<ApiResponse<Order>>(`/orders/${orderId}`);
+      return response.data.data;
+    } catch (error) {
+      console.error(`Error fetching order ${orderId}:`, error);
+      throw error;
+    }
+  },
+
+  cancelOrder: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      await buyerApiInstance.patch(`/orders/${orderId}/cancel`);
+      return { success: true };
+    } catch (error: any) {
+      console.error(`Error cancelling order ${orderId}:`, error);
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to cancel order' 
+      };
+    }
+  },
+
+  confirmOrderReceipt: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      console.log(`Sending confirm receipt request for order ${orderId}...`);
+      const response = await buyerApiInstance.patch(`/orders/${orderId}/confirm-receipt`, {}, {
+        timeout: 30000 // 30 seconds timeout for this specific request
+      });
+      console.log(`Confirm receipt response for order ${orderId}:`, response.data);
+      return { success: true };
+    } catch (error: any) {
+      console.error(`Error confirming receipt for order ${orderId}:`, error);
+      
+      let errorMessage = 'Failed to confirm order receipt';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Request timed out. Please check your internet connection and try again.';
+      } else if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        errorMessage = error.response.data?.message || error.response.statusText || 'Server error occurred';
+      } else if (error.request) {
+        // The request was made but no response was received
+        errorMessage = 'No response from server. Please try again later.';
+      }
+      
+      return { 
+        success: false, 
+        message: errorMessage
+      };
     }
   }
 };

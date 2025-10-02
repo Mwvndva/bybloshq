@@ -7,11 +7,9 @@ import { SellerLogin } from '../components/seller/SellerLogin';
 import { ProductsList } from '../components/seller/ProductsList';
 import AddProductForm from '../components/seller/AddProductForm';
 import { EditProductForm } from '../components/seller/EditProductForm';
-import SellerSettings from '../components/seller/SellerSettings';
 import { Button } from '../components/ui/button';
 import { useToast } from '../hooks/use-toast';
 import { sellerApi } from '../api/sellerApi';
-import SellerOrdersPage from '../pages/seller/SellerOrdersPage';
 import { Plus, Pencil, Trash2, EyeOff, RefreshCw, CheckCircle, Loader2 } from 'lucide-react';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
@@ -411,15 +409,6 @@ export const sellerRoutes: RouteObject[] = [
             path: 'add-product',
             element: <AddProductForm onSuccess={() => {}} />,
           },
-          {
-            path: 'settings',
-            element: <SellerSettings />,
-          },
-          {
-            path: 'orders',
-            element: <SellerOrdersPage />,
-          },
-          
           // Redirects for protected routes
           {
             path: '',

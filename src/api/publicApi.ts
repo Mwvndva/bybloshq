@@ -124,10 +124,14 @@ interface Seller {
   phone: string;
   bio?: string;
   avatarUrl?: string;
+  bannerUrl?: string;  // Add bannerUrl to the interface
+  banner_url?: string; // Also support the snake_case version
   location?: string;
   city?: string;
   website?: string;
   socialMedia?: Record<string, string>;
+  shopName?: string;   // Add shopName to match the transform function
+  shop_name?: string;  // Also support the snake_case version
   createdAt: string;
   created_at?: string;
   updatedAt?: string;
@@ -163,14 +167,21 @@ export function transformSeller(seller: any): Seller | null {
     fullName: seller.full_name || seller.fullName || 'Unknown Seller',
     email: seller.email || '',
     phone: seller.phone || '',
+    // Required fields with default values
+    bannerUrl: seller.banner_url || seller.bannerUrl || '',
+    shopName: seller.shop_name || seller.shopName || 'My Shop',
+    // Timestamps
     createdAt: seller.created_at || seller.createdAt || new Date().toISOString(),
-    updatedAt: seller.updated_at || seller.updatedAt,
-    // Add any additional fields that might be present
+    updatedAt: seller.updated_at || seller.updatedAt || new Date().toISOString(),
+    // Optional fields
     ...(seller.bio && { bio: seller.bio }),
     ...(seller.avatar_url && { avatarUrl: seller.avatar_url }),
+    ...(seller.avatarUrl && { avatarUrl: seller.avatarUrl }), // Handle both cases
     ...(seller.location && { location: seller.location }),
+    ...(seller.city && { city: seller.city }),
     ...(seller.website && { website: seller.website }),
-    ...(seller.social_media && { socialMedia: seller.social_media })
+    ...(seller.social_media && { socialMedia: seller.social_media }),
+    ...(seller.socialMedia && { socialMedia: seller.socialMedia }) // Handle both cases
   };
 }
 
