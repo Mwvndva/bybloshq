@@ -140,6 +140,8 @@ const whitelist = [
   // Production domains
   'https://byblosatelier.com',
   'https://www.byblosatelier.com',
+  'https://bybloshq.space',
+  'https://www.bybloshq.space',
   'https://byblosexperience.vercel.app',
   'https://www.byblosexperience.vercel.app',
   'https://byblos-backend.vercel.app',
