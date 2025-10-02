@@ -574,10 +574,16 @@ async function getSellerProductsFromDB(sellerId) {
 // @route   POST /api/sellers/upload-banner
 // @access  Private
 export const uploadBanner = async (req, res) => {
+  console.log('Upload banner request received');
+  console.log('Request files:', req.files);
+  console.log('Request file:', req.file);
+  console.log('Request body:', req.body);
+  
   try {
     const sellerId = req.user?.id;
     
     if (!sellerId) {
+      console.error('No seller ID in request');
       return res.status(401).json({
         status: 'error',
         message: 'Authentication required'
@@ -586,11 +592,17 @@ export const uploadBanner = async (req, res) => {
 
     // Check if file was uploaded
     if (!req.file) {
+      console.error('No file in request');
       return res.status(400).json({
         status: 'error',
         message: 'No file uploaded. Please upload a valid image file.'
       });
     }
+
+    console.log('Processing file upload for seller:', sellerId);
+    console.log('Original filename:', req.file.originalname);
+    console.log('File size:', req.file.size);
+    console.log('File mimetype:', req.file.mimetype);
 
     // Get the file buffer and generate a unique filename
     const fileBuffer = req.file.buffer;
@@ -598,15 +610,27 @@ export const uploadBanner = async (req, res) => {
     const filename = `banner-${sellerId}-${Date.now()}${fileExt}`;
     const filepath = path.join(uploadsDir, filename);
 
+    console.log('Saving file to:', filepath);
+
     try {
+      // Ensure the uploads directory exists
+      if (!fs.existsSync(uploadsDir)) {
+        console.log('Uploads directory does not exist, creating...');
+        await fs.promises.mkdir(uploadsDir, { recursive: true });
+      }
+
       // Save the file to the uploads directory
       await fs.promises.writeFile(filepath, fileBuffer);
+      console.log('File saved successfully');
       
       // Update the seller's banner image path in the database
       const bannerUrl = `/uploads/${filename}`;
+      console.log('Updating database with banner URL:', bannerUrl);
+      
       const result = await query(
         `UPDATE sellers 
-         SET banner_image = $1 
+         SET banner_image = $1, 
+             updated_at = NOW()
          WHERE id = $2 
          RETURNING id, banner_image AS "bannerImage"`,
         [bannerUrl, sellerId]
@@ -614,6 +638,7 @@ export const uploadBanner = async (req, res) => {
 
       if (!result.rows[0]) {
         // Clean up the uploaded file if database update fails
+        console.error('Seller not found in database, cleaning up file');
         await fs.promises.unlink(filepath).catch(console.error);
         return res.status(404).json({
           status: 'error',
@@ -621,6 +646,7 @@ export const uploadBanner = async (req, res) => {
         });
       }
 
+      console.log('Banner upload successful');
       res.status(200).json({
         status: 'success',
         data: {
@@ -628,12 +654,15 @@ export const uploadBanner = async (req, res) => {
         }
       });
     } catch (error) {
+      console.error('Error processing file upload:', error);
       // Clean up the uploaded file if there's an error
-      await fs.promises.unlink(filepath).catch(console.error);
+      if (fs.existsSync(filepath)) {
+        await fs.promises.unlink(filepath).catch(console.error);
+      }
       throw error;
     }
   } catch (error) {
-    console.error('Error uploading banner:', error);
+    console.error('Error in uploadBanner:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to upload banner',

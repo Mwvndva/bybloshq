@@ -7,6 +7,9 @@ import * as withdrawalController from '../controllers/withdrawal.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
 
+// Log when the upload middleware is imported
+console.log('Upload middleware imported successfully');
+
 const router = express.Router();
 
 // Public routes
