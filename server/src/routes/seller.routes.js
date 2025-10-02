@@ -29,7 +29,12 @@ router.use(protect);
 // Seller profile routes
 router.get('/profile', sellerController.getProfile);
 router.patch('/profile', sellerController.updateProfile);
-router.post('/upload-banner', sellerController.uploadBanner);
+
+// Upload banner image (using multer for file upload)
+router.post('/upload-banner', 
+  upload.single('banner'), // 'banner' is the field name in the form data
+  sellerController.uploadBanner
+);
 
 // Seller analytics
 router.get('/analytics', analyticsController.getSellerAnalytics);

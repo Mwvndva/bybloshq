@@ -1,5 +1,20 @@
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+// Get the current directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Define uploads directory
+const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 import { 
   createSeller, 
   findSellerByEmail, 
@@ -569,37 +584,54 @@ export const uploadBanner = async (req, res) => {
       });
     }
 
-    const { bannerImage } = req.body;
-
-    if (!bannerImage) {
+    // Check if file was uploaded
+    if (!req.file) {
       return res.status(400).json({
         status: 'error',
-        message: 'Banner image is required'
+        message: 'No file uploaded. Please upload a valid image file.'
       });
     }
 
-    // Update the seller's banner image
-    const result = await query(
-      `UPDATE sellers 
-       SET banner_image = $1 
-       WHERE id = $2 
-       RETURNING id, banner_image AS "bannerImage"`,
-      [bannerImage, sellerId]
-    );
+    // Get the file buffer and generate a unique filename
+    const fileBuffer = req.file.buffer;
+    const fileExt = path.extname(req.file.originalname).toLowerCase();
+    const filename = `banner-${sellerId}-${Date.now()}${fileExt}`;
+    const filepath = path.join(uploadsDir, filename);
 
-    if (!result.rows[0]) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'Seller not found'
-      });
-    }
+    try {
+      // Save the file to the uploads directory
+      await fs.promises.writeFile(filepath, fileBuffer);
+      
+      // Update the seller's banner image path in the database
+      const bannerUrl = `/uploads/${filename}`;
+      const result = await query(
+        `UPDATE sellers 
+         SET banner_image = $1 
+         WHERE id = $2 
+         RETURNING id, banner_image AS "bannerImage"`,
+        [bannerUrl, sellerId]
+      );
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        bannerUrl: result.rows[0].bannerImage
+      if (!result.rows[0]) {
+        // Clean up the uploaded file if database update fails
+        await fs.promises.unlink(filepath).catch(console.error);
+        return res.status(404).json({
+          status: 'error',
+          message: 'Seller not found'
+        });
       }
-    });
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          bannerUrl: result.rows[0].bannerImage
+        }
+      });
+    } catch (error) {
+      // Clean up the uploaded file if there's an error
+      await fs.promises.unlink(filepath).catch(console.error);
+      throw error;
+    }
   } catch (error) {
     console.error('Error uploading banner:', error);
     res.status(500).json({
