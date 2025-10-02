@@ -490,7 +490,16 @@ export const sellerApi = {
   },
 
   async cancelOrder(orderId: string): Promise<Order> {
-    return this.updateOrderStatus(orderId, 'cancelled');
+    const response = await sellerApiInstance.patch<{ data: Order }>(
+      `/sellers/orders/${orderId}/cancel`
+    );
+    return response.data.data;
+  },
+
+  // Upload banner image
+  async uploadBanner(bannerImage: string): Promise<{ bannerUrl: string }> {
+    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/sellers/upload-banner', { bannerImage });
+    return response.data.data;
   },
 
   async getOrdersAnalytics(): Promise<{

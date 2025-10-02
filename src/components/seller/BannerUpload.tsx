@@ -60,34 +60,23 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
       // Convert file to base64
       const base64Image = await fileToBase64(file);
       
-      // Upload the banner image
-      const response = await fetch(`/api/sellers/upload-banner`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('sellerToken')}`
-        },
-        body: JSON.stringify({ bannerImage: base64Image })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to upload banner');
-      }
-      
-      const data = await response.json();
+      // Upload the banner image using the sellerApi
+      const { bannerUrl } = await sellerApi.uploadBanner(base64Image);
       
       // Update the preview and call the callback
-      onBannerUploaded(data.data.bannerUrl);
+      onBannerUploaded(bannerUrl);
+      setPreviewUrl(bannerUrl);
+      setFile(null);
       
       toast({
         title: 'Banner updated',
         description: 'Your store banner has been updated successfully.',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading banner:', error);
       toast({
         title: 'Error',
-        description: 'Failed to upload banner. Please try again.',
+        description: error.response?.data?.message || 'Failed to upload banner. Please try again.',
         variant: 'destructive',
       });
     } finally {
