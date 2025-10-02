@@ -30,6 +30,7 @@ router.use(protect);
 router.get('/profile', sellerController.getProfile);
 router.patch('/profile', sellerController.updateProfile);
 router.post('/upload-banner', sellerController.uploadBanner);
+router.patch('/theme', sellerController.updateTheme);
 
 // Seller analytics
 router.get('/analytics', analyticsController.getSellerAnalytics);

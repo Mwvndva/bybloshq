@@ -610,6 +610,57 @@ export const uploadBanner = async (req, res) => {
   }
 };
 
+// @desc    Update seller theme
+// @route   PATCH /api/sellers/theme
+// @access  Private
+export const updateTheme = async (req, res) => {
+  try {
+    const { theme } = req.body;
+    const sellerId = req.user?.id;
+    
+    if (!sellerId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    if (!theme) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Theme is required'
+      });
+    }
+
+    // Update the seller's theme
+    const result = await query(
+      'UPDATE sellers SET theme = $1 WHERE id = $2 RETURNING theme',
+      [theme, sellerId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Seller not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        theme: result.rows[0].theme
+      }
+    });
+  } catch (error) {
+    console.error('Error updating theme:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to update theme',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 export const getSellerById = async (req, res) => {
   try {
     const seller = await findSellerById(req.params.id);

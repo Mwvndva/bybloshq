@@ -464,12 +464,6 @@ export const sellerApi = {
     }
   },
 
-  // Update seller theme
-  async updateTheme(theme: Theme): Promise<Seller> {
-    const response = await sellerApiInstance.put<{ data: any }>('/sellers/theme', { theme });
-    return transformSeller(response.data.data);
-  },
-
   // Orders
   async getOrders(params?: { status?: OrderStatus }): Promise<Order[]> {
     const response = await sellerApiInstance.get<{ data: Order[] }>('/sellers/orders', { params });
@@ -478,6 +472,12 @@ export const sellerApi = {
 
   async getOrder(orderId: string): Promise<Order> {
     const response = await sellerApiInstance.get<{ data: Order }>(`/sellers/orders/${orderId}`);
+    return response.data.data;
+  },
+
+  // Update seller theme
+  async updateTheme(theme: Theme): Promise<{ theme: Theme }> {
+    const response = await sellerApiInstance.patch<{ data: { theme: Theme } }>('/sellers/theme', { theme });
     return response.data.data;
   },
 
