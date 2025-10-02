@@ -319,8 +319,8 @@ const getSellerOrders = async (req, res) => {
           (
             SELECT json_agg(
               json_build_object(
-                'id', oi.id,
-                'productId', oi.product_id,
+                'id', oi.id::text,
+                'productId', oi.product_id::text,
                 'name', oi.product_name,
                 'price', oi.product_price,
                 'quantity', oi.quantity,
@@ -330,12 +330,12 @@ const getSellerOrders = async (req, res) => {
               )
             )
             FROM order_items oi
-            LEFT JOIN products p ON oi.product_id = p.id
-            WHERE oi.order_id = o.id
+            LEFT JOIN products p ON oi.product_id::text = p.id::text
+            WHERE oi.order_id::text = o.id::text
           ) as items,
           (
             SELECT json_build_object(
-              'id', b.id,
+              'id', b.id::text,
               'name', b.full_name,
               'email', b.email,
               'phone', b.phone,
@@ -343,7 +343,7 @@ const getSellerOrders = async (req, res) => {
               'location', b.location
             )
             FROM buyers b
-            WHERE b.id = o.buyer_id
+            WHERE b.id::text = o.buyer_id::text
           ) as customer
         FROM product_orders o
         WHERE o.seller_id = $1::integer
