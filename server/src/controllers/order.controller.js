@@ -275,7 +275,7 @@ const getSellerOrders = async (req, res) => {
         WHERE o.seller_id = $1
     `;
     
-    // Complete the WITH clause
+    // Build the base query with proper type casting for status
     query = `
       WITH order_with_items AS (
         SELECT 
@@ -330,7 +330,7 @@ const getSellerOrders = async (req, res) => {
           ) as customer
         FROM product_orders o
         WHERE o.seller_id = $1
-        ${status ? 'AND o.status = $2' : ''}
+        ${status ? 'AND o.status = $2::order_status' : ''}
       )
       SELECT * FROM order_with_items
       ORDER BY "createdAt" DESC
@@ -351,12 +351,12 @@ const getSellerOrders = async (req, res) => {
     
     const result = await pool.query(query, queryParams);
     
-    // Get subtotal count for pagination
+    // Get subtotal count for pagination with proper type casting for status
     let countQuery = 'SELECT COUNT(DISTINCT o.id) FROM product_orders o WHERE o.seller_id = $1';
     const countParams = [sellerId];
     
     if (status) {
-      countQuery += ' AND o.status = $2';
+      countQuery += ' AND o.status = $2::order_status';
       countParams.push(status);
     }
     
