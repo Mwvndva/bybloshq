@@ -213,9 +213,20 @@ const getUserOrders = async (req, res) => {
  */
 const getSellerOrders = async (req, res) => {
   try {
+    console.log('getSellerOrders called with query:', req.query);
+    console.log('Authenticated user:', req.user);
+    
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
-    const sellerId = req.user.id; // Assuming seller ID is in the user object
+    const sellerId = req.user?.id; // Using optional chaining in case user is not defined
+    
+    if (!sellerId) {
+      console.error('No seller ID found in request');
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required: No seller ID found'
+      });
+    }
     
     // First, get the orders with basic information
     const queryParams = [sellerId];
@@ -275,7 +286,13 @@ const getSellerOrders = async (req, res) => {
         WHERE o.seller_id = $1
     `;
     
-    // Build the base query with proper type casting for status
+    // Ensure sellerId is a number
+    const numericSellerId = parseInt(sellerId, 10);
+    if (isNaN(numericSellerId)) {
+      throw new Error('Invalid seller ID format');
+    }
+    
+    // Build the base query with proper type casting
     query = `
       WITH order_with_items AS (
         SELECT 
@@ -329,13 +346,16 @@ const getSellerOrders = async (req, res) => {
             WHERE b.id = o.buyer_id
           ) as customer
         FROM product_orders o
-        WHERE o.seller_id = $1
+        WHERE o.seller_id = $1::integer
         ${status ? 'AND o.status = $2::order_status' : ''}
       )
       SELECT * FROM order_with_items
       ORDER BY "createdAt" DESC
       LIMIT $${status ? 3 : 2} OFFSET $${status ? 4 : 3}
     `;
+    
+    // Update queryParams with the parsed numeric sellerId
+    queryParams[0] = numericSellerId;
     
     // Add status to params if provided
     if (status) {
@@ -349,11 +369,24 @@ const getSellerOrders = async (req, res) => {
     console.log('Final query:', query);
     console.log('Query parameters:', queryParams);
     
-    const result = await pool.query(query, queryParams);
+    let result;
+    try {
+      result = await pool.query(query, queryParams);
+      console.log('Query successful, rows returned:', result.rowCount);
+    } catch (queryError) {
+      console.error('Database query error:', {
+        error: queryError,
+        query: query,
+        params: queryParams,
+        status: status || 'not provided',
+        statusType: typeof status
+      });
+      throw queryError;
+    }
     
-    // Get subtotal count for pagination with proper type casting for status
-    let countQuery = 'SELECT COUNT(DISTINCT o.id) FROM product_orders o WHERE o.seller_id = $1';
-    const countParams = [sellerId];
+    // Get subtotal count for pagination with proper type casting
+    let countQuery = 'SELECT COUNT(DISTINCT o.id) FROM product_orders o WHERE o.seller_id = $1::integer';
+    const countParams = [numericSellerId];
     
     if (status) {
       countQuery += ' AND o.status = $2::order_status';
@@ -410,11 +443,28 @@ const getSellerOrders = async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Error fetching seller orders:', error);
+    console.error('Error in getSellerOrders:', {
+      error: error,
+      message: error.message,
+      stack: error.stack,
+      status: status || 'not provided',
+      statusType: typeof status,
+      sellerId: req.user?.id,
+      timestamp: new Date().toISOString()
+    });
+    
+    // More specific error messages based on the error type
+    let errorMessage = 'Failed to fetch seller orders';
+    if (error.code === '22P02') { // Invalid text representation error
+      errorMessage = 'Invalid status value provided. Please check the order status and try again.';
+    } else if (error.code === '23505') { // Unique violation
+      errorMessage = 'A database constraint was violated. Please try again.';
+    }
+    
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch seller orders',
-      error: error.message
+      message: errorMessage,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
