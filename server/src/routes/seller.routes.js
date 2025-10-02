@@ -6,6 +6,7 @@ import * as orderController from '../controllers/order.controller.js';
 import * as withdrawalController from '../controllers/withdrawal.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
+import { restrictTo } from '../middleware/role.js';
 
 // Log when the upload middleware is imported
 console.log('Upload middleware imported successfully');
@@ -28,6 +29,9 @@ router.get('/:sellerId/products', sellerController.getSellerProducts);
 
 // Protected routes (require authentication)
 router.use(protect);
+
+// Restrict all following routes to sellers only
+router.use(restrictTo('seller', 'admin'));
 
 // Seller profile routes
 router.get('/profile', sellerController.getProfile);
