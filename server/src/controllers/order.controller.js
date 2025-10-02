@@ -123,20 +123,26 @@ const getUserOrders = async (req, res) => {
 
     console.log(`Fetching orders for user ${userId} with status: ${status || 'all'}`);
     
+    // Ensure userId is a number
+    const numericUserId = parseInt(userId, 10);
+    if (isNaN(numericUserId)) {
+      throw new Error('Invalid user ID format');
+    }
+
     let query = `
       SELECT o.*, 
              COALESCE(
                json_agg(
                  json_build_object(
-                   'id', oi.id,
-                   'productId', oi.product_id,
+                   'id', oi.id::text,
+                   'productId', oi.product_id::text,
                    'name', oi.product_name,
                    'price', oi.product_price,
                    'quantity', oi.quantity,
                    'imageUrl', (
                      SELECT p.image_url 
                      FROM products p 
-                     WHERE p.id = oi.product_id 
+                     WHERE p.id::text = oi.product_id::text
                      LIMIT 1
                    ),
                    'subtotal', oi.quantity * oi.product_price
@@ -145,14 +151,14 @@ const getUserOrders = async (req, res) => {
                '[]'::json
              ) as items
       FROM product_orders o
-      LEFT JOIN order_items oi ON o.id = oi.order_id
-      WHERE o.buyer_id = $1
+      LEFT JOIN order_items oi ON o.id::text = oi.order_id::text
+      WHERE o.buyer_id = $1::integer
     `;
     
-    const queryParams = [userId];
+    const queryParams = [numericUserId];
     
     if (status) {
-      query += ' AND o.status = $2';
+      query += ' AND o.status = $2::order_status';
       queryParams.push(status);
     }
     
@@ -170,12 +176,12 @@ const getUserOrders = async (req, res) => {
     const result = await pool.query(query, queryParams);
     console.log(`Found ${result.rows.length} orders`);
     
-    // Get subtotal count for pagination
-    let countQuery = 'SELECT COUNT(*) FROM product_orders WHERE buyer_id = $1';
-    const countParams = [userId];
+    // Get subtotal count for pagination with proper type casting
+    let countQuery = 'SELECT COUNT(*) FROM product_orders WHERE buyer_id = $1::integer';
+    const countParams = [numericUserId];
     
     if (status) {
-      countQuery += ' AND status = $2';
+      countQuery += ' AND status = $2::order_status';
       countParams.push(status);
     }
     
