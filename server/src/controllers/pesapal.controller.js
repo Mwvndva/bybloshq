@@ -65,8 +65,17 @@ class PesapalController {
       // Get the first product to determine seller ID
       let sellerId = null;
       
-      if (items.length === 0 || !items[0].productId) {
-        throw new Error('No product items provided in the order');
+      if (items.length === 0 || (!items[0].productId && !items[0].id)) {
+        logger.error('No product items provided in the order or missing product ID:', { items });
+        throw new Error('No product items provided in the order or missing product ID');
+      }
+      
+      // Use either productId or id from the item
+      const productId = items[0].productId || items[0].id;
+      
+      if (!productId) {
+        logger.error('Product ID is missing from the first item:', { firstItem: items[0] });
+        throw new Error('Product ID is missing from the order item');
       }
       
       // First, verify the product exists and get its seller_id
@@ -76,21 +85,21 @@ class PesapalController {
         LEFT JOIN sellers s ON p.seller_id = s.id 
         WHERE p.id = $1`;
         
-      logger.info('Fetching seller ID for product:', items[0].productId);
-      const productResult = await client.query(productQuery, [items[0].productId]);
+      logger.info('Fetching seller ID for product:', productId);
+      const productResult = await client.query(productQuery, [productId]);
       
       if (productResult.rows.length === 0) {
-        throw new Error(`Product with ID ${items[0].productId} not found`);
+        throw new Error(`Product with ID ${productId} not found`);
       }
       
       const row = productResult.rows[0];
       
       if (!row.seller_id) {
-        throw new Error(`Product ${items[0].productId} is not associated with any seller`);
+        throw new Error(`Product ${productId} is not associated with any seller`);
       }
       
       if (!row.seller_exists) {
-        throw new Error(`Seller ID ${row.seller_id} for product ${items[0].productId} does not exist`);
+        throw new Error(`Seller ID ${row.seller_id} for product ${productId} does not exist`);
       }
       
       if (row.seller_status !== 'active') {
@@ -98,7 +107,7 @@ class PesapalController {
       }
       
       sellerId = row.seller_id;
-      logger.info(`Using seller ID ${sellerId} from product ${items[0].productId}`);
+      logger.info(`Using seller ID ${sellerId} from product ${productId}`);
       
       // Verify the seller exists before proceeding
       const sellerCheck = await client.query('SELECT id FROM sellers WHERE id = $1', [sellerId]);
