@@ -1263,7 +1263,24 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="amount">Amount to Withdraw (Ksh)</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="amount">Amount to Withdraw (Ksh)</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => {
+                    const availableBalance = analytics?.totalRevenue || 0;
+                    setWithdrawalData({
+                      ...withdrawalData,
+                      amount: availableBalance.toFixed(2)
+                    });
+                  }}
+                >
+                  Use Available Balance
+                </Button>
+              </div>
               <Input
                 id="amount"
                 type="number"
@@ -1271,6 +1288,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 value={withdrawalData.amount}
                 onChange={(e) => setWithdrawalData({...withdrawalData, amount: e.target.value})}
                 disabled={isSubmitting}
+                min="0"
+                max={analytics?.totalRevenue || 0}
               />
               <p className="text-xs text-gray-500">
                 Available: Ksh {analytics?.totalRevenue ? analytics.totalRevenue.toFixed(2) : '0.00'}
