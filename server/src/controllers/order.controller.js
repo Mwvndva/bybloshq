@@ -10,30 +10,37 @@ import Order from '../models/order.model.js';
  */
 const createOrder = async (req, res) => {
   try {
-    const { items, shippingAddress, paymentMethod, sellerId } = req.body;
+    const { items, shippingAddress, paymentMethod } = req.body;
     const userId = req.user.id;
+    
+    // Get sellerId from the authenticated user
+    const sellerId = req.user.sellerId || req.user.id; // Assuming the seller ID is stored in the JWT token
 
-    // Verify seller exists and is active
+    // Verify seller exists, is active, and matches the authenticated user
     console.log(`[Order] Verifying seller ID: ${sellerId}`);
-    const sellerCheck = await pool.query('SELECT id, email, status FROM sellers WHERE id = $1', [sellerId]);
+    const sellerCheck = await pool.query(
+      'SELECT id, email, status FROM sellers WHERE id = $1 AND user_id = $2', 
+      [sellerId, userId]
+    );
     
     if (sellerCheck.rows.length === 0) {
-      console.error(`[Order] Seller not found: ID ${sellerId}`);
-      return res.status(400).json({
+      console.error(`[Order] Seller not found or not authorized: ID ${sellerId} for user ${userId}`);
+      return res.status(403).json({
         success: false,
-        message: 'Invalid seller. The specified seller does not exist.'
+        message: 'You are not authorized to create orders for this seller.'
       });
     }
     
-    if (sellerCheck.rows[0].status !== 'active') {
-      console.error(`[Order] Seller is not active:`, sellerCheck.rows[0]);
+    const seller = sellerCheck.rows[0];
+    if (seller.status !== 'active') {
+      console.error(`[Order] Seller is not active:`, seller);
       return res.status(400).json({
         success: false,
         message: 'This seller account is not active. Please contact support for assistance.'
       });
     }
     
-    console.log(`[Order] Verified seller:`, sellerCheck.rows[0].email);
+    console.log(`[Order] Verified seller:`, seller.email);
 
     // Prepare order data for the model
     const orderData = {
