@@ -62,6 +62,24 @@ class PesapalController {
         logger.info(`Item ${index + 1} data:`, JSON.stringify(item, null, 2));
       });
       
+      // Get the first product to determine seller ID
+      let sellerId = 1; // Default fallback
+      if (items.length > 0 && items[0].productId) {
+        try {
+          const productQuery = 'SELECT seller_id FROM products WHERE id = $1';
+          const productResult = await client.query(productQuery, [items[0].productId]);
+          if (productResult.rows.length > 0) {
+            sellerId = productResult.rows[0].seller_id;
+            logger.info(`Using seller ID ${sellerId} from product ${items[0].productId}`);
+          } else {
+            logger.warn(`Product ${items[0].productId} not found, using default seller ID`);
+          }
+        } catch (error) {
+          logger.error('Error fetching seller ID:', error);
+          // Continue with default seller ID
+        }
+      }
+      
       // Basic validation
       if (!amount || !description || !customer || !customer.email || !Array.isArray(items) || items.length === 0) {
         return res.status(400).json({
@@ -124,7 +142,7 @@ class PesapalController {
         merchantReference,                    // $1 - order_number
         parseFloat(orderPayload.amount),      // $2 - total_amount
         customer.id,                          // $3 - buyer_id
-        1,                                    // $4 - seller_id (default to 1 or get from items)
+        sellerId,                              // $4 - seller_id (fetched from product or default to 1)
         customer.email,                       // $5 - buyer_email
         customer.phone || '',                 // $6 - buyer_phone
         JSON.stringify({
