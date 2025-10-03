@@ -66,18 +66,64 @@ class PesapalController {
       let sellerId = 1; // Default fallback
       if (items.length > 0 && items[0].productId) {
         try {
-          const productQuery = 'SELECT seller_id FROM products WHERE id = $1';
+          // First, verify the product exists and get its seller_id
+          const productQuery = `
+            SELECT p.seller_id, s.id as seller_exists 
+            FROM products p 
+            LEFT JOIN sellers s ON p.seller_id = s.id 
+            WHERE p.id = $1`;
+            
+          logger.info('Fetching seller ID for product:', items[0].productId);
           const productResult = await client.query(productQuery, [items[0].productId]);
+          
           if (productResult.rows.length > 0) {
-            sellerId = productResult.rows[0].seller_id;
-            logger.info(`Using seller ID ${sellerId} from product ${items[0].productId}`);
+            const row = productResult.rows[0];
+            
+            if (row.seller_id && row.seller_exists) {
+              sellerId = row.seller_id;
+              logger.info(`Using seller ID ${sellerId} from product ${items[0].productId}`);
+            } else if (row.seller_id && !row.seller_exists) {
+              logger.error(`Seller ID ${row.seller_id} from product ${items[0].productId} does not exist in sellers table`);
+              // Don't use the invalid seller ID, fall through to default
+            } else {
+              logger.warn(`Product ${items[0].productId} has no seller_id, using default seller ID`);
+            }
           } else {
-            logger.warn(`Product ${items[0].productId} not found, using default seller ID`);
+            logger.warn(`Product ${items[0].productId} not found in database, using default seller ID`);
           }
+          
+          // Log all sellers for debugging
+          const allSellers = await client.query('SELECT id, email, status FROM sellers LIMIT 10');
+          logger.info('Available sellers (first 10):', allSellers.rows);
+          
         } catch (error) {
-          logger.error('Error fetching seller ID:', error);
-          // Continue with default seller ID
+          logger.error('Error in seller ID lookup:', {
+            error: error.message,
+            stack: error.stack,
+            productId: items[0].productId
+          });
         }
+      } else {
+        logger.warn('No items in order or missing productId, using default seller ID');
+      }
+      
+      // Verify the seller exists before proceeding
+      try {
+        const sellerCheck = await client.query('SELECT id FROM sellers WHERE id = $1', [sellerId]);
+        if (sellerCheck.rows.length === 0) {
+          logger.error(`Seller ID ${sellerId} does not exist in the database`);
+          // If the default seller ID doesn't exist, try to find any active seller
+          const anySeller = await client.query("SELECT id FROM sellers WHERE status = 'active' LIMIT 1");
+          if (anySeller.rows.length > 0) {
+            sellerId = anySeller.rows[0].id;
+            logger.info(`Using first available active seller ID: ${sellerId}`);
+          } else {
+            throw new Error('No active sellers found in the database');
+          }
+        }
+      } catch (error) {
+        logger.error('Error verifying seller:', error);
+        throw new Error(`Failed to verify seller: ${error.message}`);
       }
       
       // Basic validation
