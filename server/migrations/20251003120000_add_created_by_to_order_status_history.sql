@@ -1,23 +1,52 @@
--- Add created_by column to order_status_history table if it doesn't exist
+-- Add missing columns to order_status_history table if they don't exist
 DO $$
 BEGIN
-    -- Check if the column doesn't exist
+    -- Add created_by column if it doesn't exist
     IF NOT EXISTS (
         SELECT 1
         FROM information_schema.columns
         WHERE table_name = 'order_status_history' 
         AND column_name = 'created_by'
     ) THEN
-        -- Add the column
         ALTER TABLE order_status_history 
         ADD COLUMN created_by INTEGER;
         
-        -- Add a comment to document the column
         COMMENT ON COLUMN order_status_history.created_by IS 'References buyer_id or seller_id depending on who made the change';
-        
         RAISE NOTICE 'Added created_by column to order_status_history table';
     ELSE
         RAISE NOTICE 'created_by column already exists in order_status_history table';
+    END IF;
+    
+    -- Add notes column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'order_status_history' 
+        AND column_name = 'notes'
+    ) THEN
+        ALTER TABLE order_status_history 
+        ADD COLUMN notes TEXT;
+        
+        COMMENT ON COLUMN order_status_history.notes IS 'Additional notes about the status change';
+        RAISE NOTICE 'Added notes column to order_status_history table';
+    ELSE
+        RAISE NOTICE 'notes column already exists in order_status_history table';
+    END IF;
+    
+    -- Add created_by_type column if it doesn't exist
+    IF NOT EXISTS (
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_name = 'order_status_history' 
+        AND column_name = 'created_by_type'
+    ) THEN
+        ALTER TABLE order_status_history 
+        ADD COLUMN created_by_type VARCHAR(20);
+        
+        COMMENT ON COLUMN order_status_history.created_by_type IS 'Type of user who made the change (buyer, seller, admin, system)';
+        RAISE NOTICE 'Added created_by_type column to order_status_history table';
+    ELSE
+        RAISE NOTICE 'created_by_type column already exists in order_status_history table';
     END IF;
 END $$;
 
