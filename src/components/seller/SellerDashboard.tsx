@@ -1342,9 +1342,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 try {
                   setIsSubmitting(true);
 
-                  // Log withdrawal request initiation
-                  console.log('🚀 Withdrawal request initiated:', {
-                    sellerId: 'unknown', // Will be added from token if available
+                  console.log('🚀 [Frontend] Initiating withdrawal request:', {
+                    sellerId: 'unknown', // Will be determined by backend from token
                     mpesaNumber: withdrawalData.mpesaNumber,
                     registeredName: withdrawalData.registeredName,
                     amount: parseFloat(withdrawalData.amount),
@@ -1352,7 +1351,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   });
 
                   // Send withdrawal request to the server
-                  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
+                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
@@ -1367,8 +1366,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
 
                   const responseData = await response.json();
 
-                  // Log withdrawal response
-                  console.log('📥 Withdrawal response received:', {
+                  console.log('📥 [Frontend] Withdrawal response received:', {
                     status: response.status,
                     statusText: response.statusText,
                     responseData: responseData,
@@ -1376,7 +1374,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   });
 
                   if (!response.ok) {
-                    console.error('❌ Withdrawal request failed:', {
+                    console.error('❌ [Frontend] Withdrawal request failed:', {
                       status: response.status,
                       error: responseData.message,
                       timestamp: new Date().toISOString()
@@ -1384,10 +1382,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                     throw new Error(responseData.message || 'Failed to process withdrawal request');
                   }
 
-                  console.log('✅ Withdrawal request successful:', {
-                    withdrawalId: responseData.data?.withdrawalId,
-                    amount: responseData.data?.amount,
-                    status: responseData.data?.status,
+                  console.log('✅ [Frontend] Withdrawal request successful:', {
+                    withdrawalId: responseData.data?.withdrawal?.id,
+                    amount: responseData.data?.withdrawal?.amount,
+                    status: responseData.data?.withdrawal?.status,
                     timestamp: new Date().toISOString()
                   });
 
@@ -1398,7 +1396,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   
                   setIsWithdrawalModalOpen(false);
                 } catch (error) {
-                  console.error('❌ Withdrawal request error:', {
+                  console.error('❌ [Frontend] Withdrawal request error:', {
                     error: error.message,
                     stack: error.stack,
                     timestamp: new Date().toISOString()

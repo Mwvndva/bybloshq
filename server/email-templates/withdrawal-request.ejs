@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Withdrawal Request Confirmation</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: white;
+            margin: 20px;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #007bff;
+        }
+        .header h1 {
+            color: #007bff;
+            margin: 0;
+            font-size: 28px;
+        }
+        .details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 5px 0;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .detail-value {
+            color: #212529;
+        }
+        .amount {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: #d4edda;
+            border-radius: 8px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .highlight {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Withdrawal Request Confirmation</h1>
+            <p>Your withdrawal request has been received and is being processed</p>
+        </div>
+
+        <div class="details">
+            <h2 style="margin-top: 0; color: #007bff;">Withdrawal Details</h2>
+
+            <div class="detail-row">
+                <span class="detail-label">Seller Name:</span>
+                <span class="detail-value"><%= sellerName %></span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Shop Name:</span>
+                <span class="detail-value"><%= shopName %></span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Withdrawal ID:</span>
+                <span class="detail-value highlight">#<%= withdrawalId %></span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Request Date:</span>
+                <span class="detail-value"><%= requestDate %></span>
+            </div>
+        </div>
+
+        <div class="amount">
+            Withdrawal Amount: <span style="font-size: 32px;">KSh <%= amount.toLocaleString() %></span>
+        </div>
+
+        <div class="details">
+            <h3>Payment Information</h3>
+
+            <div class="detail-row">
+                <span class="detail-label">M-Pesa Number:</span>
+                <span class="detail-value"><%= mpesaNumber %></span>
+            </div>
+
+            <div class="detail-row">
+                <span class="detail-label">Registered Name:</span>
+                <span class="detail-value"><%= registeredName %></span>
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Important:</strong>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+                <li>Withdrawal requests are processed within 24-48 hours</li>
+                <li>A 9% commission fee applies to all withdrawals</li>
+                <li>Ensure your M-Pesa details are correct to avoid delays</li>
+                <li>You will receive a confirmation SMS once the payment is processed</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p><strong><%= appName %></strong> - Empowering sellers across Kenya</p>
+            <p>If you have any questions, please contact our support team.</p>
+            <p style="margin-top: 20px; font-size: 12px;">
+                This is an automated message. Please do not reply to this email.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

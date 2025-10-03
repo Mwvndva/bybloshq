@@ -95,20 +95,14 @@ export const getSellerAnalytics = async (req, res, next) => {
     );
     console.log('Monthly sales query result:', monthlySalesResult.rows);
 
-    // 5. Get seller's balance (handle case where column might not exist)
+    // 5. Get seller's balance
     console.log('Fetching seller balance...');
-    let sellerBalance = 0;
-    try {
-      const sellerBalanceResult = await pool.query(
-        `SELECT COALESCE(balance, 0) as balance FROM sellers WHERE id = $1`,
-        [sellerId]
-      );
-      sellerBalance = parseFloat(sellerBalanceResult.rows[0]?.balance || 0);
-      console.log('Seller balance:', sellerBalance);
-    } catch (balanceError) {
-      console.warn('Could not fetch seller balance, using default 0:', balanceError.message);
-      sellerBalance = 0;
-    }
+    const sellerBalanceResult = await pool.query(
+      `SELECT balance FROM sellers WHERE id = $1`,
+      [sellerId]
+    );
+    const sellerBalance = parseFloat(sellerBalanceResult.rows[0]?.balance || 0);
+    console.log('Seller balance:', sellerBalance);
 
     // 6. Get recent orders
     console.log('Fetching recent orders...');
