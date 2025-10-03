@@ -1363,26 +1363,35 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                     endpoint: '/sellers/withdrawals',
                     method: 'POST',
                     payload: requestPayload,
-                    hasAuthToken: !!localStorage.getItem('sellerToken')
+                    hasAuthToken: !!localStorage.getItem('sellerToken'),
+                    baseURL: sellerApiInstance.defaults.baseURL,
+                    timeout: sellerApiInstance.defaults.timeout
                   });
 
                   const response = await sellerApiInstance.post('/sellers/withdrawals', requestPayload);
 
                   console.log('📥 Response received:', {
                     status: response.status,
-                    data: response.data
+                    statusText: response.statusText,
+                    data: response.data,
+                    headers: response.headers,
+                    config: {
+                      url: response.config.url,
+                      method: response.config.method,
+                      timeout: response.config.timeout
+                    }
                   });
 
                   const data = response.data;
 
-                  console.log('📋 Response data:', data);
+                  console.log('📋 Response data received:', data);
 
                   if (response.status !== 200) {
                     console.log('❌ Request failed with error response');
                     throw new Error(data.message || 'Failed to process withdrawal request');
                   }
 
-                  console.log('✅ Withdrawal request successful!');
+                  console.log('✅ Withdrawal request successful! Response data:', data);
 
                   // Close modal and show success
                   setIsWithdrawalModalOpen(false);
@@ -1392,6 +1401,13 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   });
 
                   console.log('🎉 Withdrawal modal closed and success toast shown');
+
+                  // Additional logging to track response processing
+                  console.log('📊 Final state check:', {
+                    modalOpen: isWithdrawalModalOpen,
+                    isSubmitting: isSubmitting,
+                    responseReceived: true
+                  });
 
                 } catch (error) {
                   console.error('💥 Withdrawal request failed:', {

@@ -84,7 +84,37 @@ export const requestWithdrawal = async (req, res, next) => {
       status: 'pending'
     });
 
-    // Prepare email content
+    // Prepare response data
+    const responseData = {
+      status: 'success',
+      message: 'Withdrawal request submitted successfully',
+      data: {
+        withdrawalId: withdrawalResult.rows[0].id,
+        amount: parseFloat(amount),
+        status: 'pending',
+        requestedAt: new Date().toISOString()
+      }
+    };
+
+    console.log('📤 Sending response to client immediately:', {
+      statusCode: 200,
+      responseSize: JSON.stringify(responseData).length,
+      withdrawalId: responseData.data.withdrawalId
+    });
+
+    // Send response immediately (don't wait for email)
+    res.status(200).json(responseData);
+
+    // Send email asynchronously in the background with timeout
+    console.log('📧 Sending notification email in background...');
+
+    // Check if email configuration is available
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_FROM_EMAIL) {
+      console.warn('⚠️ Email configuration missing - skipping email notification');
+      console.log('🎉 Withdrawal request completed successfully');
+      return;
+    }
+
     const emailContent = `
 New Withdrawal Request:
 ----------------------
@@ -108,41 +138,41 @@ Requested At: ${new Date().toLocaleString()}
 Please process this withdrawal request within 24-48 hours.
     `;
 
-    // Send email to admin (optional - don't fail if email fails)
-    console.log('📧 Sending notification email...');
+    // Send email with timeout to prevent hanging
     try {
-      await transporter.sendMail({
+      console.log('📨 Email configuration:', {
+        host: process.env.EMAIL_HOST,
+        port: process.env.EMAIL_PORT,
+        secure: process.env.EMAIL_SECURE,
+        from: process.env.EMAIL_FROM_EMAIL,
+        to: process.env.EMAIL_FROM_EMAIL
+      });
+
+      // Create a promise that rejects after 10 seconds
+      const emailPromise = transporter.sendMail({
         from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
         to: process.env.EMAIL_FROM_EMAIL,
         subject: `Withdrawal Request - ${seller.shop_name || 'Seller'}`,
         text: emailContent,
       });
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Email timeout after 10 seconds')), 10000)
+      );
+
+      await Promise.race([emailPromise, timeoutPromise]);
       console.log('✅ Withdrawal notification email sent successfully');
     } catch (emailError) {
-      console.warn('⚠️ Failed to send withdrawal email:', emailError.message);
-      // Don't throw error - email failure shouldn't prevent withdrawal request
+      console.error('❌ Failed to send withdrawal email:', {
+        message: emailError.message,
+        code: emailError.code,
+        command: emailError.command,
+        response: emailError.response
+      });
+      // Email failure doesn't affect the withdrawal request
     }
 
-    console.log('🎉 Withdrawal request completed successfully');
-
-    const responseData = {
-      status: 'success',
-      message: 'Withdrawal request submitted successfully',
-      data: {
-        withdrawalId: withdrawalResult.rows[0].id,
-        amount: parseFloat(amount),
-        status: 'pending',
-        requestedAt: new Date().toISOString()
-      }
-    };
-
-    console.log('📤 Sending response to client:', {
-      statusCode: 200,
-      responseSize: JSON.stringify(responseData).length,
-      withdrawalId: responseData.data.withdrawalId
-    });
-
-    res.status(200).json(responseData);
+    console.log('🎉 Withdrawal request fully completed');
   } catch (error) {
     console.error('💥 Error processing withdrawal request:', {
       message: error.message,
