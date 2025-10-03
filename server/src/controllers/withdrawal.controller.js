@@ -20,28 +20,57 @@ const transporter = nodemailer.createTransport({
  * @param {Function} next - Express next middleware function
  */
 export const requestWithdrawal = async (req, res, next) => {
+  console.log('🔄 Withdrawal request received');
+  console.log('🔗 Request details:', {
+    method: req.method,
+    url: req.originalUrl,
+    userAgent: req.headers['user-agent']?.substring(0, 50) + '...',
+    contentType: req.headers['content-type'],
+    authorization: req.headers.authorization ? 'Bearer token present' : 'No token',
+    body: req.body ? 'Has body' : 'No body',
+    user: req.user ? `User ID: ${req.user.id}` : 'No user'
+  });
+
   try {
     const sellerId = req.user.id;
     const { mpesaNumber, registeredName, amount } = req.body;
 
+    console.log('📋 Withdrawal request details:', {
+      sellerId,
+      mpesaNumber: mpesaNumber ? `${mpesaNumber.substring(0, 6)}...` : 'missing',
+      registeredName: registeredName ? `${registeredName.substring(0, 10)}...` : 'missing',
+      amount: amount ? `Ksh ${parseFloat(amount).toFixed(2)}` : 'missing',
+      timestamp: new Date().toISOString()
+    });
+
     // Validate required fields
     if (!mpesaNumber || !registeredName || !amount) {
+      console.log('❌ Validation failed: Missing required fields');
       throw new AppError('M-Pesa number, registered name, and amount are required', 400);
     }
 
     // Get seller details
+    console.log('🔍 Fetching seller details for ID:', sellerId);
     const sellerResult = await pool.query(
       'SELECT full_name, email, phone, shop_name FROM sellers WHERE id = $1',
       [sellerId]
     );
 
     if (sellerResult.rows.length === 0) {
+      console.log('❌ Seller not found in database');
       throw new AppError('Seller not found', 404);
     }
 
     const seller = sellerResult.rows[0];
+    console.log('✅ Seller found:', {
+      id: sellerId,
+      name: seller.full_name,
+      shop: seller.shop_name,
+      email: seller.email
+    });
 
     // Save withdrawal request to database
+    console.log('💾 Saving withdrawal request to database...');
     const withdrawalResult = await pool.query(
       `INSERT INTO seller_withdrawals
        (seller_id, mpesa_number, registered_name, amount, status, requested_at)
@@ -50,28 +79,37 @@ export const requestWithdrawal = async (req, res, next) => {
       [sellerId, mpesaNumber, registeredName, amount]
     );
 
+    console.log('✅ Withdrawal saved to database:', {
+      withdrawalId: withdrawalResult.rows[0].id,
+      status: 'pending'
+    });
+
     // Prepare email content
     const emailContent = `
-      New Withdrawal Request:
-      -------------------
-      Seller ID: ${sellerId}
-      Seller Name: ${seller.full_name}
-      Shop Name: ${seller.shop_name}
-      Email: ${seller.email}
-      Phone: ${seller.phone}
-      
-      Withdrawal Details:
-      -------------------
-      M-Pesa Number: ${mpesaNumber}
-      Registered Name: ${registeredName}
-      Amount: Ksh ${parseFloat(amount).toFixed(2)}
-      
-      Requested At: ${new Date().toLocaleString()}
-      
-      Please process this withdrawal request as soon as possible.
+New Withdrawal Request:
+----------------------
+
+Seller Details:
+- ID: ${sellerId}
+- Name: ${seller.full_name}
+- Shop: ${seller.shop_name}
+- Email: ${seller.email}
+- Phone: ${seller.phone}
+
+Withdrawal Details:
+------------------
+- M-Pesa Number: ${mpesaNumber}
+- Registered Name: ${registeredName}
+- Amount: Ksh ${parseFloat(amount).toFixed(2)}
+- Status: Pending
+
+Requested At: ${new Date().toLocaleString()}
+
+Please process this withdrawal request within 24-48 hours.
     `;
 
     // Send email to admin (optional - don't fail if email fails)
+    console.log('📧 Sending notification email...');
     try {
       await transporter.sendMail({
         from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
@@ -79,11 +117,15 @@ export const requestWithdrawal = async (req, res, next) => {
         subject: `Withdrawal Request - ${seller.shop_name || 'Seller'}`,
         text: emailContent,
       });
+      console.log('✅ Withdrawal notification email sent successfully');
     } catch (emailError) {
-      console.warn('Failed to send withdrawal email:', emailError.message);
+      console.warn('⚠️ Failed to send withdrawal email:', emailError.message);
+      // Don't throw error - email failure shouldn't prevent withdrawal request
     }
 
-    res.status(200).json({
+    console.log('🎉 Withdrawal request completed successfully');
+
+    const responseData = {
       status: 'success',
       message: 'Withdrawal request submitted successfully',
       data: {
@@ -92,9 +134,22 @@ export const requestWithdrawal = async (req, res, next) => {
         status: 'pending',
         requestedAt: new Date().toISOString()
       }
+    };
+
+    console.log('📤 Sending response to client:', {
+      statusCode: 200,
+      responseSize: JSON.stringify(responseData).length,
+      withdrawalId: responseData.data.withdrawalId
     });
+
+    res.status(200).json(responseData);
   } catch (error) {
-    console.error('Error processing withdrawal request:', error);
+    console.error('💥 Error processing withdrawal request:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      statusCode: error.statusCode
+    });
     next(error);
   }
 };

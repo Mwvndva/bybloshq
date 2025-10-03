@@ -1318,7 +1318,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
             </Button>
             <Button 
               onClick={async () => {
+                console.log('🚀 Withdrawal request initiated');
+
                 if (!withdrawalData.mpesaNumber || !withdrawalData.registeredName || !withdrawalData.amount) {
+                  console.log('❌ Validation failed: Missing required fields');
                   toast({
                     title: 'Error',
                     description: 'Please fill in all fields',
@@ -1328,7 +1331,16 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 }
 
                 const availableBalance = analytics?.balance || 0;
-                if (parseFloat(withdrawalData.amount) > availableBalance) {
+                const withdrawalAmount = parseFloat(withdrawalData.amount);
+
+                console.log('💰 Balance check:', {
+                  availableBalance,
+                  withdrawalAmount,
+                  exceedsBalance: withdrawalAmount > availableBalance
+                });
+
+                if (withdrawalAmount > availableBalance) {
+                  console.log('❌ Balance exceeded');
                   toast({
                     title: 'Error',
                     description: `Withdrawal amount cannot exceed your available balance of Ksh ${availableBalance.toFixed(2)}`,
@@ -1337,27 +1349,49 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   return;
                 }
 
+                console.log('✅ Validation passed, submitting withdrawal...');
                 setIsSubmitting(true);
 
                 try {
+                  const requestPayload = {
+                    mpesaNumber: withdrawalData.mpesaNumber,
+                    registeredName: withdrawalData.registeredName,
+                    amount: withdrawalAmount
+                  };
+
+                  console.log('📤 Sending withdrawal request:', {
+                    url: `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`,
+                    method: 'POST',
+                    payload: requestPayload,
+                    hasAuthToken: !!localStorage.getItem('sellerToken')
+                  });
+
                   const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',
                       'Authorization': `Bearer ${localStorage.getItem('sellerToken')}`
                     },
-                    body: JSON.stringify({
-                      mpesaNumber: withdrawalData.mpesaNumber,
-                      registeredName: withdrawalData.registeredName,
-                      amount: parseFloat(withdrawalData.amount)
-                    })
+                    body: JSON.stringify(requestPayload)
+                  });
+
+                  console.log('📥 Response received:', {
+                    status: response.status,
+                    ok: response.ok,
+                    statusText: response.statusText,
+                    headers: Object.fromEntries(response.headers.entries())
                   });
 
                   const data = await response.json();
 
+                  console.log('📋 Response data:', data);
+
                   if (!response.ok) {
+                    console.log('❌ Request failed with error response');
                     throw new Error(data.message || 'Failed to process withdrawal request');
                   }
+
+                  console.log('✅ Withdrawal request successful!');
 
                   // Close modal and show success
                   setIsWithdrawalModalOpen(false);
@@ -1366,13 +1400,21 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                     description: 'Your withdrawal request has been submitted successfully!',
                   });
 
+                  console.log('🎉 Withdrawal modal closed and success toast shown');
+
                 } catch (error) {
+                  console.error('💥 Withdrawal request failed:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                  });
                   toast({
                     title: 'Error',
                     description: error.message || 'Failed to submit withdrawal request. Please try again.',
                     variant: 'destructive',
                   });
                 } finally {
+                  console.log('🔄 Clearing loading state');
                   setIsSubmitting(false);
                 }
               }}

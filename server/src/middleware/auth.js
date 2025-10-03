@@ -20,8 +20,12 @@ export const restrictTo = (...roles) => {
 export const protect = async (req, res, next) => {
   try {
     console.log('\n=== Auth Middleware ===');
-    console.log('Request URL:', req.originalUrl);
-    console.log('Request Method:', req.method);
+    console.log('🔐 Authenticating request:', {
+      url: req.originalUrl,
+      method: req.method,
+      userAgent: req.headers['user-agent']?.substring(0, 50) + '...',
+      timestamp: new Date().toISOString()
+    });
     
     // Parse cookies if not already parsed
     if (!req.cookies) {
@@ -98,15 +102,23 @@ export const protect = async (req, res, next) => {
         
         user = result.rows[0];
         user.userType = userType;
+
+        console.log('✅ User authenticated successfully:', {
+          userId: user.id,
+          userType: user.userType,
+          email: user.email,
+          url: req.originalUrl
+        });
       } catch (dbError) {
-        console.error('Database error during user lookup:', dbError);
+        console.error('❌ Database error during user lookup:', dbError);
         return next(new AppError('Error during authentication', 500));
       }
 
       if (!user) {
+        console.log('❌ No user found for token');
         return next(new AppError('The user belonging to this token no longer exists.', 401));
       }
-      
+
       // Add user type to the user object
       user.userType = userType;
     }
