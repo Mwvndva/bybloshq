@@ -762,9 +762,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    // Use balance from analytics for withdrawal amount
+                    // Use totalRevenue from analytics for withdrawal amount
                     // Default to 0 if analytics data is not available yet
-                    const availableBalance = analytics?.balance || 0;
+                    const availableBalance = analytics?.totalRevenue || 0;
                     setWithdrawalData({
                       mpesaNumber: '',
                       registeredName: sellerProfile?.fullName || '',
@@ -1271,7 +1271,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   size="sm"
                   className="h-7 text-xs"
                   onClick={() => {
-                    const availableBalance = analytics?.balance || 0;
+                    const availableBalance = analytics?.totalRevenue || 0;
                     setWithdrawalData({
                       ...withdrawalData,
                       amount: availableBalance.toFixed(2)
@@ -1289,10 +1289,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 onChange={(e) => setWithdrawalData({...withdrawalData, amount: e.target.value})}
                 disabled={isSubmitting}
                 min="0"
-                max={analytics?.balance || 0}
+                max={analytics?.totalRevenue || 0}
               />
               <p className="text-xs text-gray-500">
-                Available: Ksh {analytics?.balance ? analytics.balance.toFixed(2) : '0.00'}
+                Available: Ksh {analytics?.totalRevenue ? analytics.totalRevenue.toFixed(2) : '0.00'}
               </p>
             </div>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
@@ -1329,7 +1329,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   return;
                 }
 
-                const availableBalance = analytics?.balance || 0;
+                const availableBalance = analytics?.totalRevenue || 0;
                 if (parseFloat(withdrawalData.amount) > availableBalance) {
                   toast({
                     title: 'Error',
@@ -1341,15 +1341,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
 
                 try {
                   setIsSubmitting(true);
-
-                  console.log('🚀 [Frontend] Initiating withdrawal request:', {
-                    sellerId: 'unknown', // Will be determined by backend from token
-                    mpesaNumber: withdrawalData.mpesaNumber,
-                    registeredName: withdrawalData.registeredName,
-                    amount: parseFloat(withdrawalData.amount),
-                    timestamp: new Date().toISOString()
-                  });
-
+                  
                   // Send withdrawal request to the server
                   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
                     method: 'POST',
@@ -1365,29 +1357,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   });
 
                   const responseData = await response.json();
-
-                  console.log('📥 [Frontend] Withdrawal response received:', {
-                    status: response.status,
-                    statusText: response.statusText,
-                    responseData: responseData,
-                    timestamp: new Date().toISOString()
-                  });
-
+                  
                   if (!response.ok) {
-                    console.error('❌ [Frontend] Withdrawal request failed:', {
-                      status: response.status,
-                      error: responseData.message,
-                      timestamp: new Date().toISOString()
-                    });
                     throw new Error(responseData.message || 'Failed to process withdrawal request');
                   }
-
-                  console.log('✅ [Frontend] Withdrawal request successful:', {
-                    withdrawalId: responseData.data?.withdrawal?.id,
-                    amount: responseData.data?.withdrawal?.amount,
-                    status: responseData.data?.withdrawal?.status,
-                    timestamp: new Date().toISOString()
-                  });
 
                   toast({
                     title: 'Success',
@@ -1396,11 +1369,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   
                   setIsWithdrawalModalOpen(false);
                 } catch (error) {
-                  console.error('❌ [Frontend] Withdrawal request error:', {
-                    error: error.message,
-                    stack: error.stack,
-                    timestamp: new Date().toISOString()
-                  });
+                  console.error('Error submitting withdrawal request:', error);
                   toast({
                     title: 'Error',
                     description: 'Failed to submit withdrawal request. Please try again.',
