@@ -647,7 +647,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       title: 'Available Balance',
       // Format balance as a simple string with fixed decimal places
       value: `KSh ${(Math.round(analytics.balance * 100) / 100).toFixed(2)}`,
-      subtitle: 'Available for withdrawal',
+      subtitle: 'available for withdrawal amount',
       iconColor: 'text-white',
       bgColor: 'bg-gradient-to-br from-purple-500 to-purple-600',
       textColor: 'text-black',
