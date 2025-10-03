@@ -75,7 +75,7 @@ router.post('/withdrawals', async (req, res) => {
     const sellerEmail = req.user?.email;
 
     // Create transporter (same as organizer system)
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: 'smtp.zoho.com',
       port: 587,
       secure: false, // true for 465, false for other ports
