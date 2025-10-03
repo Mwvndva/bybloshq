@@ -58,7 +58,7 @@ router.route('/products/:id')
   .patch(productController.updateProduct)     // Update a product
   .delete(productController.deleteProduct);   // Delete a product
 
-// Simple withdrawal email route
+// Simple withdrawal email route - sends directly to admin email
 router.post('/withdrawals', async (req, res) => {
   try {
     const { mpesaNumber, registeredName, amount } = req.body;
@@ -70,6 +70,10 @@ router.post('/withdrawals', async (req, res) => {
       });
     }
 
+    // Get seller information from authenticated user
+    const sellerId = req.user?.id;
+    const sellerEmail = req.user?.email;
+
     // Send simple email notification
     await sendEmail({
       to: 'byblosexperience@zohomail.com',
@@ -77,17 +81,20 @@ router.post('/withdrawals', async (req, res) => {
       text: `
 New withdrawal request received:
 
-Seller Details:
-- M-Pesa Number: ${mpesaNumber}
-- Registered Name: ${registeredName}
-- Amount: Ksh ${amount}
+Seller ID: ${sellerId}
+Seller Email: ${sellerEmail}
+M-Pesa Number: ${mpesaNumber}
+Registered Name: ${registeredName}
+Amount: Ksh ${amount}
 
 Please process this withdrawal request.
       `,
       html: `
 <h2>New Withdrawal Request</h2>
-<p><strong>Seller Details:</strong></p>
+<p><strong>Seller Information:</strong></p>
 <ul>
+  <li><strong>Seller ID:</strong> ${sellerId}</li>
+  <li><strong>Seller Email:</strong> ${sellerEmail}</li>
   <li><strong>M-Pesa Number:</strong> ${mpesaNumber}</li>
   <li><strong>Registered Name:</strong> ${registeredName}</li>
   <li><strong>Amount:</strong> Ksh ${amount}</li>
@@ -98,13 +105,13 @@ Please process this withdrawal request.
 
     res.status(200).json({
       status: 'success',
-      message: 'Withdrawal request sent successfully'
+      message: 'Withdrawal request sent successfully via email'
     });
   } catch (error) {
     console.error('Error sending withdrawal email:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Failed to send withdrawal request'
+      message: 'Failed to send withdrawal request. Please try again later.'
     });
   }
 });

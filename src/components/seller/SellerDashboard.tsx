@@ -1365,7 +1365,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
 
                   toast({
                     title: 'Success',
-                    description: 'Your withdrawal request has been submitted successfully!',
+                    description: 'Your withdrawal request has been sent via email and will be processed within 24-48 hours!',
                   });
                   
                   setIsWithdrawalModalOpen(false);
@@ -1373,7 +1373,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   console.error('Error submitting withdrawal request:', error);
                   toast({
                     title: 'Error',
-                    description: 'Failed to submit withdrawal request. Please try again.',
+                    description: 'Failed to send withdrawal request email. Please check your connection and try again.',
                     variant: 'destructive',
                   });
                 } finally {
