@@ -762,23 +762,13 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 <Button
                   variant="outline"
               onClick={() => {
-                // Prevent multiple rapid clicks
-                if (isWithdrawalModalOpen) return;
-
-                try {
-                  // Use balance from analytics for withdrawal amount
-                  // Default to 0 if analytics data is not available yet
-                  const availableBalance = analytics?.balance || 0;
-                  console.log('Opening withdrawal modal with balance:', availableBalance);
-                  setWithdrawalData({
-                    mpesaNumber: '',
-                    registeredName: sellerProfile?.fullName || '',
-                    amount: availableBalance > 0 ? availableBalance.toFixed(2) : '0.00'
-                  });
-                  setIsWithdrawalModalOpen(true);
-                } catch (error) {
-                  console.error('Error opening withdrawal modal:', error);
-                }
+                const availableBalance = analytics?.balance || 0;
+                setWithdrawalData({
+                  mpesaNumber: '',
+                  registeredName: sellerProfile?.fullName || '',
+                  amount: availableBalance > 0 ? availableBalance.toFixed(2) : '0.00'
+                });
+                setIsWithdrawalModalOpen(true);
               }}
                   className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 border-0 rounded-xl h-8 sm:h-9 md:h-10 px-2 sm:px-3 py-1.5 sm:py-2 font-medium shadow-sm"
                 >
@@ -1347,17 +1337,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   return;
                 }
 
+                setIsSubmitting(true);
+
                 try {
-                  setIsSubmitting(true);
-
-                  console.log('Submitting withdrawal request...', {
-                    mpesaNumber: withdrawalData.mpesaNumber,
-                    registeredName: withdrawalData.registeredName,
-                    amount: withdrawalData.amount,
-                    token: localStorage.getItem('sellerToken') ? 'present' : 'missing'
-                  });
-
-                  // Send withdrawal request to the server
                   const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
                     method: 'POST',
                     headers: {
@@ -1371,56 +1353,27 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                     })
                   });
 
-                  console.log('Response status:', response.status, response.ok);
-                  console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-                  const responseText = await response.text();
-                  console.log('Raw response text:', responseText);
-
-                  let responseData;
-                  try {
-                    responseData = JSON.parse(responseText);
-                    console.log('Parsed response data:', responseData);
-                  } catch (parseError) {
-                    console.error('Failed to parse response as JSON:', parseError);
-                    throw new Error('Invalid response format from server');
-                  }
+                  const data = await response.json();
 
                   if (!response.ok) {
-                    throw new Error(responseData.message || 'Failed to process withdrawal request');
+                    throw new Error(data.message || 'Failed to process withdrawal request');
                   }
 
-                  console.log('Withdrawal request successful!', responseData);
-
-                  // Clear modal state first
+                  // Close modal and show success
                   setIsWithdrawalModalOpen(false);
-
                   toast({
                     title: 'Success',
                     description: 'Your withdrawal request has been submitted successfully!',
                   });
 
-                  console.log('Modal closed and success toast shown');
                 } catch (error) {
-                  console.error('Error submitting withdrawal request:', error);
-                  console.error('Error details:', {
-                    message: error.message,
-                    stack: error.stack,
-                    name: error.name
-                  });
                   toast({
                     title: 'Error',
                     description: error.message || 'Failed to submit withdrawal request. Please try again.',
                     variant: 'destructive',
                   });
                 } finally {
-                  console.log('Finally block - clearing loading state');
                   setIsSubmitting(false);
-                  // Safety timeout in case something goes wrong
-                  setTimeout(() => {
-                    setIsSubmitting(false);
-                    console.log('Safety timeout cleared loading state');
-                  }, 1000);
                 }
               }}
               disabled={isSubmitting}

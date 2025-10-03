@@ -90,12 +90,9 @@ export const protect = async (req, res, next) => {
         }
         
         // Execute the query
-        console.log('Auth query:', queryText, 'with params:', queryParams);
         const result = await query(queryText, queryParams);
-        console.log('Auth query result:', result.rows);
 
         if (!result.rows[0]) {
-          console.error(`No ${userType} found with ID:`, queryParams[0]);
           return next(new AppError(`The ${userType} belonging to this token no longer exists.`, 401));
         }
         

@@ -42,7 +42,6 @@ export const requestWithdrawal = async (req, res, next) => {
     const seller = sellerResult.rows[0];
 
     // Save withdrawal request to database
-    console.log('Inserting withdrawal request:', { sellerId, mpesaNumber, registeredName, amount });
     const withdrawalResult = await pool.query(
       `INSERT INTO seller_withdrawals
        (seller_id, mpesa_number, registered_name, amount, status, requested_at)
@@ -50,7 +49,6 @@ export const requestWithdrawal = async (req, res, next) => {
        RETURNING id`,
       [sellerId, mpesaNumber, registeredName, amount]
     );
-    console.log('Withdrawal inserted successfully:', withdrawalResult.rows[0]);
 
     // Prepare email content
     const emailContent = `
@@ -73,19 +71,16 @@ export const requestWithdrawal = async (req, res, next) => {
       Please process this withdrawal request as soon as possible.
     `;
 
-    // Send email to admin
-    console.log('Sending withdrawal email to:', process.env.EMAIL_FROM_EMAIL);
+    // Send email to admin (optional - don't fail if email fails)
     try {
       await transporter.sendMail({
         from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
-        to: process.env.EMAIL_FROM_EMAIL, // Send to admin email
+        to: process.env.EMAIL_FROM_EMAIL,
         subject: `Withdrawal Request - ${seller.shop_name || 'Seller'}`,
         text: emailContent,
       });
-      console.log('Withdrawal email sent successfully');
     } catch (emailError) {
-      console.error('Failed to send withdrawal email:', emailError);
-      // Don't throw error - email failure shouldn't prevent withdrawal request
+      console.warn('Failed to send withdrawal email:', emailError.message);
     }
 
     res.status(200).json({
