@@ -3,7 +3,7 @@ import * as sellerController from '../controllers/seller.controller.js';
 import * as productController from '../controllers/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
 import * as orderController from '../controllers/order.controller.js';
-import * as withdrawalController from '../controllers/withdrawal.controller.js';
+import { sendEmail } from '../utils/email.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
 
@@ -58,9 +58,55 @@ router.route('/products/:id')
   .patch(productController.updateProduct)     // Update a product
   .delete(productController.deleteProduct);   // Delete a product
 
-// Withdrawal routes
-router.route('/withdrawals')
-  .get(withdrawalController.getWithdrawals)   // Get withdrawal history
-  .post(withdrawalController.requestWithdrawal); // Request a new withdrawal
+// Simple withdrawal email route
+router.post('/withdrawals', async (req, res) => {
+  try {
+    const { mpesaNumber, registeredName, amount } = req.body;
+
+    if (!mpesaNumber || !registeredName || !amount) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'M-Pesa number, registered name, and amount are required'
+      });
+    }
+
+    // Send simple email notification
+    await sendEmail({
+      to: 'byblosexperience@zohomail.com',
+      subject: 'New Withdrawal Request',
+      text: `
+New withdrawal request received:
+
+Seller Details:
+- M-Pesa Number: ${mpesaNumber}
+- Registered Name: ${registeredName}
+- Amount: Ksh ${amount}
+
+Please process this withdrawal request.
+      `,
+      html: `
+<h2>New Withdrawal Request</h2>
+<p><strong>Seller Details:</strong></p>
+<ul>
+  <li><strong>M-Pesa Number:</strong> ${mpesaNumber}</li>
+  <li><strong>Registered Name:</strong> ${registeredName}</li>
+  <li><strong>Amount:</strong> Ksh ${amount}</li>
+</ul>
+<p>Please process this withdrawal request.</p>
+      `
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Withdrawal request sent successfully'
+    });
+  } catch (error) {
+    console.error('Error sending withdrawal email:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to send withdrawal request'
+    });
+  }
+});
 
 export default router;
