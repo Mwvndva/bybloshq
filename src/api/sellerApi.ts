@@ -528,3 +528,4 @@ export const sellerApi = {
 };
 
 export default sellerApi;
+export { sellerApiInstance };

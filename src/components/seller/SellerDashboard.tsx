@@ -41,7 +41,7 @@ import {
   XCircle,
   Loader2
 } from 'lucide-react';
-import { sellerApi } from '@/api/sellerApi';
+import { sellerApi, sellerApiInstance } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
@@ -1359,34 +1359,25 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                     amount: withdrawalAmount
                   };
 
-                  console.log('📤 Sending withdrawal request:', {
-                    url: `${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`,
+                  console.log('📤 Sending withdrawal request via axios:', {
+                    endpoint: '/sellers/withdrawals',
                     method: 'POST',
                     payload: requestPayload,
                     hasAuthToken: !!localStorage.getItem('sellerToken')
                   });
 
-                  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'Authorization': `Bearer ${localStorage.getItem('sellerToken')}`
-                    },
-                    body: JSON.stringify(requestPayload)
-                  });
+                  const response = await sellerApiInstance.post('/sellers/withdrawals', requestPayload);
 
                   console.log('📥 Response received:', {
                     status: response.status,
-                    ok: response.ok,
-                    statusText: response.statusText,
-                    headers: Object.fromEntries(response.headers.entries())
+                    data: response.data
                   });
 
-                  const data = await response.json();
+                  const data = response.data;
 
                   console.log('📋 Response data:', data);
 
-                  if (!response.ok) {
+                  if (response.status !== 200) {
                     console.log('❌ Request failed with error response');
                     throw new Error(data.message || 'Failed to process withdrawal request');
                   }
