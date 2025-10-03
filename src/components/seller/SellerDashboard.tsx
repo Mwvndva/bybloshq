@@ -41,7 +41,7 @@ import {
   XCircle,
   Loader2
 } from 'lucide-react';
-import { sellerApi, sellerApiInstance } from '@/api/sellerApi';
+import { sellerApi } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
@@ -761,20 +761,22 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
 
                 <Button
                   variant="outline"
-              onClick={() => {
-                const availableBalance = analytics?.balance || 0;
-                setWithdrawalData({
-                  mpesaNumber: '',
-                  registeredName: sellerProfile?.fullName || '',
-                  amount: availableBalance > 0 ? availableBalance.toFixed(2) : '0.00'
-                });
-                setIsWithdrawalModalOpen(true);
-              }}
+                  onClick={() => {
+                    // Use balance from analytics for withdrawal amount
+                    // Default to 0 if analytics data is not available yet
+                    const availableBalance = analytics?.balance || 0;
+                    setWithdrawalData({
+                      mpesaNumber: '',
+                      registeredName: sellerProfile?.fullName || '',
+                      amount: availableBalance > 0 ? availableBalance.toFixed(2) : '0.00'
+                    });
+                    setIsWithdrawalModalOpen(true);
+                  }}
                   className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 border-0 rounded-xl h-8 sm:h-9 md:h-10 px-2 sm:px-3 py-1.5 sm:py-2 font-medium shadow-sm"
                 >
                   <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline text-sm">Request Payment</span>
-                  <span className="sm:hidden text-xs">Request</span>
+                  <span className="hidden sm:inline text-sm">Withdraw</span>
+                  <span className="sm:hidden text-xs">Withdraw</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -1232,10 +1234,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       <Dialog open={isWithdrawalModalOpen} onOpenChange={setIsWithdrawalModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Request Payment</DialogTitle>
-              <DialogDescription>
-                Your withdrawal request will be automatically approved and processed within 24 hours.
-              </DialogDescription>
+            <DialogTitle>Request Withdrawal</DialogTitle>
+            <DialogDescription>
+              Please fill in your withdrawal details. Net revenue is 91% of your total sales.
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -1301,8 +1303,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-green-700">
-                    Your withdrawal request has been automatically approved. Payment will be sent to your M-Pesa number within 24 hours.
+                  <p className="text-sm text-yellow-700">
+                    Withdrawal requests are processed within 24-48 hours. A 9% commission fee applies to all withdrawals.
                   </p>
                 </div>
               </div>
@@ -1318,10 +1320,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
             </Button>
             <Button 
               onClick={async () => {
-                console.log('🚀 Withdrawal request initiated');
-
                 if (!withdrawalData.mpesaNumber || !withdrawalData.registeredName || !withdrawalData.amount) {
-                  console.log('❌ Validation failed: Missing required fields');
                   toast({
                     title: 'Error',
                     description: 'Please fill in all fields',
@@ -1331,16 +1330,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 }
 
                 const availableBalance = analytics?.balance || 0;
-                const withdrawalAmount = parseFloat(withdrawalData.amount);
-
-                console.log('💰 Balance check:', {
-                  availableBalance,
-                  withdrawalAmount,
-                  exceedsBalance: withdrawalAmount > availableBalance
-                });
-
-                if (withdrawalAmount > availableBalance) {
-                  console.log('❌ Balance exceeded');
+                if (parseFloat(withdrawalData.amount) > availableBalance) {
                   toast({
                     title: 'Error',
                     description: `Withdrawal amount cannot exceed your available balance of Ksh ${availableBalance.toFixed(2)}`,
@@ -1349,79 +1339,76 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   return;
                 }
 
-                console.log('✅ Validation passed, submitting withdrawal...');
-                setIsSubmitting(true);
-
                 try {
-                  const requestPayload = {
+                  setIsSubmitting(true);
+
+                  // Log withdrawal request initiation
+                  console.log('🚀 Withdrawal request initiated:', {
+                    sellerId: 'unknown', // Will be added from token if available
                     mpesaNumber: withdrawalData.mpesaNumber,
                     registeredName: withdrawalData.registeredName,
-                    amount: withdrawalAmount
-                  };
-
-                  console.log('📤 Sending withdrawal request via axios:', {
-                    endpoint: '/sellers/withdrawals',
-                    method: 'POST',
-                    payload: requestPayload,
-                    hasAuthToken: !!localStorage.getItem('sellerToken'),
-                    baseURL: sellerApiInstance.defaults.baseURL,
-                    timeout: sellerApiInstance.defaults.timeout
+                    amount: parseFloat(withdrawalData.amount),
+                    timestamp: new Date().toISOString()
                   });
 
-                  const response = await sellerApiInstance.post('/sellers/withdrawals', requestPayload);
+                  // Send withdrawal request to the server
+                  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                      'Authorization': `Bearer ${localStorage.getItem('sellerToken')}`
+                    },
+                    body: JSON.stringify({
+                      mpesaNumber: withdrawalData.mpesaNumber,
+                      registeredName: withdrawalData.registeredName,
+                      amount: parseFloat(withdrawalData.amount)
+                    })
+                  });
 
-                  console.log('📥 Response received:', {
+                  const responseData = await response.json();
+
+                  // Log withdrawal response
+                  console.log('📥 Withdrawal response received:', {
                     status: response.status,
                     statusText: response.statusText,
-                    data: response.data,
-                    headers: response.headers,
-                    config: {
-                      url: response.config.url,
-                      method: response.config.method,
-                      timeout: response.config.timeout
-                    }
+                    responseData: responseData,
+                    timestamp: new Date().toISOString()
                   });
 
-                  const data = response.data;
-
-                  console.log('📋 Response data received:', data);
-
-                  if (response.status !== 200) {
-                    console.log('❌ Request failed with error response');
-                    throw new Error(data.message || 'Failed to process withdrawal request');
+                  if (!response.ok) {
+                    console.error('❌ Withdrawal request failed:', {
+                      status: response.status,
+                      error: responseData.message,
+                      timestamp: new Date().toISOString()
+                    });
+                    throw new Error(responseData.message || 'Failed to process withdrawal request');
                   }
 
-                  console.log('✅ Withdrawal request successful! Response data:', data);
+                  console.log('✅ Withdrawal request successful:', {
+                    withdrawalId: responseData.data?.withdrawalId,
+                    amount: responseData.data?.amount,
+                    status: responseData.data?.status,
+                    timestamp: new Date().toISOString()
+                  });
 
-                  // Close modal and show success
-                  setIsWithdrawalModalOpen(false);
                   toast({
                     title: 'Success',
-                    description: 'Your withdrawal request has been submitted and approved! Payment will be sent within 24 hours.',
+                    description: 'Your withdrawal request has been submitted successfully!',
                   });
-
-                  console.log('🎉 Withdrawal modal closed and success toast shown');
-
-                  // Additional logging to track response processing
-                  console.log('📊 Final state check:', {
-                    modalOpen: isWithdrawalModalOpen,
-                    isSubmitting: isSubmitting,
-                    responseReceived: true
-                  });
-
+                  
+                  setIsWithdrawalModalOpen(false);
                 } catch (error) {
-                  console.error('💥 Withdrawal request failed:', {
-                    message: error.message,
+                  console.error('❌ Withdrawal request error:', {
+                    error: error.message,
                     stack: error.stack,
-                    name: error.name
+                    timestamp: new Date().toISOString()
                   });
                   toast({
                     title: 'Error',
-                    description: error.message || 'Failed to submit withdrawal request. Please try again.',
+                    description: 'Failed to submit withdrawal request. Please try again.',
                     variant: 'destructive',
                   });
                 } finally {
-                  console.log('🔄 Clearing loading state');
                   setIsSubmitting(false);
                 }
               }}
@@ -1431,9 +1418,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
               {isSubmitting ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  Submitting...
                 </>
-              ) : 'Request Payment'}
+              ) : 'Submit Request'}
             </Button>
           </DialogFooter>
         </DialogContent>

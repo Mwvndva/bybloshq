@@ -29,11 +29,12 @@ export const getSellerAnalytics = async (req, res, next) => {
 
     // 1. Get total products count
     const productsResult = await pool.query(
-      `SELECT COUNT(*) as total_products
-       FROM products
+      `SELECT COUNT(*) as total_products 
+       FROM products 
        WHERE seller_id = $1 AND status = 'available'`,
       [sellerId]
     );
+    console.log('Products query result:', productsResult.rows[0]);
 
     // 2. Get total sales (sum of total_amount for all orders)
     const totalSalesResult = await pool.query(
@@ -41,10 +42,11 @@ export const getSellerAnalytics = async (req, res, next) => {
        FROM product_orders o
        JOIN order_items oi ON o.id = oi.order_id
        JOIN products p ON oi.product_id::INTEGER = p.id
-       WHERE p.seller_id = $1
+       WHERE p.seller_id = $1 
          AND o.status IN ('PROCESSING', 'COMPLETED')`,
       [sellerId]
     );
+    console.log('Total sales query result:', totalSalesResult.rows[0]);
 
     // 3. Get total revenue (sum of total_amount for this seller)
     // Include all COMPLETED and PROCESSING orders
@@ -69,7 +71,14 @@ export const getSellerAnalytics = async (req, res, next) => {
       [sellerId]
     );
     
+    console.log('Revenue and Payout:', {
+      total_revenue: revenueResult.rows[0].total_revenue,
+      total_payout: payoutResult.rows[0].total_payout
+    });
+    console.log('Net revenue query result:', revenueResult.rows[0]);
+
     // 4. Get monthly sales data for the last 12 months
+    console.log('Fetching monthly sales data...');
     const monthlySalesResult = await pool.query(
       `SELECT 
          TO_CHAR(o.created_at, 'YYYY-MM') as month,
@@ -87,6 +96,7 @@ export const getSellerAnalytics = async (req, res, next) => {
     console.log('Monthly sales query result:', monthlySalesResult.rows);
 
     // 5. Get seller's balance (handle case where column might not exist)
+    console.log('Fetching seller balance...');
     let sellerBalance = 0;
     try {
       const sellerBalanceResult = await pool.query(
@@ -94,12 +104,14 @@ export const getSellerAnalytics = async (req, res, next) => {
         [sellerId]
       );
       sellerBalance = parseFloat(sellerBalanceResult.rows[0]?.balance || 0);
+      console.log('Seller balance:', sellerBalance);
     } catch (balanceError) {
       console.warn('Could not fetch seller balance, using default 0:', balanceError.message);
       sellerBalance = 0;
     }
 
     // 6. Get recent orders
+    console.log('Fetching recent orders...');
     const recentOrdersResult = await pool.query(
       `SELECT 
          o.id, 
@@ -153,6 +165,7 @@ export const getSellerAnalytics = async (req, res, next) => {
         }))
       };
 
+      console.log('Sending analytics response:', JSON.stringify(analyticsData, null, 2));
       
       res.status(200).json({
         status: 'success',

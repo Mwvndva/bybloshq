@@ -63,7 +63,4 @@ router.route('/withdrawals')
   .get(withdrawalController.getWithdrawals)   // Get withdrawal history
   .post(withdrawalController.requestWithdrawal); // Request a new withdrawal
 
-// Individual withdrawal status
-router.get('/withdrawals/:id', withdrawalController.getWithdrawalById);
-
 export default router;

@@ -39,7 +39,6 @@ router.patch('/events/:eventId/mark-paid', adminController.markEventAsPaid);
 router.get('/products', adminController.getAllProducts);
 router.get('/products/seller/:sellerId', adminController.getSellerProducts);
 
-
 // Metrics
 router.get('/metrics/monthly-events', adminController.getMonthlyEvents);
 router.get('/metrics/monthly', adminController.getMonthlyMetrics);
