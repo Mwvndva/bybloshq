@@ -547,6 +547,52 @@ export const adminApi = {
   // Update buyer status
   updateBuyerStatus(buyerId: string, data: { status: string }) {
     return api.patch(`/admin/buyers/${buyerId}/status`, data);
+  },
+
+  // Withdrawal requests
+  async getWithdrawalRequests() {
+    try {
+      console.log('Fetching withdrawal requests from API...');
+      const response = await api.get('/admin/withdrawal-requests');
+      console.log('Withdrawal requests API response:', response);
+
+      // Handle different response formats
+      let withdrawalRequests = [];
+      if (response.data && Array.isArray(response.data.data)) {
+        withdrawalRequests = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        withdrawalRequests = response.data;
+      } else {
+        console.error('Unexpected API response format:', response);
+        return [];
+      }
+
+      const requests = withdrawalRequests.map((request: any) => ({
+        id: String(request.id || `withdrawal-${Math.random().toString(36).substr(2, 9)}`),
+        amount: Number(request.amount || 0),
+        mpesaNumber: String(request.mpesa_number || request.mpesaNumber || ''),
+        mpesaName: String(request.mpesa_name || request.mpesaName || ''),
+        status: String(request.status || 'pending'),
+        sellerId: String(request.seller_id || request.sellerId || ''),
+        sellerName: String(request.seller_name || request.sellerName || 'Unknown Seller'),
+        sellerEmail: String(request.seller_email || request.sellerEmail || ''),
+        // Use camelCase for consistency
+        createdAt: request.created_at || request.createdAt || new Date().toISOString(),
+        processedAt: request.processed_at || request.processedAt || null,
+        processedBy: request.processed_by || request.processedBy || null
+      }));
+
+      console.log(`Fetched ${requests.length} withdrawal requests`);
+      return requests;
+    } catch (error) {
+      console.error('Error fetching withdrawal requests:', error);
+      // Return empty array instead of throwing to prevent UI crashes
+      return [];
+    }
+  },
+
+  async updateWithdrawalRequestStatus(requestId: string, status: 'approved' | 'rejected') {
+    return api.patch(`/admin/withdrawal-requests/${requestId}/status`, { status });
   }
 };
 

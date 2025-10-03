@@ -43,4 +43,8 @@ router.get('/products/seller/:sellerId', adminController.getSellerProducts);
 router.get('/metrics/monthly-events', adminController.getMonthlyEvents);
 router.get('/metrics/monthly', adminController.getMonthlyMetrics);
 
+// Withdrawal requests management
+router.get('/withdrawal-requests', adminController.getAllWithdrawalRequests);
+router.patch('/withdrawal-requests/:id/status', adminController.updateWithdrawalRequestStatus);
+
 export default router;

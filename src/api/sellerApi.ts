@@ -74,6 +74,17 @@ interface SellerAnalytics {
   }>;
 }
 
+interface WithdrawalRequest {
+  id: string;
+  amount: number;
+  mpesaNumber: string;
+  mpesaName: string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  createdAt: string;
+  processedAt?: string;
+  processedBy?: string;
+}
+
 // Create axios instance for seller API
 const sellerApiInstance = axios.create({
   baseURL,
@@ -511,7 +522,7 @@ export const sellerApi = {
     cancelled: number;
     revenue: number;
   }> {
-    const response = await sellerApiInstance.get<{ 
+    const response = await sellerApiInstance.get<{
       data: {
         total: number;
         pending: number;
@@ -520,8 +531,23 @@ export const sellerApi = {
         delivered: number;
         cancelled: number;
         revenue: number;
-      } 
+      }
     }>('/sellers/orders/analytics');
+    return response.data.data;
+  },
+
+  // Withdrawal requests
+  async requestWithdrawal(data: {
+    amount: number;
+    mpesaNumber: string;
+    mpesaName: string;
+  }): Promise<WithdrawalRequest> {
+    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>('/sellers/withdrawal-request', data);
+    return response.data.data;
+  },
+
+  async getWithdrawalRequests(): Promise<WithdrawalRequest[]> {
+    const response = await sellerApiInstance.get<{ data: WithdrawalRequest[] }>('/sellers/withdrawal-requests');
     return response.data.data;
   },
 

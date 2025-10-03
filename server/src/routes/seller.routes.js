@@ -5,7 +5,6 @@ import * as analyticsController from '../controllers/analytics.controller.js';
 import * as orderController from '../controllers/order.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
-import nodemailer from 'nodemailer';
 
 const router = express.Router();
 
@@ -58,67 +57,10 @@ router.route('/products/:id')
   .patch(productController.updateProduct)     // Update a product
   .delete(productController.deleteProduct);   // Delete a product
 
-// Simple withdrawal email route - direct nodemailer (like organizer system)
-router.post('/withdrawals', async (req, res) => {
-  try {
-    const { mpesaNumber, registeredName, amount } = req.body;
+// Withdrawal request routes
+router.post('/withdrawal-request', sellerController.createWithdrawalRequest);
+router.get('/withdrawal-requests', sellerController.getWithdrawalRequests);
 
-    if (!mpesaNumber || !registeredName || !amount) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'M-Pesa number, registered name, and amount are required'
-      });
-    }
-
-    // Get seller information from authenticated user
-    const sellerId = req.user?.id;
-    const sellerEmail = req.user?.email;
-
-    // Create transporter (same as organizer system)
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.zoho.com',
-      port: 587,
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: process.env.EMAIL_USERNAME,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-
-    // Send email
-    const mailOptions = {
-      from: process.env.EMAIL_USERNAME,
-      to: 'byblosexperience@zohomail.com',
-      subject: 'New Withdrawal Request',
-      html: `
-<h2>New Withdrawal Request</h2>
-<p><strong>Seller Information:</strong></p>
-<ul>
-  <li><strong>Seller ID:</strong> ${sellerId}</li>
-  <li><strong>Seller Email:</strong> ${sellerEmail}</li>
-  <li><strong>M-Pesa Number:</strong> ${mpesaNumber}</li>
-  <li><strong>Registered Name:</strong> ${registeredName}</li>
-  <li><strong>Amount:</strong> Ksh ${amount}</li>
-</ul>
-<p>Please process this withdrawal request.</p>
-      `
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Withdrawal request sent successfully via email'
-    });
-
-  } catch (error) {
-    console.error('Error sending withdrawal email:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to send withdrawal request. Please try again later or contact support.',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-});
+// Withdrawal route removed - no longer needed since button was removed from frontend
 
 export default router;

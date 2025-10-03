@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, Clock, Users, Ticket, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin } from 'lucide-react';
+import { Calendar, Clock, Users, Ticket, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle } from 'lucide-react';
 import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -70,6 +70,20 @@ interface MonthlyMetricsData {
   buyerCount: number;
 }
 
+interface WithdrawalRequest {
+  id: string;
+  amount: number;
+  mpesaNumber: string;
+  mpesaName: string;
+  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  sellerId: string;
+  sellerName: string;
+  sellerEmail: string;
+  createdAt: string;
+  processedAt?: string;
+  processedBy?: string;
+}
+
 interface DashboardState {
   analytics: DashboardAnalytics;
   recentEvents: Array<{
@@ -115,6 +129,7 @@ interface DashboardState {
     location: string;
     createdAt: string;
   }>;
+  withdrawalRequests: WithdrawalRequest[];
   monthlyEvents: MonthlyEventData[];
   monthlyMetrics: MonthlyMetricsData[];
 }
@@ -212,6 +227,7 @@ const NewAdminDashboard = () => {
     sellers: [],
     organizers: [],
     buyers: [],
+    withdrawalRequests: [],
     monthlyEvents: [],
     monthlyMetrics: []
   });
@@ -224,11 +240,12 @@ const NewAdminDashboard = () => {
       console.log('Starting to fetch dashboard data...');
       try {
         const [
-          analytics, 
-          events, 
-          sellers, 
-          organizers, 
+          analytics,
+          events,
+          sellers,
+          organizers,
           buyers,
+          withdrawalRequests,
           monthlyEvents,
           monthlyMetrics
         ] = await Promise.all([
@@ -250,6 +267,10 @@ const NewAdminDashboard = () => {
           }),
           adminApi.getBuyers().then(data => {
             console.log('Buyers data received:', data);
+            return data;
+          }),
+          adminApi.getWithdrawalRequests().then(data => {
+            console.log('Withdrawal requests data received:', data);
             return data;
           }),
           adminApi.getMonthlyEvents().then(data => {
@@ -301,6 +322,7 @@ const NewAdminDashboard = () => {
           sellers: Array.isArray(sellers) ? sellers : [],
           organizers: Array.isArray(organizers) ? organizers : [],
           buyers: Array.isArray(buyers) ? buyers : [],
+          withdrawalRequests: Array.isArray(withdrawalRequests) ? withdrawalRequests : [],
           monthlyEvents: Array.isArray(monthlyEvents) ? monthlyEvents : [],
           monthlyMetrics: metricsData
         });
@@ -670,24 +692,54 @@ const NewAdminDashboard = () => {
     try {
       // Call the API to update the buyer status
       const response = await adminApi.updateBuyerStatus(buyerId, { status: newStatus });
-      
+
       if (response.status === 'success') {
         // Update the UI to reflect the new status
         setDashboardState(prevState => ({
           ...prevState,
-          buyers: prevState.buyers.map(buyer => 
-            buyer.id === buyerId 
+          buyers: prevState.buyers.map(buyer =>
+            buyer.id === buyerId
               ? { ...buyer, status: newStatus }
               : buyer
           )
         }));
-        
+
         // Show success message
         toast.success(`Buyer has been ${newStatus === 'active' ? 'activated' : 'deactivated'}`);
       }
     } catch (error) {
       console.error('Error updating buyer status:', error);
       toast.error('Failed to update buyer status');
+    }
+  };
+
+  // Handle withdrawal request approval/rejection
+  const handleWithdrawalRequestAction = async (requestId: string, action: 'approved' | 'rejected') => {
+    try {
+      const response = await adminApi.updateWithdrawalRequestStatus(requestId, action);
+
+      if (response.status === 'success') {
+        // Update the UI to reflect the new status
+        setDashboardState(prevState => ({
+          ...prevState,
+          withdrawalRequests: prevState.withdrawalRequests.map(request =>
+            request.id === requestId
+              ? {
+                  ...request,
+                  status: action,
+                  processedAt: new Date().toISOString(),
+                  processedBy: 'Admin' // You might want to get the actual admin name
+                }
+              : request
+          )
+        }));
+
+        // Show success message
+        toast.success(`Withdrawal request has been ${action}`);
+      }
+    } catch (error) {
+      console.error('Error updating withdrawal request status:', error);
+      toast.error('Failed to update withdrawal request status');
     }
   };
 
@@ -993,11 +1045,17 @@ const NewAdminDashboard = () => {
               >
                 Sellers
               </TabsTrigger>
-              <TabsTrigger 
-                value="buyers" 
+              <TabsTrigger
+                value="buyers"
                 className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
               >
                 Buyers
+              </TabsTrigger>
+              <TabsTrigger
+                value="withdrawals"
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
+              >
+                Withdrawals
               </TabsTrigger>
           </TabsList>
           </div>
@@ -1757,6 +1815,138 @@ const NewAdminDashboard = () => {
                   <div className="text-sm text-gray-500">
                     Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.buyers?.length || 0}</span> of{' '}
                     <span className="font-medium">{dashboardState.buyers?.length || 0}</span> buyers
+                  </div>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Previous
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={true}>
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          {/* Withdrawals Tab */}
+          <TabsContent value="withdrawals" className="space-y-4 sm:space-y-6">
+            <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
+              <CardHeader className="pb-3 sm:pb-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl font-bold text-black">Withdrawal Requests</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-gray-600">
+                      Manage seller withdrawal requests
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search requests..."
+                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr className="border-b border-gray-200">
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Seller</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Amount</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">M-Pesa Details</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Date</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {dashboardState.withdrawalRequests?.map((request) => (
+                          <tr key={request.id} className="hover:bg-yellow-50/50 transition-colors">
+                            <td className="py-3 px-3 sm:px-4">
+                              <div className="font-medium text-gray-900">{request.sellerName}</div>
+                              <div className="text-xs text-gray-500">{request.sellerEmail}</div>
+                              <div className="sm:hidden text-xs text-gray-500 mt-1">
+                                <div>KSh {request.amount.toLocaleString()}</div>
+                                <div>{request.mpesaNumber} ({request.mpesaName})</div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                              <span className="font-semibold text-black">KSh {request.amount.toLocaleString()}</span>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden md:table-cell">
+                              <div className="font-medium text-gray-900">{request.mpesaNumber}</div>
+                              <div className="text-xs text-gray-500">{request.mpesaName}</div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3">
+                              <Badge
+                                variant="outline"
+                                className={`${
+                                  request.status === 'pending'
+                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                    : request.status === 'approved'
+                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    : request.status === 'rejected'
+                                    ? 'bg-red-100 text-red-800 border-red-200'
+                                    : 'bg-blue-100 text-blue-800 border-blue-200'
+                                } rounded-full px-3 py-1 font-semibold`}
+                              >
+                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden lg:table-cell">
+                              <div>{new Date(request.createdAt).toLocaleDateString()}</div>
+                              <div className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleTimeString()}</div>
+                            </td>
+                            <td className="py-3 pr-3 sm:pr-4 text-right">
+                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
+                                {request.status === 'pending' && (
+                                  <>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-green-600 hover:bg-green-100 hover:text-green-700 h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                                      onClick={() => handleWithdrawalRequestAction(request.id, 'approved')}
+                                    >
+                                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Approve</span>
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="text-red-600 hover:bg-red-100 hover:text-red-700 h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                                      onClick={() => handleWithdrawalRequestAction(request.id, 'rejected')}
+                                    >
+                                      <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                      <span className="hidden sm:inline">Reject</span>
+                                    </Button>
+                                  </>
+                                )}
+                                {request.status !== 'pending' && (
+                                  <span className="text-xs text-gray-500">
+                                    Processed by {request.processedBy || 'Admin'}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </CardContent>
+              <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+                <div className="flex items-center justify-between w-full">
+                  <div className="text-sm text-gray-500">
+                    Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.withdrawalRequests?.length || 0}</span> of{' '}
+                    <span className="font-medium">{dashboardState.withdrawalRequests?.length || 0}</span> withdrawal requests
                   </div>
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" disabled={true}>

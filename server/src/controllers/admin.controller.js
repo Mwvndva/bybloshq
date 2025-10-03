@@ -894,30 +894,166 @@ const getBuyerById = async (req, res, next) => {
   }
 };
 
-export {
-  adminLogin,
-  protect,
-  processPendingPayments,
-  getDashboardStats,
-  getAllSellers,
-  getSellerById,
-  updateSellerStatus,
-  getAllOrganizers,
-  getOrganizerById,
-  getMonthlyEvents,
-  updateOrganizerStatus,
-  getAllBuyers,
-  getBuyerById,
-  getAllEvents,
-  getEventById,
-  getEventTickets,
-  getAllProducts,
-  getSellerProducts,
-  getMonthlyMetrics,
-  markEventAsPaid,
+// @desc    Get all withdrawal requests
+// @route   GET /api/admin/withdrawal-requests
+// @access  Private (Admin)
+const getAllWithdrawalRequests = async (req, res, next) => {
+  try {
+    const query = `
+      SELECT
+        wr.id,
+        wr.amount,
+        wr.mpesa_number,
+        wr.mpesa_name,
+        wr.status,
+        wr.created_at,
+        wr.processed_at,
+        wr.processed_by,
+        s.id as seller_id,
+        s.full_name as seller_name,
+        s.email as seller_email,
+        s.phone as seller_phone
+      FROM withdrawal_requests wr
+      JOIN sellers s ON wr.seller_id = s.id
+      ORDER BY wr.created_at DESC
+    `;
+
+    const result = await pool.query(query);
+
+    const withdrawalRequests = result.rows.map(row => ({
+      id: row.id,
+      amount: parseFloat(row.amount),
+      mpesaNumber: row.mpesa_number,
+      mpesaName: row.mpesa_name,
+      status: row.status,
+      sellerId: row.seller_id,
+      sellerName: row.seller_name,
+      sellerEmail: row.seller_email,
+      sellerPhone: row.seller_phone,
+      createdAt: row.created_at,
+      processedAt: row.processed_at,
+      processedBy: row.processed_by
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: withdrawalRequests
+    });
+
+  } catch (error) {
+    console.error('Error fetching withdrawal requests:', error);
+    next(new AppError('Failed to fetch withdrawal requests', 500));
+  }
 };
 
-// Mark event as paid (withdrawal processed)
+// @desc    Update withdrawal request status
+// @route   PATCH /api/admin/withdrawal-requests/:id/status
+// @access  Private (Admin)
+const updateWithdrawalRequestStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validate status
+    if (!['approved', 'rejected'].includes(status)) {
+      return next(new AppError('Invalid status. Must be approved or rejected', 400));
+    }
+
+    // Check if withdrawal request exists
+    const checkQuery = `
+      SELECT wr.*, s.balance as seller_balance
+      FROM withdrawal_requests wr
+      JOIN sellers s ON wr.seller_id = s.id
+      WHERE wr.id = $1
+    `;
+    const checkResult = await pool.query(checkQuery, [id]);
+
+    if (checkResult.rows.length === 0) {
+      return next(new AppError('Withdrawal request not found', 404));
+    }
+
+    const withdrawalRequest = checkResult.rows[0];
+    const currentBalance = parseFloat(withdrawalRequest.seller_balance || 0);
+    const withdrawalAmount = parseFloat(withdrawalRequest.amount || 0);
+
+    // Check if already processed
+    if (withdrawalRequest.status !== 'pending') {
+      return next(new AppError('Withdrawal request has already been processed', 400));
+    }
+
+    // If approving, check if seller has sufficient balance
+    if (status === 'approved' && withdrawalAmount > currentBalance) {
+      return next(new AppError(`Insufficient balance. Seller has KSh ${currentBalance.toLocaleString()} but requested KSh ${withdrawalAmount.toLocaleString()}`, 400));
+    }
+
+    // Start transaction
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Update withdrawal request status
+      const updateWithdrawalQuery = `
+        UPDATE withdrawal_requests
+        SET status = $1, processed_at = NOW(), processed_by = 'admin'
+        WHERE id = $2
+        RETURNING *
+      `;
+
+      const updateResult = await client.query(updateWithdrawalQuery, [status, id]);
+      const updatedRequest = updateResult.rows[0];
+
+      // If approved, subtract from seller's balance
+      if (status === 'approved') {
+        const newBalance = currentBalance - withdrawalAmount;
+
+        const updateBalanceQuery = `
+          UPDATE sellers
+          SET balance = $1, updated_at = NOW()
+          WHERE id = $2
+        `;
+
+        await client.query(updateBalanceQuery, [newBalance, withdrawalRequest.seller_id]);
+
+        console.log(`Withdrawal approved: KSh ${withdrawalAmount} deducted from seller ${withdrawalRequest.seller_id}. New balance: KSh ${newBalance}`);
+      }
+
+      await client.query('COMMIT');
+
+      res.status(200).json({
+        status: 'success',
+        message: `Withdrawal request ${status} successfully${status === 'approved' ? ` and balance updated` : ''}`,
+        data: {
+          id: updatedRequest.id,
+          amount: parseFloat(updatedRequest.amount),
+          mpesaNumber: updatedRequest.mpesa_number,
+          mpesaName: updatedRequest.mpesa_name,
+          status: updatedRequest.status,
+          sellerId: updatedRequest.seller_id,
+          createdAt: updatedRequest.created_at,
+          processedAt: updatedRequest.processed_at,
+          processedBy: updatedRequest.processed_by,
+          balanceDeducted: status === 'approved' ? withdrawalAmount : 0,
+          newBalance: status === 'approved' ? currentBalance - withdrawalAmount : currentBalance
+        }
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error('Error updating withdrawal request status:', error);
+    next(new AppError('Failed to update withdrawal request status', 500));
+  }
+};
+
+// @desc    Mark event as paid (withdrawal processed)
+// @route   PATCH /api/admin/events/:eventId/mark-paid
+// @access  Private (Admin)
 const markEventAsPaid = async (req, res, next) => {
   try {
     const { eventId } = req.params;
@@ -931,7 +1067,7 @@ const markEventAsPaid = async (req, res, next) => {
     // Check if event exists
     const eventQuery = 'SELECT id, name, withdrawal_status FROM events WHERE id = $1';
     const eventResult = await pool.query(eventQuery, [eventId]);
-    
+
     if (eventResult.rows.length === 0) {
       return next(new AppError('Event not found', 404));
     }
@@ -945,7 +1081,7 @@ const markEventAsPaid = async (req, res, next) => {
 
     // Calculate total revenue for the event
     const revenueQuery = `
-      SELECT 
+      SELECT
         COALESCE(SUM(t.total_price), 0) as total_revenue
       FROM tickets t
       WHERE t.event_id = $1 AND t.status = 'paid'
@@ -959,8 +1095,8 @@ const markEventAsPaid = async (req, res, next) => {
 
     // Update event with withdrawal status
     const updateQuery = `
-      UPDATE events 
-      SET 
+      UPDATE events
+      SET
         withdrawal_status = 'paid',
         withdrawal_date = NOW(),
         withdrawal_amount = $1,
@@ -1005,3 +1141,29 @@ const markEventAsPaid = async (req, res, next) => {
     next(new AppError('Failed to mark event as paid', 500));
   }
 };
+
+export {
+  adminLogin,
+  protect,
+  processPendingPayments,
+  getDashboardStats,
+  getAllSellers,
+  getSellerById,
+  updateSellerStatus,
+  getAllOrganizers,
+  getOrganizerById,
+  getMonthlyEvents,
+  updateOrganizerStatus,
+  getAllBuyers,
+  getBuyerById,
+  getAllEvents,
+  getEventById,
+  getEventTickets,
+  getAllProducts,
+  getSellerProducts,
+  getMonthlyMetrics,
+  markEventAsPaid,
+  getAllWithdrawalRequests,
+  updateWithdrawalRequestStatus,
+};
+

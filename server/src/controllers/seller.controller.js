@@ -664,14 +664,14 @@ export const updateTheme = async (req, res) => {
 export const getSellerById = async (req, res) => {
   try {
     const seller = await findSellerById(req.params.id);
-    
+
     if (!seller) {
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
       });
     }
-    
+
     // Format the response to match the expected frontend format
     const sellerData = {
       id: seller.id,
@@ -682,13 +682,159 @@ export const getSellerById = async (req, res) => {
       createdAt: seller.created_at || seller.createdAt,
       updatedAt: seller.updated_at || seller.updatedAt
     };
-    
+
     res.status(200).json(sellerData);
   } catch (error) {
     console.error('Error fetching seller:', error);
     res.status(500).json({
       status: 'error',
       message: error.message || 'Failed to fetch seller information'
+    });
+  }
+};
+
+// @desc    Create withdrawal request
+// @route   POST /api/sellers/withdrawal-request
+// @access  Private
+export const createWithdrawalRequest = async (req, res) => {
+  try {
+    const sellerId = req.user?.id;
+    const { amount, mpesaNumber, mpesaName } = req.body;
+
+    if (!sellerId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    // Validate required fields
+    if (!amount || !mpesaNumber || !mpesaName) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Amount, M-Pesa number, and M-Pesa name are required'
+      });
+    }
+
+    // Validate amount is positive number
+    const withdrawalAmount = parseFloat(amount);
+    if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Amount must be a positive number'
+      });
+    }
+
+    // Get seller's current balance
+    const balanceResult = await query(
+      'SELECT balance FROM sellers WHERE id = $1',
+      [sellerId]
+    );
+
+    if (balanceResult.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Seller not found'
+      });
+    }
+
+    const currentBalance = parseFloat(balanceResult.rows[0].balance || 0);
+
+    // Check if withdrawal amount exceeds balance
+    if (withdrawalAmount > currentBalance) {
+      return res.status(400).json({
+        status: 'error',
+        message: `Withdrawal amount (KSh ${withdrawalAmount.toLocaleString()}) cannot exceed available balance (KSh ${currentBalance.toLocaleString()})`
+      });
+    }
+
+    // Create withdrawal request
+    const result = await query(
+      `INSERT INTO withdrawal_requests (seller_id, amount, mpesa_number, mpesa_name, status, created_at)
+       VALUES ($1, $2, $3, $4, 'pending', NOW())
+       RETURNING id, seller_id, amount, mpesa_number, mpesa_name, status, created_at`,
+      [sellerId, withdrawalAmount, mpesaNumber, mpesaName]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(500).json({
+        status: 'error',
+        message: 'Failed to create withdrawal request'
+      });
+    }
+
+    const withdrawalRequest = result.rows[0];
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        id: withdrawalRequest.id,
+        amount: withdrawalRequest.amount,
+        mpesaNumber: withdrawalRequest.mpesa_number,
+        mpesaName: withdrawalRequest.mpesa_name,
+        status: withdrawalRequest.status,
+        createdAt: withdrawalRequest.created_at
+      }
+    });
+  } catch (error) {
+    console.error('Error creating withdrawal request:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to create withdrawal request',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Get seller's withdrawal requests
+// @route   GET /api/sellers/withdrawal-requests
+// @access  Private
+export const getWithdrawalRequests = async (req, res) => {
+  try {
+    const sellerId = req.user?.id;
+
+    if (!sellerId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    // Get withdrawal requests for the seller
+    const result = await query(
+      `SELECT wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name, wr.status,
+              wr.created_at, wr.processed_at, wr.processed_by,
+              s.full_name as seller_name, s.email as seller_email
+       FROM withdrawal_requests wr
+       JOIN sellers s ON wr.seller_id = s.id
+       WHERE wr.seller_id = $1
+       ORDER BY wr.created_at DESC`,
+      [sellerId]
+    );
+
+    const withdrawalRequests = result.rows.map(row => ({
+      id: row.id,
+      amount: row.amount,
+      mpesaNumber: row.mpesa_number,
+      mpesaName: row.mpesa_name,
+      status: row.status,
+      createdAt: row.created_at,
+      processedAt: row.processed_at,
+      processedBy: row.processed_by,
+      sellerName: row.seller_name,
+      sellerEmail: row.email
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: withdrawalRequests
+    });
+  } catch (error) {
+    console.error('Error fetching withdrawal requests:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch withdrawal requests',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
