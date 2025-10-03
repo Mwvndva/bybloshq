@@ -1343,7 +1343,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   setIsSubmitting(true);
                   
                   // Send withdrawal request to the server
-                  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
+                  const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3002'}/api/sellers/withdrawals`, {
                     method: 'POST',
                     headers: {
                       'Content-Type': 'application/json',

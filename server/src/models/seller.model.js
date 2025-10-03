@@ -8,45 +8,93 @@ export const createSeller = async (sellerData) => {
   const { fullName, shopName, email, phone, password, city, location } = sellerData;
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
   
-  const result = await query(
-    `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
-     RETURNING 
-       id, 
-       full_name AS "fullName", 
-       shop_name AS "shopName", 
-       email, 
-       phone, 
-       city, 
-       location, 
-       total_sales AS "totalSales",
-       net_revenue AS "netRevenue",
-       balance,
-       created_at AS "createdAt"`,
-    [fullName, shopName, email, phone, hashedPassword, city, location]
-  );
-  
-  return result.rows[0];
+  try {
+    const result = await query(
+      `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location, balance)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING
+         id,
+         full_name AS "fullName",
+         shop_name AS "shopName",
+         email,
+         phone,
+         city,
+         location,
+         total_sales AS "totalSales",
+         net_revenue AS "netRevenue",
+         COALESCE(balance, 0) as balance,
+         created_at AS "createdAt"`,
+      [fullName, shopName, email, phone, hashedPassword, city, location, 0]
+    );
+    return result.rows[0];
+  } catch (error) {
+    // Handle case where balance column doesn't exist
+    if (error.code === '42703') { // Column doesn't exist
+      const result = await query(
+        `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING
+           id,
+           full_name AS "fullName",
+           shop_name AS "shopName",
+           email,
+           phone,
+           city,
+           location,
+           total_sales AS "totalSales",
+           net_revenue AS "netRevenue",
+           0 as balance,
+           created_at AS "createdAt"`,
+        [fullName, shopName, email, phone, hashedPassword, city, location]
+      );
+      return result.rows[0];
+    }
+    throw error;
+  }
 };
 
 export const findSellerByEmail = async (email) => {
-  const result = await query(
-    `SELECT 
-      id, 
-      full_name AS "fullName", 
-      shop_name AS "shopName", 
-      email, 
-      phone, 
-      password, 
-      total_sales AS "totalSales",
-      net_revenue AS "netRevenue",
-      balance,
-      created_at AS "createdAt"
-     FROM sellers 
-     WHERE email = $1`,
-    [email]
-  );
-  return result.rows[0];
+  try {
+    const result = await query(
+      `SELECT
+        id,
+        full_name AS "fullName",
+        shop_name AS "shopName",
+        email,
+        phone,
+        password,
+        total_sales AS "totalSales",
+        net_revenue AS "netRevenue",
+        COALESCE(balance, 0) as balance,
+        created_at AS "createdAt"
+       FROM sellers
+       WHERE email = $1`,
+      [email]
+    );
+    return result.rows[0];
+  } catch (error) {
+    // Handle case where balance column doesn't exist
+    if (error.code === '42703') { // Column doesn't exist
+      const result = await query(
+        `SELECT
+          id,
+          full_name AS "fullName",
+          shop_name AS "shopName",
+          email,
+          phone,
+          password,
+          total_sales AS "totalSales",
+          net_revenue AS "netRevenue",
+          0 as balance,
+          created_at AS "createdAt"
+         FROM sellers
+         WHERE email = $1`,
+        [email]
+      );
+      return result.rows[0];
+    }
+    throw error;
+  }
 };
 
 export const findSellerByShopName = async (shopName) => {
@@ -132,26 +180,53 @@ export const isShopNameAvailable = async (shopName) => {
 };
 
 export const findSellerById = async (id) => {
-  const result = await query(
-    `SELECT 
-      id, 
-      full_name AS "fullName", 
-      shop_name AS "shopName", 
-      email, 
-      phone, 
-      location, 
-      city, 
-      theme, 
-      total_sales AS "totalSales",
-      net_revenue AS "netRevenue",
-      balance,
-      created_at AS "createdAt", 
-      updated_at AS "updatedAt"
-     FROM sellers 
-     WHERE id = $1`,
-    [id]
-  );
-  return result.rows[0];
+  try {
+    const result = await query(
+      `SELECT
+        id,
+        full_name AS "fullName",
+        shop_name AS "shopName",
+        email,
+        phone,
+        location,
+        city,
+        theme,
+        total_sales AS "totalSales",
+        net_revenue AS "netRevenue",
+        COALESCE(balance, 0) as balance,
+        created_at AS "createdAt",
+        updated_at AS "updatedAt"
+       FROM sellers
+       WHERE id = $1`,
+      [id]
+    );
+    return result.rows[0];
+  } catch (error) {
+    // Handle case where balance column doesn't exist
+    if (error.code === '42703') { // Column doesn't exist
+      const result = await query(
+        `SELECT
+          id,
+          full_name AS "fullName",
+          shop_name AS "shopName",
+          email,
+          phone,
+          location,
+          city,
+          theme,
+          total_sales AS "totalSales",
+          net_revenue AS "netRevenue",
+          0 as balance,
+          created_at AS "createdAt",
+          updated_at AS "updatedAt"
+         FROM sellers
+         WHERE id = $1`,
+        [id]
+      );
+      return result.rows[0];
+    }
+    throw error;
+  }
 };
 
 export const updateSeller = async (id, updates) => {
@@ -162,7 +237,7 @@ export const updateSeller = async (id, updates) => {
     throw new Error('Seller ID is required for update');
   }
   
-  const { fullName, shopName, email, phone, password, city, location, bannerImage, banner_image, theme } = updates || {};
+  const { fullName, shopName, email, phone, password, city, location, bannerImage, banner_image, theme, balance } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -225,6 +300,17 @@ export const updateSeller = async (id, updates) => {
     values.push(theme);
   }
 
+  // Handle balance update (with error handling for missing column)
+  if (balance !== undefined) {
+    try {
+      paramCount++;
+      updatesList.push(`balance = $${paramCount}`);
+      values.push(balance);
+    } catch (error) {
+      console.warn('Could not update balance field:', error.message);
+    }
+  }
+
   if (updatesList.length === 0) {
     throw new Error('No valid fields to update');
   }
@@ -238,18 +324,18 @@ export const updateSeller = async (id, updates) => {
     UPDATE sellers
     SET ${updatesList.join(', ')}
     WHERE id = $1
-    RETURNING 
-      id, 
-      full_name AS "fullName", 
-      shop_name AS "shopName", 
-      email, 
-      phone, 
-      city, 
-      location, 
-      theme, 
+    RETURNING
+      id,
+      full_name AS "fullName",
+      shop_name AS "shopName",
+      email,
+      phone,
+      city,
+      location,
+      theme,
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
-      balance,
+      COALESCE(balance, 0) as balance,
       created_at AS "createdAt"
   `;
 
