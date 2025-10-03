@@ -136,16 +136,50 @@ This withdrawal request has been automatically approved and should be processed 
     try {
       console.log('📨 Sending to business email: byblosexperience@zohomail.com');
 
-      // Create a promise that rejects after 10 seconds
+      // Check if email configuration is properly set
+      const requiredEmailVars = ['EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USERNAME', 'EMAIL_PASSWORD', 'EMAIL_FROM_EMAIL'];
+      const missingEmailVars = requiredEmailVars.filter(varName => !process.env[varName]);
+
+      if (missingEmailVars.length > 0) {
+        console.error('❌ Email configuration incomplete. Missing variables:', missingEmailVars);
+        console.error('📧 Email configuration status:', {
+          EMAIL_HOST: process.env.EMAIL_HOST ? 'Set' : 'Missing',
+          EMAIL_PORT: process.env.EMAIL_PORT ? 'Set' : 'Missing',
+          EMAIL_USERNAME: process.env.EMAIL_USERNAME ? `${process.env.EMAIL_USERNAME.substring(0, 10)}...` : 'Missing',
+          EMAIL_FROM_EMAIL: process.env.EMAIL_FROM_EMAIL ? 'Set' : 'Missing',
+          EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME ? 'Set' : 'Missing'
+        });
+        console.log('⚠️ Skipping email notification due to missing configuration');
+        return;
+      }
+
+      const emailConfig = {
+        host: process.env.EMAIL_HOST,
+        port: process.env.EMAIL_PORT,
+        secure: process.env.EMAIL_SECURE,
+        username: process.env.EMAIL_USERNAME,
+        fromEmail: process.env.EMAIL_FROM_EMAIL,
+        fromName: process.env.EMAIL_FROM_NAME
+      };
+
+      console.log('✅ Email configuration verified for business email');
+      console.log('📧 Email configuration check:', {
+        host: emailConfig.host ? 'Set' : 'Missing',
+        port: emailConfig.port ? 'Set' : 'Missing',
+        username: emailConfig.username ? `${emailConfig.username.substring(0, 10)}...` : 'Missing',
+        fromEmail: emailConfig.fromEmail ? 'Set' : 'Missing'
+      });
+
+      // Create a promise that rejects after 30 seconds
       const emailPromise = transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME || 'Byblos Platform'}" <${process.env.EMAIL_FROM_EMAIL}>`,
+        from: `"${emailConfig.fromName || 'Byblos Platform'}" <${emailConfig.fromEmail}>`,
         to: 'byblosexperience@zohomail.com',
         subject: `Seller Withdrawal Request - ${seller.shop_name || seller.full_name} - Ksh ${parseFloat(amount).toFixed(2)}`,
         text: emailContent,
       });
 
       const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Email timeout after 10 seconds')), 10000)
+        setTimeout(() => reject(new Error('Email timeout after 30 seconds')), 30000)
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
@@ -155,8 +189,19 @@ This withdrawal request has been automatically approved and should be processed 
         message: emailError.message,
         code: emailError.code,
         command: emailError.command,
-        response: emailError.response
+        response: emailError.response,
+        stack: emailError.stack
       });
+
+      // Log email configuration for debugging
+      console.error('📧 Email configuration status:', {
+        EMAIL_HOST: process.env.EMAIL_HOST ? 'Set' : 'Missing',
+        EMAIL_PORT: process.env.EMAIL_PORT ? 'Set' : 'Missing',
+        EMAIL_USERNAME: process.env.EMAIL_USERNAME ? `${process.env.EMAIL_USERNAME.substring(0, 10)}...` : 'Missing',
+        EMAIL_FROM_EMAIL: process.env.EMAIL_FROM_EMAIL ? 'Set' : 'Missing',
+        EMAIL_FROM_NAME: process.env.EMAIL_FROM_NAME ? 'Set' : 'Missing'
+      });
+
       // Email failure doesn't affect the withdrawal request
     }
 
