@@ -773,8 +773,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   className="flex items-center gap-1 sm:gap-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 border-0 rounded-xl h-8 sm:h-9 md:h-10 px-2 sm:px-3 py-1.5 sm:py-2 font-medium shadow-sm"
                 >
                   <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline text-sm">Withdraw</span>
-                  <span className="sm:hidden text-xs">Withdraw</span>
+                  <span className="hidden sm:inline text-sm">Request Payment</span>
+                  <span className="sm:hidden text-xs">Request</span>
                 </Button>
                 <Button
                   variant="outline"
@@ -1232,10 +1232,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       <Dialog open={isWithdrawalModalOpen} onOpenChange={setIsWithdrawalModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Request Withdrawal</DialogTitle>
-            <DialogDescription>
-              Please fill in your withdrawal details. Net revenue is 91% of your total sales.
-            </DialogDescription>
+            <DialogTitle>Request Payment</DialogTitle>
+              <DialogDescription>
+                Your withdrawal request will be automatically approved and processed within 24 hours.
+              </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
@@ -1301,8 +1301,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm text-yellow-700">
-                    Withdrawal requests are processed within 24-48 hours. A 9% commission fee applies to all withdrawals.
+                  <p className="text-sm text-green-700">
+                    Your withdrawal request has been automatically approved. Payment will be sent to your M-Pesa number within 24 hours.
                   </p>
                 </div>
               </div>
@@ -1397,7 +1397,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   setIsWithdrawalModalOpen(false);
                   toast({
                     title: 'Success',
-                    description: 'Your withdrawal request has been submitted successfully!',
+                    description: 'Your withdrawal request has been submitted and approved! Payment will be sent within 24 hours.',
                   });
 
                   console.log('🎉 Withdrawal modal closed and success toast shown');
@@ -1431,9 +1431,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
               {isSubmitting ? (
                 <>
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Submitting...
+                  Processing...
                 </>
-              ) : 'Submit Request'}
+              ) : 'Request Payment'}
             </Button>
           </DialogFooter>
         </DialogContent>

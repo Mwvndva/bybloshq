@@ -74,25 +74,26 @@ export const requestWithdrawal = async (req, res, next) => {
     const withdrawalResult = await pool.query(
       `INSERT INTO seller_withdrawals
        (seller_id, mpesa_number, registered_name, amount, status, requested_at)
-       VALUES ($1, $2, $3, $4, 'pending', NOW())
+       VALUES ($1, $2, $3, $4, 'completed', NOW())
        RETURNING id`,
       [sellerId, mpesaNumber, registeredName, amount]
     );
 
     console.log('✅ Withdrawal saved to database:', {
       withdrawalId: withdrawalResult.rows[0].id,
-      status: 'pending'
+      status: 'completed'
     });
 
     // Prepare response data
     const responseData = {
       status: 'success',
-      message: 'Withdrawal request submitted successfully',
+      message: 'Withdrawal request submitted and processed successfully',
       data: {
         withdrawalId: withdrawalResult.rows[0].id,
         amount: parseFloat(amount),
-        status: 'pending',
-        requestedAt: new Date().toISOString()
+        status: 'completed',
+        requestedAt: new Date().toISOString(),
+        processedAt: new Date().toISOString()
       }
     };
 
@@ -106,53 +107,40 @@ export const requestWithdrawal = async (req, res, next) => {
     res.status(200).json(responseData);
 
     // Send email asynchronously in the background with timeout
-    console.log('📧 Sending notification email in background...');
-
-    // Check if email configuration is available
-    if (!process.env.EMAIL_HOST || !process.env.EMAIL_FROM_EMAIL) {
-      console.warn('⚠️ Email configuration missing - skipping email notification');
-      console.log('🎉 Withdrawal request completed successfully');
-      return;
-    }
+    console.log('📧 Sending notification email to business email...');
 
     const emailContent = `
-New Withdrawal Request:
-----------------------
+New Seller Withdrawal Request:
+-----------------------------
 
-Seller Details:
-- ID: ${sellerId}
-- Name: ${seller.full_name}
-- Shop: ${seller.shop_name}
-- Email: ${seller.email}
-- Phone: ${seller.phone}
+Seller Information:
+• Seller ID: ${sellerId}
+• Seller Name: ${seller.full_name}
+• Shop Name: ${seller.shop_name}
+• Seller Email: ${seller.email}
+• Seller Phone: ${seller.phone}
 
-Withdrawal Details:
-------------------
-- M-Pesa Number: ${mpesaNumber}
-- Registered Name: ${registeredName}
-- Amount: Ksh ${parseFloat(amount).toFixed(2)}
-- Status: Pending
+Withdrawal Request:
+• M-Pesa Number: ${mpesaNumber}
+• Registered Name: ${registeredName}
+• Amount: Ksh ${parseFloat(amount).toFixed(2)}
+• Request Time: ${new Date().toLocaleString()}
 
-Requested At: ${new Date().toLocaleString()}
+Action Required:
+Please send Ksh ${parseFloat(amount).toFixed(2)} to the M-Pesa number ${mpesaNumber} registered to ${registeredName}.
 
-Please process this withdrawal request within 24-48 hours.
+This withdrawal request has been automatically approved and should be processed within 24 hours.
     `;
 
     // Send email with timeout to prevent hanging
     try {
-      console.log('📨 Email configuration:', {
-        host: process.env.EMAIL_HOST,
-        port: process.env.EMAIL_PORT,
-        secure: process.env.EMAIL_SECURE,
-        from: process.env.EMAIL_FROM_EMAIL,
-        to: process.env.EMAIL_FROM_EMAIL
-      });
+      console.log('📨 Sending to business email: byblosexperience@zohomail.com');
 
       // Create a promise that rejects after 10 seconds
       const emailPromise = transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
-        to: process.env.EMAIL_FROM_EMAIL,
-        subject: `Withdrawal Request - ${seller.shop_name || 'Seller'}`,
+        from: `"${process.env.EMAIL_FROM_NAME || 'Byblos Platform'}" <${process.env.EMAIL_FROM_EMAIL}>`,
+        to: 'byblosexperience@zohomail.com',
+        subject: `Seller Withdrawal Request - ${seller.shop_name || seller.full_name} - Ksh ${parseFloat(amount).toFixed(2)}`,
         text: emailContent,
       });
 
@@ -161,9 +149,9 @@ Please process this withdrawal request within 24-48 hours.
       );
 
       await Promise.race([emailPromise, timeoutPromise]);
-      console.log('✅ Withdrawal notification email sent successfully');
+      console.log('✅ Withdrawal notification email sent to business successfully');
     } catch (emailError) {
-      console.error('❌ Failed to send withdrawal email:', {
+      console.error('❌ Failed to send withdrawal email to business:', {
         message: emailError.message,
         code: emailError.code,
         command: emailError.command,
@@ -193,7 +181,7 @@ Please process this withdrawal request within 24-48 hours.
 export const getWithdrawals = async (req, res, next) => {
   try {
     const sellerId = req.user.id;
-    
+
     const result = await pool.query(
       `SELECT id, amount, status, requested_at as "requestedAt",
               processed_at as "processedAt", mpesa_number as "mpesaNumber",
@@ -212,5 +200,43 @@ export const getWithdrawals = async (req, res, next) => {
   } catch (error) {
     console.error('Error fetching withdrawal history:', error);
     next(error);
+  }
+};
+
+/**
+ * Get a specific withdrawal by ID for the authenticated seller
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ * @param {Function} next - Express next middleware function
+ */
+export const getWithdrawalById = async (req, res, next) => {
+  try {
+    const sellerId = req.user.id;
+    const { id } = req.params;
+
+    console.log('🔍 Fetching withdrawal by ID for seller:', { sellerId, withdrawalId: id });
+
+    const result = await pool.query(
+      `SELECT id, amount, status, requested_at as "requestedAt",
+              processed_at as "processedAt", mpesa_number as "mpesaNumber",
+              registered_name as "registeredName", notes
+       FROM seller_withdrawals
+       WHERE id = $1 AND seller_id = $2`,
+      [id, sellerId]
+    );
+
+    if (result.rows.length === 0) {
+      return next(new AppError('Withdrawal not found', 404));
+    }
+
+    console.log('✅ Withdrawal found:', result.rows[0].id);
+
+    res.status(200).json({
+      status: 'success',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Error fetching withdrawal by ID:', error);
+    next(new AppError('Failed to fetch withdrawal', 500));
   }
 };

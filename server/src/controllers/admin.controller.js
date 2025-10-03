@@ -1005,3 +1005,4 @@ const markEventAsPaid = async (req, res, next) => {
     next(new AppError('Failed to mark event as paid', 500));
   }
 };
+
