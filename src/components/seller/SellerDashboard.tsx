@@ -762,9 +762,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    // Use totalRevenue from analytics for withdrawal amount
+                    // Use balance from analytics for withdrawal amount
                     // Default to 0 if analytics data is not available yet
-                    const availableBalance = analytics?.totalRevenue || 0;
+                    const availableBalance = analytics?.balance || 0;
                     setWithdrawalData({
                       mpesaNumber: '',
                       registeredName: sellerProfile?.fullName || '',
@@ -1271,7 +1271,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   size="sm"
                   className="h-7 text-xs"
                   onClick={() => {
-                    const availableBalance = analytics?.totalRevenue || 0;
+                    const availableBalance = analytics?.balance || 0;
                     setWithdrawalData({
                       ...withdrawalData,
                       amount: availableBalance.toFixed(2)
@@ -1289,10 +1289,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 onChange={(e) => setWithdrawalData({...withdrawalData, amount: e.target.value})}
                 disabled={isSubmitting}
                 min="0"
-                max={analytics?.totalRevenue || 0}
+                max={analytics?.balance || 0}
               />
               <p className="text-xs text-gray-500">
-                Available: Ksh {analytics?.totalRevenue ? analytics.totalRevenue.toFixed(2) : '0.00'}
+                Available: Ksh {analytics?.balance ? analytics.balance.toFixed(2) : '0.00'}
               </p>
             </div>
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
@@ -1329,7 +1329,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   return;
                 }
 
-                const availableBalance = analytics?.totalRevenue || 0;
+                const availableBalance = analytics?.balance || 0;
                 if (parseFloat(withdrawalData.amount) > availableBalance) {
                   toast({
                     title: 'Error',
