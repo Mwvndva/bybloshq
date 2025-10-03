@@ -42,13 +42,15 @@ export const requestWithdrawal = async (req, res, next) => {
     const seller = sellerResult.rows[0];
 
     // Save withdrawal request to database
+    console.log('Inserting withdrawal request:', { sellerId, mpesaNumber, registeredName, amount });
     const withdrawalResult = await pool.query(
-      `INSERT INTO withdrawals 
+      `INSERT INTO seller_withdrawals
        (seller_id, mpesa_number, registered_name, amount, status, requested_at)
        VALUES ($1, $2, $3, $4, 'pending', NOW())
        RETURNING id`,
       [sellerId, mpesaNumber, registeredName, amount]
     );
+    console.log('Withdrawal inserted successfully:', withdrawalResult.rows[0]);
 
     // Prepare email content
     const emailContent = `
@@ -72,12 +74,19 @@ export const requestWithdrawal = async (req, res, next) => {
     `;
 
     // Send email to admin
-    await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
-      to: process.env.EMAIL_FROM_EMAIL, // Send to admin email
-      subject: `Withdrawal Request - ${seller.shop_name || 'Seller'}`,
-      text: emailContent,
-    });
+    console.log('Sending withdrawal email to:', process.env.EMAIL_FROM_EMAIL);
+    try {
+      await transporter.sendMail({
+        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
+        to: process.env.EMAIL_FROM_EMAIL, // Send to admin email
+        subject: `Withdrawal Request - ${seller.shop_name || 'Seller'}`,
+        text: emailContent,
+      });
+      console.log('Withdrawal email sent successfully');
+    } catch (emailError) {
+      console.error('Failed to send withdrawal email:', emailError);
+      // Don't throw error - email failure shouldn't prevent withdrawal request
+    }
 
     res.status(200).json({
       status: 'success',
@@ -106,10 +115,10 @@ export const getWithdrawals = async (req, res, next) => {
     const sellerId = req.user.id;
     
     const result = await pool.query(
-      `SELECT id, amount, status, requested_at as "requestedAt", 
+      `SELECT id, amount, status, requested_at as "requestedAt",
               processed_at as "processedAt", mpesa_number as "mpesaNumber",
               registered_name as "registeredName"
-       FROM withdrawals 
+       FROM seller_withdrawals
        WHERE seller_id = $1
        ORDER BY requested_at DESC`,
       [sellerId]
