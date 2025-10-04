@@ -1067,7 +1067,7 @@ const markEventAsPaid = async (req, res, next) => {
     // Check if event exists
     const eventQuery = 'SELECT id, name, withdrawal_status FROM events WHERE id = $1';
     const eventResult = await pool.query(eventQuery, [eventId]);
-
+    
     if (eventResult.rows.length === 0) {
       return next(new AppError('Event not found', 404));
     }
@@ -1081,7 +1081,7 @@ const markEventAsPaid = async (req, res, next) => {
 
     // Calculate total revenue for the event
     const revenueQuery = `
-      SELECT
+      SELECT 
         COALESCE(SUM(t.total_price), 0) as total_revenue
       FROM tickets t
       WHERE t.event_id = $1 AND t.status = 'paid'
@@ -1095,8 +1095,8 @@ const markEventAsPaid = async (req, res, next) => {
 
     // Update event with withdrawal status
     const updateQuery = `
-      UPDATE events
-      SET
+      UPDATE events 
+      SET 
         withdrawal_status = 'paid',
         withdrawal_date = NOW(),
         withdrawal_amount = $1,
