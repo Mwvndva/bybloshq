@@ -57,7 +57,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
       
       // Check if we're on a protected route
-      const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password'];
+      const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password', '/buyer/reset-password'];
       const isProtectedRoute = location.pathname.startsWith('/buyer') && 
                              !publicRoutes.some(route => location.pathname.startsWith(route));
       
@@ -149,7 +149,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       
       // Check if we're on a protected route
-      const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password'];
+      const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password', '/buyer/reset-password'];
       const isProtectedRoute = location.pathname.startsWith('/buyer') && 
                              !publicRoutes.some(route => location.pathname.startsWith(route));
       
