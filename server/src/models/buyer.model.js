@@ -62,6 +62,13 @@ class Buyer {
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
+  // Find buyer by phone number
+  static async findByPhone(phone) {
+    const query = 'SELECT * FROM buyers WHERE phone = $1';
+    const result = await pool.query(query, [phone]);
+    return result.rows.length ? this.createInstance(result.rows[0]) : null;
+  }
+
   // Find buyer by ID
   static async findById(id) {
     const query = 'SELECT * FROM buyers WHERE id = $1';

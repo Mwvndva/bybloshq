@@ -310,6 +310,27 @@ export const sellerApi = {
     }
   },
 
+  // Public method to get products for a specific seller (no authentication required)
+  getSellerProducts: async (sellerId: string | number): Promise<Product[]> => {
+    try {
+      // Use axios directly to avoid auth interceptor
+      const response = await axios.get<ProductsResponse>(`${baseURL}/sellers/${sellerId}/products`);
+      const products = response.data?.data?.products || response.data?.data || [];
+      return products.map(transformProduct);
+    } catch (error: any) {
+      console.error('Error fetching seller products:', {
+        error: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        sellerId
+      });
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
+  },
+
   getProduct: async (id: string): Promise<Product> => {
     try {
       const response = await sellerApiInstance.get<ProductResponse>(`/sellers/products/${id}`);

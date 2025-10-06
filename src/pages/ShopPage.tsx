@@ -265,9 +265,9 @@ const ShopPage = () => {
 
         setSellerInfo(sellerData);
 
-        // Then fetch products for this seller
+        // Then fetch products for this seller using the public endpoint
         console.log('Fetching products for seller:', seller.id);
-        const sellerProducts = await sellerApi.getProducts();
+        const sellerProducts = await sellerApi.getSellerProducts(seller.id);
         console.log('Fetched products:', sellerProducts);
 
         // Map seller API products to our ProductType and filter available ones

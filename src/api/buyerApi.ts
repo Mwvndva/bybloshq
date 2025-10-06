@@ -617,6 +617,47 @@ const buyerApi = {
     }
   },
 
+  // Check if buyer exists by phone number (public endpoint - no auth required)
+  checkBuyerByPhone: async (phone: string): Promise<{ 
+    exists: boolean; 
+    buyer?: Buyer; 
+    token?: string; 
+  }> => {
+    try {
+      console.log('Checking buyer by phone:', phone);
+      
+      // Use a fresh axios instance to avoid auth interceptor
+      const response = await axios.create().post<{ 
+        status: string; 
+        data: { 
+          exists: boolean; 
+          buyer?: Buyer; 
+          token?: string; 
+        } 
+      }>(
+        `${API_URL}/buyers/check-phone`,
+        { phone },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      console.log('Check phone response:', response.data);
+      if (!response.data || response.data.status !== 'success') {
+        throw new Error('Failed to check buyer information');
+      }
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error checking buyer by phone:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error('Failed to check buyer information. Please try again.');
+    }
+  },
+
   saveBuyerInfo: async (buyerInfo: {
     fullName: string;
     email: string;

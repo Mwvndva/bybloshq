@@ -10,6 +10,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { BuyerInfoModal } from '@/components/BuyerInfoModal';
+import PhoneCheckModal from '@/components/PhoneCheckModal';
 import buyerApi from '@/api/buyerApi';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
@@ -43,12 +44,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   
   // Dialog state
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+  const [isPhoneCheckModalOpen, setIsPhoneCheckModalOpen] = useState(false);
   const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
+  const [currentPhone, setCurrentPhone] = useState('');
 
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
+  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
   
   // Derived state
   const displaySeller = seller || product.seller;
@@ -139,11 +143,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     e?.stopPropagation?.();
     e?.nativeEvent?.stopImmediatePropagation?.();
 
-    // Check if user needs to complete their information
-    if (!isAuthenticated || !userData?.email || !userData?.phone || !userData?.fullName) {
-      // Show buyer information modal to collect/update information
-      setIsBuyerModalOpen(true);
-    } else {
+    // Check if user is authenticated with complete information
+    if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
       // User has complete information, proceed directly with payment
       await handleBuyerInfoSubmit({
         fullName: userData.fullName,
@@ -152,6 +153,52 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         city: userData.city,
         location: userData.location
       });
+    } else {
+      // Show phone check modal to verify if buyer exists
+      setIsPhoneCheckModalOpen(true);
+    }
+  };
+
+  const handlePhoneSubmit = async (phone: string) => {
+    setIsCheckingPhone(true);
+    try {
+      console.log('Checking phone:', phone);
+      const result = await buyerApi.checkBuyerByPhone(phone);
+      
+      setCurrentPhone(phone);
+      setIsPhoneCheckModalOpen(false);
+      
+      if (result.exists && result.buyer && result.token) {
+        // Buyer exists - use their data to initiate payment
+        console.log('Buyer exists, proceeding with payment');
+        
+        // Store token if provided
+        if (result.token) {
+          localStorage.setItem('buyer_token', result.token);
+        }
+        
+        // Proceed directly to payment with existing buyer info
+        await handleBuyerInfoSubmit({
+          fullName: result.buyer.fullName || '',
+          email: result.buyer.email || '',
+          phone: result.buyer.phone || phone,
+          city: result.buyer.city,
+          location: result.buyer.location
+        });
+      } else {
+        // Buyer doesn't exist - show form to collect full details
+        console.log('Buyer not found, showing registration form');
+        setIsBuyerModalOpen(true);
+      }
+    } catch (error: any) {
+      console.error('Error checking phone:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to check phone number. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsCheckingPhone(false);
     }
   };
 
@@ -513,12 +560,25 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       </Dialog>
 
       {/* Buyer Information Modal */}
+      <PhoneCheckModal
+        isOpen={isPhoneCheckModalOpen}
+        onClose={() => setIsPhoneCheckModalOpen(false)}
+        onPhoneSubmit={handlePhoneSubmit}
+        isLoading={isCheckingPhone}
+      />
+
       <BuyerInfoModal
         isOpen={isBuyerModalOpen}
         onClose={() => setIsBuyerModalOpen(false)}
-        onSubmit={handleBuyerInfoSubmit}
+        onSubmit={async (buyerInfo) => {
+          await handleBuyerInfoSubmit({
+            ...buyerInfo,
+            phone: currentPhone
+          });
+        }}
         isLoading={isProcessingPurchase}
         theme={theme}
+        phoneNumber={currentPhone}
       />
     </Card>
   );

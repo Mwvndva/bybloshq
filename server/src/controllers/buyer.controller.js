@@ -275,6 +275,89 @@ export const updateProfile = async (req, res, next) => {
 };
 
 // Save buyer information (for guest checkouts) - Public endpoint
+// Helper function to normalize phone numbers
+const normalizePhoneNumber = (phone) => {
+  if (!phone) return null;
+  
+  // Remove all spaces, dashes, and parentheses
+  let normalized = phone.replace(/[\s\-\(\)]/g, '');
+  
+  // Remove leading + if present
+  if (normalized.startsWith('+')) {
+    normalized = normalized.substring(1);
+  }
+  
+  // Remove leading 254 if present (Kenya country code)
+  if (normalized.startsWith('254')) {
+    normalized = '0' + normalized.substring(3);
+  }
+  
+  // Ensure it starts with 0
+  if (!normalized.startsWith('0')) {
+    normalized = '0' + normalized;
+  }
+  
+  console.log(`Normalized phone: ${phone} -> ${normalized}`);
+  return normalized;
+};
+
+// Check if buyer exists by phone number (public endpoint)
+export const checkBuyerByPhone = async (req, res, next) => {
+  try {
+    const { phone } = req.body;
+
+    console.log('Checking buyer by phone:', phone);
+
+    // Validate required field
+    if (!phone) {
+      return next(new AppError('Phone number is required', 400));
+    }
+
+    // Normalize the phone number
+    const normalizedPhone = normalizePhoneNumber(phone);
+    console.log('Normalized phone number:', normalizedPhone);
+
+    // Check if buyer exists by normalized phone number
+    const existingBuyer = await Buyer.findByPhone(normalizedPhone);
+
+    if (existingBuyer) {
+      // Buyer exists - return buyer info and generate token
+      console.log('Buyer found with phone:', normalizedPhone, '- Buyer ID:', existingBuyer.id);
+      
+      const token = signToken(existingBuyer.id, 'buyer');
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          exists: true,
+          buyer: {
+            id: existingBuyer.id,
+            fullName: existingBuyer.fullName,
+            email: existingBuyer.email,
+            phone: existingBuyer.phone,
+            city: existingBuyer.city,
+            location: existingBuyer.location
+          },
+          token
+        }
+      });
+    } else {
+      // Buyer does not exist
+      console.log('No buyer found with phone:', normalizedPhone);
+      
+      res.status(200).json({
+        status: 'success',
+        data: {
+          exists: false
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in checkBuyerByPhone:', error);
+    next(error);
+  }
+};
+
 export const saveBuyerInfo = async (req, res, next) => {
   try {
     const { fullName, email, phone, city, location } = req.body;
@@ -286,35 +369,50 @@ export const saveBuyerInfo = async (req, res, next) => {
       return next(new AppError('Full name, email, and phone are required', 400));
     }
 
-    // Check if buyer already exists
-    const existingBuyer = await Buyer.findByEmail(email);
+    // Normalize the phone number
+    const normalizedPhone = normalizePhoneNumber(phone);
+    console.log('Normalized phone number for save:', normalizedPhone);
+
+    // Check if buyer already exists by normalized phone number (primary identifier)
+    const existingBuyer = await Buyer.findByPhone(normalizedPhone);
 
     let buyer;
+    let token;
+
     if (existingBuyer) {
-      // Update existing buyer information
-      console.log('Updating existing buyer:', existingBuyer.id);
-      buyer = await Buyer.update(existingBuyer.id, {
-        fullName,
-        phone,
-        city,
-        location
+      // Buyer exists - use existing buyer data for payment
+      console.log('Buyer already exists with phone:', normalizedPhone, '- Using existing buyer ID:', existingBuyer.id);
+      buyer = existingBuyer;
+      
+      // Generate token for the existing buyer
+      token = signToken(buyer.id, 'buyer');
+
+      console.log('Using existing buyer for payment:', { 
+        buyerId: buyer.id, 
+        phone: buyer.phone,
+        fullName: buyer.fullName
       });
     } else {
-      // Create new buyer (no password required for guest checkout)
-      console.log('Creating new buyer for guest checkout');
+      // Buyer does not exist - create new buyer with the collected details
+      console.log('Buyer phone not found in database - Creating new buyer for guest checkout');
+      
       buyer = await Buyer.createGuest({
         fullName,
         email,
-        phone,
+        phone: normalizedPhone, // Save normalized phone
         city,
         location
       });
+
+      // Generate token for the new buyer
+      token = signToken(buyer.id, 'buyer');
+
+      console.log('New buyer created successfully:', { 
+        buyerId: buyer.id, 
+        phone: buyer.phone,
+        token: token.substring(0, 20) + '...' 
+      });
     }
-
-    // Generate token for the buyer
-    const token = signToken(buyer.id, 'buyer');
-
-    console.log('Buyer info saved successfully:', { buyerId: buyer.id, token: token.substring(0, 20) + '...' });
 
     res.status(200).json({
       status: 'success',

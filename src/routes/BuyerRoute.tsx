@@ -27,7 +27,7 @@ export function BuyerRoute({ children }: BuyerRouteProps) {
       console.log('🚫 [BuyerRoute] User not authenticated');
       
       // Don't redirect if we're already on a public route
-      const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password'];
+      const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password', '/buyer/reset-password'];
       const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
       
       if (isPublicRoute) {

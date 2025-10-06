@@ -3,13 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, User, Phone, Mail, MapPin } from 'lucide-react';
+import { Loader2, User, Mail, MapPin, Phone } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 interface BuyerInfo {
   fullName: string;
   email: string;
-  phone: string;
   city: string;
   location: string;
 }
@@ -20,14 +19,21 @@ interface BuyerInfoModalProps {
   onSubmit: (buyerInfo: BuyerInfo) => Promise<void>;
   isLoading?: boolean;
   theme?: string;
+  phoneNumber: string; // Pre-filled from first step
 }
 
-export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, theme = 'default' }: BuyerInfoModalProps) {
+export function BuyerInfoModal({ 
+  isOpen, 
+  onClose, 
+  onSubmit, 
+  isLoading = false, 
+  theme = 'default',
+  phoneNumber 
+}: BuyerInfoModalProps) {
   const { toast } = useToast();
   const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>({
     fullName: '',
     email: '',
-    phone: '',
     city: '',
     location: ''
   });
@@ -47,12 +53,6 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!buyerInfo.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^(\+254|254|0)[17]\d{8}$/.test(buyerInfo.phone.replace(/[\s-]/g, ''))) {
-      newErrors.phone = 'Please enter a valid Kenyan phone number';
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -70,7 +70,6 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
       setBuyerInfo({
         fullName: '',
         email: '',
-        phone: '',
         city: '',
         location: ''
       });
@@ -91,7 +90,6 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
       setBuyerInfo({
         fullName: '',
         email: '',
-        phone: '',
         city: '',
         location: ''
       });
@@ -176,11 +174,30 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
         <DialogHeader>
           <DialogTitle className={`text-xl font-bold ${themeClasses.text} flex items-center gap-2`}>
             <User className={`h-5 w-5 ${themeClasses.text}`} />
-            Buyer Information
+            Complete Your Information
           </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Phone Number - Read Only */}
+          <div className="space-y-2">
+            <Label htmlFor="phone" className={`text-sm font-medium ${themeClasses.label}`}>
+              Phone Number
+            </Label>
+            <div className="relative">
+              <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-60`} />
+              <Input
+                id="phone"
+                type="tel"
+                value={phoneNumber}
+                disabled
+                className={`pl-10 bg-gray-100 ${theme === 'black' ? 'bg-gray-800' : ''} cursor-not-allowed opacity-75`}
+              />
+            </div>
+            <p className={`text-xs ${themeClasses.text} opacity-60`}>Your registered phone number</p>
+          </div>
+
+          {/* Full Name */}
           <div className="space-y-2">
             <Label htmlFor="fullName" className={`text-sm font-medium ${themeClasses.label}`}>
               Full Name *
@@ -202,6 +219,7 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
             )}
           </div>
 
+          {/* Email */}
           <div className="space-y-2">
             <Label htmlFor="email" className={`text-sm font-medium ${themeClasses.label}`}>
               Email Address *
@@ -223,27 +241,7 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="phone" className={`text-sm font-medium ${themeClasses.label}`}>
-              Phone Number *
-            </Label>
-            <div className="relative">
-              <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-60`} />
-              <Input
-                id="phone"
-                type="tel"
-                placeholder="0712345678 or +254712345678"
-                value={buyerInfo.phone}
-                onChange={(e) => setBuyerInfo(prev => ({ ...prev, phone: e.target.value }))}
-                className={`pl-10 ${themeClasses.input} ${errors.phone ? 'border-red-500' : ''}`}
-                disabled={isLoading}
-              />
-            </div>
-            {errors.phone && (
-              <p className={`text-xs ${themeClasses.error}`}>{errors.phone}</p>
-            )}
-          </div>
-
+          {/* City */}
           <div className="space-y-2">
             <Label htmlFor="city" className={`text-sm font-medium ${themeClasses.label}`}>
               City
@@ -262,6 +260,7 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
             </div>
           </div>
 
+          {/* Location */}
           <div className="space-y-2">
             <Label htmlFor="location" className={`text-sm font-medium ${themeClasses.label}`}>
               Location/Address
@@ -298,7 +297,7 @@ export function BuyerInfoModal({ isOpen, onClose, onSubmit, isLoading = false, t
               {isLoading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Saving...
+                  Processing...
                 </>
               ) : (
                 'Continue to Payment'
