@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Check, Palette } from 'lucide-react';
+import { Check, Palette, Loader2 } from 'lucide-react';
 import { sellerApi, Theme } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -58,46 +58,55 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold flex items-center">
-          <Palette className="h-5 w-5 mr-2" />
-          Shop Theme
-        </h3>
-        <p className="text-sm text-gray-500 mt-1">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Palette className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+          <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-black">Shop Theme</h3>
+        </div>
+        <p className="text-xs sm:text-sm text-gray-500 flex-1 sm:flex-none">
           Choose a color theme for your shop. This will affect the appearance of your shop page.
         </p>
       </div>
-      
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
         {themeColors.map((theme) => (
           <button
             key={theme.value}
             type="button"
             onClick={() => handleThemeSelect(theme.value as Theme)}
-            className={`relative h-24 rounded-lg overflow-hidden border-2 transition-all ${
-              selectedTheme === theme.value ? 'ring-2 ring-offset-2 ring-yellow-500' : 'border-gray-200 hover:border-gray-300'
+            className={`relative h-16 sm:h-20 lg:h-24 rounded-lg sm:rounded-xl overflow-hidden border-2 transition-all ${
+              selectedTheme === theme.value
+                ? 'ring-2 ring-offset-2 ring-yellow-500 scale-105'
+                : 'border-gray-200 hover:border-gray-300 hover:scale-102'
             }`}
           >
             <div className={`w-full h-full ${theme.bg} flex items-center justify-center`}>
               {selectedTheme === theme.value && (
-                <div className="absolute top-2 right-2 bg-white rounded-full p-1">
-                  <Check className="h-4 w-4 text-green-500" />
+                <div className="absolute top-1 sm:top-2 right-1 sm:right-2 bg-white rounded-full p-0.5 sm:p-1 shadow-sm">
+                  <Check className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                 </div>
               )}
-              <span className="text-white font-medium text-sm">{theme.name}</span>
+              <span className="text-white font-medium text-xs sm:text-sm">{theme.name}</span>
             </div>
           </button>
         ))}
       </div>
-      
-      <div className="pt-2">
+
+      <div className="pt-2 sm:pt-4 flex justify-center sm:justify-start">
         <Button
           onClick={saveTheme}
           disabled={isSaving || selectedTheme === currentTheme}
-          className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white"
+          className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white px-4 sm:px-6 py-2 sm:py-3 text-sm sm:text-base"
         >
-          {isSaving ? 'Saving...' : 'Save Theme'}
+          {isSaving ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            'Save Theme'
+          )}
         </Button>
       </div>
     </div>

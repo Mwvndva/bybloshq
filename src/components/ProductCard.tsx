@@ -9,6 +9,8 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
+import { BuyerInfoModal } from '@/components/BuyerInfoModal';
+import buyerApi from '@/api/buyerApi';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
@@ -22,27 +24,27 @@ interface ProductCardProps {
   theme?: Theme; // Add theme prop
 }
 
-// Hook to safely use wishlist context
-const useWishlistSafe = () => {
-  try {
-    return useWishlist();
-  } catch (error) {
-    return {
-      addToWishlist: async () => {},
-      removeFromWishlist: async () => {},
-      isInWishlist: () => false,
-      isLoading: false,
-    } as any;
-  }
-};
 
 export function ProductCard({ product, seller, hideWishlist = false, theme = 'default' }: ProductCardProps) {
   const { toast } = useToast();
-  const { addToWishlist, isInWishlist, isLoading: isWishlistLoading } = useWishlistSafe();
+  // Safely use wishlist context
+  let wishlistContext = null;
+
+  try {
+    wishlistContext = useWishlist?.();
+  } catch (error) {
+    // If useWishlist throws an error, use null
+    console.warn('ProductCard: Wishlist not available');
+  }
+
+  const addToWishlist = wishlistContext?.addToWishlist || (async () => {});
+  const isInWishlist = wishlistContext?.isInWishlist || (() => false);
+  const isWishlistLoading = wishlistContext?.isLoading || false;
   
   // Dialog state
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
-  
+  const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
+
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
@@ -101,94 +103,110 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open image dialog if clicking on interactive elements
     const target = e.target as HTMLElement;
-    const isInteractiveElement = 
-      target.closest('button') || 
+    const isInteractiveElement =
+      target.closest('button') ||
       target.closest('a') ||
-      target.closest('[role="button"]');
-    
+      target.closest('[role="button"]') ||
+      target.closest('input') ||
+      target.closest('textarea') ||
+      target.closest('select') ||
+      target.closest('[contenteditable="true"]') ||
+      target.closest('[tabindex]');
+
     if (!isInteractiveElement) {
       setIsImageDialogOpen(true);
     }
   };
   
-  const { isAuthenticated, user: userData, isLoading } = useBuyerAuth();
+  // Safely use buyer auth context
+  let isAuthenticated = false;
+  let userData = null;
+  let isLoading = false;
+
+  try {
+    const buyerAuth = useBuyerAuth?.();
+    isAuthenticated = buyerAuth?.isAuthenticated || false;
+    userData = buyerAuth?.user || null;
+    isLoading = buyerAuth?.isLoading || false;
+  } catch (error) {
+    // If useBuyerAuth throws an error, use default values
+    console.warn('ProductCard: BuyerAuth not available');
+  }
   
   const handleBuyClick = async (e: React.MouseEvent) => {
-    // 1. Prevent default behavior and stop propagation
+    // Prevent default behavior and stop propagation
     e?.preventDefault?.();
     e?.stopPropagation?.();
     e?.nativeEvent?.stopImmediatePropagation?.();
-    
-    // 2. Set loading state
+
+    // Check if user needs to complete their information
+    if (!isAuthenticated || !userData?.email || !userData?.phone || !userData?.fullName) {
+      // Show buyer information modal to collect/update information
+      setIsBuyerModalOpen(true);
+    } else {
+      // User has complete information, proceed directly with payment
+      await handleBuyerInfoSubmit({
+        fullName: userData.fullName,
+        email: userData.email,
+        phone: userData.phone,
+        city: userData.city,
+        location: userData.location
+      });
+    }
+  };
+
+  const handleBuyerInfoSubmit = async (buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string }) => {
     setIsProcessingPurchase(true);
-    
+
     try {
-      console.debug('Auth Debug:', { isAuthenticated, userData, isLoading, product });
-      
-      // 3. Check authentication status
-      if (isLoading) {
-        toast({
-          title: 'Please wait',
-          description: 'Checking your authentication status...',
-          variant: 'default',
-          duration: 2000
-        });
-        return;
+      console.debug('Buyer Info:', buyerInfo);
+
+      // 1. Check if user is already authenticated
+      let buyerId: string;
+      let buyerToken: string;
+
+      if (isAuthenticated && userData?.id) {
+        // User is already authenticated, use their existing buyer ID
+        buyerId = String(userData.id);
+        buyerToken = localStorage.getItem('buyer_token') || '';
+
+        console.log('Using existing authenticated buyer:', { buyerId, hasToken: !!buyerToken });
+      } else {
+        // User is not authenticated, save buyer info first
+        try {
+          const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
+
+          if (!saveResult.buyer?.id) {
+            throw new Error('Failed to create buyer account');
+          }
+
+          buyerId = String(saveResult.buyer.id);
+          buyerToken = saveResult.token || '';
+
+          // Store token if provided (for new buyer)
+          if (buyerToken) {
+            localStorage.setItem('buyer_token', buyerToken);
+          }
+
+          console.log('Created new buyer account:', { buyerId, hasToken: !!buyerToken });
+
+        } catch (saveError) {
+          console.error('Error saving buyer info:', saveError);
+          throw new Error('Failed to save buyer information. Please try again.');
+        }
       }
-      
-      // 4. Verify user is authenticated
-      if (!isAuthenticated || !userData) {
-        toast({
-          title: 'Authentication Required',
-          description: 'Please sign in to complete your purchase.',
-          variant: 'destructive',
-          action: (
-            <button 
-              onClick={() => {
-                // Store current URL for redirect after login
-                localStorage.setItem('post_login_redirect', window.location.pathname);
-                window.location.href = '/buyer/login';
-              }}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-            >
-              Sign In
-            </button>
-          )
-        });
-        return;
-      }
-      
-      // 5. Validate required user data
-      if (!userData.email) {
-        toast({
-          title: 'Profile Incomplete',
-          description: 'Please complete your profile information before making a purchase.',
-          variant: 'destructive',
-          action: (
-            <button 
-              onClick={() => {
-                window.location.href = '/buyer/profile';
-              }}
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-            >
-              Complete Profile
-            </button>
-          )
-        });
-        return;
-      }
-      
-      // 6. Prepare payment payload
-      const [firstName = 'Customer', ...lastNameParts] = userData.fullName?.split(' ') || [];
+
+      // 2. Prepare payment payload
+      const [firstName = 'Customer', ...lastNameParts] = buyerInfo.fullName.split(' ') || [];
       const lastName = lastNameParts.join(' ') || 'User';
-      
+
       const payload = {
         amount: product.price,
         description: `Purchase of ${product.name}`,
         customer: {
-          id: String(userData.id || 'N/A'),
-          email: userData.email,
-          phone: userData.phone || '',
+          id: buyerId,
+          email: buyerInfo.email,
+          phone: buyerInfo.phone,
           firstName: firstName,
           lastName: lastName,
         },
@@ -209,53 +227,53 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         cancelUrl: `${window.location.origin}/products/${product.id}`,
         notificationId: process.env.VITE_PESAPAL_IPN_ID || '',
         billingAddress: {
-          emailAddress: userData.email,
-          phoneNumber: userData.phone || '',
+          emailAddress: buyerInfo.email,
+          phoneNumber: buyerInfo.phone,
           firstName: firstName,
           lastName: lastName,
         }
       };
-      
+
       console.debug('Checkout Request:', { payload });
-      
-      // 7. Get authentication token
+
+      // 3. Get authentication token (might be from new buyer or existing)
       const token = localStorage.getItem('buyer_token');
-      if (!token) {
-        throw new Error('Authentication token not found');
+      if (!token && buyerToken) {
+        localStorage.setItem('buyer_token', buyerToken);
       }
-      
-      // 8. Call checkout API
+
+      // 4. Call checkout API
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(`${apiUrl}/api/pesapal/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token || buyerToken}`
         },
         body: JSON.stringify(payload),
       });
-      
-      // 9. Handle API response
+
+      // 5. Handle API response
       const responseData = await response.json().catch(() => ({}));
-      
+
       if (!response.ok) {
         const errorMessage = responseData.message || 'Failed to initiate payment';
         console.error('Checkout API Error:', { status: response.status, responseData });
         throw new Error(errorMessage);
       }
-      
+
       // Extract redirect URL from the nested data object
       const redirectUrl = responseData.data?.redirect_url;
-      
+
       if (!redirectUrl) {
         console.error('Invalid response format from payment gateway:', responseData);
         throw new Error('Invalid response from payment gateway');
       }
-      
-      // 10. Redirect to payment page
+
+      // 6. Redirect to payment page
       console.debug('Redirecting to payment gateway:', redirectUrl);
       window.location.href = redirectUrl;
-      
+
     } catch (error) {
       console.error('Checkout error:', error);
       toast({
@@ -265,7 +283,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         duration: 5000
       });
     } finally {
-      // 11. Always reset loading state
       setIsProcessingPurchase(false);
     }
   };
@@ -494,6 +511,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Buyer Information Modal */}
+      <BuyerInfoModal
+        isOpen={isBuyerModalOpen}
+        onClose={() => setIsBuyerModalOpen(false)}
+        onSubmit={handleBuyerInfoSubmit}
+        isLoading={isProcessingPurchase}
+        theme={theme}
+      />
     </Card>
   );
 }

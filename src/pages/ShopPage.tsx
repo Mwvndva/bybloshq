@@ -1,8 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Phone, User, ArrowLeft, Store, Package, Heart } from 'lucide-react';
+import { Loader2, ArrowLeft, Store, Package, Heart } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 import { formatCurrency } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
@@ -68,7 +67,6 @@ const ShopPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sellerInfo, setSellerInfo] = useState<ShopSeller | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<ShopProduct | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const defaultBanner = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
 
@@ -534,8 +532,8 @@ const ShopPage = () => {
                 } : undefined;
 
                 return (
-                  <div key={product.id} onClick={() => setSelectedProduct(product)}>
-                    <ProductCard 
+                  <div key={product.id}>
+                    <ProductCard
                       product={productWithSeller}
                       seller={sellerForCard}
                       hideWishlist={true}
@@ -579,65 +577,6 @@ const ShopPage = () => {
           </div>
         )}
 
-        <Dialog open={!!selectedProduct} onOpenChange={(open) => !open && setSelectedProduct(null)}>
-          <DialogContent className={`${themeClasses.cardBg} backdrop-blur-sm border-0 shadow-2xl rounded-3xl`}>
-            {selectedProduct && (
-              <>
-                <DialogHeader className="text-center pb-6">
-                  <DialogTitle className={`text-2xl font-black ${themeClasses.textColor}`}>
-                    Product Details
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-6">
-                  <div className={`${themeClasses.cardBg} bg-opacity-70 rounded-2xl p-6 border ${themeClasses.borderColor}/30`}>
-                    <h3 className={`text-xl font-bold ${themeClasses.textColor} mb-2`}>
-                      {selectedProduct.name}
-                    </h3>
-                    <p className={`${themeClasses.textColor === 'text-white' ? 'text-white/80' : 'text-gray-600'} mb-4 leading-relaxed`}>
-                      {selectedProduct.description}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <p className={`text-2xl font-black ${themeClasses.accentColor}`}>
-                        {formatCurrency(selectedProduct.price)}
-                      </p>
-                      <div className={`${themeClasses.buttonGradient} text-white px-3 py-1 rounded-xl text-sm font-bold`}>
-                        {selectedProduct.status === 'sold' || selectedProduct.isSold ? 'Sold' : 'Available'}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className={`${themeClasses.cardBg} bg-opacity-70 rounded-2xl p-6 border ${themeClasses.borderColor}/30`}>
-                    <h4 className={`font-bold ${themeClasses.textColor} mb-4 flex items-center gap-2`}>
-                      <Store className={`h-5 w-5 ${themeClasses.accentColor}`} />
-                      Seller Information
-                    </h4>
-                    {sellerInfo && (
-                      <div className="space-y-3">
-                        <div className={`flex items-center text-sm ${themeClasses.cardBg} ${themeClasses.borderColor}/30 rounded-xl p-3`}>
-                          <User className={`h-4 w-4 mr-3 ${themeClasses.textColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`} />
-                          <span className={`font-medium ${themeClasses.textColor}`}>
-                            {sellerInfo.fullName || 'N/A'}
-                          </span>
-                        </div>
-                        {sellerInfo.phone && (
-                          <div className={`flex items-center text-sm ${themeClasses.cardBg} ${themeClasses.borderColor}/30 rounded-xl p-3`}>
-                            <Phone className={`h-4 w-4 mr-3 ${themeClasses.textColor === 'text-white' ? 'text-white/70' : 'text-gray-500'}`} />
-                            <a 
-                              href={`tel:${sellerInfo.phone}`} 
-                              className={`hover:underline font-medium ${themeClasses.accentColor}`}
-                            >
-                              {sellerInfo.phone}
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
-          </DialogContent>
-        </Dialog>
       </main>
     </div>
   );

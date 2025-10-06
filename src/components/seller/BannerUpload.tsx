@@ -123,17 +123,17 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
   }, [onBannerUploaded]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold">Store Banner</h3>
-          <p className="text-sm text-gray-500">Upload a banner image for your store (recommended size: 1200x300px)</p>
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-black truncate">Store Banner</h3>
+          <p className="text-xs sm:text-sm text-gray-500 mt-1">Upload a banner image for your store (recommended size: 1200x300px)</p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
-            className="relative"
+            className="relative flex-1 sm:flex-none"
             disabled={isUploading}
           >
             <input
@@ -143,46 +143,51 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               disabled={isUploading}
             />
-            <UploadCloud className="h-4 w-4 mr-2" />
-            {file ? 'Change' : 'Upload'}
+            <UploadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+            <span className="text-xs sm:text-sm">{file ? 'Change' : 'Upload'}</span>
           </Button>
-          
+
           {previewUrl && (
             <Button
               variant="outline"
               size="sm"
               onClick={handleRemoveBanner}
               disabled={isUploading}
+              className="flex-1 sm:flex-none"
             >
-              <X className="h-4 w-4 mr-2" />
-              Remove
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              <span className="text-xs sm:text-sm">Remove</span>
             </Button>
           )}
-          
+
           {file && (
             <Button
               onClick={handleUpload}
               disabled={isUploading}
+              className="flex-1 sm:flex-none"
             >
               {isUploading ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
+                  <span className="text-xs sm:text-sm">Uploading...</span>
                 </>
               ) : (
-                'Save Changes'
+                <>
+                  <UploadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="text-xs sm:text-sm">Save Changes</span>
+                </>
               )}
             </Button>
           )}
         </div>
       </div>
-      
+
       {(previewUrl || currentBannerUrl) && (
-        <div className="relative rounded-lg overflow-hidden border border-gray-200 bg-gray-50">
+        <div className="relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
           <img
             src={previewUrl || currentBannerUrl}
             alt="Store banner preview"
-            className="w-full h-48 object-cover"
+            className="w-full h-32 sm:h-40 lg:h-48 object-cover"
           />
         </div>
       )}

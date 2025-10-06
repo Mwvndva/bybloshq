@@ -274,5 +274,60 @@ export const updateProfile = async (req, res, next) => {
   }
 };
 
+// Save buyer information (for guest checkouts) - Public endpoint
+export const saveBuyerInfo = async (req, res, next) => {
+  try {
+    const { fullName, email, phone, city, location } = req.body;
+
+    console.log('Saving buyer info:', { fullName, email, phone, city, location });
+
+    // Validate required fields
+    if (!fullName || !email || !phone) {
+      return next(new AppError('Full name, email, and phone are required', 400));
+    }
+
+    // Check if buyer already exists
+    const existingBuyer = await Buyer.findByEmail(email);
+
+    let buyer;
+    if (existingBuyer) {
+      // Update existing buyer information
+      console.log('Updating existing buyer:', existingBuyer.id);
+      buyer = await Buyer.update(existingBuyer.id, {
+        fullName,
+        phone,
+        city,
+        location
+      });
+    } else {
+      // Create new buyer (no password required for guest checkout)
+      console.log('Creating new buyer for guest checkout');
+      buyer = await Buyer.createGuest({
+        fullName,
+        email,
+        phone,
+        city,
+        location
+      });
+    }
+
+    // Generate token for the buyer
+    const token = signToken(buyer.id, 'buyer');
+
+    console.log('Buyer info saved successfully:', { buyerId: buyer.id, token: token.substring(0, 20) + '...' });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        buyer,
+        token
+      }
+    });
+  } catch (error) {
+    console.error('Error in saveBuyerInfo:', error);
+    next(error);
+  }
+};
+
 
 

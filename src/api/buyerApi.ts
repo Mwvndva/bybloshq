@@ -596,9 +596,9 @@ const buyerApi = {
       return { success: true };
     } catch (error: any) {
       console.error(`Error confirming receipt for order ${orderId}:`, error);
-      
+
       let errorMessage = 'Failed to confirm order receipt';
-      
+
       if (error.code === 'ECONNABORTED') {
         errorMessage = 'Request timed out. Please check your internet connection and try again.';
       } else if (error.response) {
@@ -609,11 +609,50 @@ const buyerApi = {
         // The request was made but no response was received
         errorMessage = 'No response from server. Please try again later.';
       }
-      
-      return { 
-        success: false, 
+
+      return {
+        success: false,
         message: errorMessage
       };
+    }
+  },
+
+  saveBuyerInfo: async (buyerInfo: {
+    fullName: string;
+    email: string;
+    phone: string;
+    city?: string;
+    location?: string;
+  }): Promise<{ buyer?: Buyer; token?: string; message?: string }> => {
+    try {
+      console.log('Saving buyer information:', buyerInfo);
+
+      // Use the public API endpoint that doesn't require authentication
+      const response = await axios.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
+        `${API_URL}/buyers/save-info`,
+        buyerInfo,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      console.log('Save buyer info response:', response.data);
+
+      if (!response.data || response.data.status !== 'success') {
+        throw new Error(response.data?.data?.message || 'Failed to save buyer information');
+      }
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error saving buyer info:', error);
+
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+
+      throw new Error('Failed to save buyer information. Please try again.');
     }
   }
 };
