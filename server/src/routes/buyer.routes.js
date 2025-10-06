@@ -14,6 +14,7 @@ router.post('/register', buyerController.register);
 router.post('/login', buyerController.login);
 router.post('/forgot-password', buyerController.forgotPassword);
 router.post('/reset-password', buyerController.resetPassword);
+router.post('/save-info', buyerController.saveBuyerInfo);
 
 // Protected routes - require buyer authentication
 router.use(protect(['buyer']));

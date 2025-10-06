@@ -18,22 +18,35 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
-  // Use optional chaining and provide a default empty object to prevent errors
-  const { user } = useBuyerAuth?.() || {};
   const [wishlist, setWishlist] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+
+  // Safely use the buyer auth context
+  let user = null;
+  let buyerAuthAvailable = true;
+
+  try {
+    const buyerAuth = useBuyerAuth?.();
+    user = buyerAuth?.user || null;
+  } catch (error) {
+    // If useBuyerAuth throws an error, it means we're not in a BuyerAuthProvider
+    buyerAuthAvailable = false;
+    console.warn('WishlistProvider: BuyerAuth not available');
+  }
+
   const { toast } = useToast?.() || {};
-  
+
   console.log('🔄 WishlistProvider render:', {
     user: user ? { id: user.id, email: user.email } : null,
     wishlistLength: wishlist.length,
     isLoading,
-    hasError: !!error
+    hasError: !!error,
+    buyerAuthAvailable
   });
-  
-  // If useBuyerAuth is not available, provide a default context value
-  if (!useBuyerAuth) {
+
+  // If buyer auth is not available, provide a default context value
+  if (!buyerAuthAvailable) {
     return (
       <WishlistContext.Provider
         value={{
@@ -241,7 +254,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 export function useWishlist(): WishlistContextType {
   const context = useContext(WishlistContext);
   if (context === undefined) {
-    throw new Error('useWishlist must be used within a WishlistProvider');
+    // Return a default context when not in provider
+    return {
+      wishlist: [],
+      addToWishlist: async () => {},
+      removeFromWishlist: async () => {},
+      isInWishlist: () => false,
+      isLoading: false,
+      error: null,
+      refreshWishlist: async () => {},
+    };
   }
   return context;
 };

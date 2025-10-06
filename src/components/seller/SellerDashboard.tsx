@@ -1313,28 +1313,28 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-6 sm:space-y-8 lg:space-y-10">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-black mb-2 sm:mb-3">Store Settings</h2>
-              <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium max-w-3xl mx-auto">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-black text-black mb-2 sm:mb-3">Store Settings</h2>
+              <p className="text-gray-600 text-xs sm:text-sm lg:text-base xl:text-lg font-medium max-w-3xl mx-auto px-4 sm:px-0">
                 Manage your store configuration and preferences. Update your store details, location, and appearance.
               </p>
             </div>
-            
-            <div className="w-full max-w-7xl mx-auto space-y-6">
+
+            <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
               {/* Banner Upload Section */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
-                <BannerUpload 
-                  currentBannerUrl={sellerProfile?.bannerImage} 
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
+                <BannerUpload
+                  currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
                     setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
-                  }} 
+                  }}
                 />
               </div>
 
               {/* Theme Selection */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
-                <ThemeSelector 
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
+                <ThemeSelector
                   currentTheme={sellerProfile?.theme as any || 'default'}
                   onThemeChange={(theme) => {
                     setSellerProfile(prev => prev ? { ...prev, theme } : { theme });
@@ -1343,101 +1343,100 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
               </div>
 
               {/* Store Information */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 lg:mb-8">
-                  <div className="mb-4 lg:mb-0">
-                    <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-black">Store Information</h3>
-                    <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 lg:mt-2">
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                  <div className="mb-2 sm:mb-0 flex-1 min-w-0">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-black text-black truncate">Store Information</h3>
+                    <p className="text-gray-600 text-xs sm:text-sm lg:text-base font-medium mt-1">
                       Your store details and contact information
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-2 sm:gap-3 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
                     {isEditing ? (
                       <>
-                        <Button 
+                        <Button
                           variant="outline"
                           onClick={toggleEdit}
                           disabled={isSaving}
-                          className="text-xs sm:text-sm border-gray-300 hover:bg-gray-50 flex-1 sm:flex-none"
+                          className="text-xs sm:text-sm border-gray-300 hover:bg-gray-50 flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                         >
                           Cancel
                         </Button>
-                        <Button 
+                        <Button
                           onClick={handleSaveProfile}
                           disabled={isSaving}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none"
+                          className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                         >
                           {isSaving ? 'Saving...' : 'Save Changes'}
                         </Button>
                       </>
                     ) : (
-                      <Button 
+                      <Button
                         onClick={toggleEdit}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                       >
-                        <Edit className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                        <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
                         Edit Profile
                       </Button>
                     )}
-                    <Button 
+                    <Button
                       variant="destructive"
                       onClick={handleLogout}
-                      className="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm flex-1 sm:flex-none"
+                      className="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                     >
-                      <LogOut className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
+                      <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
                       Logout
                     </Button>
                   </div>
                 </div>
 
 
-                
                 {/* Profile Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6 lg:mb-8">
-                  <div className="p-4 sm:p-5 bg-gray-50 rounded-lg lg:rounded-xl">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Full Name</p>
-                    <p className="text-base font-semibold text-black truncate" title={sellerProfile?.fullName || 'Not set'}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</p>
+                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-black truncate" title={sellerProfile?.fullName || 'Not set'}>
                       {sellerProfile?.fullName || 'Not set'}
                     </p>
                   </div>
-                  <div className="p-4 sm:p-5 bg-gray-50 rounded-lg lg:rounded-xl">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Email</p>
-                    <p className="text-base font-semibold text-black truncate" title={sellerProfile?.email || 'Not set'}>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</p>
+                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-black truncate" title={sellerProfile?.email || 'Not set'}>
                       {sellerProfile?.email || 'Not set'}
                     </p>
                   </div>
-                  <div className="p-4 sm:p-5 bg-gray-50 rounded-lg lg:rounded-xl">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Phone Number</p>
-                    <p className="text-base font-semibold text-black">
+                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2 xl:col-span-1">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone Number</p>
+                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-black">
                       {sellerProfile?.phone || 'Not set'}
                     </p>
                   </div>
                 </div>
 
                 {/* Location Settings */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-lg sm:text-xl font-bold text-black">Location Settings</h4>
+                <div className="space-y-3 sm:space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
+                    <h4 className="text-base sm:text-lg lg:text-xl font-bold text-black">Location Settings</h4>
                     {!isEditing && (
-                      <button 
+                      <button
                         onClick={toggleEdit}
-                        className="text-xs sm:text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1"
+                        className="text-xs sm:text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1 self-start sm:self-auto"
                       >
-                        <Edit className="h-3.5 w-3.5" />
+                        <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         Edit Location
                       </button>
                     )}
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="p-3 sm:p-4 bg-white rounded-lg lg:rounded-xl border border-gray-200">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl lg:rounded-2xl border border-gray-200">
                       <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">City</p>
                       {isEditing ? (
                         <select
                           name="city"
                           value={formData.city}
                           onChange={handleCityChange}
-                          className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                          className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
                         >
                           <option value="">Select a city</option>
                           {Object.keys(cities).map(city => (
@@ -1445,20 +1444,20 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                           ))}
                         </select>
                       ) : (
-                        <p className="text-sm sm:text-base font-semibold text-black">
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-black">
                           {sellerProfile?.city || 'Not set'}
                         </p>
                       )}
                     </div>
-                    
-                    <div className="p-3 sm:p-4 bg-white rounded-lg lg:rounded-xl border border-gray-200">
+
+                    <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl lg:rounded-2xl border border-gray-200">
                       <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Location/Area</p>
                       {isEditing ? (
                         <select
                           name="location"
                           value={formData.location}
                           onChange={handleLocationChange}
-                          className="w-full p-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                          className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
                           disabled={!formData.city}
                         >
                           <option value="">Select a location</option>
@@ -1467,7 +1466,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                           ))}
                         </select>
                       ) : (
-                        <p className="text-sm sm:text-base font-semibold text-black">
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-black">
                           {sellerProfile?.location || 'Not set'}
                         </p>
                       )}

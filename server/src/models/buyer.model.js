@@ -18,13 +18,30 @@ class Buyer {
   // Create a new buyer
   static async create({ fullName, email, phone, password, city, location }) {
     const hashedPassword = await bcrypt.hash(password, 10);
-    
+
     const query = `
       INSERT INTO buyers (full_name, email, phone, password, city, location, is_verified, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW())
       RETURNING *
     `;
-    
+
+    const values = [fullName, email, phone, hashedPassword, city, location];
+    const result = await pool.query(query, values);
+    return toCamelCase(result.rows[0]);
+  }
+
+  // Create a new buyer for guest checkout (generates secure random password)
+  static async createGuest({ fullName, email, phone, city, location }) {
+    // Generate a secure random password for guest accounts
+    const randomPassword = crypto.randomBytes(32).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+    const query = `
+      INSERT INTO buyers (full_name, email, phone, password, city, location, is_verified, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW())
+      RETURNING *
+    `;
+
     const values = [fullName, email, phone, hashedPassword, city, location];
     const result = await pool.query(query, values);
     return toCamelCase(result.rows[0]);
