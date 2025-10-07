@@ -198,6 +198,14 @@ class PesapalController {
 
       const orderResult = await client.query(orderQuery, orderValues);
       const order = orderResult.rows[0];
+      
+      // Verify order was created successfully
+      if (!order || !order.id) {
+        logger.error('Order creation failed - no order ID returned:', orderResult);
+        throw new Error('Failed to create order - no order ID returned');
+      }
+      
+      logger.info('Order created successfully with ID:', order.id);
 
       // Now, insert the order items with a 'PENDING' status
       for (const item of items) {
