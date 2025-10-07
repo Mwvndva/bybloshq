@@ -29,6 +29,7 @@ import AestheticCategories from '@/components/AestheticCategories';
 import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
+import RefundCard from './RefundCard';
 
 const StatsCard = ({ icon: Icon, title, value, subtitle }: {
   icon: any;
@@ -133,6 +134,9 @@ function BuyerDashboardInner() {
     }
   ];
 
+  // Get refund amount from user
+  const refundAmount = user?.refunds || 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
       {/* Header - Mobile Responsive */}
@@ -177,6 +181,7 @@ function BuyerDashboardInner() {
           {stats.map((stat, index) => (
             <StatsCard key={index} {...stat} />
           ))}
+          <RefundCard refundAmount={refundAmount} />
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}

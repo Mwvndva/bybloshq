@@ -242,25 +242,104 @@ const getAllSellers = async (req, res, next) => {
 const getSellerById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await pool.query(
-      'SELECT id, full_name as name, email, status, created_at FROM sellers WHERE id = $1',
+    
+    // Get seller basic info
+    const sellerResult = await pool.query(
+      `SELECT 
+        id, 
+        full_name as name, 
+        email, 
+        phone,
+        city,
+        location,
+        shop_name,
+        status, 
+        created_at 
+      FROM sellers 
+      WHERE id = $1`,
       [id]
     );
     
-    if (result.rows.length === 0) {
+    if (sellerResult.rows.length === 0) {
       return next(new AppError('No seller found with that ID', 404));
     }
     
-    const seller = result.rows[0];
+    const seller = sellerResult.rows[0];
+    
+    // Get seller's sales metrics
+    const salesMetrics = await pool.query(
+      `SELECT 
+        COUNT(*) as total_orders,
+        COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN total_amount ELSE 0 END), 0) as total_sales,
+        COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN platform_fee_amount ELSE 0 END), 0) as total_commission,
+        COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN seller_payout_amount ELSE 0 END), 0) as net_sales,
+        COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
+        COUNT(CASE WHEN status = 'READY_FOR_PICKUP' THEN 1 END) as ready_for_pickup,
+        COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_orders,
+        COUNT(CASE WHEN status = 'CANCELLED' THEN 1 END) as cancelled_orders
+      FROM product_orders
+      WHERE seller_id = $1`,
+      [id]
+    );
+    
+    // Get seller's product count
+    const productsResult = await pool.query(
+      `SELECT COUNT(*) as total_products
+      FROM products
+      WHERE seller_id = $1`,
+      [id]
+    );
+    
+    // Get recent orders
+    const recentOrders = await pool.query(
+      `SELECT 
+        id,
+        order_number,
+        buyer_name,
+        total_amount,
+        status,
+        payment_status,
+        created_at
+      FROM product_orders
+      WHERE seller_id = $1
+      ORDER BY created_at DESC
+      LIMIT 5`,
+      [id]
+    );
+    
+    const metrics = salesMetrics.rows[0];
+    const productCount = productsResult.rows[0].total_products;
+    
     res.status(200).json({
       status: 'success',
       data: {
         ...seller,
-        status: seller.status || 'Active',
-        createdAt: seller.created_at
+        status: seller.status || 'active',
+        createdAt: seller.created_at,
+        metrics: {
+          totalOrders: parseInt(metrics.total_orders) || 0,
+          totalSales: parseFloat(metrics.total_sales) || 0,
+          totalCommission: parseFloat(metrics.total_commission) || 0,
+          netSales: parseFloat(metrics.net_sales) || 0,
+          pendingOrders: parseInt(metrics.pending_orders) || 0,
+          readyForPickup: parseInt(metrics.ready_for_pickup) || 0,
+          completedOrders: parseInt(metrics.completed_orders) || 0,
+          cancelledOrders: parseInt(metrics.cancelled_orders) || 0,
+          totalProducts: parseInt(productCount) || 0
+        },
+        recentOrders: recentOrders.rows.map(order => ({
+          id: order.id,
+          orderNumber: order.order_number,
+          buyerName: order.buyer_name,
+          totalAmount: parseFloat(order.total_amount),
+          status: order.status,
+          paymentStatus: order.payment_status,
+          createdAt: order.created_at
+        }))
       }
     });
   } catch (error) {
+    console.error('Error getting seller by ID:', error);
     next(error);
   }
 };
@@ -1142,6 +1221,134 @@ const markEventAsPaid = async (req, res, next) => {
   }
 };
 
+// Get financial metrics (sales, commission, refunds)
+const getFinancialMetrics = async (req, res, next) => {
+  try {
+    console.log('Fetching financial metrics...');
+
+    // Get total sales from all completed orders
+    const salesQuery = await pool.query(`
+      SELECT 
+        COALESCE(SUM(total_amount), 0) as total_sales,
+        COUNT(*) as total_orders
+      FROM product_orders
+      WHERE payment_status = 'completed'
+        AND status IN ('PENDING', 'READY_FOR_PICKUP', 'COMPLETED')
+    `);
+
+    // Get total commission (platform_fee_amount)
+    const commissionQuery = await pool.query(`
+      SELECT 
+        COALESCE(SUM(platform_fee_amount), 0) as total_commission
+      FROM product_orders
+      WHERE payment_status = 'completed'
+        AND status IN ('PENDING', 'READY_FOR_PICKUP', 'COMPLETED')
+    `);
+
+    // Get total refunds made
+    const refundsQuery = await pool.query(`
+      SELECT 
+        COALESCE(SUM(amount), 0) as total_refunds,
+        COUNT(*) as total_refund_requests
+      FROM refund_requests
+      WHERE status = 'completed'
+    `);
+
+    // Get pending refunds
+    const pendingRefundsQuery = await pool.query(`
+      SELECT 
+        COALESCE(SUM(refunds), 0) as pending_refunds
+      FROM buyers
+      WHERE refunds > 0
+    `);
+
+    const totalSales = parseFloat(salesQuery.rows[0].total_sales) || 0;
+    const totalOrders = parseInt(salesQuery.rows[0].total_orders) || 0;
+    const totalCommission = parseFloat(commissionQuery.rows[0].total_commission) || 0;
+    const totalRefunds = parseFloat(refundsQuery.rows[0].total_refunds) || 0;
+    const totalRefundRequests = parseInt(refundsQuery.rows[0].total_refund_requests) || 0;
+    const pendingRefunds = parseFloat(pendingRefundsQuery.rows[0].pending_refunds) || 0;
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalSales,
+        totalOrders,
+        totalCommission,
+        totalRefunds,
+        totalRefundRequests,
+        pendingRefunds,
+        netRevenue: totalCommission - totalRefunds
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching financial metrics:', error);
+    next(new AppError(`Failed to fetch financial metrics: ${error.message}`, 500));
+  }
+};
+
+// Get monthly financial data (sales, commission, refunds)
+const getMonthlyFinancialData = async (req, res, next) => {
+  try {
+    console.log('Fetching monthly financial data...');
+
+    // Get monthly sales, commission, and refunds for the last 12 months
+    const query = `
+      WITH monthly_dates AS (
+        SELECT 
+          date_trunc('month', CURRENT_DATE - (n || ' months')::interval) AS month
+        FROM generate_series(0, 11) n
+      ),
+      monthly_sales AS (
+        SELECT 
+          date_trunc('month', created_at) AS month,
+          COALESCE(SUM(total_amount), 0) AS sales,
+          COALESCE(SUM(platform_fee_amount), 0) AS commission
+        FROM product_orders
+        WHERE payment_status = 'completed'
+          AND status IN ('PENDING', 'READY_FOR_PICKUP', 'COMPLETED')
+          AND created_at >= CURRENT_DATE - interval '12 months'
+        GROUP BY date_trunc('month', created_at)
+      ),
+      monthly_refunds AS (
+        SELECT 
+          date_trunc('month', processed_at) AS month,
+          COALESCE(SUM(amount), 0) AS refunds
+        FROM refund_requests
+        WHERE status = 'completed'
+          AND processed_at >= CURRENT_DATE - interval '12 months'
+        GROUP BY date_trunc('month', processed_at)
+      )
+      SELECT 
+        md.month,
+        COALESCE(ms.sales, 0) AS sales,
+        COALESCE(ms.commission, 0) AS commission,
+        COALESCE(mr.refunds, 0) AS refunds
+      FROM monthly_dates md
+      LEFT JOIN monthly_sales ms ON md.month = ms.month
+      LEFT JOIN monthly_refunds mr ON md.month = mr.month
+      ORDER BY md.month ASC
+    `;
+
+    const result = await pool.query(query);
+
+    const monthlyData = result.rows.map(row => ({
+      month: row.month,
+      sales: parseFloat(row.sales) || 0,
+      commission: parseFloat(row.commission) || 0,
+      refunds: parseFloat(row.refunds) || 0
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      data: monthlyData
+    });
+  } catch (error) {
+    console.error('Error fetching monthly financial data:', error);
+    next(new AppError(`Failed to fetch monthly financial data: ${error.message}`, 500));
+  }
+};
+
 export {
   adminLogin,
   protect,
@@ -1165,5 +1372,7 @@ export {
   markEventAsPaid,
   getAllWithdrawalRequests,
   updateWithdrawalRequestStatus,
+  getFinancialMetrics,
+  getMonthlyFinancialData,
 };
 

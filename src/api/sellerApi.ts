@@ -521,11 +521,11 @@ export const sellerApi = {
     return response.data.data;
   },
 
-  async cancelOrder(orderId: string): Promise<Order> {
-    const response = await sellerApiInstance.patch<{ data: Order }>(
-      `/sellers/orders/${orderId}/cancel`
+  async cancelOrder(orderId: string): Promise<{ success: boolean; message: string; refundAmount: number }> {
+    const response = await sellerApiInstance.patch<{ success: boolean; message: string; refundAmount: number }>(
+      `/orders/${orderId}/seller-cancel`
     );
-    return response.data.data;
+    return response.data;
   },
 
   // Upload banner image
