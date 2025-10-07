@@ -572,6 +572,11 @@ class PesapalController {
           const items = itemsResult.rows;
           const sellerId = items.length > 0 ? items[0].seller_id : null;
           
+          if (!sellerId) {
+            logger.warn('No seller ID found for order notifications');
+            return;
+          }
+          
           // Prepare customer data
           const customer = {
             firstName: fullOrder.buyer_name?.split(' ')[0] || 'Customer',
@@ -791,10 +796,17 @@ class PesapalController {
    */
   async sendOrderNotifications(order, items, customer, sellerId) {
     try {
+      // Ensure sellerId is an integer
+      const sellerIdInt = parseInt(sellerId, 10);
+      if (isNaN(sellerIdInt)) {
+        logger.warn('Invalid seller ID for order notifications:', sellerId);
+        return;
+      }
+      
       // Fetch seller and buyer details
       const sellerQuery = await pool.query(
         'SELECT id, full_name, phone, email FROM sellers WHERE id = $1',
-        [sellerId]
+        [sellerIdInt]
       );
       
       if (sellerQuery.rows.length === 0) {
