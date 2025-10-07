@@ -860,12 +860,15 @@ class PesapalController {
       };
       
       // Send notifications to seller, buyer, and logistics partner
+      // Ensure order ID is an integer for all uses
+      const orderIdInt = parseInt(order.id, 10);
+      
       await Promise.all([
         whatsappService.notifySellerNewOrder(notificationData),
         whatsappService.notifyBuyerOrderConfirmation(notificationData),
         whatsappService.sendLogisticsNotification(
           {
-            id: order.id,
+            id: orderIdInt,
             order_id: order.order_number,
             total_amount: order.total_amount,
             amount: order.total_amount,
