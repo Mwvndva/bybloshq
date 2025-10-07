@@ -243,6 +243,12 @@ const getSellerById = async (req, res, next) => {
   try {
     const { id } = req.params;
     
+    // Convert id to integer to match database type
+    const sellerId = parseInt(id, 10);
+    if (isNaN(sellerId)) {
+      return next(new AppError('Invalid seller ID', 400));
+    }
+    
     // Get seller basic info
     const sellerResult = await pool.query(
       `SELECT 
@@ -257,7 +263,7 @@ const getSellerById = async (req, res, next) => {
         created_at 
       FROM sellers 
       WHERE id = $1`,
-      [id]
+      [sellerId]
     );
     
     if (sellerResult.rows.length === 0) {
@@ -279,7 +285,7 @@ const getSellerById = async (req, res, next) => {
         COUNT(CASE WHEN status = 'CANCELLED' THEN 1 END) as cancelled_orders
       FROM product_orders
       WHERE seller_id = $1`,
-      [id]
+      [sellerId]
     );
     
     // Get seller's product count
@@ -287,7 +293,7 @@ const getSellerById = async (req, res, next) => {
       `SELECT COUNT(*) as total_products
       FROM products
       WHERE seller_id = $1`,
-      [id]
+      [sellerId]
     );
     
     // Get recent orders
@@ -304,7 +310,7 @@ const getSellerById = async (req, res, next) => {
       WHERE seller_id = $1
       ORDER BY created_at DESC
       LIMIT 5`,
-      [id]
+      [sellerId]
     );
     
     const metrics = salesMetrics.rows[0];
