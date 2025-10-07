@@ -285,7 +285,7 @@ export function BuyerInfoModal({
               variant="outline"
               onClick={handleClose}
               disabled={isLoading}
-              className={`flex-1 ${themeClasses.text} border-gray-300 hover:bg-gray-50`}
+              className="flex-1 text-black border-gray-300 hover:bg-gray-50"
             >
               Cancel
             </Button>
