@@ -6,64 +6,88 @@ const router = express.Router();
 
 /**
  * @route   GET /api/whatsapp/status
- * @desc    Get WhatsApp connection status
- * @access  Private (Admin/Seller)
+ * @desc    Get WhatsApp connection status (Public for monitoring)
+ * @access  Public
  */
-router.get('/status', protect, async (req, res) => {
+router.get('/status', async (req, res) => {
   try {
     const isReady = whatsappService.isClientReady();
     const qrCode = whatsappService.getQRCode();
+    
+    console.log('Status check - Ready:', isReady, 'Has QR:', !!qrCode);
     
     res.json({
       success: true,
       data: {
         connected: isReady,
-        qrCode: qrCode,
-        message: isReady ? 'WhatsApp is connected' : 'WhatsApp is not connected'
+        hasQRCode: !!qrCode,
+        qrAvailable: !isReady && !!qrCode,
+        status: isReady ? 'ready' : (qrCode ? 'awaiting_scan' : 'initializing'),
+        message: isReady 
+          ? 'WhatsApp is connected and ready' 
+          : (qrCode ? 'QR code available - scan to authenticate' : 'WhatsApp client is initializing')
       }
     });
   } catch (error) {
     console.error('Error checking WhatsApp status:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to check WhatsApp status'
+      message: 'Failed to check WhatsApp status',
+      error: error.message
     });
   }
 });
 
 /**
  * @route   GET /api/whatsapp/qr
- * @desc    Get QR code for WhatsApp authentication
- * @access  Private (Admin only)
+ * @desc    Get QR code for WhatsApp authentication (Public for initial setup)
+ * @access  Public (but should be secured in production after setup)
  */
-router.get('/qr', protect, async (req, res) => {
+router.get('/qr', async (req, res) => {
   try {
     const qrCode = whatsappService.getQRCode();
+    const isReady = whatsappService.isClientReady();
     
-    if (!qrCode) {
+    console.log('QR Code request - Ready:', isReady, 'Has QR:', !!qrCode);
+    
+    if (!qrCode && !isReady) {
       return res.json({
         success: true,
         data: {
           qrCode: null,
-          message: whatsappService.isClientReady() 
-            ? 'Already authenticated' 
-            : 'QR code not available yet'
+          message: 'QR code not generated yet. WhatsApp client may still be initializing. Try again in a few seconds.',
+          status: 'initializing'
         }
       });
     }
     
+    if (isReady) {
+      return res.json({
+        success: true,
+        data: {
+          qrCode: null,
+          message: 'Already authenticated! WhatsApp is ready.',
+          status: 'authenticated'
+        }
+      });
+    }
+    
+    // Return QR code as both text and image URL
     res.json({
       success: true,
       data: {
         qrCode,
-        message: 'Scan this QR code with WhatsApp'
+        qrImageUrl: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`,
+        message: 'Scan this QR code with WhatsApp mobile app',
+        status: 'awaiting_scan'
       }
     });
   } catch (error) {
     console.error('Error getting QR code:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to get QR code'
+      message: 'Failed to get QR code',
+      error: error.message
     });
   }
 });
