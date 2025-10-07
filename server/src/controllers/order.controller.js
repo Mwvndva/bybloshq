@@ -303,7 +303,7 @@ const getSellerOrders = async (req, res) => {
               )
             )
             FROM order_items oi
-            LEFT JOIN products p ON oi.product_id = p.id
+            LEFT JOIN products p ON oi.product_id::integer = p.id
             WHERE oi.order_id = o.id
           ) as items,
           (
@@ -366,7 +366,7 @@ const getSellerOrders = async (req, res) => {
               )
             )
             FROM order_items oi
-            LEFT JOIN products p ON oi.product_id = p.id
+            LEFT JOIN products p ON oi.product_id::integer = p.id
             WHERE oi.order_id = o.id
           ) as items,
           (
@@ -545,7 +545,7 @@ const getOrderById = async (req, res) => {
               ) as status_history
        FROM product_orders o
        LEFT JOIN order_items oi ON o.id = oi.order_id
-       LEFT JOIN products p ON oi.product_id = p.id
+       LEFT JOIN products p ON oi.product_id::integer = p.id
        WHERE o.id = $1
        GROUP BY o.id`,
       [id]
