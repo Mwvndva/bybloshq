@@ -217,6 +217,40 @@ class PesapalController {
       }
       
       logger.info(`Verified order ${order.id} exists in product_orders table`);
+      
+      // Check the foreign key constraint details
+      const fkCheckQuery = `
+        SELECT 
+          tc.constraint_name, 
+          tc.table_name, 
+          kcu.column_name,
+          ccu.table_name AS foreign_table_name,
+          ccu.column_name AS foreign_column_name 
+        FROM information_schema.table_constraints AS tc 
+        JOIN information_schema.key_column_usage AS kcu
+          ON tc.constraint_name = kcu.constraint_name
+          AND tc.table_schema = kcu.table_schema
+        JOIN information_schema.constraint_column_usage AS ccu
+          ON ccu.constraint_name = tc.constraint_name
+          AND ccu.table_schema = tc.table_schema
+        WHERE tc.constraint_type = 'FOREIGN KEY' 
+          AND tc.table_name='order_items'
+          AND kcu.column_name='order_id';
+      `;
+      
+      const fkCheckResult = await client.query(fkCheckQuery);
+      logger.info('Foreign key constraint details for order_items.order_id:', JSON.stringify(fkCheckResult.rows, null, 2));
+      
+      // Also check what tables exist
+      const tablesQuery = `
+        SELECT table_schema, table_name 
+        FROM information_schema.tables 
+        WHERE table_name IN ('product_orders', 'order_items', 'orders')
+        ORDER BY table_schema, table_name;
+      `;
+      
+      const tablesResult = await client.query(tablesQuery);
+      logger.info('Tables found in database:', JSON.stringify(tablesResult.rows, null, 2));
 
       // Now, insert the order items with a 'PENDING' status
       for (const item of items) {
