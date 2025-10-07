@@ -232,13 +232,61 @@ export const publicApiService = {
   },
 
   // Get all products with city and location filters
-  getProducts: async (filters: { city: string; location?: string }): Promise<Product[]> => {
+  getProducts: async (filters: { city?: string; location?: string } = {}): Promise<Product[]> => {
     try {
       console.log('Starting getProducts with filters:', filters);
       
-      // First, find sellers in the specified city/location
+      // If no city filter is provided, fetch all products directly from the backend
+      if (!filters.city) {
+        console.log('No city filter - fetching all products directly from backend');
+        const response = await publicApi.get('public/products', {
+          params: filters
+        });
+        
+        let productsData: any[] = [];
+        const responseData = response.data;
+        
+        if (Array.isArray(responseData)) {
+          productsData = responseData;
+        } else if (responseData && 'data' in responseData) {
+          if (Array.isArray(responseData.data)) {
+            productsData = responseData.data;
+          } else if (responseData.data && 'products' in responseData.data && Array.isArray(responseData.data.products)) {
+            productsData = responseData.data.products;
+          }
+        } else if (responseData && 'products' in responseData && Array.isArray(responseData.products)) {
+          productsData = responseData.products;
+        }
+        
+        console.log(`Fetched ${productsData.length} products from backend (no city filter)`);
+        
+        // Transform products and ensure seller info is included
+        const transformedProducts = productsData.map(product => {
+          const transformed = transformProduct(product);
+          
+          // If the API response includes seller data in snake_case, transform it
+          if (product.seller_name || product.seller_full_name) {
+            transformed.seller = {
+              id: product.seller_id || String(product.sellerId || ''),
+              fullName: product.seller_name || product.seller_full_name || 'Unknown Seller',
+              email: product.seller_email || '',
+              phone: product.seller_phone || '',
+              location: product.seller_location || null,
+              city: product.seller_city || null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            };
+          }
+          
+          return transformed;
+        });
+        
+        return transformedProducts;
+      }
+      
+      // If city filter is provided, search for sellers first
       console.log('Searching for sellers with filters:', filters);
-      const sellers = await publicApiService.searchSellers(filters);
+      const sellers = await publicApiService.searchSellers(filters as { city: string; location?: string });
       
       console.log(`Found ${sellers.length} sellers for city: ${filters.city}${filters.location ? `, location: ${filters.location}` : ''}`);
       
@@ -355,7 +403,7 @@ export const publicApiService = {
   // Get a single product by ID
   getProduct: async (id: string): Promise<Product | null> => {
     try {
-      const response = await publicApi.get(`products/${id}`);
+      const response = await publicApi.get(`public/products/${id}`);
       const productData = response.data.product || response.data;
       return productData ? transformProduct(productData) : null;
     } catch (error) {
@@ -391,7 +439,7 @@ export const publicApiService = {
   // Get featured products
   getFeaturedProducts: async (limit: number = 8): Promise<Product[]> => {
     try {
-      const response = await publicApi.get(`products/featured?limit=${limit}`);
+      const response = await publicApi.get(`public/products/featured?limit=${limit}`);
       let productsData: Product[] = [];
       const responseData = response.data; // No need for type assertion
       
@@ -415,7 +463,7 @@ export const publicApiService = {
   // Search products
   searchProducts: async (query: string, filters: Record<string, any> = {}): Promise<Product[]> => {
     try {
-      const response = await publicApi.get('products/search', {
+      const response = await publicApi.get('public/products/search', {
         params: { q: query, ...filters }
       });
       
@@ -445,7 +493,7 @@ export const publicApiService = {
   getProductsByLocation: async (location: string): Promise<Product[]> => {
     try {
       // Use the main products endpoint with location filter
-      const response = await publicApi.get('products', {
+      const response = await publicApi.get('public/products', {
         params: { location }
       });
       

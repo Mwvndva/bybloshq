@@ -82,31 +82,26 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       selectedAesthetic 
     });
     
-    // Don't fetch if no city is selected
-    if (!locationCity) {
-      console.log('No location selected, skipping fetch');
-      setProducts([]);
-      setLoading(false);
-      return;
-    }
-    
     try {
       setLoading(true);
       setError('');
       
-      // Build query parameters - always include city, optionally include location
-      const queryParams = { 
-        city: locationCity 
-      };
+      // Build query parameters - city and location are now optional
+      const queryParams: any = {};
       
-      // Only include location (area) if it's not empty
-      if (locationArea) {
-        (queryParams as any).location = locationArea;
+      // Only include city if it's selected
+      if (locationCity) {
+        queryParams.city = locationCity;
+        
+        // Only include location (area) if city is selected and location is not empty
+        if (locationArea) {
+          queryParams.location = locationArea;
+        }
       }
       
       console.log('API Request Params:', queryParams);
       
-      // Fetch products from the API
+      // Fetch products from the API (will fetch all products if no city is specified)
       let fetchedProducts = await publicApiService.getProducts(queryParams);
       
       console.log('API Response:', { 

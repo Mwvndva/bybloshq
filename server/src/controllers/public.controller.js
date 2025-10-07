@@ -32,9 +32,10 @@ export const getProducts = async (req, res) => {
       queryParams.push(city);
       
       // Add location filter if provided and city is also provided
+      // Use LIKE for partial matching to allow flexible location search
       if (location) {
-        query += ` AND LOWER(s.location) = LOWER($${paramCount++})`;
-        queryParams.push(location);
+        query += ` AND LOWER(s.location) LIKE LOWER($${paramCount++})`;
+        queryParams.push(`%${location}%`);
       }
     }
     

@@ -528,7 +528,7 @@ const getOrderById = async (req, res) => {
                   'subtotal', oi.subtotal,
                   'metadata', COALESCE(oi.metadata, '{}'::jsonb)
                 )
-              ) as items,
+              ) FILTER (WHERE oi.id IS NOT NULL) as items,
               (
                 SELECT json_agg(
                   json_build_object(
@@ -544,6 +544,7 @@ const getOrderById = async (req, res) => {
               ) as status_history
        FROM product_orders o
        LEFT JOIN order_items oi ON o.id = oi.order_id
+       LEFT JOIN products p ON oi.product_id = p.id
        WHERE o.id = $1
        GROUP BY o.id`,
       [id]

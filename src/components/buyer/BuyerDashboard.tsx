@@ -69,7 +69,7 @@ function BuyerDashboardInner() {
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('casual');
   const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>('shop');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterCity, setFilterCity] = useState<string>(user?.city || '');
+  const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
   const [priceMin, setPriceMin] = useState<string>('');
   const [priceMax, setPriceMax] = useState<string>('');
@@ -103,16 +103,8 @@ function BuyerDashboardInner() {
     }
   };
   
-  // Update filterCity and filterArea when user's city and location change
-  useEffect(() => {
-    console.log('User location updated:', { city: user?.city, location: user?.location });
-    if (user?.city) {
-      setFilterCity(user.city);
-    }
-    if (user?.location) {
-      setFilterArea(user.location);
-    }
-  }, [user?.city, user?.location]);
+  // Removed auto-filter by user location - now shows all products by default
+  // Users can manually select their city/location if they want to filter
   
   // Log when filter values change
   useEffect(() => {
@@ -237,7 +229,7 @@ function BuyerDashboardInner() {
                           setFilterArea('');
                         }
                       }}
-                      defaultValue={user?.city || ''}
+                      defaultValue="__all__"
                     >
                       <SelectTrigger className="h-10">
                         <SelectValue placeholder="City" />
