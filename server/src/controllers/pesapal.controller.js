@@ -586,6 +586,26 @@ class PesapalController {
           logger.info(`Fetching order items for order ID: ${orderId} (type: ${typeof orderId})`);
           logger.info(`Full order product_id type check: buyer_id=${fullOrder.buyer_id} (${typeof fullOrder.buyer_id})`);
           
+          // First, check what's in the order_items table for this order
+          const checkItemsResult = await pool.query(
+            `SELECT id, order_id, product_id, 
+                    pg_typeof(product_id) as product_id_type,
+                    pg_typeof(order_id) as order_id_type
+             FROM order_items 
+             WHERE order_id = $1`,
+            [orderId]
+          );
+          
+          logger.info(`Order items check: Found ${checkItemsResult.rows.length} items`);
+          if (checkItemsResult.rows.length > 0) {
+            logger.info(`Sample item types:`, {
+              product_id: checkItemsResult.rows[0].product_id,
+              product_id_type: checkItemsResult.rows[0].product_id_type,
+              order_id: checkItemsResult.rows[0].order_id,
+              order_id_type: checkItemsResult.rows[0].order_id_type
+            });
+          }
+          
           const itemsResult = await pool.query(
             `SELECT oi.*, p.name as product_name, p.seller_id
              FROM order_items oi
