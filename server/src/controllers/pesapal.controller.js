@@ -201,11 +201,22 @@ class PesapalController {
       
       // Verify order was created successfully
       if (!order || !order.id) {
-        logger.error('Order creation failed - no order ID returned:', orderResult);
+        logger.error('Order creation failed - no order ID returned:', JSON.stringify(orderResult, null, 2));
         throw new Error('Failed to create order - no order ID returned');
       }
       
-      logger.info('Order created successfully with ID:', order.id);
+      logger.info(`Order created successfully with ID: ${order.id} (type: ${typeof order.id})`);
+      
+      // Verify the order exists in the database before proceeding
+      const verifyQuery = 'SELECT id FROM product_orders WHERE id = $1';
+      const verifyResult = await client.query(verifyQuery, [order.id]);
+      
+      if (verifyResult.rows.length === 0) {
+        logger.error(`CRITICAL: Order ${order.id} was created but cannot be found in product_orders table!`);
+        throw new Error(`Order verification failed - order ${order.id} not found in database`);
+      }
+      
+      logger.info(`Verified order ${order.id} exists in product_orders table`);
 
       // Now, insert the order items with a 'PENDING' status
       for (const item of items) {
@@ -324,6 +335,7 @@ class PesapalController {
           ];
           
           logger.info('Executing order item insert with values:', JSON.stringify(insertValues, null, 2));
+          logger.info(`Attempting to insert order_item with order_id: ${order.id} (type: ${typeof order.id}) for product_id: ${productId}`);
           
           const result = await client.query(insertQuery, insertValues);
           
