@@ -522,10 +522,16 @@ class PesapalController {
         newPaymentStatus = paymentStatusValues[0];
       }
       
+      // Ensure order ID is an integer for the update query
+      const orderIdForUpdate = parseInt(currentOrder.id, 10);
+      if (isNaN(orderIdForUpdate)) {
+        throw new Error(`Invalid order ID: ${currentOrder.id}`);
+      }
+      
       logger.info('Updating order with status:', { 
         newStatus, 
         newPaymentStatus,
-        orderId: currentOrder.id 
+        orderId: orderIdForUpdate 
       });
       
       // Update the order with the new status
@@ -537,7 +543,7 @@ class PesapalController {
              updated_at = NOW(),
              paid_at = CASE WHEN $2::text = ANY(ARRAY['PAID', 'COMPLETED']::text[]) THEN COALESCE(paid_at, NOW()) ELSE paid_at END
          WHERE id = $4`,
-        [newStatus, newPaymentStatus, OrderTrackingId, currentOrder.id]
+        [newStatus, newPaymentStatus, OrderTrackingId, orderIdForUpdate]
       );
       
       logger.info('Successfully updated order status');
@@ -556,6 +562,8 @@ class PesapalController {
           return;
         }
         
+        logger.info(`Fetching full order details for order ID: ${orderId} (type: ${typeof orderId})`);
+        
         const fullOrderResult = await pool.query(
           `SELECT po.*, b.full_name as buyer_name, b.phone as buyer_phone, b.email as buyer_email
            FROM product_orders po
@@ -563,6 +571,8 @@ class PesapalController {
            WHERE po.id = $1`,
           [orderId]
         );
+        
+        logger.info(`Fetched ${fullOrderResult.rows.length} order(s)`);
         
         if (fullOrderResult.rows.length > 0) {
           const fullOrder = fullOrderResult.rows[0];
