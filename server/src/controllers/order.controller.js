@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import { calculatePlatformFee } from '../utils/calculateFees.js';
 import Order from '../models/order.model.js';
+import whatsappService from '../services/whatsapp.service.js';
 
 /**
  * Create a new order
@@ -758,7 +759,10 @@ const updateOrderStatus = async (req, res) => {
     
     await client.query('COMMIT');
     
-    // In a real app, you would send notifications here
+    // Send WhatsApp notifications (non-blocking)
+    sendOrderStatusNotifications(order, updatedOrder, status).catch(err => {
+      console.error('Error sending WhatsApp notifications:', err);
+    });
     
     res.json({
       success: true,
@@ -956,6 +960,11 @@ const confirmReceipt = async (req, res) => {
       throw new Error('Failed to commit transaction');
     }
     
+    // Send WhatsApp notifications for order completion (non-blocking)
+    sendOrderCompletionNotifications(order, updatedOrder).catch(err => {
+      console.error('Error sending WhatsApp notifications for order completion:', err);
+    });
+    
     const response = {
       success: true,
       data: updatedOrder,
@@ -983,11 +992,564 @@ const confirmReceipt = async (req, res) => {
   }
 };
 
+/**
+ * Send WhatsApp notifications for order status updates
+ * @param {Object} order - Original order with buyer info
+ * @param {Object} updatedOrder - Updated order
+ * @param {string} newStatus - New status
+ */
+async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
+  try {
+    // Fetch seller details
+    const sellerQuery = await pool.query(
+      'SELECT id, full_name, phone, email FROM sellers WHERE id = $1',
+      [order.seller_id]
+    );
+    
+    if (sellerQuery.rows.length === 0) {
+      console.warn('Seller not found for order status notifications');
+      return;
+    }
+    
+    const seller = sellerQuery.rows[0];
+    
+    // Prepare notification data for buyer (includes seller info for pickup)
+    const buyerNotificationData = {
+      buyer: {
+        name: order.buyer?.name || order.buyer_name,
+        phone: order.buyer?.phone || order.buyer_phone,
+        email: order.buyer?.email || order.buyer_email
+      },
+      seller: {
+        name: seller.full_name,
+        phone: seller.phone,
+        email: seller.email,
+        location: seller.location || seller.city || 'Contact seller for location'
+      },
+      order: {
+        orderNumber: order.order_number,
+        totalAmount: parseFloat(order.total_amount),
+        status: order.status
+      },
+      oldStatus: order.status?.toUpperCase(),
+      newStatus: newStatus.toUpperCase(),
+      notes: updatedOrder.notes || ''
+    };
+    
+    // Prepare notification data for seller (includes buyer info)
+    const sellerNotificationData = {
+      seller: {
+        name: seller.full_name,
+        phone: seller.phone,
+        email: seller.email
+      },
+      buyer: {
+        name: order.buyer?.name || order.buyer_name,
+        phone: order.buyer?.phone || order.buyer_phone,
+        email: order.buyer?.email || order.buyer_email
+      },
+      order: {
+        orderNumber: order.order_number,
+        totalAmount: parseFloat(order.total_amount),
+        status: order.status
+      },
+      oldStatus: order.status?.toUpperCase(),
+      newStatus: newStatus.toUpperCase(),
+      notes: updatedOrder.notes || ''
+    };
+    
+    // Send notifications to both buyer and seller
+    await Promise.all([
+      whatsappService.notifyBuyerStatusUpdate(buyerNotificationData),
+      whatsappService.notifySellerStatusUpdate(sellerNotificationData)
+    ]);
+    
+    console.log(`WhatsApp status update notifications sent for order ${order.order_number}`);
+    
+  } catch (error) {
+    console.error('Error in sendOrderStatusNotifications:', error);
+    // Don't throw - notifications are not critical
+  }
+}
+
+/**
+ * Send WhatsApp notifications for order completion (buyer confirms receipt)
+ * @param {Object} order - Original order with buyer info
+ * @param {Object} updatedOrder - Updated order
+ */
+async function sendOrderCompletionNotifications(order, updatedOrder) {
+  try {
+    console.log('Sending order completion notifications for order:', order.order_number);
+    
+    // Fetch seller details
+    const sellerQuery = await pool.query(
+      'SELECT id, full_name, phone, email, location, city FROM sellers WHERE id = $1',
+      [order.seller_id]
+    );
+    
+    if (sellerQuery.rows.length === 0) {
+      console.warn('Seller not found for order completion notifications');
+      return;
+    }
+    
+    const seller = sellerQuery.rows[0];
+    
+    // Fetch buyer details if not in order
+    let buyerName = order.buyer_name;
+    let buyerPhone = order.buyer_phone;
+    let buyerEmail = order.buyer_email;
+    
+    if (!buyerName || !buyerPhone) {
+      const buyerQuery = await pool.query(
+        'SELECT full_name, phone, email FROM buyers WHERE id = $1',
+        [order.buyer_id]
+      );
+      
+      if (buyerQuery.rows.length > 0) {
+        const buyer = buyerQuery.rows[0];
+        buyerName = buyer.full_name;
+        buyerPhone = buyer.phone;
+        buyerEmail = buyer.email;
+      }
+    }
+    
+    console.log('Notification details:', {
+      buyerName,
+      buyerPhone,
+      sellerName: seller.full_name,
+      sellerPhone: seller.phone,
+      orderNumber: order.order_number
+    });
+    
+    // Prepare notification data for buyer (thank you message)
+    const buyerNotificationData = {
+      buyer: {
+        name: buyerName,
+        phone: buyerPhone,
+        email: buyerEmail
+      },
+      seller: {
+        name: seller.full_name,
+        phone: seller.phone,
+        email: seller.email,
+        location: seller.location || seller.city || 'Contact seller for location'
+      },
+      order: {
+        orderNumber: order.order_number,
+        totalAmount: parseFloat(order.total_amount),
+        status: 'COMPLETED'
+      },
+      oldStatus: 'READY_FOR_PICKUP',
+      newStatus: 'COMPLETED',
+      notes: ''
+    };
+    
+    // Prepare notification data for seller (order completed confirmation)
+    const sellerNotificationData = {
+      seller: {
+        name: seller.full_name,
+        phone: seller.phone,
+        email: seller.email
+      },
+      buyer: {
+        name: buyerName,
+        phone: buyerPhone,
+        email: buyerEmail
+      },
+      order: {
+        orderNumber: order.order_number,
+        totalAmount: parseFloat(order.total_amount),
+        status: 'COMPLETED'
+      },
+      oldStatus: 'READY_FOR_PICKUP',
+      newStatus: 'COMPLETED',
+      notes: ''
+    };
+    
+    // Send notifications to both buyer and seller
+    console.log('Calling WhatsApp service to send notifications...');
+    await Promise.all([
+      whatsappService.notifyBuyerStatusUpdate(buyerNotificationData),
+      whatsappService.notifySellerStatusUpdate(sellerNotificationData)
+    ]);
+    
+    console.log(`✅ WhatsApp completion notifications sent for order ${order.order_number}`);
+    
+  } catch (error) {
+    console.error('❌ Error in sendOrderCompletionNotifications:', error);
+    // Don't throw - notifications are not critical
+  }
+}
+
+/**
+ * Cancel order (buyer cancels their own order)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+/**
+ * Cancel order by buyer
+ */
+const cancelOrder = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    
+    console.log(`Buyer ${userId} attempting to cancel order ${id}`);
+    
+    await client.query('BEGIN');
+    
+    // Lock the order for update
+    const orderResult = await client.query(
+      `SELECT * FROM product_orders 
+       WHERE id = $1 AND buyer_id = $2 
+       FOR UPDATE`,
+      [id, userId]
+    );
+    
+    if (orderResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found or you do not have permission to cancel this order'
+      });
+    }
+    
+    const order = orderResult.rows[0];
+    
+    // Check if order can be cancelled
+    if (order.status === 'COMPLETED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot cancel a completed order'
+      });
+    }
+    
+    if (order.status === 'CANCELLED') {
+      return res.status(400).json({
+        success: false,
+        message: 'Order is already cancelled'
+      });
+    }
+    
+    // Update order status to CANCELLED
+    await client.query(
+      `UPDATE product_orders 
+       SET status = 'CANCELLED', 
+           payment_status = 'cancelled',
+           cancelled_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [id]
+    );
+    
+    // Add refund amount to buyer's refunds column
+    const refundAmount = parseFloat(order.total_amount);
+    await client.query(
+      `UPDATE buyers 
+       SET refunds = COALESCE(refunds, 0) + $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [refundAmount, userId]
+    );
+    
+    // Add status history
+    await client.query(
+      'INSERT INTO order_status_history (order_id, status, notes) VALUES ($1, $2, $3)',
+      [id, 'CANCELLED', 'Order cancelled by buyer']
+    );
+    
+    await client.query('COMMIT');
+    
+    console.log(`Order ${id} cancelled successfully. Refund amount: KSh ${refundAmount}`);
+    
+    // Send cancellation notifications to buyer, seller, and logistics (non-blocking)
+    try {
+      // Fetch full order details with items
+      const fullOrderResult = await pool.query(
+        `SELECT o.*, 
+                COALESCE(
+                  json_agg(
+                    json_build_object(
+                      'id', oi.id,
+                      'product_name', oi.product_name,
+                      'product_price', oi.product_price,
+                      'quantity', oi.quantity
+                    )
+                  ) FILTER (WHERE oi.id IS NOT NULL),
+                  '[]'::json
+                ) as items
+         FROM product_orders o
+         LEFT JOIN order_items oi ON o.id = oi.order_id
+         WHERE o.id = $1
+         GROUP BY o.id`,
+        [id]
+      );
+      
+      if (fullOrderResult.rows.length > 0) {
+        const fullOrder = fullOrderResult.rows[0];
+        
+        // Fetch buyer details
+        const buyerResult = await pool.query(
+          'SELECT id, full_name, phone, email, city, location FROM buyers WHERE id = $1',
+          [userId]
+        );
+        
+        // Fetch seller details
+        const sellerResult = await pool.query(
+          'SELECT id, full_name, phone, email, shop_name FROM sellers WHERE id = $1',
+          [order.seller_id]
+        );
+        
+        if (buyerResult.rows.length > 0 && sellerResult.rows.length > 0) {
+          const buyer = buyerResult.rows[0];
+          const seller = sellerResult.rows[0];
+          
+          const orderData = {
+            id: fullOrder.id,
+            order_id: fullOrder.order_number || fullOrder.id,
+            total_amount: fullOrder.total_amount,
+            amount: fullOrder.total_amount,
+            buyer_phone: buyer.phone,
+            phone: buyer.phone,
+            items: fullOrder.items
+          };
+          
+          // Send notifications to buyer, seller, and logistics
+          await Promise.all([
+            whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Buyer'),
+            whatsappService.sendSellerOrderCancellationNotification(orderData, seller, 'Buyer'),
+            whatsappService.sendLogisticsCancellationNotification(
+              orderData,
+              {
+                fullName: buyer.full_name,
+                full_name: buyer.full_name,
+                phone: buyer.phone,
+                email: buyer.email,
+                city: buyer.city,
+                location: buyer.location
+              },
+              {
+                ...seller,
+                shop_name: seller.shop_name || seller.full_name,
+                businessName: seller.shop_name || seller.full_name
+              },
+              'Buyer'
+            )
+          ]);
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error sending cancellation notifications:', notificationError);
+      // Don't fail the cancellation if notification fails
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully',
+      refundAmount: refundAmount
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error cancelling order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel order',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
+/**
+ * Cancel order by seller
+ */
+const sellerCancelOrder = async (req, res) => {
+  const client = await pool.connect();
+  
+  try {
+    const { id } = req.params;
+    const sellerId = req.user.id;
+    
+    console.log(`Seller ${sellerId} attempting to cancel order ${id}`);
+    
+    await client.query('BEGIN');
+    
+    // Lock the order for update and verify seller owns this order
+    const orderResult = await client.query(
+      `SELECT * FROM product_orders 
+       WHERE id = $1 AND seller_id = $2 
+       FOR UPDATE`,
+      [id, sellerId]
+    );
+    
+    if (orderResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found or you do not have permission to cancel this order'
+      });
+    }
+    
+    const order = orderResult.rows[0];
+    
+    // Check if order can be cancelled
+    if (order.status === 'COMPLETED') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot cancel a completed order'
+      });
+    }
+    
+    if (order.status === 'CANCELLED') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({
+        success: false,
+        message: 'Order is already cancelled'
+      });
+    }
+    
+    // Update order status to CANCELLED
+    await client.query(
+      `UPDATE product_orders 
+       SET status = 'CANCELLED', 
+           payment_status = 'cancelled',
+           cancelled_at = NOW(),
+           updated_at = NOW()
+       WHERE id = $1`,
+      [id]
+    );
+    
+    // Add refund amount to buyer's refunds column
+    const refundAmount = parseFloat(order.total_amount);
+    await client.query(
+      `UPDATE buyers 
+       SET refunds = COALESCE(refunds, 0) + $1,
+           updated_at = NOW()
+       WHERE id = $2`,
+      [refundAmount, order.buyer_id]
+    );
+    
+    // Add status history
+    await client.query(
+      'INSERT INTO order_status_history (order_id, status, notes) VALUES ($1, $2, $3)',
+      [id, 'CANCELLED', 'Order cancelled by seller']
+    );
+    
+    await client.query('COMMIT');
+    
+    console.log(`Order ${id} cancelled by seller. Refund amount: KSh ${refundAmount}`);
+    
+    // Send cancellation notifications to buyer, seller, and logistics (non-blocking)
+    try {
+      // Fetch full order details with items
+      const fullOrderResult = await pool.query(
+        `SELECT o.*, 
+                COALESCE(
+                  json_agg(
+                    json_build_object(
+                      'id', oi.id,
+                      'product_name', oi.product_name,
+                      'product_price', oi.product_price,
+                      'quantity', oi.quantity
+                    )
+                  ) FILTER (WHERE oi.id IS NOT NULL),
+                  '[]'::json
+                ) as items
+         FROM product_orders o
+         LEFT JOIN order_items oi ON o.id = oi.order_id
+         WHERE o.id = $1
+         GROUP BY o.id`,
+        [id]
+      );
+      
+      if (fullOrderResult.rows.length > 0) {
+        const fullOrder = fullOrderResult.rows[0];
+        
+        // Fetch buyer details
+        const buyerResult = await pool.query(
+          'SELECT id, full_name, phone, email, city, location FROM buyers WHERE id = $1',
+          [order.buyer_id]
+        );
+        
+        // Fetch seller details
+        const sellerResult = await pool.query(
+          'SELECT id, full_name, phone, email, shop_name FROM sellers WHERE id = $1',
+          [sellerId]
+        );
+        
+        if (buyerResult.rows.length > 0 && sellerResult.rows.length > 0) {
+          const buyer = buyerResult.rows[0];
+          const seller = sellerResult.rows[0];
+          
+          const orderData = {
+            id: fullOrder.id,
+            order_id: fullOrder.order_number || fullOrder.id,
+            total_amount: fullOrder.total_amount,
+            amount: fullOrder.total_amount,
+            buyer_phone: buyer.phone,
+            phone: buyer.phone,
+            items: fullOrder.items
+          };
+          
+          // Send notifications to buyer, seller, and logistics
+          await Promise.all([
+            whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Seller'),
+            whatsappService.sendSellerOrderCancellationNotification(orderData, seller, 'Seller'),
+            whatsappService.sendLogisticsCancellationNotification(
+              orderData,
+              {
+                fullName: buyer.full_name,
+                full_name: buyer.full_name,
+                phone: buyer.phone,
+                email: buyer.email,
+                city: buyer.city,
+                location: buyer.location
+              },
+              {
+                ...seller,
+                shop_name: seller.shop_name || seller.full_name,
+                businessName: seller.shop_name || seller.full_name
+              },
+              'Seller'
+            )
+          ]);
+        }
+      }
+    } catch (notificationError) {
+      console.error('Error sending cancellation notifications:', notificationError);
+      // Don't fail the cancellation if notification fails
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Order cancelled successfully',
+      refundAmount: refundAmount
+    });
+    
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Error cancelling order:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to cancel order',
+      error: error.message
+    });
+  } finally {
+    client.release();
+  }
+};
+
 export {
   createOrder,
   getUserOrders,
   getSellerOrders,
   getOrderById,
   updateOrderStatus,
-  confirmReceipt
+  confirmReceipt,
+  cancelOrder,
+  sellerCancelOrder
 };

@@ -167,14 +167,21 @@ export default function SellerOrdersSection() {
   };
   
   const cancelOrder = async (orderId: string) => {
+    const confirmationMessage = 'Are you sure you want to cancel this order?\n\nThe buyer will receive a full refund to their account balance.';
+    
+    if (!window.confirm(confirmationMessage)) {
+      return; // User cancelled the action
+    }
+    
     try {
       setIsUpdating(true);
-      const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'CANCELLED' as OrderStatus);
+      const result = await sellerApi.cancelOrder(orderId);
       
+      // Remove the order from the list or update its status
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId ? { 
-            ...updatedOrder,
+            ...order,
             status: 'CANCELLED' as const,
             paymentStatus: 'cancelled' as const
           } : order
@@ -183,13 +190,13 @@ export default function SellerOrdersSection() {
       
       toast({
         title: 'Order Cancelled',
-        description: 'The order has been cancelled.',
+        description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount.toLocaleString()}.`,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to cancel order:', err);
       toast({
         title: 'Error',
-        description: 'Failed to cancel order. Please try again.',
+        description: err.response?.data?.message || 'Failed to cancel order. Please try again.',
         variant: 'destructive',
       });
     } finally {

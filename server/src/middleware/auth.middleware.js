@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import AppError from '../utils/appError.js';
 import Buyer from '../models/buyer.model.js';
+import pool from '../db/index.js';
 
 // Protect routes - user must be authenticated
 export const protect = (roles = []) => {
@@ -27,23 +28,45 @@ export const protect = (roles = []) => {
       // 2) Verify token
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-      // 3) Check if user still exists
-      const currentUser = await Buyer.findById(decoded.id);
-      if (!currentUser) {
+      // 3) Check if user still exists (based on role)
+      let currentUser;
+      
+      // Check if this is an admin token (admin tokens have id: 'admin' with no role field)
+      if (decoded.id === 'admin' || decoded.role === 'admin') {
+        // For admins, just verify the token is valid
+        // We don't have an admins table, so we'll use a simple object
+        currentUser = {
+          id: 'admin',
+          role: 'admin',
+          email: decoded.email || 'admin@byblos.com'
+        };
+      } else if (decoded.role === 'buyer' || (!decoded.role && typeof decoded.id === 'number')) {
+        // For buyers, check the buyers table
+        currentUser = await Buyer.findById(decoded.id);
+        if (!currentUser) {
+          return next(
+            new AppError('The user belonging to this token no longer exists.', 401)
+          );
+        }
+        
+        // Check if user changed password after the token was issued
+        if (currentUser.changedPasswordAfter && currentUser.changedPasswordAfter(decoded.iat)) {
+          return next(
+            new AppError('User recently changed password! Please log in again.', 401)
+          );
+        }
+      } else {
+        // For other roles (seller, organizer), we can add support later
         return next(
-          new AppError('The user belonging to this token no longer exists.', 401)
+          new AppError('Invalid user role', 401)
         );
       }
 
-      // 4) Check if user changed password after the token was issued
-      if (currentUser.changedPasswordAfter(decoded.iat)) {
-        return next(
-          new AppError('User recently changed password! Please log in again.', 401)
-        );
-      }
+      // 4) Determine the user's role
+      const userRole = currentUser.role || decoded.role || (decoded.id === 'admin' ? 'admin' : 'buyer');
 
       // 5) Check if user has the required role
-      if (roles.length && !roles.includes(decoded.role)) {
+      if (roles.length && !roles.includes(userRole)) {
         return next(
           new AppError('You do not have permission to perform this action', 403)
         );
@@ -52,7 +75,8 @@ export const protect = (roles = []) => {
       // 6) Grant access to protected route
       req.user = {
         id: currentUser.id,
-        role: decoded.role
+        role: userRole,
+        email: currentUser.email
       };
       res.locals.user = currentUser;
       next();

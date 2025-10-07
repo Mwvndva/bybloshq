@@ -358,6 +358,99 @@ export const checkBuyerByPhone = async (req, res, next) => {
   }
 };
 
+/**
+ * Get buyer's pending refund requests
+ */
+export const getPendingRefundRequests = async (req, res, next) => {
+  try {
+    const buyerId = req.user.id;
+
+    const query = `
+      SELECT id, amount, status, requested_at
+      FROM refund_requests
+      WHERE buyer_id = $1 AND status = 'pending'
+      ORDER BY requested_at DESC
+    `;
+
+    const result = await pool.query(query, [buyerId]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        pendingRequests: result.rows,
+        hasPending: result.rows.length > 0
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching pending refund requests:', error);
+    next(error);
+  }
+};
+
+/**
+ * Request refund withdrawal
+ * Uses buyer's existing details from database
+ */
+export const requestRefund = async (req, res, next) => {
+  try {
+    const { amount } = req.body;
+    const buyerId = req.user.id;
+
+    console.log('Refund request from buyer:', buyerId, 'Amount:', amount);
+
+    if (!amount || amount <= 0) {
+      return next(new AppError('Invalid refund amount', 400));
+    }
+
+    // Get buyer's details and check available refunds
+    const buyer = await Buyer.findById(buyerId);
+    if (!buyer) {
+      return next(new AppError('Buyer not found', 404));
+    }
+
+    const availableRefunds = parseFloat(buyer.refunds || 0);
+    if (availableRefunds < amount) {
+      return next(new AppError(`Insufficient refund balance. Available: KSh ${availableRefunds}`, 400));
+    }
+
+    // Use buyer's existing details for refund
+    const paymentMethod = 'M-Pesa'; // Default to M-Pesa for Kenya
+    const paymentDetailsJson = JSON.stringify({
+      phone: buyer.phone,
+      name: buyer.fullName,
+      email: buyer.email
+    });
+
+    // Create refund request
+    const query = `
+      INSERT INTO refund_requests (
+        buyer_id, amount, status, payment_method, payment_details
+      ) VALUES ($1, $2, 'pending', $3, $4)
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [
+      buyerId,
+      amount,
+      paymentMethod,
+      paymentDetailsJson
+    ]);
+
+    console.log('Refund request created:', result.rows[0].id, 'for buyer:', buyer.fullName, buyer.phone);
+
+    res.status(201).json({
+      status: 'success',
+      message: 'Refund request submitted successfully',
+      data: {
+        requestId: result.rows[0].id
+      }
+    });
+  } catch (error) {
+    console.error('Error in requestRefund:', error);
+    next(error);
+  }
+};
+
 export const saveBuyerInfo = async (req, res, next) => {
   try {
     const { fullName, email, phone, city, location } = req.body;

@@ -5,7 +5,9 @@ import {
   getSellerOrders,
   getOrderById,
   updateOrderStatus,
-  confirmReceipt
+  confirmReceipt,
+  cancelOrder,
+  sellerCancelOrder
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -292,6 +294,72 @@ router.patch(
   '/:id/confirm-receipt',
   protect,
   confirmReceipt
+);
+
+/**
+ * @swagger
+ * /api/orders/{id}/cancel:
+ *   patch:
+ *     summary: Cancel order (buyer)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Order cancelled successfully, refund amount added to buyer account
+ *       400:
+ *         description: Order cannot be cancelled (already completed or cancelled)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Order not found
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+  '/:id/cancel',
+  protect,
+  cancelOrder
+);
+
+/**
+ * @swagger
+ * /api/orders/{id}/seller-cancel:
+ *   patch:
+ *     summary: Cancel order (seller)
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *     responses:
+ *       200:
+ *         description: Order cancelled successfully by seller, refund amount added to buyer account
+ *       400:
+ *         description: Order cannot be cancelled (already completed or cancelled)
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Order not found or seller does not own this order
+ *       500:
+ *         description: Server error
+ */
+router.patch(
+  '/:id/seller-cancel',
+  protect,
+  sellerCancelOrder
 );
 
 export default router;

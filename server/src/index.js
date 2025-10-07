@@ -23,6 +23,7 @@ import ticketRoutes from './routes/ticket.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import pesapalRoutes from './routes/pesapal.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import refundRoutes from './routes/refund.routes.js';
 import * as eventController from './controllers/event.controller.js';
 import { pool, testConnection as testDbConnection } from './config/database.js';
 import { globalErrorHandler, notFoundHandler } from './utils/errorHandler.js';
@@ -290,6 +291,8 @@ import eventRoutes from './routes/event.routes.js';
 import protectedOrganizerRoutes from './routes/protectedOrganizer.routes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import pesapalV2Routes from './routes/pesapal-v2.routes.js';
+import whatsappRoutes from './routes/whatsapp.routes.js';
+import whatsappService from './services/whatsapp.service.js';
 import models from './models/index.js';
 const { Payment } = models;
 
@@ -305,6 +308,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/pesapal', pesapalRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/refunds', refundRoutes);
 app.use('/api/v2/payments/pesapal', pesapalV2Routes); // New Pesapal V2 routes
 app.use('/api/events', eventRoutes);
 
@@ -313,6 +317,9 @@ app.use('/api/organizers', protectedOrganizerRoutes);
 
 // Mount order routes
 app.use('/api/orders', orderRoutes);
+
+// Mount WhatsApp routes
+app.use('/api/whatsapp', whatsappRoutes);
 
 // Debug: Log all registered routes in development
 if (process.env.NODE_ENV === 'development') {
@@ -450,6 +457,13 @@ const startServer = async () => {
     const server = app.listen(port, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
       console.log(`📡 API available at http://localhost:${port}/api`);
+      
+      // Initialize WhatsApp service (non-blocking)
+      console.log('📱 Initializing WhatsApp service...');
+      whatsappService.initialize().catch(err => {
+        console.error('⚠️  WhatsApp initialization failed:', err.message);
+        console.log('ℹ️  WhatsApp notifications will be unavailable. Use /api/whatsapp/initialize to retry.');
+      });
     });
 
     // Handle server errors

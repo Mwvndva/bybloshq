@@ -369,13 +369,14 @@ export default function OrdersSection() {
               </p>
               
               <div className="mt-3 space-y-2">
-                {order.status === 'READY_FOR_PICKUP' && (
+                {(order.status === 'PENDING' || order.status === 'READY_FOR_PICKUP') && (
                   <Button 
                     variant="outline" 
                     size="sm" 
-                    className="w-full"
+                    className="w-full border-red-300 text-red-600 hover:bg-red-50"
                     onClick={() => handleCancelOrder(order.id)}
                   >
+                    <XCircle className="h-4 w-4 mr-2" />
                     Cancel Order
                   </Button>
                 )}
@@ -387,7 +388,7 @@ export default function OrdersSection() {
                     onClick={() => handleConfirmReceipt(order.id)}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
-                    Confirm
+                    Confirm Receipt
                   </Button>
                 )}
               </div>

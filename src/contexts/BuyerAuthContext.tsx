@@ -10,6 +10,7 @@ interface User {
   phone: string;
   city?: string;
   location?: string;
+  refunds?: number;
   createdAt: string;
   updatedAt?: string;
 }

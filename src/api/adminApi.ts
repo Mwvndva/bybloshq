@@ -171,6 +171,18 @@ export const adminApi = {
     }
   },
 
+  async getSellerById(sellerId: string) {
+    try {
+      console.log(`Fetching seller ${sellerId} details from API...`);
+      const response = await api.get(`/admin/sellers/${sellerId}`);
+      console.log('Seller details API response:', response);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching seller details:', error);
+      throw error;
+    }
+  },
+
   // Events
   async getEvents() {
     try {
@@ -593,6 +605,47 @@ export const adminApi = {
 
   async updateWithdrawalRequestStatus(requestId: string, status: 'approved' | 'rejected') {
     return api.patch(`/admin/withdrawal-requests/${requestId}/status`, { status });
+  },
+
+  // Financial metrics
+  async getFinancialMetrics() {
+    try {
+      console.log('Fetching financial metrics from API...');
+      const response = await api.get('/admin/metrics/financial');
+      console.log('Financial metrics API response:', response);
+      return response.data.data || {
+        totalSales: 0,
+        totalOrders: 0,
+        totalCommission: 0,
+        totalRefunds: 0,
+        totalRefundRequests: 0,
+        pendingRefunds: 0,
+        netRevenue: 0
+      };
+    } catch (error) {
+      console.error('Error fetching financial metrics:', error);
+      return {
+        totalSales: 0,
+        totalOrders: 0,
+        totalCommission: 0,
+        totalRefunds: 0,
+        totalRefundRequests: 0,
+        pendingRefunds: 0,
+        netRevenue: 0
+      };
+    }
+  },
+
+  async getMonthlyFinancialData() {
+    try {
+      console.log('Fetching monthly financial data from API...');
+      const response = await api.get('/admin/metrics/financial/monthly');
+      console.log('Monthly financial data API response:', response);
+      return response.data.data || [];
+    } catch (error) {
+      console.error('Error fetching monthly financial data:', error);
+      return [];
+    }
   }
 };
 

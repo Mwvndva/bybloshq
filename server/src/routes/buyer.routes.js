@@ -26,6 +26,12 @@ router.get('/profile', buyerController.getProfile);
 // Update profile
 router.patch('/update-profile', buyerController.updateProfile);
 
+// Request refund withdrawal
+router.post('/refund-request', buyerController.requestRefund);
+
+// Get pending refund requests
+router.get('/refund-requests/pending', buyerController.getPendingRefundRequests);
+
 // Wishlist routes
 router.use('/wishlist', wishlistRoutes);
 

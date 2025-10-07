@@ -7,6 +7,7 @@ interface Buyer {
   phone: string;
   city?: string;
   location?: string;
+  refunds?: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -173,6 +174,7 @@ const transformBuyer = (data: any): Buyer => {
     phone: buyer.phone || '',
     city: buyer.city || '',
     location: buyer.location || '',
+    refunds: buyer.refunds != null ? parseFloat(buyer.refunds) : 0,
     createdAt: buyer.createdAt || buyer.created_at || new Date().toISOString(),
     updatedAt: buyer.updatedAt || buyer.updated_at
   };
@@ -694,6 +696,38 @@ const buyerApi = {
       }
 
       throw new Error('Failed to save buyer information. Please try again.');
+    }
+  },
+
+  // Request refund withdrawal (uses buyer's existing details)
+  requestRefund: async (data: {
+    amount: number;
+  }): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const response = await buyerApiInstance.post('/buyers/refund-request', data);
+      return { success: true, message: response.data.message };
+    } catch (error: any) {
+      console.error('Error requesting refund:', error);
+      throw new Error(error.response?.data?.message || 'Failed to submit refund request');
+    }
+  },
+
+  // Get pending refund requests
+  getPendingRefundRequests: async (): Promise<{
+    pendingRequests: Array<{
+      id: number;
+      amount: number;
+      status: string;
+      requested_at: string;
+    }>;
+    hasPending: boolean;
+  }> => {
+    try {
+      const response = await buyerApiInstance.get('/buyers/refund-requests/pending');
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error fetching pending refund requests:', error);
+      throw new Error(error.response?.data?.message || 'Failed to fetch pending refund requests');
     }
   }
 };

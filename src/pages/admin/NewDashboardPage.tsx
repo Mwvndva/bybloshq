@@ -15,6 +15,7 @@ import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Lock, Unlock } from 'lucide-react';
+import RefundRequestsPage from './RefundRequestsPage';
 
 // Custom tooltip for the events chart
 const EventsTooltip = ({ active, payload, label }: any) => {
@@ -84,6 +85,23 @@ interface WithdrawalRequest {
   processedBy?: string;
 }
 
+interface FinancialMetrics {
+  totalSales: number;
+  totalOrders: number;
+  totalCommission: number;
+  totalRefunds: number;
+  totalRefundRequests: number;
+  pendingRefunds: number;
+  netRevenue: number;
+}
+
+interface MonthlyFinancialData {
+  month: string;
+  sales: number;
+  commission: number;
+  refunds: number;
+}
+
 interface DashboardState {
   analytics: DashboardAnalytics;
   recentEvents: Array<{
@@ -132,6 +150,8 @@ interface DashboardState {
   withdrawalRequests: WithdrawalRequest[];
   monthlyEvents: MonthlyEventData[];
   monthlyMetrics: MonthlyMetricsData[];
+  financialMetrics: FinancialMetrics;
+  monthlyFinancialData: MonthlyFinancialData[];
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -206,6 +226,10 @@ const NewAdminDashboard = () => {
   const [error, setError] = useState<string | null>(null);
   const [isMarkingPaid, setIsMarkingPaid] = useState<string | null>(null);
 
+  // State for seller details modal
+  const [selectedSeller, setSelectedSeller] = useState<any | null>(null);
+  const [isLoadingSeller, setIsLoadingSeller] = useState(false);
+
   const [dashboardState, setDashboardState] = React.useState<DashboardState>({
     analytics: {
       totalRevenue: 0,
@@ -229,7 +253,17 @@ const NewAdminDashboard = () => {
     buyers: [],
     withdrawalRequests: [],
     monthlyEvents: [],
-    monthlyMetrics: []
+    monthlyMetrics: [],
+    financialMetrics: {
+      totalSales: 0,
+      totalOrders: 0,
+      totalCommission: 0,
+      totalRefunds: 0,
+      totalRefundRequests: 0,
+      pendingRefunds: 0,
+      netRevenue: 0
+    },
+    monthlyFinancialData: []
   });
 
   // Fetch dashboard data in a separate effect
@@ -247,7 +281,9 @@ const NewAdminDashboard = () => {
           buyers,
           withdrawalRequests,
           monthlyEvents,
-          monthlyMetrics
+          monthlyMetrics,
+          financialMetrics,
+          monthlyFinancialData
         ] = await Promise.all([
           adminApi.getAnalytics().then(data => {
             console.log('Analytics data received:', data);
@@ -280,6 +316,14 @@ const NewAdminDashboard = () => {
           adminApi.getMonthlyMetrics().then(data => {
             console.log('Monthly metrics data received:', data);
             console.log('Monthly metrics data.data:', data?.data);
+            return data;
+          }),
+          adminApi.getFinancialMetrics().then(data => {
+            console.log('Financial metrics data received:', data);
+            return data;
+          }),
+          adminApi.getMonthlyFinancialData().then(data => {
+            console.log('Monthly financial data received:', data);
             return data;
           })
         ]);
@@ -324,7 +368,17 @@ const NewAdminDashboard = () => {
           buyers: Array.isArray(buyers) ? buyers : [],
           withdrawalRequests: Array.isArray(withdrawalRequests) ? withdrawalRequests : [],
           monthlyEvents: Array.isArray(monthlyEvents) ? monthlyEvents : [],
-          monthlyMetrics: metricsData
+          monthlyMetrics: metricsData,
+          financialMetrics: financialMetrics || {
+            totalSales: 0,
+            totalOrders: 0,
+            totalCommission: 0,
+            totalRefunds: 0,
+            totalRefundRequests: 0,
+            pendingRefunds: 0,
+            netRevenue: 0
+          },
+          monthlyFinancialData: Array.isArray(monthlyFinancialData) ? monthlyFinancialData : []
         });
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -379,6 +433,27 @@ const NewAdminDashboard = () => {
       icon: <UserCircle className="h-4 w-4 text-cyan-500" />,
       description: 'Registered buyers',
       trend: dashboardState.analytics.monthlyGrowth?.buyers ?? 0
+    },
+    {
+      title: 'Total Sales',
+      value: `KSh ${dashboardState.financialMetrics.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      icon: <DollarSign className="h-4 w-4 text-green-600" />,
+      description: `${dashboardState.financialMetrics.totalOrders} orders`,
+      trend: 0
+    },
+    {
+      title: 'Total Commission',
+      value: `KSh ${dashboardState.financialMetrics.totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      icon: <DollarSign className="h-4 w-4 text-yellow-600" />,
+      description: 'Platform earnings',
+      trend: 0
+    },
+    {
+      title: 'Total Refunds',
+      value: `KSh ${dashboardState.financialMetrics.totalRefunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      icon: <DollarSign className="h-4 w-4 text-red-600" />,
+      description: `${dashboardState.financialMetrics.totalRefundRequests} completed`,
+      trend: 0
     },
   ];
 
@@ -640,14 +715,22 @@ const NewAdminDashboard = () => {
   };
 
   // Handle viewing seller details
-  const handleViewSeller = (sellerId: string) => {
-    // Navigate to seller details page or show a modal
-    // For now, we'll just log the ID and show a toast
-    console.log('Viewing seller:', sellerId);
-    toast.info(`Viewing seller ID: ${sellerId}`);
-    
-    // If you have a dedicated seller details page, you can navigate there:
-    // navigate(`/admin/sellers/${sellerId}`);
+  const handleViewSeller = async (sellerId: string) => {
+    try {
+      setIsLoadingSeller(true);
+      const response = await adminApi.getSellerById(sellerId);
+      setSelectedSeller(response.data);
+    } catch (error) {
+      console.error('Error fetching seller details:', error);
+      toast.error('Failed to load seller details');
+    } finally {
+      setIsLoadingSeller(false);
+    }
+  };
+
+  // Close seller details modal
+  const closeSellerModal = () => {
+    setSelectedSeller(null);
   };
 
   // Handle toggling seller status (active/inactive)
@@ -982,6 +1065,233 @@ const NewAdminDashboard = () => {
         </div>
       )}
 
+      {/* Seller Details Modal */}
+      {selectedSeller && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white/95 backdrop-blur-xl border border-white/20 rounded-3xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200/50">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+                  <Store className="h-5 w-5 text-black" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-black">
+                    Seller Details
+                  </h3>
+                  <p className="text-sm text-gray-600">
+                    {selectedSeller.name || 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={closeSellerModal}
+                className="h-10 w-10 rounded-2xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors duration-200"
+              >
+                <X className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+            
+            {/* Content */}
+            <div className="overflow-auto flex-1 p-6">
+              {isLoadingSeller ? (
+                <div className="flex flex-col items-center justify-center h-40 space-y-4">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+                    <Loader2 className="h-6 w-6 text-black animate-spin" />
+                  </div>
+                  <p className="text-gray-600 font-medium">Loading seller details...</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Basic Info */}
+                  <Card className="bg-white/80 border border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-black">Basic Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Full Name</p>
+                        <p className="text-base text-black">{selectedSeller.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Email</p>
+                        <p className="text-base text-black">{selectedSeller.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Phone</p>
+                        <p className="text-base text-black">{selectedSeller.phone || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Shop Name</p>
+                        <p className="text-base text-black">{selectedSeller.shop_name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">City</p>
+                        <p className="text-base text-black">{selectedSeller.city || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Location</p>
+                        <p className="text-base text-black">{selectedSeller.location || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Status</p>
+                        <Badge className={selectedSeller.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}>
+                          {selectedSeller.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-600 font-medium">Member Since</p>
+                        <p className="text-base text-black">{format(new Date(selectedSeller.createdAt), 'MMM d, yyyy')}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Sales Metrics */}
+                  <Card className="bg-white/80 border border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-black">Sales Metrics</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 border border-green-200/50">
+                          <div className="flex items-center space-x-3">
+                            <div className="h-8 w-8 rounded-xl bg-green-500 flex items-center justify-center">
+                              <DollarSign className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-green-600 font-medium">Total Sales</p>
+                              <p className="text-lg font-bold text-green-800">
+                                KSh {selectedSeller.metrics?.totalSales?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 border border-blue-200/50">
+                          <div className="flex items-center space-x-3">
+                            <div className="h-8 w-8 rounded-xl bg-blue-500 flex items-center justify-center">
+                              <DollarSign className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-blue-600 font-medium">Net Sales</p>
+                              <p className="text-lg font-bold text-blue-800">
+                                KSh {selectedSeller.metrics?.netSales?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-4 border border-yellow-200/50">
+                          <div className="flex items-center space-x-3">
+                            <div className="h-8 w-8 rounded-xl bg-yellow-500 flex items-center justify-center">
+                              <DollarSign className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-yellow-600 font-medium">Commission</p>
+                              <p className="text-lg font-bold text-yellow-800">
+                                KSh {selectedSeller.metrics?.totalCommission?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 border border-purple-200/50">
+                          <div className="flex items-center space-x-3">
+                            <div className="h-8 w-8 rounded-xl bg-purple-500 flex items-center justify-center">
+                              <ShoppingCart className="h-4 w-4 text-white" />
+                            </div>
+                            <div>
+                              <p className="text-sm text-purple-600 font-medium">Total Orders</p>
+                              <p className="text-lg font-bold text-purple-800">
+                                {selectedSeller.metrics?.totalOrders || 0}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div className="text-center p-3 bg-gray-50 rounded-xl">
+                          <p className="text-2xl font-bold text-gray-800">{selectedSeller.metrics?.totalProducts || 0}</p>
+                          <p className="text-xs text-gray-600 mt-1">Products</p>
+                        </div>
+                        <div className="text-center p-3 bg-orange-50 rounded-xl">
+                          <p className="text-2xl font-bold text-orange-800">{selectedSeller.metrics?.pendingOrders || 0}</p>
+                          <p className="text-xs text-orange-600 mt-1">Pending</p>
+                        </div>
+                        <div className="text-center p-3 bg-blue-50 rounded-xl">
+                          <p className="text-2xl font-bold text-blue-800">{selectedSeller.metrics?.readyForPickup || 0}</p>
+                          <p className="text-xs text-blue-600 mt-1">Ready</p>
+                        </div>
+                        <div className="text-center p-3 bg-green-50 rounded-xl">
+                          <p className="text-2xl font-bold text-green-800">{selectedSeller.metrics?.completedOrders || 0}</p>
+                          <p className="text-xs text-green-600 mt-1">Completed</p>
+                        </div>
+                        <div className="text-center p-3 bg-red-50 rounded-xl">
+                          <p className="text-2xl font-bold text-red-800">{selectedSeller.metrics?.cancelledOrders || 0}</p>
+                          <p className="text-xs text-red-600 mt-1">Cancelled</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent Orders */}
+                  {selectedSeller.recentOrders && selectedSeller.recentOrders.length > 0 && (
+                    <Card className="bg-white/80 border border-gray-200">
+                      <CardHeader>
+                        <CardTitle className="text-lg font-bold text-black">Recent Orders</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          {selectedSeller.recentOrders.map((order: any) => (
+                            <div key={order.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                              <div className="flex-1">
+                                <p className="font-semibold text-black">Order #{order.orderNumber || order.id}</p>
+                                <p className="text-sm text-gray-600">{order.buyerName}</p>
+                                <p className="text-xs text-gray-500">{format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-black">KSh {order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                <div className="flex gap-2 mt-1">
+                                  <Badge className={
+                                    order.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                    order.status === 'PENDING' ? 'bg-orange-100 text-orange-800' :
+                                    order.status === 'READY_FOR_PICKUP' ? 'bg-blue-100 text-blue-800' :
+                                    'bg-red-100 text-red-800'
+                                  }>
+                                    {order.status}
+                                  </Badge>
+                                  <Badge className={
+                                    order.paymentStatus === 'completed' ? 'bg-green-100 text-green-800' :
+                                    'bg-gray-100 text-gray-600'
+                                  }>
+                                    {order.paymentStatus}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            {/* Footer */}
+            <div className="p-6 border-t border-gray-200/50 flex justify-end">
+              <Button 
+                onClick={closeSellerModal}
+                className="bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-black font-semibold px-6 py-2 rounded-2xl shadow-lg transition-all duration-200"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Modern Header */}
         <div className="mb-6 sm:mb-8">
@@ -1009,7 +1319,7 @@ const NewAdminDashboard = () => {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {statsCards.map((stat, index) => (
             <div key={index} className="w-full">
               <StatsCard {...stat} />
@@ -1056,6 +1366,12 @@ const NewAdminDashboard = () => {
                 className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
               >
                 Withdrawals
+              </TabsTrigger>
+              <TabsTrigger
+                value="refunds"
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-400 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
+              >
+                Refunds
               </TabsTrigger>
           </TabsList>
           </div>
@@ -1233,6 +1549,186 @@ const NewAdminDashboard = () => {
                       ) : (
                         <div className="flex items-center justify-center h-full">
                           <p className="text-gray-400">No metrics data available</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Financial Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                {/* Sales & Commission Chart */}
+                <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-black text-xl font-bold">Sales & Commission</CardTitle>
+                        <CardDescription className="text-gray-600 text-sm">Monthly sales and platform commission</CardDescription>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                          <span className="text-xs text-gray-600 font-medium">Sales</span>
+                        </div>
+                        <div className="flex items-center">
+                          <div className="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+                          <span className="text-xs text-gray-600 font-medium">Commission</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="h-[300px] w-full">
+                      {dashboardState.monthlyFinancialData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={dashboardState.monthlyFinancialData.map(d => ({
+                            name: new Date(d.month).toLocaleString('default', { month: 'short' }),
+                            fullDate: new Date(d.month).toLocaleString('default', { month: 'long', year: 'numeric' }),
+                            sales: d.sales,
+                            commission: d.commission
+                          }))}>
+                            <defs>
+                              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                              </linearGradient>
+                              <linearGradient id="colorCommission" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#eab308" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#eab308" stopOpacity={0.1}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                            <XAxis 
+                              dataKey="name" 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                              tickMargin={10}
+                            />
+                            <YAxis 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                              tickMargin={10}
+                              width={80}
+                              tickFormatter={(value) => `KSh ${(value / 1000).toFixed(0)}k`}
+                            />
+                            <Tooltip 
+                              contentStyle={{
+                                backgroundColor: '#1F2937',
+                                border: '1px solid #374151',
+                                borderRadius: '0.5rem',
+                                padding: '0.75rem',
+                              }}
+                              labelStyle={{ color: '#E5E7EB', fontWeight: '500' }}
+                              itemStyle={{ color: '#E5E7EB', padding: '4px 0' }}
+                              formatter={(value: number) => `KSh ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            />
+                            <Legend 
+                              wrapperStyle={{ paddingTop: '20px' }}
+                              iconType="line"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="sales" 
+                              stroke="#22c55e" 
+                              strokeWidth={3}
+                              dot={false}
+                              activeDot={{ r: 6, stroke: '#16a34a', strokeWidth: 2, fill: '#22c55e' }}
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="commission" 
+                              stroke="#eab308" 
+                              strokeWidth={3}
+                              dot={false}
+                              activeDot={{ r: 6, stroke: '#ca8a04', strokeWidth: 2, fill: '#eab308' }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-gray-400">No financial data available</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Refunds Chart */}
+                <Card className="bg-white/80 backdrop-blur-xl border border-white/20 rounded-3xl overflow-hidden shadow-xl">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-black text-xl font-bold">Monthly Refunds</CardTitle>
+                        <CardDescription className="text-gray-600 text-sm">Completed refund requests over time</CardDescription>
+                      </div>
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                        <span className="text-xs text-gray-600 font-medium">Refunds</span>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="h-[300px] w-full">
+                      {dashboardState.monthlyFinancialData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={dashboardState.monthlyFinancialData.map(d => ({
+                            name: new Date(d.month).toLocaleString('default', { month: 'short' }),
+                            fullDate: new Date(d.month).toLocaleString('default', { month: 'long', year: 'numeric' }),
+                            refunds: d.refunds
+                          }))}>
+                            <defs>
+                              <linearGradient id="colorRefunds" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#ef4444" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.1}/>
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                            <XAxis 
+                              dataKey="name" 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                              tickMargin={10}
+                            />
+                            <YAxis 
+                              axisLine={false} 
+                              tickLine={false} 
+                              tick={{ fill: '#9CA3AF', fontSize: 12 }}
+                              tickMargin={10}
+                              width={80}
+                              tickFormatter={(value) => `KSh ${(value / 1000).toFixed(0)}k`}
+                            />
+                            <Tooltip 
+                              contentStyle={{
+                                backgroundColor: '#1F2937',
+                                border: '1px solid #374151',
+                                borderRadius: '0.5rem',
+                                padding: '0.75rem',
+                              }}
+                              labelStyle={{ color: '#E5E7EB', fontWeight: '500' }}
+                              itemStyle={{ color: '#E5E7EB', padding: '4px 0' }}
+                              formatter={(value: number) => `KSh ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                            />
+                            <Legend 
+                              wrapperStyle={{ paddingTop: '20px' }}
+                              iconType="line"
+                            />
+                            <Line 
+                              type="monotone" 
+                              dataKey="refunds" 
+                              stroke="#ef4444" 
+                              strokeWidth={3}
+                              dot={false}
+                              activeDot={{ r: 6, stroke: '#dc2626', strokeWidth: 2, fill: '#ef4444' }}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <p className="text-gray-400">No refunds data available</p>
                         </div>
                       )}
                     </div>
@@ -1959,6 +2455,11 @@ const NewAdminDashboard = () => {
                 </div>
               </CardFooter>
             </Card>
+          </TabsContent>
+
+          {/* Refunds Tab */}
+          <TabsContent value="refunds" className="space-y-4 sm:space-y-6">
+            <RefundRequestsPage />
           </TabsContent>
         </Tabs>
       </div>

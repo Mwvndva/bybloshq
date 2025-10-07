@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import pesapalService from '../services/pesapal.service.js';
+import whatsappService from '../services/whatsapp.service.js';
 
 
 class PesapalController {
@@ -405,6 +406,9 @@ class PesapalController {
 
       await client.query('COMMIT');
       
+      // Note: WhatsApp notifications are sent AFTER payment is confirmed in the callback
+      // See callback() method for notification logic
+      
       res.json({
         success: true,
         data: {
@@ -537,6 +541,50 @@ class PesapalController {
       logger.info('Successfully updated order status');
       
       await client.query('COMMIT');
+      
+      // Send WhatsApp notifications ONLY if payment is successful
+      if (upperStatus === 'COMPLETED' || upperStatus === 'PAID') {
+        logger.info('Payment successful - sending WhatsApp notifications');
+        
+        // Fetch full order details for notifications
+        const fullOrderResult = await pool.query(
+          `SELECT po.*, b.full_name as buyer_name, b.phone as buyer_phone, b.email as buyer_email
+           FROM product_orders po
+           LEFT JOIN buyers b ON po.buyer_id = b.id
+           WHERE po.id = $1`,
+          [currentOrder.id]
+        );
+        
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+          
+          // Fetch order items
+          const itemsResult = await pool.query(
+            `SELECT oi.*, p.name as product_name, p.seller_id
+             FROM order_items oi
+             LEFT JOIN products p ON oi.product_id = p.id
+             WHERE oi.order_id = $1`,
+            [currentOrder.id]
+          );
+          
+          const items = itemsResult.rows;
+          const sellerId = items.length > 0 ? items[0].seller_id : null;
+          
+          // Prepare customer data
+          const customer = {
+            firstName: fullOrder.buyer_name?.split(' ')[0] || 'Customer',
+            lastName: fullOrder.buyer_name?.split(' ').slice(1).join(' ') || '',
+            phone: fullOrder.buyer_phone,
+            email: fullOrder.buyer_email,
+            countryCode: 'KE'
+          };
+          
+          // Send notifications (non-blocking)
+          this.sendOrderNotifications(fullOrder, items, customer, sellerId).catch(err => {
+            logger.error('Error sending WhatsApp notifications after payment:', err);
+          });
+        }
+      }
       
       // Determine the status parameter based on Pesapal status
       let statusParam = 'pending';
@@ -729,6 +777,96 @@ class PesapalController {
       });
     }
   };
+
+  /**
+   * Send WhatsApp notifications for new order
+   * @param {object} order - Order details
+   * @param {array} items - Order items
+   * @param {object} customer - Customer details
+   * @param {number} sellerId - Seller ID
+   */
+  async sendOrderNotifications(order, items, customer, sellerId) {
+    try {
+      // Fetch seller and buyer details
+      const sellerQuery = await pool.query(
+        'SELECT id, full_name, phone, email FROM sellers WHERE id = $1',
+        [sellerId]
+      );
+      
+      if (sellerQuery.rows.length === 0) {
+        logger.warn('Seller not found for order notifications');
+        return;
+      }
+      
+      const seller = sellerQuery.rows[0];
+      
+      // Prepare notification data
+      const notificationData = {
+        seller: {
+          name: seller.full_name,
+          phone: seller.phone,
+          email: seller.email
+        },
+        buyer: {
+          name: customer.firstName + ' ' + customer.lastName,
+          phone: customer.phone,
+          email: customer.email,
+          location: customer.countryCode || 'Kenya'
+        },
+        order: {
+          orderNumber: order.order_number,
+          totalAmount: parseFloat(order.total_amount),
+          status: order.status,
+          createdAt: order.created_at
+        },
+        items: items.map(item => ({
+          name: item.product_name || item.productName || 'Product',
+          quantity: parseInt(item.quantity) || 1,
+          price: parseFloat(item.product_price || item.price || 0)
+        }))
+      };
+      
+      // Send notifications to seller, buyer, and logistics partner
+      await Promise.all([
+        whatsappService.notifySellerNewOrder(notificationData),
+        whatsappService.notifyBuyerOrderConfirmation(notificationData),
+        whatsappService.sendLogisticsNotification(
+          {
+            id: order.id,
+            order_id: order.order_number,
+            total_amount: order.total_amount,
+            amount: order.total_amount,
+            items: items.map(item => ({
+              name: item.product_name || item.productName || 'Product',
+              product_name: item.product_name || item.productName || 'Product',
+              quantity: parseInt(item.quantity) || 1,
+              price: parseFloat(item.product_price || item.price || 0),
+              product_price: parseFloat(item.product_price || item.price || 0)
+            }))
+          },
+          {
+            fullName: customer.firstName + ' ' + customer.lastName,
+            full_name: customer.firstName + ' ' + customer.lastName,
+            phone: customer.phone,
+            email: customer.email,
+            city: customer.countryCode || 'Kenya',
+            location: customer.location || ''
+          },
+          {
+            ...seller,
+            shop_name: seller.business_name || seller.full_name,
+            businessName: seller.business_name || seller.full_name
+          }
+        )
+      ]);
+      
+      logger.info(`WhatsApp notifications sent for order ${order.order_number} (buyer, seller, and logistics)`);
+      
+    } catch (error) {
+      logger.error('Error in sendOrderNotifications:', error);
+      // Don't throw - notifications are not critical
+    }
+  }
 }
 
 export default new PesapalController();
