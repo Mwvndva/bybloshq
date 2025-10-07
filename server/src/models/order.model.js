@@ -107,7 +107,7 @@ class Order {
           
           return [
             order.id,
-            item.productId,
+            parseInt(item.productId, 10), // Ensure productId is an integer
             item.name || `Product ${item.productId}`,
             parseFloat(item.price).toFixed(2),
             parseInt(item.quantity, 10),
