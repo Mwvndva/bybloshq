@@ -549,12 +549,19 @@ class PesapalController {
         logger.info('Payment successful - sending WhatsApp notifications');
         
         // Fetch full order details for notifications
+        // Ensure order ID is an integer
+        const orderId = parseInt(currentOrder.id, 10);
+        if (isNaN(orderId)) {
+          logger.error('Invalid order ID for notifications:', currentOrder.id);
+          return;
+        }
+        
         const fullOrderResult = await pool.query(
           `SELECT po.*, b.full_name as buyer_name, b.phone as buyer_phone, b.email as buyer_email
            FROM product_orders po
            LEFT JOIN buyers b ON po.buyer_id = b.id
            WHERE po.id = $1`,
-          [currentOrder.id]
+          [orderId]
         );
         
         if (fullOrderResult.rows.length > 0) {
@@ -566,7 +573,7 @@ class PesapalController {
              FROM order_items oi
              LEFT JOIN products p ON oi.product_id = p.id
              WHERE oi.order_id = $1`,
-            [currentOrder.id]
+            [orderId]
           );
           
           const items = itemsResult.rows;
