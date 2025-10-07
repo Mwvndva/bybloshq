@@ -72,9 +72,21 @@ class WhatsAppService {
 
       // QR Code event
       this.client.on('qr', (qr) => {
-        console.log('📱 QR Code received. Scan with WhatsApp:');
-        qrcode.generate(qr, { small: true });
+        console.log('📱 QR Code received!');
+        console.log('QR Code length:', qr.length);
+        console.log('QR Code (first 50 chars):', qr.substring(0, 50) + '...');
+        console.log('🌐 Access QR code at: /api/whatsapp/qr');
+        console.log('📷 Or visit: https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qr));
+        
+        // Generate QR in terminal (if not in production)
+        try {
+          qrcode.generate(qr, { small: true });
+        } catch (err) {
+          console.log('⚠️ Could not generate QR in terminal:', err.message);
+        }
+        
         this.qrCode = qr;
+        console.log('✅ QR Code stored and ready for retrieval');
       });
 
       // Ready event
