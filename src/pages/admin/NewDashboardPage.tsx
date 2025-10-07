@@ -1612,7 +1612,15 @@ const NewAdminDashboard = () => {
                               tick={{ fill: '#9CA3AF', fontSize: 12 }}
                               tickMargin={10}
                               width={80}
-                              tickFormatter={(value) => `KSh ${(value / 1000).toFixed(0)}k`}
+                              tickFormatter={(value) => {
+                                if (value >= 1000000) {
+                                  return `KSh ${(value / 1000000).toFixed(1)}M`;
+                                } else if (value >= 1000) {
+                                  return `KSh ${(value / 1000).toFixed(0)}k`;
+                                } else {
+                                  return `KSh ${value.toLocaleString()}`;
+                                }
+                              }}
                             />
                             <Tooltip 
                               contentStyle={{
@@ -1699,7 +1707,15 @@ const NewAdminDashboard = () => {
                               tick={{ fill: '#9CA3AF', fontSize: 12 }}
                               tickMargin={10}
                               width={80}
-                              tickFormatter={(value) => `KSh ${(value / 1000).toFixed(0)}k`}
+                              tickFormatter={(value) => {
+                                if (value >= 1000000) {
+                                  return `KSh ${(value / 1000000).toFixed(1)}M`;
+                                } else if (value >= 1000) {
+                                  return `KSh ${(value / 1000).toFixed(0)}k`;
+                                } else {
+                                  return `KSh ${value.toLocaleString()}`;
+                                }
+                              }}
                             />
                             <Tooltip 
                               contentStyle={{
