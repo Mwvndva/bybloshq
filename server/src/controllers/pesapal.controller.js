@@ -464,9 +464,11 @@ class PesapalController {
       await client.query('BEGIN');
       
       // First, get the current order to check its status
+      // Ensure OrderMerchantReference is treated as a string
+      const orderNumber = String(OrderMerchantReference);
       const orderResult = await client.query(
         'SELECT id, status, payment_status FROM product_orders WHERE order_number = $1 FOR UPDATE',
-        [OrderMerchantReference]
+        [orderNumber]
       );
       
       if (orderResult.rows.length === 0) {
@@ -634,9 +636,11 @@ class PesapalController {
       await client.query('BEGIN');
       
       // Get the order first to check current status
+      // Ensure OrderMerchantReference is treated as a string
+      const orderNumber = String(OrderMerchantReference);
       const orderResult = await client.query(
-        'SELECT * FROM product_orders WHERE merchant_reference = $1 FOR UPDATE',
-        [OrderMerchantReference]
+        'SELECT * FROM product_orders WHERE order_number = $1 FOR UPDATE',
+        [orderNumber]
       );
       
       if (orderResult.rows.length === 0) {
@@ -667,9 +671,9 @@ class PesapalController {
              status_updated_at = NOW(),
              status_updated_by = 'system',
              payment_date = CASE WHEN $1 IN ('COMPLETED', 'PAID') THEN NOW() ELSE payment_date END
-         WHERE merchant_reference = $3
+         WHERE order_number = $3
          RETURNING *`,
-        [upperStatus, OrderTrackingId, OrderMerchantReference]
+        [upperStatus, OrderTrackingId, orderNumber]
       );
       const updatedOrder = updatedOrderResult.rows[0];
       
