@@ -39,7 +39,7 @@ interface StatsCardProps {
   value: string | number;
   icon: React.ReactNode;
   description: string;
-  trend: number;
+  trend: number | null;
 }
 
 interface MonthlyEventData {
@@ -158,7 +158,7 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 // StatsCard Component
 const StatsCard = React.memo(({ title, value, icon, description, trend }: StatsCardProps) => {
-  const isPositive = trend >= 0;
+  const isPositive = trend !== null && trend >= 0;
   const trendColor = isPositive ? 'text-green-600' : 'text-red-600';
   const trendIcon = isPositive ? '↗' : '↘';
 
@@ -175,12 +175,18 @@ const StatsCard = React.memo(({ title, value, icon, description, trend }: StatsC
       </CardHeader>
       <CardContent className="relative">
         <div className="text-3xl font-black text-black mb-2">{value}</div>
-        <p className="text-xs text-gray-600">
-          <span className={`${trendColor} font-semibold`}>
-            {trendIcon} {Math.abs(trend)}%
-          </span>{' '}
-          <span className="text-gray-500">vs last month</span>
-        </p>
+        {trend !== null ? (
+          <p className="text-xs text-gray-600">
+            <span className={`${trendColor} font-semibold`}>
+              {trendIcon} {Math.abs(trend)}%
+            </span>{' '}
+            <span className="text-gray-500">vs last month</span>
+          </p>
+        ) : (
+          <p className="text-xs text-gray-500">
+            {description}
+          </p>
+        )}
       </CardContent>
     </Card>
   );
@@ -397,6 +403,11 @@ const NewAdminDashboard = () => {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
+  // Helper function to determine if trend should be shown
+  const shouldShowTrend = (trend: number) => {
+    return trend !== 0 || dashboardState.analytics.monthlyGrowth?.revenue !== 0;
+  };
+
   // Stats cards data with proper type safety
   const statsCards: StatsCardProps[] = [
     {
@@ -404,56 +415,70 @@ const NewAdminDashboard = () => {
       value: dashboardState.analytics.totalEvents.toLocaleString(),
       icon: <Calendar className="h-4 w-4 text-blue-500" />,
       description: 'Active events',
-      trend: dashboardState.analytics.monthlyGrowth?.events ?? 0
+      trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.events ?? 0) 
+        ? dashboardState.analytics.monthlyGrowth?.events ?? 0 
+        : null
     },
     {
       title: 'Total Organizers',
       value: dashboardState.analytics.totalOrganizers.toLocaleString(),
       icon: <Users className="h-4 w-4 text-green-500" />,
       description: 'Registered organizers',
-      trend: dashboardState.analytics.monthlyGrowth?.organizers ?? 0
+      trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.organizers ?? 0)
+        ? dashboardState.analytics.monthlyGrowth?.organizers ?? 0
+        : null
     },
     {
       title: 'Total Products',
       value: dashboardState.analytics.totalProducts.toLocaleString(),
       icon: <Package className="h-4 w-4 text-orange-500" />,
       description: 'Available products',
-      trend: dashboardState.analytics.monthlyGrowth?.products ?? 0
+      trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.products ?? 0)
+        ? dashboardState.analytics.monthlyGrowth?.products ?? 0
+        : null
     },
     {
       title: 'Total Sellers',
       value: dashboardState.analytics.totalSellers?.toLocaleString() || '0',
       icon: <ShoppingCart className="h-4 w-4 text-purple-500" />,
       description: 'Active sellers',
-      trend: dashboardState.analytics.monthlyGrowth?.sellers ?? 0
+      trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.sellers ?? 0)
+        ? dashboardState.analytics.monthlyGrowth?.sellers ?? 0
+        : null
     },
     {
       title: 'Total Buyers',
       value: dashboardState.analytics.totalBuyers?.toLocaleString() || '0',
       icon: <UserCircle className="h-4 w-4 text-cyan-500" />,
       description: 'Registered buyers',
-      trend: dashboardState.analytics.monthlyGrowth?.buyers ?? 0
+      trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.buyers ?? 0)
+        ? dashboardState.analytics.monthlyGrowth?.buyers ?? 0
+        : null
     },
     {
       title: 'Total Sales',
       value: `KSh ${dashboardState.financialMetrics.totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-green-600" />,
       description: `${dashboardState.financialMetrics.totalOrders} orders`,
-      trend: 0
+      trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.revenue ?? 0)
+        ? dashboardState.analytics.monthlyGrowth?.revenue ?? 0
+        : null
     },
     {
       title: 'Total Commission',
       value: `KSh ${dashboardState.financialMetrics.totalCommission.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-yellow-600" />,
       description: 'Platform earnings',
-      trend: 0
+      trend: shouldShowTrend(dashboardState.analytics.monthlyGrowth?.revenue ?? 0)
+        ? dashboardState.analytics.monthlyGrowth?.revenue ?? 0
+        : null
     },
     {
       title: 'Total Refunds',
       value: `KSh ${dashboardState.financialMetrics.totalRefunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-red-600" />,
       description: `${dashboardState.financialMetrics.totalRefundRequests} completed`,
-      trend: 0
+      trend: null // Refunds don't have growth tracking
     },
   ];
 
