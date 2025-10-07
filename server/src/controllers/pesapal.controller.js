@@ -609,7 +609,7 @@ class PesapalController {
           const itemsResult = await pool.query(
             `SELECT oi.*, p.name as product_name, p.seller_id
              FROM order_items oi
-             LEFT JOIN products p ON oi.product_id = p.id
+             LEFT JOIN products p ON oi.product_id::integer = p.id
              WHERE oi.order_id = $1`,
             [orderId]
           );

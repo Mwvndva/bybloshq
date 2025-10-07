@@ -181,7 +181,7 @@ const getUserOrders = async (req, res) => {
                '[]'::json
              ) as items
       FROM product_orders o
-      LEFT JOIN order_items oi ON o.id::text = oi.order_id::text
+      LEFT JOIN order_items oi ON o.id = oi.order_id
       WHERE o.buyer_id = $1::integer
     `;
     
@@ -366,8 +366,8 @@ const getSellerOrders = async (req, res) => {
               )
             )
             FROM order_items oi
-            LEFT JOIN products p ON oi.product_id::text = p.id::text
-            WHERE oi.order_id::text = o.id::text
+            LEFT JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = o.id
           ) as items,
           (
             SELECT json_build_object(
@@ -379,7 +379,7 @@ const getSellerOrders = async (req, res) => {
               'location', b.location
             )
             FROM buyers b
-            WHERE b.id::text = o.buyer_id::text
+            WHERE b.id = o.buyer_id
           ) as customer
         FROM product_orders o
         WHERE o.seller_id = $1::integer
