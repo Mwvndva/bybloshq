@@ -47,7 +47,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isPhoneCheckModalOpen, setIsPhoneCheckModalOpen] = useState(false);
   const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
   const [currentPhone, setCurrentPhone] = useState('');
-
+  
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
@@ -107,8 +107,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open image dialog if clicking on interactive elements
     const target = e.target as HTMLElement;
-    const isInteractiveElement =
-      target.closest('button') ||
+    const isInteractiveElement = 
+      target.closest('button') || 
       target.closest('a') ||
       target.closest('[role="button"]') ||
       target.closest('input') ||
@@ -116,7 +116,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       target.closest('select') ||
       target.closest('[contenteditable="true"]') ||
       target.closest('[tabindex]');
-
+    
     if (!isInteractiveElement) {
       setIsImageDialogOpen(true);
     }
@@ -142,7 +142,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     e?.preventDefault?.();
     e?.stopPropagation?.();
     e?.nativeEvent?.stopImmediatePropagation?.();
-
+    
     // Check if user is authenticated with complete information
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
       // User has complete information, proceed directly with payment
@@ -204,7 +204,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const handleBuyerInfoSubmit = async (buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string }) => {
     setIsProcessingPurchase(true);
-
+    
     try {
       console.debug('Buyer Info:', buyerInfo);
 
@@ -246,7 +246,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       // 2. Prepare payment payload
       const [firstName = 'Customer', ...lastNameParts] = buyerInfo.fullName.split(' ') || [];
       const lastName = lastNameParts.join(' ') || 'User';
-
+      
       const payload = {
         amount: product.price,
         description: `Purchase of ${product.name}`,
@@ -280,15 +280,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           lastName: lastName,
         }
       };
-
+      
       console.debug('Checkout Request:', { payload });
-
+      
       // 3. Get authentication token (might be from new buyer or existing)
       const token = localStorage.getItem('buyer_token');
       if (!token && buyerToken) {
         localStorage.setItem('buyer_token', buyerToken);
       }
-
+      
       // 4. Call checkout API
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
       const response = await fetch(`${apiUrl}/api/pesapal/checkout`, {
@@ -299,28 +299,28 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         },
         body: JSON.stringify(payload),
       });
-
+      
       // 5. Handle API response
       const responseData = await response.json().catch(() => ({}));
-
+      
       if (!response.ok) {
         const errorMessage = responseData.message || 'Failed to initiate payment';
         console.error('Checkout API Error:', { status: response.status, responseData });
         throw new Error(errorMessage);
       }
-
+      
       // Extract redirect URL from the nested data object
       const redirectUrl = responseData.data?.redirect_url;
-
+      
       if (!redirectUrl) {
         console.error('Invalid response format from payment gateway:', responseData);
         throw new Error('Invalid response from payment gateway');
       }
-
+      
       // 6. Redirect to payment page
       console.debug('Redirecting to payment gateway:', redirectUrl);
       window.location.href = redirectUrl;
-
+      
     } catch (error) {
       console.error('Checkout error:', error);
       toast({

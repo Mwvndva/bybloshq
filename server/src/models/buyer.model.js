@@ -62,10 +62,54 @@ class Buyer {
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
-  // Find buyer by phone number
+  // Find buyer by phone number (checks multiple formats)
   static async findByPhone(phone) {
-    const query = 'SELECT * FROM buyers WHERE phone = $1';
-    const result = await pool.query(query, [phone]);
+    if (!phone) return null;
+    
+    // Generate all possible phone formats to check
+    let normalized = phone.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
+    
+    // Create variations to search for
+    const phoneVariations = [];
+    
+    // Add the phone as-is
+    phoneVariations.push(normalized);
+    
+    // If starts with +254, add variations
+    if (normalized.startsWith('+254')) {
+      phoneVariations.push(normalized.substring(1)); // Remove +
+      phoneVariations.push('0' + normalized.substring(4)); // +254712... -> 0712...
+    }
+    // If starts with 254 (no +)
+    else if (normalized.startsWith('254')) {
+      phoneVariations.push('+' + normalized); // Add +
+      phoneVariations.push('0' + normalized.substring(3)); // 254712... -> 0712...
+    }
+    // If starts with 0
+    else if (normalized.startsWith('0')) {
+      phoneVariations.push('+254' + normalized.substring(1)); // 0712... -> +254712...
+      phoneVariations.push('254' + normalized.substring(1)); // 0712... -> 254712...
+    }
+    // If just the number (e.g., 712345678)
+    else {
+      phoneVariations.push('0' + normalized); // 712... -> 0712...
+      phoneVariations.push('+254' + normalized); // 712... -> +254712...
+      phoneVariations.push('254' + normalized); // 712... -> 254712...
+    }
+    
+    // Remove duplicates
+    const uniqueVariations = [...new Set(phoneVariations)];
+    
+    console.log('Searching for phone variations:', uniqueVariations);
+    
+    // Search for any of these variations
+    const query = `SELECT * FROM buyers WHERE phone = ANY($1)`;
+    const result = await pool.query(query, [uniqueVariations]);
+    
+    if (result.rows.length > 0) {
+      console.log('Found buyer with phone:', result.rows[0].phone);
+    }
+    
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
