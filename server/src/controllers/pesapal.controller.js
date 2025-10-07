@@ -264,9 +264,14 @@ class PesapalController {
           // Log the raw item data for debugging
           logger.info('Raw item data:', JSON.stringify(item, null, 2));
           
-          // Ensure we have a valid product ID
+          // Ensure we have a valid product ID and convert to integer
           if (!productId) {
             throw new Error('Product ID is required for all order items');
+          }
+          
+          const productIdInt = parseInt(productId, 10);
+          if (isNaN(productIdInt)) {
+            throw new Error(`Invalid product ID: ${productId}`);
           }
           
           // Fetch product details from database if price is not provided
@@ -284,16 +289,16 @@ class PesapalController {
             // Fetch price from database if not provided
             try {
               const productQuery = 'SELECT price FROM products WHERE id = $1';
-              const productResult = await client.query(productQuery, [productId]);
+              const productResult = await client.query(productQuery, [productIdInt]);
               
               if (productResult.rows.length > 0) {
                 price = parseFloat(productResult.rows[0].price) || 0;
-                logger.info(`Fetched price ${price} from database for product ${productId}`);
+                logger.info(`Fetched price ${price} from database for product ${productIdInt}`);
               } else {
-                logger.warn(`Product ${productId} not found in database`);
+                logger.warn(`Product ${productIdInt} not found in database`);
               }
             } catch (dbError) {
-              logger.error(`Error fetching price for product ${productId}:`, dbError);
+              logger.error(`Error fetching price for product ${productIdInt}:`, dbError);
               // Continue with price as 0, will be caught by validation
             }
           }
@@ -314,7 +319,7 @@ class PesapalController {
           // Log the final values being inserted
           logger.info('Inserting order item with values:', {
             order_id: order.id,
-            product_id: productId,
+            product_id: productIdInt,
             product_name: productName,
             price: price,
             quantity: quantity,
@@ -322,7 +327,7 @@ class PesapalController {
           });
 
           // Log the parsed values for debugging
-          logger.info(`Parsed values for product ${productId}:`, {
+          logger.info(`Parsed values for product ${productIdInt}:`, {
             originalPrice: item.price,
             parsedPrice: price,
             originalQuantity: item.quantity,
@@ -331,11 +336,11 @@ class PesapalController {
           
           // Validate price and quantity after parsing
           if (price <= 0) {
-            throw new Error(`Invalid price (${price}) for product ${productId}. Please ensure the product has a valid price.`);
+            throw new Error(`Invalid price (${price}) for product ${productIdInt}. Please ensure the product has a valid price.`);
           }
           
           if (quantity <= 0) {
-            throw new Error(`Invalid quantity (${quantity}) for product ${productId}. Quantity must be at least 1.`);
+            throw new Error(`Invalid quantity (${quantity}) for product ${productIdInt}. Quantity must be at least 1.`);
           }
 
           // Insert order item with explicit column types
@@ -356,7 +361,7 @@ class PesapalController {
           
           const insertValues = [
             order.id,                     // order_id
-            productId,                   // product_id
+            productIdInt,                 // product_id (now properly typed as integer)
             productName,                 // product_name
             price.toFixed(2),            // product_price (as string to ensure proper numeric conversion)
             quantity,                    // quantity
@@ -370,7 +375,7 @@ class PesapalController {
           ];
           
           logger.info('Executing order item insert with values:', JSON.stringify(insertValues, null, 2));
-          logger.info(`Attempting to insert order_item with order_id: ${order.id} (type: ${typeof order.id}) for product_id: ${productId}`);
+          logger.info(`Attempting to insert order_item with order_id: ${order.id} (type: ${typeof order.id}) for product_id: ${productIdInt} (type: ${typeof productIdInt})`);
           
           const result = await client.query(insertQuery, insertValues);
           
@@ -578,6 +583,9 @@ class PesapalController {
           const fullOrder = fullOrderResult.rows[0];
           
           // Fetch order items
+          logger.info(`Fetching order items for order ID: ${orderId} (type: ${typeof orderId})`);
+          logger.info(`Full order product_id type check: buyer_id=${fullOrder.buyer_id} (${typeof fullOrder.buyer_id})`);
+          
           const itemsResult = await pool.query(
             `SELECT oi.*, p.name as product_name, p.seller_id
              FROM order_items oi
@@ -586,6 +594,7 @@ class PesapalController {
             [orderId]
           );
           
+          logger.info(`Fetched ${itemsResult.rows.length} order item(s)`);
           const items = itemsResult.rows;
           const sellerId = items.length > 0 ? items[0].seller_id : null;
           
