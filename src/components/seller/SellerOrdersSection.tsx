@@ -206,19 +206,36 @@ export default function SellerOrdersSection() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 sm:space-y-6">
         {[1, 2].map((i) => (
-          <Card key={i} className="p-4">
-            <div className="flex justify-between items-start">
-              <div>
-                <Skeleton className="h-5 w-32 mb-2" />
-                <Skeleton className="h-4 w-24" />
+          <Card key={i} className="p-4 sm:p-6">
+            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
+              <div className="space-y-3 sm:space-y-4 flex-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <Skeleton className="h-5 sm:h-6 w-32 sm:w-40 mb-2" />
+                    <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
+                  </div>
+                  <Skeleton className="h-6 w-20 sm:w-24 self-start sm:self-auto" />
+                </div>
+                <div>
+                  <Skeleton className="h-4 sm:h-5 w-16 sm:w-20 mb-2" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-8 sm:h-10 w-full rounded-lg" />
+                    <Skeleton className="h-8 sm:h-10 w-3/4 rounded-lg" />
+                  </div>
+                </div>
               </div>
-              <Skeleton className="h-9 w-28" />
-            </div>
-            <div className="mt-4 space-y-2">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-3/4" />
+              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
+                <div className="flex-1 sm:flex-none">
+                  <Skeleton className="h-6 sm:h-7 w-24 sm:w-32 mb-1" />
+                  <Skeleton className="h-3 w-16 sm:w-20" />
+                </div>
+                <div className="w-full sm:w-auto lg:w-full space-y-2">
+                  <Skeleton className="h-8 sm:h-9 w-full rounded-md" />
+                  <Skeleton className="h-8 sm:h-9 w-full rounded-md" />
+                </div>
+              </div>
             </div>
           </Card>
         ))}
@@ -228,119 +245,136 @@ export default function SellerOrdersSection() {
 
   if (orders.length === 0) {
     return (
-      <div className="text-center py-12">
-        <Package className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-1">No orders yet</h3>
-        <p className="text-gray-500">Your orders will appear here when customers purchase your products.</p>
+      <div className="text-center py-8 sm:py-12 px-4">
+        <Package className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-gray-400 mb-3 sm:mb-4" />
+        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">No orders yet</h3>
+        <p className="text-sm sm:text-base text-gray-500 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 sm:space-y-6">
       {orders.map((order) => (
-        <Card key={order.id} className="p-4">
-          <div className="flex justify-between items-start">
-            <div className="space-y-3">
+        <Card key={order.id} className="p-4 sm:p-6">
+          {/* Mobile-first responsive layout */}
+          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
+            {/* Order Information Section */}
+            <div className="space-y-3 sm:space-y-4 flex-1">
+              {/* Order Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <h3 className="font-medium">Order #{order.orderNumber}</h3>
-                <p className="text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+                  <h3 className="font-semibold text-base sm:text-lg text-gray-900">Order #{order.orderNumber}</h3>
+                  <p className="text-xs sm:text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+                </div>
+                {/* Status Badge - positioned for mobile */}
+                <div className="self-start sm:self-auto">
+                  {order.status === 'COMPLETED' ? (
+                    <Badge className="bg-green-100 text-green-800 text-xs sm:text-sm">
+                      <CheckCircle className="h-3 w-3 mr-1" /> Completed
+                    </Badge>
+                  ) : order.status === 'READY_FOR_PICKUP' ? (
+                    <Badge className="bg-blue-100 text-blue-800 text-xs sm:text-sm">
+                      <Truck className="h-3 w-3 mr-1" /> Ready for Pickup
+                    </Badge>
+                  ) : order.status === 'FAILED' ? (
+                    <Badge className="bg-red-100 text-red-800 text-xs sm:text-sm">
+                      <XCircle className="h-3 w-3 mr-1" /> Failed
+                    </Badge>
+                  ) : order.status === 'CANCELLED' ? (
+                    <Badge className="bg-red-100 text-red-800 text-xs sm:text-sm">
+                      <XCircle className="h-3 w-3 mr-1" /> Cancelled
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm">
+                      <Clock className="h-3 w-3 mr-1" /> Pending
+                    </Badge>
+                  )}
+                </div>
               </div>
               
+              {/* Products Section */}
               <div>
-                <h4 className="text-sm font-medium text-gray-900">Products:</h4>
-                <ul className="mt-1 space-y-1">
+                <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Products:</h4>
+                <ul className="space-y-1 sm:space-y-2">
                   {order.items && order.items.length > 0 ? (
                     order.items.map((item) => (
-                      <li key={item.id} className="text-sm text-gray-700">
-                        {item.name} × {item.quantity}
+                      <li key={item.id} className="text-xs sm:text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
+                        <span className="font-medium">{item.name}</span>
+                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
                       </li>
                     ))
                   ) : (
-                    <li className="text-sm text-gray-500">No items in this order</li>
+                    <li className="text-xs sm:text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2">No items in this order</li>
                   )}
                 </ul>
               </div>
-              
-              <div className="mt-2">
-                {order.status === 'COMPLETED' ? (
-                  <Badge className="bg-green-100 text-green-800">
-                    <CheckCircle className="h-3 w-3 mr-1" /> Completed
-                  </Badge>
-                ) : order.status === 'READY_FOR_PICKUP' ? (
-                  <Badge className="bg-blue-100 text-blue-800">
-                    <Truck className="h-3 w-3 mr-1" /> Ready for Pickup
-                  </Badge>
-                ) : order.status === 'FAILED' ? (
-                  <Badge className="bg-red-100 text-red-800">
-                    <XCircle className="h-3 w-3 mr-1" /> Failed
-                  </Badge>
-                ) : order.status === 'CANCELLED' ? (
-                  <Badge className="bg-red-100 text-red-800">
-                    <XCircle className="h-3 w-3 mr-1" /> Cancelled
-                  </Badge>
-                ) : (
-                  <Badge className="bg-yellow-100 text-yellow-800">
-                    <Clock className="h-3 w-3 mr-1" /> Pending
-                  </Badge>
-                )}
-              </div>
             </div>
             
-            <div className="flex flex-col items-end space-y-2 min-w-[180px] pl-4">
-              <p className="font-medium text-lg">
+            {/* Price and Actions Section */}
+            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
+              {/* Total Amount */}
+              <div className="flex-1 sm:flex-none">
+                <p className="font-bold text-lg sm:text-xl text-gray-900">
                 {formatCurrency(order.totalAmount, order.currency)}
               </p>
+                <p className="text-xs text-gray-500">Total Amount</p>
+              </div>
               
+              {/* Action Buttons */}
+              <div className="w-full sm:w-auto lg:w-full">
               {order.status === 'PENDING' && (
-                <div className="w-full space-y-2 mt-2">
+                  <div className="space-y-2">
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="w-full justify-start bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 text-xs sm:text-sm"
                     onClick={() => markAsReadyForPickup(order.id)}
                     disabled={isUpdating}
                   >
-                    <Truck className="h-4 w-4 mr-2" />
-                    Mark as Ready for Pickup
+                      <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      <span className="hidden sm:inline">Mark as Ready for Pickup</span>
+                      <span className="sm:hidden">Ready for Pickup</span>
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="w-full justify-start text-red-600 hover:bg-red-50 border-red-200"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
                     onClick={() => cancelOrder(order.id)}
                     disabled={isUpdating}
                   >
-                    <Package className="h-4 w-4 mr-2" />
+                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     Cancel Order
                   </Button>
                 </div>
               )}
               {order.status === 'READY_FOR_PICKUP' && 
                (order.paymentStatus?.toLowerCase() === 'completed') && (
-                <div className="w-full space-y-2 mt-2">
+                  <div className="space-y-2">
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="w-full justify-start bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-green-50 hover:bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm"
                     onClick={() => markAsDelivered(order.id)}
                     disabled={isUpdating}
                   >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Mark as Delivered
+                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      <span className="hidden sm:inline">Mark as Delivered</span>
+                      <span className="sm:hidden">Mark Delivered</span>
                   </Button>
                   <Button 
                     size="sm" 
                     variant="outline"
-                    className="w-full justify-start text-red-600 hover:bg-red-50 border-red-200"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
                     onClick={() => cancelOrder(order.id)}
                     disabled={isUpdating}
                   >
-                    <Package className="h-4 w-4 mr-2" />
+                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                     Cancel Order
                   </Button>
                 </div>
               )}
+              </div>
             </div>
           </div>
         </Card>
