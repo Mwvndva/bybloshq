@@ -287,14 +287,6 @@ export default function WishlistSection() {
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between text-sm sm:text-base">
               <span className="truncate pr-2">{selectedProduct?.name}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsImageDialogOpen(false)}
-                className="h-8 w-8 p-0 flex-shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </DialogTitle>
           </DialogHeader>
           <div className="flex justify-center">
