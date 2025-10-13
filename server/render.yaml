@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: byblos-atelier-api
+    env: node
+    buildCommand: npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        fromDatabase:
+          name: byblos
+          property: hostname
+      - key: DB_PORT
+        fromDatabase:
+          name: byblos
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: byblos
+          property: database
+      - key: DB_USER
+        fromDatabase:
+          name: byblos
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: byblos
+          property: password
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+    plan: free
