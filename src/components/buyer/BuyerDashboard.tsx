@@ -31,22 +31,29 @@ import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
 import RefundCard from './RefundCard';
 
+// Local helper for localized integers
+const formatNumber = (value: number | null | undefined) => {
+  const num = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return num.toLocaleString();
+};
+
 const StatsCard = ({ icon: Icon, title, value, subtitle }: {
   icon: any;
   title: string;
   value: string | number;
   subtitle: string;
 }) => (
-  <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-    <CardContent className="p-4 sm:p-6 lg:p-8">
-      <div className="flex items-center justify-between">
-        <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
-          <p className="text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wide truncate">{title}</p>
-          <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-black">{value}</p>
-          <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">{subtitle}</p>
+  <Card className="relative overflow-hidden border-0 shadow hover:shadow-lg transition-all duration-300 rounded-2xl">
+    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/10 via-transparent to-yellow-600/10" />
+    <CardContent className="relative p-3 sm:p-4 md:p-5">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wide truncate">{title}</p>
+          <p className="text-xl sm:text-2xl md:text-3xl font-black text-black leading-tight">{value}</p>
+          <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium truncate">{subtitle}</p>
         </div>
-        <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-          <Icon className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
+        <div className="shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-500 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 grid place-items-center shadow">
+          <Icon className="text-white h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
         </div>
       </div>
     </CardContent>
@@ -128,9 +135,9 @@ function BuyerDashboardInner() {
   const stats = [
     {
       icon: Heart,
-      title: 'Wishlist Items',
-      value: wishlist.length,
-      subtitle: 'Items saved'
+      title: 'Wishlist',
+      value: formatNumber(wishlist.length),
+      subtitle: 'Saved'
     }
   ];
 

@@ -93,15 +93,13 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
             <div className="flex items-center justify-between">
               <div className="space-y-1 sm:space-y-2 min-w-0 flex-1">
                 <p className="text-xs sm:text-sm font-semibold text-gray-700 uppercase tracking-wide truncate">
-                  Available Refunds
+                  Refunds
                 </p>
                 <p className="text-2xl sm:text-3xl lg:text-4xl font-black text-green-600">
                   {formatCurrency(refundAmount)}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">
-                  {refundAmount > 0 
-                    ? 'From cancelled orders' 
-                    : 'No refunds available'}
+                  {refundAmount > 0 ? 'Available' : 'None'}
                 </p>
               </div>
               <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
@@ -114,7 +112,7 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <div className="flex items-center gap-2 mb-2">
                   <Clock className="h-4 w-4 text-yellow-600" />
-                  <span className="text-sm font-semibold text-yellow-800">Pending Withdrawal Request</span>
+                  <span className="text-sm font-semibold text-yellow-800">Pending</span>
                 </div>
                 {pendingRequests.map((request) => (
                   <div key={request.id} className="text-xs text-gray-700 space-y-1">
@@ -127,7 +125,7 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
                     </p>
                     <Badge className="bg-yellow-100 text-yellow-800 mt-2">
                       <Clock className="h-3 w-3 mr-1" />
-                      Awaiting Admin Approval
+                      Awaiting Approval
                     </Badge>
                   </div>
                 ))}
