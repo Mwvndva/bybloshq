@@ -352,7 +352,7 @@ export default function SellerOrdersSection() {
                     size="sm" 
                     variant="outline"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
-                    onClick={() => cancelOrder(order.id)}
+                    onClick={() => handleCancelClick(order.id)}
                     disabled={isUpdating}
                   >
                       <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -378,7 +378,7 @@ export default function SellerOrdersSection() {
                     size="sm" 
                     variant="outline"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
-                    onClick={() => cancelOrder(order.id)}
+                    onClick={() => handleCancelClick(order.id)}
                     disabled={isUpdating}
                   >
                       <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
