@@ -41,6 +41,12 @@ import SellerOrdersSection from './SellerOrdersSection';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
+// Local helpers for consistent formatting within this component
+const formatNumber = (value: number | null | undefined) => {
+  const num = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return num.toLocaleString();
+};
+
 interface SellerProfile {
   fullName?: string;
   shopName?: string;
@@ -132,17 +138,17 @@ const StatsCard: React.FC<StatsCardProps> = ({
   className = ''
 }) => (
   <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md transition-all duration-300 h-full">
-    <CardContent className="p-3 sm:p-4">
-      <div className="flex items-center justify-between gap-2">
+    <CardContent className="p-2 sm:p-3 md:p-4">
+      <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className={`space-y-0.5 flex-1 min-w-0 ${className}`}>
-          <p className="text-[9px] xs:text-[10px] font-medium text-gray-500 uppercase tracking-wide truncate">{title}</p>
-          <p className={`text-xl xs:text-2xl font-bold ${textColor} break-words leading-tight`}>
+          <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wide truncate">{title}</p>
+          <p className={`text-lg sm:text-2xl md:text-4xl font-bold ${textColor} break-words leading-tight`}>
             {value}
           </p>
-          <p className="text-[10px] xs:text-xs text-gray-500 font-medium truncate">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs md:text-base text-gray-500 font-medium truncate">{subtitle}</p>
         </div>
-        <div className={`w-10 h-10 sm:w-12 sm:h-12 ${bgColor} rounded-xl flex-shrink-0 flex items-center justify-center shadow`}>
-          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
+        <div className={`w-9 h-9 sm:w-12 sm:h-12 md:w-16 md:h-16 ${bgColor} rounded-xl flex-shrink-0 flex items-center justify-center shadow`}>
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 md:h-7 md:w-7 ${iconColor}`} />
         </div>
       </div>
     </CardContent>
@@ -715,25 +721,25 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const stats = [
     {
       icon: Package,
-      title: 'Total Products',
-      value: analytics.totalProducts,
-      subtitle: 'Products in your store'
+      title: 'Products',
+      value: formatNumber(analytics.totalProducts),
+      subtitle: 'Products'
     },
     {
       icon: DollarSign,
-      title: 'Total Sales',
-      value: formatCurrency(analytics.totalRevenue || 0),
-      subtitle: 'Gross sales amount',
+      title: 'Sales',
+      value: formatCurrency(analytics.totalRevenue ?? 0),
+      subtitle: 'Gross',
       iconColor: 'text-white',
       bgColor: 'bg-gradient-to-br from-blue-500 to-blue-600',
       textColor: 'text-black'
     },
     {
       icon: Wallet,
-      title: 'Available Balance',
+      title: 'Balance',
       // Format balance as a simple string with fixed decimal places
-      value: `KSh ${(Math.round(analytics.balance * 100) / 100).toFixed(2)}`,
-      subtitle: 'available for withdrawal amount',
+      value: new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((analytics.balance ?? 0)),
+      subtitle: 'Available',
       iconColor: 'text-white',
       bgColor: 'bg-gradient-to-br from-purple-500 to-purple-600',
       textColor: 'text-black',
@@ -741,9 +747,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     },
     {
       icon: DollarSign,
-      title: 'Net Sales',
+      title: 'Net',
       value: (() => {
-        const totalSales = parseFloat(((analytics as any).totalSales || 0).toFixed(2));
+        const totalSales = parseFloat((((analytics as any)?.totalSales ?? 0)).toFixed(2));
         const platformFeeRate = 0.09; // 9%
         const platformFee = parseFloat((totalSales * platformFeeRate).toFixed(2));
         const netSales = parseFloat((totalSales - platformFee).toFixed(2));
@@ -771,7 +777,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           maximumFractionDigits: 2
         }).format(netSales);
       })(),
-      subtitle: 'After 9% platform fee',
+      subtitle: 'After 9%',
       iconColor: 'text-white',
       bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
       textColor: 'text-black'
@@ -922,7 +928,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 </div>
                 <div className="bg-gradient-to-r from-green-100 to-green-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg">
                   <p className="text-2xl sm:text-3xl md:text-4xl font-black text-green-800">
-                    KSh {(analytics?.balance || 0).toLocaleString()}
+                    {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                   </p>
                 </div>
               </div>
@@ -957,7 +963,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                           required
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                          Max: KSh {(analytics?.balance || 0).toLocaleString()}
+                          Max: {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                         </p>
                       </div>
                       <div>
@@ -1046,7 +1052,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
                               <p className="text-xl sm:text-2xl font-black text-black">
-                                KSh {request.amount.toLocaleString()}
+                                {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(request.amount)}
                               </p>
                               <Badge
                                 variant="outline"
@@ -1183,7 +1189,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
                     <div>
                       <p className="text-xs sm:text-sm font-medium sm:font-semibold text-gray-700">Active Products</p>
-                      <p className="text-xl sm:text-2xl font-black text-black">{analytics.totalProducts}</p>
+                      <p className="text-xl sm:text-2xl font-black text-black">{formatNumber(analytics.totalProducts)}</p>
                     </div>
                     <Package className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
                   </div>
