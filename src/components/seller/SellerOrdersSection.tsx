@@ -27,7 +27,9 @@ export default function SellerOrdersSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [showPickupDialog, setShowPickupDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
 
   // Debug log for order statuses
   useEffect(() => {
@@ -172,21 +174,24 @@ export default function SellerOrdersSection() {
     }
   };
   
-  const cancelOrder = async (orderId: string) => {
-    const confirmationMessage = 'Are you sure you want to cancel this order?\n\nThe buyer will receive a full refund to their account balance.';
+  const handleCancelClick = (orderId: string) => {
+    setCancellingOrderId(orderId);
+    setShowCancelDialog(true);
+  };
+
+  const cancelOrder = async () => {
+    if (!cancellingOrderId) return;
     
-    if (!window.confirm(confirmationMessage)) {
-      return; // User cancelled the action
-    }
+    setShowCancelDialog(false);
     
     try {
       setIsUpdating(true);
-      const result = await sellerApi.cancelOrder(orderId);
+      const result = await sellerApi.cancelOrder(cancellingOrderId);
       
-      // Remove the order from the list or update its status
+      // Update the order status in the list
       setOrders(prevOrders => 
         prevOrders.map(order => 
-          order.id === orderId ? { 
+          order.id === cancellingOrderId ? { 
             ...order,
             status: 'CANCELLED' as const,
             paymentStatus: 'cancelled' as const
@@ -196,7 +201,7 @@ export default function SellerOrdersSection() {
       
       toast({
         title: 'Order Cancelled',
-        description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount.toLocaleString()}.`,
+        description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount?.toLocaleString() || '0'}.`,
       });
     } catch (err: any) {
       console.error('Failed to cancel order:', err);
@@ -445,6 +450,43 @@ export default function SellerOrdersSection() {
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Confirm Drop-off
               </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    {/* Cancel Order Confirmation Dialog */}
+    <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Cancel Order</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to cancel this order?
+            <br /><br />
+            The buyer will receive a full refund to their account balance.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setShowCancelDialog(false)}
+            disabled={isUpdating}
+          >
+            No, Keep Order
+          </Button>
+          <Button 
+            variant="destructive"
+            onClick={cancelOrder}
+            disabled={isUpdating}
+          >
+            {isUpdating ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Cancelling...
+              </>
+            ) : (
+              'Yes, Cancel Order'
             )}
           </Button>
         </DialogFooter>
