@@ -3,14 +3,6 @@ import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isValid, parseISO } from 'date-fns';
 
@@ -157,12 +149,6 @@ export default function OrdersSection() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
-
-  const confirmationMessage = 'Have you picked up and inspected your package from "Dynamic Mall, along Tomboya Street - shop number SL 32"?\n\nPlease only confirm after you have physically received and inspected your package.';
-  const [title, ...descriptionParts] = confirmationMessage.split('\n\n');
-  const description = descriptionParts.join('\n\n');
 
   const fetchOrders = useCallback(async () => {
     if (!user) {
@@ -214,25 +200,23 @@ export default function OrdersSection() {
 
   const [isConfirming, setIsConfirming] = useState<string | null>(null);
 
-  const handleConfirmReceiptClick = (orderId: string) => {
-    setCurrentOrderId(orderId);
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleConfirmReceipt = async () => {
-    if (!currentOrderId) return;
-    
+  const handleConfirmReceipt = async (orderId: string) => {
     console.log('=== START handleConfirmReceipt ===');
-    console.log('Order ID:', currentOrderId);
+    console.log('Order ID:', orderId);
     
-    setIsConfirmModalOpen(false);
+    const confirmationMessage = 'Have you picked up and inspected your package from "Dynamic Mall, along Tomboya Street - shop number SL 32"?\n\nPlease only confirm after you have physically received and inspected your package. This will release the payment to the seller after deducting our 9% service fee.';
+    
+    if (!window.confirm(confirmationMessage)) {
+      console.log('User cancelled the confirmation');
+      return;
+    }
 
-    setIsConfirming(currentOrderId);
+    setIsConfirming(orderId);
     const loadingToast = toast.loading('Confirming order receipt...');
     
     try {
       console.log('Calling buyerApi.confirmOrderReceipt...');
-      const result = await buyerApi.confirmOrderReceipt(currentOrderId);
+      const result = await buyerApi.confirmOrderReceipt(orderId);
       console.log('buyerApi.confirmOrderReceipt result:', result);
       
       if (result.success) {
@@ -242,8 +226,8 @@ export default function OrdersSection() {
         setOrders(prevOrders => {
           console.log('Previous orders state:', prevOrders);
           const updatedOrders = prevOrders.map(order => {
-            if (order.id === currentOrderId) {
-              console.log('Updating order in state:', currentOrderId);
+            if (order.id === orderId) {
+              console.log('Updating order in state:', orderId);
               // Create a new order object with the updated properties
               const updatedOrder: Order = {
                 id: order.id,
@@ -401,7 +385,7 @@ export default function OrdersSection() {
                     variant="default" 
                     size="sm" 
                     className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={() => handleConfirmReceiptClick(order.id)}
+                    onClick={() => handleConfirmReceipt(order.id)}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Confirm Receipt
@@ -412,34 +396,6 @@ export default function OrdersSection() {
           </div>
         </Card>
       ))}
-      
-      {/* Confirmation Modal */}
-      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">{title}</DialogTitle>
-            <DialogDescription className="mt-2 text-gray-600 whitespace-pre-line">
-              {description}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-6">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsConfirmModalOpen(false)}
-              className="mr-2"
-            >
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleConfirmReceipt}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Confirm Receipt
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
