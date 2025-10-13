@@ -501,20 +501,43 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     }
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
 
-  useEffect(() => {
-    console.log(`[SellerDashboard] Tab changed to: ${activeTab}`);
-    
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        const [productsData, analyticsData] = await Promise.all([
-          sellerApi.getProducts(),
-          sellerApi.getAnalytics()
-        ]);
-        setProducts(productsData);
-        
-        // Calculate total sales and revenue from analytics data
-        if (analyticsData) {
+useEffect(() => {
+  console.log(`[SellerDashboard] Tab changed to: ${activeTab}`);
+  
+  const fetchData = async () => {
+    // This effect no longer fetches on tab switches for overview/products
+    try {
+      if (activeTab === 'withdrawals') {
+        console.log('[SellerDashboard] Withdrawals tab selected');
+        await fetchWithdrawalRequests();
+      }
+      if (activeTab === 'orders') {
+        console.log('[SellerDashboard] Orders tab selected');
+        // Orders data is fetched by SellerOrdersSection
+      }
+    } catch (err) {
+      console.error('Error during tab change handling:', err);
+    }
+  };
+  
+  fetchData();
+}, [activeTab, fetchWithdrawalRequests]);
+
+// Prefetch data on initial mount to make tabs render instantly like Settings
+useEffect(() => {
+  let isMounted = true;
+  const prefetch = async () => {
+    setIsLoading(true);
+    try {
+      const [productsData, analyticsData] = await Promise.all([
+        sellerApi.getProducts(),
+        sellerApi.getAnalytics()
+      ]);
+      if (!isMounted) return;
+      setProducts(productsData);
+      
+      // Calculate total sales and revenue from analytics data
+      if (analyticsData) {
           // Calculate revenue from monthly sales data
           const salesTotal = analyticsData.monthlySales.reduce(
             (sum, monthData) => sum + monthData.sales, 0
@@ -614,29 +637,18 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           };
           setAnalytics(transformedData);
         }
-      } catch (err) {
-        setError('Failed to load data. Please try again later.');
-        console.error('Error fetching data:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    if (activeTab === 'products') {
-      console.log('[SellerDashboard] Fetching products...');
-      fetchProducts();
-    } else if (activeTab === 'overview' || activeTab === 'dashboard') {
-      console.log('[SellerDashboard] Fetching dashboard data...');
-      fetchData();
-      fetchProfile();
-    } else if (activeTab === 'orders') {
-      console.log('[SellerDashboard] Orders tab selected');
-      // Orders data will be fetched by the SellerOrdersSection component
-    } else if (activeTab === 'withdrawals') {
-      console.log('[SellerDashboard] Withdrawals tab selected');
-      fetchWithdrawalRequests();
+    } catch (err) {
+      setError('Failed to load data. Please try again later.');
+      console.error('Error prefetching data:', err);
+    } finally {
+      if (isMounted) setIsLoading(false);
     }
-  }, [activeTab, fetchProducts, fetchProfile]);
+  };
+  
+  prefetch();
+  fetchProfile();
+  return () => { isMounted = false; };
+}, []);
 
   // Create context value to pass to child routes
   const outletContext = {
