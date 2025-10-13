@@ -208,8 +208,7 @@ export default function OrdersSection() {
     <div className="space-y-4">
       <p>Have you picked up and inspected your package from <strong>"Dynamic Mall, along Tomboya Street - shop number SL 32"</strong>?</p>
       <p className="text-sm text-muted-foreground">
-        Please only confirm after you have physically received and inspected your package. 
-        This will release the payment to the seller after deducting our 9% service fee.
+        Please only confirm after you have physically received and inspected your package.
       </p>
     </div>
   );
