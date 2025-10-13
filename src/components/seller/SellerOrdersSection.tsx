@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format, isValid, parseISO } from 'date-fns';
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 
@@ -25,6 +26,8 @@ export default function SellerOrdersSection() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showPickupDialog, setShowPickupDialog] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   // Debug log for order statuses
   useEffect(() => {
@@ -95,22 +98,24 @@ export default function SellerOrdersSection() {
     }
   };
 
-  const markAsReadyForPickup = async (orderId: string) => {
-    const confirmationMessage = 'Have you dropped off the package at "Dynamic Mall, along Tomboya Street - shop number SL 32"?\n\nPlease confirm only after the package has been dropped off at the specified location.';
-    
-    if (!window.confirm(confirmationMessage)) {
-      return; // User cancelled the action
-    }
+  const handleReadyForPickupClick = (orderId: string) => {
+    setSelectedOrderId(orderId);
+    setShowPickupDialog(true);
+  };
+
+  const markAsReadyForPickup = async () => {
+    if (!selectedOrderId) return;
     
     try {
       setIsUpdating(true);
+      setShowPickupDialog(false);
       
       // Use uppercase 'READY_FOR_PICKUP' to match database enum
-      const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'READY_FOR_PICKUP' as any);
+      const updatedOrder = await sellerApi.updateOrderStatus(selectedOrderId, 'READY_FOR_PICKUP' as any);
       
       setOrders(prevOrders => 
         prevOrders.map(order => 
-          order.id === orderId ? { 
+          order.id === selectedOrderId ? { 
             ...order, // Keep all existing order properties
             status: 'READY_FOR_PICKUP' as const,
             paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'pending') as PaymentStatus,
@@ -132,6 +137,7 @@ export default function SellerOrdersSection() {
       });
     } finally {
       setIsUpdating(false);
+      setSelectedOrderId(null);
     }
   };
 
@@ -254,6 +260,7 @@ export default function SellerOrdersSection() {
   }
 
   return (
+    <>
     <div className="space-y-4 sm:space-y-6">
       {orders.map((order) => (
         <Card key={order.id} className="p-4 sm:p-6">
@@ -329,7 +336,7 @@ export default function SellerOrdersSection() {
                     size="sm" 
                     variant="outline"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 text-xs sm:text-sm"
-                    onClick={() => markAsReadyForPickup(order.id)}
+                    onClick={() => handleReadyForPickupClick(order.id)}
                     disabled={isUpdating}
                   >
                       <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -380,5 +387,69 @@ export default function SellerOrdersSection() {
         </Card>
       ))}
     </div>
+
+    {/* Ready for Pickup Confirmation Dialog */}
+    <Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
+            <Truck className="h-5 w-5 text-blue-600" />
+            Confirm Package Drop-off
+          </DialogTitle>
+          <DialogDescription className="text-sm text-gray-600 leading-relaxed">
+            Have you dropped off the package at the specified location?
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-4">
+          <div className="flex items-start gap-3">
+            <Package className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="text-sm">
+              <p className="font-medium text-blue-900 mb-1">Drop-off Location:</p>
+              <p className="text-blue-800">
+                <strong>Dynamic Mall</strong><br />
+                Along Tomboya Street<br />
+                Shop Number: <strong>SL 32</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <p className="text-sm text-yellow-800 font-medium">
+            ⚠️ Please confirm only after the package has been physically dropped off at the specified location.
+          </p>
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            onClick={() => setShowPickupDialog(false)}
+            disabled={isUpdating}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={markAsReadyForPickup}
+            disabled={isUpdating}
+            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+          >
+            {isUpdating ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                Updating...
+              </>
+            ) : (
+              <>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Confirm Drop-off
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
