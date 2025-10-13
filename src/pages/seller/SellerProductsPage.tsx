@@ -51,18 +51,25 @@ export default function SellerProductsPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
+    console.log('Starting delete for product:', id);
+    
+    // Store product to delete for potential revert
+    const productToDelete = products.find(p => p.id === id);
+    
     try {
       // Optimistic update - remove from UI immediately
-      const productToDelete = products.find(p => p.id === id);
       setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
+      console.log('Optimistic update completed');
       
       await sellerApi.deleteProduct(id);
+      console.log('API delete completed successfully');
       toast.success('Product deleted successfully');
     } catch (error: any) {
       console.error('Failed to delete product:', error);
       
       // Revert optimistic update on error
       if (productToDelete) {
+        console.log('Reverting optimistic update');
         setProducts(prevProducts => [...prevProducts, productToDelete]);
       }
       
