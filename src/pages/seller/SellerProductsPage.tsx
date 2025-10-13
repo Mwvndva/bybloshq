@@ -51,15 +51,26 @@ export default function SellerProductsPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      try {
-        await sellerApi.deleteProduct(id);
-        toast.success('Product deleted successfully');
-        fetchProducts();
-      } catch (error) {
-        console.error('Failed to delete product:', error);
-        toast.error('Failed to delete product');
+    try {
+      // Optimistic update - remove from UI immediately
+      const productToDelete = products.find(p => p.id === id);
+      setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
+      
+      await sellerApi.deleteProduct(id);
+      toast.success('Product deleted successfully');
+    } catch (error: any) {
+      console.error('Failed to delete product:', error);
+      
+      // Revert optimistic update on error
+      if (productToDelete) {
+        setProducts(prevProducts => [...prevProducts, productToDelete]);
       }
+      
+      // Show specific error message
+      const errorMessage = error?.response?.data?.message || 
+                          error?.message || 
+                          'Failed to delete product. Please try again.';
+      toast.error(errorMessage);
     }
   };
 
