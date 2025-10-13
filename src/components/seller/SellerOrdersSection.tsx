@@ -28,6 +28,8 @@ export default function SellerOrdersSection() {
   const [isUpdating, setIsUpdating] = useState(false);
   const [showPickupDialog, setShowPickupDialog] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [orderToCancel, setOrderToCancel] = useState<string | null>(null);
 
   // Debug log for order statuses
   useEffect(() => {
@@ -172,21 +174,22 @@ export default function SellerOrdersSection() {
     }
   };
   
-  const cancelOrder = async (orderId: string) => {
-    const confirmationMessage = 'Are you sure you want to cancel this order?\n\nThe buyer will receive a full refund to their account balance.';
-    
-    if (!window.confirm(confirmationMessage)) {
-      return; // User cancelled the action
-    }
+  const handleCancelClick = (orderId: string) => {
+    setOrderToCancel(orderId);
+    setShowCancelDialog(true);
+  };
+
+  const cancelOrder = async () => {
+    if (!orderToCancel) return;
     
     try {
       setIsUpdating(true);
-      const result = await sellerApi.cancelOrder(orderId);
+      const result = await sellerApi.cancelOrder(orderToCancel);
       
-      // Remove the order from the list or update its status
+      // Update the order status in the list
       setOrders(prevOrders => 
         prevOrders.map(order => 
-          order.id === orderId ? { 
+          order.id === orderToCancel ? { 
             ...order,
             status: 'CANCELLED' as const,
             paymentStatus: 'cancelled' as const
@@ -194,9 +197,10 @@ export default function SellerOrdersSection() {
         )
       );
       
+      setShowCancelDialog(false);
       toast({
         title: 'Order Cancelled',
-        description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount.toLocaleString()}.`,
+        description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount?.toLocaleString() || '0'}.`,
       });
     } catch (err: any) {
       console.error('Failed to cancel order:', err);
@@ -207,6 +211,7 @@ export default function SellerOrdersSection() {
       });
     } finally {
       setIsUpdating(false);
+      setOrderToCancel(null);
     }
   };
 
@@ -347,7 +352,7 @@ export default function SellerOrdersSection() {
                     size="sm" 
                     variant="outline"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
-                    onClick={() => cancelOrder(order.id)}
+                    onClick={() => handleCancelClick(order.id)}
                     disabled={isUpdating}
                   >
                       <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -373,7 +378,7 @@ export default function SellerOrdersSection() {
                     size="sm" 
                     variant="outline"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
-                    onClick={() => cancelOrder(order.id)}
+                    onClick={() => handleCancelClick(order.id)}
                     disabled={isUpdating}
                   >
                       <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -450,6 +455,49 @@ export default function SellerOrdersSection() {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Cancel Order Confirmation Dialog */}
+    <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Cancel Order</DialogTitle>
+          <DialogDescription>
+            <div className="space-y-4">
+              <p>Are you sure you want to cancel this order?</p>
+              <p className="text-sm text-muted-foreground">
+                The buyer will receive a full refund to their account balance.
+              </p>
+            </div>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="mt-4">
+          <Button 
+            variant="outline" 
+            onClick={() => {
+              setShowCancelDialog(false);
+              setOrderToCancel(null);
+            }}
+            disabled={isUpdating}
+          >
+            No, Keep Order
+          </Button>
+          <Button 
+            variant="destructive"
+            onClick={cancelOrder}
+            disabled={isUpdating}
+          >
+            {isUpdating ? (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                Cancelling...
+              </>
+            ) : (
+              'Yes, Cancel Order'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
-}
+};

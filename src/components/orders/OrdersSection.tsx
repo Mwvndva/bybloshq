@@ -181,15 +181,19 @@ export default function OrdersSection() {
     fetchOrders();
   }, [fetchOrders]);
 
-  const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm('Are you sure you want to cancel this order?')) {
-      return;
-    }
+  const handleCancelClick = (orderId: string) => {
+    setCurrentOrderId(orderId);
+    setShowCancelDialog(true);
+  };
 
+  const handleCancelOrder = async () => {
+    if (!currentOrderId) return;
+    
     try {
-      const result = await buyerApi.cancelOrder(orderId);
+      const result = await buyerApi.cancelOrder(currentOrderId);
       if (result.success) {
         toast.success('Order cancelled successfully');
+        setShowCancelDialog(false);
         fetchOrders();
       } else {
         toast.error(result.message || 'Failed to cancel order');
@@ -197,11 +201,14 @@ export default function OrdersSection() {
     } catch (error) {
       console.error('Error cancelling order:', error);
       toast.error('An error occurred while cancelling the order');
+    } finally {
+      setCurrentOrderId(null);
     }
   };
 
   const [isConfirming, setIsConfirming] = useState<string | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
   const confirmationMessage = (
@@ -389,7 +396,7 @@ export default function OrdersSection() {
                     variant="outline" 
                     size="sm" 
                     className="w-full border-red-300 text-red-600 hover:bg-red-50"
-                    onClick={() => handleCancelOrder(order.id)}
+                    onClick={() => handleCancelClick(order.id)}
                   >
                     <XCircle className="h-4 w-4 mr-2" />
                     Cancel Order
@@ -443,6 +450,49 @@ export default function OrdersSection() {
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Confirm Receipt
                 </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order Confirmation Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Cancel Order</DialogTitle>
+            <DialogDescription>
+              <div className="space-y-4">
+                <p>Are you sure you want to cancel this order?</p>
+                <p className="text-sm text-muted-foreground">
+                  This action cannot be undone. The order will be permanently cancelled.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowCancelDialog(false);
+                setCurrentOrderId(null);
+              }}
+              disabled={!!currentOrderId}
+            >
+              No, Keep Order
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={handleCancelOrder}
+              disabled={!!currentOrderId}
+            >
+              {currentOrderId ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                'Yes, Cancel Order'
               )}
             </Button>
           </DialogFooter>
