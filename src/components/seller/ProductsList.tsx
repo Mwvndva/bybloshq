@@ -44,16 +44,14 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
     try {
       setDeletingId(id);
       await onDelete(id);
-      toast({
-        title: 'Success',
-        description: 'Product deleted successfully',
-      });
-      onRefresh?.();
-    } catch (error) {
+      // Success toast is handled by the parent component
+    } catch (error: any) {
       console.error('Failed to delete product:', error);
       toast({
         title: 'Error',
-        description: 'Failed to delete product',
+        description: error?.response?.data?.message || 
+                   error?.message || 
+                   'Failed to delete product. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -135,14 +133,19 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         <AlertDialogAction 
                           onClick={() => handleDeleteClick(product.id)}
                           disabled={deletingId === product.id}
-                          className="bg-destructive hover:bg-destructive/90"
+                          className="bg-destructive hover:bg-destructive/90 disabled:opacity-50"
                         >
                           {deletingId === product.id ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Deleting...
+                            </>
                           ) : (
-                            <Trash2 className="mr-2 h-4 w-4" />
+                            <>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </>
                           )}
-                          Delete
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
@@ -286,14 +289,19 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                           <AlertDialogAction 
                             onClick={() => handleDeleteClick(product.id)}
                             disabled={deletingId === product.id}
-                            className="bg-destructive hover:bg-destructive/90"
+                            className="bg-destructive hover:bg-destructive/90 disabled:opacity-50"
                           >
                             {deletingId === product.id ? (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Deleting...
+                              </>
                             ) : (
-                              <Trash2 className="mr-2 h-4 w-4" />
+                              <>
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </>
                             )}
-                            Delete
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>
