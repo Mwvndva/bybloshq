@@ -41,17 +41,19 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
         
           {/* Main Heading */}
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-yellow-500 mb-4 sm:mb-6 font-mono">
-            BYBLOS - KENYA'S #1 ONLINE THRIFT STORE
+            BYBLOS - KENYA'S #1 ONLINE MARKETPLACE
           </h1>
           
           {/* SEO Description */}
           <div className="mb-8 sm:mb-12 max-w-3xl mx-auto">
             <p className="text-white text-lg sm:text-xl mb-4">
-              Discover amazing second-hand fashion at unbeatable prices. Shop vintage, streetwear, and unique finds from Nairobi's best thrift stores.
-            </p>
+            Everyone’s selling something — do it right.
+            Turn your side hustle into a real online brand with Byblos.
+            Your own shop link. Orders on WhatsApp. Fast deliveries.
+            It’s everything your business deserves — all in one link.            </p>
             <div className="text-yellow-400 text-sm sm:text-base">
-              <p>✓ 100% Authentic Pre-Loved Items</p>
-              <p>✓ Same Day Delivery in Nairobi</p>
+              <p>✓ 100% Authentic Items</p>
+              <p>✓ Delivery in Nairobi</p>
               <p>✓ Secure Online Payments</p>
             </div>
           </div>
