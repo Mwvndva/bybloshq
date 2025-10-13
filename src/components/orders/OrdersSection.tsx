@@ -3,6 +3,7 @@ import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isValid, parseISO } from 'date-fns';
 
@@ -49,6 +50,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
   if (value === undefined || isNaN(value)) return `${currency} 0`;
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
+
 import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw } from 'lucide-react';
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 import buyerApi from '@/api/buyerApi';
@@ -199,24 +201,38 @@ export default function OrdersSection() {
   };
 
   const [isConfirming, setIsConfirming] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
-  const handleConfirmReceipt = async (orderId: string) => {
+  const confirmationMessage = (
+    <div className="space-y-4">
+      <p>Have you picked up and inspected your package from <strong>"Dynamic Mall, along Tomboya Street - shop number SL 32"</strong>?</p>
+      <p className="text-sm text-muted-foreground">
+        Please only confirm after you have physically received and inspected your package. 
+        This will release the payment to the seller after deducting our 9% service fee.
+      </p>
+    </div>
+  );
+
+  const handleConfirmReceiptClick = (orderId: string) => {
+    setCurrentOrderId(orderId);
+    setShowConfirmDialog(true);
+  };
+
+  const handleConfirmReceipt = async () => {
+    if (!currentOrderId) return;
+    
     console.log('=== START handleConfirmReceipt ===');
-    console.log('Order ID:', orderId);
+    console.log('Order ID:', currentOrderId);
     
-    const confirmationMessage = 'Have you picked up and inspected your package from "Dynamic Mall, along Tomboya Street - shop number SL 32"?\n\nPlease only confirm after you have physically received and inspected your package. This will release the payment to the seller after deducting our 9% service fee.';
-    
-    if (!window.confirm(confirmationMessage)) {
-      console.log('User cancelled the confirmation');
-      return;
-    }
+    setShowConfirmDialog(false);
 
-    setIsConfirming(orderId);
+    setIsConfirming(currentOrderId);
     const loadingToast = toast.loading('Confirming order receipt...');
     
     try {
       console.log('Calling buyerApi.confirmOrderReceipt...');
-      const result = await buyerApi.confirmOrderReceipt(orderId);
+      const result = await buyerApi.confirmOrderReceipt(currentOrderId);
       console.log('buyerApi.confirmOrderReceipt result:', result);
       
       if (result.success) {
@@ -226,8 +242,8 @@ export default function OrdersSection() {
         setOrders(prevOrders => {
           console.log('Previous orders state:', prevOrders);
           const updatedOrders = prevOrders.map(order => {
-            if (order.id === orderId) {
-              console.log('Updating order in state:', orderId);
+            if (order.id === currentOrderId) {
+              console.log('Updating order in state:', currentOrderId);
               // Create a new order object with the updated properties
               const updatedOrder: Order = {
                 id: order.id,
@@ -385,7 +401,7 @@ export default function OrdersSection() {
                     variant="default" 
                     size="sm" 
                     className="w-full bg-green-600 hover:bg-green-700"
-                    onClick={() => handleConfirmReceipt(order.id)}
+                    onClick={() => handleConfirmReceiptClick(order.id)}
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     Confirm Receipt
@@ -396,6 +412,43 @@ export default function OrdersSection() {
           </div>
         </Card>
       ))}
+      
+      <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Confirm Package Receipt</DialogTitle>
+            <DialogDescription>
+              {confirmationMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowConfirmDialog(false)}
+              disabled={isConfirming === currentOrderId}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleConfirmReceipt}
+              disabled={isConfirming === currentOrderId}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {isConfirming === currentOrderId ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Confirming...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Confirm Receipt
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
