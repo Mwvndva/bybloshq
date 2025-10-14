@@ -41,20 +41,21 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
         
           {/* Main Heading */}
           <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-yellow-500 mb-4 sm:mb-6 font-mono">
-            BYBLOS - KENYA'S #1 ONLINE MARKETPLACE
+          BYBLOS — JUST START
           </h1>
           
           {/* SEO Description */}
           <div className="mb-8 sm:mb-12 max-w-3xl mx-auto">
             <p className="text-white text-lg sm:text-xl mb-4">
-            Everyone’s selling something — do it right.
-            Turn your side hustle into a real online brand with Byblos.
-            Your own shop link. Orders on WhatsApp. Fast deliveries.
-            It’s everything your business deserves — all in one link.            </p>
+            Kenya’s #1 interactive online marketplace.
+            Everyone’s got a hustle — make yours official.
+            Set up your shop in minutes, get your own link, take orders on WhatsApp, and deliver fast across Nairobi.
+            No excuses. No stress. Just start.           </p>
             <div className="text-yellow-400 text-sm sm:text-base">
               <p>✓ 100% Authentic Items</p>
               <p>✓ Delivery in Nairobi</p>
               <p>✓ Secure Online Payments</p>
+              <p>✓ Your Business, All in One Link</p>
             </div>
           </div>
           
@@ -64,7 +65,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
               onClick={handleStartThrifting}
               className="bg-yellow-300 hover:bg-white hover:text-black text-black px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium transition-colors duration-200 w-full sm:w-auto"
             >
-              Start Thrifting
+                Start Thrifting
             </Button>
             <Button 
               onClick={onEventsClick}
