@@ -1,16 +1,12 @@
 
 export type Aesthetic = 
-  | 'all'
-  | 'casual'
-  | 'earth girl/boy'
-  | 'brands'
-  | 'corporate'
-  | 'street wear'
-  | 'baddie'
-  | 'island boy/girl'
-  | 'vintage'
-  | 'gothic'
-  | 'made in kenya';
+  | 'clothes-style'
+  | 'sneakers-shoes'
+  | 'beauty-fragrance'
+  | 'art-decor-crafts'
+  | 'electronics-accessories'
+  | 'home-living'
+  | 'health-wellness';
 
 export interface Seller {
   bannerUrl: any;

@@ -74,7 +74,7 @@ function BuyerDashboardInner() {
   const navigate = useNavigate();
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
-  const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('casual');
+  const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
   const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>('shop');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
