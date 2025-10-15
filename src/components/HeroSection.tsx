@@ -65,7 +65,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
               onClick={handleStartThrifting}
               className="bg-yellow-300 hover:bg-white hover:text-black text-black px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium transition-colors duration-200 w-full sm:w-auto"
             >
-                Start Thrifting
+                Start Shopping
             </Button>
             <Button 
               onClick={onEventsClick}
