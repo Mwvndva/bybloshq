@@ -32,7 +32,7 @@ const Header = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 mx-auto md:mx-0">
             <h1 className="font-serif text-xl sm:text-2xl font-bold text-black">
-              Byblos Experience
+              Byblos
             </h1>
           </Link>
 
@@ -103,7 +103,7 @@ const Header = () => {
               className="flex items-center text-black hover:bg-black/10 px-2 py-2 rounded text-base"
             >
               <ShoppingBag className="h-5 w-5 mr-2" />
-              Sell Your Clothes
+              Sell
             </Link>
           </div>
         </div>

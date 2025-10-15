@@ -1,5 +1,6 @@
 
 export type Aesthetic = 
+  | 'all'
   | 'clothes-style'
   | 'sneakers-shoes'
   | 'beauty-fragrance'

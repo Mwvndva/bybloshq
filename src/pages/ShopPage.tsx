@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Store, Package, Heart } from 'lucide-react';
+import { Loader2, ArrowLeft, Store, Package } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 import { formatCurrency } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
@@ -14,14 +14,13 @@ type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow
 function isAesthetic(value: string): value is Aesthetic {
   return [
     'all',
-    'casual',
-    'earth girl/boy',
-    'brands',
-    'corporate',
-    'street wear',
-    'baddie',
-    'island boy/girl',
-    'vintage'
+    'clothes-style',
+    'sneakers-shoes',
+    'beauty-fragrance',
+    'art-decor-crafts',
+    'electronics-accessories',
+    'home-living',
+    'health-wellness'
   ].includes(value);
 }
 
