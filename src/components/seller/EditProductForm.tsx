@@ -258,7 +258,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Aesthetic</Label>
+                  <Label>Category</Label>
                   <Select
                     value={formData.aesthetic}
                     onValueChange={handleAestheticChange}

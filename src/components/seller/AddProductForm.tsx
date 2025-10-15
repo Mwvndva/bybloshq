@@ -377,7 +377,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
             </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Aesthetic</Label>
+                    <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Category</Label>
               <Select
                 value={formData.aesthetic}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, aesthetic: value }))}
