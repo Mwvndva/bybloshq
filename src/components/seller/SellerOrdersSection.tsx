@@ -219,35 +219,37 @@ export default function SellerOrdersSection() {
     return (
       <div className="space-y-4 sm:space-y-6">
         {[1, 2].map((i) => (
-          <Card key={i} className="p-4 sm:p-6">
-            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
-              <div className="space-y-3 sm:space-y-4 flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <Card key={i} className="bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md transition-all duration-300">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
+                <div className="space-y-3 sm:space-y-4 flex-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <Skeleton className="h-5 sm:h-6 w-32 sm:w-40 mb-2" />
+                      <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
+                    </div>
+                    <Skeleton className="h-6 w-20 sm:w-24 self-start sm:self-auto" />
+                  </div>
                   <div>
-                    <Skeleton className="h-5 sm:h-6 w-32 sm:w-40 mb-2" />
-                    <Skeleton className="h-3 sm:h-4 w-24 sm:w-32" />
+                    <Skeleton className="h-4 sm:h-5 w-16 sm:w-20 mb-2" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-8 sm:h-10 w-full rounded-lg" />
+                      <Skeleton className="h-8 sm:h-10 w-3/4 rounded-lg" />
+                    </div>
                   </div>
-                  <Skeleton className="h-6 w-20 sm:w-24 self-start sm:self-auto" />
                 </div>
-                <div>
-                  <Skeleton className="h-4 sm:h-5 w-16 sm:w-20 mb-2" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-8 sm:h-10 w-full rounded-lg" />
-                    <Skeleton className="h-8 sm:h-10 w-3/4 rounded-lg" />
+                <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
+                  <div className="flex-1 sm:flex-none">
+                    <Skeleton className="h-6 sm:h-7 w-24 sm:w-32 mb-1" />
+                    <Skeleton className="h-3 w-16 sm:w-20" />
+                  </div>
+                  <div className="w-full sm:w-auto lg:w-full space-y-2">
+                    <Skeleton className="h-8 sm:h-9 w-full rounded-md" />
+                    <Skeleton className="h-8 sm:h-9 w-full rounded-md" />
                   </div>
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
-                <div className="flex-1 sm:flex-none">
-                  <Skeleton className="h-6 sm:h-7 w-24 sm:w-32 mb-1" />
-                  <Skeleton className="h-3 w-16 sm:w-20" />
-                </div>
-                <div className="w-full sm:w-auto lg:w-full space-y-2">
-                  <Skeleton className="h-8 sm:h-9 w-full rounded-md" />
-                  <Skeleton className="h-8 sm:h-9 w-full rounded-md" />
-                </div>
-              </div>
-            </div>
+            </CardContent>
           </Card>
         ))}
       </div>
@@ -256,149 +258,153 @@ export default function SellerOrdersSection() {
 
   if (orders.length === 0) {
     return (
-      <div className="text-center py-8 sm:py-12 px-4">
-        <Package className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-gray-400 mb-3 sm:mb-4" />
-        <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1 sm:mb-2">No orders yet</h3>
-        <p className="text-sm sm:text-base text-gray-500 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
+      <div className="text-center py-12 px-4">
+        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-4">
+          <Package className="h-8 w-8 text-yellow-500" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
+        <p className="text-gray-500 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
       </div>
     );
   }
 
   return (
     <>
-    <div className="space-y-4 sm:space-y-6">
-      {orders.map((order) => (
-        <Card key={order.id} className="p-4 sm:p-6">
-          {/* Mobile-first responsive layout */}
-          <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
-            {/* Order Information Section */}
-            <div className="space-y-3 sm:space-y-4 flex-1">
-              {/* Order Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                  <h3 className="font-semibold text-base sm:text-lg text-gray-900">Order #{order.orderNumber}</h3>
-                  <p className="text-xs sm:text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+      <div className="space-y-4 sm:space-y-6">
+        {orders.map((order) => (
+          <Card key={order.id} className="bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+            <CardContent className="p-4 sm:p-6">
+              {/* Mobile-first responsive layout */}
+              <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
+                {/* Order Information Section */}
+                <div className="space-y-3 sm:space-y-4 flex-1">
+                  {/* Order Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <h3 className="font-semibold text-base sm:text-lg text-gray-900">Order #{order.orderNumber}</h3>
+                      <p className="text-xs sm:text-sm text-gray-500">{formatDate(order.createdAt)}</p>
+                    </div>
+                    {/* Status Badge - positioned for mobile */}
+                    <div className="self-start sm:self-auto">
+                      {order.status === 'COMPLETED' ? (
+                        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                          <CheckCircle className="h-3 w-3 mr-1" /> Completed
+                        </Badge>
+                      ) : order.status === 'READY_FOR_PICKUP' ? (
+                        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                          <Truck className="h-3 w-3 mr-1" /> Ready for Pickup
+                        </Badge>
+                      ) : order.status === 'FAILED' ? (
+                        <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                          <XCircle className="h-3 w-3 mr-1" /> Failed
+                        </Badge>
+                      ) : order.status === 'CANCELLED' ? (
+                        <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                          <XCircle className="h-3 w-3 mr-1" /> Cancelled
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                          <Clock className="h-3 w-3 mr-1" /> Pending
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Products Section */}
+                  <div>
+                    <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Products:</h4>
+                    <ul className="space-y-2">
+                      {order.items && order.items.length > 0 ? (
+                        order.items.map((item) => (
+                          <li key={item.id} className="text-xs sm:text-sm text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg px-3 py-2 border border-gray-200/50">
+                            <span className="font-semibold">{item.name}</span>
+                            <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="text-xs sm:text-sm text-gray-500 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg px-3 py-2 border border-gray-200/50">No items in this order</li>
+                      )}
+                    </ul>
+                  </div>
                 </div>
-                {/* Status Badge - positioned for mobile */}
-                <div className="self-start sm:self-auto">
-                  {order.status === 'COMPLETED' ? (
-                    <Badge className="bg-green-100 text-green-800 text-xs sm:text-sm">
-                      <CheckCircle className="h-3 w-3 mr-1" /> Completed
-                    </Badge>
-                  ) : order.status === 'READY_FOR_PICKUP' ? (
-                    <Badge className="bg-blue-100 text-blue-800 text-xs sm:text-sm">
-                      <Truck className="h-3 w-3 mr-1" /> Ready for Pickup
-                    </Badge>
-                  ) : order.status === 'FAILED' ? (
-                    <Badge className="bg-red-100 text-red-800 text-xs sm:text-sm">
-                      <XCircle className="h-3 w-3 mr-1" /> Failed
-                    </Badge>
-                  ) : order.status === 'CANCELLED' ? (
-                    <Badge className="bg-red-100 text-red-800 text-xs sm:text-sm">
-                      <XCircle className="h-3 w-3 mr-1" /> Cancelled
-                    </Badge>
-                  ) : (
-                    <Badge className="bg-yellow-100 text-yellow-800 text-xs sm:text-sm">
-                      <Clock className="h-3 w-3 mr-1" /> Pending
-                    </Badge>
-                  )}
+                
+                {/* Price and Actions Section */}
+                <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
+                  {/* Total Amount */}
+                  <div className="flex-1 sm:flex-none">
+                    <p className="font-bold text-lg sm:text-xl text-gray-900">
+                      {formatCurrency(order.totalAmount, order.currency)}
+                    </p>
+                    <p className="text-xs text-gray-500">Total Amount</p>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="w-full sm:w-auto lg:w-full">
+                    {order.status === 'PENDING' && (
+                      <div className="space-y-2">
+                        <Button 
+                          size="sm" 
+                          className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                          onClick={() => handleReadyForPickupClick(order.id)}
+                          disabled={isUpdating}
+                        >
+                          <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          <span className="hidden sm:inline">Mark as Ready for Pickup</span>
+                          <span className="sm:hidden">Ready for Pickup</span>
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300 text-xs sm:text-sm font-semibold transition-all duration-200"
+                          onClick={() => handleCancelClick(order.id)}
+                          disabled={isUpdating}
+                        >
+                          <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          Cancel Order
+                        </Button>
+                      </div>
+                    )}
+                    {order.status === 'READY_FOR_PICKUP' && 
+                     (order.paymentStatus?.toLowerCase() === 'completed') && (
+                      <div className="space-y-2">
+                        <Button 
+                          size="sm" 
+                          className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                          onClick={() => markAsDelivered(order.id)}
+                          disabled={isUpdating}
+                        >
+                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          <span className="hidden sm:inline">Mark as Delivered</span>
+                          <span className="sm:hidden">Mark Delivered</span>
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300 text-xs sm:text-sm font-semibold transition-all duration-200"
+                          onClick={() => handleCancelClick(order.id)}
+                          disabled={isUpdating}
+                        >
+                          <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          Cancel Order
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              
-              {/* Products Section */}
-              <div>
-                <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-2">Products:</h4>
-                <ul className="space-y-1 sm:space-y-2">
-                  {order.items && order.items.length > 0 ? (
-                    order.items.map((item) => (
-                      <li key={item.id} className="text-xs sm:text-sm text-gray-700 bg-gray-50 rounded-lg px-3 py-2">
-                        <span className="font-medium">{item.name}</span>
-                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
-                      </li>
-                    ))
-                  ) : (
-                    <li className="text-xs sm:text-sm text-gray-500 bg-gray-50 rounded-lg px-3 py-2">No items in this order</li>
-                  )}
-                </ul>
-              </div>
-            </div>
-            
-            {/* Price and Actions Section */}
-            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
-              {/* Total Amount */}
-              <div className="flex-1 sm:flex-none">
-                <p className="font-bold text-lg sm:text-xl text-gray-900">
-                {formatCurrency(order.totalAmount, order.currency)}
-              </p>
-                <p className="text-xs text-gray-500">Total Amount</p>
-              </div>
-              
-              {/* Action Buttons */}
-              <div className="w-full sm:w-auto lg:w-full">
-              {order.status === 'PENDING' && (
-                  <div className="space-y-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 text-xs sm:text-sm"
-                    onClick={() => handleReadyForPickupClick(order.id)}
-                    disabled={isUpdating}
-                  >
-                      <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      <span className="hidden sm:inline">Mark as Ready for Pickup</span>
-                      <span className="sm:hidden">Ready for Pickup</span>
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
-                    onClick={() => handleCancelClick(order.id)}
-                    disabled={isUpdating}
-                  >
-                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                    Cancel Order
-                  </Button>
-                </div>
-              )}
-              {order.status === 'READY_FOR_PICKUP' && 
-               (order.paymentStatus?.toLowerCase() === 'completed') && (
-                  <div className="space-y-2">
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-green-50 hover:bg-green-100 text-green-700 border-green-200 text-xs sm:text-sm"
-                    onClick={() => markAsDelivered(order.id)}
-                    disabled={isUpdating}
-                  >
-                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      <span className="hidden sm:inline">Mark as Delivered</span>
-                      <span className="sm:hidden">Mark Delivered</span>
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 text-xs sm:text-sm"
-                    onClick={() => handleCancelClick(order.id)}
-                    disabled={isUpdating}
-                  >
-                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                    Cancel Order
-                  </Button>
-                </div>
-              )}
-              </div>
-            </div>
-          </div>
-        </Card>
-      ))}
-    </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
     {/* Ready for Pickup Confirmation Dialog */}
     <Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg font-semibold">
-            <Truck className="h-5 w-5 text-blue-600" />
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
+              <Truck className="h-4 w-4 text-white" />
+            </div>
             Confirm Package Drop-off
           </DialogTitle>
           <DialogDescription className="text-sm text-gray-600 leading-relaxed">
@@ -406,11 +412,13 @@ export default function SellerOrdersSection() {
           </DialogDescription>
         </DialogHeader>
         
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-4">
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 my-4">
           <div className="flex items-start gap-3">
-            <Package className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+              <Package className="h-4 w-4 text-white" />
+            </div>
             <div className="text-sm">
-              <p className="font-medium text-blue-900 mb-1">Drop-off Location:</p>
+              <p className="font-semibold text-blue-900 mb-1">Drop-off Location:</p>
               <p className="text-blue-800">
                 <strong>Dynamic Mall</strong><br />
                 Along Tomboya Street<br />
@@ -420,8 +428,8 @@ export default function SellerOrdersSection() {
           </div>
         </div>
 
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-          <p className="text-sm text-yellow-800 font-medium">
+        <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-3 mb-4">
+          <p className="text-sm text-yellow-800 font-semibold">
             ⚠️ Please confirm only after the package has been physically dropped off at the specified location.
           </p>
         </div>
@@ -431,14 +439,14 @@ export default function SellerOrdersSection() {
             variant="outline"
             onClick={() => setShowPickupDialog(false)}
             disabled={isUpdating}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto border-gray-300 hover:bg-gray-50"
           >
             Cancel
           </Button>
           <Button
             onClick={markAsReadyForPickup}
             disabled={isUpdating}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700"
+            className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
           >
             {isUpdating ? (
               <>
@@ -458,27 +466,40 @@ export default function SellerOrdersSection() {
 
     {/* Cancel Order Confirmation Dialog */}
     <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl">
         <DialogHeader>
-          <DialogTitle>Cancel Order</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+            <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
+              <XCircle className="h-4 w-4 text-white" />
+            </div>
+            Cancel Order
+          </DialogTitle>
+          <DialogDescription className="text-sm text-gray-600 leading-relaxed">
             Are you sure you want to cancel this order?
             <br /><br />
             The buyer will receive a full refund to their account balance.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="mt-4">
+        
+        <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-3 mb-4">
+          <p className="text-sm text-red-800 font-semibold">
+            ⚠️ This action cannot be undone. The buyer will be notified of the cancellation.
+          </p>
+        </div>
+
+        <DialogFooter className="mt-4 gap-2">
           <Button 
             variant="outline" 
             onClick={() => setShowCancelDialog(false)}
             disabled={isUpdating}
+            className="border-gray-300 hover:bg-gray-50"
           >
             No, Keep Order
           </Button>
           <Button 
-            variant="destructive"
             onClick={cancelOrder}
             disabled={isUpdating}
+            className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
           >
             {isUpdating ? (
               <>
