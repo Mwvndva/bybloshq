@@ -123,7 +123,7 @@ const Index = () => {
                       <div className="mb-2">
                         <h4 className="font-medium mb-1">1.8 Contact</h4>
                         <p className="mb-1">For data requests or privacy inquiries:</p>
-                        <p className="mb-1">📧 privacy@bybloshq.com</p>
+                        <p className="mb-1">📧 byblosexperience@zohomail.com</p>
                       </div>
                     </div>
 
@@ -205,7 +205,7 @@ const Index = () => {
 
                       <div className="mb-2">
                         <h4 className="font-medium mb-1">3.5 Contact for Refunds</h4>
-                        <p className="mb-1">📧 refunds@bybloshq.com</p>
+                        <p className="mb-1">byblosexperience@zohomail.com</p>
                       </div>
                     </div>
 
