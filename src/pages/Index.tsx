@@ -57,160 +57,196 @@ const Index = () => {
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle className="text-xl font-bold">BYBLOS TERMS AND CONDITIONS OF USE</DialogTitle>
+                    <DialogTitle className="text-xl font-bold">BYBLOS LEGAL DOCUMENTS</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4 text-sm">
-                    <p className="text-gray-600">Last updated: October 2025</p>
+                    <p className="text-gray-600">Last Updated: October 2025</p>
+                    <p className="text-gray-600">Registered in Kenya — ByblosHQ ("Byblos," "we," "us," or "our")</p>
                     
                     <div>
-                      <h3 className="font-semibold text-base mb-2">1. Introduction</h3>
-                      <p className="mb-2">Welcome to ByblosHQ ("Byblos," "we," "us," or "our").</p>
-                      <p className="mb-2">By using our website, mobile application, or related services (collectively the "Platform"), you agree to comply with and be bound by these Terms and Conditions.</p>
-                      <p className="mb-2">These Terms govern your access and use of Byblos whether you are a Seller, Buyer, or Event Organizer.</p>
-                      <p className="mb-2">By accessing or using the Platform, you confirm that you have read, understood, and agree to these Terms and our Privacy Policy.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">2. Definitions</h3>
-                      <p className="mb-1"><strong>"Seller"</strong> refers to any individual or business offering goods or services for sale on the Platform.</p>
-                      <p className="mb-1"><strong>"Buyer"</strong> refers to any user purchasing goods, services, or event tickets through the Platform.</p>
-                      <p className="mb-1"><strong>"Event Organizer"</strong> refers to a user who lists and sells tickets to events using Byblos.</p>
-                      <p className="mb-1"><strong>"Commission"</strong> refers to the fee charged by Byblos for facilitating sales or transactions.</p>
-                      <p className="mb-1"><strong>"Account"</strong> means a registered user profile on Byblos.</p>
-                      <p className="mb-1"><strong>"Services"</strong> refers to all products, systems, and functionalities provided by Byblos.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">3. Eligibility</h3>
-                      <p className="mb-1">To use Byblos:</p>
-                      <p className="mb-1">You must be at least 18 years old or have legal parental consent.</p>
-                      <p className="mb-1">You must comply with all applicable Kenyan laws, including consumer protection, e-commerce, and data protection regulations.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">4. User Accounts</h3>
-                      <p className="mb-2">All users must create an account with accurate and verifiable information.</p>
-                      <p className="mb-1">You agree to:</p>
-                      <p className="mb-1">• Maintain accurate and updated information.</p>
-                      <p className="mb-1">• Keep your password confidential.</p>
-                      <p className="mb-1">• Notify Byblos immediately of unauthorized access.</p>
-                      <p className="mb-1">Byblos reserves the right to suspend or terminate any account that violates these Terms or engages in suspicious activity.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">5. Platform Services</h3>
+                      <h3 className="font-semibold text-base mb-2">1. PRIVACY POLICY</h3>
                       <div className="mb-2">
-                        <h4 className="font-medium mb-1">(a) For Sellers</h4>
-                        <p className="mb-1">Sellers can create a personalized shop to list products or services.</p>
-                        <p className="mb-1">Byblos provides tools for order management, payment collection, delivery coordination, and analytics.</p>
-                        <p className="mb-1">A 9% commission is automatically deducted from each successful transaction before settlement to the Seller.</p>
-                        <p className="mb-1">Sellers must:</p>
-                        <p className="mb-1">• Ensure all products/services listed are legal under Kenyan law.</p>
-                        <p className="mb-1">• Provide accurate product descriptions and pricing.</p>
-                        <p className="mb-1">• Fulfill orders promptly and handle customer complaints professionally.</p>
-                        <p className="mb-1">Byblos reserves the right to remove listings that violate our policies or applicable laws.</p>
+                        <h4 className="font-medium mb-1">1.1 Introduction</h4>
+                        <p className="mb-1">This Privacy Policy explains how Byblos collects, uses, and protects personal information from Sellers, Buyers, and Event Organizers ("Users") in compliance with the Data Protection Act, 2019 (Kenya).</p>
+                        <p className="mb-1">By using Byblos, you consent to the collection and processing of your information as outlined below.</p>
                       </div>
+                      
                       <div className="mb-2">
-                        <h4 className="font-medium mb-1">(b) For Buyers</h4>
-                        <p className="mb-1">Buyers can browse, order, and pay for products or services securely through the Platform.</p>
-                        <p className="mb-1">Payments are processed via integrated PSPs (e.g., M-Pesa, card gateways).</p>
-                        <p className="mb-1">Buyers agree to:</p>
-                        <p className="mb-1">• Provide accurate delivery and contact details.</p>
-                        <p className="mb-1">• Use the platform in good faith without fraud or abuse.</p>
-                        <p className="mb-1">• Review product descriptions before making purchases.</p>
-                        <p className="mb-1">Refunds or disputes must be handled in accordance with the Seller's stated policy, and Byblos may act as a mediator where necessary.</p>
+                        <h4 className="font-medium mb-1">1.2 Information We Collect</h4>
+                        <p className="mb-1">We collect the following data:</p>
+                        <p className="mb-1">Personal details: Name, phone number, email, business name, KRA PIN, and location.</p>
+                        <p className="mb-1">Transactional data: Payment records, delivery details, orders, and booking history.</p>
+                        <p className="mb-1">Device data: IP address, browser, device type, and cookies.</p>
+                        <p className="mb-1">Communications: WhatsApp messages, customer service interactions, and feedback.</p>
                       </div>
+
                       <div className="mb-2">
-                        <h4 className="font-medium mb-1">(c) For Event Organizers</h4>
-                        <p className="mb-1">Event Organizers can create and list events on Byblos, sell tickets, and manage attendee data.</p>
-                        <p className="mb-1">A 6% commission is charged on every ticket sold.</p>
-                        <p className="mb-1">Event Organizers are responsible for:</p>
-                        <p className="mb-1">• Ensuring all events comply with relevant local permits, public safety, and licensing laws.</p>
-                        <p className="mb-1">• Providing accurate event details, refund policies, and contact information.</p>
-                        <p className="mb-1">• Managing event access (e.g., QR codes or wristbands).</p>
-                        <p className="mb-1">Byblos may assist with ticketing, but ultimate event responsibility lies with the Organizer.</p>
+                        <h4 className="font-medium mb-1">1.3 How We Use Your Data</h4>
+                        <p className="mb-1">Byblos uses your data to:</p>
+                        <p className="mb-1">• Create and manage your account.</p>
+                        <p className="mb-1">• Process payments and deliver services.</p>
+                        <p className="mb-1">• Send notifications, invoices, and updates via WhatsApp or email.</p>
+                        <p className="mb-1">• Prevent fraud and secure the platform.</p>
+                        <p className="mb-1">• Improve user experience and product features.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">1.4 Data Sharing</h4>
+                        <p className="mb-1">We may share your information with:</p>
+                        <p className="mb-1">• Licensed Payment Service Providers (PSPs) (e.g. Pesapal, Paystack).</p>
+                        <p className="mb-1">• Delivery and logistics partners for shipping orders.</p>
+                        <p className="mb-1">• Regulatory authorities if legally required.</p>
+                        <p className="mb-1">• Third-party analytics or support tools under data protection agreements.</p>
+                        <p className="mb-1">We do not sell or rent your personal data.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">1.5 Data Security</h4>
+                        <p className="mb-1">We use encryption, secure servers, and restricted access controls.</p>
+                        <p className="mb-1">In case of a data breach, users will be notified within 72 hours in accordance with Kenyan law.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">1.6 Your Rights</h4>
+                        <p className="mb-1">Under the Data Protection Act, you have the right to:</p>
+                        <p className="mb-1">• Access, correct, or delete your personal data.</p>
+                        <p className="mb-1">• Withdraw consent.</p>
+                        <p className="mb-1">• Request data portability.</p>
+                        <p className="mb-1">• Lodge a complaint with the Office of the Data Protection Commissioner (ODPC).</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">1.7 Data Retention</h4>
+                        <p className="mb-1">We retain user data for as long as your account is active or required by law (typically 7 years for transactional data).</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">1.8 Contact</h4>
+                        <p className="mb-1">For data requests or privacy inquiries:</p>
+                        <p className="mb-1">📧 privacy@bybloshq.com</p>
                       </div>
                     </div>
 
                     <div>
-                      <h3 className="font-semibold text-base mb-2">6. Payments & Commissions</h3>
-                      <p className="mb-1">All payments are processed via licensed Payment Service Providers (PSPs) regulated by the Central Bank of Kenya (CBK).</p>
-                      <p className="mb-1">Byblos deducts:</p>
-                      <p className="mb-1">• 9% on each Seller transaction.</p>
-                      <p className="mb-1">• 6% on each Event Organizer sale.</p>
-                      <p className="mb-1">Settlement to Sellers/Organizers is made after payment confirmation, usually within 2–3 business days, depending on PSP processing.</p>
-                      <p className="mb-1">Byblos is not liable for PSP delays, chargebacks, or third-party system failures.</p>
+                      <h3 className="font-semibold text-base mb-2">2. CLIENT AGREEMENT (USER AGREEMENT)</h3>
+                      <p className="mb-1">This Agreement is between Byblos and all registered users.</p>
+                      
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">2.1 Scope</h4>
+                        <p className="mb-1">Byblos provides a digital marketplace that connects Sellers, Buyers, and Event Organizers.</p>
+                        <p className="mb-1">By registering, you agree to use the platform legally, responsibly, and honestly.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">2.2 Seller Terms</h4>
+                        <p className="mb-1">• Sellers pay a 9% commission on every completed sale.</p>
+                        <p className="mb-1">• Sellers must ensure product/service authenticity, legality, and timely delivery.</p>
+                        <p className="mb-1">• Sellers are solely responsible for customer service and dispute resolution.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">2.3 Buyer Terms</h4>
+                        <p className="mb-1">• Buyers agree to pay full price before order confirmation.</p>
+                        <p className="mb-1">• Buyers are responsible for providing accurate delivery and contact details.</p>
+                        <p className="mb-1">• Refunds follow the Byblos Refund Policy.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">2.4 Event Organizer Terms</h4>
+                        <p className="mb-1">• Event Organizers pay a 6% commission per ticket sale.</p>
+                        <p className="mb-1">• They must ensure compliance with licensing, venue safety, and refund terms.</p>
+                        <p className="mb-1">• Byblos provides event listing, ticketing, and payment facilitation only.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">2.5 Platform Rights</h4>
+                        <p className="mb-1">Byblos may:</p>
+                        <p className="mb-1">• Suspend or terminate accounts violating these terms.</p>
+                        <p className="mb-1">• Modify commission rates with prior notice.</p>
+                        <p className="mb-1">• Use listings or shop content for marketing or promotional purposes.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">2.6 Indemnity</h4>
+                        <p className="mb-1">Users agree to indemnify and hold Byblos harmless against claims, losses, or damages arising from their use of the platform or breach of this Agreement.</p>
+                      </div>
                     </div>
 
                     <div>
-                      <h3 className="font-semibold text-base mb-2">7. Refunds & Cancellations</h3>
-                      <p className="mb-1">Refund policies are defined by Sellers and Event Organizers individually.</p>
-                      <p className="mb-1">Byblos facilitates refund requests but does not guarantee refunds on behalf of users.</p>
-                      <p className="mb-1">In case of confirmed fraud, double charges, or system errors, Byblos may process refunds directly at its discretion.</p>
+                      <h3 className="font-semibold text-base mb-2">3. REFUND POLICY</h3>
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">3.1 General Policy</h4>
+                        <p className="mb-1">Byblos facilitates transactions but is not the direct seller. Refunds are processed based on the Seller's or Event Organizer's individual policy, subject to review by Byblos.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">3.2 Eligible Refunds</h4>
+                        <p className="mb-1">Refunds may apply if:</p>
+                        <p className="mb-1">• The item/service is not delivered as described.</p>
+                        <p className="mb-1">• An event is canceled or rescheduled.</p>
+                        <p className="mb-1">• There is proven fraud or double payment.</p>
+                        <p className="mb-1">• A payment system error occurs.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">3.3 Refund Procedure</h4>
+                        <p className="mb-1">• The Buyer must submit a request within 7 days of the transaction.</p>
+                        <p className="mb-1">• Byblos verifies details with the Seller or Organizer.</p>
+                        <p className="mb-1">• Approved refunds are processed via the same payment method within 5–10 business days.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">3.4 Non-Refundable Cases</h4>
+                        <p className="mb-1">No refunds are available for:</p>
+                        <p className="mb-1">• Change of mind after confirmed order.</p>
+                        <p className="mb-1">• Downloadable or digital items once accessed.</p>
+                        <p className="mb-1">• Late delivery caused by third-party couriers.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">3.5 Contact for Refunds</h4>
+                        <p className="mb-1">📧 refunds@bybloshq.com</p>
+                      </div>
                     </div>
 
                     <div>
-                      <h3 className="font-semibold text-base mb-2">8. Content & Intellectual Property</h3>
-                      <p className="mb-1">Sellers and Organizers retain ownership of their listings, media, and branding.</p>
-                      <p className="mb-1">Byblos retains ownership of all platform design, code, trademarks, and systems.</p>
-                      <p className="mb-1">By posting content, you grant Byblos a non-exclusive, worldwide license to use, display, and promote your listings for marketing purposes.</p>
+                      <h3 className="font-semibold text-base mb-2">4. RISK DISCLOSURE AGREEMENT</h3>
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">4.1 General Acknowledgment</h4>
+                        <p className="mb-1">By using Byblos, you acknowledge that online commerce involves inherent risks including:</p>
+                        <p className="mb-1">• Payment delays or chargebacks.</p>
+                        <p className="mb-1">• Fraudulent listings or misrepresentation.</p>
+                        <p className="mb-1">• Delivery or logistics issues.</p>
+                        <p className="mb-1">• Event postponements or cancellations.</p>
+                        <p className="mb-1">Byblos acts only as a platform facilitator, not as a seller, event organizer, or payment guarantor.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">4.2 User Responsibility</h4>
+                        <p className="mb-1">You agree to:</p>
+                        <p className="mb-1">• Conduct due diligence before transactions.</p>
+                        <p className="mb-1">• Confirm Seller/Event legitimacy.</p>
+                        <p className="mb-1">• Report suspicious activity immediately.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">4.3 Byblos Limitation</h4>
+                        <p className="mb-1">Byblos shall not be liable for:</p>
+                        <p className="mb-1">• Loss of profits, business opportunities, or data.</p>
+                        <p className="mb-1">• Disputes between users.</p>
+                        <p className="mb-1">• Service interruptions caused by third-party providers.</p>
+                        <p className="mb-1">However, we are committed to resolving disputes fairly and promptly.</p>
+                      </div>
+
+                      <div className="mb-2">
+                        <h4 className="font-medium mb-1">4.4 Acknowledgment</h4>
+                        <p className="mb-1">By registering or using Byblos, you acknowledge and accept all associated business, transactional, and digital risks.</p>
+                      </div>
                     </div>
 
                     <div>
-                      <h3 className="font-semibold text-base mb-2">9. Prohibited Activities</h3>
-                      <p className="mb-1">Users may not:</p>
-                      <p className="mb-1">• List illegal, counterfeit, or stolen goods.</p>
-                      <p className="mb-1">• Engage in misleading advertising or price manipulation.</p>
-                      <p className="mb-1">• Circumvent Byblos' commission system.</p>
-                      <p className="mb-1">• Post abusive, defamatory, or explicit content.</p>
-                      <p className="mb-1">• Use bots, scrapers, or unauthorized software to access Byblos.</p>
-                      <p className="mb-1">Violations will result in suspension or permanent removal of your account.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">10. Data Privacy</h3>
-                      <p className="mb-1">Byblos complies with the Data Protection Act (Kenya, 2019).</p>
-                      <p className="mb-1">We collect, store, and process data only for legitimate business purposes, including order processing, customer communication, and analytics.</p>
-                      <p className="mb-1">Sensitive information (such as payment data) is encrypted and handled by licensed PSPs.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">11. Limitation of Liability</h3>
-                      <p className="mb-1">Byblos acts as a facilitator between Sellers, Buyers, and Organizers.</p>
-                      <p className="mb-1">We are not a party to the actual sale or event contract.</p>
-                      <p className="mb-1">Byblos shall not be liable for:</p>
-                      <p className="mb-1">• Product/service quality issues.</p>
-                      <p className="mb-1">• Delivery or event cancellation disputes.</p>
-                      <p className="mb-1">• Loss of profits, data, or business interruptions.</p>
-                      <p className="mb-1">However, Byblos will take reasonable measures to ensure platform integrity and user protection.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">12. Termination</h3>
-                      <p className="mb-1">Byblos may suspend or terminate your account if:</p>
-                      <p className="mb-1">• You breach these Terms.</p>
-                      <p className="mb-1">• You engage in fraudulent or harmful activity.</p>
-                      <p className="mb-1">• You misuse platform services or intellectual property.</p>
-                      <p className="mb-1">Upon termination, all pending settlements (minus commissions) will be processed according to Byblos' internal policies.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">13. Dispute Resolution</h3>
-                      <p className="mb-1">All disputes shall first be resolved amicably through customer support.</p>
-                      <p className="mb-1">If unresolved, disputes shall be submitted to arbitration in Nairobi, Kenya, under the Arbitration Act (Cap. 49, Laws of Kenya).</p>
-                      <p className="mb-1">The decision of the arbitrator shall be final and binding.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">14. Governing Law</h3>
-                      <p className="mb-1">These Terms are governed by and construed in accordance with the Laws of Kenya.</p>
-                      <p className="mb-1">Users agree to submit to the exclusive jurisdiction of the Kenyan courts.</p>
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-base mb-2">15. Modifications</h3>
-                      <p className="mb-1">Byblos reserves the right to amend or update these Terms at any time.</p>
-                      <p className="mb-1">Any changes will take effect immediately upon posting on the Platform, and continued use signifies acceptance.</p>
+                      <h3 className="font-semibold text-base mb-2">5. GOVERNING LAW</h3>
+                      <p className="mb-1">All agreements are governed by the Laws of Kenya and subject to the exclusive jurisdiction of Kenyan courts.</p>
                     </div>
                   </div>
                 </DialogContent>
@@ -219,10 +255,10 @@ const Index = () => {
 
             {/* Copyright */}
             <div className="pt-2 space-y-2">
-              <p className="text-gray-600 text-sm">
-                &copy; {new Date().getFullYear()} Byblos. All rights reserved.
-              </p>
-              <p className="text-gray-500 text-xs">Powered by Evolve</p>
+          <p className="text-gray-600 text-sm">
+            &copy; {new Date().getFullYear()} Byblos. All rights reserved.
+          </p>
+          <p className="text-gray-500 text-xs">Powered by Evolve</p>
             </div>
           </div>
         </div>
