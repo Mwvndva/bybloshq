@@ -14,7 +14,6 @@ export const getProducts = async (req, res) => {
              s.city as seller_city,
              s.location as seller_location,
              s.avatar_url as seller_avatar_url,
-             s.banner_url as seller_banner_url,
              s.bio as seller_bio,
              s.shop_name as seller_shop_name,
              s.created_at as seller_created_at,
@@ -66,8 +65,6 @@ export const getProducts = async (req, res) => {
           city: row.seller_city,
           avatarUrl: row.seller_avatar_url,
           avatar_url: row.seller_avatar_url,
-          bannerUrl: row.seller_banner_url,
-          banner_url: row.seller_banner_url,
           bio: row.seller_bio,
           shopName: row.seller_shop_name,
           shop_name: row.seller_shop_name,
@@ -86,7 +83,6 @@ export const getProducts = async (req, res) => {
       delete product.seller_city;
       delete product.seller_location;
       delete product.seller_avatar_url;
-      delete product.seller_banner_url;
       delete product.seller_bio;
       delete product.seller_shop_name;
       delete product.seller_created_at;
