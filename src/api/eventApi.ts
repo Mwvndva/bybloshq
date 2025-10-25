@@ -345,9 +345,24 @@ export const sendTicketEmail = async (ticketData: {
       parseFloat(ticketData.price.replace(/[^0-9.-]+/g,"")) : 
       Number(ticketData.price) || 0;
       
-    const numericTotalPrice = typeof ticketData.totalPrice === 'string' ? 
-      parseFloat(ticketData.totalPrice.toString().replace(/[^0-9.-]+/g,"")) : 
-      (ticketData.totalPrice ? Number(ticketData.totalPrice) : numericPrice * (Number(ticketData.quantity) || 1));
+    // Safely convert totalPrice to number
+    let numericTotalPrice = 0;
+    if (ticketData.totalPrice !== null && ticketData.totalPrice !== undefined) {
+      if (typeof ticketData.totalPrice === 'number') {
+        numericTotalPrice = ticketData.totalPrice;
+      } else if (typeof ticketData.totalPrice === 'string') {
+        numericTotalPrice = parseFloat(ticketData.totalPrice.replace(/[^0-9.-]+/g,""));
+      } else if (typeof ticketData.totalPrice === 'object') {
+        // Handle price objects (e.g., { value: 100, currency: 'KES' })
+        const numericValue = ticketData.totalPrice.value || ticketData.totalPrice.amount || ticketData.totalPrice.price || 0;
+        numericTotalPrice = typeof numericValue === 'number' ? numericValue : 0;
+      }
+    }
+    
+    // If totalPrice is 0 or invalid, calculate from price and quantity
+    if (numericTotalPrice === 0 || isNaN(numericTotalPrice)) {
+      numericTotalPrice = numericPrice * (Number(ticketData.quantity) || 1);
+    }
     
     const quantity = Number(ticketData.quantity) || 1;
     

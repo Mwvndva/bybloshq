@@ -13,8 +13,8 @@ class PaymentService {
 
     // Debug log environment variables (don't log full tokens in production)
     logger.info('IntaSend Configuration:', {
-      hasToken: !!process.env.INTASEND_API_TOKEN,
-      hasPubKey: !!process.env.INTASEND_PUB_KEY,
+      hasPublicKey: !!process.env.INTASEND_PUBLIC_KEY,
+      hasSecretKey: !!process.env.INTASEND_SECRET_KEY,
       nodeEnv: process.env.NODE_ENV,
       chosenMode: isLive ? 'live' : 'sandbox',
       backendUrl: process.env.BACKEND_URL,
@@ -23,19 +23,19 @@ class PaymentService {
       liveFlag: process.env.INTASEND_LIVE
     });
 
-    if (!process.env.INTASEND_API_TOKEN || !process.env.INTASEND_PUB_KEY) {
+    if (!process.env.INTASEND_PUBLIC_KEY || !process.env.INTASEND_SECRET_KEY) {
       const error = new Error('IntaSend API credentials not configured');
       logger.error('Missing IntaSend credentials:', {
-        hasToken: !!process.env.INTASEND_API_TOKEN,
-        hasPubKey: !!process.env.INTASEND_PUB_KEY
+        hasPublicKey: !!process.env.INTASEND_PUBLIC_KEY,
+        hasSecretKey: !!process.env.INTASEND_SECRET_KEY
       });
       throw error;
     }
 
     try {
       this.intaSend = new IntaSend(
-        process.env.INTASEND_PUB_KEY,
-        process.env.INTASEND_API_TOKEN,
+        process.env.INTASEND_PUBLIC_KEY,
+        process.env.INTASEND_SECRET_KEY,
         testMode
       );
       

@@ -21,7 +21,7 @@ import publicRoutes from './routes/public.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import ticketRoutes from './routes/ticket.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
-import pesapalRoutes from './routes/pesapal.routes.js';
+import intasendRoutes from './routes/intasend.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import refundRoutes from './routes/refund.routes.js';
 import * as eventController from './controllers/event.controller.js';
@@ -38,12 +38,21 @@ const __dirname = path.dirname(__filename);
 
 // Load environment variables (prefer server/.env, then repo root .env, then .env.production)
 const candidateEnvPaths = [
-  path.join(__dirname, '.env'),                 // server/.env
+  path.join(__dirname, '.env'),                 // server/.env (PRIORITY)
   path.join(process.cwd(), '.env'),             // repo root .env
   process.env.NODE_ENV === 'production' ? path.join(__dirname, '.env.production') : null,
 ].filter(Boolean);
 
+// Debug: Log all candidate paths
+console.log('Checking for .env files in these locations:');
+candidateEnvPaths.forEach((envPath, index) => {
+  const exists = existsSync(envPath);
+  console.log(`${index + 1}. ${envPath} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+});
+
 const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
+console.log(`Using .env file: ${chosenEnvPath || 'NONE FOUND'}`);
+
 dotenv.config({ path: chosenEnvPath });
 
 // Debug log environment variables (without sensitive data)
@@ -56,7 +65,12 @@ console.log({
   DB_NAME: process.env.DB_NAME,
   DB_USER: process.env.DB_USER,
   DB_PASSWORD: process.env.DB_PASSWORD ? '***' : undefined,
-  ENV_PATH: chosenEnvPath
+  ENV_PATH: chosenEnvPath,
+  // IntaSend specific variables
+  INTASEND_PUBLIC_KEY: process.env.INTASEND_PUBLIC_KEY ? 'SET' : 'NOT SET',
+  INTASEND_SECRET_KEY: process.env.INTASEND_SECRET_KEY ? 'SET' : 'NOT SET',
+  INTASEND_BASE_URL: process.env.INTASEND_BASE_URL || 'NOT SET',
+  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'NOT SET'
 });
 
 // Create Express app
@@ -290,7 +304,6 @@ app.use(fixApiPrefix);
 import eventRoutes from './routes/event.routes.js';
 import protectedOrganizerRoutes from './routes/protectedOrganizer.routes.js';
 import orderRoutes from './routes/orderRoutes.js';
-import pesapalV2Routes from './routes/pesapal-v2.routes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
 import whatsappService from './services/whatsapp.service.js';
 import models from './models/index.js';
@@ -306,10 +319,9 @@ app.use('/api/public', publicRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/pesapal', pesapalRoutes);
+app.use('/api/intasend', intasendRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/refunds', refundRoutes);
-app.use('/api/v2/payments/pesapal', pesapalV2Routes); // New Pesapal V2 routes
 app.use('/api/events', eventRoutes);
 
 // Mount protected organizer routes
@@ -353,14 +365,15 @@ if (process.env.NODE_ENV === 'development') {
     }
   });
   
-  // Manually log the Pesapal routes we expect
-  console.log('\n=== Expected Pesapal Routes ===');
-  console.log('POST    /api/pesapal/initialize');
-  console.log('POST    /api/pesapal/checkout');
-  console.log('GET     /api/pesapal/callback');
-  console.log('POST    /api/pesapal/ipn');
-  console.log('GET     /api/pesapal/status/:orderId');
-  console.log('GET     /api/pesapal/test');
+  // Manually log the IntaSend routes we expect
+  console.log('\n=== Expected IntaSend Routes ===');
+  console.log('POST    /api/intasend/initialize');
+  console.log('POST    /api/intasend/checkout');
+  console.log('POST    /api/intasend/mpesa-stk-push');
+  console.log('GET     /api/intasend/callback');
+  console.log('POST    /api/intasend/webhook');
+  console.log('GET     /api/intasend/status/:orderId');
+  console.log('GET     /api/intasend/test');
 }
 
 // Organizer protected routes

@@ -210,12 +210,18 @@ class WhatsAppService {
    */
   async notifySellerNewOrder(orderData) {
     try {
+      console.log('=== NOTIFY SELLER NEW ORDER ===');
+      console.log('Order data received:', JSON.stringify(orderData, null, 2));
+      
       const { seller, order, items, buyer } = orderData;
       
       if (!seller?.phone) {
         console.warn('⚠️ Seller phone number not available');
         return false;
       }
+
+      console.log('Seller phone:', seller.phone);
+      console.log('Order items:', items);
 
       const itemsList = items.map((item, index) => 
         `${index + 1}. ${item.name} x${item.quantity} - KSh ${item.price.toLocaleString()}`
@@ -251,7 +257,10 @@ This ensures your sale is completed successfully! ✅
 Byblos Platform
       `.trim();
 
-      return await this.sendMessage(seller.phone, message);
+      console.log('Sending message to seller:', seller.phone);
+      const result = await this.sendMessage(seller.phone, message);
+      console.log('Seller notification result:', result);
+      return result;
       
     } catch (error) {
       console.error('❌ Error sending new order notification to seller:', error);
@@ -266,12 +275,18 @@ Byblos Platform
    */
   async notifyBuyerOrderConfirmation(orderData) {
     try {
+      console.log('=== NOTIFY BUYER ORDER CONFIRMATION ===');
+      console.log('Order data received:', JSON.stringify(orderData, null, 2));
+      
       const { buyer, order, items, seller } = orderData;
       
       if (!buyer?.phone) {
         console.warn('⚠️ Buyer phone number not available');
         return false;
       }
+
+      console.log('Buyer phone:', buyer.phone);
+      console.log('Order items:', items);
 
       const itemsList = items.map((item, index) => 
         `${index + 1}. ${item.name} x${item.quantity} - KSh ${item.price.toLocaleString()}`
@@ -299,7 +314,10 @@ We'll notify you when your order is ready for pickup!
 Byblos Platform
       `.trim();
 
-      return await this.sendMessage(buyer.phone, message);
+      console.log('Sending message to buyer:', buyer.phone);
+      const result = await this.sendMessage(buyer.phone, message);
+      console.log('Buyer notification result:', result);
+      return result;
       
     } catch (error) {
       console.error('❌ Error sending order confirmation to buyer:', error);
@@ -323,8 +341,9 @@ Byblos Platform
 
       const statusEmojis = {
         'PENDING': '⏳',
+        'DELIVERY_PENDING': '🚚',
         'PROCESSING': '⚙️',
-        'READY_FOR_PICKUP': '📦',
+        'DELIVERY_COMPLETE': '📦',
         'SHIPPED': '🚚',
         'DELIVERED': '✅',
         'COMPLETED': '🎉',
@@ -335,7 +354,30 @@ Byblos Platform
 
       let message = '';
 
-      if (newStatus === 'READY_FOR_PICKUP') {
+      if (newStatus === 'DELIVERY_PENDING') {
+        // Payment successful message
+        message = `
+✅ *PAYMENT SUCCESSFUL!*
+
+Hi! 👋
+
+Great news! Your payment has been processed successfully.
+
+📦 *Order Details:*
+Order #: ${order.orderNumber}
+💰 Amount: KSh ${order.totalAmount?.toLocaleString() || 'N/A'}
+
+🚚 *What's Next:*
+Your order is now being prepared for pickup. We'll notify you once it's ready for collection.
+
+⏰ Payment Confirmed: ${new Date().toLocaleString()}
+
+Thank you for your purchase! 🙏
+
+---
+Byblos Platform
+        `.trim();
+      } else if (newStatus === 'DELIVERY_COMPLETE') {
         // Special message with pickup details
         message = `
 📦 *ORDER READY FOR PICKUP!*
@@ -446,8 +488,34 @@ Order #: ${order.orderNumber}
 
       let message = '';
 
-      // Special message when status changes to READY_FOR_PICKUP
-      if (newStatus === 'READY_FOR_PICKUP') {
+      if (newStatus === 'DELIVERY_PENDING') {
+        // Payment received message for seller
+        message = `
+💰 *PAYMENT RECEIVED!*
+
+Hi! 👋
+
+Great news! You've received a new order with confirmed payment.
+
+📦 *Order Details:*
+Order #: ${order.orderNumber}
+💰 Amount: KSh ${order.totalAmount?.toLocaleString() || 'N/A'}
+
+👤 *Customer:*
+Name: ${buyer.name}
+Phone: ${buyer.phone}
+
+🚚 *Next Steps:*
+Please prepare the order for pickup. Once ready, mark it as "Ready for Pickup" in your seller dashboard.
+
+⏰ Payment Received: ${new Date().toLocaleString()}
+
+Thank you for using our platform! 🙏
+
+---
+Byblos Platform
+        `.trim();
+      } else if (newStatus === 'DELIVERY_COMPLETE') {
         message = `
 ✅ *BUYER NOTIFIED*
 

@@ -112,6 +112,7 @@ const createOrder = async (req, res) => {
       // Log the returned order data
       console.log('Order created successfully:', JSON.stringify(order, null, 2));
 
+
       res.status(201).json({
         success: true,
         data: order
@@ -413,9 +414,7 @@ const getSellerOrders = async (req, res) => {
       console.error('Database query error:', {
         error: queryError,
         query: query,
-        params: queryParams,
-        status: status || 'not provided',
-        statusType: typeof status
+        params: queryParams
       });
       throw queryError;
     }
@@ -453,7 +452,7 @@ const getSellerOrders = async (req, res) => {
       cancelledAt: row.cancelledAt,
       paymentReference: row.paymentReference,
       notes: row.notes || '',
-      items: row.items.filter(item => item.id !== null).map(item => ({
+      items: (row.items || []).filter(item => item.id !== null).map(item => ({
         id: item.id,
         productId: item.productId,
         name: item.name,
@@ -483,8 +482,6 @@ const getSellerOrders = async (req, res) => {
       error: error,
       message: error.message,
       stack: error.stack,
-      status: status || 'not provided',
-      statusType: typeof status,
       sellerId: req.user?.id,
       timestamp: new Date().toISOString()
     });
@@ -649,25 +646,23 @@ const updateOrderStatus = async (req, res) => {
     
     // Validate status transition
     const validTransitions = {
-      'pending': ['ready_for_pickup', 'cancelled'],
-      'ready_for_pickup': ['completed', 'cancelled'],
-      'processing': ['shipped', 'cancelled', 'completed'],
-      'shipped': ['delivered', 'completed'],
-      'delivered': ['completed'],
-      'completed': [],
-      'cancelled': [],
-      'refunded': []
+      'PENDING': ['DELIVERY_PENDING', 'CANCELLED'],
+      'DELIVERY_PENDING': ['DELIVERY_COMPLETE', 'CANCELLED'],
+      'DELIVERY_COMPLETE': ['COMPLETED', 'CANCELLED'],
+      'COMPLETED': [],
+      'CANCELLED': [],
+      'FAILED': []
     };
     
     // Log the valid transitions for debugging
     console.log('Valid transitions:', JSON.stringify(validTransitions, null, 2));
     
     // Ensure order.status is defined and exists in validTransitions
-    const currentStatus = order.status ? order.status.toLowerCase() : null;
-    const newStatus = status ? status.toLowerCase() : null;
+    const currentStatus = order.status ? order.status.toUpperCase() : 'PENDING';
+    const newStatus = status ? status.toUpperCase() : 'PENDING';
     
-    console.log('Current status (lowercase):', currentStatus);
-    console.log('New status (lowercase):', newStatus);
+    console.log('Current status (uppercase):', currentStatus);
+    console.log('New status (uppercase):', newStatus);
     console.log('Valid transition keys:', Object.keys(validTransitions));
     
     if (!currentStatus || !(currentStatus in validTransitions)) {
@@ -817,11 +812,11 @@ const confirmReceipt = async (req, res) => {
     
     const order = orderResult.rows[0];
     
-    // Only allow confirming receipt for orders that are READY_FOR_PICKUP
-    if (order.status !== 'READY_FOR_PICKUP') {
+    // Only allow confirming receipt for orders that are DELIVERY_COMPLETE
+    if (order.status !== 'DELIVERY_COMPLETE') {
       return res.status(400).json({
         success: false,
-        message: `Cannot confirm receipt for order with status: ${order.status}`
+        message: `Cannot confirm receipt for order with status: ${order.status}. Order must be marked as ready for pickup first.`
       });
     }
     
@@ -1139,7 +1134,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         totalAmount: parseFloat(order.total_amount),
         status: 'COMPLETED'
       },
-      oldStatus: 'READY_FOR_PICKUP',
+      oldStatus: 'DELIVERY_COMPLETE',
       newStatus: 'COMPLETED',
       notes: ''
     };
@@ -1161,7 +1156,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         totalAmount: parseFloat(order.total_amount),
         status: 'COMPLETED'
       },
-      oldStatus: 'READY_FOR_PICKUP',
+      oldStatus: 'DELIVERY_COMPLETE',
       newStatus: 'COMPLETED',
       notes: ''
     };

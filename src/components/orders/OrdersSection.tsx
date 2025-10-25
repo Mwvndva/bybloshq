@@ -67,11 +67,18 @@ const getStatusBadge = (status: string) => {
           Pending
         </Badge>
       );
-    case 'READY_FOR_PICKUP':
+    case 'DELIVERY_PENDING':
       return (
         <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
           <Truck className="h-3 w-3 mr-1" />
-          Ready for Pickup
+          Delivery Pending
+        </Badge>
+      );
+    case 'DELIVERY_COMPLETE':
+      return (
+        <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+          <Package className="h-3 w-3 mr-1" />
+          Delivery Complete
         </Badge>
       );
     case 'COMPLETED':
@@ -117,11 +124,17 @@ const getPaymentStatusBadge = (status?: string) => {
         </Badge>
       );
     case 'paid':
-    case 'completed':
       return (
         <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
           <CheckCircle className="h-3 w-3 mr-1" />
           Paid
+        </Badge>
+      );
+    case 'completed':
+      return (
+        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Completed
         </Badge>
       );
     case 'failed':
@@ -452,7 +465,7 @@ export default function OrdersSection() {
                       Cancel Order
                     </Button>
                   )}
-                  {order.status === 'READY_FOR_PICKUP' && (
+                  {order.status === 'DELIVERY_COMPLETE' && (
                     <Button 
                       size="sm" 
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"

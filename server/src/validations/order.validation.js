@@ -30,11 +30,11 @@ const createOrderSchema = Joi.object({
   }).required().label('Shipping address'),
   
   paymentMethod: Joi.string()
-    .valid('credit_card', 'mobile_money', 'paypal', 'pesapal')
+    .valid('credit_card', 'mobile_money', 'paypal', 'intasend', 'intasend_mpesa')
     .required()
     .label('Payment method'),
     
-  sellerId: Joi.string().required().label('Seller ID')
+  sellerId: Joi.number().integer().required().label('Seller ID')
 });
 
 // Schema for updating order status

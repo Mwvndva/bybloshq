@@ -1,6 +1,6 @@
 // These types should match the database enum values
-export type OrderStatus = 'PENDING' | 'READY_FOR_PICKUP' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
-export type PaymentStatus = 'pending' | 'completed' | 'failed' | 'cancelled'; // Payment status is lowercase in DB
+export type OrderStatus = 'PENDING' | 'DELIVERY_PENDING' | 'DELIVERY_COMPLETE' | 'COMPLETED' | 'CANCELLED' | 'FAILED';
+export type PaymentStatus = 'pending' | 'paid' | 'completed' | 'failed' | 'cancelled'; // Payment status is lowercase in DB
 
 export interface OrderItem {
   id: string;
