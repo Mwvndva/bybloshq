@@ -1,7 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import { Loader2, UploadCloud, X } from 'lucide-react';
+import { Loader2, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 
 interface BannerUploadProps {
@@ -13,6 +13,16 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentBannerUrl || null);
   const [file, setFile] = useState<File | null>(null);
+
+  // Update preview URL when currentBannerUrl changes (e.g., after refresh)
+  useEffect(() => {
+    console.log('BannerUpload: currentBannerUrl changed:', currentBannerUrl);
+    console.log('BannerUpload: previewUrl before update:', previewUrl);
+    if (currentBannerUrl) {
+      setPreviewUrl(currentBannerUrl);
+      console.log('BannerUpload: updated previewUrl to:', currentBannerUrl);
+    }
+  }, [currentBannerUrl]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
@@ -88,19 +98,8 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
     try {
       setIsUploading(true);
       
-      // Update the seller's banner to empty
-      const response = await fetch(`/api/sellers/upload-banner`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('sellerToken')}`
-        },
-        body: JSON.stringify({ bannerImage: '' })
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to remove banner');
-      }
+      // Update the seller's banner to empty using sellerApi
+      await sellerApi.uploadBanner('');
       
       setFile(null);
       setPreviewUrl(null);
@@ -110,11 +109,11 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
         title: 'Banner removed',
         description: 'Your store banner has been removed.',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error removing banner:', error);
       toast({
         title: 'Error',
-        description: 'Failed to remove banner. Please try again.',
+        description: error.response?.data?.message || 'Failed to remove banner. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -123,74 +122,96 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
   }, [onBannerUploaded]);
 
   return (
-    <div className="space-y-3 sm:space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-black truncate">Store Banner</h3>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">Upload a banner image for your store (recommended size: 1200x300px)</p>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-xl shadow-lg">
+          <ImageIcon className="h-5 w-5 text-white" />
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2 w-full sm:w-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            className="relative flex-1 sm:flex-none"
-            disabled={isUploading}
-          >
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              disabled={isUploading}
-            />
-            <UploadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-            <span className="text-xs sm:text-sm">{file ? 'Change' : 'Upload'}</span>
-          </Button>
-
-          {previewUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleRemoveBanner}
-              disabled={isUploading}
-              className="flex-1 sm:flex-none"
-            >
-              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-              <span className="text-xs sm:text-sm">Remove</span>
-            </Button>
-          )}
-
-          {file && (
-            <Button
-              onClick={handleUpload}
-              disabled={isUploading}
-              className="flex-1 sm:flex-none"
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                  <span className="text-xs sm:text-sm">Uploading...</span>
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="text-xs sm:text-sm">Save Changes</span>
-                </>
-              )}
-            </Button>
-          )}
+        <div>
+          <h3 className="text-lg sm:text-xl font-bold text-gray-900">Store Banner</h3>
+          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Upload a banner image for your store (recommended: 1200x300px)</p>
         </div>
       </div>
 
-      {(previewUrl || currentBannerUrl) && (
-        <div className="relative rounded-lg sm:rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+      {/* Preview Section */}
+      {(previewUrl || currentBannerUrl) ? (
+        <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shadow-md group">
           <img
             src={previewUrl || currentBannerUrl}
             alt="Store banner preview"
-            className="w-full h-32 sm:h-40 lg:h-48 object-cover"
+            className="w-full h-40 sm:h-48 lg:h-56 object-cover"
           />
+          {previewUrl && (
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+              <span className="text-white text-sm font-semibold">Preview</span>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="relative rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-6">
+          <div className="flex flex-col items-center justify-center text-center">
+            <div className="p-4 bg-white rounded-full shadow-md mb-4">
+              <UploadCloud className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-sm font-semibold text-gray-700 mb-1">No banner uploaded</p>
+            <p className="text-xs text-gray-500">Upload a banner to make your store stand out</p>
+          </div>
         </div>
       )}
+
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button
+          variant="outline"
+          size="default"
+          className="relative flex-1 sm:flex-none border-2 border-gray-300 hover:border-yellow-500 hover:bg-yellow-50 transition-all"
+          disabled={isUploading}
+        >
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            disabled={isUploading}
+          />
+          <UploadCloud className="h-4 w-4 mr-2" />
+          <span className="text-sm font-semibold">{file ? 'Change Image' : 'Upload Banner'}</span>
+        </Button>
+
+        {(previewUrl || currentBannerUrl) && !file && (
+          <Button
+            variant="outline"
+            size="default"
+            onClick={handleRemoveBanner}
+            disabled={isUploading}
+            className="flex-1 sm:flex-none border-2 border-red-300 text-red-600 hover:bg-red-50 hover:border-red-500"
+          >
+            <X className="h-4 w-4 mr-2" />
+            <span className="text-sm font-semibold">Remove</span>
+          </Button>
+        )}
+
+        {file && (
+          <Button
+            onClick={handleUpload}
+            disabled={isUploading}
+            className="flex-1 sm:flex-1 bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white shadow-lg hover:shadow-xl transition-all"
+          >
+            {isUploading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <span className="font-semibold">Uploading...</span>
+              </>
+            ) : (
+              <>
+                <UploadCloud className="h-4 w-4 mr-2" />
+                <span className="font-semibold">Save Changes</span>
+              </>
+            )}
+          </Button>
+        )}
+      </div>
     </div>
   );
 };

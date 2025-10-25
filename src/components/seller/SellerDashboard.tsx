@@ -402,14 +402,19 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const fetchProfile = useCallback(async () => {
     try {
       const profile = await sellerApi.getProfile();
-      setSellerProfile({
+      console.log('SellerDashboard: fetchProfile - raw profile data:', profile);
+      const profileData = {
         fullName: profile.fullName || profile.full_name,
         shopName: profile.shopName || profile.shop_name,
         email: profile.email,
         phone: profile.phone,
         city: profile.city,
-        location: profile.location
-      });
+        location: profile.location,
+        bannerImage: profile.bannerImage || profile.banner_image,
+        theme: profile.theme
+      };
+      console.log('SellerDashboard: fetchProfile - profileData to set:', profileData);
+      setSellerProfile(profileData);
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast({
@@ -649,6 +654,13 @@ useEffect(() => {
   fetchProfile();
   return () => { isMounted = false; };
 }, []);
+
+  // Fetch profile data when settings tab is active
+  useEffect(() => {
+    if (activeTab === 'settings') {
+      fetchProfile();
+    }
+  }, [activeTab, fetchProfile]);
 
   // Create context value to pass to child routes
   const outletContext = {
@@ -1345,9 +1357,11 @@ useEffect(() => {
                 <BannerUpload
                   currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
+                    console.log('SellerDashboard: onBannerUploaded called with:', bannerUrl);
                     setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
                   }}
                 />
+                {console.log('SellerDashboard: Rendering BannerUpload with currentBannerUrl:', sellerProfile?.bannerImage)}
               </div>
 
               {/* Theme Selection */}

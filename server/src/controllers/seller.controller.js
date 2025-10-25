@@ -244,10 +244,16 @@ export const getProfile = async (req, res) => {
       });
     }
     
+    // Map banner_image to bannerImage for frontend compatibility
+    const sellerData = {
+      ...seller,
+      bannerImage: seller.banner_image || null
+    };
+    
     res.status(200).json({
       status: 'success',
       data: {
-        seller
+        seller: sellerData
       }
     });
   } catch (error) {
@@ -571,20 +577,24 @@ export const uploadBanner = async (req, res) => {
 
     const { bannerImage } = req.body;
 
-    if (!bannerImage) {
+    // Allow empty string to remove banner
+    if (bannerImage === undefined || bannerImage === null) {
       return res.status(400).json({
         status: 'error',
         message: 'Banner image is required'
       });
     }
 
-    // Update the seller's banner image
+    // Convert empty string to NULL for database (to remove the banner)
+    const bannerValue = bannerImage === '' ? null : bannerImage;
+
+    // Update the seller's banner image (null removes it)
     const result = await query(
       `UPDATE sellers 
        SET banner_image = $1 
        WHERE id = $2 
        RETURNING id, banner_image AS "bannerImage"`,
-      [bannerImage, sellerId]
+      [bannerValue, sellerId]
     );
 
     if (!result.rows[0]) {
@@ -597,7 +607,7 @@ export const uploadBanner = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        bannerUrl: result.rows[0].bannerImage
+        bannerUrl: result.rows[0].bannerImage || ''
       }
     });
   } catch (error) {
