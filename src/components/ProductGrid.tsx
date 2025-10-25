@@ -1,5 +1,5 @@
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { ProductCard } from './ProductCard';
 import { Aesthetic, Seller } from '@/types';
 import { publicApiService } from '@/api/publicApi';
@@ -24,13 +24,15 @@ interface Product {
 const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locationArea, priceMin, priceMax }: ProductGridProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  interface SellerInfo {
-    name: string;
-    phone?: string;
-  }
-  
+  const [error, setError] = useState('');
   const [sellers, setSellers] = useState<Record<string, Seller>>({});
+  const [cacheKey, setCacheKey] = useState('');
+  const requestCache = useMemo(() => new Map<string, { data: Product[]; timestamp: number }>(), []);
+  const CACHE_DURATION = 60000; // 60 seconds cache
+
+  const getCacheKey = useCallback((params: any) => {
+    return JSON.stringify(params);
+  }, []);
   
   // Transform product data to ensure it matches our Product interface
   const transformProduct = (product: any): Product => {
@@ -74,58 +76,48 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
     return transformedProduct;
   };
 
-  // Simplified product fetching logic
+  // Optimized product fetching logic with caching
   const fetchProducts = useCallback(async () => {
-    console.log('Fetching products with filters:', { 
+    const params = { 
       locationCity, 
       locationArea, 
       selectedAesthetic 
-    });
+    };
+    const key = getCacheKey(params);
+    setCacheKey(key);
+    
+    // Check cache first
+    const cached = requestCache.get(key);
+    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+      setProducts(cached.data);
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
       setError('');
       
-      // Build query parameters - city and location are now optional
+      // Build query parameters
       const queryParams: any = {};
       
-      // Only include city if it's selected
       if (locationCity) {
         queryParams.city = locationCity;
         
-        // Only include location (area) if city is selected and location is not empty
         if (locationArea) {
           queryParams.location = locationArea;
         }
       }
       
-      console.log('API Request Params:', queryParams);
-      
-      // Fetch products from the API (will fetch all products if no city is specified)
+      // Fetch products from the API
       let fetchedProducts = await publicApiService.getProducts(queryParams);
-      
-      console.log('API Response:', { 
-        count: fetchedProducts.length,
-        firstProduct: fetchedProducts[0] || 'No products',
-        hasSeller: !!fetchedProducts[0]?.seller
-      });
       
       // Filter by aesthetic if one is selected
       if (selectedAesthetic && selectedAesthetic !== 'all') {
         fetchedProducts = fetchedProducts.filter(
           (product: any) => product.aesthetic === selectedAesthetic
         );
-        console.log('After aesthetic filter:', { 
-          count: fetchedProducts.length,
-          hasSeller: fetchedProducts[0]?.seller ? 'Yes' : 'No'
-        });
       }
-      
-      console.log('Filtered products:', {
-        count: fetchedProducts.length,
-        firstProduct: fetchedProducts[0] || 'No products',
-        hasSeller: fetchedProducts[0]?.seller ? 'Yes' : 'No'
-      });
       
       // Transform and set products
       const transformedProducts = fetchedProducts.map(transformProduct);
@@ -138,56 +130,16 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
         return acc;
       }, {});
       
-      // Set the products with their sellers
+      // Set the products
       setProducts(transformedProducts);
       
-      // If we already have sellers from the products, use them
-      if (Object.keys(sellersFromProducts).length > 0) {
-        console.log('Using sellers from products:', Object.keys(sellersFromProducts));
-        setSellers(sellersFromProducts);
-      } else {
-        // Fall back to fetching seller info individually
-        const uniqueSellerIds = [...new Set(transformedProducts
-          .map(p => p.sellerId)
-          .filter((id): id is string => !!id)
-        )];
-        
-        if (uniqueSellerIds.length > 0) {
-          console.log('Fetching seller info for:', uniqueSellerIds);
-          const sellerPromises = uniqueSellerIds.map(async (id) => {
-            try {
-              const seller = await publicApiService.getSellerInfo(id);
-              return seller ? { id, ...seller } : null;
-            } catch (error) {
-              console.error(`Failed to fetch seller ${id}:`, error);
-              return null;
-            }
-          });
+      // Use sellers from products if available
+      setSellers(sellersFromProducts);
 
-          const sellerResults = await Promise.all(sellerPromises);
-          const sellerMap = sellerResults.reduce<Record<string, Seller>>((acc, seller) => {
-            if (!seller) return acc;
-            
-            return {
-              ...acc,
-              [seller.id]: {
-                id: seller.id,
-                fullName: seller.fullName || `Seller ${seller.id.slice(0, 6)}`,
-                email: seller.email || '',
-                phone: seller.phone || '',
-                location: seller.location || null,
-                createdAt: seller.createdAt || new Date().toISOString(),
-                updatedAt: seller.updatedAt || new Date().toISOString()
-              }
-            };
-          }, {});
-          
-          setSellers(sellerMap);
-        } else {
-          setSellers({});
-        }
-      }
-    } catch (err) {
+      // Cache the result
+      requestCache.set(key, { data: transformedProducts, timestamp: Date.now() });
+      
+    } catch (err: any) {
       console.error('Failed to fetch products:', err);
       setError('Failed to load products. Please try again later.');
       setProducts([]);
@@ -195,77 +147,45 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
     } finally {
       setLoading(false);
     }
-  }, [selectedAesthetic, locationCity, locationArea, publicApiService]);
+  }, [selectedAesthetic, locationCity, locationArea, requestCache, getCacheKey]);
 
-  // Fetch products when any filter changes
+  // Fetch products when any filter changes - no debouncing for faster response
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchProducts().catch(err => {
-        console.error('Error in fetchProducts:', err);
-        setError('Failed to load products. Please try again later.');
-        setProducts([]);
-        setSellers({});
-        setLoading(false);
-      });
-    }, 100);
+    fetchProducts().catch(err => {
+      console.error('Error in fetchProducts:', err);
+      setError('Failed to load products. Please try again later.');
+      setProducts([]);
+      setSellers({});
+      setLoading(false);
+    });
+  }, [fetchProducts]);
 
-    // Cleanup function to cancel the fetch if the component unmounts
-    return () => {
-      clearTimeout(timer);
-    };
-    // We need to include all dependencies that affect the product listing
-  }, [fetchProducts, locationCity, locationArea, selectedAesthetic]);
+  // Memoized filtered products for better performance
+  const filteredProducts = useMemo(() => {
+    return products.filter(product => {
+      // Filter by price
+      const matchesPrice =
+        (priceMin == null || product.price >= priceMin) &&
+        (priceMax == null || product.price <= priceMax);
 
-  // Filter products based on search query, price, and area (city filtering is now done server-side)
-  const filteredProducts = products.filter(product => {
-    // Filter by price
-    const matchesPrice =
-      (priceMin == null || product.price >= priceMin) &&
-      (priceMax == null || product.price <= priceMax);
+      // Filter by area (if specified and not empty)
+      const sellerLocationText = (product.seller?.location || '').toLowerCase();
+      const locationAreaLower = (locationArea || '').toLowerCase().trim();
+      const matchesArea = !locationAreaLower || sellerLocationText.includes(locationAreaLower);
 
-    // Filter by area (if specified and not empty)
-    const sellerLocationText = (product.seller?.location || '').toLowerCase();
-    const locationAreaLower = (locationArea || '').toLowerCase().trim();
-    const matchesArea = !locationAreaLower || sellerLocationText.includes(locationAreaLower);
-
-    // If there's a search query, check if it matches product name or description
-    if (searchQuery.trim()) {
-      const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
-      const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
-      const matchesSearch = searchTerms.every(term => productText.includes(term));
-      
-      const matches = matchesPrice && matchesArea && matchesSearch;
-      
-      if (matches) {
-        console.log('Product matches all filters (with search):', {
-          id: product.id,
-          name: product.name,
-          price: product.price,
-          sellerLocation: product.seller?.location,
-          matchesPrice,
-          matchesArea,
-          matchesSearch
-        });
+      // If there's a search query, check if it matches product name or description
+      if (searchQuery.trim()) {
+        const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
+        const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
+        const matchesSearch = searchTerms.every(term => productText.includes(term));
+        
+        return matchesPrice && matchesArea && matchesSearch;
       }
       
-      return matches;
-    }
-    
-    const matches = matchesPrice && matchesArea;
-    
-    if (matches) {
-      console.log('Product matches all filters (without search):', {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        sellerLocation: product.seller?.location,
-        matchesPrice,
-        matchesArea
-      });
-    }
-    
-    return matches;
-  });
+      // If no search query, just check price and area
+      return matchesPrice && matchesArea;
+    });
+  }, [products, priceMin, priceMax, locationArea, searchQuery]);
     
   // Function to handle image loading errors
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {

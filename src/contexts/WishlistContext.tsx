@@ -66,55 +66,50 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   // Convert WishlistItem to Product with seller information
   const mapWishlistItemToProduct = async (item: WishlistItem): Promise<Product> => {
-    // Create a default seller object with all required fields
-    const defaultSeller: Seller = {
+    console.log('📝 Mapping wishlist item:', {
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      priceType: typeof item.price,
+      sellerName: (item as any).sellerName
+    });
+    
+    // Create a seller object with shop name from the wishlist item
+    const seller: Seller = {
       id: item.sellerId,
-      fullName: 'Unknown Seller',
+      fullName: (item as any).sellerName || 'Unknown Shop',
       email: '',
       phone: '',
       bannerUrl: '',
-      shopName: 'My Shop',
+      shopName: (item as any).sellerName || 'Unknown Shop',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     
-    let seller: Seller = { ...defaultSeller };
-    
-    try {
-      const sellerInfo = await publicApiService.getSellerInfo(item.sellerId);
-      if (sellerInfo) {
-        // Get the banner URL from either camelCase or snake_case property
-        const bannerUrl = (sellerInfo as any).bannerUrl || (sellerInfo as any).banner_url || '';
-        const shopName = (sellerInfo as any).shopName || (sellerInfo as any).shop_name || 'My Shop';
-        
-        // Merge the fetched seller info with default values
-        seller = {
-          ...defaultSeller,
-          ...sellerInfo,
-          // Ensure required fields are not overridden with undefined
-          bannerUrl,
-          shopName
-        };
-      }
-    } catch (error) {
-      console.error(`Error fetching seller info for ${item.sellerId}:`, error);
-      // Use default seller if there's an error
-    }
-    
-    return {
+    const product: Product = {
       id: item.id,
       name: item.name,
       description: item.description,
-      price: item.price,
+      price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
       image_url: item.image_url,
       sellerId: item.sellerId,
-      seller: seller, // Use the seller variable which is guaranteed to have all required fields
+      seller: seller,
       isSold: item.isSold,
       status: item.status,
       createdAt: item.createdAt,
       updatedAt: item.updatedAt,
       aesthetic: item.aesthetic as Aesthetic,
     };
+    
+    console.log('✅ Mapped product:', {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      priceType: typeof product.price,
+      shopName: product.seller.shopName
+    });
+    
+    return product;
   };
 
   // Load wishlist from server

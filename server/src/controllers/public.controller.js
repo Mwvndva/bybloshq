@@ -7,11 +7,18 @@ export const getProducts = async (req, res) => {
     
     let query = `
       SELECT p.*, 
+             s.id as seller_id,
              s.full_name as seller_name,
              s.phone as seller_phone,
              s.email as seller_email,
              s.city as seller_city,
-             s.location as seller_location
+             s.location as seller_location,
+             s.avatar_url as seller_avatar_url,
+             s.banner_url as seller_banner_url,
+             s.bio as seller_bio,
+             s.shop_name as seller_shop_name,
+             s.created_at as seller_created_at,
+             s.updated_at as seller_updated_at
       FROM products p
       JOIN sellers s ON p.seller_id = s.id
       WHERE p.status = $1
@@ -43,11 +50,56 @@ export const getProducts = async (req, res) => {
     
     const result = await pool.query(query, queryParams);
     
+    // Transform results to include nested seller object
+    const transformedResults = result.rows.map(row => {
+      const product = { ...row };
+      
+      // Create seller object
+      if (row.seller_id) {
+        product.seller = {
+          id: row.seller_id,
+          fullName: row.seller_shop_name, // Use shop name instead of full name
+          full_name: row.seller_shop_name,
+          email: row.seller_email,
+          phone: row.seller_phone,
+          location: row.seller_location,
+          city: row.seller_city,
+          avatarUrl: row.seller_avatar_url,
+          avatar_url: row.seller_avatar_url,
+          bannerUrl: row.seller_banner_url,
+          banner_url: row.seller_banner_url,
+          bio: row.seller_bio,
+          shopName: row.seller_shop_name,
+          shop_name: row.seller_shop_name,
+          createdAt: row.seller_created_at,
+          created_at: row.seller_created_at,
+          updatedAt: row.seller_updated_at,
+          updated_at: row.seller_updated_at
+        };
+      }
+      
+      // Remove individual seller fields from root level
+      delete product.seller_id;
+      delete product.seller_name;
+      delete product.seller_phone;
+      delete product.seller_email;
+      delete product.seller_city;
+      delete product.seller_location;
+      delete product.seller_avatar_url;
+      delete product.seller_banner_url;
+      delete product.seller_bio;
+      delete product.seller_shop_name;
+      delete product.seller_created_at;
+      delete product.seller_updated_at;
+      
+      return product;
+    });
+    
     res.status(200).json({
       status: 'success',
-      results: result.rows.length,
+      results: transformedResults.length,
       data: {
-        products: result.rows
+        products: transformedResults
       }
     });
   } catch (error) {

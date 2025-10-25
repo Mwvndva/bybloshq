@@ -30,6 +30,7 @@ export interface WishlistItem {
   price: number;
   image_url: string;
   sellerId: string;
+  sellerName?: string;
   isSold: boolean;
   status: 'available' | 'sold';
   createdAt: string;

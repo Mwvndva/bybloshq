@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Heart, X, Loader2, ShoppingCart, User } from 'lucide-react';
+import { Heart, X, Loader2, ShoppingCart, Store, Eye, Trash2 } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { useToast } from '@/components/ui/use-toast';
@@ -181,11 +181,13 @@ export default function WishlistSection() {
 
   if (wishlist.length === 0) {
     return (
-      <div className="text-center py-12 sm:py-16 lg:py-20">
-        <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl sm:rounded-3xl flex items-center justify-center shadow-lg">
-          <Heart className="h-8 w-8 sm:h-10 sm:w-10 lg:h-12 lg:w-12 text-yellow-600" />
+      <div className="text-center py-16 sm:py-20 lg:py-24">
+        <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-pink-100 via-purple-100 to-yellow-100 rounded-3xl flex items-center justify-center shadow-lg">
+          <Heart className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-pink-500 fill-current animate-pulse" />
         </div>
-        <h3 className="text-lg sm:text-xl lg:text-2xl font-black text-black mb-2 sm:mb-3">Your wishlist is empty</h3>
+        <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-black mb-3 sm:mb-4">
+          Your wishlist is empty
+        </h3>
         <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium max-w-md mx-auto px-4">
           Start adding items you love to your wishlist and they'll appear here
         </p>
@@ -195,91 +197,122 @@ export default function WishlistSection() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
         {wishlist.map((product, index) => {
+          console.log('🎨 Rendering wishlist product:', {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            priceType: typeof product.price,
+            seller: product.seller
+          });
+          
           const displaySeller = product.seller;
-          const displaySellerName = displaySeller?.fullName || 'Unknown Seller';
-          const hasContactInfo = Boolean(displaySeller?.phone || displaySeller?.email);
+          const displaySellerName = displaySeller?.shopName || displaySeller?.shop_name || displaySeller?.fullName || 'Unknown Shop';
 
           return (
-            <Card key={`wishlist-${product.id}-${index}`} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
-              <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl">
-                <img 
-                  src={product.image_url} 
-                  alt={product.name} 
-                  className="w-full h-40 sm:h-48 lg:h-56 object-cover group-hover:scale-110 transition-transform duration-500"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <Card 
+              key={`wishlist-${product.id}-${index}`} 
+              className="group relative overflow-hidden border-0 bg-gradient-to-br from-white to-gray-50/50 shadow-md hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2"
+            >
+              {/* Image Container */}
+              <div className="relative overflow-hidden rounded-t-xl bg-gray-100">
+                <div className="aspect-square w-full">
+                  <img 
+                    src={product.image_url} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+                  />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleImageClick(product);
-                  }}
-                  className="absolute inset-0 w-full h-full bg-transparent cursor-pointer"
-                  aria-label="View full size image"
-                />
-                
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="absolute top-2 right-2 sm:top-4 sm:right-4 bg-white/90 hover:bg-white rounded-xl sm:rounded-2xl h-8 w-8 sm:h-10 sm:w-10 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110 z-10"
-                  onClick={() => removeFromWishlist(product.id)}
-                >
-                  <Heart className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 fill-current" />
-                </Button>
+                {/* Action Buttons */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="absolute top-3 left-3">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-9 w-9 bg-white/95 hover:bg-white backdrop-blur-sm shadow-lg hover:scale-110 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleImageClick(product);
+                      }}
+                    >
+                      <Eye className="h-4 w-4 text-gray-700" />
+                    </Button>
+                  </div>
+                  <div className="absolute top-3 right-3">
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="h-9 w-9 bg-red-500/95 hover:bg-red-600 backdrop-blur-sm shadow-lg hover:scale-110 transition-all"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromWishlist(product.id);
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Heart Icon - Always Visible */}
+                <div className="absolute bottom-3 right-3">
+                  <div className="w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center shadow-lg">
+                    <Heart className="h-5 w-5 text-pink-500 fill-current" />
+                  </div>
+                </div>
               </div>
-              <CardContent className="p-4 sm:p-6">
-                <h3 className="font-bold text-black mb-2 line-clamp-1 text-sm sm:text-base lg:text-lg">{product.name}</h3>
-                <p className="text-yellow-600 font-black text-lg sm:text-xl mb-2 sm:mb-3">
-                  KSh {typeof product.price === 'number' ? product.price.toLocaleString() : '0'}
-                </p>
-                <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3 sm:mb-4">
+
+              {/* Content */}
+              <CardContent className="p-4 space-y-3">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-gray-900 line-clamp-2 text-sm leading-tight group-hover:text-yellow-600 transition-colors">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-black text-yellow-600">
+                      KSh {typeof product.price === 'number' ? product.price.toLocaleString() : '0'}
+                    </span>
+                  </div>
+                </div>
+                
+                <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
                   {product.description}
                 </p>
                 
-                {/* Seller and Buy Button */}
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-3">
-                  <div className="flex items-center space-x-2">
-                    <User className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm text-gray-700 font-medium">{displaySellerName}</span>
+                {/* Seller Info */}
+                <div className="flex items-center gap-2 pt-2 border-t border-gray-100">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center flex-shrink-0">
+                    <Store className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <button
-                    type="button"
-                    className={cn(
-                      'text-xs bg-yellow-600 hover:bg-yellow-700 text-white transition-all duration-200',
-                      'flex items-center justify-center space-x-1 px-3 py-2 rounded-md',
-                      'disabled:opacity-50 disabled:cursor-not-allowed',
-                      'focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2',
-                      'h-8 text-sm font-medium'
-                    )}
-                    onClick={async (e) => {
-                      // Stop all event propagation
-                      e.preventDefault();
-                      e.stopPropagation();
-                      if (e.nativeEvent) {
-                        e.nativeEvent.stopImmediatePropagation();
-                      }
-                      
-                      // Call the handler
-                      await handleBuyClick(e, product);
-                    }}
-                    disabled={isProcessingPurchase}
-                    aria-busy={isProcessingPurchase}
-                  >
-                    {isProcessingPurchase ? (
-                      <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                        <span>Buy Now</span>
-                      </>
-                    )}
-                  </button>
+                  <span className="text-xs text-gray-700 font-medium truncate flex-1">
+                    {displaySellerName}
+                  </span>
                 </div>
+
+                {/* Buy Button */}
+                <Button
+                  className="w-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-md hover:shadow-lg transition-all duration-200"
+                  onClick={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    await handleBuyClick(e, product);
+                  }}
+                  disabled={isProcessingPurchase}
+                >
+                  {isProcessingPurchase ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Buy Now
+                    </>
+                  )}
+                </Button>
               </CardContent>
             </Card>
           );

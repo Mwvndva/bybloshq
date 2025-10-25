@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { User, Image as ImageIcon, X, Heart, Loader2, ShoppingCart } from 'lucide-react';
+import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -56,7 +56,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   
   // Derived state
   const displaySeller = seller || product.seller;
-  const displaySellerName = displaySeller?.fullName || 'Unknown Seller';
+  const displaySellerName = displaySeller?.shopName || displaySeller?.shop_name || displaySeller?.fullName || 'Unknown Shop';
   const sellerLocation = displaySeller?.location;
   const isSold = product.status === 'sold' || product.isSold;
   
@@ -489,7 +489,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           theme === 'black' ? 'border-gray-800' : 'border-gray-100'
         )}>
           <div className="flex items-center space-x-2">
-            <User className={cn("h-4 w-4", themeClasses.icon)} />
+            <Store className={cn("h-4 w-4", themeClasses.icon)} />
             <span className={cn("text-sm font-medium", themeClasses.seller)}>{displaySellerName}</span>
           </div>
           <Button
@@ -534,16 +534,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="sm:max-w-4xl mx-4">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between text-sm sm:text-base">
-              <span className="truncate pr-2">{product.name}</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsImageDialogOpen(false)}
-                className="h-8 w-8 p-0 flex-shrink-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            <DialogTitle className="text-sm sm:text-base">
+              {product.name}
             </DialogTitle>
           </DialogHeader>
           <div className="flex justify-center">
