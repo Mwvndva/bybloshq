@@ -19,7 +19,7 @@ export async function findByBuyerId(buyerId) {
       p.created_at as "createdAt",
       p.updated_at as "updatedAt",
       s.id AS "sellerId",
-      s.store_name AS "sellerName"
+      s.shop_name AS "sellerName"
     FROM wishlist w
     JOIN products p ON w.product_id = p.id
     JOIN sellers s ON p.seller_id = s.id
