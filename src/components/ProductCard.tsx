@@ -484,50 +484,49 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           </p>
         )}
 
-        {/* Seller and Buy Button */}
-        <div className={cn("flex items-center justify-between pt-2 border-t mt-3", 
+        {/* Seller Info */}
+        <div className={cn("flex items-center gap-2 pt-2 border-t mt-3", 
           theme === 'black' ? 'border-gray-800' : 'border-gray-100'
         )}>
-          <div className="flex items-center space-x-2">
-            <Store className={cn("h-4 w-4", themeClasses.icon)} />
-            <span className={cn("text-sm font-medium", themeClasses.seller)}>{displaySellerName}</span>
-          </div>
-          <Button
-            variant="default"
-            size="sm"
-            className={cn(
-              'text-xs font-medium transition-colors',
-              'focus-visible:ring-2 focus-visible:ring-offset-2',
-              'flex items-center space-x-1.5',
-              'disabled:opacity-50 disabled:pointer-events-none',
-              'h-8 px-3 py-1.5 rounded-md',
-              isSold ? 'bg-gray-400 hover:bg-gray-400' : themeClasses.button,
-              themeClasses.button
-            )}
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (e.nativeEvent) {
-                e.nativeEvent.stopImmediatePropagation();
-              }
-              handleBuyClick(e);
-            }}
-            disabled={isSold || isProcessingPurchase}
-            aria-busy={isProcessingPurchase}
-          >
-            {isProcessingPurchase ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
-                <span>Processing...</span>
-              </>
-            ) : (
-              <>
-                <ShoppingCart className="h-3.5 w-3.5 mr-1.5" />
-                <span>{isSold ? 'Sold Out' : 'Buy Now'}</span>
-              </>
-            )}
-          </Button>
+          <Store className={cn("h-4 w-4", themeClasses.icon)} />
+          <span className={cn("text-sm font-medium truncate flex-1", themeClasses.seller)}>{displaySellerName}</span>
         </div>
+
+        {/* Buy Button */}
+        <Button
+          variant="default"
+          size="default"
+          className={cn(
+            'w-full font-semibold transition-colors mt-3',
+            'focus-visible:ring-2 focus-visible:ring-offset-2',
+            'flex items-center justify-center space-x-2',
+            'disabled:opacity-50 disabled:pointer-events-none',
+            isSold ? 'bg-gray-400 hover:bg-gray-400' : themeClasses.button,
+            themeClasses.button
+          )}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (e.nativeEvent) {
+              e.nativeEvent.stopImmediatePropagation();
+            }
+            handleBuyClick(e);
+          }}
+          disabled={isSold || isProcessingPurchase}
+          aria-busy={isProcessingPurchase}
+        >
+          {isProcessingPurchase ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Processing...</span>
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4" />
+              <span>{isSold ? 'Sold Out' : 'Buy Now'}</span>
+            </>
+          )}
+        </Button>
       </CardContent>
 
       {/* Image Dialog */}
