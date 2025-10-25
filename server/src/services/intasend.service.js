@@ -18,6 +18,19 @@ class IntaSendService {
       cancelUrl: process.env.PUBLIC_BASE_URL ? `${process.env.PUBLIC_BASE_URL}/checkout?status=cancelled` : null
     };
 
+    console.log('=== INTASEND CONFIGURATION DEBUG ===');
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    console.log('sandbox:', config.sandbox);
+    console.log('baseUrl:', config.baseUrl);
+    console.log('webhookUrl:', config.webhookUrl);
+    console.log('callbackUrl:', config.callbackUrl);
+    console.log('cancelUrl:', config.cancelUrl);
+    console.log('Environment variables:');
+    console.log('- BACKEND_URL:', process.env.BACKEND_URL);
+    console.log('- PUBLIC_BASE_URL:', process.env.PUBLIC_BASE_URL);
+    console.log('- VITE_BASE_URL:', process.env.VITE_BASE_URL);
+    console.log('=== END INTASEND CONFIGURATION DEBUG ===');
+
     if (!config.publicKey || !config.secretKey) {
       logger.warn('IntaSend credentials not found. Please set INTASEND_PUBLIC_KEY and INTASEND_SECRET_KEY environment variables.');
     }

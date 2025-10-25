@@ -1053,13 +1053,45 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
       notes: updatedOrder.notes || ''
     };
     
-    // Send notifications to both buyer and seller
+    // Prepare logistics notification data for status updates
+    const logisticsNotificationData = {
+      order: {
+        id: order.id,
+        order_id: order.id,
+        order_number: order.order_number,
+        total_amount: parseFloat(order.total_amount),
+        amount: parseFloat(order.total_amount),
+        items: order.items || []
+      },
+      buyer: {
+        fullName: order.buyer?.name || order.buyer_name,
+        full_name: order.buyer?.name || order.buyer_name,
+        phone: order.buyer?.phone || order.buyer_phone,
+        email: order.buyer?.email || order.buyer_email,
+        city: 'Nairobi', // Default city for logistics
+        location: 'Dynamic Mall, Tom Mboya St'
+      },
+      seller: {
+        shop_name: seller.full_name,
+        businessName: seller.full_name,
+        full_name: seller.full_name,
+        phone: seller.phone,
+        email: seller.email
+      }
+    };
+    
+    // Send notifications to buyer, seller, and logistics
     await Promise.all([
       whatsappService.notifyBuyerStatusUpdate(buyerNotificationData),
-      whatsappService.notifySellerStatusUpdate(sellerNotificationData)
+      whatsappService.notifySellerStatusUpdate(sellerNotificationData),
+      whatsappService.sendLogisticsNotification(
+        logisticsNotificationData.order,
+        logisticsNotificationData.buyer,
+        logisticsNotificationData.seller
+      )
     ]);
     
-    console.log(`WhatsApp status update notifications sent for order ${order.order_number}`);
+    console.log(`WhatsApp status update notifications sent for order ${order.order_number}: Buyer, Seller, and Logistics Partner`);
     
   } catch (error) {
     console.error('Error in sendOrderStatusNotifications:', error);
@@ -1161,14 +1193,46 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
       notes: ''
     };
     
-    // Send notifications to both buyer and seller
+    // Prepare logistics notification data for order completion
+    const logisticsNotificationData = {
+      order: {
+        id: order.id,
+        order_id: order.id,
+        order_number: order.order_number,
+        total_amount: parseFloat(order.total_amount),
+        amount: parseFloat(order.total_amount),
+        items: order.items || []
+      },
+      buyer: {
+        fullName: buyerName,
+        full_name: buyerName,
+        phone: buyerPhone,
+        email: buyerEmail,
+        city: 'Nairobi', // Default city for logistics
+        location: 'Dynamic Mall, Tom Mboya St'
+      },
+      seller: {
+        shop_name: seller.full_name,
+        businessName: seller.full_name,
+        full_name: seller.full_name,
+        phone: seller.phone,
+        email: seller.email
+      }
+    };
+    
+    // Send notifications to buyer, seller, and logistics
     console.log('Calling WhatsApp service to send notifications...');
     await Promise.all([
       whatsappService.notifyBuyerStatusUpdate(buyerNotificationData),
-      whatsappService.notifySellerStatusUpdate(sellerNotificationData)
+      whatsappService.notifySellerStatusUpdate(sellerNotificationData),
+      whatsappService.sendLogisticsNotification(
+        logisticsNotificationData.order,
+        logisticsNotificationData.buyer,
+        logisticsNotificationData.seller
+      )
     ]);
     
-    console.log(`✅ WhatsApp completion notifications sent for order ${order.order_number}`);
+    console.log(`✅ WhatsApp completion notifications sent for order ${order.order_number}: Buyer, Seller, and Logistics Partner`);
     
   } catch (error) {
     console.error('❌ Error in sendOrderCompletionNotifications:', error);

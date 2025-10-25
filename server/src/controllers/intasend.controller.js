@@ -255,7 +255,12 @@ class IntaSendController {
     const client = await pool.connect();
     try {
       const { collection_id, status, reference, checkout_id, tracking_id, signature } = req.query;
-      const frontendUrl = process.env.VITE_BASE_URL || process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
+      // Try multiple environment variables for frontend URL
+      const frontendUrl = process.env.VITE_BASE_URL || 
+                         process.env.PUBLIC_BASE_URL || 
+                         process.env.FRONTEND_URL ||
+                         process.env.CLIENT_URL ||
+                         'http://localhost:3000';
       
       console.log('=== CALLBACK RECEIVED ===');
       console.log('Query params:', req.query);
@@ -577,21 +582,61 @@ class IntaSendController {
                 }))
               };
               
-              // Send all notifications: payment success + new order confirmation
+              // Send all notifications: payment success + new order confirmation + logistics
               console.log('=== SENDING WHATSAPP NOTIFICATIONS ===');
               console.log('Buyer notification data:', JSON.stringify(buyerNotificationData, null, 2));
               console.log('Seller notification data:', JSON.stringify(sellerNotificationData, null, 2));
               console.log('New order data:', JSON.stringify(newOrderData, null, 2));
               
+              // Prepare logistics notification data
+              const logisticsNotificationData = {
+                order: {
+                  id: currentOrder.id,
+                  order_id: currentOrder.id,
+                  order_number: currentOrder.order_number,
+                  total_amount: parseFloat(currentOrder.total_amount),
+                  amount: parseFloat(currentOrder.total_amount),
+                  items: orderItems.map(item => ({
+                    name: item.name,
+                    product_name: item.name,
+                    price: item.price,
+                    product_price: item.price,
+                    quantity: item.quantity
+                  }))
+                },
+                buyer: {
+                  fullName: currentOrder.buyer_name,
+                  full_name: currentOrder.buyer_name,
+                  phone: currentOrder.buyer_phone,
+                  email: currentOrder.buyer_email,
+                  city: 'Nairobi', // Default city for logistics
+                  location: 'Dynamic Mall, Tom Mboya St'
+                },
+                seller: {
+                  shop_name: seller.full_name,
+                  businessName: seller.full_name,
+                  full_name: seller.full_name,
+                  phone: seller.phone,
+                  email: seller.email
+                }
+              };
+              
+              console.log('Logistics notification data:', JSON.stringify(logisticsNotificationData, null, 2));
+              
               const notificationResults = await Promise.all([
                 whatsappService.notifyBuyerStatusUpdate(buyerNotificationData),
                 whatsappService.notifySellerStatusUpdate(sellerNotificationData),
                 whatsappService.notifySellerNewOrder(newOrderData),
-                whatsappService.notifyBuyerOrderConfirmation(newOrderData)
+                whatsappService.notifyBuyerOrderConfirmation(newOrderData),
+                whatsappService.sendLogisticsNotification(
+                  logisticsNotificationData.order,
+                  logisticsNotificationData.buyer,
+                  logisticsNotificationData.seller
+                )
               ]);
               
               console.log('Notification results:', notificationResults);
-              console.log(`✅ WhatsApp payment success and new order notifications sent for order ${currentOrder.order_number}`);
+              console.log(`✅ WhatsApp notifications sent for order ${currentOrder.order_number}: Buyer, Seller, and Logistics Partner`);
             } else {
               console.log('No seller found for notifications');
             }
@@ -615,12 +660,43 @@ class IntaSendController {
       }
       
       const redirectUrl = `${frontendUrl}/checkout?status=${frontendStatus}&reference=${orderNumber}&message=${encodeURIComponent('Payment processed successfully')}`;
+      
+      console.log('=== REDIRECT DEBUG ===');
+      console.log('frontendUrl:', frontendUrl);
+      console.log('frontendStatus:', frontendStatus);
+      console.log('orderNumber:', orderNumber);
+      console.log('redirectUrl:', redirectUrl);
+      console.log('Environment variables:');
+      console.log('- VITE_BASE_URL:', process.env.VITE_BASE_URL);
+      console.log('- PUBLIC_BASE_URL:', process.env.PUBLIC_BASE_URL);
+      console.log('- FRONTEND_URL:', process.env.FRONTEND_URL);
+      console.log('- CLIENT_URL:', process.env.CLIENT_URL);
+      console.log('- NODE_ENV:', process.env.NODE_ENV);
+      console.log('=== END REDIRECT DEBUG ===');
+      
       res.redirect(redirectUrl);
 
     } catch (error) {
       await client.query('ROLLBACK');
       logger.error('Error handling IntaSend callback:', error);
-      const frontendUrl = process.env.VITE_BASE_URL || process.env.PUBLIC_BASE_URL || 'http://localhost:3000';
+      // Try multiple environment variables for frontend URL
+      const frontendUrl = process.env.VITE_BASE_URL || 
+                         process.env.PUBLIC_BASE_URL || 
+                         process.env.FRONTEND_URL ||
+                         process.env.CLIENT_URL ||
+                         'http://localhost:3000';
+      
+      console.log('=== ERROR REDIRECT DEBUG ===');
+      console.log('Error:', error.message);
+      console.log('frontendUrl:', frontendUrl);
+      console.log('Environment variables:');
+      console.log('- VITE_BASE_URL:', process.env.VITE_BASE_URL);
+      console.log('- PUBLIC_BASE_URL:', process.env.PUBLIC_BASE_URL);
+      console.log('- FRONTEND_URL:', process.env.FRONTEND_URL);
+      console.log('- CLIENT_URL:', process.env.CLIENT_URL);
+      console.log('- NODE_ENV:', process.env.NODE_ENV);
+      console.log('=== END ERROR REDIRECT DEBUG ===');
+      
       res.redirect(`${frontendUrl}/checkout?status=error&message=${encodeURIComponent('Payment processing failed')}`);
     } finally {
       client.release();
