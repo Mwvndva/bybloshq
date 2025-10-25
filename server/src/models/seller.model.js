@@ -141,6 +141,7 @@ export const findSellerById = async (id) => {
       phone, 
       location, 
       city, 
+      banner_image,
       theme, 
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
