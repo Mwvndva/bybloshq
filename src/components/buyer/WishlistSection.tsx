@@ -90,9 +90,14 @@ export default function WishlistSection() {
       const [firstName = 'Customer', ...lastNameParts] = userData.fullName?.split(' ') || [];
       const lastName = lastNameParts.join(' ') || 'User';
       
+      // Safely convert price to number and string
+      const numericPrice = typeof product.price === 'number' ? product.price : 
+        (typeof product.price === 'string' ? parseFloat(product.price) : 0);
+      
       const payload = {
-        amount: product.price.toString(),
+        amount: numericPrice.toString(),
         description: `Purchase of ${product.name}`,
+        sellerId: parseInt(product.sellerId || product.seller_id || '0'),
         customer: {
           id: String(userData.id || 'N/A'),
           email: userData.email,
@@ -105,7 +110,7 @@ export default function WishlistSection() {
             productId: String(product.id),
             productName: product.name,
             quantity: 1,
-            price: product.price,
+            price: numericPrice,
           },
         ],
       };
@@ -120,7 +125,7 @@ export default function WishlistSection() {
       
       // 8. Call checkout API
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/api/pesapal/checkout`, {
+      const response = await fetch(`${apiUrl}/api/intasend/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,7 +232,7 @@ export default function WishlistSection() {
               <CardContent className="p-4 sm:p-6">
                 <h3 className="font-bold text-black mb-2 line-clamp-1 text-sm sm:text-base lg:text-lg">{product.name}</h3>
                 <p className="text-yellow-600 font-black text-lg sm:text-xl mb-2 sm:mb-3">
-                  KSh {product.price.toLocaleString()}
+                  KSh {typeof product.price === 'number' ? product.price.toLocaleString() : '0'}
                 </p>
                 <p className="text-xs sm:text-sm text-gray-600 line-clamp-2 leading-relaxed mb-3 sm:mb-4">
                   {product.description}

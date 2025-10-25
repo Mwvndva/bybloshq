@@ -280,7 +280,7 @@ const getSellerById = async (req, res, next) => {
         COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN platform_fee_amount ELSE 0 END), 0) as total_commission,
         COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN seller_payout_amount ELSE 0 END), 0) as net_sales,
         COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
-        COUNT(CASE WHEN status = 'READY_FOR_PICKUP' THEN 1 END) as ready_for_pickup,
+        COUNT(CASE WHEN status = 'DELIVERY_COMPLETE' THEN 1 END) as delivery_complete,
         COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_orders,
         COUNT(CASE WHEN status = 'CANCELLED' THEN 1 END) as cancelled_orders
       FROM product_orders
@@ -1239,7 +1239,7 @@ const getFinancialMetrics = async (req, res, next) => {
         COUNT(*) as total_orders
       FROM product_orders
       WHERE payment_status = 'completed'
-        AND status IN ('PENDING', 'READY_FOR_PICKUP', 'COMPLETED')
+        AND status IN ('PENDING', 'DELIVERY_COMPLETE', 'COMPLETED')
     `);
 
     // Get total commission (platform_fee_amount)
@@ -1248,7 +1248,7 @@ const getFinancialMetrics = async (req, res, next) => {
         COALESCE(SUM(platform_fee_amount), 0) as total_commission
       FROM product_orders
       WHERE payment_status = 'completed'
-        AND status IN ('PENDING', 'READY_FOR_PICKUP', 'COMPLETED')
+        AND status IN ('PENDING', 'DELIVERY_COMPLETE', 'COMPLETED')
     `);
 
     // Get total refunds made
@@ -1312,7 +1312,7 @@ const getMonthlyFinancialData = async (req, res, next) => {
           COALESCE(SUM(platform_fee_amount), 0) AS commission
         FROM product_orders
         WHERE payment_status = 'completed'
-          AND status IN ('PENDING', 'READY_FOR_PICKUP', 'COMPLETED')
+          AND status IN ('PENDING', 'DELIVERY_COMPLETE', 'COMPLETED')
           AND created_at >= CURRENT_DATE - interval '12 months'
         GROUP BY date_trunc('month', created_at)
       ),

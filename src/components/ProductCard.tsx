@@ -250,6 +250,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       const payload = {
         amount: product.price,
         description: `Purchase of ${product.name}`,
+        sellerId: parseInt(product.sellerId || product.seller_id || displaySeller?.id || '0'),
         customer: {
           id: buyerId,
           email: buyerInfo.email,
@@ -272,7 +273,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         currency: 'KES',
         callbackUrl: `${window.location.origin}/orders`,
         cancelUrl: `${window.location.origin}/products/${product.id}`,
-        notificationId: process.env.VITE_PESAPAL_IPN_ID || '',
+        notificationId: process.env.VITE_INTASEND_WEBHOOK_ID || '',
         billingAddress: {
           emailAddress: buyerInfo.email,
           phoneNumber: buyerInfo.phone,
@@ -291,7 +292,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       
       // 4. Call checkout API
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/api/pesapal/checkout`, {
+      const response = await fetch(`${apiUrl}/api/intasend/checkout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

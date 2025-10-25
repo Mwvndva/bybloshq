@@ -140,8 +140,24 @@ interface Seller {
 
 // Helper function to transform product data from API
 const transformProduct = (product: any): Product => {
+  // Safely convert price to number
+  let price = 0;
+  if (product.price !== null && product.price !== undefined) {
+    if (typeof product.price === 'number') {
+      price = product.price;
+    } else if (typeof product.price === 'string') {
+      const parsed = parseFloat(product.price);
+      price = isNaN(parsed) ? 0 : parsed;
+    } else if (typeof product.price === 'object') {
+      // Handle price objects (e.g., { value: 100, currency: 'KES' })
+      const numericValue = product.price.value || product.price.amount || product.price.price || 0;
+      price = typeof numericValue === 'number' ? numericValue : 0;
+    }
+  }
+
   const transformedProduct: any = {
     ...product,
+    price: price, // Ensure price is always a number
     image_url: product.image_url || product.imageUrl,
     sellerId: product.sellerId || product.seller_id,
     isSold: product.isSold || product.is_sold || product.status === 'sold',

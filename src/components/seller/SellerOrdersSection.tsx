@@ -67,39 +67,6 @@ export default function SellerOrdersSection() {
     fetchOrders();
   }, []);
 
-  const markAsShipped = async (orderId: string) => {
-    try {
-      setIsUpdating(true);
-      // Update order status in the database
-      const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'READY_FOR_PICKUP' as OrderStatus);
-      
-      // Update local state with proper typing
-      setOrders(prevOrders => 
-        prevOrders.map(order => 
-          order.id === orderId ? { 
-            ...updatedOrder,
-            status: 'READY_FOR_PICKUP' as const,
-            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'pending') as PaymentStatus
-          } : order
-        )
-      );
-      
-      toast({
-        title: 'Order Updated',
-        description: 'Order has been marked as ready for pickup.',
-      });
-    } catch (err) {
-      console.error('Failed to update order status:', err);
-      toast({
-        title: 'Error',
-        description: 'Failed to update order status. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
   const handleReadyForPickupClick = (orderId: string) => {
     setSelectedOrderId(orderId);
     setShowPickupDialog(true);
@@ -112,16 +79,16 @@ export default function SellerOrdersSection() {
       setIsUpdating(true);
       setShowPickupDialog(false);
       
-      // Use uppercase 'READY_FOR_PICKUP' to match database enum
-      const updatedOrder = await sellerApi.updateOrderStatus(selectedOrderId, 'READY_FOR_PICKUP' as any);
+      // Update order status to DELIVERY_COMPLETE
+      const updatedOrder = await sellerApi.updateOrderStatus(selectedOrderId, 'DELIVERY_COMPLETE' as OrderStatus);
       
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === selectedOrderId ? { 
-            ...order, // Keep all existing order properties
-            status: 'READY_FOR_PICKUP' as const,
-            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'pending') as PaymentStatus,
-            updatedAt: new Date().toISOString() // Update the updatedAt timestamp
+            ...order,
+            status: 'DELIVERY_COMPLETE' as const,
+            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
+            updatedAt: new Date().toISOString()
           } : order
         )
       );
@@ -134,7 +101,7 @@ export default function SellerOrdersSection() {
       console.error('Failed to update order status:', err);
       toast({
         title: 'Error',
-        description: 'Failed to update order status. Please try again.',
+        description: 'Failed to mark order as ready for pickup. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -146,13 +113,13 @@ export default function SellerOrdersSection() {
   const markAsDelivered = async (orderId: string) => {
     try {
       setIsUpdating(true);
-      const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'COMPLETED' as OrderStatus);
+      const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'DELIVERY_COMPLETE' as OrderStatus);
       
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId ? { 
             ...updatedOrder,
-            status: 'COMPLETED' as const,
+            status: 'DELIVERY_COMPLETE' as const,
             paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'completed') as PaymentStatus
           } : order
         )
@@ -290,9 +257,13 @@ export default function SellerOrdersSection() {
                         <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
                           <CheckCircle className="h-3 w-3 mr-1" /> Completed
                         </Badge>
-                      ) : order.status === 'READY_FOR_PICKUP' ? (
+                      ) : order.status === 'DELIVERY_COMPLETE' ? (
+                        <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                          <Package className="h-3 w-3 mr-1" /> Delivery Complete
+                        </Badge>
+                      ) : order.status === 'DELIVERY_PENDING' ? (
                         <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                          <Truck className="h-3 w-3 mr-1" /> Ready for Pickup
+                          <Truck className="h-3 w-3 mr-1" /> Delivery Pending
                         </Badge>
                       ) : order.status === 'FAILED' ? (
                         <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -344,16 +315,6 @@ export default function SellerOrdersSection() {
                       <div className="space-y-2">
                         <Button 
                           size="sm" 
-                          className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-                          onClick={() => handleReadyForPickupClick(order.id)}
-                          disabled={isUpdating}
-                        >
-                          <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                          <span className="hidden sm:inline">Mark as Ready for Pickup</span>
-                          <span className="sm:hidden">Ready for Pickup</span>
-                        </Button>
-                        <Button 
-                          size="sm" 
                           variant="outline"
                           className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300 text-xs sm:text-sm font-semibold transition-all duration-200"
                           onClick={() => handleCancelClick(order.id)}
@@ -364,18 +325,18 @@ export default function SellerOrdersSection() {
                         </Button>
                       </div>
                     )}
-                    {order.status === 'READY_FOR_PICKUP' && 
-                     (order.paymentStatus?.toLowerCase() === 'completed') && (
+                    {order.status === 'DELIVERY_PENDING' && 
+                     (order.paymentStatus?.toLowerCase() === 'paid') && (
                       <div className="space-y-2">
                         <Button 
                           size="sm" 
-                          className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-                          onClick={() => markAsDelivered(order.id)}
+                          className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                          onClick={() => handleReadyForPickupClick(order.id)}
                           disabled={isUpdating}
                         >
-                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                          <span className="hidden sm:inline">Mark as Delivered</span>
-                          <span className="sm:hidden">Mark Delivered</span>
+                          <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                          <span className="hidden sm:inline">Mark as Ready for Pickup</span>
+                          <span className="sm:hidden">Ready for Pickup</span>
                         </Button>
                         <Button 
                           size="sm" 

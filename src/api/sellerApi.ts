@@ -120,15 +120,33 @@ sellerApiInstance.interceptors.response.use(
 );
 
 // Helper function to transform product data
-const transformProduct = (product: any): Product => ({
-  ...product,
-  image_url: product.image_url || product.imageUrl,
-  sellerId: product.sellerId || product.seller_id,
-  createdAt: product.createdAt || product.created_at,
-  updatedAt: product.updatedAt || product.updated_at,
-  isSold: product.isSold || product.is_sold || product.status === 'sold',
-  status: product.status || (product.isSold || product.is_sold ? 'sold' : 'available')
-});
+const transformProduct = (product: any): Product => {
+  // Safely convert price to number
+  let price = 0;
+  if (product.price !== null && product.price !== undefined) {
+    if (typeof product.price === 'number') {
+      price = product.price;
+    } else if (typeof product.price === 'string') {
+      const parsed = parseFloat(product.price);
+      price = isNaN(parsed) ? 0 : parsed;
+    } else if (typeof product.price === 'object') {
+      // Handle price objects (e.g., { value: 100, currency: 'KES' })
+      const numericValue = product.price.value || product.price.amount || product.price.price || 0;
+      price = typeof numericValue === 'number' ? numericValue : 0;
+    }
+  }
+
+  return {
+    ...product,
+    price: price, // Ensure price is always a number
+    image_url: product.image_url || product.imageUrl,
+    sellerId: product.sellerId || product.seller_id,
+    createdAt: product.createdAt || product.created_at,
+    updatedAt: product.updatedAt || product.updated_at,
+    isSold: product.isSold || product.is_sold || product.status === 'sold',
+    status: product.status || (product.isSold || product.is_sold ? 'sold' : 'available')
+  };
+};
 
 // Helper function to transform seller data
 const transformSeller = (data: any): Seller => {
@@ -159,7 +177,7 @@ interface ShopNameAvailabilityResponse {
 // Check if shop name is available
 export const checkShopNameAvailability = async (shopName: string): Promise<{ available: boolean }> => {
   try {
-    const response = await sellerApiInstance.get<ShopNameAvailabilityResponse>(`/sellers/check-shop-name?shopName=${encodeURIComponent(shopName)}`);
+    const response = await sellerApiInstance.get<ShopNameAvailabilityResponse>(`/api/sellers/check-shop-name?shopName=${encodeURIComponent(shopName)}`);
     console.log('Shop name availability response:', response.data);
     return response.data.data;
   } catch (error) {
@@ -215,7 +233,7 @@ export const sellerApi = {
   // Auth
   login: async (credentials: { email: string; password: string }): Promise<{ seller: Seller; token: string }> => {
     try {
-      const response = await sellerApiInstance.post<LoginResponse>('/sellers/login', credentials);
+      const response = await sellerApiInstance.post<LoginResponse>('/api/sellers/login', credentials);
       const responseData = response.data.data;
       
       if (!responseData) {
@@ -250,7 +268,7 @@ export const sellerApi = {
     location?: string;
   }): Promise<{ seller: Seller; token: string }> => {
     try {
-      const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
+      const response = await sellerApiInstance.post<RegisterResponse>('/api/sellers/register', {
         fullName: data.fullName,
         shopName: data.shopName,
         email: data.email,
@@ -287,13 +305,13 @@ export const sellerApi = {
 
   // Products
   createProduct: async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isSold'>): Promise<Product> => {
-    const response = await sellerApiInstance.post('/sellers/products', product);
+    const response = await sellerApiInstance.post('/api/sellers/products', product);
     return transformProduct(response.data);
   },
 
   getProducts: async (): Promise<Product[]> => {
     try {
-      const response = await sellerApiInstance.get<ProductsResponse>('/sellers/products');
+      const response = await sellerApiInstance.get<ProductsResponse>('/api/sellers/products');
       const products = response.data?.data?.products || [];
       return products.map(transformProduct);
     } catch (error: any) {
@@ -314,7 +332,7 @@ export const sellerApi = {
   getSellerProducts: async (sellerId: string | number): Promise<Product[]> => {
     try {
       // Use axios directly to avoid auth interceptor
-      const response = await axios.get<ProductsResponse>(`${baseURL}/sellers/${sellerId}/products`);
+      const response = await axios.get<ProductsResponse>(`${baseURL}/api/sellers/${sellerId}/products`);
       const products = response.data?.data?.products || response.data?.data || [];
       return products.map(transformProduct);
     } catch (error: any) {
@@ -333,7 +351,7 @@ export const sellerApi = {
 
   getProduct: async (id: string): Promise<Product> => {
     try {
-      const response = await sellerApiInstance.get<ProductResponse>(`/sellers/products/${id}`);
+      const response = await sellerApiInstance.get<ProductResponse>(`/api/sellers/products/${id}`);
       const productData = response.data?.data;
       if (!productData) {
         throw new Error('Product not found');
@@ -349,18 +367,18 @@ export const sellerApi = {
   },
 
   updateProduct: async (id: string, updates: Partial<Product>): Promise<Product> => {
-    const response = await sellerApiInstance.patch(`/sellers/products/${id}`, updates);
+    const response = await sellerApiInstance.patch(`/api/sellers/products/${id}`, updates);
     return transformProduct(response.data);
   },
 
   deleteProduct: async (id: string): Promise<void> => {
-    await sellerApiInstance.delete(`/sellers/products/${id}`);
+    await sellerApiInstance.delete(`/api/sellers/products/${id}`);
   },
 
   // Seller
   getProfile: async (): Promise<Seller> => {
     try {
-      const response = await sellerApiInstance.get<SellerResponse>('/sellers/profile');
+      const response = await sellerApiInstance.get<SellerResponse>('/api/sellers/profile');
       const profileData = response.data?.data;
       if (!profileData) {
         throw new Error('No profile data received');
@@ -377,7 +395,7 @@ export const sellerApi = {
 
   getSellerById: async (id: string | number): Promise<Seller> => {
     try {
-      const response = await sellerApiInstance.get<SellerResponse>(`/sellers/${id}`);
+      const response = await sellerApiInstance.get<SellerResponse>(`/api/sellers/${id}`);
       const sellerData = response.data?.data;
       if (!sellerData) {
         throw new Error('No seller data received');
@@ -394,7 +412,7 @@ export const sellerApi = {
 
   async getSellerByShopName(shopName: string): Promise<Seller> {
     try {
-      const response = await sellerApiInstance.get<SellerResponse>(`/sellers/shop/${encodeURIComponent(shopName)}`);
+      const response = await sellerApiInstance.get<SellerResponse>(`/api/sellers/shop/${encodeURIComponent(shopName)}`);
       const sellerData = response.data?.data;
       if (!sellerData) {
         throw new Error('No seller data received');
@@ -412,7 +430,7 @@ export const sellerApi = {
   // Analytics
   getAnalytics: async (): Promise<SellerAnalytics> => {
     try {
-      const response = await sellerApiInstance.get<AnalyticsResponse>('/sellers/analytics');
+      const response = await sellerApiInstance.get<AnalyticsResponse>('/api/sellers/analytics');
       if (!response.data?.data) {
         throw new Error('No analytics data received');
       }
@@ -428,7 +446,7 @@ export const sellerApi = {
     try {
       // Use the public API endpoint directly
       const response = await axios.post<ForgotPasswordResponse>(
-        `${API_URL}/sellers/forgot-password`, 
+        `${API_URL}/api/sellers/forgot-password`, 
         { 
           email: email.trim().toLowerCase() 
         }, 
@@ -457,7 +475,7 @@ export const sellerApi = {
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<ResetPasswordResponse>(
-        `${API_URL}/sellers/reset-password`,
+        `${API_URL}/api/sellers/reset-password`,
         { token, newPassword },
         { 
           headers: { 
@@ -488,7 +506,7 @@ export const sellerApi = {
   // Update seller profile
   updateProfile: async (data: { city?: string; location?: string; theme?: Theme }): Promise<Seller> => {
     try {
-      const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
+      const response = await sellerApiInstance.patch<{ data: Seller }>('/api/sellers/profile', data);
       return transformSeller(response.data.data);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -498,24 +516,24 @@ export const sellerApi = {
 
   // Orders
   async getOrders(params?: { status?: OrderStatus }): Promise<Order[]> {
-    const response = await sellerApiInstance.get<{ data: Order[] }>('/sellers/orders', { params });
+    const response = await sellerApiInstance.get<{ data: Order[] }>('/api/sellers/orders', { params });
     return response.data.data;
   },
 
   async getOrder(orderId: string): Promise<Order> {
-    const response = await sellerApiInstance.get<{ data: Order }>(`/sellers/orders/${orderId}`);
+    const response = await sellerApiInstance.get<{ data: Order }>(`/api/sellers/orders/${orderId}`);
     return response.data.data;
   },
 
   // Update seller theme
   async updateTheme(theme: Theme): Promise<{ theme: Theme }> {
-    const response = await sellerApiInstance.patch<{ data: { theme: Theme } }>('/sellers/theme', { theme });
+    const response = await sellerApiInstance.patch<{ data: { theme: Theme } }>('/api/sellers/theme', { theme });
     return response.data.data;
   },
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
     const response = await sellerApiInstance.patch<{ data: Order }>(
-      `/sellers/orders/${orderId}`, 
+      `/api/sellers/orders/${orderId}`, 
       { status }
     );
     return response.data.data;
@@ -523,14 +541,14 @@ export const sellerApi = {
 
   async cancelOrder(orderId: string): Promise<{ success: boolean; message: string; refundAmount: number }> {
     const response = await sellerApiInstance.patch<{ success: boolean; message: string; refundAmount: number }>(
-      `/orders/${orderId}/seller-cancel`
+      `/api/orders/${orderId}/seller-cancel`
     );
     return response.data;
   },
 
   // Upload banner image
   async uploadBanner(bannerImage: string): Promise<{ bannerUrl: string }> {
-    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/sellers/upload-banner', { bannerImage });
+    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/api/sellers/upload-banner', { bannerImage });
     return response.data.data;
   },
 
@@ -553,7 +571,7 @@ export const sellerApi = {
         cancelled: number;
         revenue: number;
       }
-    }>('/sellers/orders/analytics');
+    }>('/api/sellers/orders/analytics');
     return response.data.data;
   },
 
@@ -563,12 +581,12 @@ export const sellerApi = {
     mpesaNumber: string;
     mpesaName: string;
   }): Promise<WithdrawalRequest> {
-    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>('/sellers/withdrawal-request', data);
+    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>('/api/sellers/withdrawal-request', data);
     return response.data.data;
   },
 
   async getWithdrawalRequests(): Promise<WithdrawalRequest[]> {
-    const response = await sellerApiInstance.get<{ data: WithdrawalRequest[] }>('/sellers/withdrawal-requests');
+    const response = await sellerApiInstance.get<{ data: WithdrawalRequest[] }>('/api/sellers/withdrawal-requests');
     return response.data.data;
   },
 
