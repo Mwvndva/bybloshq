@@ -90,6 +90,17 @@ class IntaSendService {
         webhook_url: collectionData.webhook_url,
         payload: collectionData
       });
+      
+      console.log('=== INTASEND PAYMENT COLLECTION DEBUG ===');
+      console.log('Collection data being sent to IntaSend:');
+      console.log('- amount:', collectionData.amount);
+      console.log('- currency:', collectionData.currency);
+      console.log('- api_ref:', collectionData.api_ref);
+      console.log('- redirect_url:', collectionData.redirect_url);
+      console.log('- webhook_url:', collectionData.webhook_url);
+      console.log('- customer_email:', collectionData.email);
+      console.log('- customer_phone:', collectionData.phone_number);
+      console.log('=== END INTASEND PAYMENT COLLECTION DEBUG ===');
 
       const response = await client.collection().charge(collectionData);
       

@@ -23,7 +23,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateBuyerProfile } from '@/api/buyerApi';
 import { useNavigate } from 'react-router-dom';
-import { WishlistProvider, useWishlist } from '@/contexts/WishlistContext';
+import { useWishlist } from '@/contexts/WishlistContext';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import AestheticCategories from '@/components/AestheticCategories';
 import ProductGrid from '@/components/ProductGrid';
@@ -60,17 +60,8 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
   </Card>
 );
 
-// Wrapper component to provide WishlistContext to the dashboard
-const BuyerDashboard = () => {
-  return (
-    <WishlistProvider>
-      <BuyerDashboardInner />
-    </WishlistProvider>
-  );
-}
-
 // Main dashboard component
-function BuyerDashboardInner() {
+function BuyerDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
