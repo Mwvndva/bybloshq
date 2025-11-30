@@ -1,233 +1,95 @@
-import IntaSend from 'intasend-node';
+import paystackService from './paystack.service.js';
 import logger from '../utils/logger.js';
 
 class PaymentService {
   constructor() {
-    // Resolve environment flags for IntaSend (sandbox vs live)
-    const isLive = (
-      (process.env.INTASEND_ENV && process.env.INTASEND_ENV.toLowerCase() === 'live') ||
-      process.env.INTASEND_LIVE === 'true' ||
-      process.env.NODE_ENV === 'production'
-    );
-    const testMode = !isLive; // third arg expects test flag
-
-    // Debug log environment variables (don't log full tokens in production)
-    logger.info('IntaSend Configuration:', {
-      hasPublicKey: !!process.env.INTASEND_PUBLIC_KEY,
-      hasSecretKey: !!process.env.INTASEND_SECRET_KEY,
-      nodeEnv: process.env.NODE_ENV,
-      chosenMode: isLive ? 'live' : 'sandbox',
-      backendUrl: process.env.BACKEND_URL,
-      frontendUrl: process.env.FRONTEND_URL,
-      envHint: process.env.INTASEND_ENV,
-      liveFlag: process.env.INTASEND_LIVE
-    });
-
-    if (!process.env.INTASEND_PUBLIC_KEY || !process.env.INTASEND_SECRET_KEY) {
-      const error = new Error('IntaSend API credentials not configured');
-      logger.error('Missing IntaSend credentials:', {
-        hasPublicKey: !!process.env.INTASEND_PUBLIC_KEY,
-        hasSecretKey: !!process.env.INTASEND_SECRET_KEY
-      });
-      throw error;
-    }
-
-    try {
-      this.intaSend = new IntaSend(
-        process.env.INTASEND_PUBLIC_KEY,
-        process.env.INTASEND_SECRET_KEY,
-        testMode
-      );
-      
-      this.collection = this.intaSend.collection();
-      logger.info('IntaSend client initialized successfully', { mode: isLive ? 'live' : 'sandbox' });
-    } catch (error) {
-      logger.error('Failed to initialize IntaSend client:', error);
-      throw new Error(`Failed to initialize payment service: ${error.message}`);
-    }
+    logger.info('Payment Service initialized with Paystack');
   }
 
   /**
-   * Initiate M-Pesa STK push payment
+   * Initiate Paystack payment
    * @param {Object} paymentData - Payment details
-   * @param {string} paymentData.phone - Phone number in 2547xxxxxxx format
    * @param {string} paymentData.email - Customer email
-   * @param {number} paymentData.amount - Amount to charge
-   * @param {string} paymentData.narrative - Payment description
-   * @returns {Promise<Object>} Payment response
+   * @param {number} paymentData.amount - Amount to charge (in main currency unit, e.g., KES)
+   * @param {string} paymentData.reference - Transaction reference (invoice_id)
+   * @param {string} paymentData.callback_url - Callback URL after payment
+   * @param {Object} paymentData.metadata - Additional metadata
+   * @returns {Promise<Object>} Payment response with access_code
    */
-  async initiateMpesaPayment({ phone, email, amount, narrative, firstName = 'Customer', lastName = '', invoice_id }) {
+  async initiatePayment({ email, amount, reference, callback_url, metadata = {} }) {
     try {
-      logger.info(`Initiating M-Pesa payment for ${email}, amount: ${amount}`);
+      logger.info(`Initiating Paystack payment for ${email}, amount: ${amount}, reference: ${reference}`);
       
-      // Construct the webhook URL - using the same host as the API but with /api/payments/webhook path
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:3002';
-      const webhookUrl = new URL('/api/payments/webhook', backendUrl).toString();
-      
-      logger.info(`Using webhook URL: ${webhookUrl} (Backend URL: ${backendUrl})`);
-      
-      // Prepare payment data
-      const paymentData = {
-        first_name: firstName,
-        last_name: lastName,
+      const response = await paystackService.initializeTransaction({
         email,
         amount,
-        phone_number: phone,
-        api_ref: invoice_id || `ticket_${Date.now()}`,
-        host: process.env.FRONTEND_URL || 'http://localhost:3000',
-        webhook: webhookUrl,
-        ...(narrative && { narrative })
-      };
-      
-      logger.info('Sending payment request to IntaSend:', {
-        ...paymentData,
-        // Don't log sensitive data in production
-        email: process.env.NODE_ENV === 'production' ? '[REDACTED]' : email,
-        phone_number: process.env.NODE_ENV === 'production' ? '[REDACTED]' : phone,
+        reference,
+        callback_url,
+        metadata
       });
       
-      let response;
-      try {
-        response = await this.collection.mpesaStkPush(paymentData);
-      } catch (apiError) {
-        const responseData = apiError?.response?.data;
-        const detail = responseData?.detail || responseData?.message || (typeof responseData === 'string' ? responseData : undefined);
-        logger.error('IntaSend API Error:', {
-          message: apiError.message,
-          status: apiError.response?.status,
-          statusText: apiError.response?.statusText,
-          data: responseData,
-          code: apiError.code,
-          config: {
-            url: apiError.config?.url,
-            method: apiError.config?.method,
-            // minimize header logging
-          }
-        });
-        throw new Error(`Payment API error: ${detail || apiError.message}`);
-      }
-
-      // Log the full response for debugging
-      logger.info('M-Pesa payment initiated', { 
-        email,
-        invoiceId: response.invoice_id || invoice_id,
-        response: JSON.stringify(response, null, 2)
+      logger.info('Paystack payment initiated successfully', {
+        reference: response.data.reference,
+        access_code: response.data.access_code
       });
       
       return {
         success: true,
-        data: response,
-        invoiceId: response.invoice_id || invoice_id  // Use the one from response if available, otherwise use the one we generated
+        data: response.data,
+        access_code: response.data.access_code,
+        authorization_url: response.data.authorization_url,
+        reference: response.data.reference
       };
     } catch (error) {
-      // Log the full error object and response if available
-      logger.error('Error initiating M-Pesa payment:', {
+      logger.error('Error initiating Paystack payment:', {
         message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
       
-      // Extract a more helpful error message if available
-      let errorMessage = error.message;
-      if (error.response?.data) {
-        errorMessage = error.response.data.detail || JSON.stringify(error.response.data);
-      }
-      
-      throw new Error(`Payment initiation failed: ${errorMessage}`);
+      throw new Error(`Payment initiation failed: ${error.message}`);
     }
   }
 
   /**
-   * Check payment status
-   * @param {string} invoiceId - Invoice ID to check
+   * Legacy method name for backward compatibility
+   * @deprecated Use initiatePayment instead
+   */
+  async initiateMpesaPayment(paymentData) {
+    return this.initiatePayment(paymentData);
+  }
+
+  /**
+   * Check payment status using Paystack verify transaction
+   * @param {string} reference - Transaction reference (invoice_id)
    * @returns {Promise<Object>} Payment status
    */
-  async checkPaymentStatus(invoiceId) {
+  async checkPaymentStatus(reference) {
     try {
-      logger.info(`Checking payment status for invoice: ${invoiceId}`);
-      const response = await this.collection.status(invoiceId);
+      logger.info(`Checking Paystack payment status for reference: ${reference}`);
       
-      // Log the raw response for debugging
-      const responseString = JSON.stringify(response, null, 2);
-      logger.info('Raw payment status response:', responseString);
-      
-      // Handle different response formats
-      let status, state, mpesaReference, invoiceData;
-      
-      // First try to get the invoice data from the response
-      if (response && typeof response === 'object') {
-        // Check if the response has an 'invoice' property
-        if (response.invoice) {
-          invoiceData = response.invoice;
-        } 
-        // If no invoice but has state, use the root object
-        else if (response.state) {
-          invoiceData = response;
-        }
-        // Check for array response (some API versions return an array)
-        else if (Array.isArray(response) && response.length > 0) {
-          invoiceData = response[0];
-        }
-        // Check for data property
-        else if (response.data) {
-          invoiceData = Array.isArray(response.data) ? response.data[0] : response.data;
-        }
-      }
-      
-      // Extract status and reference from the invoice data
-      if (invoiceData) {
-        status = invoiceData.state || invoiceData.status;
-        state = invoiceData.state;
-        mpesaReference = invoiceData.mpesa_reference || invoiceData.reference;
-        
-        // Handle case where status might be in a nested 'status' object
-        if (!status && invoiceData.status && typeof invoiceData.status === 'object') {
-          status = invoiceData.status.state || invoiceData.status.status;
-        }
-      }
-      
-      // If we still don't have a status, check the raw response
-      if (!status && response) {
-        status = response.state || response.status;
-        mpesaReference = response.mpesa_reference || response.reference;
-      }
-      
-      // Normalize status to lowercase for consistency
-      status = (status || 'pending').toLowerCase();
-      state = (state || status || 'pending').toLowerCase();
-      
-      // Log the extracted values
-      logger.info(`Extracted status: ${status}, state: ${state} for invoice ${invoiceId}`, {
-        hasInvoiceData: !!invoiceData,
-        mpesaReference,
-        responseKeys: response ? Object.keys(response) : 'no response'
-      });
+      const response = await paystackService.verifyTransaction(reference);
       
       return {
-        success: true,
-        status,
-        state,
-        mpesa_reference: mpesaReference,
-        data: response,
-        // Include common fields at the top level for easier access
-        invoice_id: response?.invoice_id || invoiceId,
-        amount: response?.amount || response?.data?.amount,
-        currency: response?.currency || response?.data?.currency,
-        provider_reference: mpesaReference || response?.provider_reference || response?.data?.provider_reference
+        success: response.success,
+        status: response.status,
+        state: response.status, // For backward compatibility
+        data: response.data,
+        reference: response.data?.reference || reference,
+        amount: response.data?.amount,
+        currency: response.data?.currency,
+        provider_reference: response.data?.reference
       };
     } catch (error) {
-      logger.error(`Error checking payment status for invoice ${invoiceId}:`, {
+      logger.error(`Error checking Paystack payment status for reference ${reference}:`, {
         error: error.message,
-        stack: error.stack,
-        response: error.response?.data
+        stack: error.stack
       });
       
       return {
         success: false,
         status: 'error',
         error: error.message,
-        invoice_id: invoiceId
+        reference
       };
     }
   }

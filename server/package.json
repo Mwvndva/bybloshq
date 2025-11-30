@@ -37,6 +37,7 @@
   },
   "homepage": "https://github.com/yourusername/byblos-atelier-vogue#readme",
   "dependencies": {
+    "@paystack/inline-js": "^2.22.7",
     "@types/joi": "^17.2.2",
     "@types/uuid": "^10.0.0",
     "axios": "^1.10.0",

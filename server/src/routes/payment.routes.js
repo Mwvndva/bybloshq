@@ -101,6 +101,16 @@ publicRouter.get(
   }
 );
 
+// Verify payment with Paystack (public) - used after callback redirect
+publicRouter.get(
+  '/verify/:reference',
+  [
+    param('reference').notEmpty().withMessage('Payment reference is required'),
+    validate
+  ],
+  paymentController.verifyPayment
+);
+
 // Mount public routes
 router.use(publicRouter);
 

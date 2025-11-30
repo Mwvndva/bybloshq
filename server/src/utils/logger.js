@@ -18,10 +18,40 @@ const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.splat(), // Enable string interpolation
     winston.format.colorize({ all: true }),
-    winston.format.printf(
-      (info) => `${info.timestamp} ${info.level}: ${info.message}`
-    )
+    winston.format.printf((info) => {
+      const { timestamp, level, message, ...meta } = info;
+      
+      // Build the log message
+      let logMessage = `${timestamp} ${level}: ${message}`;
+      
+      // Add metadata if present (excluding internal winston properties)
+      const metaKeys = Object.keys(meta).filter(key => 
+        !['splat', 'Symbol(level)', 'Symbol(message)', 'Symbol(splat)'].includes(key)
+      );
+      
+      if (metaKeys.length > 0) {
+        // Stringify the metadata for better readability
+        try {
+          const metaString = JSON.stringify(meta, null, 2);
+          logMessage += `\n${metaString}`;
+        } catch (error) {
+          // If JSON.stringify fails, try to stringify each property
+          const metaParts = metaKeys.map(key => {
+            try {
+              return `  ${key}: ${JSON.stringify(meta[key], null, 2)}`;
+            } catch (e) {
+              return `  ${key}: [Unable to serialize]`;
+            }
+          });
+          logMessage += `\n${metaParts.join('\n')}`;
+        }
+      }
+      
+      return logMessage;
+    })
   ),
   transports: [
     // Console transport

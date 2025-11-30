@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { apiRequest } from '@/lib/axios';
 import { validatePromoCode, calculateDiscount, type PromoCode } from '@/api/promoCodeApi';
 import { Badge } from '@/components/ui/badge';
+import PaystackPop from '@paystack/inline-js';
 
 type PurchaseFormData = {
   customerName: string;
@@ -414,8 +415,8 @@ export function TicketPurchaseForm({
             const failureDetails = data.failureDetails as { failed_reason?: string; failed_code?: string; failed_code_link?: string } | null;
 
             console.log(`Payment status update received: ${status}`, failureDetails);
-
-            // Handle terminal states
+        
+        // Handle terminal states
             if (['completed', 'failed', 'cancelled'].includes(status)) {
               clearTimeout(timeout);
               eventSource.close();
@@ -433,13 +434,13 @@ export function TicketPurchaseForm({
               }
 
               resolve({
-                success: status === 'completed',
-                status,
+            success: status === 'completed',
+            status,
                 message,
                 data: payment,
                 failureDetails: failureDetails || undefined
               });
-            }
+        }
           }
         } catch (error) {
           console.error('Error parsing SSE message:', error);
@@ -602,59 +603,45 @@ export function TicketPurchaseForm({
       
       const { data } = response;
       invoiceId = data.invoiceId || data.data?.invoiceId;
+      const accessCode = data.access_code || data.data?.access_code;
+      const authorizationUrl = data.authorization_url || data.data?.authorization_url;
       
       if (!invoiceId) {
         throw new Error('No invoice ID received from server');
       }
       
-      console.log('Starting payment status monitoring for invoice:', invoiceId);
-      
-      // Listen for real-time payment status updates via SSE
-      console.log('Connecting to real-time payment status stream...');
-      const result = await listenForPaymentStatus(invoiceId);
-      
-      console.log('Payment status monitoring completed with result:', result);
-      
-      // Check the actual payment status
-      const paymentStatus = result.status?.toLowerCase();
-      
-      if (paymentStatus === 'completed' && result.success) {
-        console.log('Payment completed successfully!');
-        setPurchaseDetails({
-          reference: invoiceId,
-          email: purchaseData.customerEmail
-        });
-        setPurchaseComplete(true);
-        
-        // Call the original onSubmit if provided
-        if (onSubmit) {
-          try {
-            await onSubmit(purchaseData);
-          } catch (submitError) {
-            console.error('Error in onSubmit callback:', submitError);
-          }
-        }
-      } else if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
-        // Payment explicitly failed or was cancelled
-        console.error(`Payment ${paymentStatus} with status: ${result.status}`, result.message);
-        
-        // Use failure details from webhook if available
-        const failureMessage = result.failureDetails?.failed_reason || 
-                               result.message || 
-                               (paymentStatus === 'failed' 
-                                 ? 'Payment failed. Please try again.' 
-                                 : 'Payment was cancelled.');
-        
-        // Create error with failure details
-        const error = new Error(failureMessage) as any;
-        error.failureDetails = result.failureDetails;
-        error.paymentStatus = paymentStatus;
-        throw error;
-      } else {
-        // Unknown or pending status - treat as error
-        console.error(`Payment ended with unknown status: ${result.status}`, result.message);
-        throw new Error(result.message || 'Payment status could not be determined. Please check your email or contact support.');
+      if (!accessCode && !authorizationUrl) {
+        throw new Error('No payment access code or authorization URL received from server');
       }
+      
+      console.log('Opening Paystack payment popup for invoice:', invoiceId);
+      
+      // Initialize Paystack popup
+      const paystack = new PaystackPop();
+      
+      // Open Paystack payment popup
+      if (accessCode) {
+        paystack.resumeTransaction(accessCode);
+      } else if (authorizationUrl) {
+        // Fallback: redirect to authorization URL if access_code not available
+        window.location.href = authorizationUrl;
+        return; // Exit early as we're redirecting
+      }
+      
+      // Note: Paystack will redirect to callback_url after payment
+      // The callback handler will verify payment and update status
+      // For now, we'll show a message that payment is being processed
+      toast({
+        title: 'Payment Processing',
+        description: 'Please complete the payment in the popup window. You will be redirected after payment.',
+        duration: 5000
+      });
+      
+      // Close the form dialog as payment is being processed
+      onOpenChange(false);
+      
+      // Note: Actual payment verification happens in the callback handler
+      // which will be triggered when Paystack redirects to callback_url
       
     } catch (error: any) {
       console.error('Error processing payment:', {
@@ -677,7 +664,7 @@ export function TicketPurchaseForm({
       if (paymentStatus === 'failed' && failureDetails) {
         errorTitle = 'Payment Failed';
         errorMessage = failureDetails.failed_reason || 'Payment failed. Please try again.';
-        
+      
         // Add error code if available
         if (failureDetails.failed_code) {
           errorMessage += ` (Error Code: ${failureDetails.failed_code})`;
