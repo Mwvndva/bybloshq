@@ -1,235 +1,334 @@
-import IntaSend from 'intasend-node';
 import logger from '../utils/logger.js';
+import https from 'https';
+import PaymentCompletionService from './paymentCompletion.service.js';
+import Payment from '../models/payment.model.js';
 
 class PaymentService {
-  constructor() {
-    // Resolve environment flags for IntaSend (sandbox vs live)
-    const isLive = (
-      (process.env.INTASEND_ENV && process.env.INTASEND_ENV.toLowerCase() === 'live') ||
-      process.env.INTASEND_LIVE === 'true' ||
-      process.env.NODE_ENV === 'production'
-    );
-    const testMode = !isLive; // third arg expects test flag
+  async initiatePayment(paymentData) {
+    try {
+      console.log('=== PAYMENT SERVICE INITIATE PAYMENT ===');
+      console.log('Payment data:', paymentData);
+      console.log('Timestamp:', new Date().toISOString());
+      
+      const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+      
+      if (!paystackSecretKey) {
+        throw new Error('Paystack secret key not configured');
+      }
 
-    // Debug log environment variables (don't log full tokens in production)
-    logger.info('IntaSend Configuration:', {
-      hasPublicKey: !!process.env.INTASEND_PUBLIC_KEY,
-      hasSecretKey: !!process.env.INTASEND_SECRET_KEY,
-      nodeEnv: process.env.NODE_ENV,
-      chosenMode: isLive ? 'live' : 'sandbox',
-      backendUrl: process.env.BACKEND_URL,
-      frontendUrl: process.env.FRONTEND_URL,
-      envHint: process.env.INTASEND_ENV,
-      liveFlag: process.env.INTASEND_LIVE
-    });
+      // Initialize Paystack transaction
+      const initializeData = {
+        email: paymentData.email,
+        amount: Math.round(parseFloat(paymentData.amount) * 100), // Convert to kobo
+        currency: 'KES',
+        // Don't send reference - let Paystack generate its own
+        // Note: callback_url should point to frontend for user redirect, not webhook
+        // Webhook handles payment verification separately
+        callback_url: `${process.env.PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/success`,
+        metadata: {
+          invoice_id: paymentData.invoice_id,
+          customer_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
+          narrative: paymentData.narrative,
+          phone: paymentData.phone
+        }
+      };
 
-    if (!process.env.INTASEND_PUBLIC_KEY || !process.env.INTASEND_SECRET_KEY) {
-      const error = new Error('IntaSend API credentials not configured');
-      logger.error('Missing IntaSend credentials:', {
-        hasPublicKey: !!process.env.INTASEND_PUBLIC_KEY,
-        hasSecretKey: !!process.env.INTASEND_SECRET_KEY
-      });
+      const response = await this.makePaystackRequest('POST', '/transaction/initialize', initializeData, paystackSecretKey);
+      
+      if (response.status && response.data) {
+        logger.info('Paystack transaction initialized successfully', {
+          reference: response.data.reference,
+          authorization_url: response.data.authorization_url,
+          fullResponse: response.data
+        });
+        
+        console.log('=== PAYSTACK RESPONSE DEBUG ===');
+        console.log('response.data.reference:', response.data.reference);
+        console.log('paymentData.invoice_id:', paymentData.invoice_id);
+        console.log('==============================');
+        
+        return {
+          invoice_id: paymentData.invoice_id,
+          reference: response.data.reference,
+          authorization_url: response.data.authorization_url,
+          access_code: response.data.access_code,
+          status: 'pending',
+          message: 'Payment initialized successfully'
+        };
+      } else {
+        throw new Error('Invalid response from Paystack');
+      }
+      
+    } catch (error) {
+      logger.error('Error initiating Paystack payment:', error);
       throw error;
     }
+  }
 
+  async checkPaymentStatus(paymentId) {
     try {
-      this.intaSend = new IntaSend(
-        process.env.INTASEND_PUBLIC_KEY,
-        process.env.INTASEND_SECRET_KEY,
-        testMode
-      );
+      const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
       
-      this.collection = this.intaSend.collection();
-      logger.info('IntaSend client initialized successfully', { mode: isLive ? 'live' : 'sandbox' });
+      if (!paystackSecretKey) {
+        throw new Error('Paystack secret key not configured');
+      }
+
+      const response = await this.makePaystackRequest('GET', `/transaction/verify/${paymentId}`, null, paystackSecretKey);
+      
+      if (response.status && response.data) {
+        return {
+          state: response.data.status === 'success' ? 'completed' : 'pending',
+          status: response.data.status,
+          invoice_id: paymentId,
+          reference: response.data.reference,
+          amount: response.data.amount,
+          paid_at: response.data.paid_at,
+          message: `Payment ${response.data.status}`
+        };
+      } else {
+        throw new Error('Invalid response from Paystack');
+      }
+      
     } catch (error) {
-      logger.error('Failed to initialize IntaSend client:', error);
-      throw new Error(`Failed to initialize payment service: ${error.message}`);
+      logger.error('Error checking Paystack payment status:', error);
+      throw error;
     }
   }
 
-  /**
-   * Initiate M-Pesa STK push payment
-   * @param {Object} paymentData - Payment details
-   * @param {string} paymentData.phone - Phone number in 2547xxxxxxx format
-   * @param {string} paymentData.email - Customer email
-   * @param {number} paymentData.amount - Amount to charge
-   * @param {string} paymentData.narrative - Payment description
-   * @returns {Promise<Object>} Payment response
-   */
-  async initiateMpesaPayment({ phone, email, amount, narrative, firstName = 'Customer', lastName = '', invoice_id }) {
-    try {
-      logger.info(`Initiating M-Pesa payment for ${email}, amount: ${amount}`);
-      
-      // Construct the webhook URL - using the same host as the API but with /api/payments/webhook path
-      const backendUrl = process.env.BACKEND_URL || 'http://localhost:3002';
-      const webhookUrl = new URL('/api/payments/webhook', backendUrl).toString();
-      
-      logger.info(`Using webhook URL: ${webhookUrl} (Backend URL: ${backendUrl})`);
-      
-      // Prepare payment data
-      const paymentData = {
-        first_name: firstName,
-        last_name: lastName,
-        email,
-        amount,
-        phone_number: phone,
-        api_ref: invoice_id || `ticket_${Date.now()}`,
-        host: process.env.FRONTEND_URL || 'http://localhost:3000',
-        webhook: webhookUrl,
-        ...(narrative && { narrative })
+  makePaystackRequest(method, path, data, secretKey) {
+    return new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.paystack.co',
+        port: 443,
+        path: path,
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${secretKey}`,
+          'Content-Type': 'application/json'
+        }
       };
-      
-      logger.info('Sending payment request to IntaSend:', {
-        ...paymentData,
-        // Don't log sensitive data in production
-        email: process.env.NODE_ENV === 'production' ? '[REDACTED]' : email,
-        phone_number: process.env.NODE_ENV === 'production' ? '[REDACTED]' : phone,
-      });
-      
-      let response;
-      try {
-        response = await this.collection.mpesaStkPush(paymentData);
-      } catch (apiError) {
-        const responseData = apiError?.response?.data;
-        const detail = responseData?.detail || responseData?.message || (typeof responseData === 'string' ? responseData : undefined);
-        logger.error('IntaSend API Error:', {
-          message: apiError.message,
-          status: apiError.response?.status,
-          statusText: apiError.response?.statusText,
-          data: responseData,
-          code: apiError.code,
-          config: {
-            url: apiError.config?.url,
-            method: apiError.config?.method,
-            // minimize header logging
+
+      const req = https.request(options, (res) => {
+        let responseData = '';
+        
+        res.on('data', (chunk) => {
+          responseData += chunk;
+        });
+        
+        res.on('end', () => {
+          try {
+            const parsedData = JSON.parse(responseData);
+            resolve(parsedData);
+          } catch (error) {
+            reject(new Error(`Failed to parse response: ${error.message}`));
           }
         });
-        throw new Error(`Payment API error: ${detail || apiError.message}`);
+      });
+
+      req.on('error', (error) => {
+        reject(error);
+      });
+
+      if (data) {
+        req.write(JSON.stringify(data));
+      }
+      
+      req.end();
+    });
+  }
+
+  async handlePaystackWebhook(webhookData, headers) {
+    try {
+      // Skip signature verification if webhook secret is not configured (for development)
+      const signature = headers['x-paystack-signature'];
+      const secret = process.env.PAYSTACK_WEBHOOK_SECRET;
+      
+      if (secret && signature) {
+        const isValid = this.verifyWebhookSignature(JSON.stringify(webhookData), signature);
+        if (!isValid) {
+          logger.warn('Invalid webhook signature received');
+          // Still process the webhook in development if signature is invalid
+        }
+      } else if (!secret) {
+        logger.info('Webhook secret not configured - skipping signature verification (development mode)');
       }
 
-      // Log the full response for debugging
-      logger.info('M-Pesa payment initiated', { 
-        email,
-        invoiceId: response.invoice_id || invoice_id,
-        response: JSON.stringify(response, null, 2)
-      });
-      
-      return {
-        success: true,
-        data: response,
-        invoiceId: response.invoice_id || invoice_id  // Use the one from response if available, otherwise use the one we generated
-      };
-    } catch (error) {
-      // Log the full error object and response if available
-      logger.error('Error initiating M-Pesa payment:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
-      
-      // Extract a more helpful error message if available
-      let errorMessage = error.message;
-      if (error.response?.data) {
-        errorMessage = error.response.data.detail || JSON.stringify(error.response.data);
+      const event = webhookData.event;
+      const data = webhookData.data;
+
+      logger.info('Paystack webhook received', { event, reference: data.reference });
+
+      // Handle different event types
+      switch (event) {
+        case 'charge.success':
+          return this.handleSuccessfulPayment(data);
+        
+        case 'charge.failed':
+          return this.handleFailedPayment(data);
+        
+        case 'transfer.success':
+          return this.handleSuccessfulTransfer(data);
+        
+        case 'transfer.failed':
+          return this.handleFailedTransfer(data);
+        
+        default:
+          logger.info('Unhandled webhook event', { event });
+          return { status: 'ignored', message: `Event ${event} not handled` };
       }
-      
-      throw new Error(`Payment initiation failed: ${errorMessage}`);
+
+    } catch (error) {
+      logger.error('Error processing Paystack webhook:', error);
+      throw error;
     }
   }
 
-  /**
-   * Check payment status
-   * @param {string} invoiceId - Invoice ID to check
-   * @returns {Promise<Object>} Payment status
-   */
-  async checkPaymentStatus(invoiceId) {
-    try {
-      logger.info(`Checking payment status for invoice: ${invoiceId}`);
-      const response = await this.collection.status(invoiceId);
-      
-      // Log the raw response for debugging
-      const responseString = JSON.stringify(response, null, 2);
-      logger.info('Raw payment status response:', responseString);
-      
-      // Handle different response formats
-      let status, state, mpesaReference, invoiceData;
-      
-      // First try to get the invoice data from the response
-      if (response && typeof response === 'object') {
-        // Check if the response has an 'invoice' property
-        if (response.invoice) {
-          invoiceData = response.invoice;
-        } 
-        // If no invoice but has state, use the root object
-        else if (response.state) {
-          invoiceData = response;
-        }
-        // Check for array response (some API versions return an array)
-        else if (Array.isArray(response) && response.length > 0) {
-          invoiceData = response[0];
-        }
-        // Check for data property
-        else if (response.data) {
-          invoiceData = Array.isArray(response.data) ? response.data[0] : response.data;
-        }
-      }
-      
-      // Extract status and reference from the invoice data
-      if (invoiceData) {
-        status = invoiceData.state || invoiceData.status;
-        state = invoiceData.state;
-        mpesaReference = invoiceData.mpesa_reference || invoiceData.reference;
-        
-        // Handle case where status might be in a nested 'status' object
-        if (!status && invoiceData.status && typeof invoiceData.status === 'object') {
-          status = invoiceData.status.state || invoiceData.status.status;
-        }
-      }
-      
-      // If we still don't have a status, check the raw response
-      if (!status && response) {
-        status = response.state || response.status;
-        mpesaReference = response.mpesa_reference || response.reference;
-      }
-      
-      // Normalize status to lowercase for consistency
-      status = (status || 'pending').toLowerCase();
-      state = (state || status || 'pending').toLowerCase();
-      
-      // Log the extracted values
-      logger.info(`Extracted status: ${status}, state: ${state} for invoice ${invoiceId}`, {
-        hasInvoiceData: !!invoiceData,
-        mpesaReference,
-        responseKeys: response ? Object.keys(response) : 'no response'
-      });
-      
-      return {
-        success: true,
-        status,
-        state,
-        mpesa_reference: mpesaReference,
-        data: response,
-        // Include common fields at the top level for easier access
-        invoice_id: response?.invoice_id || invoiceId,
-        amount: response?.amount || response?.data?.amount,
-        currency: response?.currency || response?.data?.currency,
-        provider_reference: mpesaReference || response?.provider_reference || response?.data?.provider_reference
-      };
-    } catch (error) {
-      logger.error(`Error checking payment status for invoice ${invoiceId}:`, {
-        error: error.message,
-        stack: error.stack,
-        response: error.response?.data
-      });
-      
-      return {
-        success: false,
-        status: 'error',
-        error: error.message,
-        invoice_id: invoiceId
-      };
+  verifyWebhookSignature(payload, signature) {
+    const secret = process.env.PAYSTACK_WEBHOOK_SECRET;
+    if (!secret) {
+      logger.warn('Paystack webhook secret not configured');
+      return false;
     }
+
+    const crypto = require('crypto');
+    const hash = crypto.createHmac('sha512', secret).update(payload).digest('hex');
+    return hash === signature;
+  }
+
+  handleSuccessfulPayment(data) {
+    logger.info('Payment successful', {
+      reference: data.reference,
+      amount: data.amount,
+      customer: data.customer?.email,
+      paid_at: data.paid_at
+    });
+
+    // Trigger payment completion process
+    this.processPaymentCompletion(data);
+
+    return {
+      status: 'success',
+      event: 'charge.success',
+      reference: data.reference,
+      amount: data.amount,
+      customer: data.customer?.email,
+      paid_at: data.paid_at,
+      metadata: data.metadata
+    };
+  }
+
+  handleFailedPayment(data) {
+    logger.info('Payment failed', {
+      reference: data.reference,
+      amount: data.amount,
+      customer: data.customer?.email,
+      gateway_response: data.gateway_response
+    });
+
+    return {
+      status: 'failed',
+      event: 'charge.failed',
+      reference: data.reference,
+      amount: data.amount,
+      customer: data.customer?.email,
+      gateway_response: data.gateway_response,
+      metadata: data.metadata
+    };
+  }
+
+  handleSuccessfulTransfer(data) {
+    logger.info('Transfer successful', {
+      reference: data.reference,
+      amount: data.amount,
+      recipient: data.recipient?.name
+    });
+
+    return {
+      status: 'success',
+      event: 'transfer.success',
+      reference: data.reference,
+      amount: data.amount,
+      recipient: data.recipient?.name
+    };
+  }
+
+  handleFailedTransfer(data) {
+    logger.info('Transfer failed', {
+      reference: data.reference,
+      amount: data.amount,
+      recipient: data.recipient?.name
+    });
+
+    return {
+      status: 'failed',
+      event: 'transfer.failed',
+      reference: data.reference,
+      amount: data.amount,
+      recipient: data.recipient?.name
+    };
+  }
+
+  async processPaymentCompletion(data) {
+    try {
+      logger.info('=== PAYMENT COMPLETION PROCESS START ===', {
+        reference: data.reference,
+        amount: data.amount,
+        customer: data.customer?.email,
+        status: data.status
+      });
+
+      // Find payment by Paystack reference
+      const payment = await Payment.findByReference(data.reference);
+      if (!payment) {
+        logger.error('Payment not found for reference:', data.reference);
+        return;
+      }
+
+      logger.info('Payment found:', {
+        paymentId: payment.id,
+        invoiceId: payment.invoice_id,
+        currentStatus: payment.status,
+        email: payment.email,
+        amount: payment.amount
+      });
+
+      // Update payment status to completed
+      logger.info('Updating payment status to completed...');
+      await Payment.updateStatus(payment.invoice_id, 'completed', {
+        paystack_data: data,
+        completed_at: new Date().toISOString()
+      });
+
+      logger.info('Payment status updated, processing ticket creation...');
+
+      // Process the successful payment (create tickets, send emails)
+      await PaymentCompletionService.processSuccessfulPayment(payment);
+
+      logger.info('Payment completion processed successfully', {
+        paymentId: payment.id,
+        reference: data.reference
+      });
+
+    } catch (error) {
+      logger.error('Error processing payment completion:', error);
+      // Don't throw here to avoid webhook failures
+    }
+  }
+
+  mapPaymentStatus(status) {
+    const statusMap = {
+      'success': 'completed',
+      'completed': 'completed',
+      'paid': 'completed',
+      'failed': 'failed',
+      'cancelled': 'cancelled',
+      'rejected': 'failed',
+      'pending': 'pending',
+      'processing': 'pending',
+      'initiated': 'pending'
+    };
+    
+    return statusMap[status?.toLowerCase()] || 'pending';
   }
 }
 

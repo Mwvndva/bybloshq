@@ -243,7 +243,17 @@
         <div class="ticket-details">
           <div class="detail">
             <div class="detail-label">Ticket Holder</div>
-            <div class="detail-value"><%= typeof customerName !== 'undefined' ? customerName : 'Guest' %></div>
+            <div class="detail-value">
+              <% 
+                // Check multiple possible variables for the customer name
+                const holderName = typeof user !== 'undefined' && user.name 
+                  ? user.name 
+                  : typeof customerName !== 'undefined' 
+                    ? customerName 
+                    : 'Guest';
+              %>
+              <%= holderName %>
+            </div>
           </div>
           <div class="detail">
             <div class="detail-label">Ticket Type</div>

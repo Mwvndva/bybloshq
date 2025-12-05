@@ -220,7 +220,7 @@ class WhatsAppService {
         return false;
       }
 
-      console.log('Seller phone:', seller.phone);
+      console.log('Seller phone:', seller.phone ? '[REDACTED]' : 'missing');
       console.log('Order items:', items);
 
       const itemsList = items.map((item, index) => 
@@ -257,7 +257,7 @@ This ensures your sale is completed successfully! ✅
 Byblos Platform
       `.trim();
 
-      console.log('Sending message to seller:', seller.phone);
+      console.log('Sending message to seller:', seller.phone ? '[REDACTED]' : 'missing');
       const result = await this.sendMessage(seller.phone, message);
       console.log('Seller notification result:', result);
       return result;

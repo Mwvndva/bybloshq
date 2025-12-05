@@ -62,7 +62,7 @@ class User {
         role: user.role 
       },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '30d' }
+      { expiresIn: '5m' } // 5 minutes expiration
     );
   }
 

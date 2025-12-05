@@ -239,6 +239,38 @@ export const sendPasswordResetEmail = async (email, token, userType = 'seller') 
   }
 };
 
+export const sendPaymentConfirmationEmail = async (email, paymentData) => {
+  try {
+    const html = await readTemplate('ticket-confirmation', {
+      ticketNumber: paymentData.ticketNumber || 'N/A',
+      ticketType: paymentData.ticketType || 'Payment',
+      eventName: paymentData.eventName || 'Payment Confirmation',
+      eventDate: paymentData.eventDate || new Date().toLocaleDateString(),
+      eventLocation: paymentData.eventLocation || 'Online',
+      customerName: paymentData.customerName || 'Valued Customer',
+      customerEmail: email,
+      price: parseFloat(paymentData.amount || 0).toFixed(2),
+      quantity: paymentData.quantity || 1,
+      totalPrice: parseFloat(paymentData.amount || 0).toFixed(2),
+      purchaseDate: new Date().toLocaleString(),
+      qrCode: paymentData.qrCode || '',
+      reference: paymentData.reference,
+      appName: process.env.APP_NAME || 'Byblos',
+      websiteUrl: process.env.FRONTEND_URL || '#'
+    });
+
+    await sendEmail({
+      to: email,
+      subject: `Payment Confirmation - ${paymentData.eventName || 'Byblos'}`,
+      html,
+      text: `Your payment of KES ${parseFloat(paymentData.amount || 0).toLocaleString()} has been successfully processed. Reference: ${paymentData.reference}`,
+    });
+  } catch (error) {
+    console.error('Error sending payment confirmation email:', error);
+    throw error;
+  }
+};
+
 export const sendWelcomeEmail = async (email, name) => {
   try {
     const loginUrl = `${process.env.FRONTEND_URL}/login`;

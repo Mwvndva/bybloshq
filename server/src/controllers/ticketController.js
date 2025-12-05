@@ -56,14 +56,9 @@ const readTemplate = async (templateName, data) => {
 
 export const sendTicketEmail = async (req, res) => {
   console.log('Received email request:', {
-    body: {
-      ...req.body,
-      ticketData: {
-        ...req.body.ticketData,
-        qrCode: req.body.ticketData?.qrCode ? '***[BASE64_DATA]***' : 'MISSING'
-      }
-    },
-    headers: req.headers
+    to: req.body.to ? '[REDACTED]' : 'missing',
+    subject: req.body.subject,
+    hasData: !!req.body.ticketData
   });
 
   try {
@@ -218,6 +213,9 @@ export const sendTicketEmail = async (req, res) => {
         email: ticketData.customerEmail
       },
       
+      // Also add customerName at root level for template compatibility
+      customerName: ticketData.customerName,
+      
       // QR code is embedded as an attachment with cid:qrcode
       
       // Add quantity at root level for easier access
@@ -228,7 +226,9 @@ export const sendTicketEmail = async (req, res) => {
       price: templateData.price,
       formattedPrice: templateData.formattedPrice,
       ticketPrice: templateData.ticket?.price,
-      quantity: templateData.quantity
+      quantity: templateData.quantity,
+      customerName: templateData.customerName,
+      userName: templateData.user?.name
     });
 
     // Log template data for debugging
@@ -302,9 +302,10 @@ Thank you for choosing Byblos Experience!`,
     }
 
     console.log('Sending email with options:', {
-      ...mailOptions,
-      html: '***[HTML_CONTENT]***',
-      text: mailOptions.text.substring(0, 100) + '...'
+      to: mailOptions.to ? '[REDACTED]' : 'missing',
+      subject: mailOptions.subject,
+      hasAttachments: !!mailOptions.attachments?.length,
+      attachmentCount: mailOptions.attachments?.length || 0
     });
 
     // Send email

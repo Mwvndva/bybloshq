@@ -35,7 +35,7 @@ export const forgotPassword = async (req, res) => {
       // 2. Send the password reset email
       await sendPasswordResetEmail(email, resetToken, 'organizer');
       
-      console.log(`Password reset email sent to ${email}`);
+      console.log(`Password reset email sent to [REDACTED]`);
       
       return res.status(200).json({
         status: 'success',

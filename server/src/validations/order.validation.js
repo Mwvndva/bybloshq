@@ -30,7 +30,7 @@ const createOrderSchema = Joi.object({
   }).required().label('Shipping address'),
   
   paymentMethod: Joi.string()
-    .valid('credit_card', 'mobile_money', 'paypal', 'intasend', 'intasend_mpesa')
+    .valid('paystack')
     .required()
     .label('Payment method'),
     

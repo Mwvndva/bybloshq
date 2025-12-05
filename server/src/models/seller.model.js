@@ -156,7 +156,14 @@ export const findSellerById = async (id) => {
 };
 
 export const updateSeller = async (id, updates) => {
-  console.log('Updating seller:', { id, updates });
+  console.log('Updating seller:', { 
+      id, 
+      updates: {
+        ...updates,
+        email: updates.email ? '[REDACTED]' : 'missing',
+        phone: updates.phone ? '[REDACTED]' : 'missing'
+      }
+    });
   
   if (!id) {
     console.error('No ID provided for update');
@@ -264,7 +271,12 @@ export const updateSeller = async (id, updates) => {
       throw new Error('No seller found with the given ID');
     }
     
-    console.log('Successfully updated seller:', result.rows[0].id);
+    console.log('Successfully updated seller:', {
+      id: result.rows[0].id,
+      shopName: result.rows[0].shop_name,
+      email: result.rows[0].email ? '[REDACTED]' : 'missing',
+      phone: result.rows[0].phone ? '[REDACTED]' : 'missing'
+    });
     return result.rows[0];
   } catch (error) {
     console.error('Database error in updateSeller:', {
@@ -286,7 +298,7 @@ export const generateAuthToken = (seller) => {
       role: 'seller' // Add role to the token payload
     },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    { expiresIn: '5m' } // 5 minutes expiration
   );
 };
 

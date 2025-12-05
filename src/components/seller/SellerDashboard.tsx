@@ -1361,17 +1361,6 @@ useEffect(() => {
                     setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
                   }}
                 />
-                {console.log('SellerDashboard: Rendering BannerUpload with currentBannerUrl:', sellerProfile?.bannerImage)}
-              </div>
-
-              {/* Theme Selection */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
-                <ThemeSelector
-                  currentTheme={sellerProfile?.theme as any || 'default'}
-                  onThemeChange={(theme) => {
-                    setSellerProfile(prev => prev ? { ...prev, theme } : { theme });
-                  }}
-                />
               </div>
 
               {/* Store Information */}

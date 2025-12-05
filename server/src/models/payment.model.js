@@ -59,6 +59,19 @@ class Payment {
     return rows[0];
   }
 
+  static async findByReference(reference) {
+    const { rows } = await pool.query(`
+      SELECT 
+        id, invoice_id, amount, currency, status, 
+        payment_method, phone_number, email, ticket_type_id,
+        event_id, organizer_id, metadata, created_at, updated_at,
+        provider_reference, api_ref
+      FROM payments 
+      WHERE provider_reference = $1 OR api_ref = $1
+    `, [reference]);
+    return rows[0];
+  }
+
   static async findById(id) {
     const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1', [id]);
     return rows[0];

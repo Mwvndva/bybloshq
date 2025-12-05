@@ -134,7 +134,7 @@ export const forgotPassword = async (req, res, next) => {
       // 2. Send the password reset email
       await sendPasswordResetEmail(email, resetToken, 'buyer');
       
-      console.log(`Password reset email sent to ${email}`);
+      console.log(`Password reset email sent to [REDACTED]`);
       
       return res.status(200).json({
         status: 'success',
@@ -297,7 +297,7 @@ const normalizePhoneNumber = (phone) => {
     normalized = '0' + normalized;
   }
   
-  console.log(`Normalized phone: ${phone} -> ${normalized}`);
+  console.log(`Normalized phone: ${phone ? '[REDACTED]' : 'missing'} -> ${normalized ? '[REDACTED]' : 'missing'}`);
   return normalized;
 };
 
@@ -306,7 +306,7 @@ export const checkBuyerByPhone = async (req, res, next) => {
   try {
     const { phone } = req.body;
 
-    console.log('Checking buyer by phone:', phone);
+    console.log('Checking buyer by phone:', phone ? '[REDACTED]' : 'missing');
 
     // Validate required field
     if (!phone) {
@@ -315,14 +315,14 @@ export const checkBuyerByPhone = async (req, res, next) => {
 
     // Normalize the phone number
     const normalizedPhone = normalizePhoneNumber(phone);
-    console.log('Normalized phone number:', normalizedPhone);
+    console.log('Normalized phone number:', normalizedPhone ? '[REDACTED]' : 'missing');
 
     // Check if buyer exists by normalized phone number
     const existingBuyer = await Buyer.findByPhone(normalizedPhone);
 
     if (existingBuyer) {
       // Buyer exists - return buyer info and generate token
-      console.log('Buyer found with phone:', normalizedPhone, '- Buyer ID:', existingBuyer.id);
+      console.log('Buyer found with phone:', '[REDACTED]', '- Buyer ID:', existingBuyer.id);
       
       const token = signToken(existingBuyer.id, 'buyer');
 
@@ -343,7 +343,7 @@ export const checkBuyerByPhone = async (req, res, next) => {
       });
     } else {
       // Buyer does not exist
-      console.log('No buyer found with phone:', normalizedPhone);
+      console.log('No buyer found with phone:', '[REDACTED]');
       
       res.status(200).json({
         status: 'success',
@@ -436,7 +436,7 @@ export const requestRefund = async (req, res, next) => {
       paymentDetailsJson
     ]);
 
-    console.log('Refund request created:', result.rows[0].id, 'for buyer:', buyer.fullName, buyer.phone);
+    console.log('Refund request created:', result.rows[0].id, 'for buyer:', buyer.fullName, buyer.phone ? '[REDACTED]' : 'missing');
 
     res.status(201).json({
       status: 'success',
@@ -455,7 +455,13 @@ export const saveBuyerInfo = async (req, res, next) => {
   try {
     const { fullName, email, phone, city, location } = req.body;
 
-    console.log('Saving buyer info:', { fullName, email, phone, city, location });
+    console.log('Saving buyer info:', { 
+  fullName, 
+  email: email ? '[REDACTED]' : 'missing', 
+  phone: phone ? '[REDACTED]' : 'missing', 
+  city, 
+  location 
+});
 
     // Validate required fields
     if (!fullName || !email || !phone) {
@@ -464,7 +470,7 @@ export const saveBuyerInfo = async (req, res, next) => {
 
     // Normalize the phone number
     const normalizedPhone = normalizePhoneNumber(phone);
-    console.log('Normalized phone number for save:', normalizedPhone);
+    console.log('Normalized phone number for save:', normalizedPhone ? '[REDACTED]' : 'missing');
 
     // Check if buyer already exists by normalized phone number (primary identifier)
     const existingBuyer = await Buyer.findByPhone(normalizedPhone);
@@ -474,7 +480,7 @@ export const saveBuyerInfo = async (req, res, next) => {
 
     if (existingBuyer) {
       // Buyer exists - use existing buyer data for payment
-      console.log('Buyer already exists with phone:', normalizedPhone, '- Using existing buyer ID:', existingBuyer.id);
+      console.log('Buyer already exists with phone:', '[REDACTED]', '- Using existing buyer ID:', existingBuyer.id);
       buyer = existingBuyer;
       
       // Generate token for the existing buyer
@@ -482,7 +488,7 @@ export const saveBuyerInfo = async (req, res, next) => {
 
       console.log('Using existing buyer for payment:', { 
         buyerId: buyer.id, 
-        phone: buyer.phone,
+        phone: buyer.phone ? '[REDACTED]' : 'missing',
         fullName: buyer.fullName
       });
     } else {
@@ -502,7 +508,7 @@ export const saveBuyerInfo = async (req, res, next) => {
 
       console.log('New buyer created successfully:', { 
         buyerId: buyer.id, 
-        phone: buyer.phone,
+        phone: buyer.phone ? '[REDACTED]' : 'missing',
         token: token.substring(0, 20) + '...' 
       });
     }

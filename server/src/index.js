@@ -21,7 +21,7 @@ import publicRoutes from './routes/public.routes.js';
 import healthRoutes from './routes/health.routes.js';
 import ticketRoutes from './routes/ticket.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
-import intasendRoutes from './routes/intasend.routes.js';
+import discountCodeRoutes from './routes/discountCode.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import refundRoutes from './routes/refund.routes.js';
 import * as eventController from './controllers/event.controller.js';
@@ -66,10 +66,8 @@ console.log({
   DB_USER: process.env.DB_USER,
   DB_PASSWORD: process.env.DB_PASSWORD ? '***' : undefined,
   ENV_PATH: chosenEnvPath,
-  // IntaSend specific variables
-  INTASEND_PUBLIC_KEY: process.env.INTASEND_PUBLIC_KEY ? 'SET' : 'NOT SET',
-  INTASEND_SECRET_KEY: process.env.INTASEND_SECRET_KEY ? 'SET' : 'NOT SET',
-  INTASEND_BASE_URL: process.env.INTASEND_BASE_URL || 'NOT SET',
+  // Paystack specific variables
+  PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY ? 'SET' : 'NOT SET',
   PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'NOT SET'
 });
 
@@ -305,6 +303,7 @@ import eventRoutes from './routes/event.routes.js';
 import protectedOrganizerRoutes from './routes/protectedOrganizer.routes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
+import refreshTokenRoutes from './routes/refreshToken.routes.js';
 import whatsappService from './services/whatsapp.service.js';
 import models from './models/index.js';
 const { Payment } = models;
@@ -319,10 +318,11 @@ app.use('/api/public', publicRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/intasend', intasendRoutes);
+app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/auth', refreshTokenRoutes); // Add refresh token route
 
 // Mount protected organizer routes
 app.use('/api/organizers', protectedOrganizerRoutes);
@@ -365,15 +365,12 @@ if (process.env.NODE_ENV === 'development') {
     }
   });
   
-  // Manually log the IntaSend routes we expect
-  console.log('\n=== Expected IntaSend Routes ===');
-  console.log('POST    /api/intasend/initialize');
-  console.log('POST    /api/intasend/checkout');
-  console.log('POST    /api/intasend/mpesa-stk-push');
-  console.log('GET     /api/intasend/callback');
-  console.log('POST    /api/intasend/webhook');
-  console.log('GET     /api/intasend/status/:orderId');
-  console.log('GET     /api/intasend/test');
+  // Log Paystack routes
+  console.log('\n=== Paystack Routes ===');
+  console.log('POST    /api/payments/initiate');
+  console.log('POST    /api/payments/initiate-product');
+  console.log('GET     /api/payments/status/:invoiceId');
+  console.log('POST    /api/payments/webhook');
 }
 
 // Organizer protected routes
