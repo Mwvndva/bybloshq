@@ -133,7 +133,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    console.log('Login attempt with data:', { email: req.body.email });
+    console.log('Login attempt with data:', { email: req.body.email ? '[REDACTED]' : 'missing' });
     const { email, password } = req.body;
     
     if (!email || !password) {
@@ -145,11 +145,11 @@ export const login = async (req, res) => {
     }
     
     // 1) Check if seller exists
-    console.log('Looking up seller with email:', email);
+    console.log('Looking up seller with email:', email ? '[REDACTED]' : 'missing');
     const seller = await findSellerByEmail(email);
     
     if (!seller) {
-      console.log('No seller found with email:', email);
+      console.log('No seller found with email:', '[REDACTED]');
       return res.status(401).json({
         status: 'error',
         message: 'Incorrect email or password'
@@ -160,7 +160,7 @@ export const login = async (req, res) => {
     const isPasswordValid = await verifyPassword(password, seller.password);
     
     if (!isPasswordValid) {
-      console.log('Invalid password for email:', email);
+      console.log('Invalid password for email:', '[REDACTED]');
       return res.status(401).json({
         status: 'error',
         message: 'Incorrect email or password'
@@ -175,7 +175,7 @@ export const login = async (req, res) => {
     const sellerWithoutPassword = { ...seller };
     delete sellerWithoutPassword.password;
     
-    console.log('Login successful for email:', email);
+    console.log('Login successful for email:', '[REDACTED]');
     res.status(200).json({
       status: 'success',
       data: {
@@ -681,6 +681,14 @@ export const getSellerById = async (req, res) => {
         message: 'Seller not found'
       });
     }
+
+    console.log('Found seller:', {
+      id: seller.id,
+      shopName: seller.shop_name,
+      email: seller.email ? '[REDACTED]' : 'missing',
+      phone: seller.phone ? '[REDACTED]' : 'missing',
+      isActive: seller.is_active
+    });
 
     // Format the response to match the expected frontend format
     const sellerData = {

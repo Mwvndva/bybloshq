@@ -21,7 +21,8 @@ import {
   Loader2,
   BarChart3,
   Settings,
-  Trash2
+  Trash2,
+  Percent
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +33,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useOrganizerAuth } from '@/hooks/use-organizer-auth';
+import { DiscountCodeManager } from '@/components/organizer/DiscountCodeManager';
 import { 
   format, 
   parseISO, 
@@ -792,7 +794,7 @@ export default function EventDetailPage() {
             {/* Ticket Management Tabs */}
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <Tabs defaultValue="types" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-8 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-1">
+                <TabsList className="grid w-full grid-cols-3 mb-8 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-1">
                   <TabsTrigger value="types" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                     <List className="h-4 w-4 mr-2" />
                     Ticket Types
@@ -800,6 +802,10 @@ export default function EventDetailPage() {
                   <TabsTrigger value="list" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
                     <Ticket className="h-4 w-4 mr-2" />
                     Ticket List
+                  </TabsTrigger>
+                  <TabsTrigger value="discounts" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                    <Percent className="h-4 w-4 mr-2" />
+                    Discount Codes
                   </TabsTrigger>
                 </TabsList>
 
@@ -966,6 +972,10 @@ export default function EventDetailPage() {
                       </Button>
                     </div>
                   )}
+                </TabsContent>
+
+                <TabsContent value="discounts" className="space-y-6">
+                  <DiscountCodeManager eventId={parseInt(id!)} eventName={safeEvent.title} />
                 </TabsContent>
               </Tabs>
             </div>

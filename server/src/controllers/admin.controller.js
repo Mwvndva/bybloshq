@@ -27,7 +27,7 @@ const adminLogin = async (req, res, next) => {
 
     // 3) If everything is ok, send token to client
     const token = jwt.sign({ id: 'admin' }, process.env.JWT_SECRET, {
-      expiresIn: process.env.JWT_EXPIRES_IN,
+      expiresIn: '5m', // 5 minutes expiration
     });
 
     // 4) Send response with token
@@ -216,7 +216,16 @@ const getAllSellers = async (req, res, next) => {
       ORDER BY created_at DESC`
     );
     
-    console.log('Raw sellers data from database:', result.rows);
+    console.log('Raw sellers data from database:', result.rows.map(seller => ({
+      id: seller.id,
+      fullName: seller.full_name,
+      shopName: seller.shop_name,
+      email: seller.email ? '[REDACTED]' : 'missing',
+      phone: seller.phone ? '[REDACTED]' : 'missing',
+      city: seller.city,
+      isActive: seller.is_active,
+      balance: seller.balance
+    })));
     
     const sellers = result.rows.map(seller => ({
       ...seller,
@@ -226,7 +235,11 @@ const getAllSellers = async (req, res, next) => {
       location: seller.location || 'N/A'
     }));
     
-    console.log('Processed sellers data:', sellers);
+    console.log('Processed sellers data:', sellers.map(seller => ({
+      ...seller,
+      email: seller.email ? '[REDACTED]' : 'missing',
+      phone: seller.phone ? '[REDACTED]' : 'missing'
+    })));
     
     res.status(200).json({
       status: 'success',

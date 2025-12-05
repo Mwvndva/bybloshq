@@ -41,7 +41,7 @@ const createOrder = async (req, res) => {
       });
     }
     
-    console.log(`[Order] Verified seller:`, seller.email);
+    console.log(`[Order] Verified seller:`, seller.email ? '[REDACTED]' : 'missing');
 
     // Prepare order data for the model
     const orderData = {

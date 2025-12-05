@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CheckCircle2, Minus, Plus, Loader2, CreditCard } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { apiRequest } from '@/lib/axios';
+import { DiscountCodeInput } from '@/components/shared/DiscountCodeInput';
+import PaystackPayment from '@/components/shared/PaystackPayment';
 
 type PurchaseFormData = {
   customerName: string;
@@ -14,9 +16,11 @@ type PurchaseFormData = {
   phoneNumber: string;
   ticketTypeId: string;
   quantity: number;
-  paymentMethod: 'mpesa' | 'card' | 'bank';
+  paymentMethod: 'paystack';
   amount: number;
   eventId: number;
+  discountCode?: string;
+  discountAmount?: number;
 };
 
 type EventTicketType = {
@@ -53,9 +57,17 @@ type PaymentInitiationResponse = {
   success: boolean;
   message: string;
   invoiceId: string;
-  paymentUrl?: string;
+  authorization_url?: string;
+  access_code?: string;
   reference?: string;
-  [key: string]: string | boolean | undefined;
+  payment_provider_response?: {
+    invoice_id: string;
+    reference: string;
+    authorization_url: string;
+    access_code: string;
+    status: string;
+  };
+  [key: string]: string | boolean | number | undefined | object;
 };
 
 interface TicketPurchaseFormProps {
@@ -66,29 +78,8 @@ interface TicketPurchaseFormProps {
   };
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit?: (data: Omit<PurchaseFormData, 'ticketTypeId'> & { ticketTypeId: number | null }) => Promise<void>;
+  onSubmit?: (data: any) => void;
 }
-
-// Type definitions moved to the top of the file
-
-const isValidEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-};
-
-const isValidPhoneNumber = (phone: string): boolean => {
-  const phoneRegex = /^[17]\d{8}$/;
-  return phoneRegex.test(phone);
-};
-
-const formatPrice = (price: number): string => {
-  return new Intl.NumberFormat('en-KE', {
-    style: 'currency',
-    currency: 'KES',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(price);
-};
 
 export function TicketPurchaseForm({ 
   event, 
@@ -99,13 +90,17 @@ export function TicketPurchaseForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
   const [purchaseDetails, setPurchaseDetails] = useState<{reference?: string; email?: string}>({});
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [appliedDiscountCode, setAppliedDiscountCode] = useState('');
+  const [showPaystackModal, setShowPaystackModal] = useState(false);
+  const [paymentInitiationData, setPaymentInitiationData] = useState<any>(null);
   const [formData, setFormData] = useState<PurchaseFormData>(() => ({
     customerName: '',
     customerEmail: '',
     phoneNumber: '',
     ticketTypeId: '',
     quantity: 1,
-    paymentMethod: 'mpesa',
+    paymentMethod: 'paystack',
     amount: 0,
     eventId: event.id
   }));
@@ -113,31 +108,203 @@ export function TicketPurchaseForm({
   const { toast } = useToast();
   const ticketTypes = event.ticketTypes || [];
   const selectedTicket = ticketTypes.find(t => t.id.toString() === formData.ticketTypeId) || null;
-  const totalPrice = selectedTicket ? selectedTicket.price * formData.quantity : 0;
   
-  // Update formData with calculated amount when ticket or quantity changes
+  // Calculate prices - this will recalculate on every render
+  const basePrice = selectedTicket ? selectedTicket.price * formData.quantity : 0;
+  const finalPrice = Math.max(0, basePrice - discountAmount);
+
+  // Debug logging for price changes
   useEffect(() => {
-    if (selectedTicket) {
-      setFormData(prev => ({
-        ...prev,
-        amount: selectedTicket.price * prev.quantity
-      }));
+    console.log('=== PRICE CALCULATION DEBUG ===');
+    console.log('Selected ticket:', selectedTicket);
+    console.log('Quantity:', formData.quantity);
+    console.log('Base price:', basePrice);
+    console.log('Discount amount:', discountAmount);
+    console.log('Applied code:', appliedDiscountCode);
+    console.log('Final price:', finalPrice);
+  }, [basePrice, discountAmount, finalPrice, selectedTicket, formData.quantity, appliedDiscountCode]);
+
+  const formatPrice = (price: number): string => {
+    return new Intl.NumberFormat('en-KE', {
+      style: 'currency',
+      currency: 'KES',
+      minimumFractionDigits: price % 1 !== 0 ? 2 : 0,
+      maximumFractionDigits: 2
+    }).format(price);
+  };
+
+  // Handler for when Paystack modal opens - close the ticket purchase dialog
+  const handlePaystackModalOpen = () => {
+    console.log('Paystack modal opening, closing ticket purchase dialog');
+    // Close the ticket purchase dialog when Paystack modal opens
+    if (onOpenChange) {
+      onOpenChange(false);
     }
-  }, [selectedTicket, formData.quantity]);
+  };
+
+  // Paystack success handler
+  const handlePaystackSuccess = async (response: any) => {
+    console.log('Paystack payment successful:', response);
+    setShowPaystackModal(false);
+    
+    // Start checking payment status
+    if (paymentInitiationData?.invoiceId) {
+      const checkPaymentStatus = async () => {
+        let statusChecks = 0;
+        const maxStatusChecks = 20; // Check for up to ~2 minutes
+        const statusCheckInterval = 5000; // Check every 5 seconds
+        
+        const statusCheckTimer = setInterval(async () => {
+          try {
+            statusChecks++;
+            console.log(`=== Payment Status Check ${statusChecks}/${maxStatusChecks} ===`);
+            
+            const statusResponse = await apiRequest.get<PaymentStatusResponse>(`payments/status/${paymentInitiationData.invoiceId}`, {
+              timeout: 10000
+            });
+            
+            console.log('Payment status response:', statusResponse);
+            
+            if (statusResponse?.status === 'success' || statusResponse?.data?.status === 'success' || 
+                statusResponse?.status === 'completed' || statusResponse?.data?.status === 'completed') {
+              clearInterval(statusCheckTimer);
+              setPurchaseComplete(true);
+              setPurchaseDetails({
+                reference: response.reference || paymentInitiationData.reference,
+                email: paymentInitiationData.email
+              });
+              setIsSubmitting(false);
+              
+              toast({
+                title: 'Payment Successful!',
+                description: 'Your ticket purchase has been completed successfully.',
+              });
+              
+              // Call onSubmit callback if provided
+              if (onSubmit) {
+                await onSubmit({
+                  eventId: event.id,
+                  ticketTypeId: paymentInitiationData.ticketTypeId,
+                  quantity: paymentInitiationData.quantity,
+                  customerName: paymentInitiationData.customerName,
+                  customerEmail: paymentInitiationData.email,
+                  phoneNumber: paymentInitiationData.phone,
+                  paymentMethod: 'paystack',
+                  amount: paymentInitiationData.amount
+                });
+              }
+            } else if (statusChecks >= maxStatusChecks) {
+              clearInterval(statusCheckTimer);
+              setIsSubmitting(false);
+              toast({
+                title: 'Payment Verification',
+                description: 'Payment was completed but verification is taking longer. You will receive a confirmation email.',
+              });
+            }
+          } catch (error) {
+            console.error('Status check error:', error);
+            if (statusChecks >= maxStatusChecks) {
+              clearInterval(statusCheckTimer);
+              setIsSubmitting(false);
+              toast({
+                title: 'Payment Verification',
+                description: 'Payment was completed but we could not verify it immediately. Please check your email for confirmation.',
+              });
+            }
+          }
+        }, statusCheckInterval);
+      };
+      
+      checkPaymentStatus();
+    }
+  };
   
-  // Reset form when dialog opens
+  // Paystack close handler
+  const handlePaystackClose = () => {
+    console.log('Paystack modal closed');
+    setShowPaystackModal(false);
+    setIsSubmitting(false);
+    
+    toast({
+      title: 'Payment Cancelled',
+      description: 'You can try again when ready.',
+      variant: 'destructive'
+    });
+  };
+
+  const handleDiscountApplied = (discount: number, finalAmount: number, code: string) => {
+    console.log('=== DISCOUNT APPLIED ===');
+    console.log('Discount details:', { discount, finalAmount, code });
+    console.log('Current state before update:', {
+      currentDiscountAmount: discountAmount,
+      currentAppliedCode: appliedDiscountCode,
+      basePrice,
+      finalPrice
+    });
+    
+    // Update all discount-related state in a single update
+    setDiscountAmount(discount);
+    setAppliedDiscountCode(code);
+    
+    // Force a re-render by updating formData amount
+    setFormData(prev => ({ 
+      ...prev, 
+      amount: finalAmount 
+    }));
+    
+    console.log('State after discount update:', {
+      newDiscountAmount: discount,
+      newAppliedCode: code,
+      newFormAmount: finalAmount,
+      expectedFinalPrice: Math.max(0, basePrice - discount)
+    });
+    
+    // Verify the calculation is correct
+    if (Math.max(0, basePrice - discount) !== finalAmount) {
+      console.error('Discount calculation mismatch!', {
+        basePrice,
+        discount,
+        expectedFinalPrice: Math.max(0, basePrice - discount),
+        receivedFinalAmount: finalAmount
+      });
+    }
+  };
+
+  const handleDiscountRemoved = () => {
+    console.log('=== DISCOUNT REMOVED ===');
+    console.log('Resetting to base price:', basePrice);
+    console.log('Current discount state:', { discountAmount, appliedDiscountCode });
+    
+    // Reset all discount-related state
+    setDiscountAmount(0);
+    setAppliedDiscountCode('');
+    setFormData(prev => ({ ...prev, amount: basePrice }));
+    setPurchaseComplete(false);
+    setPurchaseDetails({});
+    
+    console.log('State after discount removal:', {
+      newDiscountAmount: 0,
+      newAppliedCode: '',
+      newFormAmount: basePrice,
+      finalPrice: basePrice
+    });
+  };
+
+  // Reset form when dialog opens/closes
   useEffect(() => {
     if (open) {
       setFormData({
         customerName: '',
         customerEmail: '',
         phoneNumber: '',
-        ticketTypeId: ticketTypes.length === 1 ? String(ticketTypes[0].id) : '',
+        ticketTypeId: '',
         quantity: 1,
-        paymentMethod: 'mpesa',
+        paymentMethod: 'paystack',
         amount: 0,
         eventId: event.id
       });
+      setDiscountAmount(0);
+      setAppliedDiscountCode('');
       setPurchaseComplete(false);
       setPurchaseDetails({});
     }
@@ -145,51 +312,77 @@ export function TicketPurchaseForm({
 
   const [phoneError, setPhoneError] = useState<string | null>(null);
 
-  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
-    
-    // Only update if the value is empty or matches the pattern
-    if (rawValue === '' || /^[0-9]*$/.test(rawValue)) {
-      setFormData(prev => ({ 
-        ...prev, 
-        phoneNumber: rawValue
-      }));
-      
-      // Clear error when user starts typing
-      if (phoneError) {
-        setPhoneError(null);
-      }
-    }
-  };
-  
   const validatePhoneNumber = (phone: string): string | null => {
-    if (!phone) return 'Phone number is required';
-    if (phone.length !== 9) return 'Phone number must be 9 digits';
-    if (!phone.startsWith('1') && !phone.startsWith('7')) {
-      return 'Phone number must start with 1 or 7';
-    }
+    const digits = phone.replace(/\D/g, '');
+    
+    if (!digits) return 'Phone number is required';
+    if (digits.length !== 9) return 'Phone number must be 9 digits';
+    if (!/^[17]/.test(digits)) return 'Phone number must start with 7 or 1';
+    
     return null;
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    let processedValue: string | number = value;
-    
-    if (type === 'number') {
-      processedValue = Number(value);
-    } else if (name === 'customerEmail') {
-      processedValue = value.toLowerCase().trim();
-    } else if (name === 'customerName') {
-      processedValue = value.replace(/[^a-zA-Z\s'-]/g, '');
-    }
-    
-    setFormData(prev => ({
-      ...prev,
-      [name]: processedValue
-    }));
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 9);
+    setFormData(prev => ({ ...prev, phoneNumber: value }));
+    if (phoneError) setPhoneError(null);
   };
 
-  const getMaxQuantity = (ticket: EventTicketType | undefined): number => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const validateForm = () => {
+    const errors: string[] = [];
+    
+    if (!formData.customerName.trim()) {
+      errors.push('Full name is required');
+    }
+    
+    if (!formData.customerEmail.trim()) {
+      errors.push('Email is required');
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail)) {
+      errors.push('Valid email is required');
+    }
+    
+    const phoneValidationError = validatePhoneNumber(formData.phoneNumber);
+    if (phoneValidationError) {
+      errors.push(phoneValidationError);
+    }
+
+    if (!formData.ticketTypeId) {
+      errors.push('Please select a ticket type');
+    }
+
+    if (selectedTicket?.is_sold_out) {
+      errors.push('The selected ticket type is sold out');
+    }
+
+    if (formData.quantity < 1) {
+      errors.push('Quantity must be at least 1');
+    }
+
+    if (selectedTicket) {
+      const minQuantity = selectedTicket.min_per_order || 1;
+      const maxQuantity = selectedTicket.max_per_order || 10;
+      const available = selectedTicket.available !== undefined 
+        ? selectedTicket.available 
+        : (selectedTicket.quantity_available || 0);
+
+      if (formData.quantity < minQuantity) {
+        errors.push(`Minimum order quantity is ${minQuantity}`);
+      }
+
+      if (formData.quantity > Math.min(available, maxQuantity)) {
+        errors.push(`Maximum order quantity is ${Math.min(available, maxQuantity)}`);
+      }
+    }
+
+    return { isValid: errors.length === 0, errors };
+  };
+
+  const getMaxQuantity = (ticket: EventTicketType | null): number => {
     if (!ticket) return 10;
     const available = ticket.available !== undefined 
       ? ticket.available 
@@ -205,177 +398,6 @@ export function TicketPurchaseForm({
     const validQuantity = Math.max(minQuantity, Math.min(maxQuantity, newQuantity));
     setFormData(prev => ({ ...prev, quantity: validQuantity }));
   };
-
-  // Form validation function
-  const validateForm = (): { isValid: boolean; errors: string[] } => {
-    const errors: string[] = [];
-    
-    if (!formData.customerName.trim()) {
-      errors.push('Name is required');
-    } else if (formData.customerName.trim().length < 2) {
-      errors.push('Name must be at least 2 characters');
-    }
-    
-    if (!formData.customerEmail.trim()) {
-      errors.push('Email is required');
-    } else if (!isValidEmail(formData.customerEmail)) {
-      errors.push('Please enter a valid email address');
-    }
-    
-    const phoneError = validatePhoneNumber(formData.phoneNumber);
-    if (phoneError) {
-      errors.push(phoneError);
-    }
-    
-    if (!formData.ticketTypeId) {
-      errors.push('Please select a ticket type');
-    } else if (maxQuantity <= 0) {
-      errors.push('The selected ticket type is sold out');
-    }
-    
-    return {
-      isValid: errors.length === 0,
-      errors
-    };
-  };
-
-  // Poll payment status
-  const pollPaymentStatus = async (invoiceId: string): Promise<{ success: boolean; status: string; message?: string; data?: PaymentStatusData; error?: Error }> => {
-    const maxAttempts = 30;
-    const baseDelayMs = 2000; // Start with 2 seconds
-    let attempts = 0;
-    let lastStatus = '';
-
-    console.log(`=== Starting payment status polling for invoice ${invoiceId} ===`);
-
-    const checkStatus = async () => {
-      try {
-        console.log(`[Attempt ${attempts + 1}/${maxAttempts}] Checking payment status...`);
-        
-        const response = await apiRequest.get<{
-          success: boolean;
-          status: string;
-          message?: string;
-          data?: PaymentStatusData;
-        }>(`payments/status/${invoiceId}`, {
-          params: { _t: Date.now() },
-          timeout: 10000 // 10 second timeout
-        });
-        
-        console.log('Payment status response:', response.data);
-        
-        if (!response?.data) {
-          throw new Error('No response data received from server');
-        }
-        
-        // Handle the standardized response format
-        if (response.data.success === false) {
-          const errorMessage = typeof response.data.message === 'string' 
-            ? response.data.message 
-            : 'Payment check failed';
-          throw new Error(errorMessage);
-        }
-        
-        // Handle not_found status
-        if (response.data.status === 'not_found') {
-          return {
-            status: 'not_found',
-            message: response.data.message || 'Payment not found',
-            data: response.data.data
-          };
-        }
-        
-        return {
-          status: response.data.status || 'pending',
-          message: response.data.message,
-          data: response.data.data
-        };
-        
-      } catch (error: any) {
-        console.error('Error checking payment status:', error);
-        
-        // Handle network-related errors
-        const isNetworkError = error.code === 'ECONNABORTED' || 
-                             error.message?.includes('timeout') || 
-                             error.message?.includes('network') ||
-                             !navigator.onLine;
-        
-        if (isNetworkError) {
-          return { 
-            status: 'pending',
-            message: 'Network issue, checking again...',
-            error: new Error('Network error - please check your connection')
-          };
-        }
-        
-        // For other errors, return error status
-        return {
-          status: 'error',
-          message: error.message || 'Error checking payment status',
-          error: error instanceof Error ? error : new Error(String(error))
-        };
-      }
-    };
-
-    // Main polling loop
-    while (attempts < maxAttempts) {
-      attempts++;
-      
-      try {
-        const { status, message, data, error } = await checkStatus();
-        
-        // Update last status
-        if (status !== lastStatus) {
-          console.log(`Payment status changed: ${lastStatus} -> ${status}`);
-          lastStatus = status;
-        }
-        
-        // Handle terminal states
-        if (['completed', 'failed', 'cancelled', 'error', 'not_found'].includes(status)) {
-          // Ensure data matches PaymentStatusData type
-          const responseData: PaymentStatusData = data && typeof data === 'object' 
-            ? { ...data } 
-            : {};
-            
-          return {
-            success: status === 'completed',
-            status,
-            message: message || `Payment ${status}`,
-            data: responseData
-          };
-        }
-        
-        // If we got an error but it's not terminal, log it and continue
-        if (error) {
-          console.error('Non-terminal error:', error);
-        }
-        
-        // Calculate delay with exponential backoff and jitter
-        const delayMs = Math.min(
-          baseDelayMs * Math.pow(1.5, attempts - 1) + Math.random() * 1000,
-          10000 // Max 10 seconds
-        );
-        
-        console.log(`Waiting ${Math.round(delayMs)}ms before next check...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        
-      } catch (error) {
-        console.error('Unexpected error in polling loop:', error);
-        // Continue to next attempt after a delay
-        await new Promise(resolve => setTimeout(resolve, 2000));
-      }
-    }
-    
-    // If we get here, we've exhausted all attempts
-    return {
-      success: false,
-      status: 'timeout',
-      message: 'Payment status check timed out. Please check your email for confirmation or contact support.',
-      data: null
-    };
-  };
-
-  // All state and functions are now properly declared
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -417,8 +439,10 @@ export function TicketPurchaseForm({
       customerEmail: formData.customerEmail.trim().toLowerCase(),
       phoneNumber: formData.phoneNumber,
       paymentMethod: formData.paymentMethod,
-      amount: totalPrice,
-      ticketTypeName: selectedTicket?.name || 'General Admission'
+      amount: finalPrice,
+      ticketTypeName: selectedTicket?.name || 'General Admission',
+      discountCode: appliedDiscountCode || undefined,
+      discountAmount: discountAmount || undefined
     };
     
     let paymentInitiated = false;
@@ -440,7 +464,9 @@ export function TicketPurchaseForm({
             eventId: purchaseData.eventId,
             customerName: purchaseData.customerName,
             narrative: `Ticket purchase for ${event.name}`,
-            paymentMethod: purchaseData.paymentMethod
+            paymentMethod: purchaseData.paymentMethod,
+            discountCode: purchaseData.discountCode,
+            discountAmount: purchaseData.discountAmount
           });
           
           const result = await apiRequest.post<PaymentInitiationResponse>('payments/initiate', {
@@ -451,7 +477,9 @@ export function TicketPurchaseForm({
             eventId: purchaseData.eventId,
             customerName: purchaseData.customerName,
             narrative: `Ticket purchase for ${event.name}`,
-            paymentMethod: purchaseData.paymentMethod
+            paymentMethod: purchaseData.paymentMethod,
+            discountCode: purchaseData.discountCode,
+            discountAmount: purchaseData.discountAmount
           }, {
             timeout: 15000 // 15 second timeout for the initial request
           });
@@ -462,151 +490,96 @@ export function TicketPurchaseForm({
         } catch (error: any) {
           retryCount++;
           
+          console.error(`Payment initiation attempt ${retryCount} failed:`, {
+            message: error.message,
+            status: error.response?.status,
+            statusText: error.response?.statusText,
+            data: error.response?.data
+          });
+          
+          // Don't retry on client errors (4xx)
+          if (error.response?.status && error.response.status >= 400 && error.response.status < 500) {
+            throw error;
+          }
+          
+          // If we've reached max retries, throw the error
           if (retryCount >= maxRetries) {
-            console.error('Max retries reached for payment initiation');
-            throw error; // Re-throw to be caught by the outer catch
+            throw new Error(`Payment initiation failed after ${maxRetries} attempts. Last error: ${error.message}`);
           }
           
-          // If it's a network error, wait and retry
-          if (error.code === 'ECONNABORTED' || error.message?.includes('network')) {
-            const delay = Math.min(1000 * Math.pow(2, retryCount), 10000); // Exponential backoff
-            console.log(`Network error, retrying in ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-          
-          // For other errors, rethrow immediately
-          throw error;
+          // Wait before retrying with exponential backoff
+          const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
+          console.log(`Retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
-      
-      throw new Error('Failed to initiate payment after multiple attempts');
     };
     
     try {
-      // Attempt payment initiation with retries
       response = await attemptPaymentInitiation();
       
-      if (!response || !response.data) {
-        throw new Error('Invalid response from server');
-      }
-      
-      // Mark that we've successfully initiated a payment
-      paymentInitiated = true;
-      
-      const { data } = response;
-      invoiceId = data.invoiceId || data.data?.invoiceId;
-      
-      if (!invoiceId) {
-        throw new Error('No invoice ID received from server');
-      }
-      
-      console.log('Starting payment status polling for invoice:', invoiceId);
-      
-      // Start polling for payment status
-      console.log('Starting payment status polling...');
-      const result = await pollPaymentStatus(invoiceId);
-      
-      console.log('Payment polling completed with result:', result);
-      
-      if (result.success) {
-        console.log('Payment completed successfully!');
-        setPurchaseDetails({
-          reference: invoiceId,
-          email: purchaseData.customerEmail
-        });
-        setPurchaseComplete(true);
+      if (response?.status === 'success' || response?.success) {
+        paymentInitiated = true;
+        invoiceId = response.data?.invoiceId || response.data?.reference || response.invoiceId || response.reference;
         
-        // Call the original onSubmit if provided
-        if (onSubmit) {
-          try {
-            await onSubmit(purchaseData);
-          } catch (submitError) {
-            console.error('Error in onSubmit callback:', submitError);
-          }
-        }
+        console.log('Payment initiated successfully:', {
+          invoiceId,
+          authorization_url: response.data?.authorization_url || response.authorization_url,
+          access_code: response.data?.access_code || response.access_code,
+          reference: response.data?.reference || response.reference,
+          payment_provider_response: response.payment_provider_response
+        });
+        
+        // Store payment initiation data for Paystack modal
+        setPaymentInitiationData({
+          email: purchaseData.customerEmail,
+          amount: purchaseData.amount,
+          reference: response.data?.reference || response.reference || invoiceId,
+          invoiceId: invoiceId,
+          ticketTypeId: purchaseData.ticketTypeId?.toString() || '',
+          quantity: purchaseData.quantity.toString(),
+          customerName: purchaseData.customerName,
+          phone: purchaseData.phoneNumber
+        });
+        
+        // Show Paystack modal
+        setShowPaystackModal(true);
+        
+        toast({
+          title: 'Payment Ready',
+          description: 'Please complete the payment in the Paystack modal.',
+        });
       } else {
-        console.error(`Payment failed with status: ${result.status}`, result.message);
-        throw new Error(result.message || 'Payment failed. Please try again.');
+        throw new Error(response.data?.message || response.message || 'Payment initiation failed');
       }
       
     } catch (error: any) {
-      console.error('Error processing payment:', {
-        message: error.message,
-        response: error.response?.data,
-        stack: error.stack,
-        code: error.code,
-        isNetworkError: error.message?.includes('network') || error.code === 'ECONNABORTED'
-      });
-      
-      let errorMessage = 'There was an error processing your payment. ';
-      
-      // Check for network-related errors first
-      if (error.message?.includes('network') || error.code === 'ECONNABORTED' || !navigator.onLine) {
-        errorMessage = 'Network connection issue detected. ';
-        
-        if (paymentInitiated && invoiceId) {
-          errorMessage += 'Your payment was initiated but we could not confirm the status. ';
-          errorMessage += 'Please check your email for confirmation or contact support with this reference: ' + invoiceId;
-        } else if (paymentInitiated) {
-          errorMessage += 'Your payment may have been initiated. Please check your payment method or contact support for assistance.';
-        } else {
-          errorMessage += 'Please check your internet connection and try again.';
-        }
-      } 
-      // Handle other types of errors
-      else if (paymentInitiated) {
-        if (invoiceId) {
-          errorMessage = 'The payment was initiated but we encountered an issue confirming the status. ';
-          errorMessage += 'Please check your email for confirmation or contact support with this reference: ' + invoiceId;
-        } else {
-          errorMessage = 'The payment was initiated but we encountered an issue. Please check your payment method or contact support.';
-        }
-      } else {
-        errorMessage = 'There was an error processing your payment. Please try again or contact support if the issue persists.';
-      }
-      
-      // Add server error details if available
-      if (error.response?.data?.message) {
-        errorMessage += ` (${error.response.data.message})`;
-      } else if (error.message && !error.message.includes('network')) {
-        errorMessage += ` (${error.message})`;
-      }
+      console.error('Payment initiation error:', error);
+      setIsSubmitting(false);
       
       toast({
-        title: paymentInitiated ? 'Payment Processing Issue' : 'Payment Failed',
-        description: errorMessage,
-        variant: 'destructive',
-        duration: 15000, // Show for 15 seconds to allow user to read
+        title: 'Payment Error',
+        description: error.message || 'Failed to initiate payment. Please try again.',
+        variant: 'destructive'
       });
-      
-      // If we have an invoice ID but had an error, we should still show the success state
-      // as the payment might have gone through but we couldn't confirm
-      if (invoiceId && paymentInitiated) {
-        setPurchaseDetails({
-          reference: invoiceId,
-          email: purchaseData.customerEmail
-        });
-        setPurchaseComplete(true);
-      }
-    } finally {
-      // Always ensure loading state is cleared
-      setIsSubmitting(false);
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[400px]">
+      <DialogContent className="sm:max-w-[500px]">
         {purchaseComplete ? (
-          <div className="text-center p-6">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-50 mb-4">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
-            </div>
+          <div className="text-center py-6">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-green-500 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Successful</h3>
             <p className="text-gray-600 mb-4">
               Confirmation email will be sent to your email
             </p>
+            {purchaseDetails.reference && (
+              <p className="text-sm text-gray-500 mb-4">
+                Reference: {purchaseDetails.reference}
+              </p>
+            )}
             <Button 
               onClick={() => onOpenChange(false)}
               className="mt-2"
@@ -652,7 +625,7 @@ export function TicketPurchaseForm({
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number (M-Pesa Registered)</Label>
+                <Label htmlFor="phoneNumber">Phone Number</Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <span className="text-gray-500">+254</span>
@@ -673,7 +646,7 @@ export function TicketPurchaseForm({
                   <p className="text-sm text-red-500 mt-1">{phoneError}</p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Enter 9-digit Safaricom number starting with 7 or 1 (e.g., 712345678)
+                  Enter 9-digit number starting with 7 or 1 (e.g., 712345678)
                 </p>
               </div>
               
@@ -747,10 +720,47 @@ export function TicketPurchaseForm({
                 </div>
               )}
               
+              {selectedTicket && (
+                <div className="pt-2">
+                  <DiscountCodeInput
+                    eventId={String(event.id)}
+                    orderAmount={basePrice}
+                    onDiscountApplied={handleDiscountApplied}
+                    onDiscountRemoved={handleDiscountRemoved}
+                  />
+                </div>
+              )}
+              
               <div className="pt-2">
                 <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                  <span className="font-medium">Total</span>
-                  <span className="text-lg font-bold">{formatPrice(totalPrice)}</span>
+                  <div>
+                    <span className="font-medium">Subtotal</span>
+                    {discountAmount > 0 && (
+                      <div className="text-sm text-green-600">
+                        Discount: -{formatPrice(discountAmount)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    {/* Debug log for subtotal display */}
+                    {(() => {
+                      console.log('=== SUBTOTAL RENDER DEBUG ===');
+                      console.log('Rendering subtotal with:', {
+                        finalPrice,
+                        basePrice,
+                        discountAmount,
+                        formattedFinalPrice: formatPrice(finalPrice),
+                        formattedBasePrice: formatPrice(basePrice)
+                      });
+                      return null;
+                    })()}
+                    <span className="text-lg font-bold">{formatPrice(finalPrice)}</span>
+                    {discountAmount > 0 && (
+                      <div className="text-sm text-gray-500 line-through">
+                        {formatPrice(basePrice)}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -768,21 +778,38 @@ export function TicketPurchaseForm({
                   ) : (
                     <>
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Pay {formatPrice(totalPrice)} with {formData.paymentMethod === 'mpesa' ? 'M-Pesa' : formData.paymentMethod}
+                      Pay {formatPrice(finalPrice)} with Paystack
                     </>
                   )}
                 </Button>
                 
-                {formData.paymentMethod === 'mpesa' && (
-                  <p className="text-xs text-gray-500 text-center mt-2">
-                    You'll receive an M-Pesa prompt on your phone to complete the payment
-                  </p>
-                )}
+                <p className="text-xs text-gray-500 text-center mt-2">
+                  You'll be redirected to Paystack's secure payment modal
+                </p>
               </div>
             </form>
           </>
         )}
       </DialogContent>
+      
+      {/* Paystack Modal */}
+      {showPaystackModal && paymentInitiationData && (
+        <PaystackPayment
+          email={paymentInitiationData.email}
+          amount={paymentInitiationData.amount}
+          reference={paymentInitiationData.reference}
+          onSuccess={handlePaystackSuccess}
+          onClose={handlePaystackClose}
+          onOpen={handlePaystackModalOpen}
+          metadata={{
+            event_id: event.id.toString(),
+            ticket_type_id: formData.ticketTypeId,
+            quantity: formData.quantity.toString(),
+            customer_name: formData.customerName,
+            phone: formData.phoneNumber
+          }}
+        />
+      )}
     </Dialog>
   );
 }

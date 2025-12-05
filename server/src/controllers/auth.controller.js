@@ -3,7 +3,7 @@ import Organizer from '../models/organizer.model.js';
 
 const generateToken = (id, role = 'buyer') => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN
+    expiresIn: '5m' // 5 minutes expiration
   });
 };
 
@@ -105,7 +105,7 @@ export const login = async (req, res) => {
       }
     });
     
-    console.log('Login successful for organizer:', organizer.email);
+    console.log('Login successful for organizer:', '[REDACTED]');
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({

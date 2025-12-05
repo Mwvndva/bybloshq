@@ -10,7 +10,7 @@ export const getSellerAnalytics = async (req, res, next) => {
   console.log('=== getSellerAnalytics called ===');
   console.log('Request user:', {
     id: req.user?.id,
-    email: req.user?.email,
+    userType: req.user?.userType,
     role: req.user?.role
   });
   
@@ -102,7 +102,12 @@ export const getSellerAnalytics = async (req, res, next) => {
       [sellerId]
     );
     const sellerBalance = parseFloat(sellerBalanceResult.rows[0]?.balance || 0);
-    console.log('Seller balance:', sellerBalance);
+    console.log('Seller balance:', sellerBalance ? {
+      sellerId: sellerBalance.seller_id,
+      balance: sellerBalance.balance,
+      email: sellerBalance.email ? '[REDACTED]' : 'missing',
+      phone: sellerBalance.phone ? '[REDACTED]' : 'missing'
+    } : 'Not found');
 
     // 6. Get recent orders
     console.log('Fetching recent orders...');
