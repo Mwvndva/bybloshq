@@ -34,34 +34,12 @@ class WhatsAppService {
           dataPath: this.sessionPath
         }),
         puppeteer: {
-          headless: true,
+          executablePath: '/usr/bin/chromium-browser',
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--disable-gpu',
-            '--disable-extensions',
-            '--disable-background-networking',
-            '--disable-background-timer-throttling',
-            '--disable-backgrounding-occluded-windows',
-            '--disable-breakpad',
-            '--disable-component-extensions-with-background-pages',
-            '--disable-features=TranslateUI',
-            '--disable-ipc-flooding-protection',
-            '--disable-renderer-backgrounding',
-            '--enable-features=NetworkService,NetworkServiceInProcess',
-            '--force-color-profile=srgb',
-            '--hide-scrollbars',
-            '--metrics-recording-only',
-            '--mute-audio',
-            '--disable-blink-features=AutomationControlled'
-          ],
-          // Increase timeout and handle navigation
-          timeout: 60000,
-          protocolTimeout: 120000
+            '--disable-dev-shm-usage'
+          ]
         },
         // Add webVersionCache to prevent version check issues
         webVersionCache: {
