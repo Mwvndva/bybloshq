@@ -43,7 +43,7 @@ const Event = {
         tt.*,
         (SELECT COUNT(*) FROM tickets t WHERE t.ticket_type_id = tt.id AND t.status = 'paid') as sold,
         COALESCE(tc.total_created, 0) as total_created
-      FROM ticket_types tt 
+      FROM event_ticket_types tt 
       LEFT JOIN ticket_counts tc ON tt.id = tc.ticket_type_id
       WHERE tt.event_id = $1`,
       [id]
@@ -203,7 +203,7 @@ const Event = {
             GREATEST(0, tt.quantity - COALESCE(t.sold_count, 0)) as tickets_available,
             COALESCE(t.total_revenue, 0) as ticket_revenue
           FROM events e
-          LEFT JOIN ticket_types tt ON e.id = tt.event_id
+          LEFT JOIN event_ticket_types tt ON e.id = tt.event_id
           LEFT JOIN (
             SELECT 
               ticket_type_id,
@@ -250,7 +250,7 @@ const Event = {
           WHERE e.status = 'published'
             AND e.start_date > NOW()
             AND NOT EXISTS (
-              SELECT 1 FROM ticket_types tt 
+              SELECT 1 FROM event_ticket_types tt 
               WHERE tt.event_id = e.id
             )
         )
@@ -403,7 +403,7 @@ const Event = {
           COALESCE(tc.total_created, 0) as total_created,
           COALESCE(tc.total_sold, 0) as total_sold,
           GREATEST(tt.quantity - COALESCE(tc.total_created, 0), 0) as available
-        FROM ticket_types tt 
+        FROM event_ticket_types tt 
         LEFT JOIN ticket_counts tc ON tt.id = tc.ticket_type_id
         WHERE tt.event_id = $1 
           AND (tt.sales_start_date IS NULL OR tt.sales_start_date <= NOW())
@@ -555,7 +555,7 @@ const Event = {
           tt.*,
           COALESCE(ts.sold, 0) as sold,
           GREATEST(0, tt.quantity - COALESCE(ts.sold, 0)) as available
-        FROM ticket_types tt
+        FROM event_ticket_types tt
         LEFT JOIN ticket_sales ts ON tt.id = ts.ticket_type_id
         WHERE tt.event_id = ANY($1)
           AND (tt.sales_start_date IS NULL OR tt.sales_start_date <= NOW())
