@@ -9,7 +9,7 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "start": "node src/index.js",
+    "start": "npm run migrate && node src/index.js",
     "dev": "nodemon -r dotenv/config src/index.js",
     "build": "npm install && npm run migrate",
     "migrate": "node -r dotenv/config scripts/migrate.js",
