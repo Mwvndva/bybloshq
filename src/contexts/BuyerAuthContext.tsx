@@ -26,6 +26,8 @@ interface BuyerAuthContextType {
     phone: string;
     password: string;
     confirmPassword: string;
+    city: string;
+    location: string;
   }) => Promise<void>;
   logout: () => void;
   forgotPassword: (email: string) => Promise<boolean>;
@@ -349,11 +351,38 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
   }) => {
     setIsLoading(true);
     try {
-      const { buyer, token } = await buyerApi.register(userData);
+      // Ensure required fields are present
+      if (!userData.fullName || !userData.email || !userData.phone || !userData.password || !userData.city || !userData.location) {
+        throw new Error('Please fill in all required fields');
+      }
+
+      // If passwords don't match
+      if (userData.password !== userData.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
+
+      // Prepare the data to send to the API
+      const registrationData = {
+        fullName: userData.fullName,
+        email: userData.email,
+        phone: userData.phone,
+        password: userData.password,
+        confirmPassword: userData.confirmPassword,
+        city: userData.city,
+        location: userData.location
+      };
+
+      const { buyer, token } = await buyerApi.register(registrationData);
+      
+      // Store the token and update the auth state
       localStorage.setItem('buyer_token', token);
       setUser(buyer);
       setIsAuthenticated(true);
+      
+      // Redirect to dashboard
       navigate('/buyer/dashboard', { replace: true });
+      
+      // Show success message
       toast.success('Account created!', {
         description: 'Your account has been successfully created.',
         duration: 3000,
@@ -361,6 +390,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     } catch (error: any) {
       console.error('Registration failed:', error);
       
+      // Handle different types of errors
       if (error.response?.status === 400) {
         // Handle validation errors
         const errorMessage = error.response?.data?.message || 'Please check your information and try again.';
@@ -374,6 +404,12 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
           description: 'An account with this email or phone number already exists. Please log in instead.',
           duration: 6000,
         });
+      } else if (error.message === 'Passwords do not match') {
+        // Handle password mismatch
+        toast.error('Registration Failed', {
+          description: error.message,
+          duration: 5000,
+        });
       } else if (error.response?.status === 500) {
         // Handle server errors
         toast.error('Server Error', {
@@ -383,7 +419,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       } else {
         // Handle other errors
         toast.error('Registration Failed', {
-          description: error.response?.data?.message || 'Failed to create account. Please try again.',
+          description: error.message || 'Failed to create account. Please try again.',
           duration: 5000,
         });
       }
