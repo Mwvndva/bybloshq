@@ -31,6 +31,19 @@ class PaymentCompletionService {
         throw new Error(`Could not acquire lock for payment ${payment.id}`);
       }
       
+      // Check if this is a product payment
+      const metadata = payment.metadata || {};
+      if (metadata.product_id || metadata.order_id) {
+        logger.info(`Payment ${payment.id} is a product payment, skipping ticket creation`, {
+          paymentId: payment.id,
+          invoiceId: payment.invoice_id,
+          productId: metadata.product_id,
+          orderId: metadata.order_id
+        });
+        await client.query('ROLLBACK');
+        return { success: true, isProductPayment: true };
+      }
+      
       logger.info(`Processing successful payment ${payment.id} for invoice ${payment.invoice_id}`, {
         paymentId: payment.id,
         invoiceId: payment.invoice_id,

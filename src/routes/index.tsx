@@ -8,6 +8,7 @@ import { buyerRoutes } from './buyer.routes';
 // Lazy load pages
 const IndexPage = lazy(() => import('@/pages/Index'));
 const ShopPage = lazy(() => import('@/pages/ShopPage'));
+const PaymentSuccessPage = lazy(() => import('@/pages/PaymentSuccess'));
 
 // Create a simple loading component
 const LoadingFallback = () => (
@@ -31,6 +32,14 @@ export const routes = [
     element: (
       <Suspense fallback={<LoadingFallback />}>
         <ShopPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/payment/success',
+    element: (
+      <Suspense fallback={<LoadingFallback />}>
+        <PaymentSuccessPage />
       </Suspense>
     ),
   },

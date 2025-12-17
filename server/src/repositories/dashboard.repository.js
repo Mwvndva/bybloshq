@@ -38,8 +38,8 @@ const DashboardRepository = {
       SELECT 
         t.id,
         t.ticket_number as transaction_id,
-        t.customer_name,
-        t.customer_email,
+        'Customer' as customer_name,
+        '***@***.com' as customer_email,
         t.event_id,
         t.ticket_type_name as ticket_type,
         t.price as amount,

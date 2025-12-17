@@ -1,17 +1,4 @@
-import nodemailer from 'nodemailer';
-
-// Create transporter for sending emails
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: 'smtp.zoho.com',
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: process.env.EMAIL_USERNAME,
-      pass: process.env.EMAIL_PASSWORD
-    }
-  });
-};
+import { sendEmail } from '../utils/email.js';
 
 export const sendWithdrawalEmail = async (req, res) => {
   try {
@@ -24,20 +11,20 @@ export const sendWithdrawalEmail = async (req, res) => {
       });
     }
 
-    const transporter = createTransporter();
+    console.log('Sending withdrawal email with:', { to, subject, hasHtml: !!html });
 
-    const mailOptions = {
-      from: process.env.EMAIL_USERNAME,
-      to: to,
-      subject: subject,
-      html: html
-    };
+    const info = await sendEmail({
+      to,
+      subject,
+      html
+    });
 
-    await transporter.sendMail(mailOptions);
+    console.log('Withdrawal email sent successfully:', info.messageId);
 
     res.status(200).json({
       status: 'success',
-      message: 'Withdrawal request email sent successfully'
+      message: 'Withdrawal request email sent successfully',
+      messageId: info.messageId
     });
 
   } catch (error) {

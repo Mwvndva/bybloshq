@@ -15,7 +15,7 @@ export const signToken = (id, role = 'buyer') => {
   return jwt.sign(
     { id, role },
     process.env.JWT_SECRET,
-    { expiresIn: '5m' } // 5 minutes expiration
+    { expiresIn: '24h' } // 24 hours expiration instead of 5 minutes
   );
 };
 
@@ -59,7 +59,11 @@ export const getTokenFromRequest = (req) => {
     return authHeader.split(' ')[1];
   }
 
-  // 2) Check cookies
+  // 2) Check cookies (look for both 'token' and 'jwt' for compatibility)
+  if (req.cookies?.token) {
+    return req.cookies.token;
+  }
+  
   if (req.cookies?.jwt) {
     return req.cookies.jwt;
   }

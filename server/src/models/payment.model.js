@@ -14,13 +14,16 @@ class Payment {
       ticket_type_id = null,  // New field
       event_id = null,
       organizer_id = null,
+      provider_reference = null,
+      api_ref = null,
       metadata = null
     } = paymentData;
 
     // Build the query dynamically based on provided fields
     const fields = [
       'invoice_id', 'amount', 'currency', 'status', 'payment_method',
-      'phone_number', 'email', 'ticket_id', 'ticket_type_id', 'event_id', 'organizer_id', 'metadata'
+      'phone_number', 'email', 'ticket_id', 'ticket_type_id', 'event_id', 'organizer_id', 
+      'provider_reference', 'api_ref', 'metadata'
     ];
     
     // Only include fields that are not null/undefined

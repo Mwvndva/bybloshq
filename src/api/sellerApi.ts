@@ -178,8 +178,7 @@ interface ShopNameAvailabilityResponse {
 export const checkShopNameAvailability = async (shopName: string): Promise<{ available: boolean }> => {
   try {
     const response = await sellerApiInstance.get<ShopNameAvailabilityResponse>(`/api/sellers/check-shop-name?shopName=${encodeURIComponent(shopName)}`);
-    console.log('Shop name availability response:', response.data);
-    return response.data.data;
+        return response.data.data;
   } catch (error) {
     console.error('Error checking shop name availability:', error);
     // If there's an error, we'll assume the shop name is not available to be safe
@@ -333,7 +332,15 @@ export const sellerApi = {
     try {
       // Use axios directly to avoid auth interceptor
       const response = await axios.get<ProductsResponse>(`${baseURL}/api/sellers/${sellerId}/products`);
-      const products = response.data?.data?.products || response.data?.data || [];
+      // Handle both response structures: { data: { products: [] } } or { products: [] }
+      let products: any[] = [];
+      if (response.data?.data?.products) {
+        products = response.data.data.products;
+      } else if (Array.isArray(response.data?.data)) {
+        products = response.data.data;
+      } else if (Array.isArray(response.data)) {
+        products = response.data;
+      }
       return products.map(transformProduct);
     } catch (error: any) {
       console.error('Error fetching seller products:', {
@@ -379,7 +386,7 @@ export const sellerApi = {
   getProfile: async (): Promise<Seller> => {
     try {
       const response = await sellerApiInstance.get<SellerResponse>('/api/sellers/profile');
-      const profileData = response.data?.data;
+      const profileData = response.data?.data?.seller;
       if (!profileData) {
         throw new Error('No profile data received');
       }

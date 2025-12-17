@@ -112,7 +112,7 @@ buyerApiInstance.interceptors.request.use(
       
       // Log the token being sent (remove in production)
       if (isDevelopment) {
-        console.log('Sending request with token:', token.substring(0, 10) + '...');
+        // Removed sensitive token log
       }
     } else if (isDevelopment) {
       console.warn('No auth token found for request to:', config.url);
@@ -184,8 +184,8 @@ const transformBuyer = (data: any): Buyer => {
 import api from './api';
 import { Order, OrderStatus, OrderItem, PaymentStatus } from '@/types/order';
 
-export const getBuyerProfile = () => buyerApiInstance.get('/api/buyers/profile');
-export const updateBuyerProfile = (data: any) => buyerApiInstance.patch('/api/buyers/update-profile', data);
+export const getBuyerProfile = () => buyerApiInstance.get('/buyers/profile');
+export const updateBuyerProfile = (data: any) => buyerApiInstance.patch('/buyers/update-profile', data);
 
 const buyerApi = {
   // Auth
@@ -218,7 +218,7 @@ const buyerApi = {
       console.log('=== LOGIN RESPONSE ===');
       console.log('Status:', response.status);
       console.log('Headers:', JSON.stringify(response.headers, null, 2));
-      console.log('Data:', JSON.stringify(response.data, null, 2));
+      
       
       const responseData = response.data;
       
@@ -246,7 +246,7 @@ const buyerApi = {
       
       // Verify the token is stored correctly
       const storedToken = localStorage.getItem('buyer_token');
-      console.log('Token stored in localStorage:', storedToken ? 'Yes' : 'No');
+      // Removed token storage log
       
       return { buyer: transformBuyer(buyer), token };
     } catch (error: any) {
@@ -272,7 +272,7 @@ const buyerApi = {
       
       console.log('=== REGISTRATION RESPONSE ===');
       console.log('Status:', response.status);
-      console.log('Data:', JSON.stringify(response.data, null, 2));
+      
       
       const responseData = response.data;
       
@@ -301,7 +301,7 @@ const buyerApi = {
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<{ message: string }>(
-        `${API_URL}/api/buyers/forgot-password`, 
+        `${baseURL}/buyers/forgot-password`, 
         { email: email.trim().toLowerCase() },
         { 
           headers: { 'Content-Type': 'application/json' } 
@@ -326,7 +326,7 @@ const buyerApi = {
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<{ message: string }>(
-        `${API_URL}/api/buyers/reset-password`,
+        `${baseURL}/buyers/reset-password`,
         { token, newPassword },
         { 
           headers: { 
@@ -365,9 +365,9 @@ const buyerApi = {
         };
       }
       
-      const response = await buyerApiInstance.get<ProfileResponse>('/api/buyers/profile');
+      const response = await buyerApiInstance.get<ProfileResponse>('/buyers/profile');
       
-      console.log('Profile response:', response.data);
+      
       
       // The buyer data is in response.data.data.buyer
       const buyerData = response.data.data?.buyer;
@@ -391,7 +391,7 @@ const buyerApi = {
     try {
       console.log(`🔍 API - Fetching wishlist (attempt ${retryCount + 1}/${maxRetries + 1})...`);
       
-      const response = await buyerApiInstance.get<ApiResponse<{ items: WishlistItem[] }>>('/api/buyers/wishlist', {
+      const response = await buyerApiInstance.get<ApiResponse<{ items: WishlistItem[] }>>('/buyers/wishlist', {
         headers: {
           'Cache-Control': 'no-cache',
           'Pragma': 'no-cache',
@@ -444,10 +444,10 @@ const buyerApi = {
     try {
       console.log('API - Adding to wishlist:', product);
       const response = await buyerApiInstance.post<ApiResponse<any>>(
-        '/api/buyers/wishlist', 
+        '/buyers/wishlist', 
         { productId: product.id }
       );
-      console.log('API - Add to wishlist response:', response.data);
+      
       
       // Check if the response indicates success
       if (response.data?.success) {
@@ -484,10 +484,10 @@ const buyerApi = {
     try {
       console.log('Removing from wishlist:', productId);
       const response = await buyerApiInstance.delete<ApiResponse<void>>(
-        `/api/buyers/wishlist/${productId}`
+        `/buyers/wishlist/${productId}`
       );
       
-      console.log('API - Remove from wishlist response:', response.data);
+      
       
       // Check if the response indicates success
       if (response.data?.success) {
@@ -524,7 +524,7 @@ const buyerApi = {
     try {
       console.log('Syncing wishlist with server:', items);
       await buyerApiInstance.put<ApiResponse<void>>(
-        '/api/buyers/wishlist/sync', 
+        '/buyers/wishlist/sync', 
         { items }
       );
       return true;
@@ -544,7 +544,7 @@ const buyerApi = {
   // Order methods
   getOrders: async (): Promise<Order[]> => {
     try {
-      const response = await buyerApiInstance.get<ApiResponse<any[]>>('/api/orders/user');
+      const response = await buyerApiInstance.get<ApiResponse<any[]>>('/orders/user');
       // Transform the response to match the Order type
       return response.data.data.map(order => ({
         ...order,
@@ -568,7 +568,7 @@ const buyerApi = {
 
   getOrder: async (orderId: string): Promise<Order> => {
     try {
-      const response = await buyerApiInstance.get<ApiResponse<Order>>(`/api/orders/${orderId}`);
+      const response = await buyerApiInstance.get<ApiResponse<Order>>(`/orders/${orderId}`);
       return response.data.data;
     } catch (error) {
       console.error(`Error fetching order ${orderId}:`, error);
@@ -578,7 +578,7 @@ const buyerApi = {
 
   cancelOrder: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
     try {
-      await buyerApiInstance.patch(`/api/orders/${orderId}/cancel`);
+      await buyerApiInstance.patch(`/orders/${orderId}/cancel`);
       return { success: true };
     } catch (error: any) {
       console.error(`Error cancelling order ${orderId}:`, error);
@@ -592,10 +592,10 @@ const buyerApi = {
   confirmOrderReceipt: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
     try {
       console.log(`Sending confirm receipt request for order ${orderId}...`);
-      const response = await buyerApiInstance.patch(`/api/orders/${orderId}/confirm-receipt`, {}, {
+      const response = await buyerApiInstance.patch(`/orders/${orderId}/confirm-receipt`, {}, {
         timeout: 30000 // 30 seconds timeout for this specific request
       });
-      console.log(`Confirm receipt response for order ${orderId}:`, response.data);
+      
       return { success: true };
     } catch (error: any) {
       console.error(`Error confirming receipt for order ${orderId}:`, error);
@@ -627,10 +627,10 @@ const buyerApi = {
     token?: string; 
   }> => {
     try {
-      console.log('Checking buyer by phone:', phone);
+      
       
       // Use a fresh axios instance to avoid auth interceptor
-      const response = await axios.create().post<{ 
+      const response = await axios.create({}).post<{ 
         status: string; 
         data: { 
           exists: boolean; 
@@ -638,7 +638,7 @@ const buyerApi = {
           token?: string; 
         } 
       }>(
-        `${API_URL}/api/buyers/check-phone`,
+        `${baseURL}/buyers/check-phone`,
         { phone },
         {
           headers: {
@@ -647,7 +647,7 @@ const buyerApi = {
         }
       );
       
-      console.log('Check phone response:', response.data);
+      
       if (!response.data || response.data.status !== 'success') {
         throw new Error('Failed to check buyer information');
       }
@@ -669,11 +669,11 @@ const buyerApi = {
     location?: string;
   }): Promise<{ buyer?: Buyer; token?: string; message?: string }> => {
     try {
-      console.log('Saving buyer information:', buyerInfo);
+      
 
       // Use the public API endpoint that doesn't require authentication
       const response = await axios.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
-        `${API_URL}/api/buyers/save-info`,
+        `${baseURL}/buyers/save-info`,
         buyerInfo,
         {
           headers: {
@@ -682,7 +682,7 @@ const buyerApi = {
         }
       );
 
-      console.log('Save buyer info response:', response.data);
+      
 
       if (!response.data || response.data.status !== 'success') {
         throw new Error(response.data?.data?.message || 'Failed to save buyer information');
@@ -705,8 +705,8 @@ const buyerApi = {
     amount: number;
   }): Promise<{ success: boolean; message?: string }> => {
     try {
-      const response = await buyerApiInstance.post('/api/buyers/refund-request', data);
-      return { success: true, message: response.data.message };
+      const response = await buyerApiInstance.post('/buyers/refund-request', data);
+      return { success: true, message: (response.data as any)?.message || 'Refund request submitted successfully' };
     } catch (error: any) {
       console.error('Error requesting refund:', error);
       throw new Error(error.response?.data?.message || 'Failed to submit refund request');
@@ -724,8 +724,8 @@ const buyerApi = {
     hasPending: boolean;
   }> => {
     try {
-      const response = await buyerApiInstance.get('/api/buyers/refund-requests/pending');
-      return response.data.data;
+      const response = await buyerApiInstance.get('/buyers/refund-requests/pending');
+      return (response.data as any)?.data || { hasPending: false, requests: [] };
     } catch (error: any) {
       console.error('Error fetching pending refund requests:', error);
       throw new Error(error.response?.data?.message || 'Failed to fetch pending refund requests');
@@ -734,5 +734,6 @@ const buyerApi = {
 };
 
 export default buyerApi;
+
 
 

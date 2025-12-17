@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart } from 'lucide-react';
+import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -56,7 +56,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   
   // Derived state
   const displaySeller = seller || product.seller;
-  const displaySellerName = displaySeller?.shopName || displaySeller?.shop_name || displaySeller?.fullName || 'Unknown Shop';
+  const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
   const sellerLocation = displaySeller?.location;
   const isSold = product.status === 'sold' || product.isSold;
   
@@ -72,7 +72,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
 
   useEffect(() => {
-    console.log(`ProductCard ${product.id}: isWishlisted=${isWishlisted}`);
+    
   }, [product.id, isWishlisted]);
 
   const toggleWishlist = async (e: React.MouseEvent) => {
@@ -162,7 +162,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handlePhoneSubmit = async (phone: string) => {
     setIsCheckingPhone(true);
     try {
-      console.log('Checking phone:', phone);
+      
       const result = await buyerApi.checkBuyerByPhone(phone);
       
       setCurrentPhone(phone);
@@ -170,7 +170,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       
       if (result.exists && result.buyer && result.token) {
         // Buyer exists - use their data to initiate payment
-        console.log('Buyer exists, proceeding with payment');
+        
         
         // Store token if provided
         if (result.token) {
@@ -187,7 +187,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         });
       } else {
         // Buyer doesn't exist - show form to collect full details
-        console.log('Buyer not found, showing registration form');
+        
         setIsBuyerModalOpen(true);
       }
     } catch (error: any) {
@@ -217,7 +217,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         buyerId = String(userData.id);
         buyerToken = localStorage.getItem('buyer_token') || '';
 
-        console.log('Using existing authenticated buyer:', { buyerId, hasToken: !!buyerToken });
+        
       } else {
         // User is not authenticated, save buyer info first
         try {
@@ -235,7 +235,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             localStorage.setItem('buyer_token', buyerToken);
           }
 
-          console.log('Created new buyer account:', { buyerId, hasToken: !!buyerToken });
+          
 
         } catch (saveError) {
           console.error('Error saving buyer info:', saveError);
@@ -243,56 +243,34 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         }
       }
 
-      // 2. Prepare payment payload
-      const [firstName = 'Customer', ...lastNameParts] = buyerInfo.fullName.split(' ') || [];
-      const lastName = lastNameParts.join(' ') || 'User';
-      
+      // 2. Prepare payment payload for Paystack product payment
       const payload = {
+        phone: buyerInfo.phone,
+        email: buyerInfo.email,
         amount: product.price,
-        description: `Purchase of ${product.name}`,
-        sellerId: parseInt(product.sellerId || product.seller_id || displaySeller?.id || '0'),
-        customer: {
-          id: buyerId,
-          email: buyerInfo.email,
-          phone: buyerInfo.phone,
-          firstName: firstName,
-          lastName: lastName,
-        },
-        items: [
-          {
-            id: String(product.id),
-            name: product.name,
-            quantity: 1,
-            unitPrice: product.price,
-            totalPrice: product.price,
-            description: product.description || '',
-            category: product.category || 'General',
-            currency: 'KES'
-          },
-        ],
-        currency: 'KES',
-        callbackUrl: `${window.location.origin}/orders`,
-        cancelUrl: `${window.location.origin}/products/${product.id}`,
-        notificationId: process.env.VITE_INTASEND_WEBHOOK_ID || '',
-        billingAddress: {
-          emailAddress: buyerInfo.email,
-          phoneNumber: buyerInfo.phone,
-          firstName: firstName,
-          lastName: lastName,
-        }
+        productId: product.id,
+        sellerId: product.sellerId || displaySeller?.id,
+        productName: product.name,
+        customerName: buyerInfo.fullName,
+        narrative: `Purchase of ${product.name}`,
+        paymentMethod: 'paystack'
       };
       
-      console.debug('Checkout Request:', { payload });
+      console.debug('Payment Request:', { payload });
       
-      // 3. Get authentication token (might be from new buyer or existing)
+      // 3. Get authentication token
       const token = localStorage.getItem('buyer_token');
       if (!token && buyerToken) {
         localStorage.setItem('buyer_token', buyerToken);
       }
       
-      // 4. Call checkout API
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-      const response = await fetch(`${apiUrl}/api/intasend/checkout`, {
+      // 4. Call Paystack product payment API
+      const isDevelopment = import.meta.env.DEV;
+      const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
+        ? '/api'  // Use proxy in development when VITE_API_URL is not set
+        : (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '');
+      
+      const response = await fetch(`${baseURL}/payments/initiate-product`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -306,26 +284,26 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       
       if (!response.ok) {
         const errorMessage = responseData.message || 'Failed to initiate payment';
-        console.error('Checkout API Error:', { status: response.status, responseData });
+        console.error('Payment API Error:', { status: response.status, responseData });
         throw new Error(errorMessage);
       }
       
-      // Extract redirect URL from the nested data object
-      const redirectUrl = responseData.data?.redirect_url;
+      // Extract redirect URL from Paystack response
+      const redirectUrl = responseData.data?.authorization_url;
       
       if (!redirectUrl) {
         console.error('Invalid response format from payment gateway:', responseData);
         throw new Error('Invalid response from payment gateway');
       }
       
-      // 6. Redirect to payment page
-      console.debug('Redirecting to payment gateway:', redirectUrl);
+      // 6. Redirect to Paystack payment page
+      console.debug('Redirecting to Paystack:', redirectUrl);
       window.location.href = redirectUrl;
       
     } catch (error) {
-      console.error('Checkout error:', error);
+      console.error('Payment error:', error);
       toast({
-        title: 'Checkout Failed',
+        title: 'Payment Failed',
         description: error.message || 'Failed to process your payment. Please try again.',
         variant: 'destructive',
         duration: 5000
@@ -572,6 +550,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         theme={theme}
         phoneNumber={currentPhone}
       />
+
     </Card>
   );
 }

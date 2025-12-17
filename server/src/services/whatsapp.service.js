@@ -34,11 +34,15 @@ class WhatsAppService {
           dataPath: this.sessionPath
         }),
         puppeteer: {
-          executablePath: '/usr/bin/chromium-browser',
+          // Use system-installed Chrome/Chromium based on platform
+          headless: true,
           args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage'
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-web-security',
+            '--disable-features=VizDisplayCompositor'
           ]
         },
         // Add webVersionCache to prevent version check issues

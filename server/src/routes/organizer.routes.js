@@ -66,5 +66,20 @@ router.get('/me', protect, getCurrentUser);
 router.patch('/update-profile', protect, updateProfile);
 router.patch('/update-password', protect, updatePassword);
 router.post('/send-withdrawal-email', protect, sendWithdrawalEmail);
+router.post('/logout', protect, (req, res) => {
+  // Clear the HTTP-only cookie
+  res.cookie('token', '', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 0, // Immediately expire
+    path: '/',
+  });
+  
+  res.status(200).json({
+    status: 'success',
+    message: 'Logged out successfully'
+  });
+});
 
 export default router;

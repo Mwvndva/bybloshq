@@ -39,7 +39,7 @@ const adminLogin = async (req, res, next) => {
 
     // 3) If everything is ok, send token to client
     const token = jwt.sign({ id: 'admin' }, process.env.JWT_SECRET, {
-      expiresIn: '5m', // 5 minutes expiration
+      expiresIn: '24h', // 24 hours expiration
     });
 
     // 4) Send response with token

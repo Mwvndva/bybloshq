@@ -31,17 +31,6 @@ export default function SellerOrdersSection() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
 
-  // Debug log for order statuses
-  useEffect(() => {
-    if (orders.length > 0) {
-      console.log('Orders data:', orders.map(order => ({
-        id: order.id,
-        status: order.status,
-        paymentStatus: order.paymentStatus,
-        total: order.totalAmount
-      })));
-    }
-  }, [orders]);
   const { toast } = useToast();
 
   // Fetch orders from the API
@@ -161,7 +150,7 @@ export default function SellerOrdersSection() {
           order.id === cancellingOrderId ? { 
             ...order,
             status: 'CANCELLED' as const,
-            paymentStatus: 'cancelled' as const
+            paymentStatus: 'reversed' as const
           } : order
         )
       );
@@ -326,7 +315,7 @@ export default function SellerOrdersSection() {
                       </div>
                     )}
                     {order.status === 'DELIVERY_PENDING' && 
-                     (order.paymentStatus?.toLowerCase() === 'paid') && (
+                     (order.paymentStatus?.toLowerCase() === 'success') && (
                       <div className="space-y-2">
                         <Button 
                           size="sm" 

@@ -14,30 +14,30 @@ export function BuyerRoute({ children }: BuyerRouteProps) {
   const [initialCheckDone, setInitialCheckDone] = useState(false);
 
   useEffect(() => {
-    console.log('🔐 [BuyerRoute] Auth state:', { isAuthenticated, isLoading });
+    
     
     // Skip if still loading
     if (isLoading) {
-      console.log('🔄 [BuyerRoute] Still loading auth state...');
+      
       return;
     }
 
     // If not authenticated, handle redirect to login
     if (!isAuthenticated) {
-      console.log('🚫 [BuyerRoute] User not authenticated');
+      
       
       // Don't redirect if we're already on a public route
       const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password', '/buyer/reset-password'];
       const isPublicRoute = publicRoutes.some(route => location.pathname.startsWith(route));
       
       if (isPublicRoute) {
-        console.log('ℹ️ [BuyerRoute] Already on a public route, no redirect needed');
+        
         return;
       }
       
       // Save the current location for redirecting back after login
       const currentPath = location.pathname + location.search;
-      console.log('📍 [BuyerRoute] Saving current path for redirect:', currentPath);
+      
       
       // Only save if it's not the root path
       if (currentPath !== '/') {
@@ -47,7 +47,7 @@ export function BuyerRoute({ children }: BuyerRouteProps) {
         localStorage.setItem('post_login_redirect', '/buyer/dashboard');
       }
       
-      console.log('🔙 [BuyerRoute] Redirecting to login page');
+      
       navigate('/buyer/login', { 
         replace: true,
         state: { 
@@ -62,19 +62,19 @@ export function BuyerRoute({ children }: BuyerRouteProps) {
 
     // If authenticated and this is the first check
     if (!initialCheckDone) {
-      console.log('✅ [BuyerRoute] Initial auth check - user is authenticated');
+      
       setInitialCheckDone(true);
       
       // Check for a post-login redirect in localStorage
       const savedRedirect = localStorage.getItem('post_login_redirect');
       
       if (savedRedirect) {
-        console.log('🔄 [BuyerRoute] Found saved redirect path:', savedRedirect);
+        
         localStorage.removeItem('post_login_redirect');
         
         // Ensure we don't redirect to the same path
         if (savedRedirect !== window.location.pathname) {
-          console.log('🔄 [BuyerRoute] Processing post-login redirect to:', savedRedirect);
+          
           
           // Small delay to ensure the UI is ready
           setTimeout(() => {
@@ -101,6 +101,6 @@ export function BuyerRoute({ children }: BuyerRouteProps) {
   }
 
   // If authenticated, render the protected content
-  console.log(' [BuyerRoute] User authenticated, rendering content');
+  
   return children || <Outlet />;
 }

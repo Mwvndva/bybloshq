@@ -41,13 +41,15 @@ const getToken = () => {
   return localStorage.getItem('organizerToken');
 };
 
-// Add a request interceptor to include the token in requests
+// Add a request interceptor to include the token in requests (for backward compatibility)
 api.interceptors.request.use(
   (config) => {
-    // Skip adding token for auth endpoints
+    // Skip adding token for auth endpoints when using cookies
     const authEndpoints = ['/organizers/login', '/organizers/register', '/organizers/forgot-password', '/organizers/reset-password/'];
     const isAuthEndpoint = authEndpoints.some(endpoint => config.url?.includes(endpoint));
     
+    // For non-auth endpoints, try to get token from localStorage as fallback
+    // but prioritize cookies (withCredentials: true handles this automatically)
     if (!isAuthEndpoint) {
       const token = getToken();
       if (token) {
@@ -70,6 +72,7 @@ api.interceptors.response.use(
   (error) => {
     // If it's a 401 error, clear auth state and redirect to login
     if (error.response?.status === 401) {
+      // Clear localStorage (for backward compatibility)
       localStorage.removeItem('organizerToken');
       delete api.defaults.headers.common['Authorization'];
       

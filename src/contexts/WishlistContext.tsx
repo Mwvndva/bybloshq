@@ -115,12 +115,11 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   // Load wishlist from server
   const loadWishlist = useCallback(async () => {
     if (!user) {
-      console.log('No user, clearing wishlist');
       setWishlist([]);
       return;
     }
 
-    console.log('🔄 Loading wishlist for user:', user.id, user.email);
+    console.log('🔄 Loading wishlist');
     setIsLoading(true);
     try {
       const serverWishlist = await buyerApi.getWishlist();

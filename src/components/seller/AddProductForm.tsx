@@ -227,15 +227,6 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         return;
       }
 
-      // Log the image data being submitted
-      console.log('Submitting product with image data:', {
-        name: formData.name,
-        price: formData.price,
-        description: formData.description,
-        image_url: formData.image_url,
-        aesthetic: formData.aesthetic,
-      });
-
       let imageUrl = formData.image_url;
 
       // If there's a new image file, process it first

@@ -275,8 +275,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         recentOrders: analyticsData.recentOrders || []
       };
       
-      console.log('Processed analytics data:', processedAnalytics);
-      
+            
       // Return the analytics data with the correct type
       const result: AnalyticsData = {
         totalProducts: processedAnalytics.totalProducts,
@@ -402,8 +401,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const fetchProfile = useCallback(async () => {
     try {
       const profile = await sellerApi.getProfile();
-      console.log('SellerDashboard: fetchProfile - raw profile data:', profile);
-      const profileData = {
+            const profileData = {
         fullName: profile.fullName || profile.full_name,
         shopName: profile.shopName || profile.shop_name,
         email: profile.email,
@@ -413,8 +411,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         bannerImage: profile.bannerImage || profile.banner_image,
         theme: profile.theme
       };
-      console.log('SellerDashboard: fetchProfile - profileData to set:', profileData);
-      setSellerProfile(profileData);
+            setSellerProfile(profileData);
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast({
@@ -507,18 +504,15 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
 
 useEffect(() => {
-  console.log(`[SellerDashboard] Tab changed to: ${activeTab}`);
-  
+    
   const fetchData = async () => {
     // This effect no longer fetches on tab switches for overview/products
     try {
       if (activeTab === 'withdrawals') {
-        console.log('[SellerDashboard] Withdrawals tab selected');
-        await fetchWithdrawalRequests();
+                await fetchWithdrawalRequests();
       }
       if (activeTab === 'orders') {
-        console.log('[SellerDashboard] Orders tab selected');
-        // Orders data is fetched by SellerOrdersSection
+                // Orders data is fetched by SellerOrdersSection
       }
     } catch (err) {
       console.error('Error during tab change handling:', err);
@@ -553,17 +547,14 @@ useEffect(() => {
           
           // Calculate revenue from recent orders if available
           const ordersData = (analyticsData as any).recentOrders;
-          console.log('Raw orders data:', JSON.parse(JSON.stringify(ordersData)));
-          
+                    
           if (Array.isArray(ordersData) && ordersData.length > 0) {
             const completedOrders = ordersData.filter((order: any) => {
               const isCompleted = order.status === 'COMPLETED';
-              console.log(`Order ${order.orderNumber} status: ${order.status}, isCompleted: ${isCompleted}`);
-              return isCompleted;
+                            return isCompleted;
             });
             
-            console.log('Completed orders:', completedOrders.length);
-            
+                        
             totalRevenue = completedOrders.reduce((sum: number, order: any) => {
               let orderTotal = 0;
               
@@ -572,22 +563,17 @@ useEffect(() => {
                   const itemPrice = item.price || 0;
                   const itemQty = item.quantity || 1;
                   const itemTotal = itemPrice * itemQty;
-                  console.log(`Item ${item.id}: ${itemPrice} x ${itemQty} = ${itemTotal}`);
-                  return itemSum + itemTotal;
+                                    return itemSum + itemTotal;
                 }, 0);
                 orderTotal = itemsTotal;
-                console.log(`Order ${order.orderNumber} items total: ${itemsTotal}`);
-              } else {
+                              } else {
                 orderTotal = order.totalAmount || 0;
-                console.log(`Order ${order.orderNumber} using totalAmount: ${orderTotal}`);
-              }
+                              }
               
-              console.log(`Adding to totalRevenue: ${sum} + ${orderTotal} = ${sum + orderTotal}`);
-              return sum + orderTotal;
+                            return sum + orderTotal;
             }, 0);
             
-            console.log('Final calculated revenue from orders:', totalRevenue);
-          }
+                      }
           
           // If no revenue from orders, use monthly sales as fallback
           if (totalRevenue === 0) {
@@ -622,6 +608,8 @@ useEffect(() => {
             totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
             totalRevenue: totalRevenue,
             totalPayout: calculatedPayout,
+            balance: analyticsData.balance || 0,
+            monthlySales: analyticsData.monthlySales || [],
             recentOrders: (analyticsData as any).recentOrders || [] // Handle recentOrders if it exists
           };
           
@@ -1357,8 +1345,7 @@ useEffect(() => {
                 <BannerUpload
                   currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
-                    console.log('SellerDashboard: onBannerUploaded called with:', bannerUrl);
-                    setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
+                                        setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
                   }}
                 />
               </div>
@@ -1396,7 +1383,7 @@ useEffect(() => {
                         onClick={toggleEdit}
                         className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                       >
-                        <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                        <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
                         Edit Profile
                       </Button>
                     )}
@@ -1405,7 +1392,7 @@ useEffect(() => {
                       onClick={handleLogout}
                       className="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                     >
-                      <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                      <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
                       Logout
                     </Button>
                   </div>
