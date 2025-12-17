@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Calendar, Ticket, DollarSign, Clock, Users, TrendingUp, MapPin, BarChart3, Plus, Settings, RefreshCw, CheckCircle, ArrowLeft, Mail, Phone, Trash2, Save, Edit, Eye, EyeOff, List, AlertTriangle, Loader2, ExternalLink, MoreHorizontal, Menu, X } from 'lucide-react';
+import { Calendar, Ticket, DollarSign, Clock, Users, TrendingUp, MapPin, BarChart3, Plus, Settings, RefreshCw, CheckCircle, ArrowLeft, Mail, Phone, Trash2, Save, Edit, Eye, EyeOff, List, AlertTriangle, Loader2, ExternalLink, MoreHorizontal, Menu, X, LogOut } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link, useNavigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -180,7 +180,7 @@ const DashboardPage = () => {
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const { getToken, organizer } = useOrganizerAuth();
+  const { getToken, organizer, logout } = useOrganizerAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -577,9 +577,9 @@ const DashboardPage = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-4 md:py-8">
         {/* Desktop Header */}
-        <div className="hidden md:block text-center mb-8 md:mb-10">
+        <div className="hidden md:block text-left mb-8 md:mb-10">
           {/* Back to Homepage Button */}
-          <div className="flex justify-center mb-6">
+          <div className="flex justify-start mb-6">
             <Button
               variant="outline"
               onClick={() => navigate('/')}
@@ -601,7 +601,7 @@ const DashboardPage = () => {
         {/* Mobile Section Title with improved spacing */}
         <div className="md:hidden mb-5 sm:mb-6">
           {/* Back to Homepage Button - Mobile */}
-          <div className="flex justify-center mb-4">
+          <div className="flex justify-start mb-4">
             <Button
               variant="outline"
               onClick={() => navigate('/')}
@@ -1525,6 +1525,32 @@ const DashboardPage = () => {
                 <div className="flex items-center space-x-2 mt-4">
                   <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                   <span className="text-sm text-gray-600">You agreed to these terms on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+              </div>
+
+              {/* Account Actions */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
+                <h3 className="text-2xl font-black text-gray-900 mb-6">Account Actions</h3>
+                <div className="space-y-4">
+                  <div className="p-6 border-2 border-gray-200 rounded-2xl bg-gray-50/50">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                      <div>
+                        <h4 className="font-bold text-gray-900 text-lg">Logout</h4>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Sign out of your account and return to the login page.
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={logout}
+                        className="border-gray-300 hover:bg-gray-100 hover:border-gray-400 rounded-xl px-6 py-3"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
