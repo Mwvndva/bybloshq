@@ -25,7 +25,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
   onSuccess,
   onClose,
   onOpen, // Add the new onOpen prop
-  publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY || 'pk_test_demo',
+  publicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY,
   currency = 'KES',
   metadata = {}
 }) => {
@@ -133,7 +133,7 @@ const PaystackPayment: React.FC<PaystackPaymentProps> = ({
     }
 
     // Validate public key
-    if (!publicKey || publicKey === 'pk_test_demo' || !publicKey.startsWith('pk_')) {
+    if (!publicKey || !publicKey.startsWith('pk_')) {
       setError('Invalid Paystack public key. Please configure VITE_PAYSTACK_PUBLIC_KEY');
       console.error('Invalid public key:', publicKey);
       console.error('Available in import.meta.env:', import.meta.env.VITE_PAYSTACK_PUBLIC_KEY);
