@@ -16,7 +16,8 @@ axiosRetry(axios, {
 
 // Ensure API_URL ends with /api but doesn't have a trailing slash
 const getApiBaseUrl = () => {
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3002';
+  const baseUrl = import.meta.env.VITE_API_URL || 
+    (import.meta.env.DEV ? 'http://localhost:3002' : 'https://bybloshq-f1rz.onrender.com');
   // Remove trailing slash if exists
   const cleanUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   // Ensure /api is included
@@ -81,10 +82,10 @@ export const getUpcomingEvents = async (limit: number = 10): Promise<Event[]> =>
     
     if (Array.isArray(response.data)) {
       // Direct array response
-      events = response.data;
-    } else if (response.data?.data && Array.isArray(response.data.data)) {
+      events = response.data as Event[];
+    } else if (response.data && typeof response.data === 'object' && 'data' in response.data && Array.isArray((response.data as any).data)) {
       // Wrapped response
-      events = response.data.data;
+      events = (response.data as any).data as Event[];
     } else {
       console.error('Unexpected API response format:', response.data);
       throw new Error('Invalid response format from server');
@@ -115,7 +116,7 @@ export const getEventById = async (id: string | number): Promise<Event> => {
         'Content-Type': 'application/json'
       }
     });
-    return response.data;
+    return response.data as Event;
   } catch (error) {
     console.error(`Error fetching event with ID ${id}:`, error);
     throw error;
@@ -141,12 +142,14 @@ export const getPublicEvent = async (id: string | number): Promise<Event> => {
     console.log('Response status:', response.status);
     console.log('Response data:', response.data);
     
-    if (response.status === 200 && response.data?.status === 'success') {
-      return response.data.data; // The event data is directly in response.data.data
+    if (response.status === 200 && response.data && typeof response.data === 'object' && 'status' in response.data && (response.data as any).status === 'success') {
+      return (response.data as any).data as Event; // The event data is directly in response.data.data
     }
     
     // If we get here, there was an error
-    const errorMessage = response.data?.message || 'Failed to fetch event';
+    const errorMessage = response.data && typeof response.data === 'object' && 'message' in response.data 
+      ? (response.data as any).message 
+      : 'Failed to fetch event';
     console.error('Error response:', {
       status: response.status,
       message: errorMessage,
@@ -156,20 +159,22 @@ export const getPublicEvent = async (id: string | number): Promise<Event> => {
     throw new Error(errorMessage);
   } catch (error) {
     console.error(`Error fetching public event with ID ${id}:`, error);
-    if (axios.isAxiosError(error)) {
+    // Check if it's an Axios error using a more compatible approach
+    if (error && typeof error === 'object' && 'isAxiosError' in error) {
+      const axiosError = error as any;
       console.error('Axios error details:', {
-        message: error.message,
-        code: error.code,
+        message: axiosError.message,
+        code: axiosError.code,
         config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers,
-          params: error.config?.params
+          url: axiosError.config?.url,
+          method: axiosError.config?.method,
+          headers: axiosError.config?.headers,
+          params: axiosError.config?.params
         },
-        response: error.response ? {
-          status: error.response.status,
-          statusText: error.response.statusText,
-          data: error.response.data
+        response: axiosError.response ? {
+          status: axiosError.response.status,
+          statusText: axiosError.response.statusText,
+          data: axiosError.response.data
         } : 'No response'
       });
     }
@@ -181,8 +186,12 @@ export const getPublicEvent = async (id: string | number): Promise<Event> => {
 export const getEventTicketTypes = async (eventId: number | string): Promise<TicketType[]> => {
   try {
     const response = await axios.get(`${API_URL}/events/public/${eventId}/ticket-types`);
-    if (response.data?.status === 'success' && response.data?.data?.event?.ticket_types) {
-      return response.data.data.event.ticket_types.map((tt: any) => {
+    if (response.data && typeof response.data === 'object' && 
+        'status' in response.data && (response.data as any).status === 'success' &&
+        'data' in response.data && (response.data as any).data &&
+        'event' in (response.data as any).data && (response.data as any).data.event &&
+        'ticket_types' in (response.data as any).data.event) {
+      return (response.data as any).data.event.ticket_types.map((tt: any) => {
         const sold = parseInt(tt.sold || '0', 10);
         const quantity = parseInt(tt.quantity || '0', 10);
         const available = parseInt(tt.available || (quantity - sold).toString(), 10);
@@ -352,9 +361,10 @@ export const sendTicketEmail = async (ticketData: {
         numericTotalPrice = ticketData.totalPrice;
       } else if (typeof ticketData.totalPrice === 'string') {
         numericTotalPrice = parseFloat(ticketData.totalPrice.replace(/[^0-9.-]+/g,""));
-      } else if (typeof ticketData.totalPrice === 'object') {
+      } else if (typeof ticketData.totalPrice === 'object' && ticketData.totalPrice !== null) {
         // Handle price objects (e.g., { value: 100, currency: 'KES' })
-        const numericValue = ticketData.totalPrice.value || ticketData.totalPrice.amount || ticketData.totalPrice.price || 0;
+        const priceObj = ticketData.totalPrice as any;
+        const numericValue = priceObj.value || priceObj.amount || priceObj.price || 0;
         numericTotalPrice = typeof numericValue === 'number' ? numericValue : 0;
       }
     }
@@ -631,10 +641,8 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
         'Accept': 'application/json',
         'Content-Type': 'application/json'
       },
-      timeout: INITIAL_TIMEOUT,
-      'axios-retry': {
-        retryDelay: () => backoffTime + jitter
-      }
+      timeout: INITIAL_TIMEOUT
+      // Note: axios-retry configuration removed as it's not supported in this axios version
     });
     
     console.log('Purchase successful:', response.data);
