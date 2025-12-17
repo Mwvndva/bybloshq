@@ -9,7 +9,7 @@ const generateToken = (id, role = 'buyer') => {
 
 export const register = async (req, res) => {
   try {
-    const { full_name, email, phone, password } = req.body;
+    const { full_name, email, phone, password, passwordConfirm } = req.body;
 
     // Check if organizer already exists
     const organizerExists = await Organizer.findByEmail(email);
@@ -17,6 +17,14 @@ export const register = async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: 'Email already in use'
+      });
+    }
+
+    // Check if passwords match
+    if (password !== passwordConfirm) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Passwords do not match'
       });
     }
 
