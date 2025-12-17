@@ -39,6 +39,22 @@ export const register = async (req, res) => {
     // Generate JWT token with organizer role
     const token = generateToken(organizer.id, 'organizer');
 
+    // Set HTTP-only cookie with proper cross-origin settings
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      path: '/'
+    };
+    
+    // For localhost, don't set domain to allow it to work
+    if (process.env.NODE_ENV === 'development') {
+      delete cookieOptions.domain;
+    }
+    
+    res.cookie('token', token, cookieOptions);
+
     res.status(201).json({
       status: 'success',
       message: 'Registration successful',
@@ -85,14 +101,21 @@ export const login = async (req, res) => {
     // Generate JWT token with organizer role
     const token = generateToken(organizer.id, 'organizer');
     
-    // Set token as HTTP-only cookie
-    res.cookie('token', token, {
+    // Set token as HTTP-only cookie with proper cross-origin settings
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production', // Use secure in production
-      sameSite: 'lax', // CSRF protection
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-      path: '/',
-    });
+      path: '/'
+    };
+    
+    // For localhost, don't set domain to allow it to work
+    if (process.env.NODE_ENV === 'development') {
+      delete cookieOptions.domain;
+    }
+    
+    res.cookie('token', token, cookieOptions);
 
     // Also send token in response body for clients that can't use cookies
     res.status(200).json({
@@ -141,8 +164,11 @@ export const getCurrentUser = async (req, res) => {
       data: {
         organizer: {
           id: organizer.id,
-          full_name: organizer.full_name
-          // Remove email and phone from response for security
+          full_name: organizer.full_name,
+          email: organizer.email,
+          phone: organizer.phone,
+          is_verified: organizer.is_verified,
+          created_at: organizer.created_at
         }
       }
     });
