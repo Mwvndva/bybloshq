@@ -11,9 +11,10 @@ const dbConfig = {
   database: process.env.DB_NAME || 'byblos6',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'nurubot',
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: 20,
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
 };
 
 // Log database connection details

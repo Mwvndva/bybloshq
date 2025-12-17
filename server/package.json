@@ -11,7 +11,7 @@
   "scripts": {
     "start": "npm run migrate && node src/index.js",
     "dev": "nodemon -r dotenv/config src/index.js",
-    "build": "npm install && npm run migrate",
+    "build": "npm install",
     "migrate": "node -r dotenv/config scripts/migrate.js",
     "migrate:create": "node-pg-migrate create",
     "seed": "node --experimental-json-modules -r dotenv/config scripts/seed-db.js",
