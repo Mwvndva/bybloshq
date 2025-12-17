@@ -297,6 +297,25 @@ CREATE TABLE IF NOT EXISTS payments (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Ticket purchases table
+CREATE TABLE IF NOT EXISTS ticket_purchases (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+    ticket_type_id INTEGER NOT NULL REFERENCES event_ticket_types(id) ON DELETE CASCADE,
+    quantity INTEGER NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_email VARCHAR(255) NOT NULL,
+    phone_number VARCHAR(50),
+    amount_paid DECIMAL(10, 2) NOT NULL,
+    payment_method VARCHAR(50) NOT NULL,
+    payment_reference VARCHAR(100),
+    purchase_status VARCHAR(20) DEFAULT 'pending',
+    discount_code VARCHAR(50),
+    discount_amount DECIMAL(10, 2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tickets table
 CREATE TABLE IF NOT EXISTS tickets (
     id SERIAL PRIMARY KEY,
@@ -317,25 +336,6 @@ CREATE TABLE IF NOT EXISTS tickets (
     payment_id INTEGER REFERENCES payments(id) ON DELETE SET NULL,
     qr_code TEXT,
     purchase_id INTEGER REFERENCES ticket_purchases(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Ticket purchases table
-CREATE TABLE IF NOT EXISTS ticket_purchases (
-    id SERIAL PRIMARY KEY,
-    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    ticket_type_id INTEGER NOT NULL REFERENCES event_ticket_types(id) ON DELETE CASCADE,
-    quantity INTEGER NOT NULL,
-    customer_name VARCHAR(255) NOT NULL,
-    customer_email VARCHAR(255) NOT NULL,
-    phone_number VARCHAR(50),
-    amount_paid DECIMAL(10, 2) NOT NULL,
-    payment_method VARCHAR(50) NOT NULL,
-    payment_reference VARCHAR(100),
-    purchase_status VARCHAR(20) DEFAULT 'pending',
-    discount_code VARCHAR(50),
-    discount_amount DECIMAL(10, 2),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
