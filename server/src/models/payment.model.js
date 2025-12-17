@@ -10,8 +10,7 @@ class Payment {
       payment_method = 'mpesa',
       phone_number = null,
       email = null,
-      ticket_id = null,
-      ticket_type_id = null,  // New field
+      ticket_type_id = null,  // Use ticket_type_id instead of ticket_id
       event_id = null,
       organizer_id = null,
       provider_reference = null,
@@ -22,7 +21,7 @@ class Payment {
     // Build the query dynamically based on provided fields
     const fields = [
       'invoice_id', 'amount', 'currency', 'status', 'payment_method',
-      'phone_number', 'email', 'ticket_id', 'ticket_type_id', 'event_id', 'organizer_id', 
+      'phone_number', 'email', 'event_id', 'organizer_id', 
       'provider_reference', 'api_ref', 'metadata'
     ];
     
@@ -54,7 +53,7 @@ class Payment {
     const { rows } = await pool.query(`
       SELECT 
         id, invoice_id, amount, currency, status, 
-        payment_method, phone_number, email, ticket_type_id,
+        payment_method, phone_number, email,
         event_id, organizer_id, metadata, created_at, updated_at
       FROM payments 
       WHERE invoice_id = $1
@@ -66,7 +65,7 @@ class Payment {
     const { rows } = await pool.query(`
       SELECT 
         id, invoice_id, amount, currency, status, 
-        payment_method, phone_number, email, ticket_type_id,
+        payment_method, phone_number, email,
         event_id, organizer_id, metadata, created_at, updated_at,
         provider_reference, api_ref
       FROM payments 
