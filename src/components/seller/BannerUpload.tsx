@@ -16,12 +16,9 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
 
   // Update preview URL when currentBannerUrl changes (e.g., after refresh)
   useEffect(() => {
-    console.log('BannerUpload: currentBannerUrl changed:', currentBannerUrl);
-    console.log('BannerUpload: previewUrl before update:', previewUrl);
-    if (currentBannerUrl) {
+            if (currentBannerUrl) {
       setPreviewUrl(currentBannerUrl);
-      console.log('BannerUpload: updated previewUrl to:', currentBannerUrl);
-    }
+          }
   }, [currentBannerUrl]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

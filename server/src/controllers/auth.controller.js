@@ -3,7 +3,7 @@ import Organizer from '../models/organizer.model.js';
 
 const generateToken = (id, role = 'buyer') => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: '5m' // 5 minutes expiration
+    expiresIn: '24h' // 24 hours expiration
   });
 };
 
@@ -35,13 +35,8 @@ export const register = async (req, res) => {
       status: 'success',
       message: 'Registration successful',
       data: {
-        organizer: {
-          id: organizer.id,
-          full_name: organizer.full_name,
-          email: organizer.email,
-          phone: organizer.phone
-        },
-        token
+        // No organizer data returned for security
+        // Token is handled via HTTP-only cookie
       }
     });
   } catch (error) {
@@ -94,14 +89,10 @@ export const login = async (req, res) => {
     // Also send token in response body for clients that can't use cookies
     res.status(200).json({
       status: 'success',
+      message: 'Login successful',
       data: {
-        organizer: {
-          id: organizer.id,
-          full_name: organizer.full_name,
-          email: organizer.email,
-          phone: organizer.phone
-        },
-        token // Still include token in response for client-side storage if needed
+        // No organizer data returned for security
+        // Token is handled via HTTP-only cookie
       }
     });
     
@@ -142,9 +133,8 @@ export const getCurrentUser = async (req, res) => {
       data: {
         organizer: {
           id: organizer.id,
-          full_name: organizer.full_name,
-          email: organizer.email,
-          phone: organizer.phone
+          full_name: organizer.full_name
+          // Remove email and phone from response for security
         }
       }
     });
@@ -193,9 +183,8 @@ export const updateProfile = async (req, res) => {
       data: {
         organizer: {
           id: updatedOrganizer.id,
-          full_name: updatedOrganizer.full_name,
-          email: updatedOrganizer.email,
-          phone: updatedOrganizer.phone
+          full_name: updatedOrganizer.full_name
+          // Remove email and phone from response for security
         }
       }
     });

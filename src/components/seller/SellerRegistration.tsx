@@ -66,8 +66,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
       try {
         setIsCheckingShopName(true);
         const result = await checkShopNameAvailability(trimmedShopName);
-        console.log('Shop name check result:', result);
-        
+                
         // Make sure we have a valid result before updating state
         if (result && typeof result.available === 'boolean') {
           setShopNameAvailable(result.available);

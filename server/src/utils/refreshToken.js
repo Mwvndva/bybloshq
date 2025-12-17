@@ -14,7 +14,7 @@ export const generateRefreshToken = (id, role = 'buyer') => {
   return jwt.sign(
     { id, role, type: 'refresh' },
     process.env.JWT_SECRET,
-    { expiresIn: '7d' } // 7 days for refresh token
+    { expiresIn: '24h' } // 24 hours for refresh token
   );
 };
 
@@ -57,7 +57,7 @@ export const refreshAccessToken = (refreshToken) => {
   const accessToken = jwt.sign(
     { id: decoded.id, role: decoded.role },
     process.env.JWT_SECRET,
-    { expiresIn: '5m' }
+    { expiresIn: '24h' }
   );
   
   return {

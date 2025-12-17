@@ -89,8 +89,9 @@ export default function EventsListPage() {
       const response = await api.get(`/organizers/events?${params}`);
       
       // Handle different possible response structures
-      const eventsData = response.data?.data?.events || response.data?.data || [];
-      const paginationData = response.data?.data?.pagination || {
+      const responseData = response.data as any;
+      const eventsData = responseData?.data?.events || responseData?.data || [];
+      const paginationData = responseData?.data?.pagination || {
         total: eventsData.length,
         page: page,
         limit: limit,
@@ -220,7 +221,7 @@ export default function EventsListPage() {
       
       // Prepare email data
       const emailData = {
-        to: 'byblosexperience@zohomail.com',
+        to: 'official@bybloshq.space',
         subject: `Withdrawal Request - Event: ${selectedEventForWithdraw.name}`,
         html: `
           <h2>Withdrawal Request</h2>
@@ -258,7 +259,8 @@ export default function EventsListPage() {
       // Send email via backend API
       const response = await api.post('/organizers/send-withdrawal-email', emailData);
       
-      if (response.data.status === 'success') {
+      const responseData = response.data as any;
+      if (responseData.status === 'success') {
         toast({
           title: "Success",
           description: "Withdrawal request sent successfully! Your payment will be processed within 48 hours.",
@@ -274,7 +276,7 @@ export default function EventsListPage() {
         });
         setWithdrawMethod('mpesa');
       } else {
-        throw new Error(response.data.message || 'Failed to send withdrawal request');
+        throw new Error(responseData.message || 'Failed to send withdrawal request');
       }
     } catch (error: any) {
       console.error('Withdrawal error:', error);

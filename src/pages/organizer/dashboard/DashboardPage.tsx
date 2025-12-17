@@ -578,6 +578,17 @@ const DashboardPage = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-6 py-4 md:py-8">
         {/* Desktop Header */}
         <div className="hidden md:block text-center mb-8 md:mb-10">
+          {/* Back to Homepage Button */}
+          <div className="flex justify-center mb-6">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Homepage
+            </Button>
+          </div>
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-2 md:mb-3">Event Management</h1>
           <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">
             {activeSection === 'overview' && 'Manage your events and track your success'}
@@ -589,6 +600,17 @@ const DashboardPage = () => {
         
         {/* Mobile Section Title with improved spacing */}
         <div className="md:hidden mb-5 sm:mb-6">
+          {/* Back to Homepage Button - Mobile */}
+          <div className="flex justify-center mb-4">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/')}
+              className="inline-flex items-center gap-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-3 py-2 text-sm"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Homepage
+            </Button>
+          </div>
           <h2 className="text-xl font-bold text-gray-900 mb-1.5 leading-tight">
             {activeSection === 'overview' && 'Dashboard Overview'}
             {activeSection === 'events' && 'Your Events'}

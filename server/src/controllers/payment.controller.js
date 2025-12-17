@@ -2,6 +2,8 @@ import paymentService from '../services/payment.service.js';
 import logger from '../utils/logger.js';
 import Payment from '../models/payment.model.js';
 import Event from '../models/event.model.js';
+import jwt from 'jsonwebtoken';
+import Order from '../models/order.model.js';
 
 class PaymentController {
   /**
@@ -176,24 +178,102 @@ class PaymentController {
       console.log('Endpoint: /api/payments/initiate-product');
       const { phone, email, amount, productId, sellerId, productName, customerName, narrative } = req.body;
       
+      // Get buyer info from authenticated user or create guest buyer
+      let buyerInfo = null;
+      if (req.user && req.user.id) {
+        // Authenticated buyer
+        buyerInfo = req.user;
+      } else {
+        // Create or find buyer by phone/email for guest checkout
+        // This will be handled by the frontend creating buyer info first
+        const token = req.headers.authorization?.replace('Bearer ', '');
+        if (token) {
+          // Decode JWT to get buyer info (simplified - in production, verify token properly)
+          try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            buyerInfo = { id: decoded.id, email, phone };
+          } catch (error) {
+            console.log('Invalid token, proceeding as guest');
+          }
+        }
+      }
+
+      // Create product order first
+      const orderData = {
+        buyerId: buyerInfo?.id || null,
+        sellerId: parseInt(sellerId),
+        paymentMethod: 'paystack',
+        buyerName: customerName,
+        buyerEmail: email,
+        buyerPhone: phone,
+        metadata: {
+          items: [{
+            productId: productId,
+            name: productName,
+            price: amount,
+            quantity: 1,
+            subtotal: amount
+          }],
+          paymentInitiation: true
+        }
+      };
+
+      const order = await Order.createOrder(orderData);
+      console.log('Created order:', order);
+
       const paymentData = {
         phone,
         email,
         amount,
-        invoice_id: `PROD-${Date.now()}`,
+        invoice_id: order.id, // Use order ID (integer) as invoice ID
         firstName: customerName?.split(' ')[0] || 'Customer',
         lastName: customerName?.split(' ').slice(1).join(' ') || '',
         narrative: narrative || `Payment for product ${productName}`,
         product_id: productId,
-        seller_id: sellerId
+        seller_id: sellerId,
+        order_id: order.id // Link payment to order
       };
 
+      console.log('=== PAYMENT DATA DEBUG ===');
+      console.log('order.id:', order.id);
+      console.log('order.order_number:', order.order_number);
+      console.log('paymentData.invoice_id:', paymentData.invoice_id);
+      console.log('========================');
+
       const result = await paymentService.initiatePayment(paymentData);
+
+      // Create payment record in database
+      if (result.reference) {
+        const paymentRecord = await Payment.create({
+          invoice_id: order.id,
+          amount: amount,
+          currency: 'KES',
+          status: 'pending',
+          payment_method: 'paystack',
+          phone_number: phone,
+          email: email,
+          provider_reference: result.reference, // Store Paystack reference in provider_reference field
+          api_ref: result.reference, // Also store in api_ref for backup
+          metadata: {
+            ...paymentData,
+            order_id: order.id,
+            order_number: order.order_number,
+            reference: result.reference,
+            seller_id: sellerId // Store seller_id in metadata for product payments
+          }
+        });
+        
+        console.log('Payment record created:', paymentRecord);
+      }
 
       res.status(200).json({
         status: 'success',
         message: 'Product payment initiated successfully',
-        data: result
+        data: {
+          ...result,
+          order_id: order.id,
+          order_number: order.order_number
+        }
       });
 
     } catch (error) {

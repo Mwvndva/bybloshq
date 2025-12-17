@@ -114,7 +114,7 @@ const getStatusBadge = (status: string) => {
 
 const getPaymentStatusBadge = (status?: string) => {
   // Convert to lowercase for comparison, default to 'pending' if status is falsy
-  const statusValue = status?.toLowerCase() || 'pending';
+  const statusValue = (status?.toLowerCase() || 'pending') as PaymentStatus;
   switch (statusValue) {
     case 'pending':
       return (
@@ -123,18 +123,11 @@ const getPaymentStatusBadge = (status?: string) => {
           Pending
         </Badge>
       );
-    case 'paid':
+    case 'success':
       return (
         <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
           <CheckCircle className="h-3 w-3 mr-1" />
-          Paid
-        </Badge>
-      );
-    case 'completed':
-      return (
-        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-          <CheckCircle className="h-3 w-3 mr-1" />
-          Completed
+          Success
         </Badge>
       );
     case 'failed':
@@ -144,11 +137,11 @@ const getPaymentStatusBadge = (status?: string) => {
           Failed
         </Badge>
       );
-    case 'cancelled':
+    case 'reversed':
       return (
         <Badge className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
           <XCircle className="h-3 w-3 mr-1" />
-          Cancelled
+          Reversed
         </Badge>
       );
     default:
@@ -168,18 +161,18 @@ export default function OrdersSection() {
 
   const fetchOrders = useCallback(async () => {
     if (!user) {
-      console.log('No user found, skipping orders fetch');
+      
       return;
     }
     
-    console.log('Fetching orders for user:', user.id);
+    
     setIsLoading(true);
     setError(null);
     
     try {
-      console.log('Calling buyerApi.getOrders()');
+      
       const orders = await buyerApi.getOrders();
-      console.log('Received orders:', orders);
+      
       setOrders(orders);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
@@ -243,8 +236,8 @@ export default function OrdersSection() {
   const handleConfirmReceipt = async () => {
     if (!currentOrderId) return;
     
-    console.log('=== START handleConfirmReceipt ===');
-    console.log('Order ID:', currentOrderId);
+    
+    
     
     setShowReceiptDialog(false);
 
@@ -252,19 +245,19 @@ export default function OrdersSection() {
     const loadingToast = toast.loading('Confirming order receipt...');
     
     try {
-      console.log('Calling buyerApi.confirmOrderReceipt...');
+      
       const result = await buyerApi.confirmOrderReceipt(currentOrderId);
-      console.log('buyerApi.confirmOrderReceipt result:', result);
+      
       
       if (result.success) {
         toast.success('Order marked as received. Thank you for your purchase!', { id: loadingToast });
         
         // Optimistically update the UI
         setOrders(prevOrders => {
-          console.log('Previous orders state:', prevOrders);
+          
           const updatedOrders = prevOrders.map(order => {
             if (order.id === currentOrderId) {
-              console.log('Updating order in state:', currentOrderId);
+              
               // Create a new order object with the updated properties
               const updatedOrder: Order = {
                 id: order.id,
@@ -274,7 +267,7 @@ export default function OrdersSection() {
                 currency: order.currency,
                 createdAt: order.createdAt,
                 updatedAt: new Date().toISOString(),
-                paymentStatus: 'completed',
+                paymentStatus: 'success',
                 items: [...order.items],
                 customer: { ...order.customer },
                 seller: { ...order.seller },
@@ -284,15 +277,15 @@ export default function OrdersSection() {
             }
             return order;
           });
-          console.log('Updated orders state:', updatedOrders);
+          
           return updatedOrders;
         });
         
         // Fetch fresh data from the server to ensure consistency
-        console.log('Fetching fresh data from server...');
+        
         try {
           await fetchOrders();
-          console.log('Successfully refreshed orders from server');
+          
         } catch (fetchError) {
           console.error('Error refreshing orders:', fetchError);
           // Don't show error to user since we've already updated optimistically
@@ -322,7 +315,7 @@ export default function OrdersSection() {
       }
     } finally {
       setIsConfirming(null);
-      console.log('=== END handleConfirmReceipt ===');
+      
     }
   };
 
@@ -454,7 +447,7 @@ export default function OrdersSection() {
                 
                 {/* Action Buttons */}
                 <div className="w-full sm:w-auto lg:w-full space-y-2">
-                  {(order.status === 'PENDING' || order.status === 'READY_FOR_PICKUP') && (
+                  {order.status === 'PENDING' && (
                     <Button 
                       variant="outline" 
                       size="sm" 

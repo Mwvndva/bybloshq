@@ -1,7 +1,9 @@
 import logger from '../utils/logger.js';
 import https from 'https';
+import crypto from 'crypto';
 import PaymentCompletionService from './paymentCompletion.service.js';
 import Payment from '../models/payment.model.js';
+import Order from '../models/order.model.js';
 
 class PaymentService {
   async initiatePayment(paymentData) {
@@ -190,7 +192,6 @@ class PaymentService {
       return false;
     }
 
-    const crypto = require('crypto');
     const hash = crypto.createHmac('sha512', secret).update(payload).digest('hex');
     return hash === signature;
   }
@@ -289,20 +290,32 @@ class PaymentService {
         invoiceId: payment.invoice_id,
         currentStatus: payment.status,
         email: payment.email,
-        amount: payment.amount
+        amount: payment.amount,
+        metadata: payment.metadata
       });
 
-      // Update payment status to completed
-      logger.info('Updating payment status to completed...');
-      await Payment.updateStatus(payment.invoice_id, 'completed', {
+      // Update payment status to 'success' (Paystack status)
+      logger.info('Updating payment status to success...');
+      await Payment.updateStatus(payment.invoice_id, 'success', {
         paystack_data: data,
         completed_at: new Date().toISOString()
       });
 
-      logger.info('Payment status updated, processing ticket creation...');
+      logger.info('Payment status updated, checking payment type...');
 
-      // Process the successful payment (create tickets, send emails)
-      await PaymentCompletionService.processSuccessfulPayment(payment);
+      // Check if this is a product payment or ticket payment
+      const metadata = payment.metadata || {};
+      if (metadata.product_id || metadata.order_id) {
+        // This is a product payment - process product order
+        logger.info('Processing product order completion...');
+        await this.processProductOrderCompletion(payment, data);
+      } else if (payment.ticket_id || payment.event_id) {
+        // This is a ticket payment - process ticket creation
+        logger.info('Processing ticket creation...');
+        await PaymentCompletionService.processSuccessfulPayment(payment);
+      } else {
+        logger.warn('Unknown payment type, skipping completion processing');
+      }
 
       logger.info('Payment completion processed successfully', {
         paymentId: payment.id,
@@ -312,6 +325,68 @@ class PaymentService {
     } catch (error) {
       logger.error('Error processing payment completion:', error);
       // Don't throw here to avoid webhook failures
+    }
+  }
+
+  async processProductOrderCompletion(payment, paystackData) {
+    try {
+      // Get order from payment metadata
+      const metadata = payment.metadata || {};
+      let orderId = metadata.order_id;
+      
+      if (!orderId) {
+        logger.error('No order_id found in payment metadata');
+        return;
+      }
+
+      // Convert orderId to integer to fix type mismatch
+      orderId = parseInt(orderId, 10);
+      if (isNaN(orderId)) {
+        logger.error('Invalid order_id format:', metadata.order_id);
+        return;
+      }
+
+      // Find the order
+      const order = await Order.findById(orderId);
+      if (!order) {
+        logger.error('Order not found for payment:', orderId);
+        return;
+      }
+
+      logger.info('Found order for payment completion:', {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        currentStatus: order.status,
+        paymentStatus: order.payment_status
+      });
+
+      // Update order payment status to 'success' (Paystack status)
+      logger.info('Updating payment status for order:', {
+        orderId: order.id,
+        status: 'success',
+        paymentReference: paystackData.reference
+      });
+      await Order.updatePaymentStatus(order.id, 'success', paystackData.reference);
+      
+      // Update order status to DELIVERY_PENDING (not 'PROCESSING')
+      logger.info('Updating order status to DELIVERY_PENDING for order:', {
+        orderId: order.id
+      });
+      await Order.updateOrderStatus(order.id, 'DELIVERY_PENDING');
+
+      logger.info('Product order payment completed successfully:', {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        paymentReference: paystackData.reference
+      });
+
+      // TODO: Send order confirmation email to buyer
+      // TODO: Send new order notification to seller
+      // TODO: Update seller sales statistics
+
+    } catch (error) {
+      logger.error('Error processing product order completion:', error);
+      throw error;
     }
   }
 

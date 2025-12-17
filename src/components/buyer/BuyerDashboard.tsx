@@ -124,12 +124,7 @@ function BuyerDashboard() {
   };
 
   const stats = [
-    {
-      icon: Heart,
-      title: 'Wishlist',
-      value: formatNumber(wishlist.length),
-      subtitle: 'Saved'
-    }
+    // Removed wishlist stats card - will show count on tab instead
   ];
 
   // Get refund amount from user
@@ -179,7 +174,6 @@ function BuyerDashboard() {
           {stats.map((stat, index) => (
             <StatsCard key={index} {...stat} />
           ))}
-          <RefundCard refundAmount={refundAmount} />
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
@@ -201,6 +195,11 @@ function BuyerDashboard() {
             >
               <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>{label}</span>
+              {id === 'wishlist' && wishlist.length > 0 && (
+                <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                  {wishlist.length}
+                </span>
+              )}
               {id === 'profile' && isMissingLocation && (
                 <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500" aria-label="Action required" />
               )}
@@ -546,6 +545,9 @@ function BuyerDashboard() {
                   </Button>
                 </CardContent>
               </Card>
+              
+              {/* Refund Card */}
+              <RefundCard refundAmount={refundAmount} />
             </div>
           </div>
         )}

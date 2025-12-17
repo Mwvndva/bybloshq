@@ -298,7 +298,7 @@ export const generateAuthToken = (seller) => {
       role: 'seller' // Add role to the token payload
     },
     process.env.JWT_SECRET,
-    { expiresIn: '5m' } // 5 minutes expiration
+    { expiresIn: '24h' } // 24 hours expiration
   );
 };
 

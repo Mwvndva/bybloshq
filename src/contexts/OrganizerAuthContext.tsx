@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import api from '@/lib/api';
+import secureApi from '@/lib/secure-api';
 
 export interface AuthError extends Error {
   description?: string;
@@ -51,7 +51,7 @@ interface OrganizerAuthProviderProps {
 
 export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) => {
   const [organizer, setOrganizer] = useState<Organizer | null>(null);
-  const [token, setToken] = useState<string | null>(localStorage.getItem('organizerToken'));
+  const [token, setToken] = useState<string | null>(null); // Remove localStorage access
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
@@ -94,26 +94,19 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
     } as any;
   }
 
-  // Token management functions
+  // Token management functions - now uses cookies instead of localStorage
   const getToken = useCallback(async (): Promise<string | null> => {
     try {
-      const token = localStorage.getItem('organizerToken');
-      if (!token) {
-        return null;
-      }
+      // For HTTP-only cookies, we need to make a request to verify authentication
+      // The token will be automatically sent via cookies
+      await secureApi.get('/organizers/me');
       
-      // Verify token is still valid by making a test request
-      await api.get('/organizers/me', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      return token;
+      // If the request succeeds, we're authenticated
+      return 'authenticated'; // Return placeholder token
     } catch (error) {
       console.error('Token validation failed:', error);
       
-      // Clear invalid token
-      localStorage.removeItem('organizerToken');
-      delete api.defaults.headers.common['Authorization'];
+      // Clear auth state if authentication fails
       setOrganizer(null);
       setToken(null);
       
@@ -136,7 +129,7 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
       }
       
       // Make API call to update organizer
-      const response = await api.patch('/organizers/me', updates);
+      const response = await secureApi.patch('/organizers/me', updates);
       
       // Update local state with the updated organizer data
       const updatedOrganizer = { ...organizer, ...updates };
@@ -177,19 +170,12 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
         setIsLoading(true);
         setError(null);
         
-        const token = await getToken();
-        
-        if (!token) {
-          // No valid token found, user is not authenticated
-          return;
-        }
-        
-        // Token is valid, fetch organizer data
-        const response = await api.get('/organizers/me');
+        // Try to verify authentication via cookies
+        const response = await secureApi.get('/organizers/me');
         
         // Server response is in format: { status: 'success', data: { organizer: {...} } }
-        const { data } = response.data;
-        const { organizer } = data;
+        const responseData = response.data as { status: string; data: { organizer: Organizer } };
+        const { organizer } = responseData.data;
         
         if (!organizer) {
           throw new Error('No organizer data returned');
@@ -197,17 +183,14 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
         
         // Update auth state with the organizer data
         setOrganizer(organizer);
-        setToken(token);
+        setToken('authenticated'); // Placeholder token for cookie-based auth
         
-        // Set auth header for subsequent requests
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        // No need to set Authorization header when using cookies
         
       } catch (error) {
         console.error('Authentication check failed:', error);
         
         // Clear any invalid auth state
-        localStorage.removeItem('organizerToken');
-        delete api.defaults.headers.common['Authorization'];
         setOrganizer(null);
         setToken(null);
         
@@ -225,37 +208,31 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
     };
 
     checkAuth();
-  }, [getToken]);
+  }, []);
 
   const login = useCallback(async (email: string, password: string) => {
     try {
       setError(null);
       setIsLoading(true);
       
-      // Clear any existing auth data
-      localStorage.removeItem('organizerToken');
-      delete api.defaults.headers.common['Authorization'];
-      
-      // Make login request
-      const response = await api.post('/organizers/login', { 
+      // Make login request - cookies will be set automatically
+      const response = await secureApi.post('/organizers/login', { 
         email: email.trim().toLowerCase(),
         password 
       });
       
-      // Extract token and organizer from response
-      const { data } = response.data;
-      const { organizer, token } = data;
+      // After successful login, fetch organizer data separately
+      const organizerResponse = await secureApi.get('/organizers/me');
+      const responseData = organizerResponse.data as { status: string; data: { organizer: Organizer } };
+      const { organizer } = responseData.data;
       
-      if (!token) {
-        throw new Error('No authentication token received');
+      if (!organizer) {
+        throw new Error('Failed to fetch organizer data after login');
       }
       
-      // Store token and update auth state
-      localStorage.setItem('organizerToken', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+      // Update auth state
       setOrganizer(organizer);
-      setToken(token);
+      setToken('authenticated'); // Placeholder for cookie-based auth
       
       // Show success message
       toast.success('Successfully logged in!');
@@ -265,8 +242,6 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
       console.error('Login error:', error);
       
       // Clear any partial auth state
-      localStorage.removeItem('organizerToken');
-      delete api.defaults.headers.common['Authorization'];
       setOrganizer(null);
       setToken(null);
       
@@ -283,8 +258,6 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
       toast.error(errorMessage);
       
       // Clear auth state
-      localStorage.removeItem('organizerToken');
-      delete api.defaults.headers.common['Authorization'];
       setOrganizer(null);
       setToken(null);
       
@@ -306,10 +279,6 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
       setError(null);
       setIsLoading(true);
       
-      // Clear any existing auth data
-      localStorage.removeItem('organizerToken');
-      delete api.defaults.headers.common['Authorization'];
-      
       // Prepare registration data
       const registrationData = {
         full_name: data.full_name.trim(),
@@ -319,23 +288,21 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
         passwordConfirm: data.passwordConfirm
       };
       
-      // Call the register API
-      const response = await api.post('/organizers/register', registrationData);
+      // Call the register API - cookies will be set automatically
+      const response = await secureApi.post('/organizers/register', registrationData);
       
-      // Extract token and organizer from response
-      const { data: responseData } = response.data;
-      const { token, organizer } = responseData;
+      // After successful registration, fetch organizer data separately
+      const organizerResponse = await secureApi.get('/organizers/me');
+      const responseData = organizerResponse.data as { status: string; data: { organizer: Organizer } };
+      const { organizer } = responseData.data;
       
-      if (!token || !organizer) {
-        throw new Error('Invalid response from server');
+      if (!organizer) {
+        throw new Error('Failed to fetch organizer data after registration');
       }
       
-      // Store token and update auth state
-      localStorage.setItem('organizerToken', token);
-      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+      // Update auth state
       setOrganizer(organizer);
-      setToken(token);
+      setToken('authenticated'); // Placeholder for cookie-based auth
       
       // Show success message
       toast.success('Registration successful! You are now logged in.');
@@ -345,8 +312,6 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
       console.error('Registration error:', error);
       
       // Clear any partial auth state
-      localStorage.removeItem('organizerToken');
-      delete api.defaults.headers.common['Authorization'];
       setOrganizer(null);
       setToken(null);
       
@@ -384,14 +349,15 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
 
   const logout = useCallback(() => {
     try {
-      // Clear auth data
-      localStorage.removeItem('organizerToken');
-      delete api.defaults.headers.common['Authorization'];
-      
-      // Reset state immediately
+      // Clear auth state
       setOrganizer(null);
       setToken(null);
       setError(null);
+      
+      // Call logout endpoint to clear server-side cookies
+      secureApi.post('/organizers/logout').catch(() => {
+        // Ignore logout API errors since we're clearing client state anyway
+      });
       
       // Show success message
       toast.success('Successfully logged out');
@@ -412,7 +378,7 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
       setIsLoading(true);
       
       // Call the forgot password API
-      await api.post('/organizers/forgot-password', { 
+      await secureApi.post('/organizers/forgot-password', { 
         email: email.trim().toLowerCase() 
       });
       
@@ -453,7 +419,7 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
       setIsLoading(true);
       
       // Call the reset password API
-      await api.post(`/organizers/reset-password/${token}`, { 
+      await secureApi.post(`/organizers/reset-password/${token}`, { 
         password, 
         passwordConfirm 
       });

@@ -181,22 +181,32 @@ class Order {
       RETURNING *
     `;
     
+    console.log('updateOrderStatus query params:', [status, orderId]);
     const { rows } = await pool.query(query, [status, orderId]);
     return rows[0];
   }
 
   static async updatePaymentStatus(orderId, status, paymentReference = null) {
+    // First, get current order to check if paid_at should be set
+    const currentOrderQuery = 'SELECT paid_at FROM product_orders WHERE id = $1';
+    const currentOrderResult = await pool.query(currentOrderQuery, [orderId]);
+    const currentOrder = currentOrderResult.rows[0];
+    
+    const shouldSetPaidAt = (status === 'success' || status === 'completed') && !currentOrder.paid_at;
+    
     const query = `
       UPDATE product_orders 
       SET 
         payment_status = $1,
-        payment_reference = COALESCE($2, payment_reference),
-        paid_at = CASE WHEN $1 = 'completed' AND paid_at IS NULL THEN NOW() ELSE paid_at END,
+        payment_reference = $2,
+        paid_at = ${shouldSetPaidAt ? 'NOW()' : 'paid_at'},
         updated_at = NOW()
       WHERE id = $3
       RETURNING *
     `;
     
+    console.log('updatePaymentStatus query params:', [status, paymentReference, orderId]);
+    console.log('shouldSetPaidAt:', shouldSetPaidAt);
     const { rows } = await pool.query(query, [status, paymentReference, orderId]);
     return rows[0];
   }
