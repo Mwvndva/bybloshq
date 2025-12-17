@@ -254,7 +254,7 @@ export const createEvent = async (req, res) => {
         console.log('Inserting ticket:', ticket);
         try {
           await client.query(
-            `INSERT INTO public.ticket_types (
+            `INSERT INTO event_ticket_types (
               event_id, name, description, price, quantity, sales_start_date, sales_end_date,
               created_at, updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
