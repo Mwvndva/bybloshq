@@ -131,12 +131,12 @@ class PaymentController {
         amount: paymentData.amount,
         status: 'pending',
         payment_method: 'paystack',
-        ticket_type_id: paymentData.ticket_type_id,
         event_id: paymentData.event_id,
         organizer_id: paymentData.organizer_id,
         metadata: {
           customer_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
-          narrative: paymentData.narrative
+          narrative: paymentData.narrative,
+          ticket_type_id: paymentData.ticket_type_id
         }
       });
 
