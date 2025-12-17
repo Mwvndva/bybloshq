@@ -69,8 +69,8 @@ const Organizer = {
     
     const result = await pool.query(
       `INSERT INTO organizers 
-       (full_name, email, phone, password)
-       VALUES ($1, $2, $3, $4)
+       (full_name, email, phone, password, is_verified)
+       VALUES ($1, $2, $3, $4, false)
        RETURNING id, full_name, email, phone, created_at`,
       [full_name, email, phone, hashedPassword]
     );

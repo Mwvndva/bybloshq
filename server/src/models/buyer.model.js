@@ -21,7 +21,7 @@ class Buyer {
 
     const query = `
       INSERT INTO buyers (full_name, email, phone, password, city, location, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING *
     `;
 
@@ -38,7 +38,7 @@ class Buyer {
 
     const query = `
       INSERT INTO buyers (full_name, email, phone, password, city, location, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING *
     `;
 
