@@ -278,6 +278,26 @@ CREATE TABLE IF NOT EXISTS event_ticket_types (
     CONSTRAINT valid_sales_period CHECK (sales_end_date IS NULL OR sales_start_date IS NULL OR sales_end_date > sales_start_date)
 );
 
+-- Payments table
+CREATE TABLE IF NOT EXISTS payments (
+    id SERIAL PRIMARY KEY,
+    invoice_id VARCHAR(100) UNIQUE NOT NULL,
+    amount DECIMAL(10, 2) NOT NULL,
+    currency VARCHAR(3) DEFAULT 'KES' NOT NULL,
+    status payment_status DEFAULT 'pending' NOT NULL,
+    payment_method payment_method NOT NULL,
+    phone_number VARCHAR(20),
+    email VARCHAR(255) NOT NULL,
+    ticket_id INTEGER REFERENCES tickets(id) ON DELETE SET NULL,
+    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+    organizer_id INTEGER REFERENCES organizers(id) ON DELETE CASCADE,
+    metadata JSONB,
+    provider_reference VARCHAR(100),
+    api_ref VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Tickets table
 CREATE TABLE IF NOT EXISTS tickets (
     id SERIAL PRIMARY KEY,
@@ -422,26 +442,6 @@ CREATE TABLE IF NOT EXISTS withdrawal_requests (
     processed_at TIMESTAMP WITH TIME ZONE,
     processed_by VARCHAR(100),
     CONSTRAINT valid_mpesa_number CHECK (mpesa_number ~ '^[0-9]{10,15}$')
-);
-
--- Payments table
-CREATE TABLE IF NOT EXISTS payments (
-    id SERIAL PRIMARY KEY,
-    invoice_id VARCHAR(100) UNIQUE NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL,
-    currency VARCHAR(3) DEFAULT 'KES' NOT NULL,
-    status payment_status DEFAULT 'pending' NOT NULL,
-    payment_method payment_method NOT NULL,
-    phone_number VARCHAR(20),
-    email VARCHAR(255) NOT NULL,
-    ticket_id INTEGER REFERENCES tickets(id) ON DELETE SET NULL,
-    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
-    organizer_id INTEGER REFERENCES organizers(id) ON DELETE CASCADE,
-    metadata JSONB,
-    provider_reference VARCHAR(100),
-    api_ref VARCHAR(100),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Wishlist table
