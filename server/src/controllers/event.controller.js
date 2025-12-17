@@ -435,7 +435,7 @@ export const getOrganizerEvents = async (req, res) => {
       SELECT 
         tt.*,
         (SELECT COUNT(*) FROM tickets t WHERE t.ticket_type_id = tt.id AND t.status = 'paid') as sold
-      FROM ticket_types tt
+      FROM event_ticket_types tt
       WHERE tt.event_id = ANY($1)
     `;
     
@@ -720,7 +720,7 @@ export const getDashboardEvents = async (req, res) => {
       SELECT 
         tt.*,
         (SELECT COUNT(*) FROM tickets t WHERE t.ticket_type_id = tt.id AND t.status = 'paid') as sold
-      FROM ticket_types tt
+      FROM event_ticket_types tt
       WHERE tt.event_id = ANY($1)
     `;
     
