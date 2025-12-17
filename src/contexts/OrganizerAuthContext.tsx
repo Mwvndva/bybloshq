@@ -163,8 +163,17 @@ export const OrganizerAuthProvider = ({ children }: OrganizerAuthProviderProps) 
     }
   }, [organizer, setError, setIsLoading, toast]);
 
-  // Check if user is logged in on mount
+  // Check if user is logged in on mount (only for organizer routes)
   useEffect(() => {
+    const location = window.location;
+    const isOrganizerRoute = location.pathname.startsWith('/organizer');
+    
+    // Only check authentication if we're on an organizer route
+    if (!isOrganizerRoute) {
+      setIsLoading(false);
+      return;
+    }
+    
     const checkAuth = async () => {
       try {
         setIsLoading(true);
