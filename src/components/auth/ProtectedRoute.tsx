@@ -13,9 +13,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Handle authentication errors
+  // Only handle authentication errors if we're actually on a protected route
   useEffect(() => {
-    if (error && !isLoading) {
+    if (error && !isLoading && location.pathname.startsWith('/organizer')) {
       console.error('Authentication error:', error);
       
       // Show error toast
@@ -33,7 +33,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }, [error, isLoading, location, navigate]);
 
   // Show loading state while checking authentication
-  if (isLoading) {
+  if (isLoading && location.pathname.startsWith('/organizer')) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -42,8 +42,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // Redirect to login if not authenticated
-  if (!isAuthenticated) {
+  // Redirect to login if not authenticated and we're on a protected route
+  if (!isAuthenticated && location.pathname.startsWith('/organizer')) {
     // Store the current location to redirect back after login
     return (
       <Navigate 
@@ -57,6 +57,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     );
   }
 
-  // User is authenticated, render the children
+  // User is authenticated or we're not on a protected route, render the children
   return <>{children}</>;
 }
