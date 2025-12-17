@@ -42,7 +42,7 @@ BEGIN
     
     -- Payment status enum (aligned with Paystack)
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
-        CREATE TYPE payment_status AS ENUM ('pending', 'success', 'failed', 'reversed');
+        CREATE TYPE payment_status AS ENUM ('pending', 'success', 'failed', 'reversed', 'completed');
     END IF;
     
     -- Payment method enum
