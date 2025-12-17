@@ -171,11 +171,11 @@
   "rewrites": [
     {
       "source": "/api/sellers/(.*)",
-      "destination": "https://byblos-atelier-api.onrender.com/api/sellers/$1"
+      "destination": "https://bybloshq-f1rz.onrender.com/api/sellers/$1"
     },
     {
       "source": "/api/(.*)",
-      "destination": "https://byblos-atelier-api.onrender.com/api/$1"
+      "destination": "https://bybloshq-f1rz.onrender.com/api/$1"
     },
     {
       "source": "/(.*)",

@@ -13,7 +13,10 @@ const normalizeApiUrl = (url: string): string => {
 };
 
 // Get the base URL from environment variables
-const API_BASE_URL = normalizeApiUrl(import.meta.env.VITE_API_URL || 'http://localhost:3002');
+const API_BASE_URL = normalizeApiUrl(
+  import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? 'http://localhost:3002' : 'https://bybloshq-f1rz.onrender.com')
+);
 
 // Create secure axios instance that prioritizes HTTP-only cookies
 const secureApi = axios.create({

@@ -1,6 +1,7 @@
 // Simple API client using fetch
 console.log('Environment variables:', import.meta.env);
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api');
 
 export interface ApiResponse<T> {
   data: T;
