@@ -288,7 +288,6 @@ CREATE TABLE IF NOT EXISTS payments (
     payment_method payment_method NOT NULL,
     phone_number VARCHAR(20),
     email VARCHAR(255) NOT NULL,
-    ticket_id INTEGER REFERENCES tickets(id) ON DELETE SET NULL,
     event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
     organizer_id INTEGER REFERENCES organizers(id) ON DELETE CASCADE,
     metadata JSONB,
