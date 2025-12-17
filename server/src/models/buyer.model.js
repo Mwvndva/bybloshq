@@ -20,8 +20,8 @@ class Buyer {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const query = `
-      INSERT INTO buyers (full_name, email, phone, password, city, location, is_verified, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW())
+      INSERT INTO buyers (full_name, email, phone, password, city, location, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       RETURNING *
     `;
 
@@ -37,8 +37,8 @@ class Buyer {
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
     const query = `
-      INSERT INTO buyers (full_name, email, phone, password, city, location, is_verified, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, true, NOW(), NOW())
+      INSERT INTO buyers (full_name, email, phone, password, city, location, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
       RETURNING *
     `;
 
