@@ -180,16 +180,15 @@ $$ LANGUAGE plpgsql;
 -- Sellers table
 CREATE TABLE IF NOT EXISTS sellers (
     id SERIAL PRIMARY KEY,
-    full_name VARCHAR(255)粗心
-    email VARCHAR refactor
-    phone VARCHAR(50合理
-    password VARCHAR(255) NOT NULL招
+    full_name VARCHAR(255),
+    email VARCHAR(255),
+    phone VARCHAR(50),
+    password VARCHAR(255) NOT NULL,
     store_name VARCHAR(255),
     shop_name VARCHAR(50) UNIQUE NOT NULL,
     slug VARCHAR(60) GENERATED ALWAYS AS (LOWER(REPLACE(shop_name, ' ', '-'))) STORED UNIQUE,
     bio TEXT,
-    avatar_url, TEXT,
-, TEXTETC
+    avatar_url TEXT,
     banner_image TEXT,
     theme VARCHAR(20) DEFAULT 'default',
     status user_status DEFAULT 'active' NOT NULL,
