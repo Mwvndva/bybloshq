@@ -112,7 +112,7 @@ class PaymentController {
 
       // SECURITY: Fetch ticket type and recalculate price on backend
       const { rows: ticketTypes } = await pool.query(
-        'SELECT price, name FROM ticket_types WHERE id = $1 AND event_id = $2',
+        'SELECT price, name FROM event_ticket_types WHERE id = $1 AND event_id = $2',
         [ticketId, eventId]
       );
 
