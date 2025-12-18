@@ -81,15 +81,15 @@ interface TicketPurchaseFormProps {
   onSubmit?: (data: any) => void;
 }
 
-export function TicketPurchaseForm({ 
-  event, 
-  open, 
+export function TicketPurchaseForm({
+  event,
+  open,
   onOpenChange,
   onSubmit,
 }: TicketPurchaseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
-  const [purchaseDetails, setPurchaseDetails] = useState<{reference?: string; email?: string}>({});
+  const [purchaseDetails, setPurchaseDetails] = useState<{ reference?: string; email?: string }>({});
   const [discountAmount, setDiscountAmount] = useState(0);
   const [appliedDiscountCode, setAppliedDiscountCode] = useState('');
   const [showPaystackModal, setShowPaystackModal] = useState(false);
@@ -104,11 +104,11 @@ export function TicketPurchaseForm({
     amount: 0,
     eventId: event.id
   }));
-  
+
   const { toast } = useToast();
   const ticketTypes = event.ticketTypes || [];
   const selectedTicket = ticketTypes.find(t => t.id.toString() === formData.ticketTypeId) || null;
-  
+
   // Calculate prices - this will recalculate on every render
   const basePrice = selectedTicket ? selectedTicket.price * formData.quantity : 0;
   const finalPrice = Math.max(0, basePrice - discountAmount);
@@ -146,27 +146,27 @@ export function TicketPurchaseForm({
   const handlePaystackSuccess = async (response: any) => {
     console.log('Paystack payment successful:', response);
     setShowPaystackModal(false);
-    
+
     // Start checking payment status
     if (paymentInitiationData?.invoiceId) {
       const checkPaymentStatus = async () => {
         let statusChecks = 0;
         const maxStatusChecks = 20; // Check for up to ~2 minutes
         const statusCheckInterval = 5000; // Check every 5 seconds
-        
+
         const statusCheckTimer = setInterval(async () => {
           try {
             statusChecks++;
             console.log(`=== Payment Status Check ${statusChecks}/${maxStatusChecks} ===`);
-            
+
             const statusResponse = await apiRequest.get<PaymentStatusResponse>(`payments/status/${paymentInitiationData.invoiceId}`, {
               timeout: 10000
             });
-            
+
             console.log('Payment status response:', statusResponse);
-            
-            if (statusResponse?.status === 'success' || statusResponse?.data?.status === 'success' || 
-                statusResponse?.status === 'completed' || statusResponse?.data?.status === 'completed') {
+
+            if (statusResponse?.status === 'success' || statusResponse?.data?.status === 'success' ||
+              statusResponse?.status === 'completed' || statusResponse?.data?.status === 'completed') {
               clearInterval(statusCheckTimer);
               setPurchaseComplete(true);
               setPurchaseDetails({
@@ -174,12 +174,12 @@ export function TicketPurchaseForm({
                 email: paymentInitiationData.email
               });
               setIsSubmitting(false);
-              
+
               toast({
                 title: 'Payment Successful!',
                 description: 'Your ticket purchase has been completed successfully.',
               });
-              
+
               // Call onSubmit callback if provided
               if (onSubmit) {
                 await onSubmit({
@@ -214,17 +214,17 @@ export function TicketPurchaseForm({
           }
         }, statusCheckInterval);
       };
-      
+
       checkPaymentStatus();
     }
   };
-  
+
   // Paystack close handler
   const handlePaystackClose = () => {
     console.log('Paystack modal closed');
     setShowPaystackModal(false);
     setIsSubmitting(false);
-    
+
     toast({
       title: 'Payment Cancelled',
       description: 'You can try again when ready.',
@@ -241,24 +241,24 @@ export function TicketPurchaseForm({
       basePrice,
       finalPrice
     });
-    
+
     // Update all discount-related state in a single update
     setDiscountAmount(discount);
     setAppliedDiscountCode(code);
-    
+
     // Force a re-render by updating formData amount
-    setFormData(prev => ({ 
-      ...prev, 
-      amount: finalAmount 
+    setFormData(prev => ({
+      ...prev,
+      amount: finalAmount
     }));
-    
+
     console.log('State after discount update:', {
       newDiscountAmount: discount,
       newAppliedCode: code,
       newFormAmount: finalAmount,
       expectedFinalPrice: Math.max(0, basePrice - discount)
     });
-    
+
     // Verify the calculation is correct
     if (Math.max(0, basePrice - discount) !== finalAmount) {
       console.error('Discount calculation mismatch!', {
@@ -274,14 +274,14 @@ export function TicketPurchaseForm({
     console.log('=== DISCOUNT REMOVED ===');
     console.log('Resetting to base price:', basePrice);
     console.log('Current discount state:', { discountAmount, appliedDiscountCode });
-    
+
     // Reset all discount-related state
     setDiscountAmount(0);
     setAppliedDiscountCode('');
     setFormData(prev => ({ ...prev, amount: basePrice }));
     setPurchaseComplete(false);
     setPurchaseDetails({});
-    
+
     console.log('State after discount removal:', {
       newDiscountAmount: 0,
       newAppliedCode: '',
@@ -314,11 +314,11 @@ export function TicketPurchaseForm({
 
   const validatePhoneNumber = (phone: string): string | null => {
     const digits = phone.replace(/\D/g, '');
-    
+
     if (!digits) return 'Phone number is required';
     if (digits.length !== 9) return 'Phone number must be 9 digits';
     if (!/^[17]/.test(digits)) return 'Phone number must start with 7 or 1';
-    
+
     return null;
   };
 
@@ -335,17 +335,17 @@ export function TicketPurchaseForm({
 
   const validateForm = () => {
     const errors: string[] = [];
-    
+
     if (!formData.customerName.trim()) {
       errors.push('Full name is required');
     }
-    
+
     if (!formData.customerEmail.trim()) {
       errors.push('Email is required');
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail)) {
       errors.push('Valid email is required');
     }
-    
+
     const phoneValidationError = validatePhoneNumber(formData.phoneNumber);
     if (phoneValidationError) {
       errors.push(phoneValidationError);
@@ -366,8 +366,8 @@ export function TicketPurchaseForm({
     if (selectedTicket) {
       const minQuantity = selectedTicket.min_per_order || 1;
       const maxQuantity = selectedTicket.max_per_order || 10;
-      const available = selectedTicket.available !== undefined 
-        ? selectedTicket.available 
+      const available = selectedTicket.available !== undefined
+        ? selectedTicket.available
         : (selectedTicket.quantity_available || 0);
 
       if (formData.quantity < minQuantity) {
@@ -384,13 +384,13 @@ export function TicketPurchaseForm({
 
   const getMaxQuantity = (ticket: EventTicketType | null): number => {
     if (!ticket) return 10;
-    const available = ticket.available !== undefined 
-      ? ticket.available 
+    const available = ticket.available !== undefined
+      ? ticket.available
       : (ticket.quantity_available || 0);
     const maxPerOrder = ticket.max_per_order || 10;
     return Math.max(0, Math.min(available, maxPerOrder, 10));
   };
-  
+
   const maxQuantity = getMaxQuantity(selectedTicket);
 
   const handleQuantityChange = (newQuantity: number) => {
@@ -401,36 +401,36 @@ export function TicketPurchaseForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     console.log('=== Form Submission Started ===');
     console.log('Form data:', formData);
-    
+
     if (selectedTicket?.is_sold_out) {
       console.error('Ticket is sold out');
-      toast({ 
-        title: 'Ticket Unavailable', 
-        description: 'The selected ticket type is sold out. Please select another ticket type.', 
-        variant: 'destructive' 
+      toast({
+        title: 'Ticket Unavailable',
+        description: 'The selected ticket type is sold out. Please select another ticket type.',
+        variant: 'destructive'
       });
       return;
     }
 
     const { isValid, errors } = validateForm();
     console.log('Validation result:', { isValid, errors });
-    
+
     if (!isValid) {
       console.error('Form validation failed:', errors);
-      toast({ 
-        title: 'Please fix the following issues:', 
-        description: errors.join('\n'), 
-        variant: 'destructive' 
+      toast({
+        title: 'Please fix the following issues:',
+        description: errors.join('\n'),
+        variant: 'destructive'
       });
       return;
     }
-    
+
     // Set loading state
     setIsSubmitting(true);
-    
+
     const purchaseData = {
       eventId: event.id,
       ticketTypeId: formData.ticketTypeId ? Number(formData.ticketTypeId) : null,
@@ -444,13 +444,13 @@ export function TicketPurchaseForm({
       discountCode: appliedDiscountCode || undefined,
       discountAmount: discountAmount || undefined
     };
-    
+
     let paymentInitiated = false;
     let invoiceId: string | null = null;
     let retryCount = 0;
     const maxRetries = 3;
     let response;
-    
+
     // Function to attempt payment initiation with retries
     const attemptPaymentInitiation = async () => {
       while (retryCount < maxRetries) {
@@ -468,12 +468,13 @@ export function TicketPurchaseForm({
             discountCode: purchaseData.discountCode,
             discountAmount: purchaseData.discountAmount
           });
-          
+
           const result = await apiRequest.post<PaymentInitiationResponse>('payments/initiate', {
             phone: purchaseData.phoneNumber,
             email: purchaseData.customerEmail,
             amount: purchaseData.amount,
             ticketId: purchaseData.ticketTypeId,
+            quantity: purchaseData.quantity,
             eventId: purchaseData.eventId,
             customerName: purchaseData.customerName,
             narrative: `Ticket purchase for ${event.name}`,
@@ -483,30 +484,30 @@ export function TicketPurchaseForm({
           }, {
             timeout: 15000 // 15 second timeout for the initial request
           });
-          
+
           console.log('Payment initiation response:', result);
           return result;
-          
+
         } catch (error: any) {
           retryCount++;
-          
+
           console.error(`Payment initiation attempt ${retryCount} failed:`, {
             message: error.message,
             status: error.response?.status,
             statusText: error.response?.statusText,
             data: error.response?.data
           });
-          
+
           // Don't retry on client errors (4xx)
           if (error.response?.status && error.response.status >= 400 && error.response.status < 500) {
             throw error;
           }
-          
+
           // If we've reached max retries, throw the error
           if (retryCount >= maxRetries) {
             throw new Error(`Payment initiation failed after ${maxRetries} attempts. Last error: ${error.message}`);
           }
-          
+
           // Wait before retrying with exponential backoff
           const delay = Math.min(1000 * Math.pow(2, retryCount - 1), 5000);
           console.log(`Retrying in ${delay}ms...`);
@@ -514,14 +515,14 @@ export function TicketPurchaseForm({
         }
       }
     };
-    
+
     try {
       response = await attemptPaymentInitiation();
-      
+
       if (response?.status === 'success' || response?.success) {
         paymentInitiated = true;
         invoiceId = response.data?.invoiceId || response.data?.reference || response.invoiceId || response.reference;
-        
+
         console.log('Payment initiated successfully:', {
           invoiceId,
           authorization_url: response.data?.authorization_url || response.authorization_url,
@@ -529,7 +530,7 @@ export function TicketPurchaseForm({
           reference: response.data?.reference || response.reference,
           payment_provider_response: response.payment_provider_response
         });
-        
+
         // Store payment initiation data for Paystack modal
         setPaymentInitiationData({
           email: purchaseData.customerEmail,
@@ -541,10 +542,10 @@ export function TicketPurchaseForm({
           customerName: purchaseData.customerName,
           phone: purchaseData.phoneNumber
         });
-        
+
         // Show Paystack modal
         setShowPaystackModal(true);
-        
+
         toast({
           title: 'Payment Ready',
           description: 'Please complete the payment in the Paystack modal.',
@@ -552,11 +553,11 @@ export function TicketPurchaseForm({
       } else {
         throw new Error(response.data?.message || response.message || 'Payment initiation failed');
       }
-      
+
     } catch (error: any) {
       console.error('Payment initiation error:', error);
       setIsSubmitting(false);
-      
+
       toast({
         title: 'Payment Error',
         description: error.message || 'Failed to initiate payment. Please try again.',
@@ -580,7 +581,7 @@ export function TicketPurchaseForm({
                 Reference: {purchaseDetails.reference}
               </p>
             )}
-            <Button 
+            <Button
               onClick={() => onOpenChange(false)}
               className="mt-2"
             >
@@ -595,7 +596,7 @@ export function TicketPurchaseForm({
                 Complete your ticket purchase for {event.name}
               </DialogDescription>
             </DialogHeader>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="customerName">Full Name</Label>
@@ -610,7 +611,7 @@ export function TicketPurchaseForm({
                   maxLength={100}
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="customerEmail">Email</Label>
                 <Input
@@ -623,7 +624,7 @@ export function TicketPurchaseForm({
                   required
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="phoneNumber">Phone Number</Label>
                 <div className="relative">
@@ -649,7 +650,7 @@ export function TicketPurchaseForm({
                   Enter 9-digit number starting with 7 or 1 (e.g., 712345678)
                 </p>
               </div>
-              
+
               {ticketTypes.length > 0 && (
                 <div className="space-y-2">
                   <Label>Ticket Type</Label>
@@ -667,8 +668,8 @@ export function TicketPurchaseForm({
                     </SelectTrigger>
                     <SelectContent>
                       {ticketTypes.map((ticket) => (
-                        <SelectItem 
-                          key={ticket.id} 
+                        <SelectItem
+                          key={ticket.id}
                           value={String(ticket.id)}
                           disabled={ticket.is_sold_out}
                         >
@@ -685,7 +686,7 @@ export function TicketPurchaseForm({
                   </Select>
                 </div>
               )}
-              
+
               {selectedTicket && (
                 <div className="space-y-2">
                   <Label>Quantity</Label>
@@ -713,13 +714,13 @@ export function TicketPurchaseForm({
                     </Button>
                   </div>
                   <p className="text-xs text-gray-500">
-                    {maxQuantity > 0 
+                    {maxQuantity > 0
                       ? `${maxQuantity} ${maxQuantity === 1 ? 'ticket' : 'tickets'} available`
                       : 'No tickets available'}
                   </p>
                 </div>
               )}
-              
+
               {selectedTicket && (
                 <div className="pt-2">
                   <DiscountCodeInput
@@ -730,7 +731,7 @@ export function TicketPurchaseForm({
                   />
                 </div>
               )}
-              
+
               <div className="pt-2">
                 <div className="flex items-center justify-between border-t border-gray-200 pt-4">
                   <div>
@@ -763,10 +764,10 @@ export function TicketPurchaseForm({
                   </div>
                 </div>
               </div>
-              
+
               <div className="pt-2">
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full"
                   disabled={isSubmitting}
                 >
@@ -782,7 +783,7 @@ export function TicketPurchaseForm({
                     </>
                   )}
                 </Button>
-                
+
                 <p className="text-xs text-gray-500 text-center mt-2">
                   You'll be redirected to Paystack's secure payment modal
                 </p>
@@ -791,7 +792,7 @@ export function TicketPurchaseForm({
           </>
         )}
       </DialogContent>
-      
+
       {/* Paystack Modal */}
       {showPaystackModal && paymentInitiationData && (
         <PaystackPayment

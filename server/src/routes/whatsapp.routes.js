@@ -13,9 +13,9 @@ router.get('/status', async (req, res) => {
   try {
     const isReady = whatsappService.isClientReady();
     const qrCode = whatsappService.getQRCode();
-    
+
     console.log('Status check - Ready:', isReady, 'Has QR:', !!qrCode);
-    
+
     res.json({
       success: true,
       data: {
@@ -23,8 +23,8 @@ router.get('/status', async (req, res) => {
         hasQRCode: !!qrCode,
         qrAvailable: !isReady && !!qrCode,
         status: isReady ? 'ready' : (qrCode ? 'awaiting_scan' : 'initializing'),
-        message: isReady 
-          ? 'WhatsApp is connected and ready' 
+        message: isReady
+          ? 'WhatsApp is connected and ready'
           : (qrCode ? 'QR code available - scan to authenticate' : 'WhatsApp client is initializing')
       }
     });
@@ -47,9 +47,9 @@ router.get('/qr', async (req, res) => {
   try {
     const qrCode = whatsappService.getQRCode();
     const isReady = whatsappService.isClientReady();
-    
+
     console.log('QR Code request - Ready:', isReady, 'Has QR:', !!qrCode);
-    
+
     if (!qrCode && !isReady) {
       return res.json({
         success: true,
@@ -60,7 +60,7 @@ router.get('/qr', async (req, res) => {
         }
       });
     }
-    
+
     if (isReady) {
       return res.json({
         success: true,
@@ -71,7 +71,7 @@ router.get('/qr', async (req, res) => {
         }
       });
     }
-    
+
     // Return QR code as both text and image URL
     res.json({
       success: true,
@@ -105,12 +105,12 @@ router.post('/initialize', protect, async (req, res) => {
         message: 'WhatsApp is already initialized and connected'
       });
     }
-    
+
     // Initialize in background
     whatsappService.initialize().catch(err => {
       console.error('WhatsApp initialization error:', err);
     });
-    
+
     res.json({
       success: true,
       message: 'WhatsApp initialization started. Check QR code endpoint for authentication.'
@@ -132,7 +132,7 @@ router.post('/initialize', protect, async (req, res) => {
 router.post('/logout', protect, async (req, res) => {
   try {
     await whatsappService.logout();
-    
+
     res.json({
       success: true,
       message: 'Logged out from WhatsApp successfully'
@@ -154,16 +154,16 @@ router.post('/logout', protect, async (req, res) => {
 router.post('/test', protect, async (req, res) => {
   try {
     const { phone, message } = req.body;
-    
+
     if (!phone || !message) {
       return res.status(400).json({
         success: false,
         message: 'Phone number and message are required'
       });
     }
-    
+
     const sent = await whatsappService.sendMessage(phone, message);
-    
+
     res.json({
       success: sent,
       message: sent ? 'Test message sent successfully' : 'Failed to send test message'

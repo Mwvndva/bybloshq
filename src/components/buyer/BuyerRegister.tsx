@@ -37,7 +37,7 @@ export function BuyerRegister() {
   const { toast } = useToast();
   const { register, isLoading } = useBuyerAuth();
   const navigate = useNavigate();
-  
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -47,21 +47,45 @@ export function BuyerRegister() {
     city: '',
     location: ''
   });
-  
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validatePasswords = (password: string, confirmPassword: string): boolean => {
     if (password !== confirmPassword) {
-      setPasswordError('Passwords do not match');
+      setErrors(prev => ({ ...prev, confirmPassword: 'Passwords do not match' }));
+      toast({
+        title: "Validation Error",
+        description: "Passwords do not match",
+        variant: 'destructive',
+      });
       return false;
     }
     if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      setErrors(prev => ({ ...prev, password: 'Password must be at least 8 characters long' }));
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 8 characters long",
+        variant: 'destructive',
+      });
       return false;
     }
-    setPasswordError('');
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      setErrors(prev => ({ ...prev, password: 'Password must contain at least one special character' }));
+      toast({
+        title: "Validation Error",
+        description: "Password must contain at least one special character",
+        variant: 'destructive',
+      });
+      return false;
+    }
+    setErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors.password;
+      delete newErrors.confirmPassword;
+      return newErrors;
+    });
     return true;
   };
 
@@ -71,11 +95,20 @@ export function BuyerRegister() {
       ...prev,
       [name]: value
     }));
+    // Clear error when user types
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setErrors({}); // Clear previous errors
+
     if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
       toast({
         title: "Missing Information",
@@ -99,10 +132,20 @@ export function BuyerRegister() {
         city: formData.city,
         location: formData.location
       });
-      
+
       // Registration success and navigation is handled by the auth context
-    } catch (error) {
-      // Error is already handled by the auth context
+    } catch (error: any) {
+      // Handle structured validation errors
+      if (error.response?.status === 400 && error.response?.data?.errors) {
+        const validationErrors: { field: string; message: string }[] = error.response.data.errors;
+        const newErrors: { [key: string]: string } = {};
+
+        validationErrors.forEach(err => {
+          newErrors[err.field] = err.message;
+        });
+
+        setErrors(newErrors);
+      }
     }
   };
 
@@ -145,225 +188,226 @@ export function BuyerRegister() {
               <h1 className="text-3xl font-black text-black mb-2">Create Account</h1>
               <p className="text-gray-600 font-medium">Join our buyer community</p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-bold text-black">
-                Full Name
-              </Label>
-              <div className="relative">
+                  Full Name
+                </Label>
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-gray-400" />
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    placeholder="Enter your full name"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    required
+                    className={`pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.fullName ? 'border-red-500' : ''}`}
+                  />
                 </div>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  required
-                    className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                {errors.fullName && <p className="text-sm text-red-500 mt-1 ml-1">{errors.fullName}</p>}
               </div>
-            </div>
-            
-            <div className="space-y-2">
+
+              <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-bold text-black">
                   Email Address
-              </Label>
-              <div className="relative">
+                </Label>
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className={`pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.email ? 'border-red-500' : ''}`}
+                  />
                 </div>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
-                    className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                {errors.email && <p className="text-sm text-red-500 mt-1 ml-1">{errors.email}</p>}
               </div>
-            </div>
-            
-            <div className="space-y-2">
+
+              <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-bold text-black">
-                Phone Number
-              </Label>
-              <div className="relative">
+                  Phone Number
+                </Label>
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-gray-400" />
+                    <Phone className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="Enter your phone number"
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
+                    className={`pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.phone ? 'border-red-500' : ''}`}
+                  />
                 </div>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
-                  placeholder="Enter your phone number"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  required
-                    className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                {errors.phone && <p className="text-sm text-red-500 mt-1 ml-1">{errors.phone}</p>}
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="city" className="text-sm font-bold text-black">
-                City
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <MapPin className="h-5 w-5 text-gray-400" />
+              <div className="space-y-2">
+                <Label htmlFor="city" className="text-sm font-bold text-black">
+                  City
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Select
+                    value={formData.city}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        city: value,
+                        location: '' // Reset location when city changes
+                      }));
+                    }}
+                  >
+                    <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
+                      <SelectValue placeholder="Select your city" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(locationData).map((city) => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select
-                  value={formData.city}
-                  onValueChange={(value) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      city: value,
-                      location: '' // Reset location when city changes
-                    }));
-                  }}
-                >
-                  <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
-                    <SelectValue placeholder="Select your city" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(locationData).map((city) => (
-                      <SelectItem key={city} value={city}>
-                        {city}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="location" className="text-sm font-bold text-black">
-                Area/Location
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <MapPin className="h-5 w-5 text-gray-400" />
+              <div className="space-y-2">
+                <Label htmlFor="location" className="text-sm font-bold text-black">
+                  Area/Location
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <MapPin className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Select
+                    value={formData.location}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        location: value
+                      }));
+                    }}
+                    disabled={!formData.city}
+                  >
+                    <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
+                      <SelectValue placeholder={formData.city ? "Select your area" : "Select city first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {formData.city && locationData[formData.city]?.map((area) => (
+                        <SelectItem key={area} value={area}>
+                          {area}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Select
-                  value={formData.location}
-                  onValueChange={(value) => {
-                    setFormData(prev => ({
-                      ...prev,
-                      location: value
-                    }));
-                  }}
-                  disabled={!formData.city}
-                >
-                  <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
-                    <SelectValue placeholder={formData.city ? "Select your area" : "Select city first"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {formData.city && locationData[formData.city]?.map((area) => (
-                      <SelectItem key={area} value={area}>
-                        {area}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
-            </div>
-            
-            <div className="space-y-2">
+
+              <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-bold text-black">
-                Password
-              </Label>
-              <div className="relative">
+                  Password
+                </Label>
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Create a password (min 8 characters)"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
-                    className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
-                <button
-                  type="button"
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Create a password (min 8 characters)"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
+                    className={`pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.password ? 'border-red-500' : ''}`}
+                  />
+                  <button
+                    type="button"
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            <div className="space-y-2">
+
+              <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-bold text-black">
-                Confirm Password
-              </Label>
-              <div className="relative">
+                  Confirm Password
+                </Label>
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
-                </div>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
-                    className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
-                <button
-                  type="button"
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    placeholder="Confirm your password"
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
+                    className={`pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  />
+                  <button
+                    type="button"
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {errors.confirmPassword && <p className="text-sm text-red-500 mt-1 ml-1">{errors.confirmPassword}</p>}
               </div>
-              {passwordError && (
-                  <p className="text-sm text-red-500 font-medium">{passwordError}</p>
-              )}
-            </div>
-            
-            <Button 
-              type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Creating Account...
-                </>
-              ) : 'Create Account'}
-            </Button>
-          </form>
-          
+                    Creating Account...
+                  </>
+                ) : 'Create Account'}
+              </Button>
+            </form>
+
             <div className="mt-6 text-center">
               <p className="text-gray-600 font-medium">
                 Already have an account?{' '}
-            <Link 
-              to="/buyer/login" 
+                <Link
+                  to="/buyer/login"
                   className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
-            >
+                >
                   Sign In
-            </Link>
+                </Link>
               </p>
             </div>
           </div>

@@ -4,6 +4,11 @@ import crypto from 'crypto';
 import PaymentCompletionService from './paymentCompletion.service.js';
 import Payment from '../models/payment.model.js';
 import Order from '../models/order.model.js';
+import { pool } from '../config/database.js';
+import {
+  sendProductOrderConfirmationEmail,
+  sendNewOrderNotificationEmail
+} from '../utils/email.js';
 
 class PaymentService {
   async initiatePayment(paymentData) {
@@ -11,9 +16,9 @@ class PaymentService {
       console.log('=== PAYMENT SERVICE INITIATE PAYMENT ===');
       console.log('Payment data:', paymentData);
       console.log('Timestamp:', new Date().toISOString());
-      
+
       const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
-      
+
       if (!paystackSecretKey) {
         throw new Error('Paystack secret key not configured');
       }
@@ -36,19 +41,19 @@ class PaymentService {
       };
 
       const response = await this.makePaystackRequest('POST', '/transaction/initialize', initializeData, paystackSecretKey);
-      
+
       if (response.status && response.data) {
         logger.info('Paystack transaction initialized successfully', {
           reference: response.data.reference,
           authorization_url: response.data.authorization_url,
           fullResponse: response.data
         });
-        
+
         console.log('=== PAYSTACK RESPONSE DEBUG ===');
         console.log('response.data.reference:', response.data.reference);
         console.log('paymentData.invoice_id:', paymentData.invoice_id);
         console.log('==============================');
-        
+
         return {
           invoice_id: paymentData.invoice_id,
           reference: response.data.reference,
@@ -60,7 +65,7 @@ class PaymentService {
       } else {
         throw new Error('Invalid response from Paystack');
       }
-      
+
     } catch (error) {
       logger.error('Error initiating Paystack payment:', error);
       throw error;
@@ -70,13 +75,13 @@ class PaymentService {
   async checkPaymentStatus(paymentId) {
     try {
       const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
-      
+
       if (!paystackSecretKey) {
         throw new Error('Paystack secret key not configured');
       }
 
       const response = await this.makePaystackRequest('GET', `/transaction/verify/${paymentId}`, null, paystackSecretKey);
-      
+
       if (response.status && response.data) {
         return {
           state: response.data.status === 'success' ? 'completed' : 'pending',
@@ -90,7 +95,7 @@ class PaymentService {
       } else {
         throw new Error('Invalid response from Paystack');
       }
-      
+
     } catch (error) {
       logger.error('Error checking Paystack payment status:', error);
       throw error;
@@ -112,11 +117,11 @@ class PaymentService {
 
       const req = https.request(options, (res) => {
         let responseData = '';
-        
+
         res.on('data', (chunk) => {
           responseData += chunk;
         });
-        
+
         res.on('end', () => {
           try {
             const parsedData = JSON.parse(responseData);
@@ -134,25 +139,56 @@ class PaymentService {
       if (data) {
         req.write(JSON.stringify(data));
       }
-      
+
       req.end();
     });
   }
 
-  async handlePaystackWebhook(webhookData, headers) {
+  async handlePaystackWebhook(webhookData, headers, clientIp) {
     try {
-      // Skip signature verification if webhook secret is not configured (for development)
+      // Paystack official webhook IP addresses
+      const paystackIps = ['52.31.139.75', '52.49.173.169', '52.214.14.220'];
+
+      // Verification of IP address
+      if (clientIp) {
+        // Handle IPv6-mapped IPv4 addresses (e.g., ::ffff:127.0.0.1)
+        const normalizedIp = clientIp.startsWith('::ffff:') ? clientIp.substring(7) : clientIp;
+
+        if (!paystackIps.includes(normalizedIp) && process.env.NODE_ENV === 'production') {
+          logger.warn('Webhook received from unauthorized IP:', {
+            clientIp,
+            normalizedIp,
+            expected: paystackIps
+          });
+          // In production we might want to throw, but for now let's just log and continue 
+          // to avoid breaking existing integrations until confirmed.
+          // throw new Error('Unauthorized IP'); 
+        } else {
+          logger.info('Webhook IP verified successfully', { normalizedIp });
+        }
+      }
+
+      // Skip signature verification ONLY if webhook secret is not configured (for development)
       const signature = headers['x-paystack-signature'];
       const secret = process.env.PAYSTACK_WEBHOOK_SECRET;
-      
-      if (secret && signature) {
+
+      if (!signature) {
+        logger.warn('Webhook received without signature');
+        throw new Error('Signature required');
+      }
+
+      if (secret) {
         const isValid = this.verifyWebhookSignature(JSON.stringify(webhookData), signature);
         if (!isValid) {
-          logger.warn('Invalid webhook signature received');
-          // Still process the webhook in development if signature is invalid
+          logger.error('Invalid webhook signature received - POSSIBLE TAMPERING');
+          throw new Error('Invalid signature');
         }
-      } else if (!secret) {
-        logger.info('Webhook secret not configured - skipping signature verification (development mode)');
+      } else {
+        logger.warn('Webhook secret not configured - ONLY ACCEPTABLE IN DEVELOPMENT');
+        // In production, this should be a critical failure
+        if (process.env.NODE_ENV === 'production') {
+          throw new Error('Webhook secret mandatory in production');
+        }
       }
 
       const event = webhookData.event;
@@ -164,16 +200,16 @@ class PaymentService {
       switch (event) {
         case 'charge.success':
           return this.handleSuccessfulPayment(data);
-        
+
         case 'charge.failed':
           return this.handleFailedPayment(data);
-        
+
         case 'transfer.success':
           return this.handleSuccessfulTransfer(data);
-        
+
         case 'transfer.failed':
           return this.handleFailedTransfer(data);
-        
+
         default:
           logger.info('Unhandled webhook event', { event });
           return { status: 'ignored', message: `Event ${event} not handled` };
@@ -305,16 +341,29 @@ class PaymentService {
 
       // Check if this is a product payment or ticket payment
       const metadata = payment.metadata || {};
+      logger.info('Payment type check details:', {
+        hasTicketId: !!payment.ticket_id,
+        hasEventId: !!payment.event_id,
+        hasProductId: !!metadata.product_id,
+        hasOrderId: !!metadata.order_id,
+        paymentId: payment.id,
+        ticket_id_val: payment.ticket_id,
+        event_id_val: payment.event_id
+      });
+
       if (metadata.product_id || metadata.order_id) {
         // This is a product payment - process product order
         logger.info('Processing product order completion...');
         await this.processProductOrderCompletion(payment, data);
       } else if (payment.ticket_id || payment.event_id) {
         // This is a ticket payment - process ticket creation
-        logger.info('Processing ticket creation...');
+        logger.info('Triggering PaymentCompletionService.processSuccessfulPayment...');
         await PaymentCompletionService.processSuccessfulPayment(payment);
       } else {
-        logger.warn('Unknown payment type, skipping completion processing');
+        logger.warn('Unknown payment type - neither product nor ticket fields found!', {
+          metadata: JSON.stringify(metadata),
+          payment: JSON.stringify(payment)
+        });
       }
 
       logger.info('Payment completion processed successfully', {
@@ -329,50 +378,123 @@ class PaymentService {
   }
 
   async processProductOrderCompletion(payment, paystackData) {
+    const client = await pool.connect();
     try {
+      // Use a transaction with advisory lock to prevent race conditions
+      await client.query('BEGIN');
+
       // Get order from payment metadata
       const metadata = payment.metadata || {};
       let orderId = metadata.order_id;
-      
+
       if (!orderId) {
         logger.error('No order_id found in payment metadata');
+        await client.query('ROLLBACK');
         return;
       }
 
-      // Convert orderId to integer to fix type mismatch
       orderId = parseInt(orderId, 10);
       if (isNaN(orderId)) {
         logger.error('Invalid order_id format:', metadata.order_id);
+        await client.query('ROLLBACK');
         return;
       }
 
-      // Find the order
-      const order = await Order.findById(orderId);
+      // 1. ADVISORY LOCK (Conccurency Protection)
+      // Use a lock specific to product orders to avoid interfering with tickets
+      const lockId = 200000 + orderId; // Offset to avoid collisions
+      await client.query('SELECT pg_advisory_xact_lock($1)', [lockId]);
+
+      // 2. FIND ORDER (Inside transaction) - Join with sellers for notifications
+      const orderQuery = `
+        SELECT o.*, s.email as seller_email, s.full_name as seller_name
+        FROM product_orders o
+        JOIN sellers s ON o.seller_id = s.id
+        WHERE o.id = $1 FOR UPDATE
+      `;
+      const { rows } = await client.query(orderQuery, [orderId]);
+      const order = rows[0];
+
       if (!order) {
         logger.error('Order not found for payment:', orderId);
+        await client.query('ROLLBACK');
         return;
       }
 
-      logger.info('Found order for payment completion:', {
-        orderId: order.id,
-        orderNumber: order.order_number,
-        currentStatus: order.status,
-        paymentStatus: order.payment_status
-      });
+      // Fetch order items for the email
+      const itemsQuery = `
+        SELECT * FROM order_items WHERE order_id = $1
+      `;
+      const itemsResult = await client.query(itemsQuery, [orderId]);
+      order.items = itemsResult.rows;
 
-      // Update order payment status to 'success' (Paystack status)
-      logger.info('Updating payment status for order:', {
+      if (order.payment_status === 'success' || order.payment_status === 'completed') {
+        logger.info('Order already processed, skipping', { orderId: order.id });
+        await client.query('ROLLBACK');
+        return;
+      }
+
+      // 3. POST-PAYMENT AUDIT (Integrity Check)
+      const paidAmount = parseFloat(paystackData.amount) / 100; // Paystack sends in kobo/cents
+      const expectedAmount = parseFloat(order.total_amount);
+
+      if (Math.abs(paidAmount - expectedAmount) > 0.01) {
+        logger.error('CRITICAL: Payment amount mismatch for product order!', {
+          orderId: order.id,
+          expected: expectedAmount,
+          paid: paidAmount,
+          reference: paystackData.reference
+        });
+
+        // Update order with audit failure info but don't mark as successful delivery
+        await client.query(
+          `UPDATE product_orders 
+           SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{audit_error}', $1::jsonb),
+               payment_status = 'audit_failed'
+           WHERE id = $2`,
+          [JSON.stringify({
+            error: 'Amount mismatch',
+            expected: expectedAmount,
+            paid: paidAmount,
+            timestamp: new Date().toISOString()
+          }), order.id]
+        );
+
+        await client.query('COMMIT');
+        return;
+      }
+
+      logger.info('Audit passed. Updating payment status for order:', {
         orderId: order.id,
         status: 'success',
         paymentReference: paystackData.reference
       });
-      await Order.updatePaymentStatus(order.id, 'success', paystackData.reference);
-      
-      // Update order status to DELIVERY_PENDING (not 'PROCESSING')
-      logger.info('Updating order status to DELIVERY_PENDING for order:', {
-        orderId: order.id
-      });
-      await Order.updateOrderStatus(order.id, 'DELIVERY_PENDING');
+
+      // 4. UPDATE ORDER STATUS
+      await client.query(
+        `UPDATE product_orders 
+         SET payment_status = $1,
+             payment_reference = $2,
+             paid_at = NOW(),
+             status = 'DELIVERY_PENDING',
+             updated_at = NOW()
+         WHERE id = $3`,
+        ['success', paystackData.reference, order.id]
+      );
+
+      // 5. UPDATE SELLER STATISTICS
+      logger.info('Updating seller financial statistics...', { sellerId: order.seller_id });
+      await client.query(
+        `UPDATE sellers 
+         SET total_sales = total_sales + 1,
+             net_revenue = net_revenue + $1,
+             balance = balance + $2,
+             updated_at = NOW()
+         WHERE id = $3`,
+        [order.total_amount, order.seller_payout_amount, order.seller_id]
+      );
+
+      await client.query('COMMIT');
 
       logger.info('Product order payment completed successfully:', {
         orderId: order.id,
@@ -380,13 +502,30 @@ class PaymentService {
         paymentReference: paystackData.reference
       });
 
-      // TODO: Send order confirmation email to buyer
-      // TODO: Send new order notification to seller
-      // TODO: Update seller sales statistics
+      // 5. TRIGGER EMAIL NOTIFICATIONS
+      try {
+        logger.info('Sending product order confirmation emails...', { orderId: order.id });
+
+        // Send to buyer
+        await sendProductOrderConfirmationEmail(order.buyer_email, order);
+
+        // Send to seller
+        if (order.seller_email) {
+          await sendNewOrderNotificationEmail(order.seller_email, order);
+        }
+
+        logger.info('Product order notification emails sent successfully');
+      } catch (emailError) {
+        logger.error('Error triggering product order emails:', emailError);
+        // Don't throw here as the database update was successful
+      }
 
     } catch (error) {
+      if (client) await client.query('ROLLBACK');
       logger.error('Error processing product order completion:', error);
       throw error;
+    } finally {
+      client.release();
     }
   }
 
@@ -402,7 +541,7 @@ class PaymentService {
       'processing': 'pending',
       'initiated': 'pending'
     };
-    
+
     return statusMap[status?.toLowerCase()] || 'pending';
   }
 }

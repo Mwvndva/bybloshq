@@ -1,34 +1,43 @@
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database.js';
-import { 
-  createSeller, 
-  findSellerByEmail, 
-  findSellerById, 
-  findSellerByShopName, 
-  updateSeller, 
-  generateAuthToken, 
-  verifyPassword, 
-  verifyPasswordResetToken, 
-  updatePassword, 
+import {
+  createSeller,
+  findSellerByEmail,
+  findSellerById,
+  findSellerByShopName,
+  updateSeller,
+  generateAuthToken,
+  verifyPassword,
+  verifyPasswordResetToken,
+  updatePassword,
   isShopNameAvailable
 } from '../models/seller.model.js';
 
-// Email validation regex
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Helper to sanitize seller object
+const sanitizeSeller = (seller) => {
+  const sellerObj = seller.toObject ? seller.toObject() : { ...seller };
+  delete sellerObj.password;
+  delete sellerObj.password_reset_token;
+  delete sellerObj.password_reset_expires;
+  // Add other sensitive fields if any
+  return sellerObj;
+};
+
+// Email validation regex removed (handled by middleware)
 
 export const checkShopNameAvailability = async (req, res) => {
   try {
     const { shopName } = req.query;
-    
+
     if (!shopName) {
       return res.status(400).json({
         status: 'error',
         message: 'Shop name is required'
       });
     }
-    
+
     const isAvailable = await isShopNameAvailable(shopName);
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -45,26 +54,11 @@ export const checkShopNameAvailability = async (req, res) => {
 };
 
 export const register = async (req, res) => {
-  const { fullName, shopName, email, phone, password, confirmPassword, city, location } = req.body;
+  const { fullName, shopName, email, phone, password, city, location } = req.body;
 
-  // Validate required fields
-  if (!fullName || !shopName || !email || !phone || !password || !confirmPassword || !city || !location) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'All fields are required'
-    });
-  }
+  // Validation is now handled by middleware
 
-  // Validate shop name format (alphanumeric, dashes, underscores, 3-30 chars)
-  const shopNameRegex = /^[a-zA-Z0-9_-]{3,30}$/;
-  if (!shopNameRegex.test(shopName)) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Shop name must be 3-30 characters long and can only contain letters, numbers, dashes, and underscores'
-    });
-  }
-  
-  // Check if shop name is available
+  // Check if shop name is available (still needed as business logic check)
   const isShopAvailable = await isShopNameAvailable(shopName);
   if (!isShopAvailable) {
     return res.status(400).json({
@@ -72,39 +66,18 @@ export const register = async (req, res) => {
       message: 'Shop name is already taken'
     });
   }
-  
-  // Validate email format
-  if (!emailRegex.test(email)) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Please provide a valid email address'
-    });
-  }
-
-  // Validate password length
-  if (password.length < 8) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Password must be at least 8 characters long'
-    });
-  }
-
-  // Validate password confirmation
-  if (password !== confirmPassword) {
-    return res.status(400).json({
-      status: 'error',
-      message: 'Passwords do not match'
-    });
-  }
 
   try {
     const seller = await createSeller({ fullName, shopName, email, phone, password, city, location });
     const token = generateAuthToken(seller);
-    
+
+    // Sanitize seller object
+    const sanitizedSeller = sanitizeSeller(seller);
+
     res.status(201).json({
       status: 'success',
       data: {
-        seller,
+        seller: sanitizedSeller,
         token
       }
     });
@@ -122,7 +95,7 @@ export const register = async (req, res) => {
         });
       }
     }
-    
+
     console.error('Registration error:', error);
     res.status(500).json({
       status: 'error',
@@ -135,7 +108,7 @@ export const login = async (req, res) => {
   try {
     console.log('Login attempt with data:', { email: req.body.email ? '[REDACTED]' : 'missing' });
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       console.log('Login failed: Missing email or password');
       return res.status(400).json({
@@ -143,11 +116,11 @@ export const login = async (req, res) => {
         message: 'Please provide email and password'
       });
     }
-    
+
     // 1) Check if seller exists
     console.log('Looking up seller with email:', email ? '[REDACTED]' : 'missing');
     const seller = await findSellerByEmail(email);
-    
+
     if (!seller) {
       console.log('No seller found with email:', '[REDACTED]');
       return res.status(401).json({
@@ -155,10 +128,10 @@ export const login = async (req, res) => {
         message: 'Incorrect email or password'
       });
     }
-    
+
     console.log('Seller found, verifying password...');
     const isPasswordValid = await verifyPassword(password, seller.password);
-    
+
     if (!isPasswordValid) {
       console.log('Invalid password for email:', '[REDACTED]');
       return res.status(401).json({
@@ -166,20 +139,19 @@ export const login = async (req, res) => {
         message: 'Incorrect email or password'
       });
     }
-    
+
     // 2) If everything is ok, send token to client
     console.log('Password valid, generating token...');
     const token = generateAuthToken(seller);
-    
-    // Remove password from output
-    const sellerWithoutPassword = { ...seller };
-    delete sellerWithoutPassword.password;
-    
+
+    // Sanitize seller object
+    const sanitizedSeller = sanitizeSeller(seller);
+
     console.log('Login successful for email:', '[REDACTED]');
     res.status(200).json({
       status: 'success',
       data: {
-        seller: sellerWithoutPassword,
+        seller: sanitizedSeller,
         token
       }
     });
@@ -197,9 +169,9 @@ export const getSellerByShopName = async (req, res) => {
   try {
     const { shopName } = req.params;
     console.log('Fetching seller by shop name:', shopName);
-    
+
     const seller = await findSellerByShopName(shopName);
-    
+
     if (!seller) {
       console.log('Seller not found for shop name:', shopName);
       return res.status(404).json({
@@ -207,19 +179,19 @@ export const getSellerByShopName = async (req, res) => {
         message: 'Seller not found'
       });
     }
-    
+
     console.log('Found seller:', {
       id: seller.id,
       shopName: seller.shop_name,
       hasBannerImage: !!seller.banner_image,
       bannerImageLength: seller.banner_image ? seller.banner_image.length : 0
     });
-    
+
     res.status(200).json({
       status: 'success',
       data: {
         seller: {
-          ...seller,
+          ...sanitizeSeller(seller),
           banner_image: seller.banner_image || null
         }
       }
@@ -236,20 +208,23 @@ export const getSellerByShopName = async (req, res) => {
 export const getProfile = async (req, res) => {
   try {
     const seller = await findSellerById(req.user.id);
-    
+
     if (!seller) {
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
       });
     }
-    
+
+    // Sanitize seller object
+    const sanitizedSeller = sanitizeSeller(seller);
+
     // Map banner_image to bannerImage for frontend compatibility
     const sellerData = {
-      ...seller,
-      bannerImage: seller.banner_image || null
+      ...sanitizedSeller,
+      bannerImage: sanitizedSeller.banner_image || null
     };
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -272,12 +247,12 @@ export const updateProfile = async (req, res) => {
       userType: req.user?.userType,
       body: req.body
     });
-    
+
     // Remove password field if it's included in the request body
     if (req.body.password) {
       delete req.body.password;
     }
-    
+
     // Verify the user is a seller
     if (!req.user || req.user.userType !== 'seller') {
       console.error('Unauthorized: User is not a seller');
@@ -286,7 +261,7 @@ export const updateProfile = async (req, res) => {
         message: 'Only sellers can update seller profiles'
       });
     }
-    
+
     if (!req.user.id) {
       console.error('No user ID in request');
       return res.status(400).json({
@@ -294,9 +269,9 @@ export const updateProfile = async (req, res) => {
         message: 'User ID is required'
       });
     }
-    
+
     const seller = await updateSeller(req.user.id, req.body);
-    
+
     if (!seller) {
       console.error('Failed to update seller:', req.seller.id);
       return res.status(500).json({
@@ -304,12 +279,12 @@ export const updateProfile = async (req, res) => {
         message: 'Failed to update profile: no seller returned'
       });
     }
-    
+
     console.log('Profile updated successfully:', seller.id);
     res.status(200).json({
       status: 'success',
       data: {
-        seller
+        seller: sanitizeSeller(seller)
       }
     });
   } catch (error) {
@@ -359,7 +334,7 @@ export const resetPassword = async (req, res) => {
 
     // Verify the token against the database
     const isValidToken = await verifyPasswordResetToken(email, token);
-    
+
     if (!isValidToken) {
       return res.status(400).json({
         status: 'error',
@@ -376,14 +351,14 @@ export const resetPassword = async (req, res) => {
     });
   } catch (error) {
     console.error('Reset password error:', error);
-    
+
     if (error.name === 'TokenExpiredError') {
       return res.status(400).json({
         status: 'error',
         message: 'Token has expired. Please request a new password reset.'
       });
     }
-    
+
     res.status(500).json({
       status: 'error',
       message: 'An error occurred while resetting your password.'
@@ -409,7 +384,7 @@ export const forgotPassword = async (req, res) => {
 
     // Find seller by email
     const seller = await findSellerByEmail(email);
-    
+
     if (!seller) {
       // For security, don't reveal if the email exists or not
       return res.status(200).json({
@@ -421,12 +396,12 @@ export const forgotPassword = async (req, res) => {
     try {
       // 1. Create a password reset token
       const resetToken = await createPasswordResetToken(email);
-      
+
       // 2. Send the password reset email
       await sendPasswordResetEmail(email, resetToken);
-      
+
       console.log(`Password reset email sent to ${email}`);
-      
+
       return res.status(200).json({
         status: 'success',
         message: 'If an account exists with this email, you will receive a password reset link.'
@@ -454,21 +429,21 @@ export const forgotPassword = async (req, res) => {
 export const searchSellers = async (req, res) => {
   try {
     const { city, location } = req.query;
-    
+
     if (!city) {
       return res.status(400).json({
         status: 'error',
         message: 'City is required for search'
       });
     }
-    
+
     const sellers = await searchSellersInDB(city, location || null);
-    
+
     res.status(200).json({
       status: 'success',
       data: sellers
     });
-    
+
   } catch (error) {
     console.error('Error searching for sellers:', error);
     res.status(500).json({
@@ -493,16 +468,16 @@ async function searchSellersInDB(city, location = null) {
     FROM sellers 
     WHERE LOWER(city) = LOWER($1)
   `;
-  
+
   const queryParams = [city];
-  
+
   if (location) {
     queryText += ' AND LOWER(location) LIKE LOWER($2)';
     queryParams.push(`%${location}%`);
   }
-  
+
   queryText += ' ORDER BY created_at DESC';
-  
+
   const result = await query(queryText, queryParams);
   return result.rows;
 }
@@ -513,21 +488,21 @@ async function searchSellersInDB(city, location = null) {
 export const getSellerProducts = async (req, res) => {
   try {
     const { sellerId } = req.params;
-    
+
     if (!sellerId) {
       return res.status(400).json({
         status: 'error',
         message: 'Seller ID is required'
       });
     }
-    
+
     const products = await getSellerProductsFromDB(sellerId);
-    
+
     res.status(200).json({
       status: 'success',
       data: products
     });
-    
+
   } catch (error) {
     console.error('Error fetching seller products:', error);
     res.status(500).json({
@@ -567,7 +542,7 @@ async function getSellerProductsFromDB(sellerId) {
 export const uploadBanner = async (req, res) => {
   try {
     const sellerId = req.user?.id;
-    
+
     if (!sellerId) {
       return res.status(401).json({
         status: 'error',
@@ -627,7 +602,7 @@ export const updateTheme = async (req, res) => {
   try {
     const { theme } = req.body;
     const sellerId = req.user?.id;
-    
+
     if (!sellerId) {
       return res.status(401).json({
         status: 'error',

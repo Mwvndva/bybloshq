@@ -21,16 +21,16 @@ class Payment {
     // Build the query dynamically based on provided fields
     const fields = [
       'invoice_id', 'amount', 'currency', 'status', 'payment_method',
-      'phone_number', 'email', 'event_id', 'organizer_id', 
+      'phone_number', 'email', 'event_id', 'organizer_id', 'ticket_type_id', 'ticket_id',
       'provider_reference', 'api_ref', 'metadata'
     ];
-    
+
     // Only include fields that are not null/undefined
     const providedFields = fields.filter(field => paymentData[field] !== undefined && paymentData[field] !== null);
-    
+
     const placeholders = providedFields.map((_, i) => `$${i + 1}`).join(', ');
     const fieldList = providedFields.join(', ');
-    
+
     const query = `
       INSERT INTO payments (${fieldList})
       VALUES (${placeholders})
@@ -54,7 +54,8 @@ class Payment {
       SELECT 
         id, invoice_id, amount, currency, status, 
         payment_method, phone_number, email,
-        event_id, organizer_id, metadata, created_at, updated_at
+        event_id, organizer_id, ticket_type_id, ticket_id,
+        metadata, created_at, updated_at
       FROM payments 
       WHERE invoice_id = $1
     `, [invoiceId]);
@@ -66,7 +67,8 @@ class Payment {
       SELECT 
         id, invoice_id, amount, currency, status, 
         payment_method, phone_number, email,
-        event_id, organizer_id, metadata, created_at, updated_at,
+        event_id, organizer_id, ticket_type_id, ticket_id,
+        metadata, created_at, updated_at,
         provider_reference, api_ref
       FROM payments 
       WHERE provider_reference = $1 OR api_ref = $1
@@ -82,17 +84,17 @@ class Payment {
   static async updateStatus(invoiceId, status, metadata = null) {
     let query;
     let values;
-    
+
     if (metadata) {
       query = `
         UPDATE payments 
         SET status = $1, 
-            metadata = $2,
+            metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
             updated_at = NOW()
         WHERE invoice_id = $3
         RETURNING *
       `;
-      values = [status, metadata, invoiceId];
+      values = [status, typeof metadata === 'string' ? metadata : JSON.stringify(metadata), invoiceId];
     } else {
       query = `
         UPDATE payments 
@@ -103,7 +105,7 @@ class Payment {
       `;
       values = [status, invoiceId];
     }
-    
+
     const { rows } = await pool.query(query, values);
     return rows[0];
   }
@@ -128,11 +130,11 @@ class Payment {
 
   static async update(id, updateData) {
     const fields = Object.keys(updateData);
-    
+
     if (fields.length === 0) {
       throw new Error('No fields to update');
     }
-    
+
     const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
     const values = fields.map(field => {
       // Handle metadata serialization if needed
@@ -141,16 +143,16 @@ class Payment {
       }
       return updateData[field];
     });
-    
+
     values.push(id); // Add ID as the last parameter
-    
+
     const query = `
       UPDATE payments 
       SET ${setClause}, updated_at = NOW()
       WHERE id = $${values.length}
       RETURNING *
     `;
-    
+
     const { rows } = await pool.query(query, values);
     return rows[0];
   }

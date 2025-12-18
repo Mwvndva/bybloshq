@@ -41,7 +41,10 @@ COPY . .
 RUN npm run build
 
 # Expose port
-EXPOSE 8080
+EXPOSE 3002
+
+# Create uploads directory
+RUN mkdir -p uploads
 
 # Start the application
 CMD ["npm", "start"]

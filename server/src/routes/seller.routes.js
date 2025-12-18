@@ -6,11 +6,14 @@ import * as orderController from '../controllers/order.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
 
+import { authLimiter } from '../middleware/authRateLimiter.js';
+import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
+
 const router = express.Router();
 
 // Public routes
-router.post('/register', sellerController.register);
-router.post('/login', sellerController.login);
+router.post('/register', authLimiter, validateSellerRegistration, sellerController.register);
+router.post('/login', authLimiter, validateSellerLogin, sellerController.login);
 router.post('/forgot-password', sellerController.forgotPassword);
 router.post('/reset-password', sellerController.resetPassword);
 router.get('/check-shop-name', sellerController.checkShopNameAvailability);

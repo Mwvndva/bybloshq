@@ -11,7 +11,7 @@ export const signToken = (id, role = 'buyer') => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
-  
+
   return jwt.sign(
     { id, role },
     process.env.JWT_SECRET,
@@ -28,15 +28,15 @@ export const verifyToken = (token) => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not defined in environment variables');
   }
-  
+
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
+
     // Handle both 'role' and 'type' fields for backward compatibility
     if (decoded.type && !decoded.role) {
       decoded.role = decoded.type;
     }
-    
+
     return decoded;
   } catch (error) {
     if (error.name === 'TokenExpiredError') {
@@ -63,15 +63,15 @@ export const getTokenFromRequest = (req) => {
   if (req.cookies?.token) {
     return req.cookies.token;
   }
-  
+
   if (req.cookies?.jwt) {
     return req.cookies.jwt;
   }
 
-  // 3) Check query parameters (for testing only, not recommended for production)
-  if (req.query?.token) {
-    return req.query.token;
-  }
+  // 3) Query parameters check REMOVED for security
+  // if (req.query?.token) {
+  //   return req.query.token;
+  // }
 
   return null;
 };

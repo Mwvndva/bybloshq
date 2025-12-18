@@ -3,17 +3,17 @@ import { pool } from '../config/database.js';
 
 export const createEvent = async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     console.log('Raw request body:', JSON.stringify(req.body, null, 2));
-    
-    const { 
-      name, 
-      description, 
-      location, 
-      ticket_quantity, 
-      ticket_price, 
-      start_date, 
+
+    const {
+      name,
+      description,
+      location,
+      ticket_quantity,
+      ticket_price,
+      start_date,
       end_date,
       ticketTypes = [],
       image_data_url
@@ -76,7 +76,7 @@ export const createEvent = async (req, res) => {
     // Validate date range
     const startDate = new Date(start_date);
     const endDate = new Date(end_date);
-    
+
     if (endDate <= startDate) {
       return res.status(400).json({
         status: 'error',
@@ -90,15 +90,15 @@ export const createEvent = async (req, res) => {
     // For events with ticket types, we don't use the event-level ticket_quantity
     // Instead, we'll use 0 to indicate that ticket types should be used
     const useTicketTypes = ticketTypes && ticketTypes.length > 0;
-    
+
     // Only use the provided ticket_quantity if we're not using ticket types
     const totalQuantity = useTicketTypes ? 0 : (ticket_quantity ? Number(ticket_quantity) : 0);
-      
+
     // Calculate minimum price for display purposes only
-    const minPrice = useTicketTypes ? 
+    const minPrice = useTicketTypes ?
       Math.min(...ticketTypes.map(t => Number(t.price) || 0)) :
       (ticket_price ? Number(ticket_price) : 0);
-    
+
     console.log('Event configuration - using ticket types:', useTicketTypes);
     console.log('Event totals - totalQuantity:', totalQuantity, 'minPrice:', minPrice);
 
@@ -135,7 +135,7 @@ export const createEvent = async (req, res) => {
       end_date,
       image_data_url || null
     ];
-    
+
     console.log('Final values for database:', {
       organizer_id: req.user.id,
       name: name?.substring(0, 30) + (name?.length > 30 ? '...' : ''),
@@ -166,7 +166,7 @@ export const createEvent = async (req, res) => {
 
     // Handle ticket types
     const ticketsToInsert = [];
-    
+
     // Process ticket types if any
     if (ticketTypes && ticketTypes.length > 0) {
       for (const [index, type] of ticketTypes.entries()) {
@@ -179,27 +179,27 @@ export const createEvent = async (req, res) => {
         if (type.quantity === undefined || type.quantity === null) {
           throw new Error(`Ticket type "${type.name}" is missing a quantity`);
         }
-        
+
         const price = typeof type.price === 'string' ? parseFloat(type.price) : Number(type.price);
-        const quantity = typeof type.quantity === 'string' ? 
-          parseInt(type.quantity, 10) : 
+        const quantity = typeof type.quantity === 'string' ?
+          parseInt(type.quantity, 10) :
           Math.max(1, Math.floor(Number(type.quantity) || 1));
-          
+
         if (isNaN(price) || price < 0) {
           throw new Error(`Invalid price for ticket type "${type.name}"`);
         }
         if (isNaN(quantity) || quantity < 1) {
           throw new Error(`Invalid quantity for ticket type "${type.name}"`);
         }
-        
+
         // Handle dates safely
         let salesStartDate = null;
         let salesEndDate = null;
-        
+
         try {
           salesStartDate = type.salesStartDate ? new Date(type.salesStartDate) : null;
           salesEndDate = type.salesEndDate ? new Date(type.salesEndDate) : null;
-          
+
           // Validate dates
           if (salesStartDate && isNaN(salesStartDate.getTime())) {
             throw new Error(`Invalid sales start date for ticket type "${type.name}"`);
@@ -211,7 +211,7 @@ export const createEvent = async (req, res) => {
           console.error('Error parsing dates:', dateError);
           throw new Error(`Invalid date format for ticket type "${type.name}"`);
         }
-        
+
         ticketsToInsert.push({
           name: type.name,
           description: type.description || '',
@@ -224,10 +224,10 @@ export const createEvent = async (req, res) => {
     } else if (ticket_quantity !== undefined && ticket_price !== undefined) {
       // Create default ticket type if no ticket types provided but direct ticket info exists
       const price = typeof ticket_price === 'string' ? parseFloat(ticket_price) : Number(ticket_price);
-      const quantity = typeof ticket_quantity === 'string' ? 
-        parseInt(ticket_quantity, 10) : 
+      const quantity = typeof ticket_quantity === 'string' ?
+        parseInt(ticket_quantity, 10) :
         Math.max(1, Math.floor(Number(ticket_quantity)));
-      
+
       if (isNaN(price) || isNaN(quantity)) {
         throw new Error('Invalid ticket price or quantity');
       }
@@ -248,13 +248,13 @@ export const createEvent = async (req, res) => {
     // Insert ticket types if any
     if (ticketsToInsert.length > 0) {
       console.log('Preparing to insert ticket types:', ticketsToInsert);
-      
+
       // Insert tickets one by one to get better error messages
       for (const ticket of ticketsToInsert) {
         console.log('Inserting ticket:', ticket);
         try {
           await client.query(
-            `INSERT INTO event_ticket_types (
+            `INSERT INTO ticket_types (
               event_id, name, description, price, quantity, sales_start_date, sales_end_date,
               created_at, updated_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
@@ -267,51 +267,51 @@ export const createEvent = async (req, res) => {
               ticket.sales_start_date || null,
               ticket.sales_end_date || null
             ]
-            );
-            console.log('Successfully inserted ticket type:', ticket.name);
-          } catch (ticketError) {
-            console.error('Error inserting ticket:', ticket, 'Error:', ticketError);
-            throw new Error(`Failed to insert ticket type ${ticket.name}: ${ticketError.message}`);
-          }
+          );
+          console.log('Successfully inserted ticket type:', ticket.name);
+        } catch (ticketError) {
+          console.error('Error inserting ticket:', ticket, 'Error:', ticketError);
+          throw new Error(`Failed to insert ticket type ${ticket.name}: ${ticketError.message}`);
         }
-      }
-
-      await client.query('COMMIT');
-
-      res.status(201).json({
-        status: 'success',
-        data: {
-          event
-        }
-      });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      console.error('Create event error:', error);
-      
-      // Handle specific error cases
-      if (error.code === '23505') { // Unique violation
-        return res.status(400).json({
-          status: 'error',
-          message: 'An event with similar details already exists.'
-        });
-      }
-      
-      const errorResponse = {
-        status: 'error',
-        message: error.message || 'An error occurred while creating the event'
-      };
-      
-      if (process.env.NODE_ENV === 'development') {
-        errorResponse.error = error.message;
-        errorResponse.stack = error.stack;
-      }
-      
-      return res.status(500).json(errorResponse);
-    } finally {
-      if (client) {
-        client.release();
       }
     }
+
+    await client.query('COMMIT');
+
+    res.status(201).json({
+      status: 'success',
+      data: {
+        event
+      }
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Create event error:', error);
+
+    // Handle specific error cases
+    if (error.code === '23505') { // Unique violation
+      return res.status(400).json({
+        status: 'error',
+        message: 'An event with similar details already exists.'
+      });
+    }
+
+    const errorResponse = {
+      status: 'error',
+      message: error.message || 'An error occurred while creating the event'
+    };
+
+    if (process.env.NODE_ENV === 'development') {
+      errorResponse.error = error.message;
+      errorResponse.stack = error.stack;
+    }
+
+    return res.status(500).json(errorResponse);
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
 };
 
 export const getEvent = async (req, res) => {
@@ -344,7 +344,7 @@ export const getEvent = async (req, res) => {
 
 export const getOrganizerEvents = async (req, res) => {
   try {
-    const { 
+    const {
       status,
       page = 1,
       limit = 10,
@@ -352,7 +352,7 @@ export const getOrganizerEvents = async (req, res) => {
       order = 'asc',
       search = ''
     } = req.query;
-    
+
     // If user is not authenticated, return 401
     if (!req.user?.id) {
       return res.status(401).json({
@@ -360,15 +360,15 @@ export const getOrganizerEvents = async (req, res) => {
         message: 'Authentication required'
       });
     }
-    
+
     const organizerId = req.user.id;
     const offset = (page - 1) * limit;
-    
+
     // Build the base query
     let query = 'FROM events WHERE organizer_id = $1';
     const queryParams = [organizerId];
     let paramCount = 2;
-    
+
     // Add status filter
     if (status === 'upcoming') {
       query += ` AND end_date >= NOW()`;
@@ -379,26 +379,26 @@ export const getOrganizerEvents = async (req, res) => {
     } else if (status === 'published') {
       query += ` AND status = 'published'`;
     }
-    
+
     // Add search filter
     if (search) {
       query += ` AND (LOWER(name) LIKE $${paramCount} OR LOWER(description) LIKE $${paramCount})`;
       queryParams.push(`%${search.toLowerCase()}%`);
       paramCount++;
     }
-    
+
     // Validate sort field
     const validSortFields = ['name', 'start_date', 'end_date', 'created_at'];
     const sortField = validSortFields.includes(sort) ? sort : 'start_date';
-    
+
     // Validate order
     const sortOrder = order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-    
+
     // Get total count for pagination
     const countQuery = `SELECT COUNT(*) as total ${query}`;
     const countResult = await pool.query(countQuery, queryParams);
     const total = parseInt(countResult.rows[0].total, 10);
-    
+
     // Get paginated events
     const eventsQuery = `
       SELECT * 
@@ -406,14 +406,14 @@ export const getOrganizerEvents = async (req, res) => {
       ORDER BY ${sortField} ${sortOrder}
       LIMIT $${paramCount} OFFSET $${paramCount + 1}
     `;
-    
+
     const eventsResult = await pool.query(
-      eventsQuery, 
+      eventsQuery,
       [...queryParams, limit, offset]
     );
-    
+
     const events = eventsResult.rows;
-    
+
     if (events.length === 0) {
       return res.status(200).json({
         status: 'success',
@@ -426,21 +426,21 @@ export const getOrganizerEvents = async (req, res) => {
         data: []
       });
     }
-    
+
     // Get event IDs for batch querying
     const eventIds = events.map(event => event.id);
-    
+
     // Get all ticket types for these events with their sold counts
     const ticketTypesQuery = `
       SELECT 
         tt.*,
         (SELECT COUNT(*) FROM tickets t WHERE t.ticket_type_id = tt.id AND t.status = 'paid') as sold
-      FROM event_ticket_types tt
+      FROM ticket_types tt
       WHERE tt.event_id = ANY($1)
     `;
-    
+
     const { rows: allTicketTypes } = await pool.query(ticketTypesQuery, [eventIds]);
-    
+
     // Group ticket types by event ID
     const ticketTypesByEvent = {};
     allTicketTypes.forEach(tt => {
@@ -454,7 +454,7 @@ export const getOrganizerEvents = async (req, res) => {
         available: Math.max(0, (parseInt(tt.quantity || '0', 10) - parseInt(tt.sold || '0', 10)))
       });
     });
-    
+
     // Get ticket counts for events without ticket types
     const eventsWithoutTicketTypes = events.filter(e => !ticketTypesByEvent[e.id] || ticketTypesByEvent[e.id].length === 0);
     if (eventsWithoutTicketTypes.length > 0) {
@@ -468,9 +468,9 @@ export const getOrganizerEvents = async (req, res) => {
         WHERE event_id = ANY($1) AND status = 'paid'
         GROUP BY event_id
       `;
-      
+
       const { rows: ticketCounts } = await pool.query(ticketCountsQuery, [eventIdsWithoutTypes]);
-      
+
       // Add default ticket types for events without ticket types
       ticketCounts.forEach(count => {
         const event = events.find(e => e.id === count.event_id);
@@ -491,18 +491,18 @@ export const getOrganizerEvents = async (req, res) => {
         }
       });
     }
-    
+
     // Enrich events with ticket type information
     const enrichedEvents = events.map(event => {
       const ticketTypes = ticketTypesByEvent[event.id] || [];
-      
+
       // Calculate totals from ticket types
       const totals = ticketTypes.reduce((acc, tt) => ({
         sold: acc.sold + (parseInt(tt.sold) || 0),
         available: acc.available + (parseInt(tt.available) || 0),
         revenue: acc.revenue + ((parseInt(tt.sold) || 0) * parseFloat(tt.price || 0))
       }), { sold: 0, available: 0, revenue: 0 });
-      
+
       // Add calculated fields to the event
       return {
         ...event,
@@ -510,12 +510,12 @@ export const getOrganizerEvents = async (req, res) => {
         available_tickets: totals.available,
         total_revenue: totals.revenue,
         // For backward compatibility, set ticket_quantity to the sum of ticket type quantities
-        ticket_quantity: ticketTypes.length > 0 ? 
+        ticket_quantity: ticketTypes.length > 0 ?
           ticketTypes.reduce((sum, tt) => sum + (parseInt(tt.quantity) || 0), 0) :
           parseInt(event.ticket_quantity || '0', 10)
       };
     });
-    
+
     res.status(200).json({
       status: 'success',
       pagination: {
@@ -540,7 +540,7 @@ export const getOrganizerEvents = async (req, res) => {
 export const deleteEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Check if the event exists and belongs to the organizer
     const event = await Event.findById(id);
     if (!event) {
@@ -549,7 +549,7 @@ export const deleteEvent = async (req, res) => {
         message: 'Event not found'
       });
     }
-    
+
     if (event.organizer_id !== req.user.id) {
       return res.status(403).json({
         status: 'error',
@@ -558,7 +558,7 @@ export const deleteEvent = async (req, res) => {
     }
 
     await Event.delete(id, req.user.id);
-    
+
     res.status(204).json({
       status: 'success',
       data: null
@@ -575,15 +575,15 @@ export const deleteEvent = async (req, res) => {
 export const getUpcomingEvents = async (req, res) => {
   const requestId = req.id || 'no-request-id';
   const limit = Math.min(parseInt(req.query.limit, 10) || 10, 50); // Limit to max 50 events
-  
+
   console.log(`[${requestId}] === getUpcomingEvents controller called ===`);
   console.log(`[${requestId}] Request URL: ${req.originalUrl}`);
   console.log(`[${requestId}] Query params:`, req.query);
-  
+
   try {
     console.log(`[${requestId}] Fetching up to ${limit} upcoming events`);
     const events = await Event.getUpcomingEvents(limit);
-    
+
     if (!events || events.length === 0) {
       console.log(`[${requestId}] No upcoming events found`);
       return res.status(200).json({
@@ -593,9 +593,9 @@ export const getUpcomingEvents = async (req, res) => {
         requestId
       });
     }
-    
+
     console.log(`[${requestId}] Found ${events.length} upcoming events`);
-    
+
     // Format the response to match frontend expectations
     // Frontend expects a direct array of events, not a wrapped response
     const response = events.map(event => ({
@@ -627,10 +627,10 @@ export const getUpcomingEvents = async (req, res) => {
       created_at: event.created_at ? new Date(event.created_at).toISOString() : null,
       updated_at: event.updated_at ? new Date(event.updated_at).toISOString() : null
     }));
-    
+
     // Return the array of events directly as the response
     res.status(200).json(response);
-      
+
   } catch (error) {
     console.error(`[${requestId}] Error in getUpcomingEvents controller:`, error);
     res.status(500).json({
@@ -645,7 +645,7 @@ export const getUpcomingEvents = async (req, res) => {
 
 export const getDashboardEvents = async (req, res) => {
   try {
-    const { 
+    const {
       status = 'upcoming',
       limit = 5,
       sort = 'start_date',
@@ -655,14 +655,14 @@ export const getDashboardEvents = async (req, res) => {
 
     // Convert limit to number and validate
     const limitNum = Math.min(parseInt(limit, 10) || 5, 50);
-    
+
     // Validate sort field
     const validSortFields = ['start_date', 'created_at', 'name'];
     const sortField = validSortFields.includes(sort) ? sort : 'start_date';
-    
+
     // Validate order
     const sortOrder = order.toLowerCase() === 'desc' ? 'DESC' : 'ASC';
-    
+
     // Get organizer ID from authenticated user
     const organizerId = req.user.id;
 
@@ -696,14 +696,14 @@ export const getDashboardEvents = async (req, res) => {
 
     // Add sorting
     query += ` ORDER BY e.${sortField} ${sortOrder}`;
-    
+
     // Add limit
     query += ` LIMIT $${paramCount}`;
     queryParams.push(limitNum);
 
     // Execute the query to get events
     const { rows: events } = await pool.query(query, queryParams);
-    
+
     if (events.length === 0) {
       return res.status(200).json({
         status: 'success',
@@ -711,21 +711,21 @@ export const getDashboardEvents = async (req, res) => {
         data: { events: [] }
       });
     }
-    
+
     // Get event IDs for batch querying ticket types and counts
     const eventIds = events.map(event => event.id);
-    
+
     // Get ticket types for all events
     const ticketTypesQuery = `
       SELECT 
         tt.*,
         (SELECT COUNT(*) FROM tickets t WHERE t.ticket_type_id = tt.id AND t.status = 'paid') as sold
-      FROM event_ticket_types tt
+      FROM ticket_types tt
       WHERE tt.event_id = ANY($1)
     `;
-    
+
     const { rows: allTicketTypes } = await pool.query(ticketTypesQuery, [eventIds]);
-    
+
     // Group ticket types by event ID
     const ticketTypesByEvent = {};
     allTicketTypes.forEach(tt => {
@@ -739,7 +739,7 @@ export const getDashboardEvents = async (req, res) => {
         available: Math.max(0, (parseInt(tt.quantity || '0', 10) - parseInt(tt.sold || '0', 10)))
       });
     });
-    
+
     // Get ticket counts for events without ticket types
     const eventsWithoutTicketTypes = events.filter(e => !ticketTypesByEvent[e.id] || ticketTypesByEvent[e.id].length === 0);
     if (eventsWithoutTicketTypes.length > 0) {
@@ -753,9 +753,9 @@ export const getDashboardEvents = async (req, res) => {
         WHERE event_id = ANY($1) AND status = 'paid'
         GROUP BY event_id
       `;
-      
+
       const { rows: ticketCounts } = await pool.query(ticketCountsQuery, [eventIdsWithoutTypes]);
-      
+
       // Add default ticket types for events without ticket types
       ticketCounts.forEach(count => {
         const event = events.find(e => e.id === count.event_id);
@@ -776,18 +776,18 @@ export const getDashboardEvents = async (req, res) => {
         }
       });
     }
-    
+
     // Enrich events with ticket type information
     const enrichedEvents = events.map(event => {
       const ticketTypes = ticketTypesByEvent[event.id] || [];
-      
+
       // Calculate totals from ticket types
       const totals = ticketTypes.reduce((acc, tt) => ({
         sold: acc.sold + (parseInt(tt.sold) || 0),
         available: acc.available + (parseInt(tt.available) || 0),
         revenue: acc.revenue + ((parseInt(tt.sold) || 0) * parseFloat(tt.price || 0))
       }), { sold: 0, available: 0, revenue: 0 });
-      
+
       // Add calculated fields to the event
       return {
         ...event,
@@ -796,7 +796,7 @@ export const getDashboardEvents = async (req, res) => {
         total_revenue: totals.revenue,
         ticket_types: ticketTypes,
         // For backward compatibility, set ticket_quantity to the sum of ticket type quantities
-        ticket_quantity: ticketTypes.length > 0 ? 
+        ticket_quantity: ticketTypes.length > 0 ?
           ticketTypes.reduce((sum, tt) => sum + (parseInt(tt.quantity) || 0), 0) :
           parseInt(event.ticket_quantity || '0', 10)
       };
@@ -826,7 +826,7 @@ export const getDashboardEvents = async (req, res) => {
  */
 export const getEventTicketTypes = async (req, res) => {
   const requestId = req.id || 'no-request-id';
-  
+
   try {
     const { eventId } = req.params;
 
@@ -840,9 +840,9 @@ export const getEventTicketTypes = async (req, res) => {
 
     // Convert to number if it's a numeric string, otherwise keep as is (for UUIDs)
     const eventIdToUse = isNaN(eventId) ? eventId : parseInt(eventId, 10);
-    
+
     console.log(`[${requestId}] Fetching ticket types for event ID: ${eventIdToUse}`);
-    
+
     // Get the event with ticket types
     const event = await Event.getPublicEvent(eventIdToUse);
 
@@ -863,11 +863,11 @@ export const getEventTicketTypes = async (req, res) => {
           'SELECT COUNT(*) as sold FROM tickets WHERE ticket_type_id = $1',
           [tt.id]
         );
-        
+
         const sold = parseInt(soldResult.rows[0].sold, 10) || 0;
         const maxQuantity = parseInt(tt.quantity || '0', 10);
         const available = Math.max(0, maxQuantity - sold);
-        
+
         return {
           id: tt.id,
           name: tt.name,
@@ -920,11 +920,11 @@ export const getEventTicketTypes = async (req, res) => {
 export const getEventForBooking = async (req, res) => {
   const requestId = req.id || 'no-request-id';
   const { eventId } = req.params;
-  
+
   console.log(`[${requestId}] === getEventForBooking controller called ===`);
   console.log(`[${requestId}] Request URL: ${req.originalUrl}`);
   console.log(`[${requestId}] Event ID:`, eventId);
-  
+
   // Validate event ID
   if (!eventId) {
     const errorMsg = 'No event ID provided to getEventForBooking';
@@ -935,11 +935,11 @@ export const getEventForBooking = async (req, res) => {
       requestId
     });
   }
-  
+
   try {
     // Convert eventId to a number and validate it
     const numericEventId = parseInt(eventId, 10);
-    
+
     if (isNaN(numericEventId) || numericEventId <= 0) {
       console.error(`[${requestId}] Invalid event ID format: ${eventId}`);
       return res.status(400).json({
@@ -948,19 +948,19 @@ export const getEventForBooking = async (req, res) => {
         requestId
       });
     }
-    
+
     console.log(`[${requestId}] Fetching event with ID: ${numericEventId}`);
-    
+
     // Try to get the event directly from the database
     let event = await Event.getPublicEvent(numericEventId);
-    
+
     // If not found, try to get it from upcoming events as a fallback
     if (!event) {
       console.log(`[${requestId}] Event not found directly, checking upcoming events`);
       try {
         const events = await Event.getUpcomingEvents(50);
         event = events.find(e => e.id === numericEventId);
-        
+
         if (!event) {
           console.log(`[${requestId}] Event not found in upcoming events`);
           return res.status(404).json({
@@ -974,10 +974,10 @@ export const getEventForBooking = async (req, res) => {
         throw error;
       }
     }
-    
+
     if (!event) {
       console.log(`[${requestId}] Event not found in upcoming events for ID: ${eventId}`);
-      
+
       // If not found in upcoming events, try to get it directly as a fallback
       try {
         const directEvent = await Event.getPublicEvent(eventId);
@@ -988,7 +988,7 @@ export const getEventForBooking = async (req, res) => {
       } catch (directError) {
         console.error(`[${requestId}] Error fetching event directly:`, directError);
       }
-      
+
       return res.status(404).json({
         status: 'error',
         message: 'Event not found or not published',
@@ -996,10 +996,10 @@ export const getEventForBooking = async (req, res) => {
         requestId
       });
     }
-    
+
     // Format and send the response
     return formatAndSendEventResponse(event, eventId, requestId, res);
-    
+
   } catch (error) {
     console.error(`[${requestId}] Error in getEventForBooking:`, {
       message: error.message,
@@ -1007,7 +1007,7 @@ export const getEventForBooking = async (req, res) => {
       eventId,
       originalUrl: req.originalUrl
     });
-    
+
     return res.status(500).json({
       status: 'error',
       message: 'An error occurred while fetching event for booking',
@@ -1029,7 +1029,7 @@ async function formatAndSendEventResponse(event, eventId, requestId, res) {
     // Get ticket types for the event
     console.log(`[${requestId}] Fetching ticket types for event ID: ${eventId}`);
     const ticketTypes = await Event.getEventTicketTypes(eventId);
-    
+
     // Format the event data for the booking page
     const formattedEvent = {
       id: event.id || eventId,
@@ -1062,9 +1062,9 @@ async function formatAndSendEventResponse(event, eventId, requestId, res) {
       created_at: event.created_at ? new Date(event.created_at).toISOString() : null,
       updated_at: event.updated_at ? new Date(event.updated_at).toISOString() : null
     };
-    
+
     console.log(`[${requestId}] Successfully retrieved event for booking: ${formattedEvent.name} (ID: ${formattedEvent.id})`);
-    
+
     // Return the formatted event data
     return res.status(200).json(formattedEvent);
   } catch (error) {
@@ -1083,11 +1083,11 @@ async function formatAndSendEventResponse(event, eventId, requestId, res) {
 export const getPublicEvent = async (req, res) => {
   const requestId = req.id || 'no-request-id';
   const { eventId } = req.params;
-  
+
   console.log(`[${requestId}] === getPublicEvent controller called ===`);
   console.log(`[${requestId}] Request URL: ${req.originalUrl}`);
   console.log(`[${requestId}] Request params:`, req.params);
-  
+
   // Validate eventId is provided
   if (!eventId) {
     console.error(`[${requestId}] No event ID provided in request`);
@@ -1098,13 +1098,13 @@ export const getPublicEvent = async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-  
+
   console.log(`[${requestId}] Processing request for event ID:`, eventId);
-  
+
   try {
     // Convert eventId to a number for consistency
     const numericEventId = parseInt(eventId, 10);
-    
+
     // Validate numeric ID
     if (isNaN(numericEventId) || numericEventId <= 0) {
       console.error(`[${requestId}] Invalid event ID format: ${eventId}`);
@@ -1115,12 +1115,12 @@ export const getPublicEvent = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     console.log(`[${requestId}] Fetching public event with ID: ${numericEventId}`);
-    
+
     // Get the event from the database
     const event = await Event.getPublicEvent(numericEventId);
-    
+
     // Check if event exists
     if (!event) {
       console.log(`[${requestId}] Event not found for ID: ${numericEventId}`);
@@ -1131,7 +1131,7 @@ export const getPublicEvent = async (req, res) => {
         timestamp: new Date().toISOString()
       });
     }
-    
+
     // Format the response
     const formattedEvent = {
       id: event.id,
@@ -1156,9 +1156,9 @@ export const getPublicEvent = async (req, res) => {
       },
       ticket_types: event.ticket_types || []
     };
-    
+
     console.log(`[${requestId}] Successfully retrieved event: ${formattedEvent.name} (ID: ${formattedEvent.id})`);
-    
+
     // Return the formatted event
     return res.status(200).json({
       status: 'success',
@@ -1166,7 +1166,7 @@ export const getPublicEvent = async (req, res) => {
       requestId,
       timestamp: new Date().toISOString()
     });
-    
+
   } catch (error) {
     console.error(`[${requestId}] Error in getPublicEvent:`, {
       message: error.message,
@@ -1174,7 +1174,7 @@ export const getPublicEvent = async (req, res) => {
       eventId: eventId,
       originalUrl: req.originalUrl
     });
-    
+
     // Return error response
     return res.status(500).json({
       status: 'error',

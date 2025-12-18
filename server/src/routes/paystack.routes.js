@@ -81,90 +81,107 @@ router.post('/verify-paystack', authMiddleware, async (req, res) => {
 
     // Start transaction
     const client = await db.connect();
-    
+
     try {
       await client.query('BEGIN');
 
       // Check ticket availability
       const ticketQuery = `
-        SELECT id, name, price, available, quantity_available, max_per_order, min_per_order
-        FROM event_ticket_types 
+        SELECT id, name, price, quantity
+        FROM ticket_types 
         WHERE id = $1 AND event_id = $2
       `;
       const ticketResult = await client.query(ticketQuery, [ticketTypeId, eventId]);
-      
+
       if (ticketResult.rows.length === 0) {
         throw new Error('Ticket type not found');
       }
 
       const ticket = ticketResult.rows[0];
-      const available = ticket.available !== null ? ticket.available : ticket.quantity_available;
+
+      // Calculate availability manually since available column doesn't exist
+      const soldResult = await client.query('SELECT COUNT(*) FROM tickets WHERE ticket_type_id = $1 AND status = \'paid\'', [ticketTypeId]);
+      const soldCount = parseInt(soldResult.rows[0].count, 10);
+      const available = ticket.quantity - soldCount;
 
       if (available < quantity) {
         throw new Error('Insufficient tickets available');
       }
 
-      // Create ticket purchase record
-      const purchaseQuery = `
-        INSERT INTO ticket_purchases (
-          event_id, ticket_type_id, quantity, customer_name, customer_email, 
-          phone_number, amount_paid, payment_method, payment_reference, 
-          purchase_status, discount_code, discount_amount, created_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
-        RETURNING id
-      `;
-      
-      const purchaseResult = await client.query(purchaseQuery, [
-        eventId,
-        ticketTypeId,
+      // Record the payment details in the payments table instead of non-existent ticket_purchases
+      // We'll update the metadata with additional purchase info
+      const paymentMetadata = {
         quantity,
         customerName,
-        customerEmail,
         phoneNumber,
-        amount,
-        'paystack',
-        reference,
-        'completed',
-        discountCode || null,
-        discountAmount || null
-      ]);
+        ticketTypeName,
+        discountCode,
+        discountAmount,
+        customerEmail
+      };
 
-      const purchaseId = purchaseResult.rows[0].id;
+      const updatePaymentQuery = `
+        UPDATE payments 
+        SET status = 'success',
+            metadata = $1,
+            provider_reference = $2,
+            updated_at = NOW()
+        WHERE invoice_id = $2
+        RETURNING id
+      `;
+
+      let paymentResult = await client.query(updatePaymentQuery, [JSON.stringify(paymentMetadata), reference]);
+
+      // If payment record wasn't found (e.g. created by different flow), create it
+      if (paymentResult.rows.length === 0) {
+        const insertPaymentQuery = `
+          INSERT INTO payments (
+            invoice_id, amount, status, payment_method, email, 
+            event_id, metadata, provider_reference, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $1, NOW(), NOW())
+          RETURNING id
+        `;
+        paymentResult = await client.query(insertPaymentQuery, [
+          reference, amount, 'success', 'card', customerEmail, eventId, JSON.stringify(paymentMetadata)
+        ]);
+      }
+
+      const paymentId = paymentResult.rows[0].id;
 
       // Generate tickets
       const tickets = [];
       for (let i = 0; i < quantity; i++) {
         const ticketNumber = `TKT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
         const qrCode = crypto.randomBytes(32).toString('hex');
-        
+
         const ticketQuery = `
           INSERT INTO tickets (
-            purchase_id, ticket_number, qr_code, status, created_at
-          ) VALUES ($1, $2, $3, $4, NOW())
+            payment_id, event_id, organizer_id, ticket_type_id, ticket_type_name,
+            customer_name, customer_email, price, ticket_number, qr_code, status, created_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())
           RETURNING id
         `;
-        
+
         const ticketResult = await client.query(ticketQuery, [
-          purchaseId,
+          paymentId,
+          eventId,
+          null, // organizer_id should be fetched if needed, but keeping it null for now or fetch it
+          ticketTypeId,
+          ticketTypeName,
+          customerName,
+          customerEmail,
+          amount / quantity, // approximate unit price
           ticketNumber,
           qrCode,
-          'active'
+          'paid'
         ]);
-        
+
         tickets.push({
           id: ticketResult.rows[0].id,
           ticketNumber,
           qrCode
         });
       }
-
-      // Update ticket availability
-      const updateQuery = `
-        UPDATE event_ticket_types 
-        SET available = available - $1, sold = COALESCE(sold, 0) + $1
-        WHERE id = $2
-      `;
-      await client.query(updateQuery, [quantity, ticketTypeId]);
 
       // Update event statistics
       const eventStatsQuery = `

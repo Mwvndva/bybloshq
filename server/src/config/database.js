@@ -30,7 +30,8 @@ export const pool = new Pool(dbConfig);
 
 // Event listeners for the pool
 pool.on('connect', () => {
-  console.log('Successfully connected to the database');});
+  console.log('Successfully connected to the database');
+});
 
 pool.on('error', (err) => {
   console.error('Unexpected error on idle client', err);
@@ -49,10 +50,10 @@ export const query = async (text, params) => {
     console.log('Executing query:', { text, params });
     const res = await client.query(text, params);
     const duration = Date.now() - start;
-    console.log('Query executed successfully', { 
-      text, 
+    console.log('Query executed successfully', {
+      text,
       duration: `${duration}ms`,
-      rows: res.rowCount 
+      rows: res.rowCount
     });
     return res;
   } catch (error) {
