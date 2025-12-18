@@ -88,7 +88,7 @@ router.post('/verify-paystack', authMiddleware, async (req, res) => {
       // Check ticket availability
       const ticketQuery = `
         SELECT id, name, price, quantity
-        FROM ticket_types 
+        FROM event_ticket_types 
         WHERE id = $1 AND event_id = $2
       `;
       const ticketResult = await client.query(ticketQuery, [ticketTypeId, eventId]);

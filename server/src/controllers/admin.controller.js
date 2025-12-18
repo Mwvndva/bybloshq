@@ -67,13 +67,13 @@ const protect = async (req, res, next) => {
     }
 
     // 4) Add admin user to request
-    req.user = { 
-      id: 'admin', 
+    req.user = {
+      id: 'admin',
       email: 'admin@byblos.com',
       role: 'admin',
       userType: 'admin'
     };
-    
+
     next();
   } catch (error) {
     console.error('Auth error:', error);
@@ -90,12 +90,12 @@ const protect = async (req, res, next) => {
 // Get dashboard statistics
 const getDashboardStats = async (req, res, next) => {
   console.log('Fetching dashboard stats...');
-  
+
   try {
     // Test database connection first
     await pool.query('SELECT NOW()');
     console.log('Database connection successful');
-    
+
     // Get total counts with error handling
     const getCount = async (table) => {
       try {
@@ -132,7 +132,7 @@ const getDashboardStats = async (req, res, next) => {
 
     // Fetch recent activities (combine recent actions from different tables)
     const recentActivities = [];
-    
+
     // Add some mock recent activities since we don't have an activities table
     recentActivities.push({
       id: 1,
@@ -161,7 +161,7 @@ const getDashboardStats = async (req, res, next) => {
     };
 
     console.log('Dashboard stats prepared:', JSON.stringify(responseData, null, 2));
-    
+
     res.status(200).json({
       status: 'success',
       data: responseData
@@ -173,7 +173,7 @@ const getDashboardStats = async (req, res, next) => {
       code: error.code,
       detail: error.detail
     });
-    
+
     // Return default values that match the expected structure
     res.status(200).json({
       status: 'success',
@@ -215,7 +215,7 @@ const getAllSellers = async (req, res, next) => {
       FROM sellers 
       ORDER BY created_at DESC`
     );
-    
+
     console.log('Raw sellers data from database:', result.rows.map(seller => ({
       id: seller.id,
       fullName: seller.full_name,
@@ -226,7 +226,7 @@ const getAllSellers = async (req, res, next) => {
       isActive: seller.is_active,
       balance: seller.balance
     })));
-    
+
     const sellers = result.rows.map(seller => ({
       ...seller,
       status: seller.status || 'Active',
@@ -234,13 +234,13 @@ const getAllSellers = async (req, res, next) => {
       city: seller.city || 'N/A',
       location: seller.location || 'N/A'
     }));
-    
+
     console.log('Processed sellers data:', sellers.map(seller => ({
       ...seller,
       email: seller.email ? '[REDACTED]' : 'missing',
       phone: seller.phone ? '[REDACTED]' : 'missing'
     })));
-    
+
     res.status(200).json({
       status: 'success',
       results: result.rows.length,
@@ -255,13 +255,13 @@ const getAllSellers = async (req, res, next) => {
 const getSellerById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     // Convert id to integer to match database type
     const sellerId = parseInt(id, 10);
     if (isNaN(sellerId)) {
       return next(new AppError('Invalid seller ID', 400));
     }
-    
+
     // Get seller basic info
     const sellerResult = await pool.query(
       `SELECT 
@@ -278,13 +278,13 @@ const getSellerById = async (req, res, next) => {
       WHERE id = $1`,
       [sellerId]
     );
-    
+
     if (sellerResult.rows.length === 0) {
       return next(new AppError('No seller found with that ID', 404));
     }
-    
+
     const seller = sellerResult.rows[0];
-    
+
     // Get seller's sales metrics
     const salesMetrics = await pool.query(
       `SELECT 
@@ -300,7 +300,7 @@ const getSellerById = async (req, res, next) => {
       WHERE seller_id = $1`,
       [sellerId]
     );
-    
+
     // Get seller's product count
     const productsResult = await pool.query(
       `SELECT COUNT(*) as total_products
@@ -308,7 +308,7 @@ const getSellerById = async (req, res, next) => {
       WHERE seller_id = $1`,
       [sellerId]
     );
-    
+
     // Get recent orders
     const recentOrders = await pool.query(
       `SELECT 
@@ -325,10 +325,10 @@ const getSellerById = async (req, res, next) => {
       LIMIT 5`,
       [sellerId]
     );
-    
+
     const metrics = salesMetrics.rows[0];
     const productCount = productsResult.rows[0].total_products;
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -367,20 +367,20 @@ const updateSellerStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!['active', 'inactive', 'suspended', 'banned'].includes(status)) {
       return next(new AppError('Invalid status value', 400));
     }
-    
+
     const result = await pool.query(
       'UPDATE sellers SET status = $1 WHERE id = $2 RETURNING id, full_name as name, email, status',
       [status, id]
     );
-    
+
     if (result.rows.length === 0) {
       return next(new AppError('No seller found with that ID', 404));
     }
-    
+
     res.status(200).json({
       status: 'success',
       message: 'Seller status updated successfully',
@@ -402,7 +402,7 @@ const getAllOrganizers = async (req, res, next) => {
        GROUP BY o.id, o.full_name, o.email, o.phone, o.status, o.created_at
        ORDER BY o.created_at DESC`
     );
-    
+
     res.status(200).json({
       status: 'success',
       results: result.rows.length,
@@ -431,11 +431,11 @@ const getOrganizerById = async (req, res, next) => {
        GROUP BY o.id, o.full_name, o.email, o.phone, o.status, o.created_at`,
       [id]
     );
-    
+
     if (result.rows.length === 0) {
       return next(new AppError('No organizer found with that ID', 404));
     }
-    
+
     const organizer = result.rows[0];
     res.status(200).json({
       status: 'success',
@@ -455,20 +455,20 @@ const updateOrganizerStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    
+
     if (!['active', 'inactive', 'suspended', 'banned'].includes(status)) {
       return next(new AppError('Invalid status value', 400));
     }
-    
+
     const result = await pool.query(
       'UPDATE organizers SET status = $1 WHERE id = $2 RETURNING id, full_name as name, email, status',
       [status, id]
     );
-    
+
     if (result.rows.length === 0) {
       return next(new AppError('No organizer found with that ID', 404));
     }
-    
+
     res.status(200).json({
       status: 'success',
       message: 'Organizer status updated successfully',
@@ -500,7 +500,7 @@ const getAllEvents = async (req, res, next) => {
         COALESCE(
           (SELECT SUM(tt.price) 
            FROM tickets t
-           JOIN ticket_types tt ON t.ticket_type_id = tt.id
+           JOIN event_ticket_types tt ON t.ticket_type_id = tt.id
            WHERE t.event_id = e.id),
           0
         ) as total_revenue
@@ -508,7 +508,7 @@ const getAllEvents = async (req, res, next) => {
        LEFT JOIN organizers o ON e.organizer_id = o.id
        ORDER BY e.start_date DESC`
     );
-    
+
     res.status(200).json({
       status: 'success',
       results: result.rows.length,
@@ -542,11 +542,11 @@ const getEventById = async (req, res, next) => {
        WHERE e.id = $1`,
       [id]
     );
-    
+
     if (result.rows.length === 0) {
       return next(new AppError('No event found with that ID', 404));
     }
-    
+
     const event = result.rows[0];
     res.status(200).json({
       status: 'success',
@@ -599,7 +599,7 @@ const getEventTickets = async (req, res, next) => {
         tt.sales_start_date as ticket_type_sales_start_date,
         tt.sales_end_date as ticket_type_sales_end_date
       FROM tickets t
-      LEFT JOIN ticket_types tt ON t.ticket_type_name = tt.name AND t.event_id = tt.event_id
+      LEFT JOIN event_ticket_types tt ON t.ticket_type_name = tt.name AND t.event_id = tt.event_id
       WHERE t.event_id = $1
       ORDER BY t.created_at DESC`,
       [eventId]
@@ -651,36 +651,36 @@ const getAllProducts = async (req, res, next) => {
        FROM information_schema.columns 
        WHERE table_name = 'products'`
     );
-    
+
     // Get available columns
     const availableColumns = columnsResult.rows.map(row => row.column_name);
-    
+
     // Build the query based on available columns
     const hasStock = availableColumns.includes('stock');
     const hasStatus = availableColumns.includes('status');
-    
+
     // Build the select fields
     const selectFields = [
-      'p.id', 
-      'p.name', 
-      'p.description', 
+      'p.id',
+      'p.name',
+      'p.description',
       'p.price',
       'p.created_at',
       's.full_name as seller_name'
     ];
-    
+
     if (hasStock) selectFields.push('p.stock');
     if (hasStatus) selectFields.push('p.status');
-    
+
     const query = `
       SELECT ${selectFields.join(', ')}
       FROM products p
       LEFT JOIN sellers s ON p.seller_id = s.id
       ORDER BY p.created_at DESC
     `;
-    
+
     const result = await pool.query(query);
-    
+
     res.status(200).json({
       status: 'success',
       results: result.rows.length,
@@ -705,34 +705,34 @@ const getAllProducts = async (req, res, next) => {
 const getSellerProducts = async (req, res, next) => {
   try {
     const { sellerId } = req.params;
-    
+
     // First, check the structure of the products table
     const columnsResult = await pool.query(
       `SELECT column_name, data_type 
        FROM information_schema.columns 
        WHERE table_name = 'products'`
     );
-    
+
     // Get available columns
     const availableColumns = columnsResult.rows.map(row => row.column_name);
-    
+
     // Build the query based on available columns
     const hasStock = availableColumns.includes('stock');
     const hasStatus = availableColumns.includes('status');
-    
+
     // Build the select fields
     const selectFields = [
-      'p.id', 
-      'p.name', 
-      'p.description', 
+      'p.id',
+      'p.name',
+      'p.description',
       'p.price',
       'p.created_at',
       's.full_name as seller_name'
     ];
-    
+
     if (hasStock) selectFields.push('p.stock');
     if (hasStatus) selectFields.push('p.status');
-    
+
     const query = `
       SELECT ${selectFields.join(', ')}
       FROM products p
@@ -740,9 +740,9 @@ const getSellerProducts = async (req, res, next) => {
       WHERE p.seller_id = $1
       ORDER BY p.created_at DESC
     `;
-    
+
     const result = await pool.query(query, [sellerId]);
-    
+
     res.status(200).json({
       status: 'success',
       results: result.rows.length,
@@ -775,7 +775,7 @@ const getProductStatus = (stock) => {
 const getMonthlyEvents = async (req, res, next) => {
   try {
     console.log('Fetching monthly event counts...');
-    
+
     // Query to get event counts for the last 12 months
     const query = `
       WITH months AS (
@@ -795,7 +795,7 @@ const getMonthlyEvents = async (req, res, next) => {
     console.log('Executing events query...');
     const result = await pool.query(query);
     console.log('Query result rows:', result.rows);
-    
+
     // Format the response
     const monthlyEvents = result.rows.map(row => ({
       month: row.month,
@@ -822,7 +822,7 @@ const getMonthlyEvents = async (req, res, next) => {
 const getMonthlyMetrics = async (req, res, next) => {
   try {
     console.log('Fetching monthly metrics...');
-    
+
     // Query to get metrics for the last 12 months
     const query = `
       WITH months AS (
@@ -869,7 +869,7 @@ const getMonthlyMetrics = async (req, res, next) => {
     console.log('Executing metrics query...');
     const result = await pool.query(query);
     console.log('Metrics query result rows:', result.rows);
-    
+
     // Format the response
     const monthlyMetrics = result.rows.map(row => ({
       month: row.month,
@@ -900,21 +900,21 @@ const getMonthlyMetrics = async (req, res, next) => {
 const processPendingPayments = async (req, res, next) => {
   try {
     const { hours = 24, limit = 50 } = req.query;
-    
+
     logger.info(`Admin requested to process pending payments from last ${hours} hours, limit ${limit}`);
-    
+
     // Process pending payments
     const result = await PaymentCompletionService.processPendingPayments(
       parseInt(hours, 10),
       parseInt(limit, 10)
     );
-    
+
     res.status(200).json({
       status: 'success',
       message: 'Pending payments processed successfully',
       data: result
     });
-    
+
   } catch (error) {
     logger.error('Error processing pending payments:', error);
     next(new AppError('Failed to process pending payments', 500));
@@ -937,9 +937,9 @@ const getAllBuyers = async (req, res, next) => {
       FROM buyers 
       ORDER BY created_at DESC
     `;
-    
+
     const result = await pool.query(query);
-    
+
     // Process the rows to include default values for city and location
     const buyers = result.rows.map(buyer => ({
       ...buyer,
@@ -948,7 +948,7 @@ const getAllBuyers = async (req, res, next) => {
       status: buyer.status || 'Active',
       createdAt: buyer.created_at
     }));
-    
+
     res.status(200).json({
       status: 'success',
       data: buyers
@@ -963,7 +963,7 @@ const getAllBuyers = async (req, res, next) => {
 const getBuyerById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    
+
     const query = `
       SELECT 
         id,
@@ -975,13 +975,13 @@ const getBuyerById = async (req, res, next) => {
       FROM buyers 
       WHERE id = $1
     `;
-    
+
     const result = await pool.query(query, [id]);
-    
+
     if (result.rows.length === 0) {
       return next(new AppError('Buyer not found', 404));
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: result.rows[0]
@@ -1165,7 +1165,7 @@ const markEventAsPaid = async (req, res, next) => {
     // Check if event exists
     const eventQuery = 'SELECT id, name, withdrawal_status FROM events WHERE id = $1';
     const eventResult = await pool.query(eventQuery, [eventId]);
-    
+
     if (eventResult.rows.length === 0) {
       return next(new AppError('Event not found', 404));
     }

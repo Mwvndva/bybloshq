@@ -300,7 +300,7 @@ class PaymentCompletionService {
           tt.id as ticket_type_id,
           tt.name as ticket_type_name,
           e.name as event_name
-        FROM ticket_types tt
+        FROM event_ticket_types tt
         JOIN events e ON tt.event_id = e.id
         WHERE tt.id = $1 AND tt.event_id = $2
       `;
