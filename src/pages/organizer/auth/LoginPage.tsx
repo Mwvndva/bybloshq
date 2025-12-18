@@ -48,17 +48,30 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return;
-    
+
     setIsLoading(true);
 
     try {
       await login(formData.email, formData.password);
       // Navigation is handled by the useEffect when isAuthenticated changes
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
+
+      let errorMessage = 'Invalid email or password';
+      let errorTitle = 'Login Failed';
+
+      // Handle structured validation errors
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+        const firstError = error.response.data.errors[0];
+        errorTitle = 'Validation Error';
+        errorMessage = firstError.message;
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+
       toast({
-        title: 'Error',
-        description: 'Invalid email or password',
+        title: errorTitle,
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -110,7 +123,7 @@ export default function LoginPage() {
               <h1 className="text-3xl font-black text-black mb-2">Welcome Back</h1>
               <p className="text-gray-600 font-medium">Sign in to your organizer account</p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-bold text-black">
@@ -122,26 +135,26 @@ export default function LoginPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                     </svg>
                   </div>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
                     placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleInputChange}
+                    value={formData.email}
+                    onChange={handleInputChange}
                     required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                  />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-bold text-black">
                     Password
                   </Label>
-                  <Link 
-                    to="/organizer/forgot-password" 
+                  <Link
+                    to="/organizer/forgot-password"
                     className="text-sm text-yellow-600 hover:text-yellow-500 font-medium"
                   >
                     Forgot password?
@@ -176,9 +189,9 @@ export default function LoginPage() {
                   </button>
                 </div>
               </div>
-              
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
                 disabled={isLoading}
               >
@@ -190,12 +203,12 @@ export default function LoginPage() {
                 ) : 'Sign In'}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center">
               <p className="text-gray-600 font-medium">
                 Don't have an account?{' '}
-                <Link 
-                  to="/organizer/register" 
+                <Link
+                  to="/organizer/register"
                   className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
                 >
                   Create Account

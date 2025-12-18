@@ -3,6 +3,8 @@ import * as buyerController from '../controllers/buyer.controller.js';
 import { protect } from '../middleware/auth.middleware.js';
 import AppError from '../utils/appError.js';
 import wishlistRoutes from './wishlist.routes.js';
+import { validateRegistration, validateLogin } from '../middleware/authValidation.js';
+import { authLimiter } from '../middleware/authRateLimiter.js';
 
 const router = express.Router();
 
@@ -10,8 +12,8 @@ console.log('Buyer routes loaded successfully');
 console.log('Available buyer controller methods:', Object.keys(buyerController));
 
 // Public routes
-router.post('/register', buyerController.register);
-router.post('/login', buyerController.login);
+router.post('/register', authLimiter, validateRegistration, buyerController.register);
+router.post('/login', authLimiter, validateLogin, buyerController.login);
 router.post('/forgot-password', buyerController.forgotPassword);
 router.post('/reset-password', buyerController.resetPassword);
 router.post('/check-phone', buyerController.checkBuyerByPhone);

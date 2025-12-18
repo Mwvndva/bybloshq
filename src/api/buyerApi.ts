@@ -62,7 +62,7 @@ interface RegisterData {
 }
 
 // Get the base URL from environment variables
-const API_URL = (import.meta.env.VITE_API_URL || 
+const API_URL = (import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api')
 ).replace(/\/$/, '');
 const isDevelopment = import.meta.env.DEV;
@@ -97,21 +97,21 @@ buyerApiInstance.interceptors.request.use(
     // Skip for login/register routes or if it's an OPTIONS request (preflight)
     const isAuthRequest = config.url?.includes('/login') || config.url?.includes('/register');
     const isOptionsRequest = config.method?.toLowerCase() === 'options';
-    
+
     if (isAuthRequest || isOptionsRequest) {
       return config;
     }
-    
+
     // Get token from localStorage
     const token = getAuthToken();
-    
+
     if (token) {
       // Ensure headers object exists
       config.headers = config.headers || {};
-      
+
       // Set the Authorization header
       config.headers.Authorization = `Bearer ${token}`;
-      
+
       // Log the token being sent (remove in production)
       if (isDevelopment) {
         // Removed sensitive token log
@@ -119,7 +119,7 @@ buyerApiInstance.interceptors.request.use(
     } else if (isDevelopment) {
       console.warn('No auth token found for request to:', config.url);
     }
-    
+
     return config;
   },
   (error) => {
@@ -133,8 +133,8 @@ buyerApiInstance.interceptors.response.use(
   (error) => {
     // If this is a 404 from a DELETE request to the wishlist endpoint, resolve instead of reject
     if (
-      error.config && 
-      error.response?.status === 404 && 
+      error.config &&
+      error.response?.status === 404 &&
       error.config.method?.toLowerCase() === 'delete' &&
       error.config.url?.includes('/wishlist/')
     ) {
@@ -147,7 +147,7 @@ buyerApiInstance.interceptors.response.use(
         headers: {}
       });
     }
-    
+
     // For all other errors, reject the promise
     return Promise.reject(error);
   }
@@ -195,11 +195,11 @@ const buyerApi = {
     try {
       const loginUrl = '/api/buyers/login';
       console.log(`Sending login request to ${loginUrl}`);
-      
+
       // Clear any existing token first
       localStorage.removeItem('buyer_token');
       delete buyerApiInstance.defaults.headers.common['Authorization'];
-      
+
       // Create a clean axios instance for login to avoid any interceptor issues
       const loginInstance = axios.create({
         baseURL: API_URL,
@@ -210,52 +210,49 @@ const buyerApi = {
         withCredentials: true,
         timeout: 10000,
       });
-      
+
       // Make the login request with proper typing
       const response = await loginInstance.post<LoginApiResponse>(
         loginUrl,
         credentials
       );
-      
+
       console.log('=== LOGIN RESPONSE ===');
       console.log('Status:', response.status);
       console.log('Headers:', JSON.stringify(response.headers, null, 2));
-      
-      
+
+
       const responseData = response.data;
-      
+
       if (!responseData) {
         throw new Error('Invalid response from server - no data received');
       }
-      
+
       const { token, data } = responseData;
-      
+
       if (!token) {
         throw new Error('No token received in login response');
       }
-      
+
       if (!data?.buyer) {
         throw new Error('Invalid response from server - missing buyer data');
       }
-      
+
       const { buyer } = data;
-      
+
       // Store the token in localStorage
       localStorage.setItem('buyer_token', token);
-      
+
       // Set the default Authorization header for future requests
       buyerApiInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
+
       // Verify the token is stored correctly
       const storedToken = localStorage.getItem('buyer_token');
       // Removed token storage log
-      
+
       return { buyer: transformBuyer(buyer), token };
     } catch (error: any) {
       console.error('Login error:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
       throw error;
     }
   },
@@ -271,31 +268,28 @@ const buyerApi = {
           buyer: Buyer;
         };
       }>('/api/buyers/register', data);
-      
+
       console.log('=== REGISTRATION RESPONSE ===');
       console.log('Status:', response.status);
-      
-      
+
+
       const responseData = response.data;
-      
+
       if (!responseData) {
         throw new Error('Invalid response from server');
       }
-      
+
       const { buyer } = responseData.data;
       const { token } = responseData;
-      
+
       if (!buyer || !token) {
         throw new Error('Invalid response from server - missing buyer or token');
       }
-      
+
       localStorage.setItem('buyer_token', token);
       return { buyer: transformBuyer(buyer), token };
     } catch (error: any) {
       console.error('Registration error:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
       throw error;
     }
   },
@@ -303,18 +297,18 @@ const buyerApi = {
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<{ message: string }>(
-        `${baseURL}/buyers/forgot-password`, 
+        `${baseURL}/buyers/forgot-password`,
         { email: email.trim().toLowerCase() },
-        { 
-          headers: { 'Content-Type': 'application/json' } 
+        {
+          headers: { 'Content-Type': 'application/json' }
         }
       );
-      
+
       // Ensure the response has a message property
       if (!response.data || typeof response.data.message !== 'string') {
         return { message: 'Password reset email sent successfully' };
       }
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Forgot password error:', error);
@@ -330,19 +324,19 @@ const buyerApi = {
       const response = await axios.post<{ message: string }>(
         `${baseURL}/buyers/reset-password`,
         { token, newPassword },
-        { 
-          headers: { 
+        {
+          headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
-          } 
+          }
         }
       );
-      
+
       // Ensure the response has a message property
       if (!response.data || typeof response.data.message !== 'string') {
         return { message: 'Password has been reset successfully' };
       }
-      
+
       return response.data;
     } catch (error: any) {
       console.error('Reset password error:', error);
@@ -366,18 +360,18 @@ const buyerApi = {
           buyer: Buyer;
         };
       }
-      
+
       const response = await buyerApiInstance.get<ProfileResponse>('/buyers/profile');
-      
-      
-      
+
+
+
       // The buyer data is in response.data.data.buyer
       const buyerData = response.data.data?.buyer;
-      
+
       if (!buyerData) {
         throw new Error('No profile data received');
       }
-      
+
       return transformBuyer(buyerData);
     } catch (error: any) {
       console.error('Error fetching profile:', error);
@@ -392,7 +386,7 @@ const buyerApi = {
   getWishlist: async (maxRetries = 2, retryCount = 0): Promise<WishlistItem[]> => {
     try {
       console.log(`🔍 API - Fetching wishlist (attempt ${retryCount + 1}/${maxRetries + 1})...`);
-      
+
       const response = await buyerApiInstance.get<ApiResponse<{ items: WishlistItem[] }>>('/buyers/wishlist', {
         headers: {
           'Cache-Control': 'no-cache',
@@ -401,7 +395,7 @@ const buyerApi = {
         },
         timeout: 15000 // Increase timeout to 15 seconds
       });
-      
+
       // Check if the response has the expected structure
       if (!response.data?.success || !response.data.data?.items) {
         console.warn('⚠️ API - Unexpected response format from wishlist endpoint:', {
@@ -412,15 +406,15 @@ const buyerApi = {
         });
         throw new Error('Invalid response format from server');
       }
-      
+
       // Return the items array
       const items = Array.isArray(response.data.data.items) ? response.data.data.items : [];
       console.log('✅ API - Successfully fetched wishlist items:', items.length);
       return items;
-      
+
     } catch (error: any) {
       console.error(`❌ Attempt ${retryCount + 1} failed:`, error.message);
-      
+
       // Handle timeout specifically
       if ((error.code === 'ECONNABORTED' || error.message.includes('timeout')) && retryCount < maxRetries) {
         console.log(`🔄 Retrying... (${retryCount + 1}/${maxRetries})`);
@@ -428,7 +422,7 @@ const buyerApi = {
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         return buyerApi.getWishlist(maxRetries, retryCount + 1);
       }
-      
+
       // Handle 401 Unauthorized
       if (error.response?.status === 401) {
         console.log('🔒 Authentication failed, clearing token and redirecting to login');
@@ -436,7 +430,7 @@ const buyerApi = {
         delete buyerApiInstance.defaults.headers.common['Authorization'];
         window.location.href = '/buyer/login';
       }
-      
+
       // For other errors, return empty array but don't retry
       return [];
     }
@@ -446,30 +440,30 @@ const buyerApi = {
     try {
       console.log('API - Adding to wishlist:', product);
       const response = await buyerApiInstance.post<ApiResponse<any>>(
-        '/buyers/wishlist', 
+        '/buyers/wishlist',
         { productId: product.id }
       );
-      
-      
+
+
       // Check if the response indicates success
       if (response.data?.success) {
         return true;
       }
-      
+
       return false;
     } catch (error: any) {
       console.error('API - Error adding to wishlist:', {
         error: error.response?.data || error.message,
         status: error.response?.status
       });
-      
+
       if (error.response?.status === 401) {
         console.log('Authentication failed, clearing token and redirecting to login');
         localStorage.removeItem('buyer_token');
         delete buyerApiInstance.defaults.headers.common['Authorization'];
         window.location.href = '/buyer/login';
       }
-      
+
       // Handle duplicate entry (409) - throw error to be caught by frontend
       if (error.response?.status === 409) {
         const errorMessage = error.response?.data?.message || 'Product already in wishlist';
@@ -477,7 +471,7 @@ const buyerApi = {
         err.code = 'DUPLICATE_WISHLIST_ITEM';
         throw err;
       }
-      
+
       return false;
     }
   },
@@ -488,36 +482,36 @@ const buyerApi = {
       const response = await buyerApiInstance.delete<ApiResponse<void>>(
         `/buyers/wishlist/${productId}`
       );
-      
-      
-      
+
+
+
       // Check if the response indicates success
       if (response.data?.success) {
         return true;
       }
-      
+
       return false;
     } catch (error: any) {
       console.error('Error removing from wishlist:', error);
-      
+
       if (error.response) {
         console.error('Response status:', error.response.status);
         console.error('Response data:', error.response.data);
-        
+
         if (error.response.status === 401) {
           console.log('Authentication failed, clearing token and redirecting to login');
           localStorage.removeItem('buyer_token');
           delete buyerApiInstance.defaults.headers.common['Authorization'];
           window.location.href = '/buyer/login';
         }
-        
+
         // Handle 404 as success since item is not in wishlist (already removed)
         if (error.response.status === 404) {
           console.log('Product not found in wishlist (already removed)');
           return true;
         }
       }
-      
+
       return false;
     }
   },
@@ -526,19 +520,19 @@ const buyerApi = {
     try {
       console.log('Syncing wishlist with server:', items);
       await buyerApiInstance.put<ApiResponse<void>>(
-        '/buyers/wishlist/sync', 
+        '/buyers/wishlist/sync',
         { items }
       );
       return true;
     } catch (error: any) {
       console.error('Error syncing wishlist:', error);
-      
+
       if ((error as any).response?.status === 401) {
         localStorage.removeItem('buyer_token');
         delete buyerApiInstance.defaults.headers.common['Authorization'];
         window.location.href = '/buyer/login';
       }
-      
+
       return false;
     }
   },
@@ -584,9 +578,9 @@ const buyerApi = {
       return { success: true };
     } catch (error: any) {
       console.error(`Error cancelling order ${orderId}:`, error);
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Failed to cancel order' 
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to cancel order'
       };
     }
   },
@@ -597,7 +591,7 @@ const buyerApi = {
       const response = await buyerApiInstance.patch(`/orders/${orderId}/confirm-receipt`, {}, {
         timeout: 30000 // 30 seconds timeout for this specific request
       });
-      
+
       return { success: true };
     } catch (error: any) {
       console.error(`Error confirming receipt for order ${orderId}:`, error);
@@ -623,22 +617,22 @@ const buyerApi = {
   },
 
   // Check if buyer exists by phone number (public endpoint - no auth required)
-  checkBuyerByPhone: async (phone: string): Promise<{ 
-    exists: boolean; 
-    buyer?: Buyer; 
-    token?: string; 
+  checkBuyerByPhone: async (phone: string): Promise<{
+    exists: boolean;
+    buyer?: Buyer;
+    token?: string;
   }> => {
     try {
-      
-      
+
+
       // Use a fresh axios instance to avoid auth interceptor
-      const response = await axios.create({}).post<{ 
-        status: string; 
-        data: { 
-          exists: boolean; 
-          buyer?: Buyer; 
-          token?: string; 
-        } 
+      const response = await axios.create({}).post<{
+        status: string;
+        data: {
+          exists: boolean;
+          buyer?: Buyer;
+          token?: string;
+        }
       }>(
         `${baseURL}/buyers/check-phone`,
         { phone },
@@ -648,8 +642,8 @@ const buyerApi = {
           },
         }
       );
-      
-      
+
+
       if (!response.data || response.data.status !== 'success') {
         throw new Error('Failed to check buyer information');
       }
@@ -671,7 +665,7 @@ const buyerApi = {
     location?: string;
   }): Promise<{ buyer?: Buyer; token?: string; message?: string }> => {
     try {
-      
+
 
       // Use the public API endpoint that doesn't require authentication
       const response = await axios.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
@@ -684,7 +678,7 @@ const buyerApi = {
         }
       );
 
-      
+
 
       if (!response.data || response.data.status !== 'success') {
         throw new Error(response.data?.data?.message || 'Failed to save buyer information');

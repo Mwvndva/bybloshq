@@ -49,84 +49,84 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     console.log('1. Checking authentication status...');
     console.log('   Current path:', window.location.pathname);
     console.log('   Current search:', window.location.search);
-    
+
     const token = localStorage.getItem('buyer_token');
     console.log('2. Token in localStorage:', token ? `exists (${token.substring(0, 10)}...)` : 'not found');
-    
+
     if (!token) {
       console.log('🔐 3. No token found, user is not authenticated');
       setIsAuthenticated(false);
       setUser(null);
       setIsLoading(false);
-      
+
       // Check if we're on a protected route
       const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password', '/buyer/reset-password'];
-      const isProtectedRoute = location.pathname.startsWith('/buyer') && 
-                             !publicRoutes.some(route => location.pathname.startsWith(route));
-      
+      const isProtectedRoute = location.pathname.startsWith('/buyer') &&
+        !publicRoutes.some(route => location.pathname.startsWith(route));
+
       console.log('4. Route check:');
       console.log('   - Is protected route:', isProtectedRoute);
       console.log('   - Current path:', location.pathname);
-      
+
       if (isProtectedRoute) {
         const redirectPath = location.pathname + location.search;
         console.log('🔄 5. Protected route detected, saving redirect and going to login');
         console.log('   - Saving redirect path:', redirectPath);
-        
+
         localStorage.setItem('post_login_redirect', redirectPath);
-        
+
         console.log('6. Navigating to login...');
-        navigate('/buyer/login', { 
+        navigate('/buyer/login', {
           replace: true,
           state: { from: { pathname: location.pathname, search: location.search } }
         });
       } else {
         console.log('ℹ️ 5. Public route, no redirect needed');
       }
-      
+
       console.groupEnd();
       return;
     }
 
     try {
       console.log('🔑 3. Token found, verifying with server...');
-      
+
       // Verify token with the server
       console.log('4. Calling buyerApi.getProfile()...');
       const userData = await buyerApi.getProfile();
       console.log('✅ 5. Token is valid, user is authenticated');
-      console.log('   User data:', { 
+      console.log('   User data:', {
         id: userData?.id,
         email: userData?.email,
-        fullName: userData?.fullName 
+        fullName: userData?.fullName
       });
-      
+
       // Update state
       console.log('6. Updating auth state...');
       setUser(userData);
       setIsAuthenticated(true);
-      
+
       // Handle redirection if on login page
       if (location.pathname === '/buyer/login') {
         console.log('7. On login page, checking for redirect...');
         const savedRedirect = localStorage.getItem('post_login_redirect');
         const redirectPath = savedRedirect || '/buyer/dashboard';
-        
+
         console.log('   - Saved redirect:', savedRedirect);
         console.log('   - Will redirect to:', redirectPath);
-        
+
         if (savedRedirect) {
           console.log('   - Removing saved redirect from localStorage');
           localStorage.removeItem('post_login_redirect');
         }
-        
+
         // Small delay to ensure state is updated
         console.log('8. Preparing to navigate...');
         setTimeout(() => {
           console.group('🔄 [BuyerAuth] Auto-redirect');
           console.log('1. Current URL:', window.location.href);
           console.log('2. Target path:', redirectPath);
-          
+
           if (window.location.pathname + window.location.search === redirectPath) {
             console.log('3. Already on target path, reloading page');
             window.location.reload();
@@ -134,46 +134,46 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
             console.log('3. Navigating to:', redirectPath);
             window.location.href = redirectPath;
           }
-          
+
           console.groupEnd();
         }, 100);
       }
     } catch (error) {
       console.group('❌ [BuyerAuth] Authentication Error');
       console.error('1. Token verification failed:', error);
-      
+
       // Clear invalid token
       console.log('2. Removing invalid token from localStorage');
       localStorage.removeItem('buyer_token');
-      
+
       // Update state
       console.log('3. Updating auth state to unauthenticated');
       setIsAuthenticated(false);
       setUser(null);
-      
+
       // Check if we're on a protected route
       const publicRoutes = ['/buyer/login', '/buyer/register', '/buyer/forgot-password', '/buyer/reset-password'];
-      const isProtectedRoute = location.pathname.startsWith('/buyer') && 
-                             !publicRoutes.some(route => location.pathname.startsWith(route));
-      
+      const isProtectedRoute = location.pathname.startsWith('/buyer') &&
+        !publicRoutes.some(route => location.pathname.startsWith(route));
+
       console.log('4. Route check:');
       console.log('   - Is protected route:', isProtectedRoute);
       console.log('   - Current path:', location.pathname);
-      
+
       if (isProtectedRoute) {
         const redirectPath = location.pathname + location.search;
         console.log('5. Protected route detected, saving current path and redirecting to login');
         console.log('   - Saving redirect path:', redirectPath);
-        
+
         localStorage.setItem('post_login_redirect', redirectPath);
-        
+
         console.log('6. Navigating to login page...');
-        navigate('/buyer/login', { 
+        navigate('/buyer/login', {
           replace: true,
-          state: { 
-            from: { 
+          state: {
+            from: {
               pathname: location.pathname,
-              search: location.search 
+              search: location.search
             },
             authError: 'Your session has expired. Please log in again.'
           }
@@ -181,7 +181,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('ℹ️ 5. Public route, no redirect needed');
       }
-      
+
       console.groupEnd();
     } finally {
       console.log('7. Authentication check complete');
@@ -199,54 +199,54 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     console.log('1. Login function called with email:', email);
     console.log('   Current path:', window.location.pathname);
     console.log('   Current search:', window.location.search);
-    
+
     // Clear any existing errors
     setIsLoading(true);
-      
+
     try {
       console.log('2. Checking credentials...');
       if (!email || !password) {
         console.error('   ❌ Email and password are required');
         throw new Error('Email and password are required');
       }
-      
+
       console.log('3. Calling buyerApi.login...');
       console.log('   API URL:', import.meta.env.VITE_API_URL || 'http://localhost:3002/api');
       console.log('3.1. Making API call...');
-      
+
       const response = await buyerApi.login({ email, password });
       console.log('✅ 3.2. Login API call successful');
-      
+
       // Log the complete response for debugging
       console.log('   Full response:', JSON.stringify(response, null, 2));
-      
+
       if (!response) {
         throw new Error('No response received from server');
       }
-      
+
       const { buyer, token } = response;
-      
+
       console.log('   Response details:', {
         hasBuyer: !!buyer,
         hasToken: !!token,
         tokenPreview: token ? `${token.substring(0, 10)}...` : 'none',
         buyerId: buyer?.id || 'none'
       });
-      
+
       if (!token) {
         console.error('❌ No token received in login response');
         throw new Error('Authentication failed: No token received');
       }
-      
+
       // Store the token in localStorage for verification
       localStorage.setItem('buyer_token', token);
       console.log('✅ Token stored in localStorage');
-      
+
       // Get the buyer profile to ensure the token works
       console.log('4. Fetching buyer profile with the new token...');
       const buyerProfile = await buyerApi.getProfile();
       console.log('✅ Buyer profile:', buyerProfile);
-      
+
       // Update state
       console.log('5. Updating auth state...');
       if (buyerProfile) {
@@ -257,11 +257,11 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
         console.warn('   ⚠️ No buyer data received');
         throw new Error('Failed to load user profile');
       }
-      
+
       // Get the redirect path
       console.log('6. Determining redirect path...');
       let redirectPath = '/buyer/dashboard'; // Default path
-      
+
       // Check for saved redirect path in localStorage
       const savedPath = localStorage.getItem('post_login_redirect');
       if (savedPath) {
@@ -274,36 +274,36 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       } else {
         console.log('   No saved redirect, using default:', redirectPath);
       }
-      
+
       // Ensure the path is absolute and starts with /buyer
       if (!redirectPath.startsWith('/buyer') && !redirectPath.startsWith('http')) {
         const newPath = `/buyer${redirectPath.startsWith('/') ? '' : '/'}${redirectPath}`;
         console.log('7.1 Normalizing path:', redirectPath, '→', newPath);
         redirectPath = newPath;
       }
-      
+
       console.log('7. Final navigation target:', redirectPath);
-      
+
       // Show success message
       console.log('8. Showing success toast');
       toast.success('Welcome back!', {
         description: 'You have successfully logged in.',
         duration: 2000,
       });
-      
+
       // Navigate to the target page
       console.log('9. Navigating to:', redirectPath);
-      navigate(redirectPath, { 
+      navigate(redirectPath, {
         replace: true,
         state: { from: 'login' }
       });
-      
+
     } catch (loginError: any) {
       console.group('❌ [BuyerAuth] Login Error');
       console.error('Login error:', loginError);
-      
+
       let errorMessage = 'An error occurred during login';
-      
+
       if (loginError.response?.status === 403) {
         errorMessage = 'Please verify your email before logging in.';
         toast.error('Account Not Verified', {
@@ -316,6 +316,22 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
           description: errorMessage,
           duration: 7000,
         });
+      } else if (loginError.response?.status === 400 && loginError.response?.data?.errors) {
+        // Handle structured validation errors for login
+        const validationErrors = loginError.response.data.errors;
+        if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+          const firstError = validationErrors[0];
+          toast.error('Validation Error', {
+            description: `${firstError.message}`,
+            duration: 5000,
+          });
+        } else {
+          errorMessage = loginError.response?.data?.message || 'Invalid login details';
+          toast.error('Login Failed', {
+            description: errorMessage,
+            duration: 5000,
+          });
+        }
       } else {
         errorMessage = loginError.response?.data?.message || errorMessage;
         toast.error('Login Failed', {
@@ -323,19 +339,19 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
           duration: 5000,
         });
       }
-      
+
       console.groupEnd();
       throw loginError;
     } finally {
       setIsLoading(false);
       console.groupEnd();
     }
-    },
+  },
     [
-      navigate, 
-      location.state?.from?.pathname, 
-      setUser, 
-      setIsAuthenticated, 
+      navigate,
+      location.state?.from?.pathname,
+      setUser,
+      setIsAuthenticated,
       setIsLoading
     ]
   );
@@ -373,15 +389,15 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       };
 
       const { buyer, token } = await buyerApi.register(registrationData);
-      
+
       // Store the token and update the auth state
       localStorage.setItem('buyer_token', token);
       setUser(buyer);
       setIsAuthenticated(true);
-      
+
       // Redirect to dashboard
       navigate('/buyer/dashboard', { replace: true });
-      
+
       // Show success message
       toast.success('Account created!', {
         description: 'Your account has been successfully created.',
@@ -389,15 +405,28 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       });
     } catch (error: any) {
       console.error('Registration failed:', error);
-      
+
+      // Handle different types of errors
       // Handle different types of errors
       if (error.response?.status === 400) {
-        // Handle validation errors
-        const errorMessage = error.response?.data?.message || 'Please check your information and try again.';
-        toast.error('Validation Error', {
-          description: errorMessage,
-          duration: 5000,
-        });
+        // Handle structured validation errors
+        const validationErrors = error.response?.data?.errors;
+
+        if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+          // Display the first validation error clearly, or a summary
+          const firstError = validationErrors[0];
+          toast.error(`${firstError.field}: ${firstError.message}`, {
+            description: validationErrors.length > 1 ? `+${validationErrors.length - 1} other issues` : undefined,
+            duration: 6000,
+          });
+        } else {
+          // Fallback for generic 400 errors
+          const errorMessage = error.response?.data?.message || 'Please check your information and try again.';
+          toast.error('Validation Error', {
+            description: errorMessage,
+            duration: 5000,
+          });
+        }
       } else if (error.response?.status === 409) {
         // Handle duplicate email/phone
         toast.error('Account Exists', {
@@ -439,7 +468,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       return true;
     } catch (error: any) {
       console.error('Forgot password failed:', error);
-      
+
       if (error.response?.status === 400) {
         toast.error('Invalid Request', {
           description: 'Please provide a valid email address.',
@@ -471,7 +500,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
         navigate('/buyer/login');
       } catch (error: any) {
         console.error('Reset password failed:', error);
-        
+
         if (error.response?.status === 400) {
           // Invalid token or weak password
           toast.error('Invalid Request', {

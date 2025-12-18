@@ -1,3 +1,4 @@
+import { pool } from '../config/database.js';
 import paymentService from '../services/payment.service.js';
 import logger from '../utils/logger.js';
 import Payment from '../models/payment.model.js';
@@ -20,7 +21,8 @@ class PaymentController {
       });
 
       // Process the webhook
-      const result = await paymentService.handlePaystackWebhook(webhookData, headers);
+      const clientIp = req.ip || req.connection.remoteAddress;
+      const result = await paymentService.handlePaystackWebhook(webhookData, headers, clientIp);
 
       // Return appropriate response
       if (result.status === 'ignored') {
@@ -38,7 +40,7 @@ class PaymentController {
 
     } catch (error) {
       logger.error('Paystack webhook processing failed:', error);
-      
+
       // Still return 200 to acknowledge receipt (Paystack expects this)
       res.status(200).json({
         status: 'error',
@@ -99,16 +101,48 @@ class PaymentController {
       console.log('=== TICKET PAYMENT INITIATION ===');
       console.log('Request body:', req.body);
       console.log('Endpoint: /api/payments/initiate');
-      const { phone, email, amount, ticketId, eventId } = req.body;
-      
+      const { phone, email, ticketId, eventId, quantity = 1, discountCode } = req.body;
+      let { amount } = req.body; // Still capture for logging/matching if needed, but we recalculate
+
       // Get event details to obtain organizer_id
       const event = await Event.findById(eventId);
       if (!event) {
-        return res.status(404).json({
-          status: 'error',
-          message: 'Event not found'
-        });
+        return res.status(404).json({ status: 'error', message: 'Event not found' });
       }
+
+      // SECURITY: Fetch ticket type and recalculate price on backend
+      const { rows: ticketTypes } = await pool.query(
+        'SELECT price, name FROM ticket_types WHERE id = $1 AND event_id = $2',
+        [ticketId, eventId]
+      );
+
+      if (ticketTypes.length === 0) {
+        return res.status(404).json({ status: 'error', message: 'Ticket type not found' });
+      }
+
+      const ticketType = ticketTypes[0];
+      let calculatedAmount = parseFloat(ticketType.price) * parseInt(quantity, 10);
+
+      // SECURITY: Verify discount if present
+      if (discountCode) {
+        const { rows: discounts } = await pool.query(
+          'SELECT * FROM discount_codes WHERE code = $1 AND event_id = $2 AND is_active = true',
+          [discountCode, eventId]
+        );
+
+        if (discounts.length > 0) {
+          const discount = discounts[0];
+          const discountVal = parseFloat(discount.discount_amount);
+          if (discount.discount_type === 'percentage') {
+            calculatedAmount = calculatedAmount * (1 - (discountVal / 100));
+          } else {
+            calculatedAmount = Math.max(0, calculatedAmount - discountVal);
+          }
+        }
+      }
+
+      // Override the amount with our calculated one
+      amount = calculatedAmount;
 
       const paymentData = {
         phone,
@@ -117,10 +151,11 @@ class PaymentController {
         invoice_id: `INV-${Date.now()}`,
         firstName: req.body.customerName ? req.body.customerName.split(' ')[0] : 'Customer',
         lastName: req.body.customerName ? req.body.customerName.split(' ').slice(1).join(' ') : '',
-        narrative: `Payment for ticket ${ticketId}`,
+        narrative: `Payment for ${quantity} x ${ticketType.name}`,
         ticket_type_id: ticketId,
         event_id: eventId,
-        organizer_id: event.organizer_id
+        organizer_id: event.organizer_id,
+        quantity: parseInt(quantity, 10)
       };
 
       // Create payment record in database first
@@ -133,10 +168,17 @@ class PaymentController {
         payment_method: 'paystack',
         event_id: paymentData.event_id,
         organizer_id: paymentData.organizer_id,
+        ticket_type_id: paymentData.ticket_type_id,
         metadata: {
           customer_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
           narrative: paymentData.narrative,
-          ticket_type_id: paymentData.ticket_type_id
+          ticket_type_id: paymentData.ticket_type_id,
+          quantity: paymentData.quantity,
+          discount_code: discountCode || null,
+          discount_amount: calculatedAmount - (parseFloat(ticketType.price) * parseInt(quantity, 10)) === 0 ? 0 : Math.abs(calculatedAmount - (parseFloat(ticketType.price) * parseInt(quantity, 10))),
+          event_name: event.name,
+          event_date: event.start_date,
+          event_location: event.location
         }
       });
 
@@ -177,7 +219,7 @@ class PaymentController {
       console.log('Request body:', req.body);
       console.log('Endpoint: /api/payments/initiate-product');
       const { phone, email, amount, productId, sellerId, productName, customerName, narrative } = req.body;
-      
+
       // Get buyer info from authenticated user or create guest buyer
       let buyerInfo = null;
       if (req.user && req.user.id) {
@@ -198,10 +240,59 @@ class PaymentController {
         }
       }
 
-      // Create product order first
+      // Fetch product data to verify price and availability
+      const productResult = await pool.query(
+        `SELECT p.*, s.status as seller_status 
+         FROM products p
+         JOIN sellers s ON p.seller_id = s.id
+         WHERE p.id = $1`,
+        [productId]
+      );
+
+      if (productResult.rows.length === 0) {
+        return res.status(404).json({
+          status: 'error',
+          message: 'Product not found'
+        });
+      }
+
+      const product = productResult.rows[0];
+
+      // Security Checks
+      if (product.seller_status !== 'active') {
+        return res.status(400).json({
+          status: 'error',
+          message: 'This seller is currently not accepting orders'
+        });
+      }
+
+      if (product.status !== 'available') {
+        return res.status(400).json({
+          status: 'error',
+          message: 'This product is no longer available'
+        });
+      }
+
+      // STRICT PRICE VERIFICATION
+      const dbPrice = parseFloat(product.price);
+      const clientAmount = parseFloat(amount);
+
+      if (Math.abs(dbPrice - clientAmount) > 0.01) {
+        logger.warn('PRICE MANIPULATION ATTEMPT DETECTED', {
+          productId,
+          clientAmount,
+          dbPrice,
+          buyerEmail: email
+        });
+        return res.status(400).json({
+          status: 'error',
+          message: 'Price verification failed. Please refresh the page and try again.'
+        });
+      }
+
       const orderData = {
         buyerId: buyerInfo?.id || null,
-        sellerId: parseInt(sellerId),
+        sellerId: parseInt(product.seller_id),
         paymentMethod: 'paystack',
         buyerName: customerName,
         buyerEmail: email,
@@ -209,10 +300,10 @@ class PaymentController {
         metadata: {
           items: [{
             productId: productId,
-            name: productName,
-            price: amount,
+            name: product.name,
+            price: dbPrice,
             quantity: 1,
-            subtotal: amount
+            subtotal: dbPrice
           }],
           paymentInitiation: true
         }
@@ -262,7 +353,7 @@ class PaymentController {
             seller_id: sellerId // Store seller_id in metadata for product payments
           }
         });
-        
+
         console.log('Payment record created:', paymentRecord);
       }
 
@@ -292,7 +383,7 @@ class PaymentController {
   async checkStatus(req, res) {
     try {
       const { paymentId } = req.params;
-      
+
       const result = await paymentService.checkPaymentStatus(paymentId);
 
       res.status(200).json({

@@ -37,10 +37,29 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const validatePasswords = (password: string, confirmPassword: string): boolean => {
     if (password !== confirmPassword) {
       setPasswordError('Passwords do not match');
+      toast({
+        title: "Validation Error",
+        description: "Passwords do not match",
+        variant: 'destructive',
+      });
       return false;
     }
     if (password.length < 8) {
       setPasswordError('Password must be at least 8 characters long');
+      toast({
+        title: "Validation Error",
+        description: "Password must be at least 8 characters long",
+        variant: 'destructive',
+      });
+      return false;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      setPasswordError('Password must contain at least one special character');
+      toast({
+        title: "Validation Error",
+        description: "Password must contain at least one special character",
+        variant: 'destructive',
+      });
       return false;
     }
     setPasswordError('');
@@ -51,22 +70,22 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   useEffect(() => {
     const checkShopName = async () => {
       const trimmedShopName = formData.shopName.trim();
-      
+
       if (!trimmedShopName) {
         setShopNameAvailable(null);
         return;
       }
-      
+
       // Don't check if the shop name is too short
       if (trimmedShopName.length < 3) {
         setShopNameAvailable(null);
         return;
       }
-      
+
       try {
         setIsCheckingShopName(true);
         const result = await checkShopNameAvailability(trimmedShopName);
-                
+
         // Make sure we have a valid result before updating state
         if (result && typeof result.available === 'boolean') {
           setShopNameAvailable(result.available);
@@ -114,7 +133,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!formData.fullName || !formData.shopName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
       toast({
@@ -163,26 +182,37 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         city: formData.city,
         location: formData.location
       });
-      
+
       // Store the token in localStorage
       localStorage.setItem('sellerToken', token);
-      
+
       toast({
         title: "Registration Successful!",
         description: "Welcome to your seller dashboard!",
       });
-      
+
       // Redirect to seller dashboard
       navigate('/seller/dashboard');
-      
+
       if (onSuccess) onSuccess();
     } catch (error: any) {
       console.error('Registration failed:', error);
-      const errorMessage = error.response?.data?.message || 
-                         (error instanceof Error ? error.message : 'An error occurred during registration');
-      
+
+      let errorMessage = 'An error occurred during registration';
+      let errorTitle = 'Registration Failed';
+
+      // Handle structured validation errors
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+        const firstError = error.response.data.errors[0];
+        errorTitle = 'Validation Error';
+        errorMessage = firstError.message;
+      } else {
+        errorMessage = error.response?.data?.message ||
+          (error instanceof Error ? error.message : errorMessage);
+      }
+
       toast({
-        title: "Registration Failed",
+        title: errorTitle,
         description: errorMessage,
         variant: 'destructive',
       });
@@ -190,6 +220,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
@@ -230,7 +261,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
               <h1 className="text-3xl font-black text-black mb-2">Create Account</h1>
               <p className="text-gray-600 font-medium">Join our seller community</p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-bold text-black">
@@ -240,16 +271,16 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-gray-400" />
                   </div>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  type="text"
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
                     placeholder="Enter your full name"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  required
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                  />
                 </div>
               </div>
 
@@ -275,15 +306,13 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                     <Loader2 className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-gray-400" />
                   )}
                   {!isCheckingShopName && formData.shopName && shopNameAvailable !== null && (
-                    <span className={`absolute right-4 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ${
-                      shopNameAvailable ? 'bg-green-500' : 'bg-red-500'
-                    }`} />
+                    <span className={`absolute right-4 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full ${shopNameAvailable ? 'bg-green-500' : 'bg-red-500'
+                      }`} />
                   )}
                 </div>
                 {formData.shopName && !isCheckingShopName && shopNameAvailable !== null && (
-                  <p className={`text-sm font-medium ${
-                    shopNameAvailable ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <p className={`text-sm font-medium ${shopNameAvailable ? 'text-green-600' : 'text-red-600'
+                    }`}>
                     {shopNameAvailable ? 'Shop name is available!' : 'Shop name is already taken'}
                   </p>
                 )}
@@ -298,16 +327,16 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-gray-400" />
                   </div>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
                     placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                  />
                 </div>
               </div>
 
@@ -319,16 +348,16 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Phone className="h-5 w-5 text-gray-400" />
                   </div>
-                <Input
-                  id="phone"
-                  name="phone"
-                  type="tel"
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
                     placeholder="Enter your phone number"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  required
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                  />
                 </div>
               </div>
 
@@ -371,14 +400,14 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                       <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {(formData.city === 'Nairobi' ? ['CBD','Westlands','Kilimani','Karen','Runda'] :
-                        formData.city === 'Mombasa' ? ['Nyali','Bamburi','Kisauni','Likoni'] :
-                        formData.city === 'Kisumu' ? ['Milimani','Kondele','Nyalenda','Manyatta'] :
-                        formData.city === 'Nakuru' ? ['Milimani','Kiamunyi','Lanet','Section 58'] :
-                        formData.city === 'Eldoret' ? ['Kapsoya','Langas','Kimumu','Huruma'] :
-                        []).map((area) => (
-                          <SelectItem key={area} value={area}>{area}</SelectItem>
-                        ))}
+                      {(formData.city === 'Nairobi' ? ['CBD', 'Westlands', 'Kilimani', 'Karen', 'Runda'] :
+                        formData.city === 'Mombasa' ? ['Nyali', 'Bamburi', 'Kisauni', 'Likoni'] :
+                          formData.city === 'Kisumu' ? ['Milimani', 'Kondele', 'Nyalenda', 'Manyatta'] :
+                            formData.city === 'Nakuru' ? ['Milimani', 'Kiamunyi', 'Lanet', 'Section 58'] :
+                              formData.city === 'Eldoret' ? ['Kapsoya', 'Langas', 'Kimumu', 'Huruma'] :
+                                []).map((area) => (
+                                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                                ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -449,7 +478,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                 {passwordError && (
                   <p className="text-sm text-red-500 font-medium">{passwordError}</p>
                 )}
-            </div>
+              </div>
 
               <Button
                 type="submit"
@@ -464,12 +493,12 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                 ) : 'Create Account'}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center">
               <p className="text-gray-600 font-medium">
                 Already have an account?{' '}
-                <Link 
-                  to="/seller/login" 
+                <Link
+                  to="/seller/login"
                   className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
                 >
                   Sign In

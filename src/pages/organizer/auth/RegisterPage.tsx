@@ -44,11 +44,33 @@ export default function RegisterPage() {
 
   const validatePasswords = (password: string, confirmPassword: string): boolean => {
     if (password !== confirmPassword) {
-      setPasswordError('Passwords do not match');
+      const msg = 'Passwords do not match';
+      setPasswordError(msg);
+      toast({
+        title: "Validation Error",
+        description: msg,
+        variant: 'destructive',
+      });
       return false;
     }
     if (password.length < 8) {
-      setPasswordError('Password must be at least 8 characters long');
+      const msg = 'Password must be at least 8 characters long';
+      setPasswordError(msg);
+      toast({
+        title: "Validation Error",
+        description: msg,
+        variant: 'destructive',
+      });
+      return false;
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      const msg = 'Password must contain at least one special character';
+      setPasswordError(msg);
+      toast({
+        title: "Validation Error",
+        description: msg,
+        variant: 'destructive',
+      });
       return false;
     }
     setPasswordError('');
@@ -75,7 +97,7 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate form
     if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
       toast({
@@ -102,20 +124,31 @@ export default function RegisterPage() {
         password: formData.password,
         passwordConfirm: formData.confirmPassword
       };
-      
+
       // Call the register function from our auth context
       await registerUser(registrationData);
-      
+
       // The actual navigation will be handled by the useEffect above
       // when isAuthenticated becomes true
-      
+
     } catch (error: any) {
       console.error('Registration error:', error);
-      const errorMessage = error.response?.data?.message || 
-                         (error instanceof Error ? error.message : 'An error occurred during registration');
-      
+
+      let errorMessage = 'An error occurred during registration';
+      let errorTitle = 'Registration Failed';
+
+      // Handle structured validation errors
+      if (error.response?.data?.errors && Array.isArray(error.response.data.errors) && error.response.data.errors.length > 0) {
+        const firstError = error.response.data.errors[0];
+        errorTitle = 'Validation Error';
+        errorMessage = firstError.message;
+      } else {
+        errorMessage = error.response?.data?.message ||
+          (error instanceof Error ? error.message : errorMessage);
+      }
+
       toast({
-        title: "Registration Failed",
+        title: errorTitle,
         description: errorMessage,
         variant: 'destructive',
       });
@@ -168,9 +201,9 @@ export default function RegisterPage() {
               <h1 className="text-3xl font-black text-black mb-2">Create Account</h1>
               <p className="text-gray-600 font-medium">Join our organizer community</p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="fullName" className="text-sm font-bold text-black">
                   Full Name
                 </Label>
@@ -178,20 +211,20 @@ export default function RegisterPage() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <User className="h-5 w-5 text-gray-400" />
                   </div>
-              <Input
-                id="fullName"
-                name="fullName"
-                type="text"
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
                     placeholder="Enter your full name"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                required
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-              />
+                  />
                 </div>
-            </div>
+              </div>
 
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-bold text-black">
                   Email Address
                 </Label>
@@ -199,20 +232,20 @@ export default function RegisterPage() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-gray-400" />
                   </div>
-              <Input
-                id="email"
-                name="email"
-                type="email"
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
                     placeholder="Enter your email"
-                value={formData.email}
-                onChange={handleInputChange}
-                required
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-              />
+                  />
                 </div>
-            </div>
+              </div>
 
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="phone" className="text-sm font-bold text-black">
                   Phone Number
                 </Label>
@@ -220,85 +253,85 @@ export default function RegisterPage() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Phone className="h-5 w-5 text-gray-400" />
                   </div>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
+                  <Input
+                    id="phone"
+                    name="phone"
+                    type="tel"
                     placeholder="Enter your phone number"
-                value={formData.phone}
-                onChange={handleInputChange}
-                required
+                    value={formData.phone}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-              />
+                  />
                 </div>
-            </div>
+              </div>
 
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="password" className="text-sm font-bold text-black">
                   Password
                 </Label>
-              <div className="relative">
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
-                <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
                     placeholder="Create a password (min 8 characters)"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  required
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
-                <button
-                  type="button"
+                  />
+                  <button
+                    type="button"
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-bold text-black">
                   Confirm Password
                 </Label>
-              <div className="relative">
+                <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
-                <Input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
+                  <Input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="Confirm your password"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  required
+                    value={formData.confirmPassword}
+                    onChange={handleInputChange}
+                    required
                     className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
-                <button
-                  type="button"
+                  />
+                  <button
+                    type="button"
                     className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
-              {passwordError && (
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+                {passwordError && (
                   <p className="text-sm text-red-500 font-medium">{passwordError}</p>
-              )}
-            </div>
+                )}
+              </div>
 
               <Button
                 type="submit"
@@ -313,12 +346,12 @@ export default function RegisterPage() {
                 ) : 'Create Account'}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center">
               <p className="text-gray-600 font-medium">
                 Already have an account?{' '}
-                <Link 
-                  to="/organizer/login" 
+                <Link
+                  to="/organizer/login"
                   className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
                 >
                   Sign In

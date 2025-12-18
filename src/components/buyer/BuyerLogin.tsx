@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import buyerApi from '@/api/buyerApi';
+import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+// import buyerApi from '@/api/buyerApi'; // Removed direct API usage
 
 interface LoginFormData {
   email: string;
@@ -21,10 +22,11 @@ export function BuyerLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  
+
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate = useNavigate(); // Kept for Back button
+  // const location = useLocation(); // Not needed if context handles redirect
+  const { login } = useBuyerAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -38,7 +40,7 @@ export function BuyerLogin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.email || !formData.password) {
       setError('Please fill in all fields');
       return;
@@ -48,33 +50,13 @@ export function BuyerLogin() {
     setError('');
 
     try {
-      const result = await buyerApi.login({
-        email: formData.email.trim().toLowerCase(),
-        password: formData.password
-      });
-
-      toast({
-        title: 'Login Successful',
-        description: 'Welcome back! Redirecting to your dashboard...',
-      });
-
-      // Check for saved redirect path
-      const savedRedirect = localStorage.getItem('post_login_redirect');
-      
-      if (savedRedirect && savedRedirect !== '/buyer/login') {
-        localStorage.removeItem('post_login_redirect');
-        window.location.href = savedRedirect;
-      } else {
-        navigate('/buyer/dashboard');
-      }
+      await login(
+        formData.email.trim().toLowerCase(),
+        formData.password
+      );
     } catch (error: any) {
-      const errorMessage = error.message || 'Login failed. Please check your credentials and try again.';
-      setError(errorMessage);
-      toast({
-        title: 'Login Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
+      // The context re-throws the error so we catch it here to update local UI state if needed
+      // Most of the error handling/toasting is done in the context
     } finally {
       setIsLoading(false);
     }
@@ -123,14 +105,14 @@ export function BuyerLogin() {
               <h1 className="text-3xl font-black text-black mb-2">Welcome Back</h1>
               <p className="text-gray-600 font-medium">Sign in to your buyer account</p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-5">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
-              
+
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-bold text-black">
                   Email Address
@@ -186,9 +168,9 @@ export function BuyerLogin() {
                   </button>
                 </div>
               </div>
-              
-              <Button 
-                type="submit" 
+
+              <Button
+                type="submit"
                 className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
                 disabled={isLoading}
               >
@@ -202,20 +184,20 @@ export function BuyerLogin() {
                 )}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center space-y-3">
               <p className="text-gray-600 font-medium">
                 Don't have an account?{' '}
-                <Link 
-                  to="/buyer/register" 
+                <Link
+                  to="/buyer/register"
                   className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
                 >
                   Create Account
                 </Link>
               </p>
               <p>
-                <Link 
-                  to="/buyer/forgot-password" 
+                <Link
+                  to="/buyer/forgot-password"
                   className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
                 >
                   Forgot your password?

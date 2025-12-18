@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
@@ -12,7 +13,7 @@ const createTransporter = () => {
   // Validate required environment variables
   const requiredVars = ['EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USERNAME', 'EMAIL_PASSWORD', 'EMAIL_FROM_EMAIL', 'EMAIL_FROM_NAME'];
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
+
   if (missingVars.length > 0) {
     console.error('Missing required email configuration:', missingVars.join(', '));
     throw new Error(`Missing required email configuration: ${missingVars.join(', ')}`);
@@ -58,23 +59,8 @@ const createTransporter = () => {
   });
 };
 
-// Create the transporter
+// Transporter will be lazily initialized in sendEmail
 let transporter;
-try {
-  transporter = createTransporter();
-  
-  // Verify connection configuration
-  transporter.verify(function(error, success) {
-    if (error) {
-      console.error('SMTP connection verification failed:', error);
-    } else {
-      console.log('SMTP connection verified:', success);
-    }
-  });
-} catch (error) {
-  console.error('Failed to create email transporter:', error);
-  throw error;
-}
 
 // Read email templates
 const readTemplate = async (templateName, data) => {
@@ -150,14 +136,14 @@ export const sendEmail = async (options, retryCount = 0) => {
         command: sendError.command,
         response: sendError.response
       });
-      
+
       // If we have retries left, wait and try again
       if (retryCount < MAX_RETRIES) {
         console.log(`[Email] Retrying in ${RETRY_DELAY}ms...`);
         await delay(RETRY_DELAY);
         return sendEmail(options, retryCount + 1);
       }
-      
+
       // If we've exhausted retries, rethrow the error
       throw new Error(`Failed to send email after ${MAX_RETRIES + 1} attempts: ${sendError.message}`);
     }
@@ -169,7 +155,7 @@ export const sendEmail = async (options, retryCount = 0) => {
       to: options.to,
       subject: options.subject
     });
-    
+
     // If this is a connection error, we might want to recreate the transporter
     if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
       console.log('[Email] Connection error detected, recreating transporter...');
@@ -185,7 +171,7 @@ export const sendEmail = async (options, retryCount = 0) => {
         console.error('[Email] Failed to recreate transporter:', transporterError);
       }
     }
-    
+
     throw new Error(`Failed to send email: ${error.message}`);
     throw error;
   }
@@ -194,7 +180,7 @@ export const sendEmail = async (options, retryCount = 0) => {
 export const sendVerificationEmail = async (email, token) => {
   try {
     const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
-    
+
     const html = await readTemplate('verify-email', {
       verificationUrl,
       appName: process.env.APP_NAME || 'Byblos',
@@ -217,7 +203,7 @@ export const sendPasswordResetEmail = async (email, token, userType = 'seller') 
     const baseUrl = process.env.FRONTEND_URL || process.env.CLIENT_URL || 'http://localhost:3000';
     const resetUrl = `${baseUrl}/${userType}/reset-password?token=${token}&email=${encodeURIComponent(email)}`;
     const appName = process.env.APP_NAME || 'Byblos';
-    
+
     const html = await readTemplate('reset-password', {
       resetUrl,
       appName,
@@ -230,7 +216,7 @@ export const sendPasswordResetEmail = async (email, token, userType = 'seller') 
       html,
       text: `You requested a password reset for your ${userType} account. Please click on the following link to reset your password: ${resetUrl}`,
     });
-    
+
     console.log('Password reset email sent successfully to:', email);
     return true;
   } catch (error) {
@@ -239,34 +225,128 @@ export const sendPasswordResetEmail = async (email, token, userType = 'seller') 
   }
 };
 
+// Ensure environment variables are loaded if not already
+if (!process.env.EMAIL_HOST) {
+  const serverEnvPath = join(__dirname, '../.env');
+  if (fs.existsSync(serverEnvPath)) {
+    dotenv.config({ path: serverEnvPath });
+  }
+}
+
 export const sendPaymentConfirmationEmail = async (email, paymentData) => {
   try {
-    const html = await readTemplate('ticket-confirmation', {
+    const templateData = {
+      // App info
+      appName: process.env.APP_NAME || 'Byblos Atelier',
+      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
+
+      // Payment & Ticket Info
       ticketNumber: paymentData.ticketNumber || 'N/A',
-      ticketType: paymentData.ticketType || 'Payment',
-      eventName: paymentData.eventName || 'Payment Confirmation',
-      eventDate: paymentData.eventDate || new Date().toLocaleDateString(),
-      eventLocation: paymentData.eventLocation || 'Online',
-      customerName: paymentData.customerName || 'Valued Customer',
+      ticketType: paymentData.ticketType || 'General Admission',
+      eventName: paymentData.eventName || paymentData.event_name || 'Event',
+      eventDate: paymentData.eventDate || paymentData.event_date || new Date().toLocaleDateString(),
+      eventLocation: paymentData.eventLocation || paymentData.event_location || 'Venue',
+      customerName: paymentData.customerName || paymentData.customer_name || 'Guest',
       customerEmail: email,
-      price: parseFloat(paymentData.amount || 0).toFixed(2),
+      price: parseFloat(paymentData.price || paymentData.amount || 0).toFixed(2),
       quantity: paymentData.quantity || 1,
-      totalPrice: parseFloat(paymentData.amount || 0).toFixed(2),
-      purchaseDate: new Date().toLocaleString(),
+      totalPrice: parseFloat(paymentData.totalPrice || paymentData.amount || 0).toFixed(2),
+      purchaseDate: paymentData.purchaseDate || new Date().toLocaleString(),
       qrCode: paymentData.qrCode || '',
-      reference: paymentData.reference,
-      appName: process.env.APP_NAME || 'Byblos',
-      websiteUrl: process.env.FRONTEND_URL || '#'
-    });
+      reference: paymentData.reference || paymentData.invoice_id,
+
+      // Compatibility aliases
+      event: paymentData.event_name || paymentData.eventName || 'Event',
+      formattedDate: paymentData.event_date || paymentData.eventDate || '',
+      ticket: {
+        number: paymentData.ticketNumber,
+        type: paymentData.ticketType,
+        price: paymentData.price,
+        quantity: paymentData.quantity
+      }
+    };
+
+    const html = await readTemplate('ticket-confirmation', templateData);
+
+    const mailOptions = {
+      to: email,
+      subject: `Your Ticket Confirmation - ${templateData.eventName}`,
+      html,
+      text: `Thank you for your purchase! Event: ${templateData.eventName}, Ticket: ${templateData.ticketNumber}`,
+      attachments: []
+    };
+
+    // Add QR code CID attachment if present
+    if (paymentData.qrCode && paymentData.qrCode.startsWith('data:image/')) {
+      const { qrCodeToBuffer } = await import('./qrCodeUtils.js');
+      const qrBuffer = await qrCodeToBuffer(paymentData.qrCode);
+      mailOptions.attachments.push({
+        filename: `ticket-qr.png`,
+        content: qrBuffer,
+        cid: 'qrcode'
+      });
+    }
+
+    await sendEmail(mailOptions);
+  } catch (error) {
+    console.error('Error sending payment confirmation email:', error);
+    throw error;
+  }
+};
+
+export const sendProductOrderConfirmationEmail = async (email, orderData) => {
+  try {
+    const templateData = {
+      appName: process.env.APP_NAME || 'Byblos Atelier',
+      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
+      buyerName: orderData.buyer_name || 'Customer',
+      orderNumber: orderData.order_number,
+      orderDate: new Date(orderData.created_at).toLocaleDateString(),
+      items: orderData.items || [],
+      totalAmount: orderData.total_amount
+    };
+
+    const html = await readTemplate('product-order-confirmation', templateData);
 
     await sendEmail({
       to: email,
-      subject: `Payment Confirmation - ${paymentData.eventName || 'Byblos'}`,
+      subject: `Order Confirmation - #${orderData.order_number}`,
       html,
-      text: `Your payment of KES ${parseFloat(paymentData.amount || 0).toLocaleString()} has been successfully processed. Reference: ${paymentData.reference}`,
+      text: `Thank you for your order! Order Number: ${orderData.order_number}`
     });
   } catch (error) {
-    console.error('Error sending payment confirmation email:', error);
+    console.error('Error sending product order confirmation email:', error);
+    throw error;
+  }
+};
+
+export const sendNewOrderNotificationEmail = async (email, orderData) => {
+  try {
+    const templateData = {
+      appName: process.env.APP_NAME || 'Byblos Atelier',
+      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
+      sellerName: orderData.seller_name || 'Seller',
+      orderNumber: orderData.order_number,
+      orderDate: new Date(orderData.created_at).toLocaleDateString(),
+      items: orderData.items || [],
+      buyerName: orderData.buyer_name,
+      buyerPhone: orderData.buyer_phone,
+      shippingAddress: orderData.shipping_address,
+      totalAmount: orderData.total_amount,
+      platformFee: orderData.platform_fee_amount,
+      sellerPayout: orderData.seller_payout_amount
+    };
+
+    const html = await readTemplate('new-order-notification', templateData);
+
+    await sendEmail({
+      to: email,
+      subject: `New Order Received - #${orderData.order_number}`,
+      html,
+      text: `You have received a new order! Order Number: ${orderData.order_number}`
+    });
+  } catch (error) {
+    console.error('Error sending new order notification email:', error);
     throw error;
   }
 };
@@ -274,7 +354,7 @@ export const sendPaymentConfirmationEmail = async (email, paymentData) => {
 export const sendWelcomeEmail = async (email, name) => {
   try {
     const loginUrl = `${process.env.FRONTEND_URL}/login`;
-    
+
     const html = await readTemplate('welcome', {
       name,
       loginUrl,
