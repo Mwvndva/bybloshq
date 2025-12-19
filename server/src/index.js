@@ -74,6 +74,9 @@ console.log({
 // Create Express app
 const app = express();
 
+// Enable trust proxy to correctly detect client IPs from proxies like Vercel or Cloudflare
+app.set('trust proxy', true);
+
 // Mount test routes first - completely public
 import testRoutes from './controllers/test.controller.js';
 import testOrderRoutes from './routes/test.routes.js';
@@ -130,8 +133,8 @@ const ensureUploadsDir = async () => {
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, filePath) => {
     // Set proper cache control for images
-    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') || 
-        filePath.endsWith('.png') || filePath.endsWith('.webp')) {
+    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') ||
+      filePath.endsWith('.png') || filePath.endsWith('.webp')) {
       res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
     }
   }
@@ -149,7 +152,7 @@ const whitelist = [
   'http://localhost:3002',
   'http://127.0.0.1:3002',
   'http://localhost:5173',
-  
+
   // Production domains
   'https://byblosatelier.com',
   'https://www.byblosatelier.com',
@@ -158,14 +161,14 @@ const whitelist = [
   'https://byblosexperience.vercel.app',
   'https://www.byblosexperience.vercel.app',
   'https://byblos-backend.vercel.app',
-  
+
   // Development and preview domains
   'https://*.vercel.app',  // All Vercel preview deployments
   'https://*-git-*.vercel.app'  // Vercel branch deployments
 ];
 
 // Add any additional domains from environment variable
-const additionalOrigins = process.env.CORS_ORIGIN 
+const additionalOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
   : [];
 
@@ -179,7 +182,7 @@ const corsOptions = {
       }
       return callback(null, true);
     }
-    
+
     // Check if origin is in whitelist or additionalOrigins
     const isAllowed = whitelist.some(domain => {
       if (domain.includes('*')) {
@@ -188,14 +191,14 @@ const corsOptions = {
       }
       return origin === domain;
     }) || additionalOrigins.includes(origin);
-    
+
     if (isAllowed) {
       if (process.env.NODE_ENV === 'development') {
         console.log(`CORS: Allowed origin: ${origin}`);
       }
       return callback(null, true);
     }
-    
+
     // Log rejected origins for debugging
     console.warn(`CORS: Blocked origin: ${origin}`);
     console.warn('Allowed origins:', [...whitelist, ...additionalOrigins]);
@@ -204,13 +207,13 @@ const corsOptions = {
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: [
-    'Content-Type', 
+    'Content-Type',
     'Authorization',
     'X-Requested-With',
     'Accept',
     'Origin',
     'Access-Control-Allow-Origin',
-    'X-Requested-With', 
+    'X-Requested-With',
     'Accept',
     'X-Access-Token',
     'X-Refresh-Token',
@@ -223,8 +226,8 @@ const corsOptions = {
     'Expires'
   ],
   exposedHeaders: [
-    'Authorization', 
-    'Content-Length', 
+    'Authorization',
+    'Content-Length',
     'X-Access-Token',
     'X-Refresh-Token',
     'Content-Range',
@@ -336,11 +339,11 @@ app.use('/api/whatsapp', whatsappRoutes);
 // Debug: Log all registered routes in development
 if (process.env.NODE_ENV === 'development') {
   console.log('\n=== Registered Routes ===');
-  
+
   // Simple route printing function
   const printRoutes = (router, prefix = '') => {
     if (!router || !router.stack) return;
-    
+
     router.stack.forEach(layer => {
       if (layer.route) {
         // Routes registered directly on the app
@@ -352,7 +355,7 @@ if (process.env.NODE_ENV === 'development') {
       }
     });
   };
-  
+
   // Print all routes
   app._router.stack.forEach(middleware => {
     if (middleware.route) {
@@ -364,7 +367,7 @@ if (process.env.NODE_ENV === 'development') {
       printRoutes(middleware.handle, '');
     }
   });
-  
+
   // Log Paystack routes
   console.log('\n=== Paystack Routes ===');
   console.log('POST    /api/payments/initiate');
@@ -411,10 +414,10 @@ const printRoutes = (router, prefix = '') => {
 
   router.stack.forEach((middleware) => {
     if (!middleware) return;
-    
+
     if (middleware.route) {
       // Routes registered directly on the app
-      const methods = middleware.route.methods ? 
+      const methods = middleware.route.methods ?
         Object.keys(middleware.route.methods).join(',').toUpperCase() : 'ALL';
       console.log(`${methods.padEnd(7)} ${prefix}${middleware.route.path || ''}`);
     } else if (middleware.name === 'router' && middleware.handle && middleware.handle.stack) {
@@ -427,10 +430,10 @@ const printRoutes = (router, prefix = '') => {
           .replace(/\(\?=[^)]*\$\//, '') // Remove lookahead groups
           .replace(/\(([^)]+)\)/g, ':$1'); // Convert (param) to :param
       }
-      
+
       middleware.handle.stack.forEach((handler) => {
         if (handler && handler.route) {
-          const methods = handler.route.methods ? 
+          const methods = handler.route.methods ?
             Object.keys(handler.route.methods).join(',').toUpperCase() : 'ALL';
           console.log(`${methods.padEnd(7)} ${prefix}${path}${handler.route.path || ''}`);
         }
@@ -462,12 +465,12 @@ const startServer = async () => {
   try {
     // Test database connection before starting the server
     await testConnection();
-    
+
     const port = process.env.PORT || 3000;
     const server = app.listen(port, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
       console.log(`📡 API available at http://localhost:${port}/api`);
-      
+
       // Initialize WhatsApp service (non-blocking)
       console.log('📱 Initializing WhatsApp service...');
       whatsappService.initialize().catch(err => {

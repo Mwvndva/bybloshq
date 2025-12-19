@@ -154,15 +154,18 @@ class PaymentService {
         // Handle IPv6-mapped IPv4 addresses (e.g., ::ffff:127.0.0.1)
         const normalizedIp = clientIp.startsWith('::ffff:') ? clientIp.substring(7) : clientIp;
 
-        if (!paystackIps.includes(normalizedIp) && process.env.NODE_ENV === 'production') {
-          logger.warn('Webhook received from unauthorized IP:', {
-            clientIp,
-            normalizedIp,
-            expected: paystackIps
-          });
-          // In production we might want to throw, but for now let's just log and continue 
-          // to avoid breaking existing integrations until confirmed.
-          // throw new Error('Unauthorized IP'); 
+        if (!paystackIps.includes(normalizedIp)) {
+          if (process.env.NODE_ENV === 'production') {
+            logger.warn('Webhook received from unauthorized IP in PRODUCTION:', {
+              clientIp,
+              normalizedIp,
+              expected: paystackIps
+            });
+            // We log but DON'T block yet to avoid breaking valid flows 
+            // especially if proxies still mask things
+          } else {
+            logger.info('Webhook received from non-Paystack IP (Development/Test):', { normalizedIp });
+          }
         } else {
           logger.info('Webhook IP verified successfully', { normalizedIp });
         }
@@ -170,7 +173,8 @@ class PaymentService {
 
       // Skip signature verification ONLY if webhook secret is not configured (for development)
       const signature = headers['x-paystack-signature'];
-      const secret = process.env.PAYSTACK_WEBHOOK_SECRET;
+      // Use PAYSTACK_WEBHOOK_SECRET if exists, otherwise fallback to PAYSTACK_SECRET_KEY
+      const secret = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY;
 
       if (!signature) {
         logger.warn('Webhook received without signature');
@@ -184,8 +188,7 @@ class PaymentService {
           throw new Error('Invalid signature');
         }
       } else {
-        logger.warn('Webhook secret not configured - ONLY ACCEPTABLE IN DEVELOPMENT');
-        // In production, this should be a critical failure
+        logger.warn('No secret configured for webhook validation (PAYSTACK_WEBHOOK_SECRET or PAYSTACK_SECRET_KEY)');
         if (process.env.NODE_ENV === 'production') {
           throw new Error('Webhook secret mandatory in production');
         }
@@ -222,9 +225,9 @@ class PaymentService {
   }
 
   verifyWebhookSignature(payload, signature) {
-    const secret = process.env.PAYSTACK_WEBHOOK_SECRET;
+    const secret = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY;
     if (!secret) {
-      logger.warn('Paystack webhook secret not configured');
+      logger.warn('Paystack secret not configured for verification');
       return false;
     }
 
