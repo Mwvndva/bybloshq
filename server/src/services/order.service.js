@@ -1,6 +1,6 @@
 import Order from '../models/order.model.js';
 import logger from '../utils/logger.js';
-import { sendEmail } from './email.service.js';
+import { sendEmail } from '../utils/email.js';
 import NotificationService from './notification.service.js';
 
 class OrderService {
@@ -61,7 +61,7 @@ class OrderService {
   async updateOrderStatus(orderId, status, notes = null) {
     try {
       const order = await Order.updateOrderStatus(orderId, status, notes);
-      
+
       // Send notification to buyer
       await this.notificationService.sendNotification({
         userId: order.buyerId,
@@ -88,11 +88,11 @@ class OrderService {
   async updatePaymentStatus(orderId, status, paymentReference = null) {
     try {
       const order = await Order.updatePaymentStatus(orderId, status, paymentReference);
-      
+
       if (status === 'completed') {
         // Send payment confirmation email
         await this.sendPaymentConfirmationEmail(order);
-        
+
         // Send notification to buyer
         await this.notificationService.sendNotification({
           userId: order.buyerId,
@@ -119,17 +119,17 @@ class OrderService {
   async markAsShipped(orderId, trackingNumber = null) {
     try {
       const order = await Order.markAsShipped(orderId, trackingNumber);
-      
+
       // Send shipping confirmation email
       await this.sendShippingConfirmationEmail(order);
-      
+
       // Send notification to buyer
       await this.notificationService.sendNotification({
         userId: order.buyerId,
         type: 'order_shipped',
         title: 'Order Shipped',
         message: `Your order #${order.order_number} has been shipped`,
-        metadata: { 
+        metadata: {
           orderId: order.id,
           trackingNumber
         }
@@ -150,10 +150,10 @@ class OrderService {
   async markAsDelivered(orderId) {
     try {
       const order = await Order.markAsDelivered(orderId);
-      
+
       // Send delivery confirmation email
       await this.sendDeliveryConfirmationEmail(order);
-      
+
       // Send notification to buyer and seller
       await Promise.all([
         // Buyer notification
@@ -164,7 +164,7 @@ class OrderService {
           message: `Your order #${order.order_number} has been delivered`,
           metadata: { orderId: order.id }
         }),
-        
+
         // Seller notification
         this.notificationService.sendNotification({
           userId: order.sellerId,
@@ -191,10 +191,10 @@ class OrderService {
   async cancelOrder(orderId, reason = null) {
     try {
       const order = await Order.cancelOrder(orderId, reason);
-      
+
       // Send cancellation email
       await this.sendCancellationEmail(order, reason);
-      
+
       // Send notification to buyer and seller
       await Promise.all([
         // Buyer notification
@@ -203,19 +203,19 @@ class OrderService {
           type: 'order_cancelled',
           title: 'Order Cancelled',
           message: `Your order #${order.order_number} has been cancelled`,
-          metadata: { 
+          metadata: {
             orderId: order.id,
             reason: reason || 'No reason provided'
           }
         }),
-        
+
         // Seller notification
         this.notificationService.sendNotification({
           userId: order.sellerId,
           type: 'order_cancelled_seller',
           title: 'Order Cancelled',
           message: `Order #${order.order_number} has been cancelled`,
-          metadata: { 
+          metadata: {
             orderId: order.id,
             reason: reason || 'No reason provided'
           }
@@ -376,7 +376,7 @@ class OrderService {
       const html = `
         <h1>Your Order is on the Way!</h1>
         <p>Your order #${order.order_number} has been shipped.</p>
-        ${trackingNumber !== 'Not available' ? 
+        ${trackingNumber !== 'Not available' ?
           `<p>Tracking Number: ${trackingNumber}</p>` : ''}
         <p>Expected Delivery: Within 3-5 business days</p>
       `;
@@ -429,7 +429,7 @@ class OrderService {
         <h1>Order Cancelled</h1>
         <p>Your order #${order.order_number} has been cancelled.</p>
         <p>Reason: ${reason}</p>
-        ${order.status === 'cancelled' && order.payment_status === 'completed' ? 
+        ${order.status === 'cancelled' && order.payment_status === 'completed' ?
           `<p>Your refund will be processed within 5-7 business days.</p>` : ''}
       `;
 

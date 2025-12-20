@@ -10,38 +10,48 @@ const __dirname = dirname(__filename);
 
 // Helper function to create transporter with retry logic
 const createTransporter = () => {
-  // Validate required environment variables
-  const requiredVars = ['EMAIL_HOST', 'EMAIL_PORT', 'EMAIL_USERNAME', 'EMAIL_PASSWORD', 'EMAIL_FROM_EMAIL', 'EMAIL_FROM_NAME'];
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
+  // Map standard variable names to their values or fallback to alternative names
+  const config = {
+    host: process.env.EMAIL_HOST || process.env.SMTP_HOST,
+    port: process.env.EMAIL_PORT || process.env.SMTP_PORT,
+    user: process.env.EMAIL_USERNAME || process.env.SMTP_USER,
+    pass: process.env.EMAIL_PASSWORD || process.env.SMTP_PASS,
+    fromEmail: process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_USER,
+    fromName: process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'Byblos'
+  };
 
-  if (missingVars.length > 0) {
-    console.error('Missing required email configuration:', missingVars.join(', '));
-    throw new Error(`Missing required email configuration: ${missingVars.join(', ')}`);
+  // Validate required environment variables
+  const requiredFields = ['host', 'port', 'user', 'pass', 'fromEmail'];
+  const missingFields = requiredFields.filter(field => !config[field]);
+
+  if (missingFields.length > 0) {
+    const errorMsg = `Missing required email configuration fields: ${missingFields.join(', ')}. ` +
+      `Checked both EMAIL_* and SMTP_* environment variables.`;
+    console.error('[Email] Configuration Error:', errorMsg);
+    throw new Error(errorMsg);
   }
 
   // Parse port as number and handle secure flag
-  const port = parseInt(process.env.EMAIL_PORT, 10);
+  const port = parseInt(config.port, 10);
   const secure = process.env.EMAIL_SECURE === 'true' || port === 465;
 
-  console.log('Creating transporter with config:', {
-    host: process.env.EMAIL_HOST,
+  console.log('[Email] Creating transporter with config:', {
+    host: config.host,
     port,
     secure,
-    auth: {
-      user: process.env.EMAIL_USERNAME,
-      // Don't log the actual password
-      hasPassword: !!process.env.EMAIL_PASSWORD
-    }
+    user: config.user,
+    fromEmail: config.fromEmail,
+    hasPassword: !!config.pass
   });
 
   // Create transporter with connection pooling and timeout
   return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
+    host: config.host,
     port,
     secure,
     auth: {
-      user: process.env.EMAIL_USERNAME,
-      pass: process.env.EMAIL_PASSWORD,
+      user: config.user,
+      pass: config.pass,
     },
     pool: true, // use pooled connections
     maxConnections: 5, // maximum number of connections in the pool
@@ -53,7 +63,7 @@ const createTransporter = () => {
     debug: process.env.NODE_ENV !== 'production', // Enable debug logging in non-production
     logger: process.env.NODE_ENV !== 'production', // Enable logging in non-production
     tls: {
-      // Do not fail on invalid certs
+      // Do not fail on invalid certs in non-production
       rejectUnauthorized: process.env.NODE_ENV === 'production',
     },
   });
@@ -95,8 +105,11 @@ export const sendEmail = async (options, retryCount = 0) => {
       attachmentCount: options.attachments ? options.attachments.length : 0
     });
 
+    const fromName = process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'Byblos';
+    const fromEmail = process.env.EMAIL_FROM_EMAIL || process.env.EMAIL_FROM || process.env.SMTP_USER;
+
     const mailOptions = {
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
+      from: `"${fromName}" <${fromEmail}>`,
       to: options.to,
       subject: options.subject,
       text: options.text,
