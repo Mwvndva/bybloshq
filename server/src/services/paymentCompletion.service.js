@@ -638,7 +638,7 @@ class PaymentCompletionService {
         SELECT p.* 
         FROM payments p
         WHERE 
-          p.status IN ('completed', 'success', 'paid') AND
+          p.status IN ('completed', 'success') AND
           p.created_at >= NOW() - INTERVAL '${hoursAgo} hours' AND
           (
             -- Either no ticket exists yet
