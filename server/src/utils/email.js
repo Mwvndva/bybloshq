@@ -56,15 +56,16 @@ const createTransporter = () => {
     pool: true, // use pooled connections
     maxConnections: 5, // maximum number of connections in the pool
     maxMessages: 100, // maximum number of messages to send through a single connection
-    socketTimeout: 30000, // 30 seconds socket timeout
-    connectionTimeout: 10000, // 10 seconds connection timeout
+    socketTimeout: 60000, // 60 seconds socket timeout
+    connectionTimeout: 20000, // 20 seconds connection timeout
     greetingTimeout: 30000, // 30 seconds to wait for greeting after connection
-    dnsTimeout: 5000, // 5 seconds DNS lookup timeout
-    debug: process.env.NODE_ENV !== 'production', // Enable debug logging in non-production
-    logger: process.env.NODE_ENV !== 'production', // Enable logging in non-production
+    dnsTimeout: 10000, // 10 seconds DNS lookup timeout
+    debug: process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true',
+    logger: process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true',
     tls: {
-      // Do not fail on invalid certs in non-production
-      rejectUnauthorized: process.env.NODE_ENV === 'production',
+      // Allow ignoring cert errors if EMAIL_IGNORE_CERT_ERRORS is set, 
+      // otherwise only fail on invalid certs in production
+      rejectUnauthorized: process.env.EMAIL_IGNORE_CERT_ERRORS === 'true' ? false : (process.env.NODE_ENV === 'production'),
     },
   });
 };
@@ -125,10 +126,10 @@ export const sendEmail = async (options, retryCount = 0) => {
 
     // Verify connection before sending
     try {
+      if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true') {
+        console.log('[Email] Verifying SMTP connection...');
+      }
       await transporter.verify();
-      console.log('Testing SMTP connection...');
-      const isConnected = await transporter.verify();
-      console.log('SMTP connection verified:', isConnected);
     } catch (verifyError) {
       console.error('SMTP connection verification failed:', {
         message: verifyError.message,
