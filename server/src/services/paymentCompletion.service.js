@@ -91,9 +91,13 @@ class PaymentCompletionService {
         }
       }
 
-      // If we found an existing ticket and payment is already completed, this is a duplicate webhook
-      if (isExistingTicket && payment.status === 'completed') {
-        logger.info(`Payment ${payment.id} is already marked as completed, skipping duplicate processing`);
+      // If we found an existing ticket and payment is already completed, 
+      // check if we still need to send an email before skipping
+      const emailSent = payment.metadata?.email_sent === true ||
+        (payment.metadata?.email_attempts?.some(attempt => attempt.success === true));
+
+      if (isExistingTicket && payment.status === 'completed' && emailSent) {
+        logger.info(`Payment ${payment.id} is already marked as completed with email sent, skipping`);
         await client.query('ROLLBACK');
         return { success: true, alreadyProcessed: true };
       }
@@ -110,10 +114,13 @@ class PaymentCompletionService {
 
       // Send emails
       let emailResult = { success: false, reason: 'not_attempted' };
-      const emailSent = payment.metadata?.email_sent === true ||
-        (payment.metadata?.email_attempts?.some(attempt => attempt.success === true));
+      // Use the emailSent flag determined above if it exists, otherwise check now
+      const hasEmailSent = emailSent !== undefined ? emailSent : (
+        payment.metadata?.email_sent === true ||
+        (payment.metadata?.email_attempts?.some(attempt => attempt.success === true))
+      );
 
-      if (!emailSent) {
+      if (!hasEmailSent) {
         const maxRetries = 3;
         const retryDelay = 1000;
         let lastError = null;
@@ -631,7 +638,7 @@ class PaymentCompletionService {
         SELECT p.* 
         FROM payments p
         WHERE 
-          p.status = 'completed' AND
+          p.status IN ('completed', 'success', 'paid') AND
           p.created_at >= NOW() - INTERVAL '${hoursAgo} hours' AND
           (
             -- Either no ticket exists yet
