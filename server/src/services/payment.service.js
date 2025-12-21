@@ -9,6 +9,7 @@ import {
   sendProductOrderConfirmationEmail,
   sendNewOrderNotificationEmail
 } from '../utils/email.js';
+import whatsappService from './whatsapp.service.js';
 
 class PaymentService {
   async initiatePayment(paymentData) {
@@ -410,7 +411,7 @@ class PaymentService {
 
       // 2. FIND ORDER (Inside transaction) - Join with sellers for notifications
       const orderQuery = `
-        SELECT o.*, s.email as seller_email, s.full_name as seller_name
+        SELECT o.*, s.email as seller_email, s.full_name as seller_name, s.phone as seller_phone
         FROM product_orders o
         JOIN sellers s ON o.seller_id = s.id
         WHERE o.id = $1 FOR UPDATE
@@ -518,8 +519,57 @@ class PaymentService {
         }
 
         logger.info('Product order notification emails sent successfully');
+
+        // 6. TRIGGER WHATSAPP NOTIFICATIONS
+        if (whatsappService.isClientReady && whatsappService.isClientReady()) {
+          logger.info('Sending WhatsApp notifications...', { orderId: order.id });
+
+          // Notify Seller
+          await whatsappService.notifySellerNewOrder({
+            seller: {
+              phone: order.seller_phone,
+              full_name: order.seller_name
+            },
+            order: {
+              orderNumber: order.order_number,
+              totalAmount: order.total_amount
+            },
+            items: order.items
+          });
+
+          // Notify Buyer
+          await whatsappService.notifyBuyerOrderConfirmation({
+            buyer: {
+              phone: order.buyer_phone,
+              full_name: order.buyer_name
+            },
+            order: {
+              orderNumber: order.order_number,
+              totalAmount: order.total_amount
+            },
+            items: order.items
+          });
+
+          // Notify Logistics
+          await whatsappService.sendLogisticsNotification(
+            order,
+            {
+              phone: order.buyer_phone,
+              fullName: order.buyer_name,
+              city: order.shipping_address?.city, // Assuming address is JSON
+              location: order.shipping_address?.street || order.shipping_address?.location
+            },
+            {
+              phone: order.seller_phone,
+              shop_name: order.seller_name
+            }
+          );
+        } else {
+          logger.warn('WhatsApp service not ready, skipping notifications');
+        }
+
       } catch (emailError) {
-        logger.error('Error triggering product order emails:', emailError);
+        logger.error('Error triggering product order notifications:', emailError);
         // Don't throw here as the database update was successful
       }
 
