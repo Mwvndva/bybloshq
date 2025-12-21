@@ -1,118 +1,87 @@
-import pkg from 'whatsapp-web.js';
-const { Client, LocalAuth } = pkg;
+import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
+import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import fs from 'fs';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 class WhatsAppService {
     constructor() {
-        this.client = null;
+        this.sock = null;
         this.isReady = false;
         this.qrCode = null;
-        // New clean session ID to force fresh start
-        this.sessionId = 'byblos-clean';
-        this.sessionPath = path.join(process.cwd(), '.wwebjs_auth');
+        this.authFolder = path.join(process.cwd(), 'baileys_auth_info');
     }
 
     async initialize() {
-        console.log('🔄 Initializing WhatsApp Client (Clean V2)...');
+        console.log('🔄 Initializing WhatsApp Client (Baileys)...');
 
         try {
-            this.client = new Client({
-                authStrategy: new LocalAuth({
-                    clientId: this.sessionId,
-                    dataPath: this.sessionPath
-                }),
-                puppeteer: {
-                    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
-                    headless: true,
-                    args: [
-                        '--no-sandbox',
-                        '--disable-setuid-sandbox',
-                        '--disable-dev-shm-usage',
-                        '--disable-gpu',
-                        '--disable-web-security',
-                        '--disable-features=IsolateOrigins,site-per-process',
-                        '--bypass-csp'
-                    ]
-                },
-                // Spoof User-Agent to look like a real browser (Critical for preventing immediate logout)
-                userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36',
-                // Use hardcoded remote version to prevent scraping crashes
-                webVersionCache: {
-                    type: 'remote',
-                    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html',
+            const { state, saveCreds } = await useMultiFileAuthState(this.authFolder);
+            const { version, isLatest } = await fetchLatestBaileysVersion();
+            console.log(`ℹ️ Using WA v${version.join('.')}, isLatest: ${isLatest}`);
+
+            this.sock = makeWASocket({
+                version,
+                auth: state,
+                printQRInTerminal: false,
+                logger: pino({ level: 'silent' }),
+                connectTimeoutMs: 60000,
+                syncFullHistory: false, // Don't sync old history, faster startup
+            });
+
+            // Credential updates
+            this.sock.ev.on('creds.update', saveCreds);
+
+            // Connection updates
+            this.sock.ev.on('connection.update', (update) => {
+                const { connection, lastDisconnect, qr } = update;
+
+                if (qr) {
+                    this.qrCode = qr;
+                    console.log('📱 START AUTHENTICATION: Scan the QR code below');
+                    qrcode.generate(qr, { small: true });
+                    console.log('------------------------------------------------');
+                    console.log('🌐 QR also available at /api/whatsapp/qr');
+                }
+
+                if (connection === 'close') {
+                    const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
+                    console.log('🔌 Connection closed due to ', lastDisconnect?.error, ', reconnecting: ', shouldReconnect);
+
+                    this.isReady = false;
+                    // Auto-reconnect if not strictly logged out
+                    if (shouldReconnect) {
+                        this.initialize();
+                    } else {
+                        console.log('❌ Logged out. Delete baileys_auth_info and restart to scan again.');
+                    }
+                } else if (connection === 'open') {
+                    console.log('✅ WhatsApp (Baileys) is READY and CONNECTED!');
+                    this.isReady = true;
+                    this.qrCode = null;
                 }
             });
 
-            this.setupEventListeners();
-
-            console.log('🚀 Launching Puppeteer...');
-            await this.client.initialize();
-
         } catch (error) {
-            console.error('❌ Failed to initialize WhatsApp:', error.message);
+            console.error('❌ Failed to initialize Baileys:', error);
         }
-    }
-
-    setupEventListeners() {
-        // QR Code Handling
-        this.client.on('qr', (qr) => {
-            this.qrCode = qr;
-            console.log('📱 START AUTHENTICATION: Scan the QR code below');
-            console.log('------------------------------------------------');
-            qrcode.generate(qr, { small: true });
-            console.log('------------------------------------------------');
-            console.log('🌐 QR also available at /api/whatsapp/qr');
-        });
-
-        // Successful Authentication
-        this.client.on('authenticated', () => {
-            console.log('🔐 Authenticated successfully! Saving session...');
-            this.qrCode = null;
-        });
-
-        // Client Ready
-        this.client.on('ready', () => {
-            console.log('✅ WhatsApp Client is READY and CONNECTED!');
-            this.isReady = true;
-            this.qrCode = null;
-        });
-
-        // Auth Failure
-        this.client.on('auth_failure', (msg) => {
-            console.error('❌ Authentication failed:', msg);
-            this.isReady = false;
-        });
-
-        // Disconnected
-        this.client.on('disconnected', async (reason) => {
-            console.log('🔌 Disconnected:', reason);
-            this.isReady = false;
-            // Note: We do NOT auto-rejoin here to avoid loops. 
-            // Process manager (PM2) or manual restart is safer for now.
-        });
     }
 
     /**
      * Send a message to a phone number
      */
     async sendMessage(phone, message) {
-        if (!this.isReady) {
+        if (!this.isReady || !this.sock) {
             console.warn('⚠️ Cannot send message: Client not ready');
             return false;
         }
 
         try {
-            const formatted = this.formatPhoneNumber(phone);
-            if (!formatted) throw new Error('Invalid phone number');
+            const jid = this.formatToJid(phone);
+            if (!jid) throw new Error('Invalid phone number');
 
-            await this.client.sendMessage(formatted, message);
-            console.log(`✅ Message sent to ${formatted}`);
+            await this.sock.sendMessage(jid, { text: message });
+            console.log(`✅ Message sent to ${jid}`);
             return true;
         } catch (error) {
             console.error(`❌ Failed to send message to ${phone}:`, error.message);
@@ -121,14 +90,14 @@ class WhatsAppService {
     }
 
     /**
-     * Helper to format numbers to 254... format
+     * Helper to format numbers to 254... format -> jid
      */
-    formatPhoneNumber(phone) {
+    formatToJid(phone) {
         if (!phone) return null;
         let p = phone.replace(/\D/g, ''); // Strip non-digits
         if (p.startsWith('0')) p = '254' + p.substring(1);
         if (!p.startsWith('254')) p = '254' + p;
-        return p + '@c.us';
+        return p + '@s.whatsapp.net';
     }
 
     /**
@@ -142,14 +111,14 @@ class WhatsAppService {
      * Clean logout
      */
     async logout() {
-        if (this.client) {
+        if (this.sock) {
             try {
-                await this.client.destroy();
-                console.log('✅ Client destroyed');
+                this.sock.end(undefined);
+                console.log('✅ Socket closed');
             } catch (e) {
-                console.error('⚠️ Error destroying client:', e.message);
+                console.error('⚠️ Error closing socket:', e.message);
             }
-            this.client = null;
+            this.sock = null;
             this.isReady = false;
         }
     }
@@ -167,7 +136,7 @@ class WhatsAppService {
         ).join('\n');
 
         const msg = `
-🎉 *NEW ORDER RECEIVED!*
+🎉 *NEW ORDER RECEVIED!*
 
 📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${order.totalAmount.toLocaleString()}
@@ -242,9 +211,6 @@ We'll notify you when it's ready for pickup!
         return this.sendMessage(seller.phone, msg);
     }
 
-    /**
-     * Send refund approved notification to buyer
-     */
     async sendRefundApprovedNotification(buyer, refundAmount) {
         if (!buyer?.phone) return false;
 
@@ -266,9 +232,6 @@ Thank you for your patience!
         return this.sendMessage(buyer.phone, message);
     }
 
-    /**
-     * Send refund rejected notification to buyer
-     */
     async sendRefundRejectedNotification(buyer, refundAmount, reason) {
         if (!buyer?.phone) return false;
 
@@ -290,9 +253,6 @@ Your refund balance remains available for future withdrawal requests.
         return this.sendMessage(buyer.phone, message);
     }
 
-    /**
-     * Send new order notification to logistics partner
-     */
     async sendLogisticsNotification(order, buyer, seller) {
         const logisticsNumber = '+254748137819';
 
@@ -334,9 +294,6 @@ Please coordinate pickup/delivery within 48 hours.
         return this.sendMessage(logisticsNumber, message);
     }
 
-    /**
-     * Send order cancellation notification to buyer
-     */
     async sendBuyerOrderCancellationNotification(order, cancelledBy) {
         const buyerPhone = order.buyer_phone || order.phone;
         if (!buyerPhone) return false;
@@ -359,9 +316,6 @@ A full refund has been added to your account balance. You can withdraw it from y
         return this.sendMessage(buyerPhone, message);
     }
 
-    /**
-     * Send order cancellation notification to seller
-     */
     async sendSellerOrderCancellationNotification(order, seller, cancelledBy) {
         if (!seller?.phone) return false;
 
@@ -387,9 +341,6 @@ The buyer has cancelled Order #${order.id || order.orderNumber}.
         return this.sendMessage(seller.phone, message);
     }
 
-    /**
-     * Send order cancellation notification to logistics partner
-     */
     async sendLogisticsCancellationNotification(order, buyer, seller, cancelledBy) {
         const logisticsNumber = '+254748137819';
 
