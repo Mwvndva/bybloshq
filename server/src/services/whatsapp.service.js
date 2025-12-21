@@ -79,10 +79,9 @@ class WhatsAppService {
                         '--disable-features=VizDisplayCompositor'
                     ]
                 },
-                // Add webVersionCache to prevent version check issues
+                // Add webVersionCache to prevent version check issues - using default local cache now
                 webVersionCache: {
-                    type: 'remote',
-                    remotePath: 'https://raw.githubusercontent.com/wppconnect-team/wa-version/main/html/2.2412.54.html'
+                    type: 'local',
                 }
             });
 
