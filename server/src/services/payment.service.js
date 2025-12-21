@@ -31,7 +31,7 @@ class PaymentService {
         // Don't send reference - let Paystack generate its own
         // Note: callback_url should point to frontend for user redirect, not webhook
         // Webhook handles payment verification separately
-        callback_url: `${process.env.PUBLIC_BASE_URL || 'http://localhost:3000'}/payment/success`,
+        callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success`,
         metadata: {
           invoice_id: paymentData.invoice_id,
           customer_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
