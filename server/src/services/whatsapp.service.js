@@ -107,6 +107,10 @@ class WhatsAppService {
         return this.qrCode;
     }
 
+    isClientReady() {
+        return this.isReady;
+    }
+
     /**
      * Clean logout
      */
