@@ -52,6 +52,15 @@ class WhatsAppService {
                 this.client = null;
             }
 
+            // Check if session directory exists/is accessible
+            try {
+                if (fs.existsSync(this.sessionPath)) {
+                    console.log('📂 Found existing WhatsApp session data.');
+                }
+            } catch (fsError) {
+                console.warn('⚠️ Error checking session path:', fsError.message);
+            }
+
             this.client = new Client({
                 authStrategy: new LocalAuth({
                     clientId: 'byblos-whatsapp',
@@ -59,6 +68,7 @@ class WhatsAppService {
                 }),
                 puppeteer: {
                     // Use system-installed Chrome/Chromium based on platform
+                    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
                     headless: true,
                     args: [
                         '--no-sandbox',
@@ -80,22 +90,24 @@ class WhatsAppService {
             this.client.removeAllListeners();
 
             // QR Code event
+            let lastQrLog = 0;
             this.client.on('qr', (qr) => {
-                console.log('📱 QR Code received!');
-                console.log('QR Code length:', qr.length);
-                console.log('QR Code (first 50 chars):', qr.substring(0, 50) + '...');
-                console.log('🌐 Access QR code at: /api/whatsapp/qr');
-                console.log('📷 Or visit: https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qr));
-
-                // Generate QR in terminal (if not in production)
-                try {
-                    qrcode.generate(qr, { small: true });
-                } catch (err) {
-                    console.log('⚠️ Could not generate QR in terminal:', err.message);
-                }
-
                 this.qrCode = qr;
-                console.log('✅ QR Code stored and ready for retrieval');
+                // Only log QR code if it's been more than 30 seconds since last log or first time
+                const now = Date.now();
+                if (now - lastQrLog > 30000) {
+                    console.log('📱 WhatsApp QR Code received/updated');
+                    console.log('🌐 Access QR code at: /api/whatsapp/qr');
+                    console.log('📷 Or visit: https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encodeURIComponent(qr));
+
+                    try {
+                        // Generate simplified QR in terminal roughly once
+                        qrcode.generate(qr, { small: true });
+                    } catch (err) {
+                        // Ignore terminal QR error
+                    }
+                    lastQrLog = now;
+                }
             });
 
             // Ready event
@@ -103,58 +115,49 @@ class WhatsAppService {
                 console.log('✅ WhatsApp client is ready!');
                 this.isReady = true;
                 this.qrCode = null;
+                this.isInitializing = false;
             });
 
             // Authenticated event
             this.client.once('authenticated', () => {
-                console.log('🔐 WhatsApp authenticated successfully');
+                console.log('🔐 WhatsApp authenticated successfully - Session Restored!');
             });
 
             // Authentication failure event
             this.client.once('auth_failure', (msg) => {
                 console.error('❌ WhatsApp authentication failed:', msg);
                 this.isReady = false;
+                this.isInitializing = false;
+                // If auth fails, we might need to clear session
+                console.warn('⚠️ Session might be invalid or corrupted.');
             });
 
             // Disconnected event
-            this.client.once('disconnected', (reason) => {
+            this.client.on('disconnected', (reason) => {
                 console.log('🔌 WhatsApp client disconnected:', reason);
                 this.isReady = false;
+                // Don't auto-destroy here, leave it to logic
             });
 
             // Initialize the client with retry logic
-            let retries = 3;
-            let lastError;
+            console.log('🚀 Launching WhatsApp client...');
+            await this.client.initialize();
+            // Note: client.initialize() resolves as soon as browser launches, 
+            // it doesn't wait for 'ready'. We rely on events now.
 
-            while (retries > 0) {
-                try {
-                    console.log(`🔄 Attempting to initialize WhatsApp (${4 - retries}/3)...`);
-                    await this.client.initialize();
-                    console.log('✅ WhatsApp initialized successfully!');
-                    this.isInitializing = false; // Reset flag on success
-                    break;
-                } catch (initError) {
-                    lastError = initError;
-                    retries--;
-                    console.log(`⚠️  Initialization attempt failed. ${retries} retries remaining.`);
-
-                    if (retries > 0) {
-                        // Wait before retry
-                        await new Promise(resolve => setTimeout(resolve, 5000));
-                    }
+            // Set a Safety Timeout for initialization
+            setTimeout(() => {
+                if (this.isInitializing) {
+                    console.log('⚠️ WhatsApp initialization taking longer than expected (waiting for QR or Ready)...');
+                    this.isInitializing = false;
                 }
-            }
-
-            if (retries === 0) {
-                this.isInitializing = false; // Reset flag on failure
-                throw lastError;
-            }
+            }, 30000);
 
         } catch (error) {
-            this.isInitializing = false; // Reset flag on error
+            this.isInitializing = false;
             console.error('❌ Error initializing WhatsApp client:', error.message);
             console.log('💡 Tip: Try running the initialization manually via /api/whatsapp/initialize');
-            throw error;
+            // Do NOT throw, allow server to continue running without WhatsApp
         }
     }
 

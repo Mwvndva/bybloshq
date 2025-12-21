@@ -490,12 +490,36 @@ const startServer = async () => {
     });
 
     // Handle process termination
-    process.on('SIGTERM', () => {
+    process.on('SIGTERM', async () => {
       console.log('SIGTERM received. Shutting down gracefully...');
+
+      try {
+        console.log('Closing WhatsApp service...');
+        // We use destroy() here instead of logout() to keep session file but release lock
+        if (whatsappService.client) {
+          await whatsappService.client.destroy();
+          console.log('WhatsApp service closed.');
+        }
+      } catch (err) {
+        console.error('Error closing WhatsApp service:', err.message);
+      }
+
       server.close(() => {
         console.log('Server closed');
         process.exit(0);
       });
+    });
+
+    // Handle interrupt signal (Ctrl+C)
+    process.on('SIGINT', async () => {
+      console.log('SIGINT received. Shutting down gracefully...');
+      try {
+        if (whatsappService.client) {
+          await whatsappService.client.destroy();
+          console.log('WhatsApp service destroyed.');
+        }
+      } catch (err) { }
+      process.exit(0);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', {
