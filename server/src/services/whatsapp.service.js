@@ -135,15 +135,19 @@ class WhatsAppService {
         const { seller, order, items } = orderData;
         if (!seller?.phone) return false;
 
-        const itemsList = items.map((item, i) =>
-            `${i + 1}. ${item.name} x${item.quantity} - KSh ${item.price.toLocaleString()}`
-        ).join('\n');
+        const itemsList = items.map((item, i) => {
+            const name = item.name || item.product_name || 'Item';
+            const price = parseFloat(item.price || item.product_price || 0);
+            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
+        }).join('\n');
+
+        const total = parseFloat(order.totalAmount || 0);
 
         const msg = `
 🎉 *NEW ORDER RECEVIED!*
 
 📦 *Order #${order.orderNumber}*
-💰 Total: KSh ${order.totalAmount.toLocaleString()}
+💰 Total: KSh ${total.toLocaleString()}
 
 📋 *Items:*
 ${itemsList}
@@ -161,16 +165,20 @@ Please drop off within 48h.
         const { buyer, order, items } = orderData;
         if (!buyer?.phone) return false;
 
-        const itemsList = items.map((item, i) =>
-            `${i + 1}. ${item.name} x${item.quantity} - KSh ${item.price.toLocaleString()}`
-        ).join('\n');
+        const itemsList = items.map((item, i) => {
+            const name = item.name || item.product_name || 'Item';
+            const price = parseFloat(item.price || item.product_price || 0);
+            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
+        }).join('\n');
+
+        const total = parseFloat(order.totalAmount || 0);
 
         const msg = `
 ✅ *ORDER CONFIRMED!*
 
 Thanks for ordering!
 📦 *Order #${order.orderNumber}*
-💰 Total: KSh ${order.totalAmount.toLocaleString()}
+💰 Total: KSh ${total.toLocaleString()}
 
 📋 *Items:*
 ${itemsList}
@@ -267,11 +275,13 @@ Your refund balance remains available for future withdrawal requests.
             ).join('\n');
         }
 
+        const total = parseFloat(order.totalAmount || order.total_amount || 0);
+
         const message = `
 🚚 *NEW ORDER FOR LOGISTICS*
 
 📦 *Order #${order.id || order.orderNumber}*
-💰 *Amount:* KSh ${order.totalAmount.toLocaleString()}
+💰 *Amount:* KSh ${total.toLocaleString()}
 
 ---
 👤 *BUYER DETAILS*
