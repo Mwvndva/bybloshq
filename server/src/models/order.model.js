@@ -25,7 +25,7 @@ class Order {
         'SELECT id FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
         [sellerId, 'active']
       );
-      
+
       if (sellerCheck.rows.length === 0) {
         throw new Error(`Seller with ID ${sellerId} not found or inactive`);
       }
@@ -33,7 +33,7 @@ class Order {
       // Process and validate order items
       const items = metadata.items || [];
       logger.info('Processing order items:', JSON.stringify(items, null, 2));
-      
+
       // Validate each item
       items.forEach((item, index) => {
         if (typeof item.price !== 'number' || isNaN(item.price) || item.price <= 0) {
@@ -45,7 +45,7 @@ class Order {
         if (typeof item.subtotal !== 'number' || isNaN(item.subtotal) || item.subtotal <= 0) {
           throw new Error(`Invalid subtotal for item ${item.productId}: ${item.subtotal}`);
         }
-        
+
         // Log item details for debugging
         logger.info(`Item ${index + 1}:`, {
           productId: item.productId,
@@ -55,7 +55,7 @@ class Order {
           subtotal: item.subtotal
         });
       });
-      
+
       // Calculate total amount from items
       const totalAmount = items.reduce((sum, item) => {
         const calculatedSubtotal = item.price * item.quantity;
@@ -65,10 +65,10 @@ class Order {
         }
         return sum + item.subtotal;
       }, 0);
-      
-      const platformFee = parseFloat((totalAmount * 0.09).toFixed(2));
+
+      const platformFee = parseFloat((totalAmount * 0.03).toFixed(2));
       const sellerPayout = parseFloat((totalAmount - platformFee).toFixed(2));
-      
+
       logger.info(`Calculated totals - Total: ${totalAmount}, Platform Fee: ${platformFee}, Seller Payout: ${sellerPayout}`);
 
       // Insert order
@@ -104,7 +104,7 @@ class Order {
         const itemValues = items.map(item => {
           // Ensure all required fields are present and valid
           const subtotal = item.subtotal || (item.price * item.quantity);
-          
+
           return [
             order.id,
             parseInt(item.productId, 10), // Ensure productId is an integer
@@ -123,26 +123,26 @@ class Order {
         const itemQuery = `
           INSERT INTO order_items (
             order_id, product_id, product_name, product_price, quantity, subtotal, metadata
-          ) VALUES ${itemValues.map((_, i) => 
-            `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}::numeric, $${i * 7 + 5}, $${i * 7 + 6}::numeric, $${i * 7 + 7}::jsonb)`
-          ).join(', ')}
+          ) VALUES ${itemValues.map((_, i) =>
+          `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}::numeric, $${i * 7 + 5}, $${i * 7 + 6}::numeric, $${i * 7 + 7}::jsonb)`
+        ).join(', ')}
           RETURNING *
         `;
 
         const flattenedValues = itemValues.flat();
         logger.info('Executing order items insert query:', itemQuery);
         logger.info('With values:', JSON.stringify(flattenedValues, null, 2));
-        
+
         try {
           const result = await client.query(itemQuery, flattenedValues);
           logger.info('Order items inserted successfully:', JSON.stringify(result.rows, null, 2));
-          
+
           // Verify the inserted items
           const insertedItems = result.rows;
           if (insertedItems.length !== items.length) {
             throw new Error(`Expected to insert ${items.length} items but only inserted ${insertedItems.length}`);
           }
-          
+
           // Log the inserted items for verification
           insertedItems.forEach((item, index) => {
             logger.info(`Inserted item ${index + 1}:`, {
@@ -155,7 +155,7 @@ class Order {
               subtotal: item.subtotal
             });
           });
-          
+
         } catch (error) {
           logger.error('Error inserting order items:', error);
           throw new Error(`Failed to insert order items: ${error.message}`);
@@ -180,7 +180,7 @@ class Order {
       WHERE id = $2
       RETURNING *
     `;
-    
+
     console.log('updateOrderStatus query params:', [status, orderId]);
     const { rows } = await pool.query(query, [status, orderId]);
     return rows[0];
@@ -191,9 +191,9 @@ class Order {
     const currentOrderQuery = 'SELECT paid_at FROM product_orders WHERE id = $1';
     const currentOrderResult = await pool.query(currentOrderQuery, [orderId]);
     const currentOrder = currentOrderResult.rows[0];
-    
+
     const shouldSetPaidAt = (status === 'success' || status === 'completed') && !currentOrder.paid_at;
-    
+
     const query = `
       UPDATE product_orders 
       SET 
@@ -204,7 +204,7 @@ class Order {
       WHERE id = $3
       RETURNING *
     `;
-    
+
     console.log('updatePaymentStatus query params:', [status, paymentReference, orderId]);
     console.log('shouldSetPaidAt:', shouldSetPaidAt);
     const { rows } = await pool.query(query, [status, paymentReference, orderId]);
@@ -230,7 +230,7 @@ class Order {
       WHERE o.id = $1
       GROUP BY o.id
     `;
-    
+
     const { rows } = await pool.query(query, [orderId]);
     return rows[0];
   }
@@ -254,7 +254,7 @@ class Order {
       WHERE o.order_number = $1 OR o.payment_reference = $1
       GROUP BY o.id
     `;
-    
+
     const { rows } = await pool.query(query, [reference]);
     return rows[0];
   }
@@ -262,14 +262,14 @@ class Order {
   static async findByBuyerId(buyerId, { page = 1, limit = 10, status } = {}) {
     const offset = (page - 1) * limit;
     const params = [buyerId];
-    
+
     let whereClause = 'WHERE o.buyer_id = $1';
-    
+
     if (status) {
       params.push(status);
       whereClause += ` AND o.status = $${params.length}`;
     }
-    
+
     const query = `
       SELECT o.*,
              (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) as item_count,
@@ -279,20 +279,20 @@ class Order {
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
-    
+
     const countQuery = `
       SELECT COUNT(*) 
       FROM product_orders o
       ${whereClause}
     `;
-    
+
     params.push(limit, offset);
-    
+
     const [ordersResult, countResult] = await Promise.all([
       pool.query(query, params),
       pool.query(countQuery, params.slice(0, -2))
     ]);
-    
+
     return {
       data: ordersResult.rows,
       pagination: {
@@ -307,14 +307,14 @@ class Order {
   static async findBySellerId(sellerId, { page = 1, limit = 10, status } = {}) {
     const offset = (page - 1) * limit;
     const params = [sellerId];
-    
+
     let whereClause = 'WHERE o.seller_id = $1';
-    
+
     if (status) {
       params.push(status);
       whereClause += ` AND o.status = $${params.length}`;
     }
-    
+
     const query = `
       SELECT o.*,
              (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) as item_count,
@@ -324,20 +324,20 @@ class Order {
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
-    
+
     const countQuery = `
       SELECT COUNT(*) 
       FROM product_orders o
       ${whereClause}
     `;
-    
+
     params.push(limit, offset);
-    
+
     const [ordersResult, countResult] = await Promise.all([
       pool.query(query, params),
       pool.query(countQuery, params.slice(0, -2))
     ]);
-    
+
     return {
       data: ordersResult.rows,
       pagination: {
@@ -364,7 +364,7 @@ class Order {
       WHERE id = $2
       RETURNING *
     `;
-    
+
     const trackingData = trackingNumber ? { number: trackingNumber, date: new Date().toISOString() } : null;
     const { rows } = await pool.query(query, [JSON.stringify(trackingData), orderId]);
     return rows[0];
@@ -379,7 +379,7 @@ class Order {
       WHERE id = $1
       RETURNING *
     `;
-    
+
     const { rows } = await pool.query(query, [orderId]);
     return rows[0];
   }
@@ -388,7 +388,7 @@ class Order {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      
+
       // Update order status
       const updateOrderQuery = `
         UPDATE product_orders 
@@ -405,15 +405,15 @@ class Order {
         WHERE id = $2
         RETURNING *
       `;
-      
+
       const orderResult = await client.query(updateOrderQuery, [JSON.stringify(reason), orderId]);
-      
+
       // Update inventory if needed (restock products)
       const order = orderResult.rows[0];
       if (order) {
         const itemsQuery = 'SELECT product_id, quantity FROM order_items WHERE order_id = $1';
         const itemsResult = await client.query(itemsQuery, [orderId]);
-        
+
         for (const item of itemsResult.rows) {
           await client.query(
             'UPDATE products SET quantity = quantity + $1 WHERE id = $2',
@@ -421,7 +421,7 @@ class Order {
           );
         }
       }
-      
+
       await client.query('COMMIT');
       return orderResult.rows[0];
     } catch (error) {
@@ -435,12 +435,12 @@ class Order {
   static async getOrderStats(sellerId = null) {
     const params = [];
     let whereClause = '';
-    
+
     if (sellerId) {
       params.push(sellerId);
       whereClause = 'WHERE seller_id = $1';
     }
-    
+
     const query = `
       SELECT 
         COUNT(*) as total_orders,
@@ -453,7 +453,7 @@ class Order {
       FROM product_orders
       ${whereClause}
     `;
-    
+
     const { rows } = await pool.query(query, params);
     return rows[0];
   }
