@@ -73,7 +73,8 @@
     "qrcode-terminal": "^0.12.0",
     "sequelize": "^6.37.7",
     "uuid": "^9.0.1",
-    "whatsapp-web.js": "github:pedroslopez/whatsapp-web.js#main",
+    "@whiskeysockets/baileys": "^6.6.0",
+    "pino": "^9.0.0",
     "winston": "^3.11.0",
     "zod": "^3.25.67"
   },
