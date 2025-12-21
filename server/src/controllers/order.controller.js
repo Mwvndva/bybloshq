@@ -13,17 +13,17 @@ const createOrder = async (req, res) => {
   try {
     const { items, shippingAddress, paymentMethod } = req.body;
     const userId = req.user.id;
-    
+
     // Get sellerId from the authenticated user
     const sellerId = req.user.sellerId || req.user.id; // Assuming the seller ID is stored in the JWT token
 
     // Verify seller exists, is active, and matches the authenticated user
     console.log(`[Order] Verifying seller ID: ${sellerId}`);
     const sellerCheck = await pool.query(
-      'SELECT id, email, status FROM sellers WHERE id = $1 AND user_id = $2', 
+      'SELECT id, email, status FROM sellers WHERE id = $1 AND user_id = $2',
       [sellerId, userId]
     );
-    
+
     if (sellerCheck.rows.length === 0) {
       console.error(`[Order] Seller not found or not authorized: ID ${sellerId} for user ${userId}`);
       return res.status(403).json({
@@ -31,7 +31,7 @@ const createOrder = async (req, res) => {
         message: 'You are not authorized to create orders for this seller.'
       });
     }
-    
+
     const seller = sellerCheck.rows[0];
     if (seller.status !== 'active') {
       console.error(`[Order] Seller is not active:`, seller);
@@ -40,7 +40,7 @@ const createOrder = async (req, res) => {
         message: 'This seller account is not active. Please contact support for assistance.'
       });
     }
-    
+
     console.log(`[Order] Verified seller:`, seller.email ? '[REDACTED]' : 'missing');
 
     // Prepare order data for the model
@@ -104,11 +104,11 @@ const createOrder = async (req, res) => {
 
     // Log the complete order data before sending to model
     console.log('Sending order data to model:', JSON.stringify(orderData, null, 2));
-    
+
     try {
       // Create the order using the model
       const order = await Order.createOrder(orderData);
-      
+
       // Log the returned order data
       console.log('Order created successfully:', JSON.stringify(order, null, 2));
 
@@ -121,7 +121,7 @@ const createOrder = async (req, res) => {
       console.error('Error in Order.createOrder:', error);
       throw error; // Let the outer catch handle the response
     }
-    
+
   } catch (error) {
     console.error('Error creating order:', error);
     res.status(500).json({
@@ -143,7 +143,7 @@ const getUserOrders = async (req, res) => {
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const userId = req.user?.id;
-    
+
     if (!userId) {
       console.error('No user ID found in request');
       return res.status(400).json({
@@ -153,7 +153,7 @@ const getUserOrders = async (req, res) => {
     }
 
     console.log(`Fetching orders for user ${userId} with status: ${status || 'all'}`);
-    
+
     // Ensure userId is a number
     const numericUserId = parseInt(userId, 10);
     if (isNaN(numericUserId)) {
@@ -185,43 +185,43 @@ const getUserOrders = async (req, res) => {
       LEFT JOIN order_items oi ON o.id = oi.order_id
       WHERE o.buyer_id = $1::integer
     `;
-    
+
     const queryParams = [numericUserId];
-    
+
     if (status) {
       query += ' AND o.status = $2::order_status';
       queryParams.push(status);
     }
-    
+
     query += `
       GROUP BY o.id
       ORDER BY o.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `;
-    
+
     queryParams.push(parseInt(limit), offset);
-    
+
     console.log('Executing query:', query);
     console.log('Query parameters:', queryParams);
-    
+
     const result = await pool.query(query, queryParams);
     console.log(`Found ${result.rows.length} orders`);
-    
+
     // Get subtotal count for pagination with proper type casting
     let countQuery = 'SELECT COUNT(*) FROM product_orders WHERE buyer_id = $1::integer';
     const countParams = [numericUserId];
-    
+
     if (status) {
       countQuery += ' AND status = $2::order_status';
       countParams.push(status);
     }
-    
+
     console.log('Executing count query:', countQuery, 'with params:', countParams);
     const countResult = await pool.query(countQuery, countParams);
     const subtotal = parseInt(countResult.rows[0].count);
-    
+
     console.log(`Returning ${result.rows.length} of ${subtotal} total orders`);
-    
+
     res.json({
       success: true,
       data: result.rows,
@@ -232,7 +232,7 @@ const getUserOrders = async (req, res) => {
         totalPages: Math.ceil(subtotal / limit)
       }
     });
-    
+
   } catch (error) {
     console.error('Error fetching user orders:', error);
     res.status(500).json({
@@ -252,11 +252,11 @@ const getSellerOrders = async (req, res) => {
   try {
     console.log('getSellerOrders called with query:', req.query);
     console.log('Authenticated user:', req.user);
-    
+
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const sellerId = req.user?.id; // Using optional chaining in case user is not defined
-    
+
     if (!sellerId) {
       console.error('No seller ID found in request');
       return res.status(401).json({
@@ -264,7 +264,7 @@ const getSellerOrders = async (req, res) => {
         message: 'Authentication required: No seller ID found'
       });
     }
-    
+
     // First, get the orders with basic information
     const queryParams = [sellerId];
     let query = `
@@ -322,13 +322,13 @@ const getSellerOrders = async (req, res) => {
         FROM product_orders o
         WHERE o.seller_id = $1
     `;
-    
+
     // Ensure sellerId is a number
     const numericSellerId = parseInt(sellerId, 10);
     if (isNaN(numericSellerId)) {
       throw new Error('Invalid seller ID format');
     }
-    
+
     // Build the base query with proper type casting
     query = `
       WITH order_with_items AS (
@@ -390,22 +390,22 @@ const getSellerOrders = async (req, res) => {
       ORDER BY "createdAt" DESC
       LIMIT $${status ? 3 : 2} OFFSET $${status ? 4 : 3}
     `;
-    
+
     // Update queryParams with the parsed numeric sellerId
     queryParams[0] = numericSellerId;
-    
+
     // Add status to params if provided
     if (status) {
       queryParams.push(status);
     }
-    
+
     // Add pagination parameters
     queryParams.push(parseInt(limit), offset);
-    
+
     // Debug: Log the final query and parameters
     console.log('Final query:', query);
     console.log('Query parameters:', queryParams);
-    
+
     let result;
     try {
       result = await pool.query(query, queryParams);
@@ -418,19 +418,19 @@ const getSellerOrders = async (req, res) => {
       });
       throw queryError;
     }
-    
+
     // Get subtotal count for pagination with proper type casting
     let countQuery = 'SELECT COUNT(DISTINCT o.id) FROM product_orders o WHERE o.seller_id = $1::integer';
     const countParams = [numericSellerId];
-    
+
     if (status) {
       countQuery += ' AND o.status = $2::order_status';
       countParams.push(status);
     }
-    
+
     const countResult = await pool.query(countQuery, countParams);
     const subtotal = parseInt(countResult.rows[0].count);
-    
+
     // Transform the data to match the frontend expectations
     const transformedOrders = result.rows.map(row => ({
       id: row.id,
@@ -465,7 +465,7 @@ const getSellerOrders = async (req, res) => {
       customer: row.customer || {},
       currency: 'KSH' // Default currency
     }));
-    
+
     res.json({
       success: true,
       data: transformedOrders,
@@ -476,7 +476,7 @@ const getSellerOrders = async (req, res) => {
         pages: Math.ceil(subtotal / limit)
       }
     });
-    
+
   } catch (error) {
     console.error('Error in getSellerOrders:', {
       error: error,
@@ -485,7 +485,7 @@ const getSellerOrders = async (req, res) => {
       sellerId: req.user?.id,
       timestamp: new Date().toISOString()
     });
-    
+
     // More specific error messages based on the error type
     let errorMessage = 'Failed to fetch seller orders';
     if (error.code === '22P02') { // Invalid text representation error
@@ -493,7 +493,7 @@ const getSellerOrders = async (req, res) => {
     } else if (error.code === '23505') { // Unique violation
       errorMessage = 'A database constraint was violated. Please try again.';
     }
-    
+
     res.status(500).json({
       success: false,
       message: errorMessage,
@@ -511,7 +511,7 @@ const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    
+
     // Get order with items
     const orderResult = await pool.query(
       `SELECT o.*, 
@@ -547,16 +547,16 @@ const getOrderById = async (req, res) => {
        GROUP BY o.id`,
       [id]
     );
-    
+
     if (orderResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
       });
     }
-    
+
     const order = orderResult.rows[0];
-    
+
     // Check if user has permission to view this order
     if (order.buyer_id !== userId && order.seller_id !== userId) {
       return res.status(403).json({
@@ -564,12 +564,12 @@ const getOrderById = async (req, res) => {
         message: 'You do not have permission to view this order'
       });
     }
-    
+
     res.json({
       success: true,
       data: order
     });
-    
+
   } catch (error) {
     console.error('Error fetching order:', error);
     res.status(500).json({
@@ -587,27 +587,27 @@ const getOrderById = async (req, res) => {
  */
 const updateOrderStatus = async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { id } = req.params;
     const { status, notes = '' } = req.body;
     const userId = req.user.id;
-    
+
     await client.query('BEGIN');
-    
+
     // First, lock the order to prevent concurrent updates
     const lockResult = await client.query(
       `SELECT id FROM product_orders WHERE id = $1 FOR UPDATE`,
       [id]
     );
-    
+
     if (lockResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
       });
     }
-    
+
     // Now get the full order details with buyer information
     const orderResult = await client.query(
       `SELECT o.*, 
@@ -622,16 +622,16 @@ const updateOrderStatus = async (req, res) => {
        WHERE o.id = $1`,
       [id]
     );
-    
+
     if (orderResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
       });
     }
-    
+
     const order = orderResult.rows[0];
-    
+
     // Check if user has permission to update this order
     if (order.seller_id !== userId) {
       return res.status(403).json({
@@ -639,11 +639,11 @@ const updateOrderStatus = async (req, res) => {
         message: 'You do not have permission to update this order'
       });
     }
-    
+
     // Log the current and new status for debugging
     console.log('Current order status:', order.status);
     console.log('Requested new status:', status);
-    
+
     // Validate status transition
     const validTransitions = {
       'PENDING': ['DELIVERY_PENDING', 'CANCELLED'],
@@ -653,18 +653,18 @@ const updateOrderStatus = async (req, res) => {
       'CANCELLED': [],
       'FAILED': []
     };
-    
+
     // Log the valid transitions for debugging
     console.log('Valid transitions:', JSON.stringify(validTransitions, null, 2));
-    
+
     // Ensure order.status is defined and exists in validTransitions
     const currentStatus = order.status ? order.status.toUpperCase() : 'PENDING';
     const newStatus = status ? status.toUpperCase() : 'PENDING';
-    
+
     console.log('Current status (uppercase):', currentStatus);
     console.log('New status (uppercase):', newStatus);
     console.log('Valid transition keys:', Object.keys(validTransitions));
-    
+
     if (!currentStatus || !(currentStatus in validTransitions)) {
       const errorMsg = `Invalid current order status: ${order.status}. Valid statuses: ${Object.keys(validTransitions).join(', ')}`;
       console.error(errorMsg);
@@ -673,21 +673,21 @@ const updateOrderStatus = async (req, res) => {
         message: errorMsg
       });
     }
-    
+
     // Check if the transition is valid
     if (!validTransitions[currentStatus].includes(newStatus)) {
       const errorMsg = `Cannot transition order from ${currentStatus} to ${newStatus}. ` +
-                     `Valid transitions from ${currentStatus}: ${validTransitions[currentStatus].join(', ') || 'none'}`;
+        `Valid transitions from ${currentStatus}: ${validTransitions[currentStatus].join(', ') || 'none'}`;
       console.error(errorMsg);
       return res.status(400).json({
         success: false,
         message: errorMsg
       });
     }
-    
+
     // Determine payment status based on order status
     let paymentStatus = order.payment_status; // Default to current payment status
-    
+
     // Update payment status based on order status
     if (status === 'completed') {
       // If order is marked as completed, ensure payment is marked as completed if it was pending
@@ -700,11 +700,11 @@ const updateOrderStatus = async (req, res) => {
         paymentStatus = 'cancelled';
       }
     }
-    
+
     // Update order status and set appropriate timestamps
     let updateQuery = 'UPDATE product_orders SET status = $1, updated_at = NOW(), payment_status = $3';
     const queryParams = [status, id, paymentStatus];
-    
+
     // Set appropriate timestamps based on status
     if (status === 'paid') {
       updateQuery += ', paid_at = NOW()';
@@ -717,24 +717,24 @@ const updateOrderStatus = async (req, res) => {
     } else if (status === 'cancelled') {
       updateQuery += ', cancelled_at = NOW()';
     }
-    
+
     updateQuery += ' WHERE id = $2 RETURNING *';
-    
+
     const updateResult = await client.query(updateQuery, queryParams);
-    
+
     const updatedOrder = updateResult.rows[0];
-    
+
     // Add status history
     await client.query(
       'INSERT INTO order_status_history (order_id, status, notes) VALUES ($1, $2, $3)',
       [id, status, notes || `Order status updated to ${status}`]
     );
-    
+
     // If order is delivered, schedule payout after 24 hours
     if (status === 'delivered') {
       const payoutDate = new Date();
       payoutDate.setHours(payoutDate.getHours() + 24); // 24 hours from now
-      
+
       await client.query(
         `INSERT INTO payouts (
           order_id, seller_id, amount, status, scheduled_date
@@ -751,19 +751,19 @@ const updateOrderStatus = async (req, res) => {
         ]
       );
     }
-    
+
     await client.query('COMMIT');
-    
+
     // Send WhatsApp notifications (non-blocking)
     sendOrderStatusNotifications(order, updatedOrder, status).catch(err => {
       console.error('Error sending WhatsApp notifications:', err);
     });
-    
+
     res.json({
       success: true,
       data: updatedOrder
     });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error updating order status:', error);
@@ -788,13 +788,13 @@ const confirmReceipt = async (req, res) => {
   console.log('Order ID:', req.params.id);
   console.log('Authenticated user ID:', req.user?.id);
   const client = await pool.connect();
-  
+
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    
+
     await client.query('BEGIN');
-    
+
     // Lock the order for update
     const orderResult = await client.query(
       `SELECT * FROM product_orders 
@@ -802,16 +802,16 @@ const confirmReceipt = async (req, res) => {
        FOR UPDATE`,
       [id, userId]
     );
-    
+
     if (orderResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Order not found or you do not have permission to update this order'
       });
     }
-    
+
     const order = orderResult.rows[0];
-    
+
     // Only allow confirming receipt for orders that are DELIVERY_COMPLETE
     if (order.status !== 'DELIVERY_COMPLETE') {
       return res.status(400).json({
@@ -819,9 +819,9 @@ const confirmReceipt = async (req, res) => {
         message: `Cannot confirm receipt for order with status: ${order.status}. Order must be marked as ready for pickup first.`
       });
     }
-    
+
     // Calculate platform fee (9%) and seller payout (91%)
-    const platformFeePercentage = 0.09; // 9% platform fee
+    const platformFeePercentage = 0.03; // 3% platform fee
     const platformFee = order.total_amount * platformFeePercentage;
     const sellerPayout = order.total_amount - platformFee;
 
@@ -832,10 +832,10 @@ const confirmReceipt = async (req, res) => {
       FROM information_schema.columns 
       WHERE table_name='product_orders' AND column_name='payment_completed_at'
     `);
-    
+
     const hasPaymentCompletedAt = columnCheck.rows.length > 0;
     console.log('hasPaymentCompletedAt:', hasPaymentCompletedAt);
-    
+
     // 2. Update order status to COMPLETED and payment_status to completed
     const updateQuery = `
       UPDATE product_orders 
@@ -849,10 +849,10 @@ const confirmReceipt = async (req, res) => {
       WHERE id = $3
       RETURNING *
     `;
-    
+
     console.log('Executing update query:', updateQuery.replace(/\s+/g, ' ').trim());
     console.log('With parameters:', [platformFee, sellerPayout, id]);
-    
+
     const updateResult = await client.query(updateQuery, [platformFee, sellerPayout, id]);
 
     const updatedOrder = updateResult.rows[0];
@@ -867,10 +867,10 @@ const confirmReceipt = async (req, res) => {
         updated_at = NOW()
       WHERE id = $3
     `, [order.total_amount, sellerPayout, order.seller_id]);
-    
+
     // Create payout record in a simple, reliable way
     let payoutCreated = false;
-    
+
     try {
       // First check if payouts table exists
       console.log('Checking if payouts table exists...');
@@ -880,7 +880,7 @@ const confirmReceipt = async (req, res) => {
           WHERE table_name = 'payouts'
         )
       `);
-      
+
       if (tableCheck.rows[0].exists) {
         console.log('Payouts table exists, creating payout record...');
         // First, check which columns exist in the payouts table
@@ -889,10 +889,10 @@ const confirmReceipt = async (req, res) => {
           FROM information_schema.columns 
           WHERE table_name = 'payouts'
         `);
-        
+
         const existingColumns = columnsCheck.rows.map(row => row.column_name);
         console.log('Existing columns in payouts table:', existingColumns);
-        
+
         // Prepare the payout data
         const payoutData = {
           seller_id: order.seller_id,
@@ -904,12 +904,12 @@ const confirmReceipt = async (req, res) => {
           reference_number: `order_${order.id}_${Date.now()}`,
           notes: 'Payout for completed order'
         };
-        
+
         // Filter out columns that don't exist in the database
         const validColumns = Object.keys(payoutData).filter(col => existingColumns.includes(col));
         const values = validColumns.map(col => payoutData[col]);
         const placeholders = values.map((_, i) => `$${i + 1}`);
-        
+
         // Add timestamps if columns exist
         if (existingColumns.includes('created_at')) {
           validColumns.push('created_at');
@@ -919,7 +919,7 @@ const confirmReceipt = async (req, res) => {
           validColumns.push('updated_at');
           placeholders.push('NOW()');
         }
-        
+
         // Build the final query
         const queryText = `
           INSERT INTO payouts (
@@ -929,10 +929,10 @@ const confirmReceipt = async (req, res) => {
           )
           RETURNING id
         `;
-        
+
         console.log('Executing payout query:', queryText.replace(/\s+/g, ' ').trim());
         console.log('With parameters:', values);
-        
+
         // Execute the query
         const result = await client.query(queryText, values);
         console.log('Payout created successfully:', result.rows[0]);
@@ -945,7 +945,7 @@ const confirmReceipt = async (req, res) => {
       // Don't fail the whole operation if payout creation fails
       // The main order confirmation is more important
     }
-    
+
     // Commit the transaction
     try {
       await client.query('COMMIT');
@@ -954,12 +954,12 @@ const confirmReceipt = async (req, res) => {
       console.error('Error committing transaction:', commitError);
       throw new Error('Failed to commit transaction');
     }
-    
+
     // Send WhatsApp notifications for order completion (non-blocking)
     sendOrderCompletionNotifications(order, updatedOrder).catch(err => {
       console.error('Error sending WhatsApp notifications for order completion:', err);
     });
-    
+
     const response = {
       success: true,
       data: updatedOrder,
@@ -970,10 +970,10 @@ const confirmReceipt = async (req, res) => {
         platform_fee: platformFee
       }
     };
-    
+
     console.log('Sending response:', JSON.stringify(response, null, 2));
     res.status(200).json(response);
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error confirming order receipt:', error);
@@ -1000,14 +1000,14 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
       'SELECT id, full_name, phone, email FROM sellers WHERE id = $1',
       [order.seller_id]
     );
-    
+
     if (sellerQuery.rows.length === 0) {
       console.warn('Seller not found for order status notifications');
       return;
     }
-    
+
     const seller = sellerQuery.rows[0];
-    
+
     // Prepare notification data for buyer (includes seller info for pickup)
     const buyerNotificationData = {
       buyer: {
@@ -1030,7 +1030,7 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
       newStatus: newStatus.toUpperCase(),
       notes: updatedOrder.notes || ''
     };
-    
+
     // Prepare notification data for seller (includes buyer info)
     const sellerNotificationData = {
       seller: {
@@ -1052,7 +1052,7 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
       newStatus: newStatus.toUpperCase(),
       notes: updatedOrder.notes || ''
     };
-    
+
     // Prepare logistics notification data for status updates
     const logisticsNotificationData = {
       order: {
@@ -1079,7 +1079,7 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
         email: seller.email
       }
     };
-    
+
     // Send notifications to buyer, seller, and logistics
     await Promise.all([
       whatsappService.notifyBuyerStatusUpdate(buyerNotificationData),
@@ -1090,9 +1090,9 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
         logisticsNotificationData.seller
       )
     ]);
-    
+
     console.log(`WhatsApp status update notifications sent for order ${order.order_number}: Buyer, Seller, and Logistics Partner`);
-    
+
   } catch (error) {
     console.error('Error in sendOrderStatusNotifications:', error);
     // Don't throw - notifications are not critical
@@ -1107,31 +1107,31 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
 async function sendOrderCompletionNotifications(order, updatedOrder) {
   try {
     console.log('Sending order completion notifications for order:', order.order_number);
-    
+
     // Fetch seller details
     const sellerQuery = await pool.query(
       'SELECT id, full_name, phone, email, location, city FROM sellers WHERE id = $1',
       [order.seller_id]
     );
-    
+
     if (sellerQuery.rows.length === 0) {
       console.warn('Seller not found for order completion notifications');
       return;
     }
-    
+
     const seller = sellerQuery.rows[0];
-    
+
     // Fetch buyer details if not in order
     let buyerName = order.buyer_name;
     let buyerPhone = order.buyer_phone;
     let buyerEmail = order.buyer_email;
-    
+
     if (!buyerName || !buyerPhone) {
       const buyerQuery = await pool.query(
         'SELECT full_name, phone, email FROM buyers WHERE id = $1',
         [order.buyer_id]
       );
-      
+
       if (buyerQuery.rows.length > 0) {
         const buyer = buyerQuery.rows[0];
         buyerName = buyer.full_name;
@@ -1139,7 +1139,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         buyerEmail = buyer.email;
       }
     }
-    
+
     console.log('Notification details:', {
       buyerName,
       buyerPhone,
@@ -1147,7 +1147,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
       sellerPhone: seller.phone,
       orderNumber: order.order_number
     });
-    
+
     // Prepare notification data for buyer (thank you message)
     const buyerNotificationData = {
       buyer: {
@@ -1170,7 +1170,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
       newStatus: 'COMPLETED',
       notes: ''
     };
-    
+
     // Prepare notification data for seller (order completed confirmation)
     const sellerNotificationData = {
       seller: {
@@ -1192,7 +1192,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
       newStatus: 'COMPLETED',
       notes: ''
     };
-    
+
     // Prepare logistics notification data for order completion
     const logisticsNotificationData = {
       order: {
@@ -1219,7 +1219,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         email: seller.email
       }
     };
-    
+
     // Send notifications to buyer, seller, and logistics
     console.log('Calling WhatsApp service to send notifications...');
     await Promise.all([
@@ -1231,9 +1231,9 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         logisticsNotificationData.seller
       )
     ]);
-    
+
     console.log(`✅ WhatsApp completion notifications sent for order ${order.order_number}: Buyer, Seller, and Logistics Partner`);
-    
+
   } catch (error) {
     console.error('❌ Error in sendOrderCompletionNotifications:', error);
     // Don't throw - notifications are not critical
@@ -1250,15 +1250,15 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
  */
 const cancelOrder = async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    
+
     console.log(`Buyer ${userId} attempting to cancel order ${id}`);
-    
+
     await client.query('BEGIN');
-    
+
     // Lock the order for update
     const orderResult = await client.query(
       `SELECT * FROM product_orders 
@@ -1266,16 +1266,16 @@ const cancelOrder = async (req, res) => {
        FOR UPDATE`,
       [id, userId]
     );
-    
+
     if (orderResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Order not found or you do not have permission to cancel this order'
       });
     }
-    
+
     const order = orderResult.rows[0];
-    
+
     // Check if order can be cancelled
     if (order.status === 'COMPLETED') {
       return res.status(400).json({
@@ -1283,14 +1283,14 @@ const cancelOrder = async (req, res) => {
         message: 'Cannot cancel a completed order'
       });
     }
-    
+
     if (order.status === 'CANCELLED') {
       return res.status(400).json({
         success: false,
         message: 'Order is already cancelled'
       });
     }
-    
+
     // Update order status to CANCELLED
     await client.query(
       `UPDATE product_orders 
@@ -1301,7 +1301,7 @@ const cancelOrder = async (req, res) => {
        WHERE id = $1`,
       [id]
     );
-    
+
     // Add refund amount to buyer's refunds column
     const refundAmount = parseFloat(order.total_amount);
     await client.query(
@@ -1311,17 +1311,17 @@ const cancelOrder = async (req, res) => {
        WHERE id = $2`,
       [refundAmount, userId]
     );
-    
+
     // Add status history
     await client.query(
       'INSERT INTO order_status_history (order_id, status, notes) VALUES ($1, $2, $3)',
       [id, 'CANCELLED', 'Order cancelled by buyer']
     );
-    
+
     await client.query('COMMIT');
-    
+
     console.log(`Order ${id} cancelled successfully. Refund amount: KSh ${refundAmount}`);
-    
+
     // Send cancellation notifications to buyer, seller, and logistics (non-blocking)
     try {
       // Fetch full order details with items
@@ -1344,26 +1344,26 @@ const cancelOrder = async (req, res) => {
          GROUP BY o.id`,
         [id]
       );
-      
+
       if (fullOrderResult.rows.length > 0) {
         const fullOrder = fullOrderResult.rows[0];
-        
+
         // Fetch buyer details
         const buyerResult = await pool.query(
           'SELECT id, full_name, phone, email, city, location FROM buyers WHERE id = $1',
           [userId]
         );
-        
+
         // Fetch seller details
         const sellerResult = await pool.query(
           'SELECT id, full_name, phone, email, shop_name FROM sellers WHERE id = $1',
           [order.seller_id]
         );
-        
+
         if (buyerResult.rows.length > 0 && sellerResult.rows.length > 0) {
           const buyer = buyerResult.rows[0];
           const seller = sellerResult.rows[0];
-          
+
           const orderData = {
             id: fullOrder.id,
             order_id: fullOrder.order_number || fullOrder.id,
@@ -1373,7 +1373,7 @@ const cancelOrder = async (req, res) => {
             phone: buyer.phone,
             items: fullOrder.items
           };
-          
+
           // Send notifications to buyer, seller, and logistics
           await Promise.all([
             whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Buyer'),
@@ -1402,13 +1402,13 @@ const cancelOrder = async (req, res) => {
       console.error('Error sending cancellation notifications:', notificationError);
       // Don't fail the cancellation if notification fails
     }
-    
+
     res.status(200).json({
       success: true,
       message: 'Order cancelled successfully',
       refundAmount: refundAmount
     });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error cancelling order:', error);
@@ -1427,15 +1427,15 @@ const cancelOrder = async (req, res) => {
  */
 const sellerCancelOrder = async (req, res) => {
   const client = await pool.connect();
-  
+
   try {
     const { id } = req.params;
     const sellerId = req.user.id;
-    
+
     console.log(`Seller ${sellerId} attempting to cancel order ${id}`);
-    
+
     await client.query('BEGIN');
-    
+
     // Lock the order for update and verify seller owns this order
     const orderResult = await client.query(
       `SELECT * FROM product_orders 
@@ -1443,7 +1443,7 @@ const sellerCancelOrder = async (req, res) => {
        FOR UPDATE`,
       [id, sellerId]
     );
-    
+
     if (orderResult.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({
@@ -1451,9 +1451,9 @@ const sellerCancelOrder = async (req, res) => {
         message: 'Order not found or you do not have permission to cancel this order'
       });
     }
-    
+
     const order = orderResult.rows[0];
-    
+
     // Check if order can be cancelled
     if (order.status === 'COMPLETED') {
       await client.query('ROLLBACK');
@@ -1462,7 +1462,7 @@ const sellerCancelOrder = async (req, res) => {
         message: 'Cannot cancel a completed order'
       });
     }
-    
+
     if (order.status === 'CANCELLED') {
       await client.query('ROLLBACK');
       return res.status(400).json({
@@ -1470,7 +1470,7 @@ const sellerCancelOrder = async (req, res) => {
         message: 'Order is already cancelled'
       });
     }
-    
+
     // Update order status to CANCELLED
     await client.query(
       `UPDATE product_orders 
@@ -1481,7 +1481,7 @@ const sellerCancelOrder = async (req, res) => {
        WHERE id = $1`,
       [id]
     );
-    
+
     // Add refund amount to buyer's refunds column
     const refundAmount = parseFloat(order.total_amount);
     await client.query(
@@ -1491,17 +1491,17 @@ const sellerCancelOrder = async (req, res) => {
        WHERE id = $2`,
       [refundAmount, order.buyer_id]
     );
-    
+
     // Add status history
     await client.query(
       'INSERT INTO order_status_history (order_id, status, notes) VALUES ($1, $2, $3)',
       [id, 'CANCELLED', 'Order cancelled by seller']
     );
-    
+
     await client.query('COMMIT');
-    
+
     console.log(`Order ${id} cancelled by seller. Refund amount: KSh ${refundAmount}`);
-    
+
     // Send cancellation notifications to buyer, seller, and logistics (non-blocking)
     try {
       // Fetch full order details with items
@@ -1524,26 +1524,26 @@ const sellerCancelOrder = async (req, res) => {
          GROUP BY o.id`,
         [id]
       );
-      
+
       if (fullOrderResult.rows.length > 0) {
         const fullOrder = fullOrderResult.rows[0];
-        
+
         // Fetch buyer details
         const buyerResult = await pool.query(
           'SELECT id, full_name, phone, email, city, location FROM buyers WHERE id = $1',
           [order.buyer_id]
         );
-        
+
         // Fetch seller details
         const sellerResult = await pool.query(
           'SELECT id, full_name, phone, email, shop_name FROM sellers WHERE id = $1',
           [sellerId]
         );
-        
+
         if (buyerResult.rows.length > 0 && sellerResult.rows.length > 0) {
           const buyer = buyerResult.rows[0];
           const seller = sellerResult.rows[0];
-          
+
           const orderData = {
             id: fullOrder.id,
             order_id: fullOrder.order_number || fullOrder.id,
@@ -1553,7 +1553,7 @@ const sellerCancelOrder = async (req, res) => {
             phone: buyer.phone,
             items: fullOrder.items
           };
-          
+
           // Send notifications to buyer, seller, and logistics
           await Promise.all([
             whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Seller'),
@@ -1582,13 +1582,13 @@ const sellerCancelOrder = async (req, res) => {
       console.error('Error sending cancellation notifications:', notificationError);
       // Don't fail the cancellation if notification fails
     }
-    
+
     res.status(200).json({
       success: true,
       message: 'Order cancelled successfully',
       refundAmount: refundAmount
     });
-    
+
   } catch (error) {
     await client.query('ROLLBACK');
     console.error('Error cancelling order:', error);
