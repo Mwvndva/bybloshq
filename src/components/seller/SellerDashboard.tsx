@@ -9,19 +9,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast';
-import { 
-  ArrowLeft, 
+import {
+  ArrowLeft,
   BarChart3,
-  Bike, 
-  Check, 
+  Bike,
+  Check,
   CheckCircle,
-  Copy, 
+  Copy,
   DollarSign,
-  Edit, 
-  Link as LinkIcon, 
-  LogOut, 
-  Package, 
-  Plus, 
+  Edit,
+  Link as LinkIcon,
+  LogOut,
+  Package,
+  Plus,
   RefreshCw,
   Settings,
   ShoppingBag,
@@ -111,8 +111,8 @@ interface AnalyticsData {
 }
 
 interface SellerDashboardProps {
-  children?: (props: { 
-    fetchData: () => Promise<AnalyticsData> 
+  children?: (props: {
+    fetchData: () => Promise<AnalyticsData>
   }) => React.ReactNode;
 }
 
@@ -127,11 +127,11 @@ interface StatsCardProps {
   className?: string;
 }
 
-const StatsCard: React.FC<StatsCardProps> = ({ 
-  icon: Icon, 
-  title, 
-  value, 
-  subtitle, 
+const StatsCard: React.FC<StatsCardProps> = ({
+  icon: Icon,
+  title,
+  value,
+  subtitle,
   iconColor = 'text-white',
   bgColor = 'bg-gradient-to-br from-yellow-400 to-yellow-500',
   textColor = 'text-black',
@@ -196,8 +196,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
 
   // Get locations for the selected city
   const getLocations = useCallback(() => {
-    return formData.city && cities[formData.city as keyof typeof cities] 
-      ? cities[formData.city as keyof typeof cities] 
+    return formData.city && cities[formData.city as keyof typeof cities]
+      ? cities[formData.city as keyof typeof cities]
       : [];
   }, [formData.city]);
 
@@ -224,10 +224,10 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     // Clear seller token and user data from localStorage
     localStorage.removeItem('sellerToken');
     localStorage.removeItem('seller');
-    
+
     // Redirect to login page
     navigate('/seller/login');
-    
+
     // Show success message
     toast({
       title: 'Logged out successfully',
@@ -252,7 +252,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         sellerApi.getProducts(),
         sellerApi.getAnalytics()
       ]);
-      
+
       console.log('Analytics data received:', {
         totalProducts: analyticsData.totalProducts,
         totalSales: analyticsData.totalSales,
@@ -261,7 +261,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         monthlySales: analyticsData.monthlySales,
         recentOrders: analyticsData.recentOrders
       });
-      
+
       setProducts(productsData);
 
       // Create analytics data structure
@@ -274,8 +274,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         monthlySales: analyticsData.monthlySales || [],
         recentOrders: analyticsData.recentOrders || []
       };
-      
-            
+
+
       // Return the analytics data with the correct type
       const result: AnalyticsData = {
         totalProducts: processedAnalytics.totalProducts,
@@ -286,14 +286,14 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         monthlySales: processedAnalytics.monthlySales,
         recentOrders: processedAnalytics.recentOrders
       };
-      
+
       setAnalytics(processedAnalytics);
       return result;
-      
+
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
       setError(err.response?.data?.message || 'Failed to load dashboard data');
-      
+
       // If unauthorized, clear token and redirect to login
       if (err.response?.status === 401) {
         localStorage.removeItem('sellerToken');
@@ -310,7 +310,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
           variant: 'destructive',
         });
       }
-      
+
       // Return default values in case of error
       return {
         totalProducts: 0,
@@ -367,21 +367,21 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     }
 
     setIsSaving(true);
-    
+
     try {
       const updatedProfile = await sellerApi.updateProfile({
         city: formData.city,
         location: formData.location
       });
-      
+
       setSellerProfile(prev => ({
         ...prev,
         city: formData.city,
         location: formData.location
       }));
-      
+
       setIsEditing(false);
-      
+
       toast({
         title: 'Success',
         description: 'Profile updated successfully',
@@ -401,7 +401,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const fetchProfile = useCallback(async () => {
     try {
       const profile = await sellerApi.getProfile();
-            const profileData = {
+      const profileData = {
         fullName: profile.fullName || profile.full_name,
         shopName: profile.shopName || profile.shop_name,
         email: profile.email,
@@ -411,7 +411,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         bannerImage: profile.bannerImage || profile.banner_image,
         theme: profile.theme
       };
-            setSellerProfile(profileData);
+      setSellerProfile(profileData);
     } catch (error) {
       console.error('Error fetching profile:', error);
       toast({
@@ -503,91 +503,91 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     }
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
 
-useEffect(() => {
-    
-  const fetchData = async () => {
-    // This effect no longer fetches on tab switches for overview/products
-    try {
-      if (activeTab === 'withdrawals') {
-                await fetchWithdrawalRequests();
-      }
-      if (activeTab === 'orders') {
-                // Orders data is fetched by SellerOrdersSection
-      }
-    } catch (err) {
-      console.error('Error during tab change handling:', err);
-    }
-  };
-  
-  fetchData();
-}, [activeTab, fetchWithdrawalRequests]);
+  useEffect(() => {
 
-// Prefetch data on initial mount to make tabs render instantly like Settings
-useEffect(() => {
-  let isMounted = true;
-  const prefetch = async () => {
-    setIsLoading(true);
-    try {
-      const [productsData, analyticsData] = await Promise.all([
-        sellerApi.getProducts(),
-        sellerApi.getAnalytics()
-      ]);
-      if (!isMounted) return;
-      setProducts(productsData);
-      
-      // Calculate total sales and revenue from analytics data
-      if (analyticsData) {
+    const fetchData = async () => {
+      // This effect no longer fetches on tab switches for overview/products
+      try {
+        if (activeTab === 'withdrawals') {
+          await fetchWithdrawalRequests();
+        }
+        if (activeTab === 'orders') {
+          // Orders data is fetched by SellerOrdersSection
+        }
+      } catch (err) {
+        console.error('Error during tab change handling:', err);
+      }
+    };
+
+    fetchData();
+  }, [activeTab, fetchWithdrawalRequests]);
+
+  // Prefetch data on initial mount to make tabs render instantly like Settings
+  useEffect(() => {
+    let isMounted = true;
+    const prefetch = async () => {
+      setIsLoading(true);
+      try {
+        const [productsData, analyticsData] = await Promise.all([
+          sellerApi.getProducts(),
+          sellerApi.getAnalytics()
+        ]);
+        if (!isMounted) return;
+        setProducts(productsData);
+
+        // Calculate total sales and revenue from analytics data
+        if (analyticsData) {
           // Calculate revenue from monthly sales data
           const salesTotal = analyticsData.monthlySales.reduce(
             (sum, monthData) => sum + monthData.sales, 0
           );
-          
+
           let totalRevenue = 0;
           let calculatedPayout = 0;
-          
+
           // Calculate revenue from recent orders if available
           const ordersData = (analyticsData as any).recentOrders;
-                    
+
           if (Array.isArray(ordersData) && ordersData.length > 0) {
             const completedOrders = ordersData.filter((order: any) => {
               const isCompleted = order.status === 'COMPLETED';
-                            return isCompleted;
+              return isCompleted;
             });
-            
-                        
+
+
             totalRevenue = completedOrders.reduce((sum: number, order: any) => {
               let orderTotal = 0;
-              
+
               if (Array.isArray(order.items) && order.items.length > 0) {
                 const itemsTotal = order.items.reduce((itemSum: number, item: any) => {
                   const itemPrice = item.price || 0;
                   const itemQty = item.quantity || 1;
                   const itemTotal = itemPrice * itemQty;
-                                    return itemSum + itemTotal;
+                  return itemSum + itemTotal;
                 }, 0);
                 orderTotal = itemsTotal;
-                              } else {
+              } else {
                 orderTotal = order.totalAmount || 0;
-                              }
-              
-                            return sum + orderTotal;
+              }
+
+              return sum + orderTotal;
             }, 0);
-            
-                      }
-          
+
+          }
+
           // If no revenue from orders, use monthly sales as fallback
           if (totalRevenue === 0) {
             totalRevenue = salesTotal;
           }
-          
+
           // Only use the API's totalRevenue if we couldn't calculate from orders or monthly sales
           if (totalRevenue === 0 && analyticsData.totalRevenue) {
             totalRevenue = analyticsData.totalRevenue;
           }
-          
+
           // Use the full revenue amount for payout
           calculatedPayout = totalRevenue;
-          
+
           console.log('Revenue calculation:', {
             fromOrders: ordersData ? ordersData.filter((o: any) => o.status === 'COMPLETED').map((o: any) => ({
               orderNumber: o.orderNumber,
@@ -602,7 +602,7 @@ useEffect(() => {
             apiRevenue: analyticsData.totalRevenue,
             finalRevenue: totalRevenue
           });
-          
+
           const updatedAnalytics: AnalyticsData = {
             ...analyticsData,
             totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
@@ -612,9 +612,9 @@ useEffect(() => {
             monthlySales: analyticsData.monthlySales || [],
             recentOrders: (analyticsData as any).recentOrders || [] // Handle recentOrders if it exists
           };
-          
+
           setAnalytics(updatedAnalytics);
-          
+
           console.log('Updated analytics data:', {
             salesTotal,
             totalRevenue: updatedAnalytics.totalRevenue,
@@ -625,23 +625,23 @@ useEffect(() => {
           const transformedData: AnalyticsData = {
             ...analyticsData,
             totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
-            totalPayout: analyticsData.totalRevenue * 0.91, // Calculate payout as 91% of revenue (9% platform fee)
+            totalPayout: analyticsData.totalRevenue * 0.97, // Calculate payout as 97% of revenue (3% platform fee)
             recentOrders: [] // Initialize as empty array since we don't have this data
           };
           setAnalytics(transformedData);
         }
-    } catch (err) {
-      setError('Failed to load data. Please try again later.');
-      console.error('Error prefetching data:', err);
-    } finally {
-      if (isMounted) setIsLoading(false);
-    }
-  };
-  
-  prefetch();
-  fetchProfile();
-  return () => { isMounted = false; };
-}, []);
+      } catch (err) {
+        setError('Failed to load data. Please try again later.');
+        console.error('Error prefetching data:', err);
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    };
+
+    prefetch();
+    fetchProfile();
+    return () => { isMounted = false; };
+  }, []);
 
   // Fetch profile data when settings tab is active
   useEffect(() => {
@@ -653,7 +653,7 @@ useEffect(() => {
   // Create context value to pass to child routes
   const outletContext = {
     products,
-    onDeleteProduct: () => {},
+    onDeleteProduct: () => { },
     fetchData,
   };
 
@@ -674,26 +674,26 @@ useEffect(() => {
           <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             <div className="flex items-center justify-between space-y-2">
               <h2 className="text-3xl font-bold tracking-tight">
-                {activeTab === 'dashboard' ? 'Dashboard' : 
-                 activeTab === 'products' ? 'Products' : 
-                 'Seller Dashboard'}
+                {activeTab === 'dashboard' ? 'Dashboard' :
+                  activeTab === 'products' ? 'Products' :
+                    'Seller Dashboard'}
               </h2>
               <Skeleton className="h-10 w-24" />
             </div>
           </div>
         </div>
-        
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center mb-8">
             <Skeleton className="h-32 w-96" />
           </div>
-          
+
           <div className="flex space-x-2 mb-12 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-gray-200/50 w-fit mx-auto">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-12 w-24 rounded-xl" />
             ))}
           </div>
-          
+
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-64 rounded-2xl" />
@@ -717,7 +717,7 @@ useEffect(() => {
             <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
               {error || 'Something went wrong while loading your dashboard data. Please try again.'}
             </p>
-            <Button 
+            <Button
               onClick={fetchData}
               className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
             >
@@ -762,14 +762,14 @@ useEffect(() => {
       title: 'Net',
       value: (() => {
         const totalSales = parseFloat((((analytics as any)?.totalSales ?? 0)).toFixed(2));
-        const platformFeeRate = 0.09; // 9%
+        const platformFeeRate = 0.03; // 3%
         const platformFee = parseFloat((totalSales * platformFeeRate).toFixed(2));
         const netSales = parseFloat((totalSales - platformFee).toFixed(2));
-        
+
         console.log('Net Sales Calculation:', {
           rawTotalSales: (analytics as any).totalSales,
           parsedTotalSales: totalSales,
-          platformFeeRate: '9%',
+          platformFeeRate: '3%',
           calculatedPlatformFee: platformFee,
           calculatedNetSales: netSales,
           formattedNetSales: formatCurrency(netSales),
@@ -780,7 +780,7 @@ useEffect(() => {
             maximumFractionDigits: 2
           }).format(netSales)
         });
-        
+
         // Force 2 decimal places in the display
         return new Intl.NumberFormat('en-KE', {
           style: 'currency',
@@ -789,7 +789,7 @@ useEffect(() => {
           maximumFractionDigits: 2
         }).format(netSales);
       })(),
-      subtitle: 'After 9%',
+      subtitle: 'After 3%',
       iconColor: 'text-white',
       bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
       textColor: 'text-black'
@@ -804,9 +804,9 @@ useEffect(() => {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-3 sm:py-0 sm:h-16 md:h-20 space-y-3 sm:space-y-0">
             {/* Mobile: Stack vertically, Desktop: Horizontal */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 md:space-x-6 w-full sm:w-auto">
-              <Button 
-                variant="ghost" 
-                size="sm" 
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => navigate('/')}
                 className="text-gray-600 hover:text-black hover:bg-gray-100/80 transition-all duration-200 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm h-8 sm:h-9"
               >
@@ -831,7 +831,7 @@ useEffect(() => {
                 </div>
               </div>
             </div>
-            
+
             {/* Mobile: Stack buttons vertically, Desktop: Horizontal */}
             <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
               {sellerProfile?.shopName && (
@@ -901,11 +901,10 @@ useEffect(() => {
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${
-                activeTab === id
-                  ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                  : 'text-gray-600 hover:text-black hover:bg-white/80'
-              }`}
+              className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${activeTab === id
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
+                : 'text-gray-600 hover:text-black hover:bg-white/80'
+                }`}
             >
               <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>{label}</span>
@@ -1068,15 +1067,14 @@ useEffect(() => {
                               </p>
                               <Badge
                                 variant="outline"
-                                className={`${
-                                  request.status === 'pending'
-                                    ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
-                                    : request.status === 'approved'
+                                className={`${request.status === 'pending'
+                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                  : request.status === 'approved'
                                     ? 'bg-green-100 text-green-800 border-green-200'
                                     : request.status === 'rejected'
-                                    ? 'bg-red-100 text-red-800 border-red-200'
-                                    : 'bg-blue-100 text-blue-800 border-blue-200'
-                                } rounded-full px-3 py-1 font-semibold`}
+                                      ? 'bg-red-100 text-red-800 border-red-200'
+                                      : 'bg-blue-100 text-blue-800 border-blue-200'
+                                  } rounded-full px-3 py-1 font-semibold`}
                               >
                                 {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                               </Badge>
@@ -1105,7 +1103,7 @@ useEffect(() => {
             </div>
           </div>
         )}
-        
+
         {activeTab === 'overview' && (
           <div className="space-y-6 sm:space-y-8 md:space-y-12">
             <div className="text-center px-2 sm:px-0">
@@ -1120,8 +1118,8 @@ useEffect(() => {
                   <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Recent Products</h3>
                   <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Your most recently added products</p>
                 </div>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => navigate('/seller/add-product')}
                   className="gap-1.5 sm:gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-medium sm:font-semibold text-xs sm:text-sm w-full sm:w-auto"
                 >
@@ -1129,7 +1127,7 @@ useEffect(() => {
                   Add Product
                 </Button>
               </div>
-              
+
               {products.length > 0 ? (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {products.slice(0, 6).map((product) => (
@@ -1141,7 +1139,7 @@ useEffect(() => {
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <Badge 
+                        <Badge
                           variant="secondary"
                           className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
                         >
@@ -1175,7 +1173,7 @@ useEffect(() => {
                   </div>
                   <h3 className="text-2xl font-black text-black mb-3">No products found</h3>
                   <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/seller/add-product')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
                   >
@@ -1217,7 +1215,7 @@ useEffect(() => {
               <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Product Management</h2>
               <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium">Manage all your products in one place</p>
             </div>
-            
+
             {/* Quick Actions */}
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
@@ -1225,8 +1223,8 @@ useEffect(() => {
                   <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Quick Actions</h3>
                   <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Common tasks for your products</p>
                 </div>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => navigate('/seller/add-product')}
                   className="gap-1.5 sm:gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-medium sm:font-semibold text-xs sm:text-sm w-full sm:w-auto"
                 >
@@ -1234,10 +1232,10 @@ useEffect(() => {
                   Add Product
                 </Button>
               </div>
-              
+
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-12 sm:h-14 md:h-16 justify-start gap-2 sm:gap-3 md:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-lg sm:rounded-xl px-3 sm:px-4"
                   onClick={() => navigate('/seller/products')}
                 >
@@ -1247,9 +1245,9 @@ useEffect(() => {
                     <p className="text-xs sm:text-sm text-gray-500 truncate">See all your products</p>
                   </div>
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="h-12 sm:h-14 md:h-16 justify-start gap-2 sm:gap-3 md:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-lg sm:rounded-xl px-3 sm:px-4"
                   onClick={() => navigate('/seller/add-product')}
                 >
@@ -1259,7 +1257,7 @@ useEffect(() => {
                     <p className="text-xs sm:text-sm text-gray-500 truncate">Create a new listing</p>
                   </div>
                 </Button>
-                
+
               </div>
             </div>
 
@@ -1271,7 +1269,7 @@ useEffect(() => {
                   <p className="text-gray-600 font-medium mt-2">Your most recently added products</p>
                 </div>
               </div>
-              
+
               {products.length > 0 ? (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {products.slice(0, 6).map((product) => (
@@ -1283,7 +1281,7 @@ useEffect(() => {
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <Badge 
+                        <Badge
                           variant="secondary"
                           className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
                         >
@@ -1317,7 +1315,7 @@ useEffect(() => {
                   </div>
                   <h3 className="text-2xl font-black text-black mb-3">No products found</h3>
                   <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/seller/add-product')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
                   >
@@ -1345,7 +1343,7 @@ useEffect(() => {
                 <BannerUpload
                   currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
-                                        setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
+                    setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
                   }}
                 />
               </div>

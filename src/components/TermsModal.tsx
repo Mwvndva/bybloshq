@@ -23,7 +23,7 @@ const TermsModal = ({ isOpen, onClose }: TermsModalProps) => {
           {/* 1. PRIVACY POLICY */}
           <section>
             <h2 className="text-xl font-bold text-black mb-4">1. PRIVACY POLICY</h2>
-            
+
             <div className="space-y-4 text-gray-700">
               <div>
                 <h3 className="font-semibold text-black mb-2">1.1 Introduction</h3>
@@ -104,7 +104,7 @@ const TermsModal = ({ isOpen, onClose }: TermsModalProps) => {
           <section>
             <h2 className="text-xl font-bold text-black mb-4">2. CLIENT AGREEMENT (USER AGREEMENT)</h2>
             <p className="mb-4 text-gray-700">This Agreement is between Byblos and all registered users.</p>
-            
+
             <div className="space-y-4 text-gray-700">
               <div>
                 <h3 className="font-semibold text-black mb-2">2.1 Scope</h3>
@@ -115,7 +115,7 @@ const TermsModal = ({ isOpen, onClose }: TermsModalProps) => {
               <div>
                 <h3 className="font-semibold text-black mb-2">2.2 Seller Terms</h3>
                 <ul className="list-disc pl-6 space-y-1">
-                  <li>Sellers pay a 9% commission on every completed sale.</li>
+                  <li>Sellers pay a 3% commission on every completed sale.</li>
                   <li>Sellers must ensure product/service authenticity, legality, and timely delivery.</li>
                   <li>Sellers are solely responsible for customer service and dispute resolution.</li>
                 </ul>
@@ -159,7 +159,7 @@ const TermsModal = ({ isOpen, onClose }: TermsModalProps) => {
           {/* 3. REFUND POLICY */}
           <section>
             <h2 className="text-xl font-bold text-black mb-4">3. REFUND POLICY</h2>
-            
+
             <div className="space-y-4 text-gray-700">
               <div>
                 <h3 className="font-semibold text-black mb-2">3.1 General Policy</h3>
@@ -206,7 +206,7 @@ const TermsModal = ({ isOpen, onClose }: TermsModalProps) => {
           {/* 4. RISK DISCLOSURE AGREEMENT */}
           <section>
             <h2 className="text-xl font-bold text-black mb-4">4. RISK DISCLOSURE AGREEMENT</h2>
-            
+
             <div className="space-y-4 text-gray-700">
               <div>
                 <h3 className="font-semibold text-black mb-2">4.1 General Acknowledgment</h3>
