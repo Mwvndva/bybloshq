@@ -35,13 +35,13 @@ class WhatsAppService {
                         '--disable-setuid-sandbox',
                         '--disable-dev-shm-usage',
                         '--disable-gpu',
-                        '--disable-web-security'
+                        '--disable-web-security',
+                        '--disable-features=IsolateOrigins,site-per-process', // Often helps with frames
+                        '--bypass-csp' // Bypass Content Security Policy
                     ]
                 },
-                // Use default local cache (auto-detect latest version)
-                webVersionCache: {
-                    type: 'local'
-                }
+                // Remove webVersionCache to let it default to latest internal mechanism
+                // webVersionCache: { type: 'local' }
             });
 
             this.setupEventListeners();
