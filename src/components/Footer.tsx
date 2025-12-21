@@ -26,23 +26,23 @@ const Footer = () => {
           <div>
             <h3 className="font-bold text-black mb-4 text-lg">Contact Us</h3>
             <div className="space-y-2 text-sm">
-              <a 
-                href="mailto:byblosexperience@zohomail.com" 
+              <a
+                href="mailto:official@bybloshq.com"
                 className="flex items-center text-gray-800 hover:text-black transition-colors"
               >
                 <Mail className="h-4 w-4 mr-2" />
-                byblosexperience@zohomail.com
+                official@bybloshq.com
               </a>
-              <a 
-                href="tel:+254111548797" 
+              <a
+                href="tel:+254111548797"
                 className="flex items-center text-gray-800 hover:text-black transition-colors"
               >
                 <Phone className="h-4 w-4 mr-2" />
                 +254 111 548 797
               </a>
-              <a 
-                href="https://www.instagram.com/bybloshq" 
-                target="_blank" 
+              <a
+                href="https://www.instagram.com/bybloshq"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center text-gray-800 hover:text-pink-600 transition-colors"
               >
@@ -56,20 +56,20 @@ const Footer = () => {
           <div>
             <h3 className="font-bold text-black mb-4 text-lg">Quick Links</h3>
             <div className="space-y-2 text-sm">
-              <button 
+              <button
                 onClick={() => setIsTermsModalOpen(true)}
                 className="block text-gray-800 hover:text-black transition-colors cursor-pointer text-left"
               >
                 Terms & Conditions
               </button>
-              <Link 
-                to="/seller" 
+              <Link
+                to="/seller"
                 className="block text-gray-800 hover:text-black transition-colors"
               >
                 Sell on Byblos
               </Link>
-              <Link 
-                to="/organizer/events/new" 
+              <Link
+                to="/organizer/events/new"
                 className="block text-gray-800 hover:text-black transition-colors"
               >
                 Create an Event
@@ -82,6 +82,9 @@ const Footer = () => {
         <div className="border-t border-yellow-400 pt-6 text-center">
           <p className="text-gray-800 text-sm">
             © 2025 Byblos Experience. All rights reserved.
+          </p>
+          <p className="text-gray-800 text-sm mt-1 font-medium">
+            Powered by EVOLVE
           </p>
         </div>
       </div>
