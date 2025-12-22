@@ -193,7 +193,7 @@ const buyerApi = {
   // Auth
   login: async (credentials: { email: string; password: string }): Promise<LoginResponse> => {
     try {
-      const loginUrl = '/api/buyers/login';
+      const loginUrl = '/buyers/login';
       console.log(`Sending login request to ${loginUrl}`);
 
       // Clear any existing token first
@@ -267,7 +267,7 @@ const buyerApi = {
         data: {
           buyer: Buyer;
         };
-      }>('/api/buyers/register', data);
+      }>('/buyers/register', data);
 
       console.log('=== REGISTRATION RESPONSE ===');
       console.log('Status:', response.status);

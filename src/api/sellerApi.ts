@@ -182,7 +182,7 @@ interface ShopNameAvailabilityResponse {
 // Check if shop name is available
 export const checkShopNameAvailability = async (shopName: string): Promise<{ available: boolean }> => {
   try {
-    const response = await sellerApiInstance.get<ShopNameAvailabilityResponse>(`/api/sellers/check-shop-name?shopName=${encodeURIComponent(shopName)}`);
+    const response = await sellerApiInstance.get<ShopNameAvailabilityResponse>(`/sellers/check-shop-name?shopName=${encodeURIComponent(shopName)}`);
     return response.data.data;
   } catch (error) {
     console.error('Error checking shop name availability:', error);
@@ -237,7 +237,7 @@ export const sellerApi = {
   // Auth
   login: async (credentials: { email: string; password: string }): Promise<{ seller: Seller; token: string }> => {
     try {
-      const response = await sellerApiInstance.post<LoginResponse>('/api/sellers/login', credentials);
+      const response = await sellerApiInstance.post<LoginResponse>('/sellers/login', credentials);
       const responseData = response.data.data;
 
       if (!responseData) {
@@ -272,7 +272,7 @@ export const sellerApi = {
     location?: string;
   }): Promise<{ seller: Seller; token: string }> => {
     try {
-      const response = await sellerApiInstance.post<RegisterResponse>('/api/sellers/register', {
+      const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
         fullName: data.fullName,
         shopName: data.shopName,
         email: data.email,
@@ -309,13 +309,13 @@ export const sellerApi = {
 
   // Products
   createProduct: async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isSold'>): Promise<Product> => {
-    const response = await sellerApiInstance.post('/api/sellers/products', product);
+    const response = await sellerApiInstance.post('/sellers/products', product);
     return transformProduct(response.data);
   },
 
   getProducts: async (): Promise<Product[]> => {
     try {
-      const response = await sellerApiInstance.get<ProductsResponse>('/api/sellers/products');
+      const response = await sellerApiInstance.get<ProductsResponse>('/sellers/products');
       const products = response.data?.data?.products || [];
       return products.map(transformProduct);
     } catch (error: any) {
@@ -336,7 +336,7 @@ export const sellerApi = {
   getSellerProducts: async (sellerId: string | number): Promise<Product[]> => {
     try {
       // Use axios directly to avoid auth interceptor
-      const response = await axios.get<ProductsResponse>(`${baseURL}/api/sellers/${sellerId}/products`);
+      const response = await axios.get<ProductsResponse>(`${baseURL}/sellers/${sellerId}/products`);
       // Handle both response structures: { data: { products: [] } } or { products: [] }
       let products: any[] = [];
       if (response.data?.data?.products) {
@@ -363,7 +363,7 @@ export const sellerApi = {
 
   getProduct: async (id: string): Promise<Product> => {
     try {
-      const response = await sellerApiInstance.get<ProductResponse>(`/api/sellers/products/${id}`);
+      const response = await sellerApiInstance.get<ProductResponse>(`/sellers/products/${id}`);
       const productData = response.data?.data;
       if (!productData) {
         throw new Error('Product not found');
@@ -379,18 +379,18 @@ export const sellerApi = {
   },
 
   updateProduct: async (id: string, updates: Partial<Product>): Promise<Product> => {
-    const response = await sellerApiInstance.patch(`/api/sellers/products/${id}`, updates);
+    const response = await sellerApiInstance.patch(`/sellers/products/${id}`, updates);
     return transformProduct(response.data);
   },
 
   deleteProduct: async (id: string): Promise<void> => {
-    await sellerApiInstance.delete(`/api/sellers/products/${id}`);
+    await sellerApiInstance.delete(`/sellers/products/${id}`);
   },
 
   // Seller
   getProfile: async (): Promise<Seller> => {
     try {
-      const response = await sellerApiInstance.get<SellerResponse>('/api/sellers/profile');
+      const response = await sellerApiInstance.get<SellerResponse>('/sellers/profile');
       const profileData = response.data?.data?.seller;
       if (!profileData) {
         throw new Error('No profile data received');
@@ -407,7 +407,7 @@ export const sellerApi = {
 
   getSellerById: async (id: string | number): Promise<Seller> => {
     try {
-      const response = await sellerApiInstance.get<SellerResponse>(`/api/sellers/${id}`);
+      const response = await sellerApiInstance.get<SellerResponse>(`/sellers/${id}`);
       const sellerData = response.data?.data;
       if (!sellerData) {
         throw new Error('No seller data received');
@@ -424,7 +424,7 @@ export const sellerApi = {
 
   async getSellerByShopName(shopName: string): Promise<Seller> {
     try {
-      const response = await sellerApiInstance.get<SellerResponse>(`/api/sellers/shop/${encodeURIComponent(shopName)}`);
+      const response = await sellerApiInstance.get<SellerResponse>(`/sellers/shop/${encodeURIComponent(shopName)}`);
       const sellerData = response.data?.data;
       if (!sellerData) {
         throw new Error('No seller data received');
@@ -442,7 +442,7 @@ export const sellerApi = {
   // Analytics
   getAnalytics: async (): Promise<SellerAnalytics> => {
     try {
-      const response = await sellerApiInstance.get<AnalyticsResponse>('/api/sellers/analytics');
+      const response = await sellerApiInstance.get<AnalyticsResponse>('/sellers/analytics');
       if (!response.data?.data) {
         throw new Error('No analytics data received');
       }
@@ -458,7 +458,7 @@ export const sellerApi = {
     try {
       // Use the public API endpoint directly
       const response = await axios.post<ForgotPasswordResponse>(
-        `${API_URL}/api/sellers/forgot-password`,
+        `${API_URL}/sellers/forgot-password`,
         {
           email: email.trim().toLowerCase()
         },
@@ -487,7 +487,7 @@ export const sellerApi = {
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<ResetPasswordResponse>(
-        `${API_URL}/api/sellers/reset-password`,
+        `${API_URL}/sellers/reset-password`,
         { token, newPassword },
         {
           headers: {
@@ -518,7 +518,7 @@ export const sellerApi = {
   // Update seller profile
   updateProfile: async (data: { city?: string; location?: string; theme?: Theme }): Promise<Seller> => {
     try {
-      const response = await sellerApiInstance.patch<{ data: Seller }>('/api/sellers/profile', data);
+      const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
       return transformSeller(response.data.data);
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -528,24 +528,24 @@ export const sellerApi = {
 
   // Orders
   async getOrders(params?: { status?: OrderStatus }): Promise<Order[]> {
-    const response = await sellerApiInstance.get<{ data: Order[] }>('/api/sellers/orders', { params });
+    const response = await sellerApiInstance.get<{ data: Order[] }>('/sellers/orders', { params });
     return response.data.data;
   },
 
   async getOrder(orderId: string): Promise<Order> {
-    const response = await sellerApiInstance.get<{ data: Order }>(`/api/sellers/orders/${orderId}`);
+    const response = await sellerApiInstance.get<{ data: Order }>(`/sellers/orders/${orderId}`);
     return response.data.data;
   },
 
   // Update seller theme
   async updateTheme(theme: Theme): Promise<{ theme: Theme }> {
-    const response = await sellerApiInstance.patch<{ data: { theme: Theme } }>('/api/sellers/theme', { theme });
+    const response = await sellerApiInstance.patch<{ data: { theme: Theme } }>('/sellers/theme', { theme });
     return response.data.data;
   },
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
     const response = await sellerApiInstance.patch<{ data: Order }>(
-      `/api/sellers/orders/${orderId}`,
+      `/sellers/orders/${orderId}`,
       { status }
     );
     return response.data.data;
@@ -553,14 +553,14 @@ export const sellerApi = {
 
   async cancelOrder(orderId: string): Promise<{ success: boolean; message: string; refundAmount: number }> {
     const response = await sellerApiInstance.patch<{ success: boolean; message: string; refundAmount: number }>(
-      `/api/orders/${orderId}/seller-cancel`
+      `/orders/${orderId}/seller-cancel`
     );
     return response.data;
   },
 
   // Upload banner image
   async uploadBanner(bannerImage: string): Promise<{ bannerUrl: string }> {
-    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/api/sellers/upload-banner', { bannerImage });
+    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/sellers/upload-banner', { bannerImage });
     return response.data.data;
   },
 
@@ -583,7 +583,7 @@ export const sellerApi = {
         cancelled: number;
         revenue: number;
       }
-    }>('/api/sellers/orders/analytics');
+    }>('/sellers/orders/analytics');
     return response.data.data;
   },
 
@@ -593,12 +593,12 @@ export const sellerApi = {
     mpesaNumber: string;
     mpesaName: string;
   }): Promise<WithdrawalRequest> {
-    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>('/api/sellers/withdrawal-request', data);
+    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>('/sellers/withdrawal-request', data);
     return response.data.data;
   },
 
   async getWithdrawalRequests(): Promise<WithdrawalRequest[]> {
-    const response = await sellerApiInstance.get<{ data: WithdrawalRequest[] }>('/api/sellers/withdrawal-requests');
+    const response = await sellerApiInstance.get<{ data: WithdrawalRequest[] }>('/sellers/withdrawal-requests');
     return response.data.data;
   },
 
@@ -613,7 +613,7 @@ export const sellerApi = {
         fileName: string;
         size: number;
       }
-    }>('/api/sellers/products/upload-digital', formData, {
+    }>('/sellers/products/upload-digital', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

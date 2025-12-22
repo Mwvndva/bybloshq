@@ -11,17 +11,28 @@ import { sellerApi } from '@/api/sellerApi';
 import { aestheticCategories } from '../AestheticCategories';
 import { ArrowLeft } from 'lucide-react';
 
+interface ServiceOptions {
+  availability_days: string[];
+  location_type: 'buyer_visits_seller' | 'seller_visits_buyer' | 'hybrid';
+  price_type: 'hourly' | 'fixed';
+  start_time: string;
+  end_time: string;
+}
+
 interface FormData {
   name: string;
   price: string;
   description: string;
   image: File | null;
-  image_url: string; // Store the processed image data URL
+  image_url: string;
   aesthetic: string;
   is_digital: boolean;
   digital_file: File | null;
   digital_file_name: string;
   digital_file_path: string;
+  product_type: 'physical' | 'digital' | 'service';
+  service_locations: string;
+  service_options: ServiceOptions;
 }
 
 export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
@@ -39,7 +50,16 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
     is_digital: false,
     digital_file: null,
     digital_file_name: '',
-    digital_file_path: ''
+    digital_file_path: '',
+    product_type: 'physical',
+    service_locations: '',
+    service_options: {
+      availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      location_type: 'buyer_visits_seller',
+      price_type: 'fixed',
+      start_time: '09:00',
+      end_time: '17:00'
+    }
   });
 
   // Get the current seller ID from the API
@@ -291,9 +311,12 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         image_url: imageUrl,
         aesthetic: formData.aesthetic,
         sellerId: sellerId,
-        is_digital: formData.is_digital,
+        is_digital: formData.is_digital, // Keeps back-compat validation
         digital_file_path: formData.is_digital ? digitalFilePath : undefined,
         digital_file_name: formData.is_digital ? digitalFileName : undefined,
+        product_type: formData.product_type,
+        service_locations: formData.product_type === 'service' ? formData.service_locations : undefined,
+        service_options: formData.product_type === 'service' ? formData.service_options : undefined,
       };
 
       // Call the API to create the product
@@ -315,7 +338,16 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         is_digital: false,
         digital_file: null,
         digital_file_name: '',
-        digital_file_path: ''
+        digital_file_path: '',
+        product_type: 'physical',
+        service_locations: '',
+        service_options: {
+          availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+          location_type: 'buyer_visits_seller',
+          price_type: 'fixed',
+          start_time: '09:00',
+          end_time: '17:00'
+        }
       });
       setImagePreview('');
       onSuccess();
@@ -400,28 +432,36 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
                   <div className="space-y-3">
                     <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Product Type</Label>
-                    <div className="flex space-x-4">
+                    <div className="flex space-x-2">
                       <Button
                         type="button"
-                        variant={formData.is_digital ? "outline" : "default"}
-                        onClick={() => setFormData(prev => ({ ...prev, is_digital: false }))}
-                        className={`flex-1 h-12 rounded-xl ${!formData.is_digital ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
+                        variant={formData.product_type === 'physical' ? "default" : "outline"}
+                        onClick={() => setFormData(prev => ({ ...prev, product_type: 'physical', is_digital: false }))}
+                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'physical' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
                       >
-                        Physical Product
+                        Physical
                       </Button>
                       <Button
                         type="button"
-                        variant={formData.is_digital ? "default" : "outline"}
-                        onClick={() => setFormData(prev => ({ ...prev, is_digital: true }))}
-                        className={`flex-1 h-12 rounded-xl ${formData.is_digital ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
+                        variant={formData.product_type === 'digital' ? "default" : "outline"}
+                        onClick={() => setFormData(prev => ({ ...prev, product_type: 'digital', is_digital: true }))}
+                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'digital' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
                       >
-                        Digital Product
+                        Digital
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={formData.product_type === 'service' ? "default" : "outline"}
+                        onClick={() => setFormData(prev => ({ ...prev, product_type: 'service', is_digital: false }))}
+                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
+                      >
+                        Service
                       </Button>
                     </div>
                   </div>
 
-                  {formData.is_digital && (
-                    <div className="space-y-3">
+                  {formData.product_type === 'digital' && (
+                    <div className="space-y-3 animate-in fade-in zoom-in duration-300">
                       <Label htmlFor="digital_file" className="text-sm font-bold text-gray-700 uppercase tracking-wide">Digital File</Label>
                       <Input
                         id="digital_file"
@@ -438,6 +478,138 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       <p className="text-xs text-gray-500">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
                       {formData.digital_file && (
                         <p className="text-sm text-green-600 font-medium">Selected: {formData.digital_file.name}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {formData.product_type === 'service' && (
+                    <div className="space-y-6 animate-in fade-in zoom-in duration-300 bg-gray-50/50 p-4 rounded-xl border border-dashed border-gray-200">
+                      {/* Pricing Model */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Pricing Model</Label>
+                        <div className="flex space-x-2">
+                          <Button
+                            type="button"
+                            variant={formData.service_options.price_type === 'hourly' ? "default" : "outline"}
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              service_options: { ...prev.service_options, price_type: 'hourly' }
+                            }))}
+                            className={`flex-1 ${formData.service_options.price_type === 'hourly' ? 'bg-yellow-400 text-white border-yellow-400' : 'hover:bg-gray-100'}`}
+                          >
+                            Hourly Rate
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={formData.service_options.price_type === 'fixed' ? "default" : "outline"}
+                            onClick={() => setFormData(prev => ({
+                              ...prev,
+                              service_options: { ...prev.service_options, price_type: 'fixed' }
+                            }))}
+                            className={`flex-1 ${formData.service_options.price_type === 'fixed' ? 'bg-yellow-400 text-white border-yellow-400' : 'hover:bg-gray-100'}`}
+                          >
+                            Fixed Price
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Availability Days */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Available Days</Label>
+                        <div className="grid grid-cols-4 gap-2">
+                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                            <Button
+                              key={day}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const currentDays = formData.service_options.availability_days || [];
+                                const newDays = currentDays.includes(day)
+                                  ? currentDays.filter(d => d !== day)
+                                  : [...currentDays, day];
+                                setFormData(prev => ({
+                                  ...prev,
+                                  service_options: { ...prev.service_options, availability_days: newDays }
+                                }));
+                              }}
+                              className={`rounded-lg transition-all ${(formData.service_options.availability_days || []).includes(day)
+                                ? 'bg-yellow-400 text-white border-yellow-400 hover:bg-yellow-500'
+                                : 'hover:bg-gray-100'
+                                }`}
+                            >
+                              {day}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Time Availability */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-3">
+                          <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Start Time</Label>
+                          <Input
+                            type="time"
+                            value={formData.service_options.start_time || '09:00'}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              service_options: { ...prev.service_options, start_time: e.target.value }
+                            }))}
+                            className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                          />
+                        </div>
+                        <div className="space-y-3">
+                          <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">End Time</Label>
+                          <Input
+                            type="time"
+                            value={formData.service_options.end_time || '17:00'}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              service_options: { ...prev.service_options, end_time: e.target.value }
+                            }))}
+                            className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Location Type */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Location Preference</Label>
+                        <Select
+                          value={formData.service_options.location_type || 'buyer_visits_seller'}
+                          onValueChange={(val: 'buyer_visits_seller' | 'seller_visits_buyer' | 'hybrid') =>
+                            setFormData(prev => ({
+                              ...prev,
+                              service_options: { ...prev.service_options, location_type: val }
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="h-12 bg-white rounded-xl">
+                            <SelectValue placeholder="Select location logic" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="buyer_visits_seller">Client visits me (My Location)</SelectItem>
+                            <SelectItem value="seller_visits_buyer">I visit client</SelectItem>
+                            <SelectItem value="hybrid">Hybrid (Both Options)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Explicit Service Location Input */}
+                      {(formData.service_options.location_type === 'buyer_visits_seller' || formData.service_options.location_type === 'hybrid') && (
+                        <div className="space-y-3">
+                          <Label htmlFor="service_location" className="text-sm font-bold text-gray-700 uppercase tracking-wide">
+                            Where should the client come? (Hybrid implies you have a location)
+                          </Label>
+                          <Input
+                            id="service_location"
+                            value={formData.service_locations || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, service_locations: e.target.value }))}
+                            placeholder="e.g. 123 Studio Street, Floor 2"
+                            className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                            required={formData.service_options.location_type === 'buyer_visits_seller' || formData.service_options.location_type === 'hybrid'}
+                          />
+                        </div>
                       )}
                     </div>
                   )}
@@ -557,7 +729,16 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       is_digital: false,
                       digital_file: null,
                       digital_file_name: '',
-                      digital_file_path: ''
+                      digital_file_path: '',
+                      product_type: 'physical',
+                      service_locations: '',
+                      service_options: {
+                        availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+                        location_type: 'buyer_visits_seller',
+                        price_type: 'fixed',
+                        start_time: '09:00',
+                        end_time: '17:00'
+                      }
                     });
                     setImagePreview('');
                   }}

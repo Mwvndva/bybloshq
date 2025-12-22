@@ -60,6 +60,16 @@ export interface Product {
   is_digital?: boolean;
   digital_file_path?: string;
   digital_file_name?: string;
+  product_type?: 'physical' | 'digital' | 'service';
+  productType?: 'physical' | 'digital' | 'service';
+  service_locations?: string;
+  service_options?: {
+    availability_days?: string[];
+    location_type?: 'buyer_visits_seller' | 'seller_visits_buyer' | 'hybrid';
+    price_type?: 'hourly' | 'fixed';
+    start_time?: string;
+    end_time?: string;
+  };
 }
 
 export interface OrderItem {

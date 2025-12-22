@@ -1,27 +1,9 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { ProductCard } from './ProductCard';
-import { Aesthetic, Seller } from '@/types';
+import { Aesthetic, Seller, Product } from '@/types';
 import { publicApiService } from '@/api/publicApi';
 import { AestheticWithNone, ProductGridProps } from '@/types/components';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image_url: string;
-  sellerId: string;
-  seller?: Seller;
-  isSold: boolean;
-  status: 'available' | 'sold';
-  soldAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  aesthetic: Aesthetic;
-  is_digital?: boolean;
-  isDigital?: boolean;
-}
 
 const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locationArea, priceMin, priceMax }: ProductGridProps) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -57,6 +39,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       updatedAt: product.updatedAt || product.updated_at || new Date().toISOString(),
       aesthetic: (product.aesthetic || 'noir') as Aesthetic,
       is_digital: product.is_digital || product.isDigital,
+      product_type: product.product_type || product.productType || 'physical',
     };
 
     // Add seller information if available
