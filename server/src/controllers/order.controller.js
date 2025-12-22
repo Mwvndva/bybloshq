@@ -1041,7 +1041,8 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
       order: {
         orderNumber: order.order_number,
         totalAmount: parseFloat(order.total_amount),
-        status: order.status
+        status: order.status,
+        metadata: order.metadata || {} // Pass metadata
       },
       oldStatus: order.status?.toUpperCase(),
       newStatus: newStatus.toUpperCase(),
@@ -1063,7 +1064,8 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
       order: {
         orderNumber: order.order_number,
         totalAmount: parseFloat(order.total_amount),
-        status: order.status
+        status: order.status,
+        metadata: order.metadata || {} // Pass metadata
       },
       oldStatus: order.status?.toUpperCase(),
       newStatus: newStatus.toUpperCase(),
@@ -1078,7 +1080,8 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
         order_number: order.order_number,
         total_amount: parseFloat(order.total_amount),
         amount: parseFloat(order.total_amount),
-        items: order.items || []
+        items: order.items || [],
+        metadata: order.metadata || {} // Pass metadata
       },
       buyer: {
         fullName: order.buyer?.name || order.buyer_name,
@@ -1181,7 +1184,8 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
       order: {
         orderNumber: order.order_number,
         totalAmount: parseFloat(order.total_amount),
-        status: 'COMPLETED'
+        status: 'COMPLETED',
+        metadata: order.metadata || {} // Pass metadata
       },
       oldStatus: order.status,
       newStatus: 'COMPLETED',
@@ -1203,7 +1207,8 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
       order: {
         orderNumber: order.order_number,
         totalAmount: parseFloat(order.total_amount),
-        status: 'COMPLETED'
+        status: 'COMPLETED',
+        metadata: order.metadata || {} // Pass metadata
       },
       oldStatus: order.status,
       newStatus: 'COMPLETED',
@@ -1218,7 +1223,8 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         order_number: order.order_number,
         total_amount: parseFloat(order.total_amount),
         amount: parseFloat(order.total_amount),
-        items: order.items || []
+        items: order.items || [],
+        metadata: order.metadata || {} // Pass metadata
       },
       buyer: {
         fullName: buyerName,

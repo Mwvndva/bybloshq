@@ -142,16 +142,26 @@ class WhatsAppService {
         }).join('\n');
 
         const total = parseFloat(order.totalAmount || 0);
+        const productType = order.metadata?.product_type;
+        const isService = productType === 'service';
+        const isDigital = productType === 'digital';
 
         // Check for Service Booking Metadata
         let bookingInfo = '';
-        if (order.metadata?.product_type === 'service' && order.metadata?.booking_date) {
+        if (isService && order.metadata?.booking_date) {
             bookingInfo = `
 📅 *SERVICE BOOKING*
 Date: ${order.metadata.booking_date}
 Time: ${order.metadata.booking_time}
 Loc: ${order.metadata.service_location}
             `.trim();
+        }
+
+        let instructionText = `📍 *DROP-OFF:* Dynamic Mall, Tom Mboya St, Shop SL 32\n⏰ Time: ${new Date().toLocaleString()}\n\nPlease drop off within 48h.`;
+        if (isService) {
+            instructionText = `ℹ️ *ACTION:* Please review the booking details above and prepare to provide the service.`;
+        } else if (isDigital) {
+            instructionText = `ℹ️ *ACTION:* Digital product order. No physical delivery required.`;
         }
 
         const msg = `
@@ -163,10 +173,7 @@ Loc: ${order.metadata.service_location}
 📋 *Items:*
 ${itemsList}
 
-📍 *DROP-OFF:* Dynamic Mall, Tom Mboya St, Shop SL 32
-⏰ Time: ${new Date().toLocaleString()}
-
-Please drop off within 48h.
+${instructionText}
 ${bookingInfo ? '\n' + bookingInfo : ''}
         `.trim();
 
@@ -184,6 +191,26 @@ ${bookingInfo ? '\n' + bookingInfo : ''}
         }).join('\n');
 
         const total = parseFloat(order.totalAmount || 0);
+        const productType = order.metadata?.product_type;
+        const isService = productType === 'service';
+        const isDigital = productType === 'digital';
+
+        let bookingInfo = '';
+        if (isService && order.metadata?.booking_date) {
+            bookingInfo = `
+📅 *SERVICE BOOKING*
+Date: ${order.metadata.booking_date}
+Time: ${order.metadata.booking_time}
+Loc: ${order.metadata.service_location}
+            `.trim();
+        }
+
+        let nextSteps = "We'll notify you when it's ready for pickup!";
+        if (isService) {
+            nextSteps = "The seller will be notified of your booking.";
+        } else if (isDigital) {
+            nextSteps = "You can access your digital product from your dashboard.";
+        }
 
         const msg = `
 ✅ *ORDER CONFIRMED!*
@@ -195,7 +222,7 @@ Thanks for ordering!
 📋 *Items:*
 ${itemsList}
 
-We'll notify you when it's ready for pickup!
+${nextSteps}
 ${bookingInfo ? '\n' + bookingInfo : ''}
         `.trim();
 
@@ -206,11 +233,30 @@ ${bookingInfo ? '\n' + bookingInfo : ''}
         const { buyer, order, newStatus, notes } = updateData;
         if (!buyer?.phone) return false;
 
+        const productType = order.metadata?.product_type;
+        const isService = productType === 'service';
+        const isDigital = productType === 'digital';
+
         let msg = '';
         if (newStatus === 'DELIVERY_PENDING') {
-            msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} is confirmed. We will prepare it for pickup.`;
+            if (isService) {
+                msg = `✅ *BOOKING CONFIRMED*\n\nOrder #${order.orderNumber} payment received. Your service booking is confirmed.`;
+            } else if (isDigital) {
+                msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} payment received. Your download is ready.`;
+            } else {
+                msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} is confirmed. We will prepare it for pickup.`;
+            }
         } else if (newStatus === 'DELIVERY_COMPLETE') {
-            msg = `📦 *READY FOR PICKUP*\n\nOrder #${order.orderNumber} is ready!\n📍 Dynamic Mall, Tom Mboya St, Shop SL 32\n\nPlease verify item before accepting!`;
+            if (isService) {
+                // Should not really happen for services but handle gracefully
+                msg = `✅ *SERVICE COMPLETED*\n\nOrder #${order.orderNumber} marked as complete.`;
+            } else if (isDigital) {
+                msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
+            } else {
+                msg = `📦 *READY FOR PICKUP*\n\nOrder #${order.orderNumber} is ready!\n📍 Dynamic Mall, Tom Mboya St, Shop SL 32\n\nPlease verify item before accepting!`;
+            }
+        } else if (newStatus === 'CONFIRMED' && isService) { // Custom status for Service
+            msg = `✅ *BOOKING ACCEPTED*\n\nThe seller has accepted your booking for Order #${order.orderNumber}.`;
         } else if (newStatus === 'COMPLETED') {
             msg = `🎉 *ORDER COMPLETED*\n\nOrder #${order.orderNumber} is complete. Thanks for shopping with Byblos!`;
         } else {
@@ -225,10 +271,14 @@ ${bookingInfo ? '\n' + bookingInfo : ''}
         const { seller, order, newStatus } = updateData;
         if (!seller?.phone) return false;
 
+        const productType = order.metadata?.product_type;
+
         let msg = `📋 Order #${order.orderNumber} status: ${newStatus}`;
 
         if (newStatus === 'DELIVERY_PENDING') {
-            msg = `💰 *PAYMENT RECEIVED*\n\nOrder #${order.orderNumber} is paid. Please prepare for drop-off.`;
+            msg = `💰 *PAYMENT RECEIVED*\n\nOrder #${order.orderNumber} is paid. Please prepare for drop-off/service.`;
+        } else if (newStatus === 'CONFIRMED' && productType === 'service') {
+            msg = `✅ *BOOKING CONFIRMED*\n\nYou have confirmed the booking for Order #${order.orderNumber}.`;
         } else if (newStatus === 'COMPLETED') {
             msg = `🎉 *ORDER COMPLETED*\n\nOrder #${order.orderNumber} is finished. Revenue added to balance.`;
         }
@@ -279,6 +329,16 @@ Your refund balance remains available for future withdrawal requests.
     }
 
     async sendLogisticsNotification(order, buyer, seller) {
+        // Skip logistics notification for Digital and Service orders
+        const productType = order.metadata?.product_type;
+        const isService = productType === 'service';
+        const isDigital = productType === 'digital';
+
+        if (isService || isDigital) {
+            console.log(`Skipping logistics notification for ${productType} order #${order.order_number}`);
+            return true; // Return success (skipped)
+        }
+
         const logisticsNumber = '+254748137819';
 
         let itemsList = '';
