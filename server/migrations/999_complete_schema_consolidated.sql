@@ -340,6 +340,13 @@ CREATE TABLE IF NOT EXISTS tickets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tickets' AND column_name='purchase_id') THEN
+        ALTER TABLE tickets ADD COLUMN purchase_id INTEGER REFERENCES ticket_purchases(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
 -- Products table
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
@@ -591,80 +598,98 @@ CREATE INDEX IF NOT EXISTS idx_recent_sales_event ON recent_sales(event_id);
 -- ============================================================================
 
 -- Updated_at triggers
+DROP TRIGGER IF EXISTS update_sellers_updated_at ON sellers;
 CREATE TRIGGER update_sellers_updated_at
 BEFORE UPDATE ON sellers
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_organizers_updated_at ON organizers;
 CREATE TRIGGER update_organizers_updated_at
 BEFORE UPDATE ON organizers
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_buyers_updated_at ON buyers;
 CREATE TRIGGER update_buyers_updated_at
 BEFORE UPDATE ON buyers
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_events_updated_at ON events;
 CREATE TRIGGER update_events_updated_at
 BEFORE UPDATE ON events
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_ticket_types_updated_at ON event_ticket_types;
 CREATE TRIGGER update_ticket_types_updated_at
 BEFORE UPDATE ON event_ticket_types
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_tickets_updated_at ON tickets;
 CREATE TRIGGER update_tickets_updated_at
 BEFORE UPDATE ON tickets
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_products_updated_at ON products;
 CREATE TRIGGER update_products_updated_at
 BEFORE UPDATE ON products
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_product_orders_updated_at ON product_orders;
 CREATE TRIGGER update_product_orders_updated_at
 BEFORE UPDATE ON product_orders
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_order_items_updated_at ON order_items;
 CREATE TRIGGER update_order_items_updated_at
 BEFORE UPDATE ON order_items
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_payouts_updated_at ON payouts;
 CREATE TRIGGER update_payouts_updated_at
 BEFORE UPDATE ON payouts
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
 CREATE TRIGGER update_payments_updated_at
 BEFORE UPDATE ON payments
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_wishlist_updated_at ON wishlist;
 CREATE TRIGGER update_wishlist_updated_at
 BEFORE UPDATE ON wishlist
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_dashboard_stats_updated_at ON dashboard_stats;
 CREATE TRIGGER update_dashboard_stats_updated_at
 BEFORE UPDATE ON dashboard_stats
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_recent_sales_updated_at ON recent_sales;
 CREATE TRIGGER update_recent_sales_updated_at
 BEFORE UPDATE ON recent_sales
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Specialized triggers
+DROP TRIGGER IF EXISTS generate_ticket_number_trigger ON tickets;
 CREATE TRIGGER generate_ticket_number_trigger
 BEFORE INSERT ON tickets
 FOR EACH ROW
 WHEN (NEW.ticket_number IS NULL)
 EXECUTE FUNCTION generate_ticket_number();
 
+DROP TRIGGER IF EXISTS generate_order_number_trigger ON product_orders;
 CREATE TRIGGER generate_order_number_trigger
 BEFORE INSERT ON product_orders
 FOR EACH ROW
 WHEN (NEW.order_number IS NULL)
 EXECUTE FUNCTION generate_order_number();
 
+DROP TRIGGER IF EXISTS update_order_status_history_trigger ON product_orders;
 CREATE TRIGGER update_order_status_history_trigger
 AFTER UPDATE OF status ON product_orders
 FOR EACH ROW
 EXECUTE FUNCTION update_order_status_history();
 
+DROP TRIGGER IF EXISTS handle_order_completion_trigger ON product_orders;
 CREATE TRIGGER handle_order_completion_trigger
 AFTER UPDATE OF status ON product_orders
 FOR EACH ROW

@@ -663,7 +663,7 @@ const buyerApi = {
     phone: string;
     city?: string;
     location?: string;
-  }): Promise<{ buyer?: Buyer; token?: string; message?: string }> => {
+  }): Promise<{ buyer?: Buyer; token?: string; message?: string; requiresLogin?: boolean; exists?: boolean }> => {
     try {
 
 
@@ -725,6 +725,40 @@ const buyerApi = {
     } catch (error: any) {
       console.error('Error fetching pending refund requests:', error);
       throw new Error(error.response?.data?.message || 'Failed to fetch pending refund requests');
+    }
+  },
+
+  downloadDigitalProduct: async (orderId: string, productId: string): Promise<void> => {
+    try {
+      const response = await buyerApiInstance.get(`/orders/${orderId}/download/${productId}`, {
+        responseType: 'blob', // Important for file downloads
+      });
+
+      // Create a blob URL and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data as any]));
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Try to get filename from content-disposition header
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'download.zip';
+      if (contentDisposition) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error downloading digital product:', error);
+      throw new Error(error.response?.data?.message || 'Failed to download digital product');
     }
   }
 };

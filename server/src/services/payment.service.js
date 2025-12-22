@@ -425,9 +425,12 @@ class PaymentService {
         return;
       }
 
-      // Fetch order items for the email
+      // Fetch order items with product details to check if they are digital
       const itemsQuery = `
-        SELECT * FROM order_items WHERE order_id = $1
+        SELECT oi.*, p.is_digital
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1
       `;
       const itemsResult = await client.query(itemsQuery, [orderId]);
       order.items = itemsResult.rows;
@@ -437,6 +440,12 @@ class PaymentService {
         await client.query('ROLLBACK');
         return;
       }
+
+      // Check if all items are digital
+      const allDigital = order.items.length > 0 && order.items.every(item => item.is_digital);
+      const newStatus = allDigital ? 'COMPLETED' : 'DELIVERY_PENDING';
+
+      logger.info(`Order type check: ${allDigital ? 'All Digital' : 'Physical/Mixed'} -> Status: ${newStatus}`, { orderId: order.id });
 
       // 3. POST-PAYMENT AUDIT (Integrity Check)
       const paidAmount = parseFloat(paystackData.amount) / 100; // Paystack sends in kobo/cents
@@ -480,10 +489,10 @@ class PaymentService {
          SET payment_status = $1,
              payment_reference = $2,
              paid_at = NOW(),
-             status = 'DELIVERY_PENDING',
+             status = $3,
              updated_at = NOW()
-         WHERE id = $3`,
-        ['success', paystackData.reference, order.id]
+         WHERE id = $4`,
+        ['success', paystackData.reference, newStatus, order.id]
       );
 
       // 5. UPDATE SELLER STATISTICS

@@ -7,7 +7,9 @@ import {
   updateOrderStatus,
   confirmReceipt,
   cancelOrder,
-  sellerCancelOrder
+
+  sellerCancelOrder,
+  downloadDigitalProduct
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -360,6 +362,41 @@ router.patch(
   '/:id/seller-cancel',
   protect,
   sellerCancelOrder
+);
+
+/**
+ * @swagger
+ * /api/orders/{orderId}/download/{productId}:
+ *   get:
+ *     summary: Download digital product
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: orderId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Order ID
+ *       - in: path
+ *         name: productId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Product ID
+ *     responses:
+ *       200:
+ *         description: File download stream
+ *       403:
+ *         description: Forbidden (not paid or not owner)
+ *       404:
+ *         description: Order/Product/File not found
+ */
+router.get(
+  '/:orderId/download/:productId',
+  protect,
+  downloadDigitalProduct
 );
 
 export default router;

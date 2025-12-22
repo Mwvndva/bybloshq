@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Order, OrderStatus } from '@/types/order';
 
 // Get the base URL from environment variables
-const API_URL = (import.meta.env.VITE_API_URL || 
+const API_URL = (import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api')
 ).replace(/\/$/, '');
 const isDevelopment = import.meta.env.DEV;
@@ -50,6 +50,9 @@ export interface Product {
   soldAt?: string | null;
   createdAt: string;
   updatedAt?: string;
+  is_digital?: boolean;
+  digital_file_path?: string;
+  digital_file_name?: string;
 }
 
 // Order types are now imported from '@/types/order'
@@ -154,7 +157,7 @@ const transformProduct = (product: any): Product => {
 const transformSeller = (data: any): Seller => {
   // Handle case where seller data is nested under a 'seller' property
   const seller = data.seller || data;
-  
+
   return {
     id: seller.id,
     fullName: seller.fullName || seller.full_name || '',
@@ -180,7 +183,7 @@ interface ShopNameAvailabilityResponse {
 export const checkShopNameAvailability = async (shopName: string): Promise<{ available: boolean }> => {
   try {
     const response = await sellerApiInstance.get<ShopNameAvailabilityResponse>(`/api/sellers/check-shop-name?shopName=${encodeURIComponent(shopName)}`);
-        return response.data.data;
+    return response.data.data;
   } catch (error) {
     console.error('Error checking shop name availability:', error);
     // If there's an error, we'll assume the shop name is not available to be safe
@@ -236,17 +239,17 @@ export const sellerApi = {
     try {
       const response = await sellerApiInstance.post<LoginResponse>('/api/sellers/login', credentials);
       const responseData = response.data.data;
-      
+
       if (!responseData) {
         throw new Error('Invalid response from server');
       }
-      
+
       const { seller, token } = responseData;
-      
+
       if (!seller || !token) {
         throw new Error('Invalid response from server - missing seller or token');
       }
-      
+
       localStorage.setItem('sellerToken', token);
       return { seller: transformSeller(seller), token };
     } catch (error: any) {
@@ -279,20 +282,20 @@ export const sellerApi = {
         city: data.city,
         location: data.location
       });
-      
+
       // The response data structure is { data: { seller, token } }
       const responseData = response.data?.data;
-      
+
       if (!responseData) {
         throw new Error('Invalid response from server');
       }
-      
+
       const { seller, token } = responseData;
-      
+
       if (!seller || !token) {
         throw new Error('Invalid response from server - missing seller or token');
       }
-      
+
       localStorage.setItem('sellerToken', token);
       return { seller: transformSeller(seller), token };
     } catch (error: any) {
@@ -455,21 +458,21 @@ export const sellerApi = {
     try {
       // Use the public API endpoint directly
       const response = await axios.post<ForgotPasswordResponse>(
-        `${API_URL}/api/sellers/forgot-password`, 
-        { 
-          email: email.trim().toLowerCase() 
-        }, 
+        `${API_URL}/api/sellers/forgot-password`,
+        {
+          email: email.trim().toLowerCase()
+        },
         {
           headers: {
             'Content-Type': 'application/json',
           },
         }
       );
-      
+
       if (!response.data?.message) {
         throw new Error('Invalid response format from server');
       }
-      
+
       return { message: response.data.message };
     } catch (error: any) {
       console.error('Forgot password error:', error);
@@ -486,11 +489,11 @@ export const sellerApi = {
       const response = await axios.post<ResetPasswordResponse>(
         `${API_URL}/api/sellers/reset-password`,
         { token, newPassword },
-        { 
-          headers: { 
+        {
+          headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
-          } 
+          }
         }
       );
 
@@ -542,7 +545,7 @@ export const sellerApi = {
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
     const response = await sellerApiInstance.patch<{ data: Order }>(
-      `/api/sellers/orders/${orderId}`, 
+      `/api/sellers/orders/${orderId}`,
       { status }
     );
     return response.data.data;
@@ -599,6 +602,28 @@ export const sellerApi = {
     return response.data.data;
   },
 
+  async uploadDigitalProduct(file: File): Promise<{ filePath: string; fileName: string }> {
+    const formData = new FormData();
+    formData.append('digital_file', file);
+
+    const response = await sellerApiInstance.post<{
+      status: string;
+      data: {
+        filePath: string;
+        fileName: string;
+        size: number;
+      }
+    }>('/api/sellers/products/upload-digital', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    return {
+      filePath: response.data.data.filePath,
+      fileName: response.data.data.fileName
+    };
+  },
 };
 
 export default sellerApi;

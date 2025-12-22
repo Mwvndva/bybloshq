@@ -1,2 +1,8 @@
 -- Add paystack to the payment_method enum
-ALTER TYPE payment_method ADD VALUE 'paystack';
+DO $$
+BEGIN
+    ALTER TYPE payment_method ADD VALUE 'paystack';
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+

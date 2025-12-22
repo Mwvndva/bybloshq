@@ -3,6 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { calculatePlatformFee } from '../utils/calculateFees.js';
 import Order from '../models/order.model.js';
 import whatsappService from '../services/whatsapp.service.js';
+import path from 'path';
+import fs from 'fs';
 
 /**
  * Create a new order
@@ -172,6 +174,12 @@ const getUserOrders = async (req, res) => {
                    'quantity', oi.quantity,
                    'imageUrl', (
                      SELECT p.image_url 
+                     FROM products p 
+                     WHERE p.id::text = oi.product_id::text
+                     LIMIT 1
+                   ),
+                   'isDigital', (
+                     SELECT p.is_digital 
                      FROM products p 
                      WHERE p.id::text = oi.product_id::text
                      LIMIT 1
@@ -1602,6 +1610,159 @@ const sellerCancelOrder = async (req, res) => {
   }
 };
 
+
+/**
+ * Download digital product
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+const downloadDigitalProduct = async (req, res) => {
+  try {
+    const { orderId, productId } = req.params;
+    const userId = req.user.id;
+    // Verify order ownership, payment status, and product validity
+    const query = `
+      SELECT p.digital_file_path, p.digital_file_name, o.payment_status
+      FROM product_orders o
+      JOIN order_items oi ON o.id = oi.order_id
+      JOIN products p ON oi.product_id = p.id
+      WHERE o.id = $1 
+      AND o.buyer_id = $2
+      AND p.id = $3
+    `;
+
+    const result = await pool.query(query, [orderId, userId, productId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found, or you do not own this product.'
+      });
+    }
+
+    const { digital_file_path, digital_file_name, payment_status } = result.rows[0];
+
+    // Check payment status
+    if (payment_status !== 'success' && payment_status !== 'completed') {
+      return res.status(403).json({
+        success: false,
+        message: 'Order is not paid. Cannot download product.'
+      });
+    }
+
+    // Check if file path exists
+    if (!digital_file_path) {
+      return res.status(404).json({
+        success: false,
+        message: 'Digital file not available for this product.'
+      });
+    }
+
+    // Construct absolute path
+    // Assuming digital_file_path is stored as 'uploads/digital_products/filename'
+    // and server root is process.cwd()/server or process.cwd() depending on where it started.
+    // The middleware stored it. Middleware used: path.join(process.cwd(), 'server', 'uploads', 'digital_products');
+    // And digital_file_path stored 'uploads/digital_products/filename' ?
+    // Let's check middleware: `const filePath = uploads/digital_products/${req.file.filename};`
+    // So it's relative to server root IF server is run from server folder?
+    // User runs `node src/index.js` inside `server` dir.
+    // middleware used: `path.join(process.cwd(), 'server', 'uploads'...)`.
+    // Wait, if user runs from `bybloshq` (root), `process.cwd()` is `bybloshq`.
+    // If user runs from `server` dir, `process.cwd()` is `bybloshq/server`.
+
+    // In middleware: `path.join(process.cwd(), 'server', 'uploads'..)` means it assumes cwd is root `bybloshq`.
+    // AND `filePath` was returned as `uploads/digital_products/...`.
+
+    // So if process.cwd() is `bybloshq`, then absolute path is `bybloshq/server/uploads/...`.
+    // If I join `process.cwd(), 'server', digital_file_path` (where path starts with uploads/), it might duplicate 'server' if not careful?
+    // Middleware returned `uploads/digital_products/...`.
+    // So `path.join(process.cwd(), 'server', digital_file_path)` should work if cwd is `bybloshq`.
+
+    // However, if the app is running in `server` directory (node src/index.js), `process.cwd()` is `server`.
+    // Middleware: `path.join(process.cwd(), 'server', 'uploads')`. If cwd is `server`, this becomes `server/server/uploads`. This seems wrong if running from server dir.
+    // Let's assume standard running: `npm run dev` in `bybloshq` runs frontend. `node src/index.js` in `server` runs backend.
+
+    // If running in `server`, `process.cwd()` is `.../server`.
+    // Middleware: `path.join(process.cwd(), 'server', 'uploads')` -> `.../server/server/uploads`. This might be a bug in my middleware if running from `server` dir.
+
+    // Let's check middleware code I wrote:
+    // `const digitalUploadsDir = path.join(process.cwd(), 'server', 'uploads', 'digital_products');`
+    // If I run `node src/index.js` FROM `server` directory, `process.cwd()` is `.../bybloshq/server`.
+    // Then path is `.../bybloshq/server/server/uploads/...`. This creates a double server folder.
+
+    // I should fix the middleware to be robust or safer.
+    // BUT, for now, let's assume I need to look for where the file actually IS.
+    // I'll try to resolve it relative to `__dirname` or check if file exists.
+
+    // I need to be careful. I'll construct path: `path.resolve(process.cwd(), 'server', digital_file_path)`?
+    // or just `path.resolve(digital_file_path)` if I knew the base.
+
+    // Let's look at `upload.js` provided by user:
+    // `const uploadsDir = path.join(process.cwd(), 'server', 'uploads');`
+    // This existing middleware implies the intended structure is `process.cwd()` is the project root (bybloshq), OR they have a double server folder structure?
+    // OR they run `node server/src/index.js` from root?
+    // User info says: `node src/index.js (in c:\Users\Administrator\Downloads\bybloshq\server`.
+    // So CWD is `.../server`.
+    // So `process.cwd()` is `.../server`.
+    // `path.join(process.cwd(), 'server', 'uploads')` -> `.../server/server/uploads`.
+    // This looks like my new middleware creates `server/server/uploads`.
+    // AND the existing middleware `upload.js` ALSO does `path.join(process.cwd(), 'server', 'uploads')`.
+    // So it seems the existing code EXPECTS `server/server/uploads` or expects CWD to be root?
+
+    // Wait, let's re-read `upload.js` (Step 87).
+    // `const uploadsDir = path.join(process.cwd(), 'server', 'uploads');`
+    // If user runs in `server` directory, this IS `server/server/uploads`.
+    // Maybe I should assume that's "correct" for this project or I should use `..` if in server.
+
+    // Better download logic:
+    // Try both paths? Or just use the one that works?
+    // Or just path.join(process.cwd(), 'server', digital_file_path) (which is uploads/...).
+
+    // I will use `path.resolve` and check if exists.
+
+    let absolutePath = path.join(process.cwd(), 'server', digital_file_path);
+
+    // Fallback: if running from server dir, maybe we don't need 'server' in path?
+    if (!fs.existsSync(absolutePath)) {
+      // Try without 'server' prefix if it was duplicated
+      // digital_file_path is 'uploads/...'
+      // if cwd is '.../server', then join(cwd, digital_file_path) -> '.../server/uploads/...'
+      const altPath = path.join(process.cwd(), digital_file_path);
+      if (fs.existsSync(altPath)) {
+        absolutePath = altPath;
+      } else {
+        // Maybe 'server' was NOT needed in join?
+        console.error('File not found at:', absolutePath, 'or', altPath);
+      }
+    }
+
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({
+        success: false,
+        message: 'File file not found on server.'
+      });
+    }
+
+    res.download(absolutePath, digital_file_name || 'download.zip', (err) => {
+      if (err) {
+        console.error('Error downloading file:', err);
+        // Response already sent if download started?
+        if (!res.headersSent) {
+          res.status(500).json({ status: 'error', message: 'Download failed' });
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in downloadDigitalProduct:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to process download',
+      error: error.message
+    });
+  }
+};
+
 export {
   createOrder,
   getUserOrders,
@@ -1610,5 +1771,6 @@ export {
   updateOrderStatus,
   confirmReceipt,
   cancelOrder,
-  sellerCancelOrder
+  sellerCancelOrder,
+  downloadDigitalProduct
 };

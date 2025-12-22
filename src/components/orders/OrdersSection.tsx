@@ -13,11 +13,11 @@ type DateLike = string | Date | { createdAt?: string | Date; created_at?: string
 // Helper function to safely format dates
 const formatDate = (dateInput: DateLike | null | undefined): string => {
   if (!dateInput) return 'Date not available';
-  
+
   try {
     // Extract the date string/object from the input
     let dateValue: string | Date;
-    
+
     if (dateInput instanceof Date) {
       dateValue = dateInput;
     } else if (typeof dateInput === 'string') {
@@ -27,17 +27,17 @@ const formatDate = (dateInput: DateLike | null | undefined): string => {
       const dateObj = dateInput as { createdAt?: string | Date; created_at?: string | Date };
       dateValue = dateObj.createdAt || dateObj.created_at || '';
     }
-    
+
     if (!dateValue) return 'Date not available';
-    
+
     // Convert to Date object if it's a string
     const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
-    
+
     if (!isValid(date)) {
       console.warn('Invalid date:', dateValue);
       return 'Date not available';
     }
-    
+
     return format(date, 'MMM d, yyyy h:mm a');
   } catch (error) {
     console.error('Error formatting date:', error, 'Input:', dateInput);
@@ -161,18 +161,18 @@ export default function OrdersSection() {
 
   const fetchOrders = useCallback(async () => {
     if (!user) {
-      
+
       return;
     }
-    
-    
+
+
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      
+
       const orders = await buyerApi.getOrders();
-      
+
       setOrders(orders);
     } catch (err) {
       console.error('Failed to fetch orders:', err);
@@ -216,9 +216,9 @@ export default function OrdersSection() {
 
   const handleCancelOrder = async () => {
     if (!currentOrderId) return;
-    
+
     setShowCancelDialog(false);
-    
+
     try {
       const result = await buyerApi.cancelOrder(currentOrderId);
       if (result.success) {
@@ -235,29 +235,29 @@ export default function OrdersSection() {
 
   const handleConfirmReceipt = async () => {
     if (!currentOrderId) return;
-    
-    
-    
-    
+
+
+
+
     setShowReceiptDialog(false);
 
     setIsConfirming(currentOrderId);
     const loadingToast = toast.loading('Confirming order receipt...');
-    
+
     try {
-      
+
       const result = await buyerApi.confirmOrderReceipt(currentOrderId);
-      
-      
+
+
       if (result.success) {
         toast.success('Order marked as received. Thank you for your purchase!', { id: loadingToast });
-        
+
         // Optimistically update the UI
         setOrders(prevOrders => {
-          
+
           const updatedOrders = prevOrders.map(order => {
             if (order.id === currentOrderId) {
-              
+
               // Create a new order object with the updated properties
               const updatedOrder: Order = {
                 id: order.id,
@@ -277,15 +277,15 @@ export default function OrdersSection() {
             }
             return order;
           });
-          
+
           return updatedOrders;
         });
-        
+
         // Fetch fresh data from the server to ensure consistency
-        
+
         try {
           await fetchOrders();
-          
+
         } catch (fetchError) {
           console.error('Error refreshing orders:', fetchError);
           // Don't show error to user since we've already updated optimistically
@@ -299,7 +299,7 @@ export default function OrdersSection() {
       console.error('Error in handleConfirmReceipt:', error);
       const errorMsg = error.response?.data?.message || error.message || 'An error occurred while confirming order receipt';
       console.error('Error details:', errorMsg);
-      
+
       // More specific error handling
       if (error.code === 'ECONNABORTED') {
         toast.error('Request timed out. Please check your internet connection and try again.', { id: loadingToast });
@@ -315,7 +315,7 @@ export default function OrdersSection() {
       }
     } finally {
       setIsConfirming(null);
-      
+
     }
   };
 
@@ -383,7 +383,7 @@ export default function OrdersSection() {
         </div>
         <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
         <p className="text-gray-500 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
-        <Button 
+        <Button
           onClick={() => (window.location.href = '/shop')}
           className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
         >
@@ -414,21 +414,50 @@ export default function OrdersSection() {
                     {getPaymentStatusBadge(order.paymentStatus)}
                   </div>
                 </div>
-                
+
                 {/* Products Section */}
                 <div>
                   <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Products:</h4>
                   <ul className="space-y-2">
                     {order.items.map((item) => (
-                      <li key={item.id} className="text-xs sm:text-sm text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg px-3 py-2 border border-gray-200/50">
-                        <span className="font-semibold">{item.name}</span>
-                        <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                      <li key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg px-3 py-2 border border-gray-200/50">
+                        <div className="flex items-center">
+                          <span className="font-semibold">{item.name}</span>
+                          <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                          {item.isDigital && (
+                            <Badge variant="outline" className="ml-2 text-xs border-blue-200 text-blue-600 bg-blue-50">
+                              Digital
+                            </Badge>
+                          )}
+                        </div>
+                        {item.isDigital && (order.paymentStatus === 'success' || order.paymentStatus === 'completed' || order.status === 'COMPLETED') && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2 sm:mt-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
+                            onClick={async () => {
+                              try {
+                                toast.loading('Starting download...', { id: 'download-toast' });
+                                await buyerApi.downloadDigitalProduct(order.id, item.productId);
+                                toast.success('Download started', { id: 'download-toast' });
+                              } catch (error) {
+                                console.error('Download failed:', error);
+                                toast.error('Failed to download file', { id: 'download-toast' });
+                              }
+                            }}
+                          >
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download
+                          </Button>
+                        )}
                       </li>
                     ))}
                   </ul>
                 </div>
               </div>
-              
+
               {/* Price and Actions Section */}
               <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
                 {/* Total Amount */}
@@ -436,21 +465,21 @@ export default function OrdersSection() {
                   <p className="font-bold text-lg sm:text-xl text-gray-900">
                     {formatCurrency(
                       // Handle both snake_case and camelCase
-                      (order as any).total_amount !== undefined 
-                        ? (order as any).total_amount 
+                      (order as any).total_amount !== undefined
+                        ? (order as any).total_amount
                         : order.totalAmount,
                       order.currency || 'KSH'
                     )}
                   </p>
                   <p className="text-xs text-gray-500">Total Amount</p>
                 </div>
-                
+
                 {/* Action Buttons */}
                 <div className="w-full sm:w-auto lg:w-full space-y-2">
                   {order.status === 'PENDING' && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300 text-xs sm:text-sm font-semibold transition-all duration-200"
                       onClick={() => handleCancelOrderClick(order.id)}
                     >
@@ -459,8 +488,8 @@ export default function OrdersSection() {
                     </Button>
                   )}
                   {order.status === 'DELIVERY_COMPLETE' && (
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
                       onClick={() => handleConfirmReceiptClick(order.id)}
                     >
@@ -475,7 +504,7 @@ export default function OrdersSection() {
           </CardContent>
         </Card>
       ))}
-      
+
       {/* Cancel Order Confirmation Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
         <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl">
@@ -490,7 +519,7 @@ export default function OrdersSection() {
               Are you sure you want to cancel this order? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-3 mb-4">
             <p className="text-sm text-red-800 font-semibold">
               ⚠️ This action cannot be undone. You will receive a refund to your account balance.
@@ -498,15 +527,15 @@ export default function OrdersSection() {
           </div>
 
           <DialogFooter className="mt-4 gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowCancelDialog(false)}
               disabled={isConfirming === currentOrderId}
               className="border-gray-300 hover:bg-gray-50"
             >
               No, Keep Order
             </Button>
-            <Button 
+            <Button
               onClick={handleCancelOrder}
               disabled={isConfirming === currentOrderId}
               className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
@@ -538,7 +567,7 @@ export default function OrdersSection() {
               {confirmationMessage}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 my-4">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -562,15 +591,15 @@ export default function OrdersSection() {
           </div>
 
           <DialogFooter className="mt-4 gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => setShowReceiptDialog(false)}
               disabled={isConfirming === currentOrderId}
               className="border-gray-300 hover:bg-gray-50"
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleConfirmReceipt}
               disabled={isConfirming === currentOrderId}
               className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"

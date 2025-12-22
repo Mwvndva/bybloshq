@@ -60,6 +60,18 @@ router.route('/products/:id')
   .patch(productController.updateProduct)     // Update a product
   .delete(productController.deleteProduct);   // Delete a product
 
+// Digital product upload
+router.post('/products/upload-digital',
+  protect,
+  (req, res, next) => {
+    // Import dynamically or use the imported middleware
+    import('../middleware/digitalUpload.js').then(module => {
+      module.default.single('digital_file')(req, res, next);
+    }).catch(next);
+  },
+  productController.uploadDigitalFile
+);
+
 // Withdrawal request routes
 router.post('/withdrawal-request', sellerController.createWithdrawalRequest);
 router.get('/withdrawal-requests', sellerController.getWithdrawalRequests);

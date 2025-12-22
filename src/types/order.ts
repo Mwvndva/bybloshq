@@ -9,6 +9,7 @@ export interface OrderItem {
   price: number;
   quantity: number;
   imageUrl?: string;
+  isDigital?: boolean;
 }
 
 export interface OrderCustomer {

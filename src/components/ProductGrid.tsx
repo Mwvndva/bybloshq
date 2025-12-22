@@ -19,6 +19,8 @@ interface Product {
   createdAt: string;
   updatedAt: string;
   aesthetic: Aesthetic;
+  is_digital?: boolean;
+  isDigital?: boolean;
 }
 
 const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locationArea, priceMin, priceMax }: ProductGridProps) => {
@@ -33,14 +35,14 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
   const getCacheKey = useCallback((params: any) => {
     return JSON.stringify(params);
   }, []);
-  
+
   // Transform product data to ensure it matches our Product interface
   const transformProduct = (product: any): Product => {
     if (!product.image_url && !product.imageUrl) {
       console.error('Product is missing required image URL:', product);
       throw new Error('Product is missing required image');
     }
-    
+
     const transformedProduct: any = {
       id: String(product.id || ''),
       name: String(product.name || 'Unnamed Product'),
@@ -54,6 +56,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       createdAt: product.createdAt || product.created_at || new Date().toISOString(),
       updatedAt: product.updatedAt || product.updated_at || new Date().toISOString(),
       aesthetic: (product.aesthetic || 'noir') as Aesthetic,
+      is_digital: product.is_digital || product.isDigital,
     };
 
     // Add seller information if available
@@ -78,14 +81,14 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
 
   // Optimized product fetching logic with caching
   const fetchProducts = useCallback(async () => {
-    const params = { 
-      locationCity, 
-      locationArea, 
-      selectedAesthetic 
+    const params = {
+      locationCity,
+      locationArea,
+      selectedAesthetic
     };
     const key = getCacheKey(params);
     setCacheKey(key);
-    
+
     // Check cache first
     const cached = requestCache.get(key);
     if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
@@ -93,35 +96,35 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       setError('');
-      
+
       // Build query parameters
       const queryParams: any = {};
-      
+
       if (locationCity) {
         queryParams.city = locationCity;
-        
+
         if (locationArea) {
           queryParams.location = locationArea;
         }
       }
-      
+
       // Fetch products from the API
       let fetchedProducts = await publicApiService.getProducts(queryParams);
-      
+
       // Filter by aesthetic if one is selected
       if (selectedAesthetic && selectedAesthetic !== 'all') {
         fetchedProducts = fetchedProducts.filter(
           (product: any) => product.aesthetic === selectedAesthetic
         );
       }
-      
+
       // Transform and set products
       const transformedProducts = fetchedProducts.map(transformProduct);
-      
+
       // Extract sellers from the products that have them
       const sellersFromProducts = transformedProducts.reduce<Record<string, Seller>>((acc, product) => {
         if (product.seller) {
@@ -129,16 +132,16 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
         }
         return acc;
       }, {});
-      
+
       // Set the products
       setProducts(transformedProducts);
-      
+
       // Use sellers from products if available
       setSellers(sellersFromProducts);
 
       // Cache the result
       requestCache.set(key, { data: transformedProducts, timestamp: Date.now() });
-      
+
     } catch (err: any) {
       console.error('Failed to fetch products:', err);
       setError('Failed to load products. Please try again later.');
@@ -178,20 +181,20 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
         const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
         const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
         const matchesSearch = searchTerms.every(term => productText.includes(term));
-        
+
         return matchesPrice && matchesArea && matchesSearch;
       }
-      
+
       // If no search query, just check price and area
       return matchesPrice && matchesArea;
     });
   }, [products, priceMin, priceMax, locationArea, searchQuery]);
-    
+
   // Function to handle image loading errors
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
     const target = e.target as HTMLImageElement;
     console.error('Error loading image:', target.src.substring(0, 100));
-    
+
     // Set a placeholder image
     target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg=';
     target.alt = 'Image not available';
@@ -245,7 +248,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       </div>
     );
   }
-  
+
   // Show a message when no products are found for the selected filters
   if (filteredProducts.length === 0) {
     return (
@@ -295,7 +298,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       <div className="space-y-8">
         <div className="text-center">
           <h2 className="text-4xl font-black text-black mb-2 capitalize">
-            {searchQuery 
+            {searchQuery
               ? `Search Results${selectedAesthetic ? ` in ${selectedAesthetic.replace(/-/g, ' ')}` : ''}`
               : `${selectedAesthetic.replace(/-/g, ' ')} Collection`
             }
@@ -309,7 +312,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
           {filteredProducts.map((product) => {
             // Use the seller from the product if available, otherwise try to get it from the sellers map
             const productSeller = product.seller || sellers[product.sellerId];
-            
+
             // Debug log to check seller information
             if (!productSeller) {
               console.warn(`No seller found for product ${product.id} (${product.name})`);
@@ -320,7 +323,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
                 sellerLocation: productSeller.location
               });
             }
-            
+
             return (
               <ProductCard
                 key={product.id}
@@ -366,7 +369,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
             {productsByAesthetic[id].slice(0, 4).map((product) => {
               // Use the seller from the product if available, otherwise try to get it from the sellers map
               const productSeller = product.seller || sellers[product.sellerId];
-              
+
               // Debug log to check seller information
               if (!productSeller) {
                 console.warn(`No seller found for product ${product.id} (${product.name}) in aesthetic ${id}`);
@@ -377,7 +380,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
                   sellerLocation: productSeller.location
                 });
               }
-              
+
               return (
                 <ProductCard
                   key={product.id}

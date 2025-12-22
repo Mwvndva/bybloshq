@@ -1480,6 +1480,16 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   </div>
                 </div>
               </div>
+
+              {/* Theme Settings */}
+              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
+                <ThemeSelector
+                  currentTheme={sellerProfile?.theme}
+                  onThemeChange={(theme) => {
+                    setSellerProfile((prev) => (prev ? { ...prev, theme } : null));
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}

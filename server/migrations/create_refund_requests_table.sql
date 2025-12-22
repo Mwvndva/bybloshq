@@ -21,6 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_refund_requests_status ON refund_requests(status)
 CREATE INDEX IF NOT EXISTS idx_refund_requests_requested_at ON refund_requests(requested_at);
 
 -- Create trigger to update updated_at column
+DROP TRIGGER IF EXISTS update_refund_requests_updated_at ON refund_requests;
 CREATE TRIGGER update_refund_requests_updated_at
     BEFORE UPDATE ON refund_requests
     FOR EACH ROW
