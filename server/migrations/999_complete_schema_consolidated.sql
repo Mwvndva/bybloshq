@@ -476,6 +476,23 @@ CREATE TABLE IF NOT EXISTS dashboard_stats (
     UNIQUE(organizer_id)
 );
 
+-- Refund requests table
+CREATE TABLE IF NOT EXISTS refund_requests (
+    id SERIAL PRIMARY KEY,
+    buyer_id INTEGER NOT NULL REFERENCES buyers(id) ON DELETE CASCADE,
+    order_id INTEGER,
+    ticket_id INTEGER,
+    amount DECIMAL(12, 2) NOT NULL,
+    reason TEXT,
+    status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'processed')),
+    requested_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP WITH TIME ZONE,
+    processed_by INTEGER REFERENCES organizers(id),
+    admin_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Recent events table
 CREATE TABLE IF NOT EXISTS recent_events (
     id SERIAL PRIMARY KEY,
@@ -593,120 +610,173 @@ CREATE INDEX IF NOT EXISTS idx_recent_events_event ON recent_events(event_id);
 CREATE INDEX IF NOT EXISTS idx_recent_sales_organizer ON recent_sales(organizer_id);
 CREATE INDEX IF NOT EXISTS idx_recent_sales_event ON recent_sales(event_id);
 
+-- Refund requests indexes
+CREATE INDEX IF NOT EXISTS idx_refund_requests_buyer_id ON refund_requests(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_refund_requests_status ON refund_requests(status);
+CREATE INDEX IF NOT EXISTS idx_refund_requests_requested_at ON refund_requests(requested_at);
+
 -- ============================================================================
 -- TRIGGERS
 -- ============================================================================
 
 -- Updated_at triggers
-DROP TRIGGER IF EXISTS update_sellers_updated_at ON sellers;
-CREATE TRIGGER update_sellers_updated_at
-BEFORE UPDATE ON sellers
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Updated_at triggers
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_sellers_updated_at') THEN
+        CREATE TRIGGER update_sellers_updated_at
+        BEFORE UPDATE ON sellers
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_organizers_updated_at ON organizers;
-CREATE TRIGGER update_organizers_updated_at
-BEFORE UPDATE ON organizers
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_organizers_updated_at') THEN
+        CREATE TRIGGER update_organizers_updated_at
+        BEFORE UPDATE ON organizers
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_buyers_updated_at ON buyers;
-CREATE TRIGGER update_buyers_updated_at
-BEFORE UPDATE ON buyers
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_buyers_updated_at') THEN
+        CREATE TRIGGER update_buyers_updated_at
+        BEFORE UPDATE ON buyers
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_events_updated_at ON events;
-CREATE TRIGGER update_events_updated_at
-BEFORE UPDATE ON events
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_events_updated_at') THEN
+        CREATE TRIGGER update_events_updated_at
+        BEFORE UPDATE ON events
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_ticket_types_updated_at ON event_ticket_types;
-CREATE TRIGGER update_ticket_types_updated_at
-BEFORE UPDATE ON event_ticket_types
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_ticket_types_updated_at') THEN
+        CREATE TRIGGER update_ticket_types_updated_at
+        BEFORE UPDATE ON event_ticket_types
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_tickets_updated_at ON tickets;
-CREATE TRIGGER update_tickets_updated_at
-BEFORE UPDATE ON tickets
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_tickets_updated_at') THEN
+        CREATE TRIGGER update_tickets_updated_at
+        BEFORE UPDATE ON tickets
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_products_updated_at ON products;
-CREATE TRIGGER update_products_updated_at
-BEFORE UPDATE ON products
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_products_updated_at') THEN
+        CREATE TRIGGER update_products_updated_at
+        BEFORE UPDATE ON products
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_product_orders_updated_at ON product_orders;
-CREATE TRIGGER update_product_orders_updated_at
-BEFORE UPDATE ON product_orders
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_product_orders_updated_at') THEN
+        CREATE TRIGGER update_product_orders_updated_at
+        BEFORE UPDATE ON product_orders
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_order_items_updated_at ON order_items;
-CREATE TRIGGER update_order_items_updated_at
-BEFORE UPDATE ON order_items
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_order_items_updated_at') THEN
+        CREATE TRIGGER update_order_items_updated_at
+        BEFORE UPDATE ON order_items
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_payouts_updated_at ON payouts;
-CREATE TRIGGER update_payouts_updated_at
-BEFORE UPDATE ON payouts
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_payouts_updated_at') THEN
+        CREATE TRIGGER update_payouts_updated_at
+        BEFORE UPDATE ON payouts
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
-CREATE TRIGGER update_payments_updated_at
-BEFORE UPDATE ON payments
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_payments_updated_at') THEN
+        CREATE TRIGGER update_payments_updated_at
+        BEFORE UPDATE ON payments
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_wishlist_updated_at ON wishlist;
-CREATE TRIGGER update_wishlist_updated_at
-BEFORE UPDATE ON wishlist
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_wishlist_updated_at') THEN
+        CREATE TRIGGER update_wishlist_updated_at
+        BEFORE UPDATE ON wishlist
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_dashboard_stats_updated_at ON dashboard_stats;
-CREATE TRIGGER update_dashboard_stats_updated_at
-BEFORE UPDATE ON dashboard_stats
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_dashboard_stats_updated_at') THEN
+        CREATE TRIGGER update_dashboard_stats_updated_at
+        BEFORE UPDATE ON dashboard_stats
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_recent_sales_updated_at ON recent_sales;
-CREATE TRIGGER update_recent_sales_updated_at
-BEFORE UPDATE ON recent_sales
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_recent_sales_updated_at') THEN
+        CREATE TRIGGER update_recent_sales_updated_at
+        BEFORE UPDATE ON recent_sales
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- Specialized triggers
-DROP TRIGGER IF EXISTS generate_ticket_number_trigger ON tickets;
-CREATE TRIGGER generate_ticket_number_trigger
-BEFORE INSERT ON tickets
-FOR EACH ROW
-WHEN (NEW.ticket_number IS NULL)
-EXECUTE FUNCTION generate_ticket_number();
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'generate_ticket_number_trigger') THEN
+        CREATE TRIGGER generate_ticket_number_trigger
+        BEFORE INSERT ON tickets
+        FOR EACH ROW
+        WHEN (NEW.ticket_number IS NULL)
+        EXECUTE FUNCTION generate_ticket_number();
+    END IF;
 
-DROP TRIGGER IF EXISTS generate_order_number_trigger ON product_orders;
-CREATE TRIGGER generate_order_number_trigger
-BEFORE INSERT ON product_orders
-FOR EACH ROW
-WHEN (NEW.order_number IS NULL)
-EXECUTE FUNCTION generate_order_number();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'generate_order_number_trigger') THEN
+        CREATE TRIGGER generate_order_number_trigger
+        BEFORE INSERT ON product_orders
+        FOR EACH ROW
+        WHEN (NEW.order_number IS NULL)
+        EXECUTE FUNCTION generate_order_number();
+    END IF;
 
-DROP TRIGGER IF EXISTS update_order_status_history_trigger ON product_orders;
-CREATE TRIGGER update_order_status_history_trigger
-AFTER UPDATE OF status ON product_orders
-FOR EACH ROW
-EXECUTE FUNCTION update_order_status_history();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_order_status_history_trigger') THEN
+        CREATE TRIGGER update_order_status_history_trigger
+        AFTER UPDATE OF status ON product_orders
+        FOR EACH ROW
+        EXECUTE FUNCTION update_order_status_history();
+    END IF;
 
-DROP TRIGGER IF EXISTS handle_order_completion_trigger ON product_orders;
-CREATE TRIGGER handle_order_completion_trigger
-AFTER UPDATE OF status ON product_orders
-FOR EACH ROW
-WHEN (NEW.status = 'COMPLETED' AND OLD.status IS DISTINCT FROM 'COMPLETED')
-EXECUTE FUNCTION handle_order_completion();
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'handle_order_completion_trigger') THEN
+        CREATE TRIGGER handle_order_completion_trigger
+        AFTER UPDATE OF status ON product_orders
+        FOR EACH ROW
+        WHEN (NEW.status = 'COMPLETED' AND OLD.status IS DISTINCT FROM 'COMPLETED')
+        EXECUTE FUNCTION handle_order_completion();
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_refund_requests_updated_at') THEN
+        CREATE TRIGGER update_refund_requests_updated_at
+        BEFORE UPDATE ON refund_requests
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at_column();
+    END IF;
+END $$;
 
 -- ============================================================================
 -- CONSTRAINTS
 -- ============================================================================
 
 -- Add unique constraint for ticket numbers
-ALTER TABLE tickets ADD CONSTRAINT tickets_ticket_number_unique UNIQUE (ticket_number);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tickets_ticket_number_unique') THEN
+        ALTER TABLE tickets ADD CONSTRAINT tickets_ticket_number_unique UNIQUE (ticket_number);
+    END IF;
+END $$;
 
 -- Add check constraints
-ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_amount_positive CHECK (total_amount >= 0);
-ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_platform_fee_positive CHECK (platform_fee_amount >= 0);
-ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_payout_positive CHECK (seller_payout_amount >= 0);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_product_orders_amount_positive') THEN
+        ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_amount_positive CHECK (total_amount >= 0);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_product_orders_platform_fee_positive') THEN
+        ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_platform_fee_positive CHECK (platform_fee_amount >= 0);
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_product_orders_payout_positive') THEN
+        ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_payout_positive CHECK (seller_payout_amount >= 0);
+    END IF;
+END $$;
 
 -- ============================================================================
 -- COMMENTS
@@ -737,6 +807,19 @@ UPDATE buyers
 SET city = COALESCE(city, 'Nairobi'),
     location = COALESCE(location, 'CBD')
 WHERE city IS NULL OR location IS NULL;
+
+-- ============================================================================
+-- SCHEMA UPDATES (Consolidated from separate migrations)
+-- ============================================================================
+
+-- Add digital product fields to products table
+ALTER TABLE products ADD COLUMN IF NOT EXISTS is_digital BOOLEAN DEFAULT FALSE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_file_path TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_file_name TEXT;
+
+-- Add last_login to buyers
+ALTER TABLE buyers ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+CREATE INDEX IF NOT EXISTS idx_buyers_last_login ON buyers(last_login);
 
 -- ============================================================================
 -- COMPLETION LOG
