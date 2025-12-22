@@ -196,9 +196,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       setCurrentPhone(phone);
       setIsPhoneCheckModalOpen(false);
 
-      if (result.exists && result.buyer && result.token) {
+      if (result.exists && result.buyer) {
         // Buyer exists - use their data to initiate payment
-
 
         // Store token if provided
         if (result.token) {
@@ -206,13 +205,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         }
 
         // Proceed directly to payment with existing buyer info
+        // We skip saving buyer info because they already exist
         await handleBuyerInfoSubmit({
           fullName: result.buyer.fullName || '',
           email: result.buyer.email || '',
           phone: result.buyer.phone || phone,
           city: result.buyer.city,
           location: result.buyer.location
-        });
+        }, null, true); // true = skipSave
       } else {
         // Buyer doesn't exist - show form to collect full details
 
@@ -232,7 +232,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const handleBuyerInfoSubmit = async (
     buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string },
-    explicitBookingData?: { date: Date; time: string; location: string } | null
+    explicitBookingData?: { date: Date; time: string; location: string } | null,
+    skipSave: boolean = false
   ) => {
     setIsProcessingPurchase(true);
 
@@ -249,8 +250,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         buyerToken = localStorage.getItem('buyer_token') || '';
 
 
-      } else {
-        // User is not authenticated, save buyer info first
+      } else if (!skipSave) {
+        // User is not authenticated and not explicitly skipping save, save buyer info first
         try {
           const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
 
@@ -284,6 +285,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           console.error('Error saving buyer info:', saveError);
           throw new Error('Failed to save buyer information. Please try again.');
         }
+      } else {
+        // User not authenticated but skipping save (likely existing user via phone check)
+        // We don't have a token, so we'll proceed as guest/unauthenticated using the provided info
+        buyerId = ''; // No ID available without auth
+        buyerToken = '';
       }
 
       // Determine booking data to use (explicit argument takes precedence over state)
