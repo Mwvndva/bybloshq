@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone, FileText } from 'lucide-react';
+import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone, FileText, Handshake, Calendar } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -11,18 +11,18 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/components/ui/use-toast';
 import { BuyerInfoModal } from '@/components/BuyerInfoModal';
 import PhoneCheckModal from '@/components/PhoneCheckModal';
+import { ServiceBookingModal } from '@/components/ServiceBookingModal';
 import buyerApi from '@/api/buyerApi';
+import { format } from 'date-fns';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
+
 interface ProductCardProps {
-  product: Product & {
-    seller?: Seller;
-    isSold?: boolean;
-  };
+  product: Product;
   seller?: Seller;
   hideWishlist?: boolean;
-  theme?: Theme; // Add theme prop
+  theme?: Theme;
 }
 
 
@@ -137,11 +137,20 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     console.warn('ProductCard: BuyerAuth not available');
   }
 
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+  const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string } | null>(null);
+
   const handleBuyClick = async (e: React.MouseEvent) => {
     // Prevent default behavior and stop propagation
     e?.preventDefault?.();
     e?.stopPropagation?.();
     e?.nativeEvent?.stopImmediatePropagation?.();
+
+    // Check if it's a service product
+    if (product.product_type === 'service' || (product as any).productType === 'service') {
+      setIsBookingModalOpen(true);
+      return;
+    }
 
     // Check if user is authenticated with complete information
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
@@ -155,6 +164,25 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       });
     } else {
       // Show phone check modal to verify if buyer exists
+      setIsPhoneCheckModalOpen(true);
+    }
+  };
+
+  const handleBookingConfirm = async (data: { date: Date; time: string; location: string }) => {
+    setBookingData(data);
+    setIsBookingModalOpen(false);
+
+    // Proceed to payment flow after booking details are collected
+    // Check if user is authenticated with complete information
+    if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
+      await handleBuyerInfoSubmit({
+        fullName: userData.fullName,
+        email: userData.email,
+        phone: userData.phone,
+        city: userData.city,
+        location: userData.location
+      }, data);
+    } else {
       setIsPhoneCheckModalOpen(true);
     }
   };
@@ -202,7 +230,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const handleBuyerInfoSubmit = async (buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string }) => {
+  const handleBuyerInfoSubmit = async (
+    buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string },
+    explicitBookingData?: { date: Date; time: string; location: string } | null
+  ) => {
     setIsProcessingPurchase(true);
 
     try {
@@ -255,6 +286,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         }
       }
 
+      // Determine booking data to use (explicit argument takes precedence over state)
+      const activeBookingData = explicitBookingData || bookingData;
+
       // 2. Prepare payment payload for Paystack product payment
       const payload = {
         phone: buyerInfo.phone,
@@ -265,7 +299,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         productName: product.name,
         customerName: buyerInfo.fullName,
         narrative: `Purchase of ${product.name}`,
-        paymentMethod: 'paystack'
+        paymentMethod: 'paystack',
+        metadata: activeBookingData ? {
+          booking_date: format(activeBookingData.date, 'yyyy-MM-dd'),
+          booking_time: activeBookingData.time,
+          service_location: activeBookingData.location,
+          product_type: 'service'
+        } : undefined
       };
 
       console.debug('Payment Request:', { payload });
@@ -436,11 +476,20 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Image */}
       <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl">
-        {(product.is_digital || (product as any).isDigital) && (
+        {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
           <div className="absolute top-2 left-2 z-10">
-            <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+            <Badge className="bg-black/90 hover:bg-gray-900/90 text-white border-0 backdrop-blur-sm shadow-sm">
               <FileText className="h-3 w-3 mr-1" />
               Digital
+            </Badge>
+          </div>
+        )}
+
+        {(product.product_type === 'service' || (product as any).productType === 'service') && (
+          <div className="absolute top-2 left-2 z-10">
+            <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+              <Handshake className="h-3 w-3 mr-1" />
+              Service
             </Badge>
           </div>
         )}
@@ -472,8 +521,21 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         )}>
           {product.name}
         </h3>
-        <p className={cn("font-black text-lg sm:text-xl mb-2 sm:mb-3", themeClasses.price)}>
-          {formatCurrency(product.price)}
+        <p className={cn("font-black text-lg sm:text-xl mb-2 sm:mb-3 flex items-center gap-2",
+          (product.product_type === 'service' || (product as any).productType === 'service')
+            ? 'text-purple-600'
+            : themeClasses.price
+        )}>
+          {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) ? (
+            <span className="bg-black text-white px-2 py-0.5 rounded-md text-base sm:text-lg">
+              {formatCurrency(product.price)}
+            </span>
+          ) : (
+            formatCurrency(product.price)
+          )}
+          {(product.product_type === 'service' || (product as any).productType === 'service') && product.service_options?.price_type === 'hourly' && (
+            <span className="text-sm font-medium text-gray-500 ml-1">/hr</span>
+          )}
         </p>
 
         {product.description && (
@@ -499,8 +561,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             'focus-visible:ring-2 focus-visible:ring-offset-2',
             'flex items-center justify-center space-x-2',
             'disabled:opacity-50 disabled:pointer-events-none',
-            isSold ? 'bg-gray-400 hover:bg-gray-400' : themeClasses.button,
-            themeClasses.button
+            isSold
+              ? 'bg-gray-400 hover:bg-gray-400'
+              : (product.product_type === 'service' || (product as any).productType === 'service')
+                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital)
+                  ? 'bg-black hover:bg-gray-800 text-white'
+                  : themeClasses.button,
+            (product.product_type !== 'service' && (product as any).productType !== 'service' && product.product_type !== 'digital' && (product as any).productType !== 'digital' && !product.is_digital && !(product as any).isDigital) && themeClasses.button
           )}
           onClick={(e) => {
             e.preventDefault();
@@ -520,8 +588,22 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             </>
           ) : (
             <>
-              <ShoppingCart className="h-4 w-4" />
-              <span>{isSold ? 'Sold Out' : 'Buy Now'}</span>
+              {(product.product_type === 'service' || (product as any).productType === 'service') ? (
+                <Calendar className="h-4 w-4" />
+              ) : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) ? (
+                <FileText className="h-4 w-4" />
+              ) : (
+                <ShoppingCart className="h-4 w-4" />
+              )}
+              <span>
+                {isSold
+                  ? 'Sold Out'
+                  : (product.product_type === 'service' || (product as any).productType === 'service')
+                    ? 'Book Now'
+                    : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital)
+                      ? 'Download Now'
+                      : 'Buy Now'}
+              </span>
             </>
           )}
         </Button>
@@ -571,6 +653,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         phoneNumber={currentPhone}
       />
 
+      <ServiceBookingModal
+        product={product}
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        onConfirm={handleBookingConfirm}
+      />
     </Card>
   );
 }

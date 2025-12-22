@@ -51,7 +51,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw } from 'lucide-react';
+import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Handshake, FileText } from 'lucide-react';
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 import buyerApi from '@/api/buyerApi';
 import { toast } from 'sonner';
@@ -100,6 +100,20 @@ const getStatusBadge = (status: string) => {
         <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
           <XCircle className="h-3 w-3 mr-1" />
           Failed
+        </Badge>
+      );
+    case 'SERVICE_PENDING':
+      return (
+        <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Service Pending
+        </Badge>
+      );
+    case 'CONFIRMED':
+      return (
+        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Confirmed
         </Badge>
       );
     default:
@@ -195,14 +209,33 @@ export default function OrdersSection() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
 
-  const confirmationMessage = (
-    <div className="space-y-4">
-      <p>Have you picked up and inspected your package from <strong>"Dynamic Mall, along Tomboya Street - shop number SL 32"</strong>?</p>
-      <p className="text-sm text-muted-foreground">
-        Please only confirm after you have physically received and inspected your package.
-      </p>
-    </div>
-  );
+  const getConfirmationContent = () => {
+    const order = orders.find(o => o.id === currentOrderId);
+    if (!order) return null;
+
+    // Check if it's a service order (either by status or items)
+    const isService = order.status === 'CONFIRMED' || order.items.some((i: any) => i.productType === 'service' || i.isService);
+
+    if (isService) {
+      return (
+        <div className="space-y-4">
+          <p>By clicking <strong>"Confirm Receipt"</strong>, you agree that you have received the service satisfactorily.</p>
+          <p className="text-sm text-muted-foreground">
+            This will release the funds to the seller.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-4">
+        <p>Have you picked up and inspected your package from <strong>"Dynamic Mall, along Tomboya Street - shop number SL 32"</strong>?</p>
+        <p className="text-sm text-muted-foreground">
+          Please only confirm after you have physically received and inspected your package.
+        </p>
+      </div>
+    );
+  };
 
   const handleConfirmReceiptClick = (orderId: string) => {
     setCurrentOrderId(orderId);
@@ -424,13 +457,20 @@ export default function OrdersSection() {
                         <div className="flex items-center">
                           <span className="font-semibold">{item.name}</span>
                           <span className="text-gray-500 ml-2">× {item.quantity}</span>
-                          {item.isDigital && (
-                            <Badge variant="outline" className="ml-2 text-xs border-blue-200 text-blue-600 bg-blue-50">
+                          {(item.isDigital || item.productType === 'digital' || (item as any).is_digital) && (
+                            <Badge variant="outline" className="ml-2 text-xs border-gray-400 text-gray-900 bg-gray-100">
+                              <FileText className="h-3 w-3 mr-1" />
                               Digital
                             </Badge>
                           )}
+                          {(item.productType === 'service' || (item as any).isService) && (
+                            <Badge variant="outline" className="ml-2 text-xs border-purple-200 text-purple-600 bg-purple-50">
+                              <Handshake className="h-3 w-3 mr-1" />
+                              Service
+                            </Badge>
+                          )}
                         </div>
-                        {item.isDigital && (order.paymentStatus === 'success' || order.paymentStatus === 'completed' || order.status === 'COMPLETED') && (
+                        {item.isDigital && (order.paymentStatus === 'success' || order.status === 'COMPLETED') && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -496,6 +536,17 @@ export default function OrdersSection() {
                       <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                       <span className="hidden sm:inline">Confirm Receipt</span>
                       <span className="sm:hidden">Confirm Receipt</span>
+                    </Button>
+                  )}
+                  {order.status === 'CONFIRMED' && (
+                    <Button
+                      size="sm"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                      onClick={() => handleConfirmReceiptClick(order.id)}
+                    >
+                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      <span className="hidden sm:inline">Mark as Completed</span>
+                      <span className="sm:hidden">Done</span>
                     </Button>
                   )}
                 </div>
@@ -564,29 +615,35 @@ export default function OrdersSection() {
               Confirm Package Receipt
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-600 leading-relaxed">
-              {confirmationMessage}
+              {getConfirmationContent()}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 my-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                <Package className="h-4 w-4 text-white" />
+          {(!orders.find(o => o.id === currentOrderId)?.items.some((i: any) => i.productType === 'service' || i.isService) &&
+            orders.find(o => o.id === currentOrderId)?.status !== 'CONFIRMED') && (
+              <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 my-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Package className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="text-sm">
+                    <p className="font-semibold text-blue-900 mb-1">Pickup Location:</p>
+                    <p className="text-blue-800">
+                      <strong>Dynamic Mall</strong><br />
+                      Along Tomboya Street<br />
+                      Shop Number: <strong>SL 32</strong>
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="text-sm">
-                <p className="font-semibold text-blue-900 mb-1">Pickup Location:</p>
-                <p className="text-blue-800">
-                  <strong>Dynamic Mall</strong><br />
-                  Along Tomboya Street<br />
-                  Shop Number: <strong>SL 32</strong>
-                </p>
-              </div>
-            </div>
-          </div>
+            )}
 
           <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-3 mb-4">
             <p className="text-sm text-yellow-800 font-semibold">
-              ⚠️ Please confirm only after you have physically received and inspected your package.
+              {(orders.find(o => o.id === currentOrderId)?.items.some((i: any) => i.productType === 'service' || i.isService) ||
+                orders.find(o => o.id === currentOrderId)?.status === 'CONFIRMED')
+                ? "⚠️ Please confirm only after the service has been delivered satisfactorily."
+                : "⚠️ Please confirm only after you have physically received and inspected your package."}
             </p>
           </div>
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus } from 'lucide-react';
+import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
@@ -39,7 +39,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
   const confirmDelete = async () => {
     if (!productToDelete) return;
-    
+
     try {
       setDeletingId(productToDelete);
       await onDelete(productToDelete);
@@ -50,9 +50,9 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       console.error('Failed to delete product:', error);
       toast({
         title: 'Error',
-        description: error?.response?.data?.message || 
-                   error?.message || 
-                   'Failed to delete product. Please try again.',
+        description: error?.response?.data?.message ||
+          error?.message ||
+          'Failed to delete product. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -62,7 +62,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
   const handleStatusUpdate = async (productId: string, newStatus: 'available' | 'sold') => {
     if (!onStatusUpdate) return;
-    
+
     try {
       setUpdatingId(productId);
       const soldAt = newStatus === 'sold' ? new Date().toISOString() : null;
@@ -134,8 +134,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               onClick={() => {
                 setShowDeleteDialog(false);
                 setProductToDelete(null);
@@ -144,7 +144,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               variant="destructive"
               onClick={confirmDelete}
               disabled={!!deletingId}
@@ -173,14 +173,14 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => onEdit(product.id)}
                     className="flex items-center gap-2 cursor-pointer"
                   >
                     <Edit className="h-4 w-4" />
                     <span>Edit</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     className="flex items-center gap-2 cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
                     onSelect={(e) => e.preventDefault()}
                   >
@@ -192,7 +192,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             </div>
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm font-medium truncate">{product.name}</CardTitle>
-              <Badge 
+              <Badge
                 variant={product.status === 'sold' ? 'destructive' : 'default'}
                 className="mt-2 w-fit"
               >
@@ -216,9 +216,9 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               <div className="flex justify-between items-center">
                 <span className="font-medium">{formatCurrency(product.price)}</span>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => onEdit(product.id)}
                   >
                     <Edit className="h-4 w-4 mr-1" />
@@ -250,8 +250,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
                     {product.image_url ? (
-                      <img 
-                        src={product.image_url} 
+                      <img
+                        src={product.image_url}
                         alt={product.name}
                         className="h-10 w-10 rounded-md object-cover"
                       />
@@ -260,7 +260,22 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         <EyeOff className="h-5 w-5 text-gray-400" />
                       </div>
                     )}
-                    <span className="line-clamp-2">{product.name}</span>
+                    <div className="flex flex-col">
+                      <span className="line-clamp-2">{product.name}</span>
+                      <div className="flex gap-1 mt-1">
+                        {(product.product_type === 'digital' || product.productType === 'digital' || product.is_digital) && (
+                          <Badge variant="outline" className="w-fit text-[10px] h-5 px-1.5 border-gray-400 text-gray-900 bg-gray-100">
+                            Digital
+                          </Badge>
+                        )}
+                        {(product.product_type === 'service' || product.productType === 'service') && (
+                          <Badge variant="outline" className="w-fit text-[10px] h-5 px-1.5 border-purple-200 text-purple-600 bg-purple-50">
+                            <Handshake className="h-3 w-3 mr-1" />
+                            Service
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="capitalize">{product.aesthetic}</TableCell>
