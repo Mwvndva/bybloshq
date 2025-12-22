@@ -527,6 +527,7 @@ async function getSellerProductsFromDB(sellerId) {
       p.status,
       p.created_at AS "createdAt",
       p.updated_at AS "updatedAt",
+      p.is_digital AS "isDigital",
       s.shop_name AS "sellerName"
     FROM products p
     JOIN sellers s ON p.seller_id = s.id

@@ -4,9 +4,11 @@ import { pool } from '../config/database.js';
 export const getProducts = async (req, res) => {
   try {
     const { aesthetic, city, location } = req.query;
-    
+
     let query = `
-      SELECT p.*, 
+      SELECT p.*,
+             p.is_digital as "isDigital",
+             p.digital_file_name as "digitalFileName",
              s.id as seller_id,
              s.full_name as seller_name,
              s.phone as seller_phone,
@@ -22,21 +24,21 @@ export const getProducts = async (req, res) => {
       JOIN sellers s ON p.seller_id = s.id
       WHERE p.status = $1
     `;
-    
+
     const queryParams = ['available']; // Only show available products
     let paramCount = 2; // Start from 2 since we already have one parameter
-    
+
     // Add aesthetic filter if provided
     if (aesthetic && aesthetic !== 'all') {
       query += ` AND p.aesthetic = $${paramCount++}`;
       queryParams.push(aesthetic);
     }
-    
+
     // Add city filter if provided
     if (city) {
       query += ` AND LOWER(s.city) = LOWER($${paramCount++})`;
       queryParams.push(city);
-      
+
       // Add location filter if provided and city is also provided
       // Use LIKE for partial matching to allow flexible location search
       if (location) {
@@ -44,15 +46,15 @@ export const getProducts = async (req, res) => {
         queryParams.push(`%${location}%`);
       }
     }
-    
+
     query += ' ORDER BY p.created_at DESC';
-    
+
     const result = await pool.query(query, queryParams);
-    
+
     // Transform results to include nested seller object
     const transformedResults = result.rows.map(row => {
       const product = { ...row };
-      
+
       // Create seller object
       if (row.seller_id) {
         product.seller = {
@@ -74,7 +76,7 @@ export const getProducts = async (req, res) => {
           updated_at: row.seller_updated_at
         };
       }
-      
+
       // Remove individual seller fields from root level
       delete product.seller_id;
       delete product.seller_name;
@@ -87,10 +89,10 @@ export const getProducts = async (req, res) => {
       delete product.seller_shop_name;
       delete product.seller_created_at;
       delete product.seller_updated_at;
-      
+
       return product;
     });
-    
+
     res.status(200).json({
       status: 'success',
       results: transformedResults.length,
@@ -112,7 +114,7 @@ export const getProducts = async (req, res) => {
 export const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const result = await pool.query(
       `SELECT p.*, 
               s.full_name as seller_name,
@@ -123,14 +125,14 @@ export const getProduct = async (req, res) => {
        WHERE p.id = $1`,
       [id]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'Product not found'
       });
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -152,7 +154,7 @@ export const getAesthetics = async (req, res) => {
   try {
     const result = await pool.query('SELECT DISTINCT aesthetic FROM products WHERE status = $1', ['available']);
     const aesthetics = result.rows.map(row => row.aesthetic).filter(Boolean);
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -173,7 +175,7 @@ export const getAesthetics = async (req, res) => {
 export const getSellerPublicInfo = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Only select columns that exist in the sellers table
     const result = await pool.query(
       `SELECT id, full_name, email, phone, created_at, updated_at
@@ -181,17 +183,17 @@ export const getSellerPublicInfo = async (req, res) => {
        WHERE id = $1`,
       [id]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
       });
     }
-    
+
     // Don't expose sensitive data
     const { password, reset_token, reset_token_expiry, ...sellerData } = result.rows[0];
-    
+
     res.status(200).json({
       status: 'success',
       data: {

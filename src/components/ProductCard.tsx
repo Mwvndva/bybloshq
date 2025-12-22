@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone } from 'lucide-react';
+import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone, FileText } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -38,41 +38,41 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     console.warn('ProductCard: Wishlist not available');
   }
 
-  const addToWishlist = wishlistContext?.addToWishlist || (async () => {});
+  const addToWishlist = wishlistContext?.addToWishlist || (async () => { });
   const isInWishlist = wishlistContext?.isInWishlist || (() => false);
   const isWishlistLoading = wishlistContext?.isLoading || false;
-  
+
   // Dialog state
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
   const [isPhoneCheckModalOpen, setIsPhoneCheckModalOpen] = useState(false);
   const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
   const [currentPhone, setCurrentPhone] = useState('');
-  
+
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
-  
+
   // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
   const sellerLocation = displaySeller?.location;
   const isSold = product.status === 'sold' || product.isSold;
-  
+
   const hasContactInfo = Boolean(
-    displaySeller?.phone || 
-    displaySeller?.email || 
-    displaySeller?.website || 
+    displaySeller?.phone ||
+    displaySeller?.email ||
+    displaySeller?.website ||
     sellerLocation
   );
-  
+
   const isWishlisted = isInWishlist(product.id);
 
 
 
   useEffect(() => {
-    
+
   }, [product.id, isWishlisted]);
 
   const toggleWishlist = async (e: React.MouseEvent) => {
@@ -81,34 +81,34 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setWishlistActionLoading(true);
     try {
       await addToWishlist(product);
-      toast({ 
-        title: 'Added to Wishlist', 
-        description: `${product.name} added to your wishlist.` 
+      toast({
+        title: 'Added to Wishlist',
+        description: `${product.name} added to your wishlist.`
       });
     } catch (error: any) {
       if (error.code === 'DUPLICATE_WISHLIST_ITEM' || error.response?.status === 409) {
-        toast({ 
-          title: 'Already in Wishlist', 
+        toast({
+          title: 'Already in Wishlist',
           description: 'Product already in wishlist',
           variant: 'default'
         });
       } else {
-        toast({ 
-          title: 'Error', 
-          description: 'Failed to add item to wishlist.', 
-          variant: 'destructive' 
+        toast({
+          title: 'Error',
+          description: 'Failed to add item to wishlist.',
+          variant: 'destructive'
         });
       }
     } finally {
       setWishlistActionLoading(false);
     }
   };
-  
+
   const handleCardClick = (e: React.MouseEvent) => {
     // Don't open image dialog if clicking on interactive elements
     const target = e.target as HTMLElement;
-    const isInteractiveElement = 
-      target.closest('button') || 
+    const isInteractiveElement =
+      target.closest('button') ||
       target.closest('a') ||
       target.closest('[role="button"]') ||
       target.closest('input') ||
@@ -116,12 +116,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       target.closest('select') ||
       target.closest('[contenteditable="true"]') ||
       target.closest('[tabindex]');
-    
+
     if (!isInteractiveElement) {
       setIsImageDialogOpen(true);
     }
   };
-  
+
   // Safely use buyer auth context
   let isAuthenticated = false;
   let userData = null;
@@ -136,13 +136,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     // If useBuyerAuth throws an error, use default values
     console.warn('ProductCard: BuyerAuth not available');
   }
-  
+
   const handleBuyClick = async (e: React.MouseEvent) => {
     // Prevent default behavior and stop propagation
     e?.preventDefault?.();
     e?.stopPropagation?.();
     e?.nativeEvent?.stopImmediatePropagation?.();
-    
+
     // Check if user is authenticated with complete information
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
       // User has complete information, proceed directly with payment
@@ -162,21 +162,21 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handlePhoneSubmit = async (phone: string) => {
     setIsCheckingPhone(true);
     try {
-      
+
       const result = await buyerApi.checkBuyerByPhone(phone);
-      
+
       setCurrentPhone(phone);
       setIsPhoneCheckModalOpen(false);
-      
+
       if (result.exists && result.buyer && result.token) {
         // Buyer exists - use their data to initiate payment
-        
-        
+
+
         // Store token if provided
         if (result.token) {
           localStorage.setItem('buyer_token', result.token);
         }
-        
+
         // Proceed directly to payment with existing buyer info
         await handleBuyerInfoSubmit({
           fullName: result.buyer.fullName || '',
@@ -187,7 +187,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         });
       } else {
         // Buyer doesn't exist - show form to collect full details
-        
+
         setIsBuyerModalOpen(true);
       }
     } catch (error: any) {
@@ -204,7 +204,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const handleBuyerInfoSubmit = async (buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string }) => {
     setIsProcessingPurchase(true);
-    
+
     try {
       console.debug('Buyer Info:', buyerInfo);
 
@@ -217,11 +217,23 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         buyerId = String(userData.id);
         buyerToken = localStorage.getItem('buyer_token') || '';
 
-        
+
       } else {
         // User is not authenticated, save buyer info first
         try {
           const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
+
+          if (saveResult.requiresLogin) {
+            toast({
+              title: "Account Exists",
+              description: "This phone number is already registered. Please log in to complete your purchase.",
+              variant: "default",
+            });
+            setTimeout(() => {
+              window.location.href = '/buyer/login';
+            }, 2000);
+            return;
+          }
 
           if (!saveResult.buyer?.id) {
             throw new Error('Failed to create buyer account');
@@ -235,7 +247,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             localStorage.setItem('buyer_token', buyerToken);
           }
 
-          
+
 
         } catch (saveError) {
           console.error('Error saving buyer info:', saveError);
@@ -255,21 +267,21 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         narrative: `Purchase of ${product.name}`,
         paymentMethod: 'paystack'
       };
-      
+
       console.debug('Payment Request:', { payload });
-      
+
       // 3. Get authentication token
       const token = localStorage.getItem('buyer_token');
       if (!token && buyerToken) {
         localStorage.setItem('buyer_token', buyerToken);
       }
-      
+
       // 4. Call Paystack product payment API
       const isDevelopment = import.meta.env.DEV;
       const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
         ? '/api'  // Use proxy in development when VITE_API_URL is not set
         : (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '');
-      
+
       const response = await fetch(`${baseURL}/payments/initiate-product`, {
         method: 'POST',
         headers: {
@@ -278,28 +290,28 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         },
         body: JSON.stringify(payload),
       });
-      
+
       // 5. Handle API response
       const responseData = await response.json().catch(() => ({}));
-      
+
       if (!response.ok) {
         const errorMessage = responseData.message || 'Failed to initiate payment';
         console.error('Payment API Error:', { status: response.status, responseData });
         throw new Error(errorMessage);
       }
-      
+
       // Extract redirect URL from Paystack response
       const redirectUrl = responseData.data?.authorization_url;
-      
+
       if (!redirectUrl) {
         console.error('Invalid response format from payment gateway:', responseData);
         throw new Error('Invalid response from payment gateway');
       }
-      
+
       // 6. Redirect to Paystack payment page
       console.debug('Redirecting to Paystack:', redirectUrl);
       window.location.href = redirectUrl;
-      
+
     } catch (error) {
       console.error('Payment error:', error);
       toast({
@@ -391,7 +403,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   })();
 
   return (
-    <Card 
+    <Card
       className={cn(
         'group relative overflow-hidden transition-all duration-500 backdrop-blur-sm border-0',
         isSold ? 'opacity-60' : 'hover:-translate-y-2',
@@ -424,6 +436,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Image */}
       <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl">
+        {(product.is_digital || (product as any).isDigital) && (
+          <div className="absolute top-2 left-2 z-10">
+            <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+              <FileText className="h-3 w-3 mr-1" />
+              Digital
+            </Badge>
+          </div>
+        )}
         {isImageLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
             <ImageIcon className="h-8 w-8 text-gray-300 animate-pulse" />
@@ -447,7 +467,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       </div>
 
       <CardContent className="p-4 sm:p-6">
-        <h3 className={cn("font-bold mb-2 line-clamp-1 text-sm sm:text-base lg:text-lg", 
+        <h3 className={cn("font-bold mb-2 line-clamp-1 text-sm sm:text-base lg:text-lg",
           theme === 'black' ? 'text-white' : 'text-gray-900'
         )}>
           {product.name}
@@ -455,7 +475,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <p className={cn("font-black text-lg sm:text-xl mb-2 sm:mb-3", themeClasses.price)}>
           {formatCurrency(product.price)}
         </p>
-        
+
         {product.description && (
           <p className={cn("text-xs sm:text-sm line-clamp-2 leading-relaxed mb-3 sm:mb-4", themeClasses.description)}>
             {product.description}
@@ -463,7 +483,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         )}
 
         {/* Seller Info */}
-        <div className={cn("flex items-center gap-2 pt-2 border-t mt-3", 
+        <div className={cn("flex items-center gap-2 pt-2 border-t mt-3",
           theme === 'black' ? 'border-gray-800' : 'border-gray-100'
         )}>
           <Store className={cn("h-4 w-4", themeClasses.icon)} />

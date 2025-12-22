@@ -1,5 +1,5 @@
 
-export type Aesthetic = 
+export type Aesthetic =
   | 'all'
   | 'clothes-style'
   | 'sneakers-shoes'
@@ -57,6 +57,9 @@ export interface Product {
     freeShipping?: boolean;
     processingTime?: string;
   };
+  is_digital?: boolean;
+  digital_file_path?: string;
+  digital_file_name?: string;
 }
 
 export interface OrderItem {
