@@ -40,9 +40,14 @@ export const createProduct = async (req, res) => {
       image,
       image_url,
       aesthetic = 'noir',
+      // Digital Product Fields
       is_digital = false,
       digital_file_path,
-      digital_file_name
+      digital_file_name,
+      // Service Product Fields
+      product_type = 'physical',
+      service_locations,
+      service_options
     } = req.body;
 
     const sellerId = req.user?.id;
@@ -56,7 +61,10 @@ export const createProduct = async (req, res) => {
       aesthetic,
       sellerId,
       is_digital,
-      digital_file_name
+      digital_file_name,
+      product_type,
+      service_locations,
+      service_options
     });
 
     // Validate required fields
@@ -85,6 +93,14 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    // Validate service product fields
+    if (product_type === 'service' && (!service_options || !service_options.availability_days)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Availability days are required for services'
+      });
+    }
+
     // Use image_url if provided, otherwise fall back to image
     const imageData = image_url || image;
 
@@ -94,16 +110,6 @@ export const createProduct = async (req, res) => {
       return res.status(400).json({
         status: 'error',
         message: 'Invalid image format. Must be a data URL starting with data:image/'
-      });
-    }
-
-    // Extract image data and validate
-    const matches = imageData.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
-    if (!matches || matches.length !== 3) {
-      console.error('Invalid image data URL format');
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid image data URL format'
       });
     }
 
@@ -119,6 +125,10 @@ export const createProduct = async (req, res) => {
 
     console.log('Creating product with validated image data');
 
+    // Determine final product_type if strictly is_digital passed
+    let finalProductType = product_type;
+    if (is_digital) finalProductType = 'digital';
+
     // Insert into database
     const result = await pool.query(
       `INSERT INTO products (
@@ -133,8 +143,11 @@ export const createProduct = async (req, res) => {
         updated_at,
         is_digital,
         digital_file_path,
-        digital_file_name
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'available', NOW(), NOW(), $7, $8, $9)
+        digital_file_name,
+        product_type,
+        service_locations,
+        service_options
+      ) VALUES ($1, $2, $3, $4, $5, $6, 'available', NOW(), NOW(), $7, $8, $9, $10, $11, $12)
        RETURNING *`,
       [
         name.trim(),
@@ -145,7 +158,10 @@ export const createProduct = async (req, res) => {
         aesthetic,
         is_digital || false,
         digital_file_path || null,
-        digital_file_name || null
+        digital_file_name || null,
+        finalProductType,
+        service_locations || null,
+        service_options || null
       ]
     );
 
@@ -154,7 +170,8 @@ export const createProduct = async (req, res) => {
       id: product.id,
       name: product.name,
       imageUrlLength: product.image_url?.length || 0,
-      isDigital: product.is_digital
+      isDigital: product.is_digital,
+      productType: product.product_type
     });
 
     if (!product) {
@@ -188,68 +205,31 @@ export const getSellerProducts = async (req, res) => {
       });
     }
 
-    // First, check what columns exist in the products table
-    const checkColumns = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'products' 
-      AND column_name IN ('status', 'sold_at', 'is_digital', 'digital_file_name')
-    `);
-
-    const hasStatusColumn = checkColumns.rows.some(row => row.column_name === 'status');
-    const hasSoldAtColumn = checkColumns.rows.some(row => row.column_name === 'sold_at');
-    const hasIsDigitalColumn = checkColumns.rows.some(row => row.column_name === 'is_digital');
-    const hasDigitalFileNameColumn = checkColumns.rows.some(row => row.column_name === 'digital_file_name');
-
-    console.log('Database columns:', { hasStatusColumn, hasSoldAtColumn, hasIsDigitalColumn });
-
-    // Build the query based on available columns
-    let query = 'SELECT id, name, price, description, image_url, aesthetic, created_at AS "createdAt", ';
-
-    if (hasStatusColumn) {
-      query += 'status, ';
-    } else {
-      query += `'published' as status, `;
-    }
-
-    if (hasSoldAtColumn) {
-      query += 'sold_at AS "soldAt", ';
-    } else {
-      query += 'NULL as "soldAt", ';
-    }
-
-    if (hasIsDigitalColumn) {
-      query += 'is_digital AS "isDigital", ';
-    } else {
-      query += 'false AS "isDigital", ';
-    }
-
-    if (hasDigitalFileNameColumn) {
-      query += 'digital_file_name AS "digitalFileName" ';
-    } else {
-      query += 'NULL AS "digitalFileName" ';
-    }
-
-    query += 'FROM products WHERE seller_id = $1 ORDER BY created_at DESC';
+    const query = `
+      SELECT 
+        p.*,
+        p.created_at AS "createdAt",
+        p.is_digital AS "isDigital",
+        p.digital_file_name AS "digitalFileName",
+        p.product_type AS "productType",
+        p.service_locations AS "serviceLocations",
+        p.service_options AS "serviceOptions",
+        p.sold_at AS "soldAt"
+      FROM products p
+      WHERE p.seller_id = $1 
+      ORDER BY p.created_at DESC
+    `;
 
     console.log('Executing query:', query);
 
     const result = await pool.query(query, [sellerId]);
 
-    // Process the results to ensure consistent response format
-    const products = result.rows.map(product => {
-      // If status column doesn't exist, set a default status
-      if (!hasStatusColumn) {
-        product.status = 'published';
-      }
-
-      // If sold_at column doesn't exist, set soldAt to null
-      if (!hasSoldAtColumn) {
-        product.soldAt = null;
-      }
-
-      return product;
-    });
+    // Transform null status/soldAt if needed (though now strict schema enforces defaults usually)
+    const products = result.rows.map(p => ({
+      ...p,
+      status: p.status || 'published',
+      soldAt: p.soldAt || null
+    }));
 
     res.status(200).json({
       status: 'success',
@@ -272,47 +252,19 @@ export const getProduct = async (req, res) => {
     const { id } = req.params;
     const sellerId = req.user.id;
 
-    // First, check what columns exist in the products table
-    const checkColumns = await pool.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'products' 
-      AND column_name IN ('status', 'sold_at', 'is_digital', 'digital_file_name')
-    `);
-
-    const hasStatusColumn = checkColumns.rows.some(row => row.column_name === 'status');
-    const hasSoldAtColumn = checkColumns.rows.some(row => row.column_name === 'sold_at');
-    const hasIsDigitalColumn = checkColumns.rows.some(row => row.column_name === 'is_digital');
-    const hasDigitalFileNameColumn = checkColumns.rows.some(row => row.column_name === 'digital_file_name');
-
-    // Build the query based on available columns
-    let query = 'SELECT id, name, price, description, image_url, aesthetic, created_at AS "createdAt", ';
-
-    if (hasStatusColumn) {
-      query += 'status, ';
-    } else {
-      query += `'published' as status, `;
-    }
-
-    if (hasSoldAtColumn) {
-      query += 'sold_at AS "soldAt", ';
-    } else {
-      query += 'NULL as "soldAt", ';
-    }
-
-    if (hasIsDigitalColumn) {
-      query += 'is_digital AS "isDigital", ';
-    } else {
-      query += 'false AS "isDigital", ';
-    }
-
-    if (hasDigitalFileNameColumn) {
-      query += 'digital_file_name AS "digitalFileName" ';
-    } else {
-      query += 'NULL AS "digitalFileName" ';
-    }
-
-    query += 'FROM products WHERE id = $1 AND seller_id = $2';
+    const query = `
+      SELECT 
+        p.*,
+        p.created_at AS "createdAt",
+        p.is_digital AS "isDigital",
+        p.digital_file_name AS "digitalFileName",
+        p.product_type AS "productType",
+        p.service_locations AS "serviceLocations",
+        p.service_options AS "serviceOptions",
+        p.sold_at AS "soldAt"
+      FROM products p
+      WHERE p.id = $1 AND p.seller_id = $2
+    `;
 
     console.log('Executing query:', query);
 
@@ -327,13 +279,9 @@ export const getProduct = async (req, res) => {
 
     const product = result.rows[0];
 
-    // Ensure consistent response format
-    if (!hasStatusColumn) {
-      product.status = 'published';
-    }
-    if (!hasSoldAtColumn) {
-      product.soldAt = null;
-    }
+    // Normalize aliases
+    product.status = product.status || 'published';
+    product.soldAt = product.soldAt || null;
 
     res.status(200).json({
       status: 'success',

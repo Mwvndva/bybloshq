@@ -62,7 +62,7 @@ const createOrder = async (req, res) => {
     // Get current product prices and validate items
     const productIds = items.map(item => item.productId);
     const productsResult = await pool.query(
-      'SELECT id, price, name FROM products WHERE id = ANY($1::int[])',
+      'SELECT id, price, name, product_type, is_digital FROM products WHERE id = ANY($1::int[])',
       [productIds]
     );
 
@@ -96,6 +96,8 @@ const createOrder = async (req, res) => {
         price: price,
         quantity: quantity,
         subtotal: subtotal,
+        productType: product.product_type,
+        isDigital: product.is_digital,
         metadata: {
           image_url: item.product_image || null
         }
@@ -370,6 +372,7 @@ const getSellerOrders = async (req, res) => {
                 'price', oi.product_price,
                 'quantity', oi.quantity,
                 'imageUrl', p.image_url,
+                'productType', p.product_type,
                 'subtotal', oi.subtotal,
                 'metadata', COALESCE(oi.metadata, '{}'::jsonb)
               )
@@ -466,10 +469,13 @@ const getSellerOrders = async (req, res) => {
         name: item.name,
         price: parseFloat(item.price),
         quantity: parseInt(item.quantity),
+        quantity: parseInt(item.quantity),
         imageUrl: item.imageUrl,
+        productType: item.productType,
         subtotal: parseFloat(item.subtotal),
         metadata: item.metadata || {}
       })),
+      metadata: row.metadata || {},
       customer: row.customer || {},
       currency: 'KSH' // Default currency
     }));
@@ -657,6 +663,9 @@ const updateOrderStatus = async (req, res) => {
       'PENDING': ['DELIVERY_PENDING', 'CANCELLED'],
       'DELIVERY_PENDING': ['DELIVERY_COMPLETE', 'CANCELLED'],
       'DELIVERY_COMPLETE': ['COMPLETED', 'CANCELLED'],
+      'DELIVERY_COMPLETE': ['COMPLETED', 'CANCELLED'],
+      'SERVICE_PENDING': ['CONFIRMED', 'CANCELLED'],
+      'CONFIRMED': ['COMPLETED', 'CANCELLED'],
       'COMPLETED': [],
       'CANCELLED': [],
       'FAILED': []
@@ -820,11 +829,11 @@ const confirmReceipt = async (req, res) => {
 
     const order = orderResult.rows[0];
 
-    // Only allow confirming receipt for orders that are DELIVERY_COMPLETE
-    if (order.status !== 'DELIVERY_COMPLETE') {
+    // Only allow confirming receipt for orders that are DELIVERY_COMPLETE or CONFIRMED (for services)
+    if (order.status !== 'DELIVERY_COMPLETE' && order.status !== 'CONFIRMED') {
       return res.status(400).json({
         success: false,
-        message: `Cannot confirm receipt for order with status: ${order.status}. Order must be marked as ready for pickup first.`
+        message: `Cannot confirm receipt for order with status: ${order.status}. Order must be marked as ready for pickup (or confirmed for services) first.`
       });
     }
 
@@ -1174,7 +1183,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         totalAmount: parseFloat(order.total_amount),
         status: 'COMPLETED'
       },
-      oldStatus: 'DELIVERY_COMPLETE',
+      oldStatus: order.status,
       newStatus: 'COMPLETED',
       notes: ''
     };
@@ -1196,7 +1205,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         totalAmount: parseFloat(order.total_amount),
         status: 'COMPLETED'
       },
-      oldStatus: 'DELIVERY_COMPLETE',
+      oldStatus: order.status,
       newStatus: 'COMPLETED',
       notes: ''
     };

@@ -51,6 +51,17 @@
         </div>
       </div>
 
+      <% if (locals.bookingDetails) { %>
+      <div style="margin: 25px 0; border: 1px solid #7c3aed; border-radius: 8px; padding: 20px; background: #f5f3ff;">
+        <h3 style="margin-top: 0; color: #6d28d9; border-bottom: 1px solid #ddd6fe; padding-bottom: 10px;">Service Booking Confirmed</h3>
+        <div style="font-size: 14px;">
+          <p style="margin: 8px 0;"><strong>Date:</strong> <%= bookingDetails.date %></p>
+          <p style="margin: 8px 0;"><strong>Time:</strong> <%= bookingDetails.time %></p>
+          <p style="margin: 8px 0;"><strong>Location:</strong> <%= bookingDetails.location %></p>
+        </div>
+      </div>
+      <% } %>
+
       <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin: 20px 0;">
         <p style="margin: 0; font-size: 14px; color: #0369a1;"><strong>What's next?</strong> The seller will ship your item soon. You'll receive another email once your order has been shipped.</p>
       </div>
