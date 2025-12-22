@@ -317,7 +317,12 @@ export const sendProductOrderConfirmationEmail = async (email, orderData) => {
       orderNumber: orderData.order_number,
       orderDate: new Date(orderData.created_at).toLocaleDateString(),
       items: orderData.items || [],
-      totalAmount: orderData.total_amount
+      totalAmount: orderData.total_amount,
+      bookingDetails: orderData.metadata?.product_type === 'service' ? {
+        date: orderData.metadata.booking_date,
+        time: orderData.metadata.booking_time,
+        location: orderData.metadata.service_location
+      } : null
     };
 
     const html = await readTemplate('product-order-confirmation', templateData);
@@ -348,7 +353,12 @@ export const sendNewOrderNotificationEmail = async (email, orderData) => {
       shippingAddress: orderData.shipping_address,
       totalAmount: orderData.total_amount,
       platformFee: orderData.platform_fee_amount,
-      sellerPayout: orderData.seller_payout_amount
+      sellerPayout: orderData.seller_payout_amount,
+      bookingDetails: orderData.metadata?.product_type === 'service' ? {
+        date: orderData.metadata.booking_date,
+        time: orderData.metadata.booking_time,
+        location: orderData.metadata.service_location
+      } : null
     };
 
     const html = await readTemplate('new-order-notification', templateData);

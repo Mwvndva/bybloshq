@@ -71,13 +71,27 @@ class Order {
 
       logger.info(`Calculated totals - Total: ${totalAmount}, Platform Fee: ${platformFee}, Seller Payout: ${sellerPayout}`);
 
+      // Determine initial status based on product types
+      // Default to PENDING (waiting for payment)
+      let initialStatus = 'PENDING';
+
+      // Check if order contains only service items or mixed items
+      const hasPhysical = items.some(item => item.productType === 'physical' || (!item.productType && !item.isDigital));
+      const hasService = items.some(item => item.productType === 'service');
+      const isServiceOnly = hasService && !hasPhysical;
+
+      // Use SERVICE_PENDING for service-only orders to distinguish them immediately
+      if (isServiceOnly) {
+        initialStatus = 'SERVICE_PENDING';
+      }
+
       // Insert order
       const orderQuery = `
         INSERT INTO product_orders (
           buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
           payment_method, buyer_name, buyer_email, buyer_phone, shipping_address,
           notes, metadata, status, payment_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'PENDING', 'pending')
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
         RETURNING *
       `;
 
@@ -93,7 +107,8 @@ class Order {
         buyerPhone,
         shippingAddress ? JSON.stringify(shippingAddress) : null,
         notes,
-        JSON.stringify(metadata)
+        JSON.stringify(metadata),
+        initialStatus
       ];
 
       const orderResult = await client.query(orderQuery, orderValues);

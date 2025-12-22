@@ -298,12 +298,15 @@ class PaymentController {
         buyerEmail: email,
         buyerPhone: phone,
         metadata: {
+          ...(req.body.metadata || {}),
           items: [{
             productId: productId,
             name: product.name,
             price: dbPrice,
             quantity: 1,
-            subtotal: dbPrice
+            subtotal: dbPrice,
+            productType: product.product_type,
+            isDigital: product.is_digital
           }],
           paymentInitiation: true
         }
@@ -322,7 +325,8 @@ class PaymentController {
         narrative: narrative || `Payment for product ${productName}`,
         product_id: productId,
         seller_id: sellerId,
-        order_id: order.id // Link payment to order
+        order_id: order.id, // Link payment to order
+        metadata: req.body.metadata // Pass metadata from frontend
       };
 
       console.log('=== PAYMENT DATA DEBUG ===');

@@ -37,7 +37,8 @@ class PaymentService {
           invoice_id: paymentData.invoice_id,
           customer_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
           narrative: paymentData.narrative,
-          phone: paymentData.phone
+          phone: paymentData.phone,
+          ...(paymentData.metadata || {}) // Merge extra metadata (booking info, etc)
         }
       };
 
@@ -425,9 +426,9 @@ class PaymentService {
         return;
       }
 
-      // Fetch order items with product details to check if they are digital
+      // Fetch order items with product details to check type
       const itemsQuery = `
-        SELECT oi.*, p.is_digital
+        SELECT oi.*, p.is_digital, p.product_type
         FROM order_items oi
         JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = $1
@@ -441,9 +442,44 @@ class PaymentService {
         return;
       }
 
-      // Check if all items are digital
-      const allDigital = order.items.length > 0 && order.items.every(item => item.is_digital);
-      const newStatus = allDigital ? 'COMPLETED' : 'DELIVERY_PENDING';
+      // Determine Order Status based on Product Types
+      let newStatus = 'DELIVERY_PENDING'; // Default for physical
+
+      const allDigital = order.items.every(item => item.product_type === 'digital' || item.is_digital);
+      const isService = order.items.some(item => item.product_type === 'service');
+
+      if (allDigital) {
+        newStatus = 'COMPLETED';
+      } else if (isService) {
+        // If it contains a service (even mixed), it might need coordination
+        // For now, if mixed service + physical, logic is tricky, but SERVICE_PENDING is safer than COMPLETED
+        // Ideally, mixed orders are split, but for MVP, let's prioritize the most constrained status.
+        // If physical + service -> DELIVERY_PENDING? Or SERVICE_PENDING?
+        // Let's say: if ANY Service -> SERVICE_PENDING (requires coordination).
+        // If ANY Physical and NOT Service -> DELIVERY_PENDING.
+        newStatus = 'SERVICE_PENDING';
+      }
+
+      // Correction for mixed Physical + Service: The User might need to ship AND provide service.
+      // But status is single. Let's stick to DELIVERY_PENDING if physical exists, because shipping is blocking?
+      // Or SERVICE_PENDING?
+      // Simpler logic:
+      // 1. All Digital -> COMPLETED
+      // 2. Any Physical -> DELIVERY_PENDING (Shipping takes precedence for status tracking usually)
+      // 3. Else (Service only) -> SERVICE_PENDING
+
+      const hasPhysical = order.items.some(item =>
+        (item.product_type === 'physical' || (!item.product_type && !item.is_digital))
+      );
+
+      if (allDigital) {
+        newStatus = 'COMPLETED';
+      } else if (hasPhysical) {
+        newStatus = 'DELIVERY_PENDING';
+      } else {
+        // Services only (since digital check failed and no physical)
+        newStatus = 'SERVICE_PENDING';
+      }
 
       logger.info(`Order type check: ${allDigital ? 'All Digital' : 'Physical/Mixed'} -> Status: ${newStatus}`, { orderId: order.id });
 

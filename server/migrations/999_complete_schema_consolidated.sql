@@ -32,12 +32,20 @@ BEGIN
         CREATE TYPE user_status AS ENUM ('active', 'suspended', 'inactive');
     END IF;
     
+    -- Product type enum
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'product_type') THEN
+        CREATE TYPE product_type AS ENUM ('physical', 'digital', 'service');
+    END IF;
+
     -- Order status enum (with delivery flow)
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
         CREATE TYPE order_status AS ENUM (
             'PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'FAILED',
-            'DELIVERY_PENDING', 'DELIVERY_COMPLETE'
+            'DELIVERY_PENDING', 'DELIVERY_COMPLETE', 'SERVICE_PENDING'
         );
+    ELSE
+        -- Add SERVICE_PENDING to existing enum if not present
+        ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'SERVICE_PENDING';
     END IF;
     
     -- Payment status enum (aligned with Paystack)
@@ -361,8 +369,48 @@ CREATE TABLE IF NOT EXISTS products (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     is_sold BOOLEAN DEFAULT FALSE,
+    product_type product_type DEFAULT 'physical',
+    service_locations TEXT,
+    service_options JSONB,
+    is_digital BOOLEAN DEFAULT FALSE,
+    digital_file_path TEXT,
+    digital_file_name TEXT,
     CONSTRAINT valid_price_positive CHECK (price >= 0)
 );
+
+-- Ensure columns exist even if table was already created
+DO $$
+BEGIN
+    -- Product Type
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'product_type') THEN
+        CREATE TYPE product_type AS ENUM ('physical', 'digital', 'service');
+    END IF;
+
+    -- Add columns
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='product_type') THEN
+        ALTER TABLE products ADD COLUMN product_type product_type DEFAULT 'physical';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='service_locations') THEN
+        ALTER TABLE products ADD COLUMN service_locations TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='service_options') THEN
+        ALTER TABLE products ADD COLUMN service_options JSONB;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='is_digital') THEN
+        ALTER TABLE products ADD COLUMN is_digital BOOLEAN DEFAULT FALSE;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='digital_file_path') THEN
+        ALTER TABLE products ADD COLUMN digital_file_path TEXT;
+    END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='digital_file_name') THEN
+        ALTER TABLE products ADD COLUMN digital_file_name TEXT;
+    END IF;
+END $$;
 
 -- Product orders table
 CREATE TABLE IF NOT EXISTS product_orders (
@@ -820,6 +868,11 @@ ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_file_name TEXT;
 -- Add last_login to buyers
 ALTER TABLE buyers ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
 CREATE INDEX IF NOT EXISTS idx_buyers_last_login ON buyers(last_login);
+
+-- Add service columns to products
+ALTER TABLE products ADD COLUMN IF NOT EXISTS product_type product_type DEFAULT 'physical';
+ALTER TABLE products ADD COLUMN IF NOT EXISTS service_locations TEXT;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS service_options JSONB;
 
 -- ============================================================================
 -- COMPLETION LOG

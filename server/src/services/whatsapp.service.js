@@ -143,6 +143,17 @@ class WhatsAppService {
 
         const total = parseFloat(order.totalAmount || 0);
 
+        // Check for Service Booking Metadata
+        let bookingInfo = '';
+        if (order.metadata?.product_type === 'service' && order.metadata?.booking_date) {
+            bookingInfo = `
+📅 *SERVICE BOOKING*
+Date: ${order.metadata.booking_date}
+Time: ${order.metadata.booking_time}
+Loc: ${order.metadata.service_location}
+            `.trim();
+        }
+
         const msg = `
 🎉 *NEW ORDER RECEVIED!*
 
@@ -156,6 +167,7 @@ ${itemsList}
 ⏰ Time: ${new Date().toLocaleString()}
 
 Please drop off within 48h.
+${bookingInfo ? '\n' + bookingInfo : ''}
         `.trim();
 
         return this.sendMessage(seller.phone, msg);
@@ -184,6 +196,7 @@ Thanks for ordering!
 ${itemsList}
 
 We'll notify you when it's ready for pickup!
+${bookingInfo ? '\n' + bookingInfo : ''}
         `.trim();
 
         return this.sendMessage(buyer.phone, msg);
