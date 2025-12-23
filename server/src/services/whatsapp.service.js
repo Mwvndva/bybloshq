@@ -150,22 +150,23 @@ class WhatsAppService {
         let bookingInfo = '';
         if (isService && order.metadata?.booking_date) {
             bookingInfo = `
-📅 *SERVICE BOOKING*
-Date: ${order.metadata.booking_date}
-Time: ${order.metadata.booking_time}
-Loc: ${order.metadata.service_location}
-            `.trim();
+📅 *SERVICE BOOKING DETAILS*
+• Date: ${order.metadata.booking_date}
+• Time: ${order.metadata.booking_time}
+• Location: ${order.metadata.service_location || 'Not specified'}
+`.trim();
         }
 
-        let instructionText = `📍 *DROP-OFF:* Dynamic Mall, Tom Mboya St, Shop SL 32\n⏰ Time: ${new Date().toLocaleString()}\n\nPlease drop off within 48h.`;
+        let instructionText = `📍 *ACTION REQUIRED:* Please drop off items at Dynamic Mall, Shop SL 32 within 48h.`;
+
         if (isService) {
-            instructionText = `ℹ️ *ACTION:* Please review the booking details above and prepare to provide the service.`;
+            instructionText = `ℹ️ *ACTION REQUIRED:* Please review the booking details above and contact the client if needed.`;
         } else if (isDigital) {
-            instructionText = `ℹ️ *ACTION:* Digital product order. No physical delivery required.`;
+            instructionText = `ℹ️ *INFO:* Digital product order. No physical delivery required.`;
         }
 
         const msg = `
-🎉 *NEW ORDER RECEVIED!*
+🎉 *NEW ORDER RECEIVED!*
 
 📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${total.toLocaleString()}
@@ -173,8 +174,7 @@ Loc: ${order.metadata.service_location}
 📋 *Items:*
 ${itemsList}
 
-${instructionText}
-${bookingInfo ? '\n' + bookingInfo : ''}
+${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         `.trim();
 
         return this.sendMessage(seller.phone, msg);
@@ -198,32 +198,33 @@ ${bookingInfo ? '\n' + bookingInfo : ''}
         let bookingInfo = '';
         if (isService && order.metadata?.booking_date) {
             bookingInfo = `
-📅 *SERVICE BOOKING*
-Date: ${order.metadata.booking_date}
-Time: ${order.metadata.booking_time}
-Loc: ${order.metadata.service_location}
-            `.trim();
+📅 *YOUR BOOKING IS CONFIRMED*
+• Date: ${order.metadata.booking_date}
+• Time: ${order.metadata.booking_time}
+• Location: ${order.metadata.service_location || 'Not specified'}
+`.trim();
         }
 
         let nextSteps = "We'll notify you when it's ready for pickup!";
         if (isService) {
-            nextSteps = "The seller will be notified of your booking.";
+            nextSteps = "The seller has been notified of your booking and will prepare for your appointment.";
         } else if (isDigital) {
-            nextSteps = "You can access your digital product from your dashboard.";
+            const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
+            nextSteps = `Your digital product is ready for download!\n🔗 Access it here: ${dashboardUrl}`;
         }
 
         const msg = `
 ✅ *ORDER CONFIRMED!*
 
-Thanks for ordering!
+Thanks for ordering, ${buyer.full_name?.split(' ')[0] || 'valued customer'}!
+
 📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${total.toLocaleString()}
 
 📋 *Items:*
 ${itemsList}
 
-${nextSteps}
-${bookingInfo ? '\n' + bookingInfo : ''}
+${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
         `.trim();
 
         return this.sendMessage(buyer.phone, msg);
