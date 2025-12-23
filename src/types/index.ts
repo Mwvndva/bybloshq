@@ -21,6 +21,7 @@ export interface Seller {
   bio?: string;
   avatarUrl?: string;
   location?: string;
+  city?: string;
   website?: string;
   socialMedia?: {
     instagram?: string;
