@@ -577,20 +577,36 @@ class PaymentService {
             },
             order: {
               orderNumber: order.order_number,
-              totalAmount: order.total_amount
+              totalAmount: order.total_amount,
+              metadata: order.metadata
             },
             items: order.items
           });
 
           // Notify Buyer
+          const buyerPhone = order.buyer_phone || payment.phone_number || payment.metadata?.phone;
+
+          if (!buyerPhone) {
+            logger.warn('No buyer phone found for WhatsApp notification', {
+              orderId: order.id,
+              paymentPhone: payment.phone_number
+            });
+          } else {
+            logger.info('Sending WhatsApp to buyer', {
+              phone: buyerPhone,
+              source: order.buyer_phone ? 'order' : 'payment'
+            });
+          }
+
           await whatsappService.notifyBuyerOrderConfirmation({
             buyer: {
-              phone: order.buyer_phone,
+              phone: buyerPhone,
               full_name: order.buyer_name
             },
             order: {
               orderNumber: order.order_number,
-              totalAmount: order.total_amount
+              totalAmount: order.total_amount,
+              metadata: order.metadata
             },
             items: order.items
           });
@@ -599,7 +615,7 @@ class PaymentService {
           await whatsappService.sendLogisticsNotification(
             order,
             {
-              phone: order.buyer_phone,
+              phone: order.buyer_phone || payment.phone_number || payment.metadata?.phone,
               fullName: order.buyer_name,
               city: order.shipping_address?.city, // Assuming address is JSON
               location: order.shipping_address?.street || order.shipping_address?.location
