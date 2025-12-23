@@ -153,7 +153,7 @@ class WhatsAppService {
 📅 *SERVICE BOOKING DETAILS*
 • Date: ${order.metadata.booking_date}
 • Time: ${order.metadata.booking_time}
-• Location: ${order.metadata.service_location || 'Not specified'}
+• Location: ${order.metadata.service_location || seller.location || seller.city || 'Not specified'}
 `.trim();
         }
 
@@ -181,7 +181,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
     }
 
     async notifyBuyerOrderConfirmation(orderData) {
-        const { buyer, order, items } = orderData;
+        const { buyer, seller, order, items } = orderData;
         if (!buyer?.phone) return false;
 
         const itemsList = items.map((item, i) => {
@@ -201,7 +201,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 📅 *YOUR BOOKING IS CONFIRMED*
 • Date: ${order.metadata.booking_date}
 • Time: ${order.metadata.booking_time}
-• Location: ${order.metadata.service_location || 'Not specified'}
+• Location: ${order.metadata.service_location || seller?.location || seller?.city || 'Not specified'}
 `.trim();
         }
 

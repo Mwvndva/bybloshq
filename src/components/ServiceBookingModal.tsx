@@ -20,6 +20,9 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState<string>('');
     const [location, setLocation] = useState<string>('');
+    // For hybrid/buyer_visits_seller: user selects specific location or enters own
+    const [selectedLocationType, setSelectedLocationType] = useState<'seller' | 'buyer'>('seller');
+    const [customLocation, setCustomLocation] = useState<string>('');
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
     // Reset state when modal opens
@@ -28,8 +31,15 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             setDate(undefined);
             setTime('');
             setLocation('');
+            setCustomLocation('');
+            // Default based on product settings
+            if (product.service_options?.location_type === 'seller_visits_buyer') {
+                setSelectedLocationType('buyer');
+            } else {
+                setSelectedLocationType('seller');
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, product]);
 
     // Generate time slots based on product service options
     useEffect(() => {
@@ -86,16 +96,37 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     };
 
     const handleConfirm = () => {
-        if (date && time && (location || locations.length === 0)) {
+        let finalLocation = location;
+
+        if (selectedLocationType === 'buyer') {
+            finalLocation = customLocation;
+        } else if (locations.length === 0 && !location) {
+            finalLocation = 'Default Seller Location';
+        }
+
+        if (date && time && finalLocation) {
             onConfirm({
                 date,
                 time,
-                location: location || 'Default Location'
+                location: finalLocation
             });
         }
     };
 
-    const isValid = date && time && (location || locations.length === 0);
+    const locationType = product.service_options?.location_type || 'buyer_visits_seller';
+    const isHybrid = locationType === 'hybrid';
+    const isSellerVisits = locationType === 'seller_visits_buyer';
+
+    // Validation
+    const isLocationValid = () => {
+        if (selectedLocationType === 'buyer' || isSellerVisits) {
+            return customLocation.trim().length > 0;
+        }
+        // Seller location selected
+        return location.length > 0 || locations.length === 0;
+    };
+
+    const isValid = date && time && isLocationValid();
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -145,23 +176,70 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                         </Select>
                     </div>
 
-                    {/* Location Selection (if applicable) */}
-                    {locations.length > 0 && (
-                        <div className="flex flex-col gap-2">
-                            <Label className="flex items-center gap-2">
-                                <MapPin className="h-4 w-4" />
-                                Select Location
-                            </Label>
-                            <RadioGroup value={location} onValueChange={setLocation} className="gap-2">
-                                {locations.map(loc => (
-                                    <div key={loc} className="flex items-center space-x-2 border rounded-md p-2 hover:bg-accent cursor-pointer" onClick={() => setLocation(loc)}>
-                                        <RadioGroupItem value={loc} id={loc} />
-                                        <Label htmlFor={loc} className="cursor-pointer flex-1">{loc}</Label>
+                    {/* Location Selection Logic */}
+                    <div className="flex flex-col gap-2">
+                        <Label className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4" />
+                            Select Location
+                        </Label>
+
+                        {/* Hybrid Toggle */}
+                        {isHybrid && (
+                            <div className="flex space-x-2 mb-2">
+                                <Button
+                                    variant={selectedLocationType === 'seller' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setSelectedLocationType('seller')}
+                                    className="flex-1"
+                                >
+                                    Visit Shop
+                                </Button>
+                                <Button
+                                    variant={selectedLocationType === 'buyer' ? 'default' : 'outline'}
+                                    size="sm"
+                                    onClick={() => setSelectedLocationType('buyer')}
+                                    className="flex-1"
+                                >
+                                    Come to Me
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Content based on selection */}
+                        {(selectedLocationType === 'seller' && !isSellerVisits) && (
+                            <>
+                                {locations.length > 0 ? (
+                                    <RadioGroup value={location} onValueChange={setLocation} className="gap-2">
+                                        {locations.map(loc => (
+                                            <div key={loc} className="flex items-center space-x-2 border rounded-md p-2 hover:bg-accent cursor-pointer" onClick={() => setLocation(loc)}>
+                                                <RadioGroupItem value={loc} id={loc} />
+                                                <Label htmlFor={loc} className="cursor-pointer flex-1">{loc}</Label>
+                                            </div>
+                                        ))}
+                                    </RadioGroup>
+                                ) : (
+                                    <div className="text-sm text-muted-foreground p-2 border rounded-md bg-gray-50">
+                                        Location: {product.seller?.location || product.seller?.city || 'Seller Shop Address'}
                                     </div>
-                                ))}
-                            </RadioGroup>
-                        </div>
-                    )}
+                                )}
+                            </>
+                        )}
+
+                        {(selectedLocationType === 'buyer' || isSellerVisits) && (
+                            <div className="space-y-2">
+                                <input
+                                    type="text"
+                                    placeholder="Enter your address/location"
+                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    value={customLocation}
+                                    onChange={(e) => setCustomLocation(e.target.value)}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Please provide the full address where you want the service to be performed.
+                                </p>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <DialogFooter>
