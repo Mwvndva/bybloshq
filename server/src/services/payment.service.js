@@ -412,7 +412,7 @@ class PaymentService {
 
       // 2. FIND ORDER (Inside transaction) - Join with sellers for notifications
       const orderQuery = `
-        SELECT o.*, s.email as seller_email, s.full_name as seller_name, s.phone as seller_phone
+        SELECT o.*, s.email as seller_email, s.full_name as seller_name, s.phone as seller_phone, s.location as seller_location, s.city as seller_city
         FROM product_orders o
         JOIN sellers s ON o.seller_id = s.id
         WHERE o.id = $1 FOR UPDATE
@@ -573,7 +573,9 @@ class PaymentService {
           await whatsappService.notifySellerNewOrder({
             seller: {
               phone: order.seller_phone,
-              full_name: order.seller_name
+              full_name: order.seller_name,
+              location: order.seller_location,
+              city: order.seller_city
             },
             order: {
               orderNumber: order.order_number,
@@ -602,6 +604,11 @@ class PaymentService {
             buyer: {
               phone: buyerPhone,
               full_name: order.buyer_name
+            },
+            seller: {
+              location: order.seller_location,
+              city: order.seller_city,
+              shop_name: order.seller_name // Mapping full_name to shop_name contextually or just pass name
             },
             order: {
               orderNumber: order.order_number,

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, decodeJwt, isTokenExpired } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -502,6 +502,76 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       setIsRequestingWithdrawal(false);
     }
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
+
+  // Active Token Expiration Check
+  useEffect(() => {
+    const checkToken = () => {
+      const token = localStorage.getItem('sellerToken');
+
+      if (!token) {
+        // If no token and we are on a protected route, redirect to login
+        // But since this is the dashboard, we should probably redirect
+        if (!location.pathname.includes('/login')) {
+          navigate('/seller/login');
+        }
+        return;
+      }
+
+      if (isTokenExpired(token)) {
+        handleLogout();
+        toast({
+          title: 'Session Expired',
+          description: 'Your session has expired. Please log in again.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Set up a timer to auto-logout when the token expires
+      const decoded = decodeJwt(token);
+      if (decoded && decoded.exp) {
+        const expirationTime = decoded.exp * 1000; // Convert to ms
+        const timeUntilExpiry = expirationTime - Date.now();
+
+        if (timeUntilExpiry > 0) {
+          // Set timeout to logout exactly when token expires
+          // Limit to 24 hours (standard max settimeout limit usually safe enough, but good practice)
+          // If time is very long, we re-check periodically anyway? 
+          // Actually, just setting one timeout is cleaner if the user stays on this page.
+          const timerId = setTimeout(() => {
+            handleLogout();
+            toast({
+              title: 'Session Expired',
+              description: 'Your session has expired. Please log in again.',
+              variant: 'destructive',
+            });
+          }, timeUntilExpiry);
+
+          return () => clearTimeout(timerId);
+        } else {
+          // Already expired (should be caught by isTokenExpired check, but safeguard)
+          handleLogout();
+        }
+      }
+    };
+
+    checkToken();
+
+    // Also check periodically (every minute) just in case system time changes or tab was inactive
+    const intervalId = setInterval(() => {
+      const token = localStorage.getItem('sellerToken');
+      if (token && isTokenExpired(token)) {
+        handleLogout();
+        toast({
+          title: 'Session Expired',
+          description: 'Your session has expired. Please log in again.',
+          variant: 'destructive',
+        });
+      }
+    }, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, [navigate]);
 
   useEffect(() => {
 

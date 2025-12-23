@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone, FileText, Handshake, Calendar } from 'lucide-react';
+import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone, FileText, Handshake, Calendar, MapPin } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -548,6 +548,24 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           <p className={cn("text-xs sm:text-sm line-clamp-2 leading-relaxed mb-3 sm:mb-4", themeClasses.description)}>
             {product.description}
           </p>
+        )}
+
+        {/* Service Location Info */}
+        {(product.product_type === 'service' || (product as any).productType === 'service') && (
+          <div className={cn("flex items-start gap-2 mb-3 text-xs sm:text-sm",
+            theme === 'black' ? 'text-gray-400' : 'text-gray-500'
+          )}>
+            <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+            <span className="line-clamp-2">
+              {product.service_options?.location_type === 'seller_visits_buyer' ? (
+                "Mobile Service - We come to you"
+              ) : product.service_options?.location_type === 'hybrid' ? (
+                "Service available In-store & Mobile"
+              ) : (
+                product.service_locations || "In-store Service"
+              )}
+            </span>
+          </div>
         )}
 
         {/* Seller Info */}
