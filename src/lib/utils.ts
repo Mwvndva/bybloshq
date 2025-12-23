@@ -25,18 +25,18 @@ export function formatCurrency(amount: number | string | null | undefined): stri
 
   // Convert to string to handle different input types
   const amountStr = String(amount).trim();
-  
+
   // Remove any non-numeric characters except decimal point and minus
   const numericStr = amountStr.replace(/[^0-9.-]+/g, '');
-  
+
   // Parse to number
   const numericAmount = parseFloat(numericStr);
-  
+
   // Check if parsing was successful
   if (isNaN(numericAmount)) {
     return 'KSh 0';
   }
-  
+
   try {
     // Format as Kenyan Shillings
     const formatted = new Intl.NumberFormat('en-KE', {
@@ -45,7 +45,7 @@ export function formatCurrency(amount: number | string | null | undefined): stri
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(numericAmount);
-    
+
     return formatted;
   } catch (error) {
     const fallback = `KSh ${numericAmount.toFixed(0)}`;
@@ -57,16 +57,16 @@ export function formatDate(dateInput: string | Date, format: 'full' | 'date' | '
   try {
     // Handle different date input types
     let date: Date;
-    
+
     // If it's already a Date object
     if (dateInput instanceof Date) {
       date = dateInput;
-    } 
+    }
     // If it's a string that can be parsed by Date constructor
     else if (typeof dateInput === 'string') {
       // Try parsing the date string
       const parsedDate = new Date(dateInput);
-      
+
       // If the date is invalid, try parsing with Date.parse
       if (isNaN(parsedDate.getTime())) {
         const timestamp = Date.parse(dateInput);
@@ -110,4 +110,26 @@ export function formatDate(dateInput: string | Date, format: 'full' | 'date' | '
     console.error('Error formatting date:', error, 'Input:', dateInput);
     return 'Date not available';
   }
+}
+
+export function decodeJwt(token: string): any {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const decoded = decodeJwt(token);
+  if (!decoded || !decoded.exp) return true;
+
+  const currentTime = Date.now() / 1000;
+  return decoded.exp < currentTime;
 }
