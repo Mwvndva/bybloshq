@@ -1,5 +1,5 @@
 import logger from '../utils/logger.js';
-import https from 'https';
+import axios from 'axios';
 import crypto from 'crypto';
 import PaymentCompletionService from './paymentCompletion.service.js';
 import Payment from '../models/payment.model.js';
@@ -14,299 +14,195 @@ import whatsappService from './whatsapp.service.js';
 class PaymentService {
   async initiatePayment(paymentData) {
     try {
-      console.log('=== PAYMENT SERVICE INITIATE PAYMENT ===');
+      console.log('=== PAYMENT SERVICE INITIATE PAYMENT (PAYD) ===');
       console.log('Payment data:', paymentData);
-      console.log('Timestamp:', new Date().toISOString());
 
-      const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
+      const username = process.env.PAYD_USERNAME;
+      const password = process.env.PAYD_PASSWORD;
+      let networkCode = process.env.PAYD_NETWORK_CODE;
+      const channelId = process.env.PAYD_CHANNEL_ID;
 
-      if (!paystackSecretKey) {
-        throw new Error('Paystack secret key not configured');
+      if (!username || !password || !channelId) {
+        throw new Error('PAYD credentials (USERNAME, PASSWORD, CHANNEL_ID) not fully configured');
       }
 
-      // Initialize Paystack transaction
-      const initializeData = {
-        email: paymentData.email,
-        amount: Math.round(parseFloat(paymentData.amount) * 100), // Convert to kobo
+      // If network code is missing, try to fetch it dynamically
+      if (!networkCode) {
+        try {
+          console.log('PAYD_NETWORK_CODE not set, attempting to fetch from API...');
+          const networks = await this.getPaymentNetworks(username, password);
+
+          let mpesaNetwork;
+          const networkGroups = networks.mobile || networks['Mobile Money'] || networks;
+
+          if (Array.isArray(networkGroups)) {
+            mpesaNetwork = networkGroups.find(n => n.name?.toLowerCase().includes('mpesa') || n.network_name?.toLowerCase().includes('mpesa'));
+          }
+
+          if (mpesaNetwork && mpesaNetwork.network_code) {
+            networkCode = mpesaNetwork.network_code;
+            console.log(`Dynamically resolved M-PESA Network Code: ${networkCode}`);
+          }
+        } catch (netError) {
+          console.error('Failed to fetch networks:', netError.message);
+        }
+      }
+
+      if (!networkCode) {
+        throw new Error('PAYD_NETWORK_CODE is missing and could not be resolved dynamically.');
+      }
+
+      let phoneNumber = paymentData.phone;
+      if (phoneNumber.startsWith('7') || phoneNumber.startsWith('1')) {
+        phoneNumber = '0' + phoneNumber;
+      }
+
+      const paydData = {
+        username: "payd",
+        network_code: networkCode,
+        account_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
+        account_number: phoneNumber,
+        amount: parseFloat(paymentData.amount),
+        phone_number: phoneNumber,
+        channel_id: channelId,
+        narration: paymentData.narrative || 'Ticket Purchase',
         currency: 'KES',
-        // Don't send reference - let Paystack generate its own
-        // Note: callback_url should point to frontend for user redirect, not webhook
-        // Webhook handles payment verification separately
-        callback_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/payment/success`,
-        metadata: {
-          invoice_id: paymentData.invoice_id,
-          customer_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
-          narrative: paymentData.narrative,
-          phone: paymentData.phone,
-          ...(paymentData.metadata || {}) // Merge extra metadata (booking info, etc)
+        currency: 'KES',
+        callback_url: `${process.env.BACKEND_URL || process.env.API_URL || 'https://api.byblos.com'}/api/payments/webhook/payd`,
+        transaction_channel: 'mobile',
+        transaction_channel: 'mobile',
+        customer_info: {
+          name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
+          email: paymentData.email,
+          phone: phoneNumber,
+          country: "Kenya"
         }
       };
 
-      const response = await this.makePaystackRequest('POST', '/transaction/initialize', initializeData, paystackSecretKey);
+      console.log('Sending request to PAYD:', JSON.stringify(paydData, null, 2));
 
-      if (response.status && response.data) {
-        logger.info('Paystack transaction initialized successfully', {
-          reference: response.data.reference,
-          authorization_url: response.data.authorization_url,
-          fullResponse: response.data
-        });
+      const auth = Buffer.from(`${username}:${password}`).toString('base64');
 
-        console.log('=== PAYSTACK RESPONSE DEBUG ===');
-        console.log('response.data.reference:', response.data.reference);
-        console.log('paymentData.invoice_id:', paymentData.invoice_id);
-        console.log('==============================');
+      const response = await axios.post('https://api.mypayd.app/api/v3/payments', paydData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${auth}`
+        }
+      });
+
+      console.log('PAYD Response:', response.data);
+
+      if (response.data) {
+        const paydRef = response.data.transaction_reference || response.data.ref || response.data.reference || paymentData.invoice_id;
 
         return {
           invoice_id: paymentData.invoice_id,
-          reference: response.data.reference,
-          authorization_url: response.data.authorization_url,
-          access_code: response.data.access_code,
+          reference: paydRef,
+          authorization_url: null,
           status: 'pending',
-          message: 'Payment initialized successfully'
+          message: 'Payment initiated. Check your phone.'
         };
       } else {
-        throw new Error('Invalid response from Paystack');
+        throw new Error('Invalid response from PAYD');
       }
 
     } catch (error) {
-      logger.error('Error initiating Paystack payment:', error);
+      if (error.response) {
+        logger.error('PAYD API Error:', error.response.status, error.response.data);
+      } else {
+        logger.error('Error initiating PAYD payment:', error.message);
+      }
+      throw error;
+    }
+  }
+
+  async getPaymentNetworks(username, password) {
+    try {
+      const auth = Buffer.from(`${username}:${password}`).toString('base64');
+      return (await axios.get('https://api.mypayd.app/api/v3/networks/grouped?dial_code=254&transaction_type=PAYMENT', {
+        headers: { 'Authorization': `Basic ${auth}` }
+      })).data;
+    } catch (error) {
+      logger.error('Error fetching PAYD networks:', error.response?.data || error.message);
       throw error;
     }
   }
 
   async checkPaymentStatus(paymentId) {
     try {
-      const paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
-
-      if (!paystackSecretKey) {
-        throw new Error('Paystack secret key not configured');
-      }
-
-      const response = await this.makePaystackRequest('GET', `/transaction/verify/${paymentId}`, null, paystackSecretKey);
-
-      if (response.status && response.data) {
-        return {
-          state: response.data.status === 'success' ? 'completed' : 'pending',
-          status: response.data.status,
-          invoice_id: paymentId,
-          reference: response.data.reference,
-          amount: response.data.amount,
-          paid_at: response.data.paid_at,
-          message: `Payment ${response.data.status}`
-        };
+      let payment;
+      if (String(paymentId).startsWith('INV-') || String(paymentId).startsWith('ORD-')) {
+        payment = await Payment.findByInvoiceId(paymentId);
       } else {
-        throw new Error('Invalid response from Paystack');
+        payment = await Payment.findByReference(paymentId) || await Payment.findById(paymentId);
       }
+
+      if (payment) {
+        return {
+          state: payment.status === 'success' || payment.status === 'completed' ? 'completed' : 'pending',
+          status: payment.status,
+          invoice_id: payment.invoice_id,
+          reference: payment.provider_reference,
+          amount: payment.amount,
+          message: `Payment ${payment.status}`
+        };
+      }
+
+      return { state: 'pending', status: 'unknown', message: 'Payment not found or pending' };
 
     } catch (error) {
-      logger.error('Error checking Paystack payment status:', error);
+      logger.error('Error checking payment status:', error);
       throw error;
     }
   }
 
-  makePaystackRequest(method, path, data, secretKey) {
-    return new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.paystack.co',
-        port: 443,
-        path: path,
-        method: method,
-        headers: {
-          'Authorization': `Bearer ${secretKey}`,
-          'Content-Type': 'application/json'
-        }
+  async handlePaydWebhook(webhookData, headers, clientIp) {
+    try {
+      console.log('=== PAYD WEBHOOK RECEIVED ===');
+      console.log('Data:', JSON.stringify(webhookData, null, 2));
+
+      // PAYD Payload Mapping
+      const ref = webhookData.transaction_reference || webhookData.ref || webhookData.reference || webhookData.transaction_id;
+      const resultCode = webhookData.result_code; // 200 or 0 = Success
+      const status = webhookData.status || ((resultCode === 200 || resultCode === 0) ? 'SUCCESS' : 'FAILED');
+
+      if (!ref) {
+        logger.warn('Webhook received without reference');
+        return { status: 'ignored', message: 'No reference found' };
+      }
+
+      const txData = {
+        reference: ref,
+        amount: webhookData.amount,
+        status: status,
+        customer: { email: webhookData.email || webhookData.customer_email || 'unknown@payd.app' },
+        paid_at: webhookData.transaction_date || new Date().toISOString(),
+        metadata: webhookData.metadata || {}
       };
 
-      const req = https.request(options, (res) => {
-        let responseData = '';
-
-        res.on('data', (chunk) => {
-          responseData += chunk;
-        });
-
-        res.on('end', () => {
-          try {
-            const parsedData = JSON.parse(responseData);
-            resolve(parsedData);
-          } catch (error) {
-            reject(new Error(`Failed to parse response: ${error.message}`));
-          }
-        });
-      });
-
-      req.on('error', (error) => {
-        reject(error);
-      });
-
-      if (data) {
-        req.write(JSON.stringify(data));
-      }
-
-      req.end();
-    });
-  }
-
-  async handlePaystackWebhook(webhookData, headers, clientIp) {
-    try {
-      // Paystack official webhook IP addresses
-      const paystackIps = ['52.31.139.75', '52.49.173.169', '52.214.14.220'];
-
-      // Verification of IP address
-      if (clientIp) {
-        // Handle IPv6-mapped IPv4 addresses (e.g., ::ffff:127.0.0.1)
-        const normalizedIp = clientIp.startsWith('::ffff:') ? clientIp.substring(7) : clientIp;
-
-        if (!paystackIps.includes(normalizedIp)) {
-          if (process.env.NODE_ENV === 'production') {
-            logger.warn('Webhook received from unauthorized IP in PRODUCTION:', {
-              clientIp,
-              normalizedIp,
-              expected: paystackIps
-            });
-            // We log but DON'T block yet to avoid breaking valid flows 
-            // especially if proxies still mask things
-          } else {
-            logger.info('Webhook received from non-Paystack IP (Development/Test):', { normalizedIp });
-          }
-        } else {
-          logger.info('Webhook IP verified successfully', { normalizedIp });
-        }
-      }
-
-      // Skip signature verification ONLY if webhook secret is not configured (for development)
-      const signature = headers['x-paystack-signature'];
-      // Use PAYSTACK_WEBHOOK_SECRET if exists, otherwise fallback to PAYSTACK_SECRET_KEY
-      const secret = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY;
-
-      if (!signature) {
-        logger.warn('Webhook received without signature');
-        throw new Error('Signature required');
-      }
-
-      if (secret) {
-        const isValid = this.verifyWebhookSignature(JSON.stringify(webhookData), signature);
-        if (!isValid) {
-          logger.error('Invalid webhook signature received - POSSIBLE TAMPERING');
-          throw new Error('Invalid signature');
-        }
+      if (status === 'SUCCESS' || status === 'successful' || status === 'COMPLETED' || resultCode === 200) {
+        return this.handleSuccessfulPayment(txData);
       } else {
-        logger.warn('No secret configured for webhook validation (PAYSTACK_WEBHOOK_SECRET or PAYSTACK_SECRET_KEY)');
-        if (process.env.NODE_ENV === 'production') {
-          throw new Error('Webhook secret mandatory in production');
-        }
-      }
-
-      const event = webhookData.event;
-      const data = webhookData.data;
-
-      logger.info('Paystack webhook received', { event, reference: data.reference });
-
-      // Handle different event types
-      switch (event) {
-        case 'charge.success':
-          return this.handleSuccessfulPayment(data);
-
-        case 'charge.failed':
-          return this.handleFailedPayment(data);
-
-        case 'transfer.success':
-          return this.handleSuccessfulTransfer(data);
-
-        case 'transfer.failed':
-          return this.handleFailedTransfer(data);
-
-        default:
-          logger.info('Unhandled webhook event', { event });
-          return { status: 'ignored', message: `Event ${event} not handled` };
+        return { ...txData, status: 'failed', message: webhookData.remarks || 'Payment failed' };
       }
 
     } catch (error) {
-      logger.error('Error processing Paystack webhook:', error);
+      logger.error('Error processing PAYD webhook:', error);
       throw error;
     }
   }
 
-  verifyWebhookSignature(payload, signature) {
-    const secret = process.env.PAYSTACK_WEBHOOK_SECRET || process.env.PAYSTACK_SECRET_KEY;
-    if (!secret) {
-      logger.warn('Paystack secret not configured for verification');
-      return false;
-    }
-
-    const hash = crypto.createHmac('sha512', secret).update(payload).digest('hex');
-    return hash === signature;
-  }
-
-  handleSuccessfulPayment(data) {
+  async handleSuccessfulPayment(data) {
     logger.info('Payment successful', {
       reference: data.reference,
-      amount: data.amount,
-      customer: data.customer?.email,
-      paid_at: data.paid_at
+      amount: data.amount
     });
 
-    // Trigger payment completion process
-    this.processPaymentCompletion(data);
+    await this.processPaymentCompletion(data);
 
     return {
       status: 'success',
-      event: 'charge.success',
-      reference: data.reference,
-      amount: data.amount,
-      customer: data.customer?.email,
-      paid_at: data.paid_at,
-      metadata: data.metadata
-    };
-  }
-
-  handleFailedPayment(data) {
-    logger.info('Payment failed', {
-      reference: data.reference,
-      amount: data.amount,
-      customer: data.customer?.email,
-      gateway_response: data.gateway_response
-    });
-
-    return {
-      status: 'failed',
-      event: 'charge.failed',
-      reference: data.reference,
-      amount: data.amount,
-      customer: data.customer?.email,
-      gateway_response: data.gateway_response,
-      metadata: data.metadata
-    };
-  }
-
-  handleSuccessfulTransfer(data) {
-    logger.info('Transfer successful', {
-      reference: data.reference,
-      amount: data.amount,
-      recipient: data.recipient?.name
-    });
-
-    return {
-      status: 'success',
-      event: 'transfer.success',
-      reference: data.reference,
-      amount: data.amount,
-      recipient: data.recipient?.name
-    };
-  }
-
-  handleFailedTransfer(data) {
-    logger.info('Transfer failed', {
-      reference: data.reference,
-      amount: data.amount,
-      recipient: data.recipient?.name
-    });
-
-    return {
-      status: 'failed',
-      event: 'transfer.failed',
-      reference: data.reference,
-      amount: data.amount,
-      recipient: data.recipient?.name
+      reference: data.reference
     };
   }
 
@@ -314,81 +210,48 @@ class PaymentService {
     try {
       logger.info('=== PAYMENT COMPLETION PROCESS START ===', {
         reference: data.reference,
-        amount: data.amount,
-        customer: data.customer?.email,
         status: data.status
       });
 
-      // Find payment by Paystack reference
-      const payment = await Payment.findByReference(data.reference);
+      let payment = await Payment.findByReference(data.reference);
+
       if (!payment) {
         logger.error('Payment not found for reference:', data.reference);
         return;
       }
 
-      logger.info('Payment found:', {
-        paymentId: payment.id,
-        invoiceId: payment.invoice_id,
-        currentStatus: payment.status,
-        email: payment.email,
-        amount: payment.amount,
-        metadata: payment.metadata
-      });
+      if (payment.status === 'success') {
+        logger.info('Payment already marked success. Skipping.');
+        return;
+      }
 
-      // Update payment status to 'success' (Paystack status)
-      logger.info('Updating payment status to success...');
       await Payment.updateStatus(payment.invoice_id, 'success', {
-        paystack_data: data,
+        provider_data: data,
         completed_at: new Date().toISOString()
       });
 
-      logger.info('Payment status updated, checking payment type...');
-
-      // Check if this is a product payment or ticket payment
       const metadata = payment.metadata || {};
-      logger.info('Payment type check details:', {
-        hasTicketId: !!payment.ticket_id,
-        hasEventId: !!payment.event_id,
-        hasProductId: !!metadata.product_id,
-        hasOrderId: !!metadata.order_id,
-        paymentId: payment.id,
-        ticket_id_val: payment.ticket_id,
-        event_id_val: payment.event_id
-      });
 
       if (metadata.product_id || metadata.order_id) {
-        // This is a product payment - process product order
-        logger.info('Processing product order completion...');
         await this.processProductOrderCompletion(payment, data);
       } else if (payment.ticket_id || payment.event_id) {
-        // This is a ticket payment - process ticket creation
-        logger.info('Triggering PaymentCompletionService.processSuccessfulPayment...');
         await PaymentCompletionService.processSuccessfulPayment(payment);
       } else {
-        logger.warn('Unknown payment type - neither product nor ticket fields found!', {
-          metadata: JSON.stringify(metadata),
-          payment: JSON.stringify(payment)
-        });
+        logger.warn('Unknown payment type');
       }
 
-      logger.info('Payment completion processed successfully', {
-        paymentId: payment.id,
-        reference: data.reference
-      });
+      logger.info('Payment completion processed successfully');
 
     } catch (error) {
       logger.error('Error processing payment completion:', error);
-      // Don't throw here to avoid webhook failures
     }
   }
 
-  async processProductOrderCompletion(payment, paystackData) {
+  async processProductOrderCompletion(payment, providerData) {
     const client = await pool.connect();
     try {
-      // Use a transaction with advisory lock to prevent race conditions
       await client.query('BEGIN');
 
-      // Get order from payment metadata
       const metadata = payment.metadata || {};
       let orderId = metadata.order_id;
 
@@ -398,19 +261,9 @@ class PaymentService {
         return;
       }
 
-      orderId = parseInt(orderId, 10);
-      if (isNaN(orderId)) {
-        logger.error('Invalid order_id format:', metadata.order_id);
-        await client.query('ROLLBACK');
-        return;
-      }
-
-      // 1. ADVISORY LOCK (Conccurency Protection)
-      // Use a lock specific to product orders to avoid interfering with tickets
-      const lockId = 200000 + orderId; // Offset to avoid collisions
+      const lockId = 200000 + parseInt(orderId);
       await client.query('SELECT pg_advisory_xact_lock($1)', [lockId]);
 
-      // 2. FIND ORDER (Inside transaction) - Join with sellers for notifications
       const orderQuery = `
         SELECT o.*, s.email as seller_email, s.full_name as seller_name, s.phone as seller_phone, s.location as seller_location, s.city as seller_city
         FROM product_orders o
@@ -421,12 +274,10 @@ class PaymentService {
       const order = rows[0];
 
       if (!order) {
-        logger.error('Order not found for payment:', orderId);
         await client.query('ROLLBACK');
         return;
       }
 
-      // Fetch order items with product details to check type
       const itemsQuery = `
         SELECT oi.*, p.is_digital, p.product_type
         FROM order_items oi
@@ -436,90 +287,18 @@ class PaymentService {
       const itemsResult = await client.query(itemsQuery, [orderId]);
       order.items = itemsResult.rows;
 
-      if (order.payment_status === 'success' || order.payment_status === 'completed') {
-        logger.info('Order already processed, skipping', { orderId: order.id });
+      if (order.payment_status === 'success') {
         await client.query('ROLLBACK');
         return;
       }
 
-      // Determine Order Status based on Product Types
-      let newStatus = 'DELIVERY_PENDING'; // Default for physical
+      let newStatus = 'DELIVERY_PENDING';
+      const allDigital = order.items.every(item => (item.product_type || '').toLowerCase() === 'digital' || item.is_digital);
+      const isService = order.items.some(item => (item.product_type || '').toLowerCase() === 'service');
 
-      const allDigital = order.items.every(item => item.product_type === 'digital' || item.is_digital);
-      const isService = order.items.some(item => item.product_type === 'service');
+      if (allDigital) newStatus = 'COMPLETED';
+      else if (isService) newStatus = 'SERVICE_PENDING';
 
-      if (allDigital) {
-        newStatus = 'COMPLETED';
-      } else if (isService) {
-        // If it contains a service (even mixed), it might need coordination
-        // For now, if mixed service + physical, logic is tricky, but SERVICE_PENDING is safer than COMPLETED
-        // Ideally, mixed orders are split, but for MVP, let's prioritize the most constrained status.
-        // If physical + service -> DELIVERY_PENDING? Or SERVICE_PENDING?
-        // Let's say: if ANY Service -> SERVICE_PENDING (requires coordination).
-        // If ANY Physical and NOT Service -> DELIVERY_PENDING.
-        newStatus = 'SERVICE_PENDING';
-      }
-
-      // Correction for mixed Physical + Service: The User might need to ship AND provide service.
-      // But status is single. Let's stick to DELIVERY_PENDING if physical exists, because shipping is blocking?
-      // Or SERVICE_PENDING?
-      // Simpler logic:
-      // 1. All Digital -> COMPLETED
-      // 2. Any Physical -> DELIVERY_PENDING (Shipping takes precedence for status tracking usually)
-      // 3. Else (Service only) -> SERVICE_PENDING
-
-      const hasPhysical = order.items.some(item =>
-        (item.product_type === 'physical' || (!item.product_type && !item.is_digital))
-      );
-
-      if (allDigital) {
-        newStatus = 'COMPLETED';
-      } else if (hasPhysical) {
-        newStatus = 'DELIVERY_PENDING';
-      } else {
-        // Services only (since digital check failed and no physical)
-        newStatus = 'SERVICE_PENDING';
-      }
-
-      logger.info(`Order type check: ${allDigital ? 'All Digital' : 'Physical/Mixed'} -> Status: ${newStatus}`, { orderId: order.id });
-
-      // 3. POST-PAYMENT AUDIT (Integrity Check)
-      const paidAmount = parseFloat(paystackData.amount) / 100; // Paystack sends in kobo/cents
-      const expectedAmount = parseFloat(order.total_amount);
-
-      if (Math.abs(paidAmount - expectedAmount) > 0.01) {
-        logger.error('CRITICAL: Payment amount mismatch for product order!', {
-          orderId: order.id,
-          expected: expectedAmount,
-          paid: paidAmount,
-          reference: paystackData.reference
-        });
-
-        // Update order with audit failure info but don't mark as successful delivery
-        await client.query(
-          `UPDATE product_orders 
-           SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{audit_error}', $1::jsonb),
-               payment_status = 'audit_failed'
-           WHERE id = $2`,
-          [JSON.stringify({
-            error: 'Amount mismatch',
-            expected: expectedAmount,
-            paid: paidAmount,
-            timestamp: new Date().toISOString()
-          }), order.id]
-        );
-
-        await client.query('COMMIT');
-        return;
-      }
-
-      logger.info('Audit passed. Updating payment status for order:', {
-        orderId: order.id,
-        status: 'success',
-        paymentReference: paystackData.reference
-      });
-
-      // 4. UPDATE ORDER STATUS
       await client.query(
         `UPDATE product_orders 
          SET payment_status = $1,
@@ -528,11 +307,9 @@ class PaymentService {
              status = $3,
              updated_at = NOW()
          WHERE id = $4`,
-        ['success', paystackData.reference, newStatus, order.id]
+        ['success', providerData.reference, newStatus, order.id]
       );
 
-      // 5. UPDATE SELLER STATISTICS
-      logger.info('Updating seller financial statistics...', { sellerId: order.seller_id });
       await client.query(
         `UPDATE sellers 
          SET total_sales = total_sales + 1,
@@ -545,31 +322,11 @@ class PaymentService {
 
       await client.query('COMMIT');
 
-      logger.info('Product order payment completed successfully:', {
-        orderId: order.id,
-        orderNumber: order.order_number,
-        paymentReference: paystackData.reference
-      });
-
-      // 5. TRIGGER EMAIL NOTIFICATIONS
       try {
-        logger.info('Sending product order confirmation emails...', { orderId: order.id });
-
-        // Send to buyer
         await sendProductOrderConfirmationEmail(order.buyer_email, order);
+        if (order.seller_email) await sendNewOrderNotificationEmail(order.seller_email, order);
 
-        // Send to seller
-        if (order.seller_email) {
-          await sendNewOrderNotificationEmail(order.seller_email, order);
-        }
-
-        logger.info('Product order notification emails sent successfully');
-
-        // 6. TRIGGER WHATSAPP NOTIFICATIONS
         if (whatsappService.isClientReady && whatsappService.isClientReady()) {
-          logger.info('Sending WhatsApp notifications...', { orderId: order.id });
-
-          // Notify Seller
           await whatsappService.notifySellerNewOrder({
             seller: {
               phone: order.seller_phone,
@@ -585,60 +342,18 @@ class PaymentService {
             items: order.items
           });
 
-          // Notify Buyer
           const buyerPhone = order.buyer_phone || payment.phone_number || payment.metadata?.phone;
-
-          if (!buyerPhone) {
-            logger.warn('No buyer phone found for WhatsApp notification', {
-              orderId: order.id,
-              paymentPhone: payment.phone_number
-            });
-          } else {
-            logger.info('Sending WhatsApp to buyer', {
-              phone: buyerPhone,
-              source: order.buyer_phone ? 'order' : 'payment'
+          if (buyerPhone) {
+            await whatsappService.notifyBuyerOrderConfirmation({
+              buyer: { phone: buyerPhone, full_name: order.buyer_name },
+              seller: { location: order.seller_location, city: order.seller_city, shop_name: order.seller_name },
+              order: { orderNumber: order.order_number, totalAmount: order.total_amount, metadata: order.metadata },
+              items: order.items
             });
           }
-
-          await whatsappService.notifyBuyerOrderConfirmation({
-            buyer: {
-              phone: buyerPhone,
-              full_name: order.buyer_name
-            },
-            seller: {
-              location: order.seller_location,
-              city: order.seller_city,
-              shop_name: order.seller_name // Mapping full_name to shop_name contextually or just pass name
-            },
-            order: {
-              orderNumber: order.order_number,
-              totalAmount: order.total_amount,
-              metadata: order.metadata
-            },
-            items: order.items
-          });
-
-          // Notify Logistics
-          await whatsappService.sendLogisticsNotification(
-            order,
-            {
-              phone: order.buyer_phone || payment.phone_number || payment.metadata?.phone,
-              fullName: order.buyer_name,
-              city: order.shipping_address?.city, // Assuming address is JSON
-              location: order.shipping_address?.street || order.shipping_address?.location
-            },
-            {
-              phone: order.seller_phone,
-              shop_name: order.seller_name
-            }
-          );
-        } else {
-          logger.warn('WhatsApp service not ready, skipping notifications');
         }
-
-      } catch (emailError) {
-        logger.error('Error triggering product order notifications:', emailError);
-        // Don't throw here as the database update was successful
+      } catch (e) {
+        logger.error('Error triggering notifications:', e);
       }
 
     } catch (error) {
@@ -648,22 +363,6 @@ class PaymentService {
     } finally {
       client.release();
     }
-  }
-
-  mapPaymentStatus(status) {
-    const statusMap = {
-      'success': 'completed',
-      'completed': 'completed',
-      'paid': 'completed',
-      'failed': 'failed',
-      'cancelled': 'cancelled',
-      'rejected': 'failed',
-      'pending': 'pending',
-      'processing': 'pending',
-      'initiated': 'pending'
-    };
-
-    return statusMap[status?.toLowerCase()] || 'pending';
   }
 }
 

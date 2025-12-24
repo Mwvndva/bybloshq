@@ -40,17 +40,17 @@ publicRouter.post(
     body('productName').optional(),
     body('customerName').optional(),
     body('narrative').optional(),
-    body('paymentMethod').optional().isIn(['paystack']).withMessage('Invalid payment method'),
+    body('paymentMethod').optional().isIn(['paystack', 'payd']).withMessage('Invalid payment method'),
     validate
   ],
   paymentController.initiateProductPayment
 );
 
-// Webhook endpoint (public) - Paystack
+// Webhook endpoint (public) - PAYD
 publicRouter.post(
-  '/webhook/paystack',
+  '/webhook/payd',
   express.json(),
-  paymentController.handlePaystackWebhook
+  paymentController.handlePaydWebhook
 );
 
 // Test webhook endpoint (for development)
@@ -60,11 +60,11 @@ publicRouter.post(
   paymentController.testWebhook
 );
 
-// Paystack callback endpoint (public) - Legacy support
+// PAYD callback endpoint (public) - Legacy support/Fallback
 publicRouter.post(
-  '/paystack/callback',
+  '/payd/callback',
   express.json(),
-  paymentController.handlePaystackWebhook
+  paymentController.handlePaydWebhook
 );
 
 // Check payment status (public)
