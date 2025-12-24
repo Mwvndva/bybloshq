@@ -14,7 +14,7 @@ interface ServiceBookingModalProps {
     product: Product;
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (bookingData: { date: Date; time: string; location: string }) => void;
+    onConfirm: (bookingData: { date: Date; time: string; location: string; locationType?: string }) => void;
 }
 
 export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: ServiceBookingModalProps) {
@@ -26,6 +26,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const [customLocation, setCustomLocation] = useState<string>('');
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
 
+    const serviceOptions = product.service_options || (product as any).serviceOptions || {};
+
     // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
@@ -34,20 +36,20 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             setLocation('');
             setCustomLocation('');
             // Default based on product settings
-            if (product.service_options?.location_type === 'seller_visits_buyer') {
+            if (serviceOptions.location_type === 'seller_visits_buyer') {
                 setSelectedLocationType('buyer');
             } else {
                 setSelectedLocationType('seller');
             }
         }
-    }, [isOpen, product]);
+    }, [isOpen, product, serviceOptions]);
 
     // Generate time slots based on product service options
     useEffect(() => {
-        if (product.service_options?.start_time && product.service_options?.end_time) {
+        if (serviceOptions.start_time && serviceOptions.end_time) {
             const slots: string[] = [];
-            const start = parseInt(product.service_options.start_time.split(':')[0]);
-            const end = parseInt(product.service_options.end_time.split(':')[0]);
+            const start = parseInt(serviceOptions.start_time.split(':')[0]);
+            const end = parseInt(serviceOptions.end_time.split(':')[0]);
 
             for (let i = start; i < end; i++) {
                 // Create 1-hour slots for simplicity
@@ -63,15 +65,15 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00'
             ]);
         }
-    }, [product]);
+    }, [product, serviceOptions]);
 
     // Parse service locations
-    const locations = product.service_locations
-        ? product.service_locations.split(',').map(l => l.trim()).filter(Boolean)
-        : [];
+    const rawLocations = product.service_locations || (product as any).serviceLocations;
+    // Treat as single location, don't split by comma as users enter full addresses with commas
+    const locations = rawLocations ? [rawLocations] : [];
 
     // Parse availability days
-    const availableDays = product.service_options?.availability_days || [];
+    const availableDays = serviceOptions.availability_days || [];
 
     // Disable unavailable days
     const isDateDisabled = (date: Date) => {
@@ -109,12 +111,13 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             onConfirm({
                 date,
                 time,
-                location: finalLocation
+                location: finalLocation,
+                locationType: selectedLocationType === 'buyer' ? 'seller_visits_buyer' : 'buyer_visits_seller'
             });
         }
     };
 
-    const locationType = product.service_options?.location_type || 'buyer_visits_seller';
+    const locationType = serviceOptions.location_type || 'buyer_visits_seller';
     const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
 

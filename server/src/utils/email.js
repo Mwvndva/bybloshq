@@ -321,7 +321,8 @@ export const sendProductOrderConfirmationEmail = async (email, orderData) => {
       bookingDetails: orderData.metadata?.product_type === 'service' ? {
         date: orderData.metadata.booking_date,
         time: orderData.metadata.booking_time,
-        location: orderData.metadata.service_location
+        location: orderData.metadata.service_location,
+        locationLabel: orderData.metadata.location_type === 'seller_visits_buyer' ? 'Client Location' : 'Service Location'
       } : null
     };
 
@@ -357,7 +358,8 @@ export const sendNewOrderNotificationEmail = async (email, orderData) => {
       bookingDetails: orderData.metadata?.product_type === 'service' ? {
         date: orderData.metadata.booking_date,
         time: orderData.metadata.booking_time,
-        location: orderData.metadata.service_location
+        location: orderData.metadata.service_location,
+        locationLabel: orderData.metadata.location_type === 'seller_visits_buyer' ? 'Client Location' : 'Service Location'
       } : null
     };
 

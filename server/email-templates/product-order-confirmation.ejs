@@ -1,78 +1,173 @@
 <!DOCTYPE html>
 <html>
+
 <head>
   <meta charset="UTF-8">
-  <title>Order Confirmation - <%= orderNumber %></title>
+  <title>Order Confirmation - <%= orderNumber %>
+  </title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1a202c; background-color: #f7fafc; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { text-align: center; padding: 30px 20px; background: #000; color: white; border-radius: 8px 8px 0 0; }
-    .header h1 { margin: 0; font-size: 24px; font-weight: 700; }
-    .content { background: #ffffff; border-radius: 0 0 8px 8px; padding: 30px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-    .order-details { margin: 25px 0; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; }
-    .item-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #edf2f7; }
-    .item-row:last-child { border-bottom: none; }
-    .total-row { display: flex; justify-content: space-between; padding: 15px 0; font-weight: 700; font-size: 18px; border-top: 2px solid #edf2f7; margin-top: 10px; }
-    .footer { text-align: center; margin-top: 30px; color: #718096; font-size: 13px; }
-    .badge { background: #edf2f7; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #4a5568; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      line-height: 1.6;
+      color: #1a202c;
+      background-color: #f7fafc;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .header {
+      text-align: center;
+      padding: 30px 20px;
+      background: #000;
+      color: white;
+      border-radius: 8px 8px 0 0;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .content {
+      background: #ffffff;
+      border-radius: 0 0 8px 8px;
+      padding: 30px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+
+    .order-details {
+      margin: 25px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .item-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid #edf2f7;
+    }
+
+    .item-row:last-child {
+      border-bottom: none;
+    }
+
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 0;
+      font-weight: 700;
+      font-size: 18px;
+      border-top: 2px solid #edf2f7;
+      margin-top: 10px;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 30px;
+      color: #718096;
+      font-size: 13px;
+    }
+
+    .badge {
+      background: #edf2f7;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #4a5568;
+    }
   </style>
 </head>
+
 <body>
   <div class="container">
     <div class="header">
-      <h1><%= appName %></h1>
+      <h1>
+        <%= appName %>
+      </h1>
       <p>Order Confirmation</p>
     </div>
     <div class="content">
       <h2>Thank you for your order, <%= buyerName %>!</h2>
       <p>We've received your payment and the seller has been notified. Your order is now being processed.</p>
-      
+
       <div class="order-details">
         <div style="margin-bottom: 15px;">
           <span class="badge">Order #<%= orderNumber %></span>
-          <span style="float: right; color: #718096; font-size: 14px;"><%= orderDate %></span>
+          <span style="float: right; color: #718096; font-size: 14px;">
+            <%= orderDate %>
+          </span>
         </div>
-        
+
         <% items.forEach(function(item) { %>
           <div class="item-row">
             <div>
-              <div style="font-weight: 600;"><%= item.name %></div>
-              <div style="font-size: 13px; color: #718096;">Qty: <%= item.quantity %></div>
+              <div style="font-weight: 600;">
+                <%= item.name %>
+              </div>
+              <div style="font-size: 13px; color: #718096;">Qty: <%= item.quantity %>
+              </div>
             </div>
-            <div style="font-weight: 500;">KSh <%= parseFloat(item.subtotal).toLocaleString() %></div>
+            <div style="font-weight: 500;">KSh <%= parseFloat(item.subtotal).toLocaleString() %>
+            </div>
           </div>
-        <% }); %>
-        
-        <div class="total-row">
-          <span>Total Paid</span>
-          <span>KSh <%= parseFloat(totalAmount).toLocaleString() %></span>
-        </div>
+          <% }); %>
+
+            <div class="total-row">
+              <span>Total Paid</span>
+              <span>KSh <%= parseFloat(totalAmount).toLocaleString() %></span>
+            </div>
       </div>
 
       <% if (locals.bookingDetails) { %>
-      <div style="margin: 25px 0; border: 1px solid #7c3aed; border-radius: 8px; padding: 20px; background: #f5f3ff;">
-        <h3 style="margin-top: 0; color: #6d28d9; border-bottom: 1px solid #ddd6fe; padding-bottom: 10px;">Service Booking Confirmed</h3>
-        <div style="font-size: 14px;">
-          <p style="margin: 8px 0;"><strong>Date:</strong> <%= bookingDetails.date %></p>
-          <p style="margin: 8px 0;"><strong>Time:</strong> <%= bookingDetails.time %></p>
-          <p style="margin: 8px 0;"><strong>Location:</strong> <%= bookingDetails.location %></p>
+        <div style="margin: 25px 0; border: 1px solid #7c3aed; border-radius: 8px; padding: 20px; background: #f5f3ff;">
+          <h3 style="margin-top: 0; color: #6d28d9; border-bottom: 1px solid #ddd6fe; padding-bottom: 10px;">Service
+            Booking Confirmed</h3>
+          <div style="font-size: 14px;">
+            <p style="margin: 8px 0;"><strong>Date:</strong>
+              <%= bookingDetails.date %>
+            </p>
+            <p style="margin: 8px 0;"><strong>Time:</strong>
+              <%= bookingDetails.time %>
+            </p>
+            <p style="margin: 8px 0;"><strong>
+                <%= bookingDetails.locationLabel || 'Location' %>:
+              </strong>
+              <%= bookingDetails.location %>
+            </p>
+          </div>
         </div>
-      </div>
-      <% } %>
+        <% } %>
 
-      <div style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin: 20px 0;">
-        <p style="margin: 0; font-size: 14px; color: #0369a1;"><strong>What's next?</strong> The seller will ship your item soon. You'll receive another email once your order has been shipped.</p>
-      </div>
+          <div
+            style="background: #f0f9ff; border-left: 4px solid #0ea5e9; padding: 15px; border-radius: 4px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 14px; color: #0369a1;"><strong>What's next?</strong> The seller will ship
+              your item soon. You'll receive another email once your order has been shipped.</p>
+          </div>
 
-      <p style="text-align: center; margin-top: 30px;">
-        <a href="<%= websiteUrl %>/buyer/orders" style="display: inline-block; padding: 12px 24px; background: #000; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Track Your Order</a>
-      </p>
+          <p style="text-align: center; margin-top: 30px;">
+            <a href="<%= websiteUrl %>/buyer/orders"
+              style="display: inline-block; padding: 12px 24px; background: #000; color: white; text-decoration: none; border-radius: 6px; font-weight: 500;">Track
+              Your Order</a>
+          </p>
     </div>
     <div class="footer">
-      <p>© <%= new Date().getFullYear() %> <%= appName %>. All rights reserved.</p>
+      <p>© <%= new Date().getFullYear() %>
+          <%= appName %>. All rights reserved.</p>
     </div>
   </div>
 </body>
+
 </html>

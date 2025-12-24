@@ -291,7 +291,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
             {searchQuery && ` for "${searchQuery}"`}
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
           {filteredProducts.map((product) => {
             // Use the seller from the product if available, otherwise try to get it from the sellers map
             const productSeller = product.seller || sellers[product.sellerId];
@@ -348,7 +348,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
             {productsByAesthetic[id].slice(0, 4).map((product) => {
               // Use the seller from the product if available, otherwise try to get it from the sellers map
               const productSeller = product.seller || sellers[product.sellerId];
