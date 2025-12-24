@@ -8,21 +8,21 @@ import Order from '../models/order.model.js';
 
 class PaymentController {
   /**
-   * Handle Paystack webhook
+   * Handle PAYD webhook
    */
-  async handlePaystackWebhook(req, res) {
+  async handlePaydWebhook(req, res) {
     try {
       const webhookData = req.body;
       const headers = req.headers;
 
-      logger.info('Paystack webhook received', {
+      logger.info('PAYD webhook received', {
         event: webhookData.event,
-        reference: webhookData.data?.reference
+        reference: webhookData.transaction_reference || webhookData.ref
       });
 
       // Process the webhook
       const clientIp = req.ip || req.connection.remoteAddress;
-      const result = await paymentService.handlePaystackWebhook(webhookData, headers, clientIp);
+      const result = await paymentService.handlePaydWebhook(webhookData, headers, clientIp);
 
       // Return appropriate response
       if (result.status === 'ignored') {
@@ -39,7 +39,7 @@ class PaymentController {
       });
 
     } catch (error) {
-      logger.error('Paystack webhook processing failed:', error);
+      logger.error('PAYD webhook processing failed:', error);
 
       // Still return 200 to acknowledge receipt (Paystack expects this)
       res.status(200).json({
@@ -165,7 +165,7 @@ class PaymentController {
         phone_number: paymentData.phone,
         amount: paymentData.amount,
         status: 'pending',
-        payment_method: 'paystack',
+        payment_method: 'payd',
         event_id: paymentData.event_id,
         organizer_id: paymentData.organizer_id,
         ticket_type_id: paymentData.ticket_type_id,
@@ -190,7 +190,7 @@ class PaymentController {
         api_ref: result.reference,
         metadata: {
           ...payment.metadata,
-          paystack_response: result
+          payd_response: result
         }
       });
 
@@ -321,7 +321,7 @@ class PaymentController {
         phone,
         email,
         amount,
-        invoice_id: order.id, // Use order ID (integer) as invoice ID
+        invoice_id: `ORD-${order.id}`, // Use ORD- prefix for product orders
         firstName: customerName?.split(' ')[0] || 'Customer',
         lastName: customerName?.split(' ').slice(1).join(' ') || '',
         narrative: narrative || `Payment for product ${productName}`,
@@ -342,14 +342,14 @@ class PaymentController {
       // Create payment record in database
       if (result.reference) {
         const paymentRecord = await Payment.create({
-          invoice_id: order.id,
+          invoice_id: paymentData.invoice_id,
           amount: amount,
           currency: 'KES',
           status: 'pending',
-          payment_method: 'paystack',
+          payment_method: 'payd',
           phone_number: phone,
           email: email,
-          provider_reference: result.reference, // Store Paystack reference in provider_reference field
+          provider_reference: result.reference, // Store PAYD reference
           api_ref: result.reference, // Also store in api_ref for backup
           metadata: {
             ...paymentData,

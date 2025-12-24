@@ -25,7 +25,7 @@ export default function PaymentSuccess() {
       if (status === 'success') {
         setStatus('success');
         setMessage('Payment completed successfully!');
-        
+
         // Redirect to buyer dashboard after 3 seconds
         setTimeout(() => {
           navigate('/buyer/dashboard', { replace: true });
@@ -44,35 +44,35 @@ export default function PaymentSuccess() {
           {status === 'loading' && <Loader2 className="mx-auto h-12 w-12 animate-spin text-blue-600" />}
           {status === 'success' && <CheckCircle className="mx-auto h-12 w-12 text-green-600" />}
           {status === 'error' && <XCircle className="mx-auto h-12 w-12 text-red-600" />}
-          
+
           <CardTitle className="mt-4">
             {status === 'loading' && 'Processing Payment'}
             {status === 'success' && 'Payment Successful'}
             {status === 'error' && 'Payment Failed'}
           </CardTitle>
-          
+
           <CardDescription>
             {message}
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="text-center space-y-4">
           {status === 'success' && (
             <p className="text-sm text-gray-600">
               You will be redirected to your orders page in a few seconds...
             </p>
           )}
-          
-          <Button 
-            onClick={() => navigate('/buyer/dashboard')} 
+
+          <Button
+            onClick={() => navigate('/buyer/dashboard')}
             className="w-full"
             variant={status === 'success' ? 'outline' : 'default'}
           >
             {status === 'success' ? 'View My Orders' : 'Go to Dashboard'}
           </Button>
-          
-          <Button 
-            onClick={() => navigate('/')} 
+
+          <Button
+            onClick={() => navigate('/')}
             variant="ghost"
             className="w-full"
           >
