@@ -7,7 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 const themeColors = [
   { name: 'Default', value: 'default', bg: 'bg-gradient-to-br from-yellow-400 to-yellow-500' },
   { name: 'Black', value: 'black', bg: 'bg-gradient-to-br from-gray-800 to-gray-900' },
-  { name: 'Pink', value: 'pink', bg: 'bg-gradient-to-br from-pink-400 to-pink-500' },
+  { name: 'GILBERT', value: 'pink', bg: 'bg-gradient-to-br from-pink-400 to-pink-500' },
   { name: 'Orange', value: 'orange', bg: 'bg-gradient-to-br from-orange-400 to-orange-500' },
   { name: 'Green', value: 'green', bg: 'bg-gradient-to-br from-green-400 to-green-500' },
   { name: 'Red', value: 'red', bg: 'bg-gradient-to-br from-red-400 to-red-500' },
@@ -77,8 +77,8 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
             type="button"
             onClick={() => handleThemeSelect(theme.value as Theme)}
             className={`relative group h-20 sm:h-24 lg:h-28 rounded-xl overflow-hidden border-2 transition-all duration-300 shadow-md hover:shadow-lg ${selectedTheme === theme.value
-                ? 'ring-2 ring-offset-2 ring-yellow-500 scale-105 border-yellow-400'
-                : 'border-gray-200 hover:border-gray-300 hover:scale-105'
+              ? 'ring-2 ring-offset-2 ring-yellow-500 scale-105 border-yellow-400'
+              : 'border-gray-200 hover:border-gray-300 hover:scale-105'
               }`}
           >
             <div className={`w-full h-full ${theme.bg} flex flex-col items-center justify-center relative`}>
