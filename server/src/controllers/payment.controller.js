@@ -299,6 +299,8 @@ class PaymentController {
         buyerPhone: phone,
         metadata: {
           ...(req.body.metadata || {}),
+          product_type: product.product_type, // Ensure product type is at top level for notifications
+          is_digital: product.is_digital,
           items: [{
             productId: productId,
             name: product.name,

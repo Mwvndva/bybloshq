@@ -40,6 +40,8 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       aesthetic: (product.aesthetic || 'noir') as Aesthetic,
       is_digital: product.is_digital || product.isDigital,
       product_type: product.product_type || product.productType || 'physical',
+      service_options: product.service_options || product.serviceOptions,
+      service_locations: product.service_locations || product.serviceLocations,
     };
 
     // Add seller information if available
