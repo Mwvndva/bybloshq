@@ -168,7 +168,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const handleBookingConfirm = async (data: { date: Date; time: string; location: string }) => {
+  const handleBookingConfirm = async (data: { date: Date; time: string; location: string; locationType?: string }) => {
     setBookingData(data);
     setIsBookingModalOpen(false);
 
@@ -232,7 +232,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const handleBuyerInfoSubmit = async (
     buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string },
-    explicitBookingData?: { date: Date; time: string; location: string } | null,
+    explicitBookingData?: { date: Date; time: string; location: string; locationType?: string } | null,
     skipSave: boolean = false
   ) => {
     setIsProcessingPurchase(true);
@@ -310,6 +310,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           booking_date: format(activeBookingData.date, 'yyyy-MM-dd'),
           booking_time: activeBookingData.time,
           service_location: activeBookingData.location,
+          location_type: activeBookingData.locationType,
           product_type: 'service'
         } : undefined
       };
@@ -492,11 +493,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         )}
 
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
-          <div className="absolute top-2 left-2 z-10">
+          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
             <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
               <Handshake className="h-3 w-3 mr-1" />
               Service
             </Badge>
+            {(product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') && (
+              <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+                Hybrid
+              </Badge>
+            )}
           </div>
         )}
         {isImageLoading && (
@@ -539,7 +545,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           ) : (
             formatCurrency(product.price)
           )}
-          {(product.product_type === 'service' || (product as any).productType === 'service') && product.service_options?.price_type === 'hourly' && (
+          {(product.product_type === 'service' || (product as any).productType === 'service') && (product.service_options?.price_type === 'hourly' || (product as any).serviceOptions?.price_type === 'hourly') && (
             <span className="text-sm font-medium text-gray-500 ml-1">/hr</span>
           )}
         </p>
@@ -557,12 +563,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           )}>
             <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
             <span className="line-clamp-2">
-              {product.service_options?.location_type === 'seller_visits_buyer' ? (
+              {(product.service_options?.location_type === 'seller_visits_buyer' || (product as any).serviceOptions?.location_type === 'seller_visits_buyer') ? (
                 "Mobile Service - We come to you"
-              ) : product.service_options?.location_type === 'hybrid' ? (
+              ) : (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') ? (
                 "Service available In-store & Mobile"
               ) : (
-                product.service_locations || "In-store Service"
+                product.service_locations || (product as any).serviceLocations || "In-store Service"
               )}
             </span>
           </div>
