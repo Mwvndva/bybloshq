@@ -138,7 +138,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   }
 
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
-  const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string } | null>(null);
+  const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string; locationType?: string } | null>(null);
 
   const handleBuyClick = async (e: React.MouseEvent) => {
     // Prevent default behavior and stop propagation
@@ -485,7 +485,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl">
         {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
           <div className="absolute top-2 left-2 z-10">
-            <Badge className="bg-black/90 hover:bg-gray-900/90 text-white border-0 backdrop-blur-sm shadow-sm">
+            <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
               <FileText className="h-3 w-3 mr-1" />
               Digital
             </Badge>
@@ -539,7 +539,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             : themeClasses.price
         )}>
           {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) ? (
-            <span className="bg-black text-white px-2 py-0.5 rounded-md text-base sm:text-lg">
+            <span className="text-red-600">
               {formatCurrency(product.price)}
             </span>
           ) : (
@@ -596,7 +596,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
               : (product.product_type === 'service' || (product as any).productType === 'service')
                 ? 'bg-purple-600 hover:bg-purple-700 text-white'
                 : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital)
-                  ? 'bg-black hover:bg-gray-800 text-white'
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
                   : themeClasses.button,
             (product.product_type !== 'service' && (product as any).productType !== 'service' && product.product_type !== 'digital' && (product as any).productType !== 'digital' && !product.is_digital && !(product as any).isDigital) && themeClasses.button
           )}

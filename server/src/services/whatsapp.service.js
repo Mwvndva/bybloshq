@@ -165,11 +165,13 @@ class WhatsAppService {
         if (isService) {
             instructionText = `ℹ️ *ACTION REQUIRED:* Please review the booking details above and contact the client if needed.`;
         } else if (isDigital) {
-            instructionText = `ℹ️ *INFO:* Digital product order. No physical delivery required.`;
+            instructionText = `ℹ️ *INFO:* Customer has received download link. No action required.`;
         }
 
+        const header = isDigital ? '🎉 *NEW DIGITAL ORDER!*' : '🎉 *NEW ORDER RECEIVED!*';
+
         const msg = `
-🎉 *NEW ORDER RECEIVED!*
+${header}
 
 📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${total.toLocaleString()}
@@ -219,8 +221,10 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
             nextSteps = `Your digital product is ready for download!\n🔗 Access it here: ${dashboardUrl}`;
         }
 
+        const header = isDigital ? '✅ *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
+
         const msg = `
-✅ *ORDER CONFIRMED!*
+${header}
 
 Thanks for ordering, ${buyer.full_name?.split(' ')[0] || 'valued customer'}!
 

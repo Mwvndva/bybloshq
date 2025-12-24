@@ -274,8 +274,8 @@ export default function SellerOrdersSection() {
             cardClasses += "bg-gradient-to-br from-purple-50 to-white border border-purple-200 shadow-sm hover:shadow-md";
             itemClasses += "bg-gradient-to-r from-purple-50/50 to-purple-100/50 border-purple-100";
           } else if (isDigital) {
-            cardClasses += "bg-gradient-to-br from-gray-50 to-white border border-gray-200 shadow-sm hover:shadow-md";
-            itemClasses += "bg-gradient-to-r from-gray-100 to-gray-200 border-gray-200";
+            cardClasses += "bg-gradient-to-br from-red-50 to-white border border-red-200 shadow-sm hover:shadow-md";
+            itemClasses += "bg-gradient-to-r from-red-50/50 to-red-100/50 border-red-100";
           } else {
             cardClasses += "bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md";
             itemClasses += "bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200/50";
