@@ -424,6 +424,11 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       step="0.01"
                       value={formData.price}
                       onChange={handleChange}
+                      onKeyDown={(e) => {
+                        if (['e', 'E', '+', '-'].includes(e.key)) {
+                          e.preventDefault();
+                        }
+                      }}
                       placeholder="Enter price"
                       required
                       className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"

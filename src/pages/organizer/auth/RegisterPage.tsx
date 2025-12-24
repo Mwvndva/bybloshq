@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOrganizerAuth } from '@/contexts/OrganizerAuthContext';
-import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, ArrowLeft, Calendar } from 'lucide-react';
+import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, ArrowLeft, Calendar, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 export default function RegisterPage() {
@@ -42,37 +42,53 @@ export default function RegisterPage() {
     );
   }
 
-  const validatePasswords = (password: string, confirmPassword: string): boolean => {
+  // Password strength checker function
+  const checkPasswordStrength = (password: string) => {
+    return {
+      minLength: password.length >= 8,
+      hasNumber: /\d/.test(password),
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      hasUpper: /[A-Z]/.test(password),
+      hasLower: /[a-z]/.test(password),
+    };
+  };
+
+  const validatePasswords = (password: string, confirmPassword: string, showToast = true): boolean => {
     if (password !== confirmPassword) {
       const msg = 'Passwords do not match';
       setPasswordError(msg);
-      toast({
-        title: "Validation Error",
-        description: msg,
-        variant: 'destructive',
-      });
+      if (showToast) {
+        toast({
+          title: "Validation Error",
+          description: msg,
+          variant: 'destructive',
+        });
+      }
       return false;
     }
-    if (password.length < 8) {
-      const msg = 'Password must be at least 8 characters long';
+
+    const strength = checkPasswordStrength(password);
+    const unmetRequirements: string[] = [];
+
+    if (!strength.minLength) unmetRequirements.push("at least 8 characters");
+    if (!strength.hasNumber) unmetRequirements.push("a number");
+    if (!strength.hasSpecial) unmetRequirements.push("a special character");
+    if (!strength.hasUpper) unmetRequirements.push("an uppercase letter");
+    if (!strength.hasLower) unmetRequirements.push("a lowercase letter");
+
+    if (unmetRequirements.length > 0) {
+      const msg = `Password needs ${unmetRequirements.join(', ')}`;
       setPasswordError(msg);
-      toast({
-        title: "Validation Error",
-        description: msg,
-        variant: 'destructive',
-      });
+      if (showToast) {
+        toast({
+          title: "Weak Password",
+          description: msg,
+          variant: 'destructive',
+        });
+      }
       return false;
     }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-      const msg = 'Password must contain at least one special character';
-      setPasswordError(msg);
-      toast({
-        title: "Validation Error",
-        description: msg,
-        variant: 'destructive',
-      });
-      return false;
-    }
+
     setPasswordError('');
     return true;
   };
@@ -89,7 +105,8 @@ export default function RegisterPage() {
       if (formData.password && formData.confirmPassword) {
         validatePasswords(
           name === 'password' ? value : formData.password,
-          name === 'confirmPassword' ? value : formData.confirmPassword
+          name === 'confirmPassword' ? value : formData.confirmPassword,
+          false // Don't show toast on keyup
         );
       }
     }
@@ -297,6 +314,36 @@ export default function RegisterPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Password Strength Checklist */}
+              {formData.password && (
+                <div className="mt-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                  <p className="text-xs font-semibold text-gray-500 mb-2">Password Requirements:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {[
+                      { label: "At least 8 characters", met: checkPasswordStrength(formData.password).minLength },
+                      { label: "At least one number", met: checkPasswordStrength(formData.password).hasNumber },
+                      { label: "At least one special char", met: checkPasswordStrength(formData.password).hasSpecial },
+                      { label: "Upper & lowercase letters", met: checkPasswordStrength(formData.password).hasUpper && checkPasswordStrength(formData.password).hasLower },
+                    ].map((req, index) => (
+                      <div key={index} className="flex items-center space-x-2">
+                        {req.met ? (
+                          <div className="bg-green-100 p-0.5 rounded-full">
+                            <Check className="h-3 w-3 text-green-600" />
+                          </div>
+                        ) : (
+                          <div className="bg-gray-200 p-0.5 rounded-full">
+                            <X className="h-3 w-3 text-gray-400" />
+                          </div>
+                        )}
+                        <span className={`text-xs ${req.met ? 'text-green-700 font-medium' : 'text-gray-500'}`}>
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword" className="text-sm font-bold text-black">
