@@ -14,7 +14,6 @@ import PhoneCheckModal from '@/components/PhoneCheckModal';
 import { ServiceBookingModal } from '@/components/ServiceBookingModal';
 import buyerApi from '@/api/buyerApi';
 import { format } from 'date-fns';
-import { ProductPaymentStatusDialog } from '@/components/ProductPaymentStatusDialog';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
@@ -231,10 +230,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  /* New State for Payment Modal */
-  const [paymentInvoiceId, setPaymentInvoiceId] = useState<string>('');
-  const [isPaymentMonitorOpen, setIsPaymentMonitorOpen] = useState(false);
-
   const handleBuyerInfoSubmit = async (
     buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string },
     explicitBookingData?: { date: Date; time: string; location: string; locationType?: string } | null,
@@ -253,6 +248,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         // User is already authenticated, use their existing buyer ID
         buyerId = String(userData.id);
         buyerToken = localStorage.getItem('buyer_token') || '';
+
+
       } else if (!skipSave) {
         // User is not authenticated and not explicitly skipping save, save buyer info first
         try {
@@ -281,6 +278,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           if (buyerToken) {
             localStorage.setItem('buyer_token', buyerToken);
           }
+
+
+
         } catch (saveError) {
           console.error('Error saving buyer info:', saveError);
           throw new Error('Failed to save buyer information. Please try again.');
@@ -295,8 +295,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       // Determine booking data to use (explicit argument takes precedence over state)
       const activeBookingData = explicitBookingData || bookingData;
 
-      // 2. Prepare payment payload
-      // Use 'payd' as payment method (backend is updated to handle this, but explicit is good)
+      // 2. Prepare payment payload for Paystack product payment
       const payload = {
         phone: buyerInfo.phone,
         email: buyerInfo.email,
@@ -306,7 +305,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         productName: product.name,
         customerName: buyerInfo.fullName,
         narrative: `Purchase of ${product.name}`,
-        paymentMethod: 'payd', // Transmit 'payd' intent
+        paymentMethod: 'paystack',
         metadata: activeBookingData ? {
           booking_date: format(activeBookingData.date, 'yyyy-MM-dd'),
           booking_time: activeBookingData.time,
@@ -324,7 +323,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         localStorage.setItem('buyer_token', buyerToken);
       }
 
-      // 4. Call Payment API
+      // 4. Call Paystack product payment API
       const isDevelopment = import.meta.env.DEV;
       const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
         ? '/api'  // Use proxy in development when VITE_API_URL is not set
@@ -334,7 +333,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || buyerToken}` // Pass token if we have it
+          'Authorization': `Bearer ${token || buyerToken}`
         },
         body: JSON.stringify(payload),
       });
@@ -348,23 +347,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         throw new Error(errorMessage);
       }
 
-      // SUCCESS: Payment initiated
-      // We expect data to contain { invoice_id, reference, ... }
-      const initData = responseData.data;
+      // Extract redirect URL from Paystack response
+      const redirectUrl = responseData.data?.authorization_url;
 
-      if (!initData || !initData.invoice_id) {
-        throw new Error('Invalid response from payment server (missing invoice_id)');
+      if (!redirectUrl) {
+        console.error('Invalid response format from payment gateway:', responseData);
+        throw new Error('Invalid response from payment gateway');
       }
 
-      // Store invoice ID and open the status monitor dialog
-      setPaymentInvoiceId(initData.invoice_id);
-      setIsPaymentMonitorOpen(true);
+      // 6. Redirect to Paystack payment page
+      console.debug('Redirecting to Paystack:', redirectUrl);
+      window.location.href = redirectUrl;
 
-      setIsBuyerModalOpen(false); // Close buyer input modal if open
-      setIsPhoneCheckModalOpen(false); // Close phone check if open
-      setIsBookingModalOpen(false); // Close booking modal if open
-
-    } catch (error: any) {
+    } catch (error) {
       console.error('Payment error:', error);
       toast({
         title: 'Payment Failed',
@@ -375,21 +370,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     } finally {
       setIsProcessingPurchase(false);
     }
-  };
-
-  const handlePaymentSuccess = () => {
-    // Navigate to order confirmation or success page
-    // For now, reload or show a success toast, but reloading/redirecting is safer for state
-    // Ideally redirect to `/orders/${paymentInvoiceId}` or just reload to refresh "Purchased" state
-    toast({
-      title: 'Purchase Successful!',
-      description: 'Your order has been placed successfully.',
-      variant: 'default'
-    });
-
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -708,16 +688,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         onConfirm={handleBookingConfirm}
-      />
-
-      <ProductPaymentStatusDialog
-        isOpen={isPaymentMonitorOpen}
-        onOpenChange={(open) => {
-          // Only allow closing if payment is not pending (handled inside dialog mostly, but safe here)
-          setIsPaymentMonitorOpen(open);
-        }}
-        invoiceId={paymentInvoiceId}
-        onSuccess={handlePaymentSuccess}
       />
     </Card>
   );

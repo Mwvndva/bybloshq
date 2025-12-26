@@ -108,21 +108,21 @@ export const DiscountCodeInput = ({
 
   if (appliedDiscount) {
     return (
-      <Card className="border-green-200 bg-green-50/50 rounded-2xl shadow-sm">
+      <Card className="border-green-200 bg-green-50">
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                <Check className="h-5 w-5 text-green-600" />
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <Check className="h-4 w-4 text-green-600" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <p className="font-bold text-green-800">Discount Applied</p>
-                  <Badge variant="secondary" className="bg-white text-green-700 hover:bg-white border-green-100">
+                  <p className="font-semibold text-green-800">Discount Applied</p>
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
                     {appliedDiscount.code}
                   </Badge>
                 </div>
-                <p className="text-sm text-green-600 font-medium">
+                <p className="text-sm text-green-600">
                   You saved {formatCurrency(appliedDiscount.discountAmount)}
                 </p>
                 {appliedDiscount.description && (
@@ -135,7 +135,7 @@ export const DiscountCodeInput = ({
               variant="outline"
               size="sm"
               onClick={removeDiscount}
-              className="border-green-200 text-green-700 hover:bg-green-100 hover:text-green-800 rounded-xl h-9"
+              className="border-green-200 text-green-700 hover:bg-green-100"
             >
               <X className="h-4 w-4 mr-1" />
               Remove
@@ -147,38 +147,48 @@ export const DiscountCodeInput = ({
   }
 
   return (
-    <div className="space-y-3">
-      <Label htmlFor="discount-code" className="flex items-center gap-2 text-gray-700 font-semibold text-sm">
-        <Percent className="h-4 w-4 text-yellow-500" />
-        Have a Discount Code?
-      </Label>
+    <Card>
+      <CardContent className="p-4">
+        <div className="space-y-3">
+          <Label htmlFor="discount-code" className="flex items-center gap-2">
+            <Percent className="h-4 w-4" />
+            Discount Code
+          </Label>
 
-      <div className="flex gap-2">
-        <Input
-          id="discount-code"
-          placeholder="ENTER CODE"
-          value={code}
-          onChange={(e) => setCode(e.target.value.toUpperCase())}
-          onKeyPress={handleKeyPress}
-          disabled={isValidating}
-          className="uppercase rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 h-11 bg-white font-medium tracking-wide"
-        />
+          <div className="flex gap-2">
+            <Input
+              id="discount-code"
+              placeholder="Enter discount code"
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onKeyPress={handleKeyPress}
+              disabled={isValidating}
+              className="uppercase"
+            />
 
-        <Button
-          onClick={validateDiscountCode}
-          disabled={!code.trim() || isValidating}
-          className="h-11 px-6 rounded-xl bg-gray-900 text-white hover:bg-gray-800 font-semibold shadow-sm"
-        >
-          {isValidating ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Verifying
-            </>
-          ) : (
-            'Apply'
+            <Button
+              onClick={validateDiscountCode}
+              disabled={!code.trim() || isValidating}
+              size="sm"
+            >
+              {isValidating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                'Apply'
+              )}
+            </Button>
+          </div>
+
+          {orderAmount > 0 && (
+            <p className="text-xs text-gray-500">
+              Enter a discount code to save on your {formatCurrency(orderAmount)} order
+            </p>
           )}
-        </Button>
-      </div>
-    </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
