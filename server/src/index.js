@@ -24,6 +24,7 @@ import paymentRoutes from './routes/payment.routes.js';
 import discountCodeRoutes from './routes/discountCode.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import refundRoutes from './routes/refund.routes.js';
+import callbackRoutes from './routes/callback.routes.js';
 import * as eventController from './controllers/event.controller.js';
 import { pool, testConnection as testDbConnection } from './config/database.js';
 import { globalErrorHandler, notFoundHandler } from './utils/errorHandler.js';
@@ -325,7 +326,9 @@ app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/events', eventRoutes);
 app.use('/api/auth', refreshTokenRoutes); // Add refresh token route
+app.use('/api/callbacks', callbackRoutes); // Webhook callbacks
 
 // Mount protected organizer routes
 app.use('/api/organizers', protectedOrganizerRoutes);

@@ -20,7 +20,7 @@ const createOrder = async (req, res) => {
     const sellerId = req.user.sellerId || req.user.id; // Assuming the seller ID is stored in the JWT token
 
     // Verify seller exists, is active, and matches the authenticated user
-    console.log(`[Order] Verifying seller ID: ${sellerId}`);
+
     const sellerCheck = await pool.query(
       'SELECT id, email, status FROM sellers WHERE id = $1 AND user_id = $2',
       [sellerId, userId]
@@ -43,7 +43,7 @@ const createOrder = async (req, res) => {
       });
     }
 
-    console.log(`[Order] Verified seller:`, seller.email ? '[REDACTED]' : 'missing');
+
 
     // Prepare order data for the model
     const orderData = {
@@ -107,14 +107,14 @@ const createOrder = async (req, res) => {
     // Fees will be calculated in the model
 
     // Log the complete order data before sending to model
-    console.log('Sending order data to model:', JSON.stringify(orderData, null, 2));
+
 
     try {
       // Create the order using the model
       const order = await Order.createOrder(orderData);
 
       // Log the returned order data
-      console.log('Order created successfully:', JSON.stringify(order, null, 2));
+
 
 
       res.status(201).json({
@@ -143,7 +143,7 @@ const createOrder = async (req, res) => {
  */
 const getUserOrders = async (req, res) => {
   try {
-    console.log('Received request to get user orders');
+
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
     const userId = req.user?.id;
@@ -156,7 +156,7 @@ const getUserOrders = async (req, res) => {
       });
     }
 
-    console.log(`Fetching orders for user ${userId} with status: ${status || 'all'}`);
+
 
     // Ensure userId is a number
     const numericUserId = parseInt(userId, 10);
@@ -211,11 +211,11 @@ const getUserOrders = async (req, res) => {
 
     queryParams.push(parseInt(limit), offset);
 
-    console.log('Executing query:', query);
-    console.log('Query parameters:', queryParams);
+
+
 
     const result = await pool.query(query, queryParams);
-    console.log(`Found ${result.rows.length} orders`);
+
 
     // Get subtotal count for pagination with proper type casting
     let countQuery = 'SELECT COUNT(*) FROM product_orders WHERE buyer_id = $1::integer';
@@ -226,11 +226,11 @@ const getUserOrders = async (req, res) => {
       countParams.push(status);
     }
 
-    console.log('Executing count query:', countQuery, 'with params:', countParams);
+
     const countResult = await pool.query(countQuery, countParams);
     const subtotal = parseInt(countResult.rows[0].count);
 
-    console.log(`Returning ${result.rows.length} of ${subtotal} total orders`);
+
 
     res.json({
       success: true,
@@ -260,8 +260,8 @@ const getUserOrders = async (req, res) => {
  */
 const getSellerOrders = async (req, res) => {
   try {
-    console.log('getSellerOrders called with query:', req.query);
-    console.log('Authenticated user:', req.user);
+
+
 
     const { status, page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
@@ -414,13 +414,13 @@ const getSellerOrders = async (req, res) => {
     queryParams.push(parseInt(limit), offset);
 
     // Debug: Log the final query and parameters
-    console.log('Final query:', query);
-    console.log('Query parameters:', queryParams);
+
+
 
     let result;
     try {
       result = await pool.query(query, queryParams);
-      console.log('Query successful, rows returned:', result.rowCount);
+
     } catch (queryError) {
       console.error('Database query error:', {
         error: queryError,
@@ -655,8 +655,8 @@ const updateOrderStatus = async (req, res) => {
     }
 
     // Log the current and new status for debugging
-    console.log('Current order status:', order.status);
-    console.log('Requested new status:', status);
+
+
 
     // Validate status transition
     const validTransitions = {
@@ -672,15 +672,15 @@ const updateOrderStatus = async (req, res) => {
     };
 
     // Log the valid transitions for debugging
-    console.log('Valid transitions:', JSON.stringify(validTransitions, null, 2));
+
 
     // Ensure order.status is defined and exists in validTransitions
     const currentStatus = order.status ? order.status.toUpperCase() : 'PENDING';
     const newStatus = status ? status.toUpperCase() : 'PENDING';
 
-    console.log('Current status (uppercase):', currentStatus);
-    console.log('New status (uppercase):', newStatus);
-    console.log('Valid transition keys:', Object.keys(validTransitions));
+
+
+
 
     if (!currentStatus || !(currentStatus in validTransitions)) {
       const errorMsg = `Invalid current order status: ${order.status}. Valid statuses: ${Object.keys(validTransitions).join(', ')}`;

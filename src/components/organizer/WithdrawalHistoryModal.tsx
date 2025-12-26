@@ -1,0 +1,132 @@
+import { useState, useEffect } from 'react';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Calendar, DollarSign, ExternalLink } from "lucide-react";
+import { format } from "date-fns";
+import api from '@/lib/api';
+
+interface Withdrawal {
+    id: number;
+    amount: number | string;
+    status: 'processing' | 'completed' | 'failed' | 'cancelled';
+    mpesa_number: string;
+    mpesa_name: string;
+    provider_reference?: string;
+    created_at: string;
+}
+
+interface WithdrawalHistoryModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    eventId: number;
+    eventName: string;
+}
+
+export function WithdrawalHistoryModal({
+    isOpen,
+    onClose,
+    eventId,
+    eventName
+}: WithdrawalHistoryModalProps) {
+    const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        if (isOpen && eventId) {
+            fetchHistory();
+        }
+    }, [isOpen, eventId]);
+
+    const fetchHistory = async () => {
+        try {
+            setIsLoading(true);
+            const response = await api.get(`/organizers/events/${eventId}/withdrawals`);
+            if (response.data.status === 'success') {
+                setWithdrawals(response.data.data.withdrawals);
+            }
+        } catch (error) {
+            console.error('Failed to fetch withdrawal history:', error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'completed': return 'bg-green-100 text-green-800 border-green-200';
+            case 'processing': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'failed': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-3xl">
+                <DialogHeader>
+                    <DialogTitle className="text-2xl font-black text-center flex items-center justify-center gap-2">
+                        <DollarSign className="h-6 w-6 text-yellow-600" />
+                        Payout History
+                    </DialogTitle>
+                    <p className="text-center text-gray-500 font-medium">{eventName}</p>
+                </DialogHeader>
+
+                <div className="mt-6">
+                    {isLoading ? (
+                        <div className="flex justify-center items-center py-12">
+                            <Loader2 className="h-8 w-8 animate-spin text-yellow-600" />
+                        </div>
+                    ) : withdrawals.length === 0 ? (
+                        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                            <p className="text-gray-500">No withdrawal history found for this event.</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                            {withdrawals.map((withdrawal) => (
+                                <div
+                                    key={withdrawal.id}
+                                    className="bg-white border boundary-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300"
+                                >
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <h4 className="font-bold text-lg text-gray-900">
+                                                KSh {Number(withdrawal.amount).toLocaleString('en-KE')}
+                                            </h4>
+                                            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                                <Calendar className="h-3 w-3" />
+                                                {format(new Date(withdrawal.created_at), "MMM d, yyyy 'at' h:mm a")}
+                                            </p>
+                                        </div>
+                                        <Badge variant="outline" className={`capitalize ${getStatusColor(withdrawal.status)}`}>
+                                            {withdrawal.status}
+                                        </Badge>
+                                    </div>
+
+                                    <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-2">
+                                        <div className="flex justify-between">
+                                            <span className="text-gray-500">Recipient</span>
+                                            <span className="font-medium text-gray-900">{withdrawal.mpesa_name} ({withdrawal.mpesa_number})</span>
+                                        </div>
+                                        {withdrawal.provider_reference && (
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Ref ID</span>
+                                                <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded text-gray-700">
+                                                    {withdrawal.provider_reference}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}

@@ -24,13 +24,7 @@ export const register = async (req, res, next) => {
 
     // Debug log to verify payload during integration
     // Remove or lower log level in production if too noisy
-    console.log('Buyer register payload:', {
-      fullName,
-      email,
-      phone,
-      city,
-      location
-    });
+
 
     // 1) Check if passwords match
     if (password !== confirmPassword) {
@@ -210,8 +204,8 @@ export const getProfile = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    console.log('Updating profile for user:', req.user.id);
-    console.log('Update data:', req.body);
+
+
 
     // 1) Filter out unwanted fields that are not allowed to be updated
     const { password, passwordConfirm, ...updateData } = req.body;
@@ -239,7 +233,7 @@ export const updateProfile = async (req, res, next) => {
 
     // 4) Update other buyer data
     const updatedBuyer = await Buyer.update(req.user.id, updateData);
-    console.log('Updated buyer data:', updatedBuyer);
+
 
     if (!updatedBuyer) {
       console.error('Failed to update buyer profile');
@@ -282,7 +276,7 @@ const normalizePhoneNumber = (phone) => {
     normalized = '0' + normalized;
   }
 
-  console.log(`Normalized phone: ${phone ? '[REDACTED]' : 'missing'} -> ${normalized ? '[REDACTED]' : 'missing'}`);
+
   return normalized;
 };
 
@@ -291,7 +285,7 @@ export const checkBuyerByPhone = async (req, res, next) => {
   try {
     const { phone } = req.body;
 
-    console.log('Checking buyer by phone:', phone ? '[REDACTED]' : 'missing');
+
 
     // Validate required field
     if (!phone) {
@@ -307,7 +301,7 @@ export const checkBuyerByPhone = async (req, res, next) => {
 
     if (existingBuyer) {
       // Buyer exists - return buyer info BUT NO TOKEN
-      console.log('Buyer found with phone:', '[REDACTED]', '- Buyer ID:', existingBuyer.id);
+      console.log('Buyer found with phone');
 
       // SECURITY FIX: Do not generate token here
       // const token = signToken(existingBuyer.id, 'buyer');
@@ -422,7 +416,7 @@ export const requestRefund = async (req, res, next) => {
       paymentDetailsJson
     ]);
 
-    console.log('Refund request created:', result.rows[0].id, 'for buyer:', buyer.fullName, buyer.phone ? '[REDACTED]' : 'missing');
+    console.log('Refund request created:', result.rows[0].id);
 
     res.status(201).json({
       status: 'success',
@@ -441,13 +435,7 @@ export const saveBuyerInfo = async (req, res, next) => {
   try {
     const { fullName, email, phone, city, location } = req.body;
 
-    console.log('Saving buyer info:', {
-      fullName,
-      email: email ? '[REDACTED]' : 'missing',
-      phone: phone ? '[REDACTED]' : 'missing',
-      city,
-      location
-    });
+
 
     // Validate required fields
     if (!fullName || !email || !phone) {
@@ -495,11 +483,7 @@ export const saveBuyerInfo = async (req, res, next) => {
       // Generate token for the new buyer
       token = signToken(buyer.id, 'buyer');
 
-      console.log('New buyer created successfully:', {
-        buyerId: buyer.id,
-        phone: buyer.phone ? '[REDACTED]' : 'missing',
-        token: token.substring(0, 20) + '...'
-      });
+
     }
 
     res.status(200).json({

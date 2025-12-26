@@ -151,9 +151,8 @@ const StatCard = ({ title, value, icon: Icon, iconColor, change, changeType, des
           <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${iconColor.includes('yellow') ? 'text-yellow-600' : iconColor.includes('blue') ? 'text-blue-600' : iconColor.includes('green') ? 'text-green-600' : iconColor.includes('red') ? 'text-red-600' : 'text-gray-600'}`} />
         </div>
         {change && (
-          <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${
-            changeType === 'increase' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
+          <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${changeType === 'increase' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
             {changeType === 'increase' ? '↑' : '↓'} {change}
           </span>
         )}
@@ -198,17 +197,17 @@ const DashboardPage = () => {
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Fetch the dashboard data with proper typing
       const dashboardRes = await api.get<DashboardApiResponse>('/organizers/dashboard');
       console.log('Dashboard Response:', dashboardRes.data);
 
       // Extract events from the dashboard response if available
-      const events = Array.isArray(dashboardRes.data.data?.recentEvents) ? 
+      const events = Array.isArray(dashboardRes.data.data?.recentEvents) ?
         dashboardRes.data.data.recentEvents : [];
-        
+
       console.log('Setting recent events:', events);
-      
+
       // Set the stats from the dashboard response with proper fallback
       const statsData = dashboardRes.data.data?.stats || {
         id: 0,
@@ -220,10 +219,10 @@ const DashboardPage = () => {
         total_revenue: '0',
         updated_at: new Date().toISOString()
       };
-      
+
       setStats(statsData);
       setRecentEvents(events);
-      
+
       // Set recent sales if available, otherwise empty array
       setRecentSales(dashboardRes.data.data?.recentSales || []);
       setError(null);
@@ -259,7 +258,7 @@ const DashboardPage = () => {
     try {
       setTicketsLoading(true);
       setTicketsError(null);
-      
+
       // Get all tickets for the organizer with proper typing
       const response = await api.get<TicketsApiResponse>('/organizers/tickets');
       const ticketsData = response.data?.data?.tickets || [];
@@ -282,7 +281,7 @@ const DashboardPage = () => {
     try {
       setEventsLoading(true);
       setEventsError(null);
-      
+
       // Get all events for the organizer with proper typing
       const response = await api.get<EventsApiResponse>('/organizers/events');
       console.log('Events API Response:', response.data);
@@ -368,7 +367,7 @@ const DashboardPage = () => {
     const now = new Date();
     const start = new Date(startDate);
     const end = new Date(endDate);
-    
+
     if (now < start) return { status: 'Upcoming', color: 'bg-blue-100 text-blue-800' };
     if (now >= start && now <= end) return { status: 'In Progress', color: 'bg-green-100 text-green-800' };
     return { status: 'Completed', color: 'bg-gray-100 text-gray-800' };
@@ -436,21 +435,21 @@ const DashboardPage = () => {
             <div className="flex items-center justify-between h-20">
               <Skeleton className="h-8 w-48" />
               <Skeleton className="h-10 w-24" />
-        </div>
             </div>
           </div>
-        
+        </div>
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-center mb-8">
             <Skeleton className="h-32 w-96" />
           </div>
-          
+
           <div className="flex space-x-2 mb-12 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-gray-200/50 w-fit mx-auto">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-12 w-24 rounded-xl" />
-              ))}
-            </div>
-          
+            ))}
+          </div>
+
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-64 rounded-2xl" />
@@ -467,13 +466,13 @@ const DashboardPage = () => {
         <div className="text-center space-y-6 p-8">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
             <RefreshCw className="h-12 w-12 text-red-600" />
-            </div>
+          </div>
           <div>
             <h3 className="text-2xl font-black text-black mb-3">Unable to load dashboard</h3>
             <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
               {error || 'Something went wrong while loading your dashboard data. Please try again.'}
             </p>
-            <Button 
+            <Button
               onClick={fetchDashboardData}
               className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
             >
@@ -493,14 +492,14 @@ const DashboardPage = () => {
         <div className="px-4 sm:px-5 py-2.5 flex justify-between items-center">
           <div className="flex items-center">
             <h1 className="text-lg font-bold text-gray-900">
-              {activeSection === 'overview' ? 'Dashboard' : 
-               activeSection === 'events' ? 'My Events' :
-               activeSection === 'tickets' ? 'Tickets' :
-               activeSection === 'settings' ? 'Settings' : 'EventHub'}
+              {activeSection === 'overview' ? 'Dashboard' :
+                activeSection === 'events' ? 'My Events' :
+                  activeSection === 'tickets' ? 'Tickets' :
+                    activeSection === 'settings' ? 'Settings' : 'EventHub'}
             </h1>
           </div>
           <div className="flex items-center">
-            <button 
+            <button
               onClick={() => setShowMobileMenu(!showMobileMenu)}
               className="p-2.5 -mr-2 rounded-xl text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
               aria-expanded={showMobileMenu}
@@ -518,56 +517,51 @@ const DashboardPage = () => {
       </div>
 
       {/* Enhanced mobile menu with better animations */}
-      <div 
+      <div
         id="mobile-navigation"
-        className={`md:hidden bg-white border-b border-gray-200 transition-all duration-300 ease-in-out overflow-hidden ${
-          showMobileMenu ? 'max-h-96 shadow-sm' : 'max-h-0 border-transparent'
-        }`}
+        className={`md:hidden bg-white border-b border-gray-200 transition-all duration-300 ease-in-out overflow-hidden ${showMobileMenu ? 'max-h-96 shadow-sm' : 'max-h-0 border-transparent'
+          }`}
       >
         <nav className="px-2 py-1.5 space-y-0.5">
           <button
             onClick={() => { setActiveSection('overview'); setShowMobileMenu(false); }}
-            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${
-              activeSection === 'overview' 
-                ? 'bg-yellow-50 text-yellow-700' 
+            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'overview'
+                ? 'bg-yellow-50 text-yellow-700'
                 : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
-            }`}
+              }`}
           >
             <BarChart3 className="w-5 h-5 mr-3 text-yellow-500 flex-shrink-0" />
             <span>Overview</span>
           </button>
-          
+
           <button
             onClick={() => { setActiveSection('events'); setShowMobileMenu(false); }}
-            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${
-              activeSection === 'events'
-                ? 'bg-yellow-50 text-yellow-700' 
+            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'events'
+                ? 'bg-yellow-50 text-yellow-700'
                 : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
-            }`}
+              }`}
           >
             <Calendar className="w-5 h-5 mr-3 text-blue-500 flex-shrink-0" />
             <span>My Events</span>
           </button>
-          
+
           <button
             onClick={() => { setActiveSection('tickets'); setShowMobileMenu(false); }}
-            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${
-              activeSection === 'tickets'
-                ? 'bg-yellow-50 text-yellow-700' 
+            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'tickets'
+                ? 'bg-yellow-50 text-yellow-700'
                 : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
-            }`}
+              }`}
           >
             <Ticket className="w-5 h-5 mr-3 text-green-500 flex-shrink-0" />
             <span>Tickets</span>
           </button>
-          
+
           <button
             onClick={() => { setActiveSection('settings'); setShowMobileMenu(false); }}
-            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${
-              activeSection === 'settings'
-                ? 'bg-yellow-50 text-yellow-700' 
+            className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'settings'
+                ? 'bg-yellow-50 text-yellow-700'
                 : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
-            }`}
+              }`}
           >
             <Settings className="w-5 h-5 mr-3 text-purple-500 flex-shrink-0" />
             <span>Settings</span>
@@ -597,7 +591,7 @@ const DashboardPage = () => {
             {activeSection === 'settings' && 'Update your account and organization settings'}
           </p>
         </div>
-        
+
         {/* Mobile Section Title with improved spacing */}
         <div className="md:hidden mb-5 sm:mb-6">
           {/* Back to Homepage Button - Mobile */}
@@ -632,8 +626,8 @@ const DashboardPage = () => {
               {statsData.map((stat, index) => (
                 <StatCard key={index} {...stat} />
               ))}
+            </div>
           </div>
-        </div>
         </div>
 
         {/* Navigation Tabs - Desktop */}
@@ -641,11 +635,10 @@ const DashboardPage = () => {
           <Button
             variant={activeSection === 'overview' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('overview')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'overview' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'overview'
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
+              }`}
           >
             <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Overview</span>
@@ -653,11 +646,10 @@ const DashboardPage = () => {
           <Button
             variant={activeSection === 'events' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('events')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'events' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'events'
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
+              }`}
           >
             <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Events</span>
@@ -665,11 +657,10 @@ const DashboardPage = () => {
           <Button
             variant={activeSection === 'tickets' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('tickets')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'tickets' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'tickets'
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
+              }`}
           >
             <Ticket className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Tickets</span>
@@ -677,11 +668,10 @@ const DashboardPage = () => {
           <Button
             variant={activeSection === 'settings' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('settings')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${
-              activeSection === 'settings' 
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105' 
+            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'settings'
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                 : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
-            }`}
+              }`}
           >
             <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Settings</span>
@@ -694,7 +684,7 @@ const DashboardPage = () => {
             <div className="text-center">
               <h2 className="text-4xl font-black text-black mb-4">Dashboard Overview</h2>
               <p className="text-gray-600 text-lg font-medium">Your event management at a glance</p>
-      </div>
+            </div>
 
             {/* Quick Actions */}
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
@@ -703,19 +693,19 @@ const DashboardPage = () => {
                   <h3 className="text-3xl font-black text-black">Quick Actions</h3>
                   <p className="text-gray-600 font-medium mt-2">Common tasks for your events</p>
                 </div>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   onClick={() => navigate('/organizer/events/new')}
                   className="gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
                 >
                   <Plus className="h-4 w-4" />
                   Create Event
                 </Button>
-      </div>
+              </div>
 
               <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
                   onClick={() => navigate('/organizer/events')}
                 >
@@ -725,9 +715,9 @@ const DashboardPage = () => {
                     <p className="text-sm text-gray-500">Manage your events</p>
                   </div>
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
                   onClick={() => navigate('/organizer/events/new')}
                 >
@@ -737,9 +727,9 @@ const DashboardPage = () => {
                     <p className="text-sm text-gray-500">Start a new event</p>
                   </div>
                 </Button>
-                
-                <Button 
-                  variant="outline" 
+
+                <Button
+                  variant="outline"
                   className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
                   onClick={() => navigate('/organizer/tickets')}
                 >
@@ -759,17 +749,17 @@ const DashboardPage = () => {
                   <h3 className="text-3xl font-black text-black">Recent Events</h3>
                   <p className="text-gray-600 font-medium mt-2">Your most recent event activities</p>
                 </div>
-          </div>
-          
-          {recentEvents.length > 0 ? (
+              </div>
+
+              {recentEvents.length > 0 ? (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                   {recentEvents.slice(0, 6).map((event) => {
                     const eventStatus = getEventStatus(event.start_date, event.end_date);
-                return (
+                    return (
                       <Card key={event.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
                         <CardContent className="p-6">
                           <div className="flex items-start justify-between mb-4">
-                            <Badge 
+                            <Badge
                               variant="secondary"
                               className={`${eventStatus.color} px-3 py-1 text-xs font-bold rounded-xl`}
                             >
@@ -789,25 +779,25 @@ const DashboardPage = () => {
                           <div className="flex items-center justify-between text-sm">
                             <div className="flex items-center text-gray-500">
                               <MapPin className="h-4 w-4 mr-1" />
-                                <span className="truncate">{event.location}</span>
-                              </div>
+                              <span className="truncate">{event.location}</span>
+                            </div>
                             <div className="text-gray-500">
                               {event.current_attendees}/{event.max_attendees}
-                          </div>
+                            </div>
                           </div>
                         </CardContent>
-                    </Card>
-                );
-              })}
-            </div>
-          ) : (
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
                 <div className="text-center py-20">
                   <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
                     <Calendar className="h-12 w-12 text-yellow-600" />
                   </div>
                   <h3 className="text-2xl font-black text-black mb-3">No events found</h3>
                   <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Create your first event to get started</p>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/organizer/events/new')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
                   >
@@ -826,7 +816,7 @@ const DashboardPage = () => {
               <h2 className="text-4xl font-black text-black mb-4">Event Management</h2>
               <p className="text-gray-600 text-lg font-medium">Create and manage your events</p>
             </div>
-            
+
             {/* Event Management */}
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
@@ -835,8 +825,8 @@ const DashboardPage = () => {
                   <p className="text-gray-600 font-medium mt-2">Manage all your events in one place</p>
                 </div>
                 <div className="flex space-x-3">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={fetchEvents}
                     disabled={eventsLoading}
                     className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
@@ -848,7 +838,7 @@ const DashboardPage = () => {
                     )}
                     Refresh
                   </Button>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/organizer/events/new')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-2 rounded-xl font-semibold"
                   >
@@ -857,7 +847,7 @@ const DashboardPage = () => {
                   </Button>
                 </div>
               </div>
-              
+
               {eventsLoading ? (
                 <div className="flex justify-center py-12">
                   <div className="text-center space-y-4">
@@ -870,8 +860,8 @@ const DashboardPage = () => {
                   <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-400" />
                   <h3 className="text-xl font-black text-black mb-2">Error Loading Events</h3>
                   <p className="text-gray-600 mb-4">{eventsError}</p>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={fetchEvents}
                     className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
                   >
@@ -887,29 +877,29 @@ const DashboardPage = () => {
                       <div key={event.id} className="bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
                         {/* Event Image */}
                         <div className="h-48 bg-gradient-to-br from-gray-100 to-gray-200 relative">
-                            {event.image_url ? (
-                              <img 
-                                src={event.image_url} 
-                                alt={event.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
+                          {event.image_url ? (
+                            <img
+                              src={event.image_url}
+                              alt={event.title}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
                             <div className="w-full h-full flex items-center justify-center">
                               <Calendar className="h-16 w-16 text-gray-400" />
-                              </div>
-                            )}
+                            </div>
+                          )}
                           <div className="absolute top-4 right-4">
                             <Badge className={`px-3 py-1 text-xs font-bold rounded-xl ${eventStatus.color}`}>
                               {eventStatus.status}
                             </Badge>
                           </div>
                         </div>
-                        
+
                         {/* Event Content */}
                         <div className="p-6">
                           <h4 className="text-xl font-black text-black mb-2 line-clamp-2">{event.title}</h4>
                           <p className="text-gray-600 text-sm mb-4 line-clamp-2">{event.description}</p>
-                          
+
                           {/* Event Details */}
                           <div className="space-y-2 mb-4">
                             <div className="flex items-center text-sm text-gray-600">
@@ -929,10 +919,10 @@ const DashboardPage = () => {
                             </div>
                             <div className="flex items-center text-sm text-gray-600">
                               <MapPin className="h-4 w-4 mr-2" />
-                                <span className="truncate">{event.location}</span>
-                              </div>
+                              <span className="truncate">{event.location}</span>
+                            </div>
                           </div>
-                          
+
                           {/* Event Stats */}
                           <div className="flex justify-between items-center mb-4">
                             <div className="text-center">
@@ -951,20 +941,20 @@ const DashboardPage = () => {
                             </div>
                             <div className="text-center">
                               <p className="text-lg font-black text-black">
-                                {event.ticket_quantity > 0 
+                                {event.ticket_quantity > 0
                                   ? Math.round((
-                                      (Number(event.tickets_sold || 0) / 
+                                    (Number(event.tickets_sold || 0) /
                                       Number(event.ticket_quantity || 1)) * 100
-                                    )) 
+                                  ))
                                   : 0}%
                               </p>
                               <p className="text-xs text-gray-600">Capacity</p>
                             </div>
                           </div>
-                          
+
                           {/* Action Buttons */}
                           <div className="flex justify-between items-center">
-                            <Button 
+                            <Button
                               variant="outline"
                               size="sm"
                               onClick={() => navigate(`/organizer/events/${event.id}`)}
@@ -993,19 +983,19 @@ const DashboardPage = () => {
                           </div>
                         </div>
                       </div>
-                );
-              })}
-            </div>
-          ) : (
+                    );
+                  })}
+                </div>
+              ) : (
                 <div className="text-center py-20">
                   <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
                     <Calendar className="h-12 w-12 text-yellow-600" />
-                </div>
+                  </div>
                   <h3 className="text-2xl font-black text-black mb-3">No events found</h3>
                   <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
                     You haven't created any events yet. Create your first event to start selling tickets.
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/organizer/events/new')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
                   >
@@ -1013,8 +1003,8 @@ const DashboardPage = () => {
                     Create Your First Event
                   </Button>
                 </div>
-          )}
-        </div>
+              )}
+            </div>
 
             {/* Event Statistics */}
             {events.length > 0 && (
@@ -1027,12 +1017,12 @@ const DashboardPage = () => {
                     </div>
                     <p className="text-2xl font-black text-black">{events.length}</p>
                     <p className="text-sm text-gray-600 font-medium">Total Events</p>
-          </div>
-          
+                  </div>
+
                   <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                     <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
                       <Clock className="h-6 w-6 text-green-600" />
-                        </div>
+                    </div>
                     <p className="text-2xl font-black text-black">
                       {events.filter(e => {
                         const now = new Date();
@@ -1043,7 +1033,7 @@ const DashboardPage = () => {
                     </p>
                     <p className="text-sm text-gray-600 font-medium">Active Events</p>
                   </div>
-                  
+
                   <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                     <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center">
                       <DollarSign className="h-6 w-6 text-yellow-600" />
@@ -1054,12 +1044,12 @@ const DashboardPage = () => {
                         .toLocaleString('en-KE')}
                     </p>
                     <p className="text-sm text-gray-600 font-medium">Total Revenue</p>
-                        </div>
-                  
+                  </div>
+
                   <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                     <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
                       <Ticket className="h-6 w-6 text-purple-600" />
-                      </div>
+                    </div>
                     <p className="text-2xl font-black text-black">
                       {events.reduce((sum, event) => sum + (event.current_attendees || 0), 0)}
                     </p>
@@ -1077,7 +1067,7 @@ const DashboardPage = () => {
               <h2 className="text-4xl font-black text-black mb-4">Ticket Management</h2>
               <p className="text-gray-600 text-lg font-medium">Track and manage your ticket sales</p>
             </div>
-            
+
             {/* Ticket Management */}
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
@@ -1085,8 +1075,8 @@ const DashboardPage = () => {
                   <h3 className="text-3xl font-black text-black">All Tickets</h3>
                   <p className="text-gray-600 font-medium mt-2">Manage tickets across all your events</p>
                 </div>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={fetchTickets}
                   disabled={ticketsLoading}
                   className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
@@ -1099,7 +1089,7 @@ const DashboardPage = () => {
                   Refresh
                 </Button>
               </div>
-              
+
               {ticketsLoading ? (
                 <div className="flex justify-center py-12">
                   <div className="text-center space-y-4">
@@ -1112,8 +1102,8 @@ const DashboardPage = () => {
                   <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-400" />
                   <h3 className="text-xl font-black text-black mb-2">Error Loading Tickets</h3>
                   <p className="text-gray-600 mb-4">{ticketsError}</p>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={fetchTickets}
                     className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
                   >
@@ -1159,26 +1149,24 @@ const DashboardPage = () => {
                             </div>
                           </TableCell>
                           <TableCell className="font-medium">
-                            KSh {ticket.price?.toLocaleString('en-KE', {minimumFractionDigits: 2}) || '0.00'}
+                            KSh {ticket.price?.toLocaleString('en-KE', { minimumFractionDigits: 2 }) || '0.00'}
                           </TableCell>
                           <TableCell>
-                            <Badge 
-                              className={`px-3 py-1 text-xs font-bold rounded-xl ${
-                                ticket.status === 'paid' ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' :
-                                ticket.status === 'pending' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
-                                ticket.status === 'cancelled' ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800' :
-                                'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
-                              }`}
+                            <Badge
+                              className={`px-3 py-1 text-xs font-bold rounded-xl ${ticket.status === 'paid' ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' :
+                                  ticket.status === 'pending' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
+                                    ticket.status === 'cancelled' ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800' :
+                                      'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
+                                }`}
                             >
                               {ticket.status ? ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1) : 'Unknown'}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center">
-                              <div 
-                                className={`h-3 w-3 rounded-full mr-3 ${
-                                  ticket.scanned ? 'bg-green-500' : 'bg-gray-300'
-                                }`} 
+                              <div
+                                className={`h-3 w-3 rounded-full mr-3 ${ticket.scanned ? 'bg-green-500' : 'bg-gray-300'
+                                  }`}
                               />
                               <span className={`font-medium ${ticket.scanned ? 'text-green-600' : 'text-gray-600'}`}>
                                 {ticket.scanned ? 'Scanned' : 'Not Scanned'}
@@ -1187,9 +1175,9 @@ const DashboardPage = () => {
                           </TableCell>
                           <TableCell className="text-gray-600">
                             {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
                             }) : 'N/A'}
                           </TableCell>
                         </TableRow>
@@ -1206,16 +1194,16 @@ const DashboardPage = () => {
                   <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
                     No tickets have been sold for your events yet. Create an event to start selling tickets.
                   </p>
-                  <Button 
+                  <Button
                     onClick={() => navigate('/organizer/events/new')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
                   >
                     <Plus className="h-5 w-5 mr-2" />
                     Create Your First Event
                   </Button>
-                      </div>
+                </div>
               )}
-                    </div>
+            </div>
 
             {/* Ticket Statistics */}
             {tickets.length > 0 && (
@@ -1225,11 +1213,11 @@ const DashboardPage = () => {
                   <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                     <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
                       <Ticket className="h-6 w-6 text-green-600" />
-                  </div>
+                    </div>
                     <p className="text-2xl font-black text-black">{tickets.length}</p>
                     <p className="text-sm text-gray-600 font-medium">Total Tickets</p>
-            </div>
-                  
+                  </div>
+
                   <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                     <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
                       <svg
@@ -1245,13 +1233,13 @@ const DashboardPage = () => {
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                         <path d="m9 11 3 3L22 4" />
                       </svg>
-                </div>
+                    </div>
                     <p className="text-2xl font-black text-black">
                       {tickets.filter(t => t.scanned).length}
                     </p>
                     <p className="text-sm text-gray-600 font-medium">Scanned</p>
                   </div>
-                  
+
                   <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                     <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center">
                       <DollarSign className="h-6 w-6 text-yellow-600" />
@@ -1261,7 +1249,7 @@ const DashboardPage = () => {
                     </p>
                     <p className="text-sm text-gray-600 font-medium">Total Revenue</p>
                   </div>
-                  
+
                   <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                     <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
                       <Users className="h-6 w-6 text-purple-600" />
@@ -1273,8 +1261,8 @@ const DashboardPage = () => {
                   </div>
                 </div>
               </div>
-          )}
-        </div>
+            )}
+          </div>
         )}
 
         {activeSection === 'settings' && (
@@ -1283,7 +1271,7 @@ const DashboardPage = () => {
               <h2 className="text-4xl font-black text-black mb-4">Account Settings</h2>
               <p className="text-gray-600 text-lg font-medium">Manage your account information and preferences</p>
             </div>
-            
+
             {/* Settings Sections */}
             <div className="space-y-8">
               {/* Profile Information */}
@@ -1412,8 +1400,8 @@ const DashboardPage = () => {
                       </div>
                     </div>
                   </div>
-          )}
-        </div>
+                )}
+              </div>
 
               {/* Terms and Conditions */}
               <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
@@ -1424,7 +1412,7 @@ const DashboardPage = () => {
                       Platform Owner: Byblos ("we", "us", "our")<br />
                       Jurisdiction: Republic of Kenya
                     </p>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-4">1. Acceptance of Terms</h4>
                     <p>
                       By creating an event, selling tickets, or otherwise using Byblos' ticketing services, you ("Organizer") automatically agree to these Terms & Conditions, Byblos' Privacy Policy, and all applicable Kenyan laws, including but not limited to:
@@ -1436,7 +1424,7 @@ const DashboardPage = () => {
                       <li>The Contract Act (Cap 23)</li>
                     </ul>
                     <p className="mt-2">If you do not agree, you may not use Byblos for event hosting or ticketing.</p>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">2. Organizer Responsibilities</h4>
                     <p>You are solely responsible for:</p>
                     <ul className="list-disc pl-5 space-y-1">
@@ -1450,14 +1438,14 @@ const DashboardPage = () => {
                       <li>Use Byblos for money laundering, pyramid schemes, or other unlawful activity.</li>
                       <li>Share or resell attendee personal data outside Byblos without consent.</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">3. Ticketing & Validation</h4>
                     <ul className="list-disc pl-5 space-y-1">
                       <li>Byblos provides digital ticketing and entry management tools.</li>
                       <li>Every ticket sold through Byblos includes two ticket validators (devices, personnel, or tools provided by Byblos) for smooth check-ins.</li>
                       <li>Organizers must ensure proper internet access or provide alternative check-in setups where required.</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">4. Service Fees & Payouts</h4>
                     <ul className="list-disc pl-5 space-y-1">
                       <li>Byblos charges a 6% service fee on each ticket sold.</li>
@@ -1469,7 +1457,7 @@ const DashboardPage = () => {
                       <li>Ticket sales revenue (minus fees) will be processed and released to the Organizer's nominated M-Pesa account or bank account within 48 hours after the event ends.</li>
                       <li>Byblos reserves the right to withhold payouts in cases of fraud, chargebacks, unresolved disputes, or breach of these Terms.</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">5. Refunds, Cancellations & Disputes</h4>
                     <ul className="list-disc pl-5 space-y-1">
                       <li>Organizers are required to clearly state their refund policy during event creation.</li>
@@ -1480,20 +1468,20 @@ const DashboardPage = () => {
                       </ul>
                       <li>Any disputes between Organizers and Attendees must first be addressed by the Organizer.</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">6. Marketing & Promotion</h4>
                     <ul className="list-disc pl-5 space-y-1">
                       <li>Byblos provides marketing support (social media promotion, event listing visibility, and curated recommendations).</li>
                       <li>Byblos reserves the right to use your event details, logo, and media for promotional purposes.</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">7. Data Protection</h4>
                     <ul className="list-disc pl-5 space-y-1">
                       <li>Byblos complies with the Data Protection Act, 2019.</li>
                       <li>Organizers may access attendee data strictly for event management purposes.</li>
                       <li>Any misuse, resale, or unauthorized processing of attendee data will result in immediate account suspension and possible legal action.</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">8. Limitation of Liability</h4>
                     <p>Byblos provides the platform "as is" without warranties of event success, ticket sales volume, or attendee turnout.</p>
                     <p className="mt-2">Byblos shall not be liable for:</p>
@@ -1502,7 +1490,7 @@ const DashboardPage = () => {
                       <li>Losses arising from fraud by Organizers or Attendees.</li>
                       <li>Force majeure events (natural disasters, government restrictions, internet outages, etc.).</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">9. Termination</h4>
                     <p>Byblos may suspend or terminate your account and withhold payouts if:</p>
                     <ul className="list-disc pl-5 space-y-1">
@@ -1510,13 +1498,13 @@ const DashboardPage = () => {
                       <li>Fraudulent or unlawful activity is detected.</li>
                       <li>You damage Byblos' brand, reputation, or operations.</li>
                     </ul>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">10. Governing Law & Jurisdiction</h4>
                     <p>These Terms are governed by the laws of the Republic of Kenya. Any disputes shall be resolved through good faith negotiations, failing which they shall be subject to the exclusive jurisdiction of the Kenyan courts.</p>
-                    
+
                     <h4 className="font-bold text-gray-900 mt-6">11. Amendments</h4>
                     <p>Byblos reserves the right to amend these Terms at any time. Updated versions will be posted on the platform and will apply immediately to future events.</p>
-                    
+
                     <div className="text-sm text-gray-500 mt-8 pt-4 border-t border-gray-200">
                       <p className="font-medium">Last updated: September 10, 2024</p>
                     </div>
