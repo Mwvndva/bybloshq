@@ -7,7 +7,7 @@ import {
   updateProfile,
   updatePassword
 } from '../controllers/auth.controller.js';
-import { sendWithdrawalEmail } from '../controllers/organizer.controller.js';
+import { sendWithdrawalEmail, createWithdrawalRequest, getEventWithdrawals } from '../controllers/organizer.controller.js';
 import { forgotPassword, resetPassword } from '../controllers/organizerAuth.controller.js';
 import { protect } from '../middleware/auth.js';
 
@@ -71,6 +71,8 @@ router.get('/me', protect, getCurrentUser);
 router.patch('/update-profile', protect, updateProfile);
 router.patch('/update-password', protect, validatePasswordUpdate, updatePassword);
 router.post('/send-withdrawal-email', protect, sendWithdrawalEmail);
+router.post('/withdrawal-request', protect, createWithdrawalRequest);
+router.get('/events/:eventId/withdrawals', protect, getEventWithdrawals);
 router.post('/logout', protect, (req, res) => {
   // Clear the HTTP-only cookie
   res.cookie('token', '', {

@@ -8,17 +8,13 @@ import { AppError } from '../utils/errorHandler.js';
  */
 export const getSellerAnalytics = async (req, res, next) => {
   console.log('=== getSellerAnalytics called ===');
-  console.log('Request user:', {
-    id: req.user?.id,
-    userType: req.user?.userType,
-    role: req.user?.role
-  });
-  
+
+
   if (!req.user || !req.user.id) {
     console.error('Error: User not authenticated or missing user ID');
     return next(new AppError('Authentication required', 401));
   }
-  
+
   const sellerId = req.user.id; // Get seller ID from authenticated user
   console.log('Seller ID:', sellerId);
 
@@ -34,7 +30,7 @@ export const getSellerAnalytics = async (req, res, next) => {
        WHERE seller_id = $1 AND status = 'available'`,
       [sellerId]
     );
-    console.log('Products query result:', productsResult.rows[0]);
+
 
     // 2. Get total sales (sum of total_amount for all orders)
     const totalSalesResult = await pool.query(
@@ -46,7 +42,7 @@ export const getSellerAnalytics = async (req, res, next) => {
          AND o.status IN ('PROCESSING', 'COMPLETED')`,
       [sellerId]
     );
-    console.log('Total sales query result:', totalSalesResult.rows[0]);
+
 
     // 3. Get total revenue (sum of total_amount for this seller)
     // Include all COMPLETED and PROCESSING orders
@@ -59,7 +55,7 @@ export const getSellerAnalytics = async (req, res, next) => {
          AND o.status IN ('PROCESSING', 'COMPLETED')`,
       [sellerId]
     );
-    
+
     // Also get the total seller payout for reference
     const payoutResult = await pool.query(
       `SELECT COALESCE(SUM(o.seller_payout_amount), 0) as total_payout
@@ -70,12 +66,9 @@ export const getSellerAnalytics = async (req, res, next) => {
          AND o.status IN ('PROCESSING', 'COMPLETED')`,
       [sellerId]
     );
-    
-    console.log('Revenue and Payout:', {
-      total_revenue: revenueResult.rows[0].total_revenue,
-      total_payout: payoutResult.rows[0].total_payout
-    });
-    console.log('Net revenue query result:', revenueResult.rows[0]);
+
+
+
 
     // 4. Get monthly sales data for the last 12 months
     console.log('Fetching monthly sales data...');
@@ -93,7 +86,7 @@ export const getSellerAnalytics = async (req, res, next) => {
        ORDER BY month`,
       [sellerId]
     );
-    console.log('Monthly sales query result:', monthlySalesResult.rows);
+
 
     // 5. Get seller's balance
     console.log('Fetching seller balance...');
@@ -102,12 +95,7 @@ export const getSellerAnalytics = async (req, res, next) => {
       [sellerId]
     );
     const sellerBalance = parseFloat(sellerBalanceResult.rows[0]?.balance || 0);
-    console.log('Seller balance:', sellerBalance ? {
-      sellerId: sellerBalance.seller_id,
-      balance: sellerBalance.balance,
-      email: sellerBalance.email ? '[REDACTED]' : 'missing',
-      phone: sellerBalance.phone ? '[REDACTED]' : 'missing'
-    } : 'Not found');
+
 
     // 6. Get recent orders
     console.log('Fetching recent orders...');
@@ -137,7 +125,7 @@ export const getSellerAnalytics = async (req, res, next) => {
        LIMIT 5`,
       [sellerId]
     );
-    console.log('Recent orders query result:', recentOrdersResult.rows);
+
 
     // Commit the transaction
     await pool.query('COMMIT');
@@ -164,8 +152,8 @@ export const getSellerAnalytics = async (req, res, next) => {
         }))
       };
 
-      console.log('Sending analytics response:', JSON.stringify(analyticsData, null, 2));
-      
+
+
       res.status(200).json({
         status: 'success',
         data: analyticsData
@@ -182,7 +170,7 @@ export const getSellerAnalytics = async (req, res, next) => {
     } catch (rollbackError) {
       console.error('Error rolling back transaction:', rollbackError);
     }
-    
+
     console.error('Error in getSellerAnalytics:', {
       message: error.message,
       stack: error.stack,
@@ -192,12 +180,12 @@ export const getSellerAnalytics = async (req, res, next) => {
       query: error.query,
       parameters: error.parameters
     });
-    
+
     // Handle specific database errors
     if (error.code === '42P01') { // Undefined table
-      const missingTable = error.message.includes('order_items') ? 'order_items' : 
-                         error.message.includes('product_orders') ? 'product_orders' :
-                         error.message.includes('products') ? 'products' : 'required tables';
+      const missingTable = error.message.includes('order_items') ? 'order_items' :
+        error.message.includes('product_orders') ? 'product_orders' :
+          error.message.includes('products') ? 'products' : 'required tables';
       return next(new AppError(`Required database tables (${missingTable}) do not exist. Please run database migrations.`, 500));
     }
     if (error.code === '42P02') { // Undefined column
@@ -209,12 +197,12 @@ export const getSellerAnalytics = async (req, res, next) => {
     if (error.code === '23503') { // Foreign key violation
       return next(new AppError('Reference error: related data not found in the database', 400));
     }
-    
+
     // If it's already an AppError, pass it along
     if (error instanceof AppError) {
       return next(error);
     }
-    
+
     // For any other error, return a generic 500 error with the actual error message
     return next(new AppError(`Error fetching analytics data: ${error.message}`, 500));
   }

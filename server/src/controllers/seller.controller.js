@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { query } from '../config/database.js';
+import { query, pool } from '../config/database.js';
+import payoutService from '../services/payout.service.js';
 import {
   createSeller,
   findSellerByEmail,
@@ -106,11 +107,11 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    console.log('Login attempt with data:', { email: req.body.email ? '[REDACTED]' : 'missing' });
+
     const { email, password } = req.body;
 
     if (!email || !password) {
-      console.log('Login failed: Missing email or password');
+
       return res.status(400).json({
         status: 'error',
         message: 'Please provide email and password'
@@ -118,22 +119,22 @@ export const login = async (req, res) => {
     }
 
     // 1) Check if seller exists
-    console.log('Looking up seller with email:', email ? '[REDACTED]' : 'missing');
+
     const seller = await findSellerByEmail(email);
 
     if (!seller) {
-      console.log('No seller found with email:', '[REDACTED]');
+
       return res.status(401).json({
         status: 'error',
         message: 'Incorrect email or password'
       });
     }
 
-    console.log('Seller found, verifying password...');
+
     const isPasswordValid = await verifyPassword(password, seller.password);
 
     if (!isPasswordValid) {
-      console.log('Invalid password for email:', '[REDACTED]');
+
       return res.status(401).json({
         status: 'error',
         message: 'Incorrect email or password'
@@ -141,13 +142,13 @@ export const login = async (req, res) => {
     }
 
     // 2) If everything is ok, send token to client
-    console.log('Password valid, generating token...');
+
     const token = generateAuthToken(seller);
 
     // Sanitize seller object
     const sanitizedSeller = sanitizeSeller(seller);
 
-    console.log('Login successful for email:', '[REDACTED]');
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -168,12 +169,12 @@ export const login = async (req, res) => {
 export const getSellerByShopName = async (req, res) => {
   try {
     const { shopName } = req.params;
-    console.log('Fetching seller by shop name:', shopName);
+
 
     const seller = await findSellerByShopName(shopName);
 
     if (!seller) {
-      console.log('Seller not found for shop name:', shopName);
+
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
@@ -242,12 +243,6 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res) => {
   try {
-    console.log('Update profile request received:', {
-      userId: req.user?.id,
-      userType: req.user?.userType,
-      body: req.body
-    });
-
     // Remove password field if it's included in the request body
     if (req.body.password) {
       delete req.body.password;
@@ -280,7 +275,7 @@ export const updateProfile = async (req, res) => {
       });
     }
 
-    console.log('Profile updated successfully:', seller.id);
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -694,6 +689,8 @@ export const getSellerById = async (req, res) => {
 // @route   POST /api/sellers/withdrawal-request
 // @access  Private
 export const createWithdrawalRequest = async (req, res) => {
+  const client = await pool.connect();
+
   try {
     const sellerId = req.user?.id;
     const { amount, mpesaNumber, mpesaName } = req.body;
@@ -722,46 +719,119 @@ export const createWithdrawalRequest = async (req, res) => {
       });
     }
 
-    // Get seller's current balance
-    const balanceResult = await query(
-      'SELECT balance FROM sellers WHERE id = $1',
+    // Start database transaction
+    await client.query('BEGIN');
+
+    // Get seller's current balance and lock the row for update
+    const balanceResult = await client.query(
+      'SELECT balance, full_name, email FROM sellers WHERE id = $1 FOR UPDATE',
       [sellerId]
     );
 
     if (balanceResult.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
       });
     }
 
-    const currentBalance = parseFloat(balanceResult.rows[0].balance || 0);
+    const seller = balanceResult.rows[0];
+    const currentBalance = parseFloat(seller.balance || 0);
 
     // Check if withdrawal amount exceeds balance
     if (withdrawalAmount > currentBalance) {
+      await client.query('ROLLBACK');
       return res.status(400).json({
         status: 'error',
         message: `Withdrawal amount (KSh ${withdrawalAmount.toLocaleString()}) cannot exceed available balance (KSh ${currentBalance.toLocaleString()})`
       });
     }
 
-    // Create withdrawal request
-    const result = await query(
-      `INSERT INTO withdrawal_requests (seller_id, amount, mpesa_number, mpesa_name, status, created_at)
-       VALUES ($1, $2, $3, $4, 'pending', NOW())
+    // Deduct amount from seller's balance
+    await client.query(
+      'UPDATE sellers SET balance = balance - $1 WHERE id = $2',
+      [withdrawalAmount, sellerId]
+    );
+
+    // Create withdrawal request record
+    const requestResult = await client.query(
+      `INSERT INTO withdrawal_requests (
+          seller_id, 
+          amount, 
+          mpesa_number, 
+          mpesa_name, 
+          status, 
+          created_at
+       )
+       VALUES ($1, $2, $3, $4, 'processing', NOW())
        RETURNING id, seller_id, amount, mpesa_number, mpesa_name, status, created_at`,
       [sellerId, withdrawalAmount, mpesaNumber, mpesaName]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to create withdrawal request'
+    const withdrawalRequest = requestResult.rows[0];
+
+    // Commit the transaction (Money is deducted, request is recorded)
+    await client.query('COMMIT');
+
+    // Now initiate the payout with Payd
+    try {
+
+
+      const payoutResponse = await payoutService.initiateMobilePayout({
+        amount: withdrawalAmount,
+        phone_number: mpesaNumber,
+        narration: `Withdrawal for ${seller.full_name || 'Seller'}`,
+        account_name: mpesaName
       });
+
+
+
+      // Extract transaction ID from response
+      const providerRef = payoutResponse.transaction_id || payoutResponse.reference || payoutResponse.data?.transaction_id || null;
+
+      // Update the withdrawal request with provider reference
+      await client.query(
+        'UPDATE withdrawal_requests SET provider_reference = $1, raw_response = $2 WHERE id = $3',
+        [providerRef, JSON.stringify(payoutResponse), withdrawalRequest.id]
+      );
+
+    } catch (apiError) {
+      console.error('Payd API failed after balance deduction. Rolling back...', apiError);
+
+      // Compensating Transaction: Refund the money and mark as failed
+      try {
+        await client.query('BEGIN');
+
+        // Refund balance
+        await client.query(
+          'UPDATE sellers SET balance = balance + $1 WHERE id = $2',
+          [withdrawalAmount, sellerId]
+        );
+
+        // Update request status to failed
+        await client.query(
+          'UPDATE withdrawal_requests SET status = $1 WHERE id = $2',
+          ['failed', withdrawalRequest.id]
+        );
+
+        await client.query('COMMIT');
+
+        return res.status(502).json({
+          status: 'error',
+          message: 'Payout provider unavailable. Your funds have been refunded.',
+          detail: apiError.message
+        });
+
+      } catch (refundError) {
+        console.error('CRITICAL: Failed to refund balance after payout failure!', refundError);
+        // This is a bad state requiring manual intervention
+        // We'll throw to the outer catch
+        throw refundError;
+      }
     }
 
-    const withdrawalRequest = result.rows[0];
-
+    // Success response
     res.status(201).json({
       status: 'success',
       data: {
@@ -769,17 +839,28 @@ export const createWithdrawalRequest = async (req, res) => {
         amount: withdrawalRequest.amount,
         mpesaNumber: withdrawalRequest.mpesa_number,
         mpesaName: withdrawalRequest.mpesa_name,
-        status: withdrawalRequest.status,
-        createdAt: withdrawalRequest.created_at
+        status: withdrawalRequest.status, // processing
+        createdAt: withdrawalRequest.created_at,
+        message: 'Withdrawal initiated successfully. You will receive an M-Pesa notification shortly.'
       }
     });
+
   } catch (error) {
+    // Rollback any open transaction if client is still connected (though intermediate commits/rollbacks might have happened)
+    try {
+      await client.query('ROLLBACK');
+    } catch (e) {
+      // Ignore rollback error if no transaction is active
+    }
+
     console.error('Error creating withdrawal request:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to create withdrawal request',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  } finally {
+    client.release();
   }
 };
 
