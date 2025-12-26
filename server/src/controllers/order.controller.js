@@ -661,7 +661,7 @@ const updateOrderStatus = async (req, res) => {
     // Validate status transition
     const validTransitions = {
       'PENDING': ['DELIVERY_PENDING', 'CANCELLED'],
-      'DELIVERY_PENDING': ['DELIVERY_COMPLETE', 'CANCELLED', 'CONFIRMED'],
+      'DELIVERY_PENDING': ['DELIVERY_COMPLETE', 'CANCELLED'],
       'DELIVERY_COMPLETE': ['COMPLETED', 'CANCELLED'],
       'DELIVERY_COMPLETE': ['COMPLETED', 'CANCELLED'],
       'SERVICE_PENDING': ['CONFIRMED', 'CANCELLED'],
