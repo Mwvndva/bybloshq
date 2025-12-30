@@ -655,12 +655,19 @@ export function TicketPurchaseForm({
                             value={String(ticket.id)}
                             disabled={ticket.is_sold_out}
                           >
-                            <div className="flex justify-between items-center w-full">
-                              <span>{ticket.name}</span>
-                              <span className="text-sm text-gray-500 ml-2">
-                                {formatPrice(ticket.price)}
-                                {ticket.is_sold_out && ' (Sold Out)'}
-                              </span>
+                            <div className="flex flex-col w-full text-left gap-1">
+                              <div className="flex justify-between items-center w-full">
+                                <span className="font-medium">{ticket.name}</span>
+                                <span className="text-sm font-semibold text-gray-700 ml-2">
+                                  {formatPrice(ticket.price)}
+                                  {ticket.is_sold_out && ' (Sold Out)'}
+                                </span>
+                              </div>
+                              {ticket.description && (
+                                <span className="text-xs text-gray-500 line-clamp-2 leading-tight pr-4">
+                                  {ticket.description}
+                                </span>
+                              )}
                             </div>
                           </SelectItem>
                         ))}
