@@ -57,10 +57,10 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
   const params = useParams<{ eventId: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   // Use propEventId if provided, otherwise fall back to URL params
   const eventId = propEventId || params.eventId;
-  
+
   if (!eventId) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
@@ -71,18 +71,18 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
           <div>
             <h1 className="text-2xl font-black text-black mb-3">Event Not Found</h1>
             <p className="text-gray-600 text-lg font-medium mb-6">The event you're looking for doesn't exist or has been removed.</p>
-            <Button 
+            <Button
               onClick={() => navigate('/events')}
               className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
             >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events
-        </Button>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events
+            </Button>
           </div>
         </div>
       </div>
     );
   }
-  
+
   const [event, setEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +95,7 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
   const [showTicketForm, setShowTicketForm] = useState(false);
   const [ticketTypes, setTicketTypes] = useState<EventTicketType[]>([]);
   const [loadingTicketTypes, setLoadingTicketTypes] = useState(false);
-  
+
   // Calculate total price with 2 decimal places
 
 
@@ -122,23 +122,23 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
   useEffect(() => {
     const fetchEvent = async () => {
       if (!eventId) return;
-      
+
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Fetch event data
         const eventData = await getPublicEvent(eventId);
-        
+
         // If the event is not published, don't show it
         if (eventData.status !== 'published') {
           throw new Error('This event is not available for booking');
         }
-        
+
         // Fetch ticket types for this event
         try {
           const types = await getEventTicketTypes(eventData.id);
-          
+
           // Process the ticket types to ensure they have all required fields
           const processedTypes = types.map(type => ({
             ...type,
@@ -150,19 +150,19 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
             created_at: type.created_at || new Date().toISOString(),
             updated_at: type.updated_at || new Date().toISOString()
           }));
-          
+
           // Filter out any ticket types that are sold out or have no quantity
           const availableTypes = processedTypes.filter(
             type => type.quantity_available > 0 && type.quantity > 0
           );
-          
+
           // Update event with its ticket types
           setEvent({
             ...eventData,
             ticket_types: availableTypes,
             ticketTypes: availableTypes
           });
-          
+
         } catch (ticketError) {
           console.error('Error fetching ticket types:', ticketError);
           // Still set the event even if ticket types fail to load
@@ -173,7 +173,7 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
             variant: 'default'
           });
         }
-        
+
       } catch (err: any) {
         console.error('Error fetching event:', err);
         const errorMessage = err.message || 'Failed to load event details';
@@ -187,7 +187,7 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
         setIsLoading(false);
       }
     };
-    
+
     fetchEvent();
   }, [eventId, toast]);
 
@@ -218,26 +218,26 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
             <h2 className="text-2xl font-black text-black mb-3">Event Not Found</h2>
             <p className="text-gray-600 text-lg font-medium mb-6">The event you're looking for doesn't exist or has been removed.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => window.location.reload()}
                 className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
               >
-                  <RefreshCw className="mr-2 h-4 w-4" /> Try Again
-                </Button>
-              <Button 
+                <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+              </Button>
+              <Button
                 onClick={() => navigate('/')}
                 className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
               >
-                  <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
-                </Button>
+                <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
+              </Button>
             </div>
           </div>
         </div>
       </div>
     );
   }
-  
+
   // Calculate available tickets
   const calculateAvailableTickets = () => {
     // If we have ticket types, sum their available quantities
@@ -250,7 +250,7 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
     // Fall back to event-level availability
     return event.available_tickets ?? event.ticket_quantity;
   };
-  
+
   const availableTickets = calculateAvailableTickets();
 
   // Get event image URL or fallback to a default image
@@ -261,25 +261,25 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
   // Handle ticket purchase
   const handleBuyTicket = async () => {
     if (!event) return;
-    
+
     // Check if the event is sold out before proceeding
     const availableTickets = calculateAvailableTickets();
     if (availableTickets <= 0) {
       // Don't proceed further if event is sold out
       return;
     }
-    
+
     try {
       setLoadingTicketTypes(true);
-      
+
       // First, check if we have ticket types in the event data
       let types = event.ticket_types || event.ticketTypes;
-      
+
       // If no ticket types in the event data, try to fetch them
       if (!types || types.length === 0) {
         try {
           types = await getEventTicketTypes(event.id);
-          
+
           // Update the event with the fetched ticket types
           setEvent(prev => ({
             ...prev!,
@@ -291,11 +291,11 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
           throw new Error('Failed to load ticket types. Please try again.');
         }
       }
-      
+
       if (!types || types.length === 0) {
         throw new Error('No ticket types available for this event');
       }
-      
+
       // Process the ticket types to ensure they have all required fields
       const currentDate = new Date();
       const processedTypes = types.map(type => ({
@@ -313,32 +313,32 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
         created_at: type.created_at || new Date().toISOString(),
         updated_at: type.updated_at || new Date().toISOString(),
         // Additional calculated fields
-        is_available: (type.quantity_available ?? (type.quantity - (type.sold || 0))) > 0 && 
-                     type.is_active !== false &&
-                     (!type.sales_start_date || new Date(type.sales_start_date) <= currentDate) &&
-                     (!type.sales_end_date || new Date(type.sales_end_date) >= currentDate)
+        is_available: (type.quantity_available ?? (type.quantity - (type.sold || 0))) > 0 &&
+          type.is_active !== false &&
+          (!type.sales_start_date || new Date(type.sales_start_date) <= currentDate) &&
+          (!type.sales_end_date || new Date(type.sales_end_date) >= currentDate)
       }));
-      
+
       // Filter out any ticket types that are not available
       const availableTypes = processedTypes.filter(type => type.is_available);
-      
+
       // Check if we have any available tickets across all types
-      const hasAvailableTickets = availableTypes.length > 0 && 
+      const hasAvailableTickets = availableTypes.length > 0 &&
         availableTypes.some(type => (type.quantity_available ?? 1) > 0);
-      
+
       if (!hasAvailableTickets) {
         // Check for specific reasons why tickets might not be available
         const now = currentDate.getTime();
         const hasInactiveTickets = processedTypes.some(t => !t.is_active);
-        const hasFutureSales = processedTypes.some(t => 
+        const hasFutureSales = processedTypes.some(t =>
           t.sales_start_date && new Date(t.sales_start_date).getTime() > now
         );
-        const hasPastSales = processedTypes.some(t => 
+        const hasPastSales = processedTypes.some(t =>
           t.sales_end_date && new Date(t.sales_end_date).getTime() < now
         );
-        
+
         let errorMessage = 'No tickets are currently available for purchase';
-        
+
         if (hasInactiveTickets) {
           errorMessage = 'All ticket types are currently inactive';
         } else if (processedTypes.every(t => (t.quantity_available ?? 0) <= 0)) {
@@ -348,45 +348,45 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
         } else if (hasPastSales) {
           errorMessage = 'Ticket sales have ended';
         }
-        
+
         // Show toast with the error message
         toast({
           title: 'Tickets Unavailable',
           description: errorMessage,
           variant: 'destructive',
         });
-        
+
         // Don't show the form if there are no tickets available
         setShowTicketForm(false);
         return;
       }
-      
+
       // Sort by price (cheapest first)
       availableTypes.sort((a, b) => a.price - b.price);
-      
+
       setTicketTypes(availableTypes);
       setShowTicketForm(true);
     } catch (error) {
       console.error('Error in handleBuyTicket:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load ticket information';
-      
+
       toast({
         title: 'Error',
         description: errorMessage,
         variant: 'destructive',
       });
-      
+
       setShowTicketForm(false);
     } finally {
       setLoadingTicketTypes(false);
     }
   };
-  
+
   // Handle successful ticket purchase
   const handlePurchaseSuccess = () => {
     setShowSuccess(true);
     setShowTicketForm(false);
-    
+
     // Refresh event data to update available tickets
     if (event) {
       getPublicEvent(event.id).then(updatedEvent => {
@@ -403,13 +403,13 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
       <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-        <Button 
-            variant="outline" 
-          onClick={() => navigate('/')}
+          <Button
+            variant="outline"
+            onClick={() => navigate('/')}
             className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2 mb-6"
-        >
+          >
             <ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
-        </Button>
+          </Button>
         </div>
 
         {error && (
@@ -448,11 +448,11 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
             )}
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="space-y-6">
-                  <div>
+                <div>
                   <h1 className="text-4xl font-black text-black mb-4">{event.name}</h1>
                   <p className="text-gray-600 text-lg leading-relaxed">{event.description}</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
                     <div className="flex items-center text-gray-700 mb-2">
@@ -466,7 +466,7 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                       )}
                     </p>
                   </div>
-                  
+
                   <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
                     <div className="flex items-center text-gray-700 mb-2">
                       <Clock className="mr-3 h-5 w-5 text-yellow-600" />
@@ -479,12 +479,12 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                       )}
                     </p>
                   </div>
-                  
+
                   <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 md:col-span-2">
                     <div className="flex items-center text-gray-700 mb-2">
                       <MapPin className="mr-3 h-5 w-5 text-yellow-600" />
                       <span className="font-semibold">Location</span>
-                  </div>
+                    </div>
                     <p className="text-gray-600 ml-8">{event.location}</p>
                   </div>
                 </div>
@@ -497,41 +497,34 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50 sticky top-8">
               <div className="space-y-6">
                 <div className="text-center">
-                  <h3 className="text-2xl font-black text-black mb-2">Get Your Tickets</h3>
-                  <div className="flex items-center justify-center gap-2 mb-4">
-                    <Users className="h-5 w-5 text-yellow-600" />
-                    <span className="text-gray-600 font-medium">
-                      {availableTickets} {availableTickets === 1 ? 'ticket' : 'tickets'} available
-                    </span>
-                  </div>
+                  <h3 className="text-2xl font-black text-black mb-6">Get Your Tickets</h3>
                 </div>
-                
-            <Button 
-              onClick={handleBuyTicket}
-                  className={`w-full h-14 text-lg font-bold rounded-xl transition-all duration-200 ${
-                    availableTickets <= 0 
-                      ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed text-gray-500' 
+
+                <Button
+                  onClick={handleBuyTicket}
+                  className={`w-full h-14 text-lg font-bold rounded-xl transition-all duration-200 ${availableTickets <= 0
+                      ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed text-gray-500'
                       : 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
-                  }`}
-              disabled={availableTickets <= 0 || loadingTicketTypes}
-            >
-              {loadingTicketTypes ? (
-                <>
+                    }`}
+                  disabled={availableTickets <= 0 || loadingTicketTypes}
+                >
+                  {loadingTicketTypes ? (
+                    <>
                       <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                  Loading...
-                </>
-              ) : (
-                <>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
                       <Ticket className="mr-3 h-5 w-5" />
                       {availableTickets <= 0 ? 'Sold Out' : 'Buy Tickets Now'}
-                </>
-              )}
-            </Button>
-            
-            {availableTickets <= 0 && (
+                    </>
+                  )}
+                </Button>
+
+                {availableTickets <= 0 && (
                   <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
                     <div className="flex items-start">
-                  <div className="flex-shrink-0">
+                      <div className="flex-shrink-0">
                         <XCircle className="h-6 w-6 text-gray-400" />
                       </div>
                       <div className="ml-4">
@@ -560,22 +553,22 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
           </div>
         </div>
 
-            {/* Ticket Purchase Form */}
-            <TicketPurchaseForm
-              event={{
-                id: event.id,
-                name: event.name,
-                ticketTypes: ticketTypes
-              }}
-              open={showTicketForm}
-              onOpenChange={(open) => {
-                setShowTicketForm(open);
-                if (!open) {
-                  // Reset loading state when closing the form
-                  setLoadingTicketTypes(false);
-                }
-              }}
-            />
+        {/* Ticket Purchase Form */}
+        <TicketPurchaseForm
+          event={{
+            id: event.id,
+            name: event.name,
+            ticketTypes: ticketTypes
+          }}
+          open={showTicketForm}
+          onOpenChange={(open) => {
+            setShowTicketForm(open);
+            if (!open) {
+              // Reset loading state when closing the form
+              setLoadingTicketTypes(false);
+            }
+          }}
+        />
       </div>
 
       {/* Success Dialog */}

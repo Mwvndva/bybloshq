@@ -1,165 +1,316 @@
 import axios from 'axios';
 import crypto from 'crypto';
 import logger from '../utils/logger.js';
-import Payment from '../models/payment.model.js';
-import PaymentCompletionService from './paymentCompletion.service.js';
 import { pool } from '../config/database.js';
+import PaymentCompletionService from './paymentCompletion.service.js';
 
 class PaymentService {
     constructor() {
-        this.paystackSecretKey = process.env.PAYSTACK_SECRET_KEY;
-        this.paystackBaseUrl = 'https://api.paystack.co';
+        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
+        this.username = process.env.PAYD_USERNAME;
+        this.password = process.env.PAYD_PASSWORD;
+        this.networkCode = process.env.PAYD_NETWORK_CODE;
+        this.channelId = process.env.PAYD_CHANNEL_ID;
+        // Use separate variable for payload username to avoid system USERNAME conflict
+        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx'; // Fallback for immediate test consistency if user hasn't renamed yet
 
-        // Create axios instance
+        // Create axios instance with default config
         this.client = axios.create({
-            baseURL: this.paystackBaseUrl,
+            baseURL: this.baseUrl,
             headers: {
-                Authorization: `Bearer ${this.paystackSecretKey}`,
                 'Content-Type': 'application/json',
             },
-            timeout: 30000, // 30 seconds
+            timeout: 30000,
         });
     }
 
     /**
-     * Initiate a payment with Paystack
-     * @param {Object} paymentData
-     * @returns {Promise<Object>}
+     * Get Authorization Header for Basic Auth
+     */
+    getAuthHeader() {
+        if (!this.username || !this.password) {
+            throw new Error('Payd credentials not configured');
+        }
+        const authString = `${this.username}:${this.password}`;
+        return `Basic ${Buffer.from(authString).toString('base64')}`;
+    }
+
+    /**
+     * Initiate a payment with Payd (STK Push)
+     * Matches structure of: 
+     * curl --location 'https://api.mypayd.app/api/v3/payments' \
+     * --header 'Content-Type: application/json' \
+     * --header 'Authorization: Basic ...' \
+     * --data-raw '{ ... }'
      */
     async initiatePayment(paymentData) {
         try {
-            const { email, amount, invoice_id, callback_url, metadata } = paymentData;
+            const { email, amount, invoice_id, phone, narrative, firstName, lastName } = paymentData;
 
-            // Paystack expects amount in kobo (multiply by 100)
-            const paystackAmount = Math.round(parseFloat(amount) * 100);
+            if (!this.networkCode || !this.channelId) {
+                throw new Error('Payd network code or channel ID not configured');
+            }
+
+            const paydAmount = parseFloat(amount);
+            const fullName = firstName && lastName ? `${firstName} ${lastName}` : "Customer";
+            const customerEmail = email || "customer@example.com";
+
+            // Normalize phone: remove non-digits
+            let cleanPhone = phone.replace(/\D/g, '');
+            // Ensure 10 digits starting with 0 for local usage in phone_number?
+            // Docs curl example: "phone_number": "07712345671"
+            // Docs curl example: "account_number": "+254712434671"
+
+            // Let's try to match the curl example logic:
+            // If it starts with 254, replace with 0 for phone_number if needed, or keep as is?
+            // Usually '07...' is standard for 'phone_number' in Kenya for STK push.
+            if (cleanPhone.startsWith('254')) {
+                cleanPhone = '0' + cleanPhone.substring(3);
+            } else if (cleanPhone.length === 9) {
+                cleanPhone = '0' + cleanPhone;
+            }
+
+            // For account_number, valid format is often MSISDN (254...) or same as phone.
+            // Curl example uses +254 for account_number.
+            // Let's generate a +254 version for account_number
+            let accountNumber = cleanPhone;
+            if (accountNumber.startsWith('0')) {
+                accountNumber = '+254' + accountNumber.substring(1);
+            }
 
             const payload = {
-                email,
-                amount: paystackAmount,
-                reference: `REF-${invoice_id}-${Date.now()}`,
-                metadata: {
-                    ...metadata,
-                    invoice_id
-                },
-                callback_url: callback_url || process.env.PAYSTACK_CALLBACK_URL,
+                username: this.payloadUsername,
+                network_code: this.networkCode,
+                account_name: fullName,
+                account_number: accountNumber, // e.g. +254...
+                amount: paydAmount,
+                phone_number: cleanPhone, // e.g. 07...
+                channel_id: this.channelId,
+                narration: narrative || `Payment for ${invoice_id}`,
+                currency: "KES",
+                callback_url: process.env.PAYD_CALLBACK_URL || (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` : "https://bybloshq.space/api/payments/webhook/payd"),
+                transaction_channel: "mobile",
+                // Pass our invoice_id as reference to help linking
+                reference: invoice_id,
+                client_reference: invoice_id,
+                external_reference: invoice_id,
+                customer_info: {
+                    country: "Kenya",
+                    address: "Nairobi", // Placeholder/Default
+                    id_type: "National ID", // Placeholder/Default
+                    id_number: "00000000", // Placeholder/Default
+                    dob: "1990-01-01", // Placeholder/Default
+                    name: fullName,
+                    email: customerEmail,
+                    phone: accountNumber // Use international format for customer info phone often
+                }
             };
 
-            const response = await this.client.post('/transaction/initialize', payload);
+            logger.info('Sending Payd Request:', {
+                url: `${this.baseUrl}/payments`,
+                method: 'POST',
+                // Mask sensitive info
+                headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ***' },
+                payload: { ...payload, username: '***' }
+            });
 
+            const response = await this.client.post('/payments', payload, {
+                headers: {
+                    'Authorization': this.getAuthHeader(),
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            logger.info('Payd Response:', response.data);
+
+            // Return standardized response
             return {
-                authorization_url: response.data.data.authorization_url,
-                access_code: response.data.data.access_code,
-                reference: response.data.data.reference,
+                authorization_url: null,
+                access_code: null,
+                reference: response.data.transaction_id || response.data.reference || response.data.tracking_id || `REF-${Date.now()}`,
+                status: response.data.status,
+                original_response: response.data
             };
+
         } catch (error) {
-            logger.error('Paystack initialization error:', error.response?.data || error.message);
-            throw new Error(error.response?.data?.message || 'Payment initialization failed');
+            // Enhanced Error Logging
+            const errorDetails = error.response ? {
+                status: error.response.status,
+                statusText: error.response.statusText,
+                data: error.response.data,
+                headers: error.response.headers
+            } : { message: error.message };
+
+            logger.error('Payd initialization error:', errorDetails);
+
+            // Extract meaningful message
+            const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Payment initialization failed';
+            throw new Error(errorMessage);
         }
     }
 
     /**
-     * Handle Paystack Webhook
-     * @param {Object} eventData
-     * @param {Object} headers
-     * @param {string} clientIp
+     * Handle Payd Webhook/Callback
      */
-    async handlePaystackWebhook(eventData, headers, clientIp) {
-        // 1. Validate Signature
-        const signature = headers['x-paystack-signature'];
-        if (!signature) {
-            throw new Error('No signature provided');
+    async handlePaydCallback(callbackData) {
+        logger.info('Processing Payd Callback:', callbackData);
+
+        // Map fields based on user documentation
+        // { "transaction_reference": "TX...", "result_code": 200, "remarks": "...", ... }
+        const reference = callbackData.transaction_reference || callbackData.transaction_id || callbackData.reference;
+        const resultCode = callbackData.result_code;
+        const status = callbackData.status; // Fallback if they send status
+
+        // DEBUG: Force log to console for visibility
+        console.log('=== PAYD WEBHOOK RAW ===');
+        console.log(JSON.stringify(callbackData, null, 2));
+        console.log('========================');
+
+        logger.info('Payd Webhook Data Extraction:', {
+            extractedReference: reference,
+            resultCode,
+            status,
+            rawKeys: Object.keys(callbackData)
+        });
+
+        if (!reference) {
+            console.error('Missing reference', callbackData);
+            // Don't throw immediately, check if we can find by invoice_id in other fields?
+            // For now, throw but log visibly
+            throw new Error('No transaction_reference provided in callback');
         }
 
-        const hash = crypto
-            .createHmac('sha512', this.paystackSecretKey)
-            .update(JSON.stringify(eventData))
-            .digest('hex');
-
-        if (hash !== signature) {
-            throw new Error('Invalid signature');
+        // Determine Success: result_code 200 OR 0 is success
+        let isSuccess = false;
+        if (resultCode == 200 || resultCode === '200' || resultCode == 0 || resultCode === '0') {
+            isSuccess = true;
+        } else if (!resultCode && (status === 'SUCCESS' || status === 'COMPLETED')) {
+            // Fallback to old logic just in case
+            isSuccess = true;
         }
 
-        // 2. Validate IP (Optional but recommended)
-        // Paystack IPs: 52.31.139.75, 52.49.173.169, 52.214.14.220
-
-        // 3. Process Event
-        const { event, data } = eventData;
-
-        if (event === 'charge.success') {
-            return await this.handleSuccessfulPayment(data);
+        if (!isSuccess) {
+            await pool.query(
+                "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE provider_reference = $2",
+                [JSON.stringify({ failure_reason: callbackData.remarks || callbackData.status_description || 'Failed', raw_callback: callbackData }), reference]
+            );
+            return { status: 'failed', message: 'Payment marked as failed' };
         }
 
-        return { status: 'ignored', message: `Event ${event} ignored` };
+        // Handle Success
+        return await this.handleSuccessfulPayment({
+            reference,
+            amount: callbackData.amount,
+            metadata: callbackData
+        });
     }
 
     /**
-     * Process successful payment data
-     * @param {Object} data 
+     * Process successful payment logic and trigger ticket creation
      */
     async handleSuccessfulPayment(data) {
         const { reference, amount, metadata } = data;
 
-        // Find payment record by reference using raw query since we don't know if findByReference exists on model
-        const { rows } = await pool.query(
-            'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 LIMIT 1',
+        let payment = null;
+
+        // 1. Find payment by reference OR invoice_id
+        const { rows: refRows } = await pool.query(
+            'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 OR invoice_id = $1 LIMIT 1',
             [reference]
         );
 
-        const payment = rows[0];
+        if (refRows.length > 0) {
+            payment = refRows[0];
+        } else {
+            // 1b. Fuzzy match: Find by Status + Amount + Phone (if available)
+            // This handles cases where Payd generates a new reference we don't know
+            logger.info(`Reference ${reference} not found, attempting fuzzy match...`);
+
+            const webhookPhone = metadata.phone_number || metadata.phone; // "254111..."
+            const webhookAmount = parseFloat(amount);
+
+            if (webhookPhone && webhookAmount) {
+                // Extract last 9 digits to be safe (safely ignores 0 vs 254 prefix)
+                const phoneTail = webhookPhone.slice(-9);
+
+                logger.info(`Fuzzy matching for Amount: ${webhookAmount}, Phone Tail: ${phoneTail}`);
+
+                const { rows: fuzzyRows } = await pool.query(
+                    `SELECT * FROM payments 
+                     WHERE status = 'pending' 
+                     AND amount = $1 
+                     AND phone_number LIKE '%' || $2 
+                     ORDER BY created_at DESC LIMIT 1`,
+                    [webhookAmount, phoneTail]
+                );
+
+                if (fuzzyRows.length > 0) {
+                    payment = fuzzyRows[0];
+                    logger.info(`Fuzzy match found: Payment ID ${payment.id}`);
+
+                    // Update the payment with the CORRECT reference from Payd so subsequent hooks match
+                    // We only update provider_reference, leaving api_ref as the original REF-... 
+                    // so the frontend (which polls api_ref) can still find it.
+                    await pool.query(
+                        'UPDATE payments SET provider_reference = $1 WHERE id = $2',
+                        [reference, payment.id]
+                    );
+                }
+            } else {
+                logger.warn('Insufficient data for fuzzy match (missing phone or amount)');
+            }
+        }
+
+        // If still no payment, use the rows[0] (which will be undefined) or handle normally
+        // const payment = rows[0]; // Logic below handles if (!payment)
 
         if (!payment) {
             logger.warn(`Payment not found for reference: ${reference}`);
             return { status: 'error', message: 'Payment record not found' };
         }
 
-        if (payment.status === 'completed') {
+        if (payment.status === 'completed' || payment.status === 'success') {
             return { status: 'success', message: 'Payment already completed' };
         }
 
-        // Verify amount
-        const paidAmount = amount / 100;
-        if (Math.abs(paidAmount - parseFloat(payment.amount)) > 1) {
-            logger.warn(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
-        }
-
-        // Update metadata with actual Paystack confirmation if needed
-        await pool.query(
-            `UPDATE payments SET status = 'success', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2`,
-            [JSON.stringify({ paystack_confirmation: data }), payment.id]
-        );
-
-        // Re-fetch updated payment for completion service
-        const { rows: updatedRows } = await pool.query('SELECT * FROM payments WHERE id = $1', [payment.id]);
-        const updatedPayment = updatedRows[0];
-
-        return await PaymentCompletionService.processSuccessfulPayment(updatedPayment);
-    }
-
-    /**
-     * Check Status
-     * @param {string} paymentId 
-     */
-    async checkPaymentStatus(paymentId) {
-        // Check DB status
-        const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1', [paymentId]);
-        const payment = rows[0];
-
-        if (!payment) throw new Error('Payment not found');
-
-        // If pending, verify with Paystack
-        if (payment.status === 'pending' && payment.provider_reference) {
-            try {
-                const response = await this.client.get(`/transaction/verify/${payment.provider_reference}`);
-                if (response.data.data.status === 'success') {
-                    // It was successful, update our DB!
-                    await this.handleSuccessfulPayment(response.data.data);
-                    return { ...payment, status: 'completed' }; // processed
-                }
-            } catch (e) {
-                logger.warn('Failed to verify with Paystack:', e.message);
+        // 2. Validate Amount
+        if (amount) {
+            const paidAmount = parseFloat(amount);
+            if (Math.abs(paidAmount - parseFloat(payment.amount)) > 1) {
+                logger.warn(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
             }
         }
 
+        // 3. Mark as Success in DB
+        await pool.query(
+            `UPDATE payments SET status = 'success', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2`,
+            [JSON.stringify({ payd_confirmation: metadata }), payment.id]
+        );
+
+        // 4. Trigger Post-Payment Logic (Tickets, Emails)
+        const { rows: updatedRows } = await pool.query('SELECT * FROM payments WHERE id = $1', [payment.id]);
+        return await PaymentCompletionService.processSuccessfulPayment(updatedRows[0]);
+    }
+
+    async checkPaymentStatus(identifier) {
+        let rows;
+        // Check if identifier is a valid integer (for ID lookup)
+        const isId = /^\d+$/.test(identifier);
+
+        if (isId) {
+            const result = await pool.query('SELECT * FROM payments WHERE id = $1', [identifier]);
+            rows = result.rows;
+        } else {
+            // It's a string reference (provider ref, invoice_id, etc.)
+            const result = await pool.query(
+                'SELECT * FROM payments WHERE provider_reference = $1 OR invoice_id = $1 OR api_ref = $1',
+                [identifier]
+            );
+            rows = result.rows;
+        }
+
+        const payment = rows[0];
+        if (!payment) throw new Error('Payment not found');
         return payment;
     }
 }
