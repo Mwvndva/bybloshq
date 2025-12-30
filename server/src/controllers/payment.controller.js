@@ -5,6 +5,7 @@ import Payment from '../models/payment.model.js';
 import Event from '../models/event.model.js';
 import jwt from 'jsonwebtoken';
 import Order from '../models/order.model.js';
+import DiscountCode from '../models/discountCode.model.js';
 
 class PaymentController {
   /**
@@ -126,20 +127,19 @@ class PaymentController {
 
       // SECURITY: Verify discount if present
       if (discountCode) {
-        const { rows: discounts } = await pool.query(
-          'SELECT * FROM discount_codes WHERE code = $1 AND event_id = $2 AND is_active = true',
-          [discountCode, eventId]
-        );
+        const validation = await DiscountCode.validate(discountCode, calculatedAmount);
 
-        if (discounts.length > 0) {
-          const discount = discounts[0];
-          const discountVal = parseFloat(discount.discount_amount);
-          if (discount.discount_type === 'percentage') {
-            calculatedAmount = calculatedAmount * (1 - (discountVal / 100));
-          } else {
-            calculatedAmount = Math.max(0, calculatedAmount - discountVal);
-          }
+        if (!validation.valid) {
+          return res.status(400).json({ status: 'error', message: validation.message });
         }
+
+        // Ensure discount belongs to this event
+        if (validation.discount_code.event_id !== parseInt(eventId)) {
+          return res.status(400).json({ status: 'error', message: 'Invalid discount code for this event' });
+        }
+
+        // Apply validated discount
+        calculatedAmount = validation.final_amount;
       }
 
       // Override the amount with our calculated one
