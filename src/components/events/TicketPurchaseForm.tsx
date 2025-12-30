@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { PaymentProvider } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, Minus, Plus, Loader2, CreditCard } from 'lucide-react';
+import { CheckCircle2, Minus, Plus, Loader2, CreditCard, Smartphone, Ticket, Calendar } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { apiRequest } from '@/lib/axios';
 import { DiscountCodeInput } from '@/components/shared/DiscountCodeInput';
-import PaystackPayment from '@/components/shared/PaystackPayment';
 
 type PurchaseFormData = {
   customerName: string;
@@ -16,7 +16,7 @@ type PurchaseFormData = {
   phoneNumber: string;
   ticketTypeId: string;
   quantity: number;
-  paymentMethod: 'paystack';
+  paymentMethod: PaymentProvider;
   amount: number;
   eventId: number;
   discountCode?: string;
@@ -80,6 +80,7 @@ interface TicketPurchaseFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit?: (data: any) => void;
+  theme?: 'yellow' | 'default';
 }
 
 export function TicketPurchaseForm({
@@ -87,13 +88,14 @@ export function TicketPurchaseForm({
   open,
   onOpenChange,
   onSubmit,
+  theme = 'yellow',
 }: TicketPurchaseFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
+  const [waitingForStk, setWaitingForStk] = useState(false);
   const [purchaseDetails, setPurchaseDetails] = useState<{ reference?: string; email?: string }>({});
   const [discountAmount, setDiscountAmount] = useState(0);
   const [appliedDiscountCode, setAppliedDiscountCode] = useState('');
-  const [showPaystackModal, setShowPaystackModal] = useState(false);
   const [paymentInitiationData, setPaymentInitiationData] = useState<any>(null);
   const [formData, setFormData] = useState<PurchaseFormData>(() => ({
     customerName: '',
@@ -101,7 +103,7 @@ export function TicketPurchaseForm({
     phoneNumber: '',
     ticketTypeId: '',
     quantity: 1,
-    paymentMethod: 'paystack',
+    paymentMethod: 'payd',
     amount: 0,
     eventId: event.id
   }));
@@ -125,6 +127,7 @@ export function TicketPurchaseForm({
     console.log('Final price:', finalPrice);
   }, [basePrice, discountAmount, finalPrice, selectedTicket, formData.quantity, appliedDiscountCode]);
 
+  // Format Price Helper
   const formatPrice = (price: number): string => {
     return new Intl.NumberFormat('en-KE', {
       style: 'currency',
@@ -132,105 +135,6 @@ export function TicketPurchaseForm({
       minimumFractionDigits: price % 1 !== 0 ? 2 : 0,
       maximumFractionDigits: 2
     }).format(price);
-  };
-
-  // Handler for when Paystack modal opens - close the ticket purchase dialog
-  const handlePaystackModalOpen = () => {
-    console.log('Paystack modal opening, closing ticket purchase dialog');
-    // Close the ticket purchase dialog when Paystack modal opens
-    if (onOpenChange) {
-      onOpenChange(false);
-    }
-  };
-
-  // Paystack success handler
-  const handlePaystackSuccess = async (response: any) => {
-    console.log('Paystack payment successful:', response);
-    setShowPaystackModal(false);
-
-    // Start checking payment status
-    if (paymentInitiationData?.invoiceId) {
-      const checkPaymentStatus = async () => {
-        let statusChecks = 0;
-        const maxStatusChecks = 20; // Check for up to ~2 minutes
-        const statusCheckInterval = 5000; // Check every 5 seconds
-
-        const statusCheckTimer = setInterval(async () => {
-          try {
-            statusChecks++;
-            console.log(`=== Payment Status Check ${statusChecks}/${maxStatusChecks} ===`);
-
-            const statusResponse = await apiRequest.get<PaymentStatusResponse>(`payments/status/${paymentInitiationData.invoiceId}`, {
-              timeout: 10000
-            });
-
-            console.log('Payment status response:', statusResponse);
-
-            if (statusResponse?.status === 'success' || statusResponse?.data?.status === 'success' ||
-              statusResponse?.status === 'completed' || statusResponse?.data?.status === 'completed') {
-              clearInterval(statusCheckTimer);
-              setPurchaseComplete(true);
-              setPurchaseDetails({
-                reference: response.reference || paymentInitiationData.reference,
-                email: paymentInitiationData.email
-              });
-              setIsSubmitting(false);
-
-              toast({
-                title: 'Payment Successful!',
-                description: 'Your ticket purchase has been completed successfully.',
-              });
-
-              // Call onSubmit callback if provided
-              if (onSubmit) {
-                await onSubmit({
-                  eventId: event.id,
-                  ticketTypeId: paymentInitiationData.ticketTypeId,
-                  quantity: paymentInitiationData.quantity,
-                  customerName: paymentInitiationData.customerName,
-                  customerEmail: paymentInitiationData.email,
-                  phoneNumber: paymentInitiationData.phone,
-                  paymentMethod: 'paystack',
-                  amount: paymentInitiationData.amount
-                });
-              }
-            } else if (statusChecks >= maxStatusChecks) {
-              clearInterval(statusCheckTimer);
-              setIsSubmitting(false);
-              toast({
-                title: 'Payment Verification',
-                description: 'Payment was completed but verification is taking longer. You will receive a confirmation email.',
-              });
-            }
-          } catch (error) {
-            console.error('Status check error:', error);
-            if (statusChecks >= maxStatusChecks) {
-              clearInterval(statusCheckTimer);
-              setIsSubmitting(false);
-              toast({
-                title: 'Payment Verification',
-                description: 'Payment was completed but we could not verify it immediately. Please check your email for confirmation.',
-              });
-            }
-          }
-        }, statusCheckInterval);
-      };
-
-      checkPaymentStatus();
-    }
-  };
-
-  // Paystack close handler
-  const handlePaystackClose = () => {
-    console.log('Paystack modal closed');
-    setShowPaystackModal(false);
-    setIsSubmitting(false);
-
-    toast({
-      title: 'Payment Cancelled',
-      description: 'You can try again when ready.',
-      variant: 'destructive'
-    });
   };
 
   const handleDiscountApplied = (discount: number, finalAmount: number, code: string) => {
@@ -300,13 +204,14 @@ export function TicketPurchaseForm({
         phoneNumber: '',
         ticketTypeId: '',
         quantity: 1,
-        paymentMethod: 'paystack',
+        paymentMethod: 'payd',
         amount: 0,
         eventId: event.id
       });
       setDiscountAmount(0);
       setAppliedDiscountCode('');
       setPurchaseComplete(false);
+      setWaitingForStk(false);
       setPurchaseDetails({});
     }
   }, [open, ticketTypes, event.id]);
@@ -532,25 +437,72 @@ export function TicketPurchaseForm({
           payment_provider_response: response.payment_provider_response
         });
 
-        // Store payment initiation data for Paystack modal
-        setPaymentInitiationData({
-          email: purchaseData.customerEmail,
-          amount: purchaseData.amount,
-          reference: response.data?.reference || response.reference || invoiceId,
-          invoiceId: invoiceId,
-          ticketTypeId: purchaseData.ticketTypeId?.toString() || '',
-          quantity: purchaseData.quantity.toString(),
-          customerName: purchaseData.customerName,
-          phone: purchaseData.phoneNumber
-        });
-
-        // Show Paystack modal
-        setShowPaystackModal(true);
-
+        // Show STK Push confirmation
         toast({
-          title: 'Payment Ready',
-          description: 'Please complete the payment in the Paystack modal.',
+          title: 'STK Push Sent',
+          description: 'Please check your phone to complete the payment.',
+          duration: 5000,
         });
+
+        setWaitingForStk(true);
+
+        // Start polling
+        const checkPaymentStatus = async () => {
+          let statusChecks = 0;
+          const maxStatusChecks = 60; // 5 minutes
+          const statusCheckInterval = 5000;
+
+          const timer = setInterval(async () => {
+            statusChecks++;
+            try {
+              const statusRes = await apiRequest.get<PaymentStatusResponse>(`payments/status/${invoiceId}`);
+
+              // Map DB status to success
+              const status = statusRes.data?.status || statusRes.status;
+              if (status === 'success' || status === 'completed') {
+                clearInterval(timer);
+                setWaitingForStk(false);
+                setPurchaseComplete(true);
+                setPurchaseDetails({
+                  reference: response.data?.reference,
+                  email: purchaseData.customerEmail
+                });
+                toast({ title: 'Payment Successful', description: 'Your ticket has been booked.' });
+
+                if (onSubmit) {
+                  onSubmit({
+                    ...purchaseData,
+                    paymentMethod: 'payd'
+                  });
+                }
+              } else if (status === 'failed') {
+                clearInterval(timer);
+                setWaitingForStk(false);
+                setIsSubmitting(false);
+                toast({
+                  title: 'Payment Failed',
+                  description: 'The transaction was declined or failed. Please try again.',
+                  variant: 'destructive'
+                });
+              }
+            } catch (e) {
+              // ignore errors during polling
+            }
+            if (statusChecks > maxStatusChecks) {
+              clearInterval(timer);
+              setWaitingForStk(false);
+              setIsSubmitting(false);
+              toast({
+                title: 'Payment Timeout',
+                description: 'We did not receive confirmation in time. Please check your email.',
+                variant: 'destructive'
+              });
+            }
+          }, statusCheckInterval);
+        };
+
+        checkPaymentStatus();
+
       } else {
         throw new Error(response.data?.message || response.message || 'Payment initiation failed');
       }
@@ -569,254 +521,255 @@ export function TicketPurchaseForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        {purchaseComplete ? (
-          <div className="text-center py-6">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-green-500 mb-4" />
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Payment Successful</h3>
-            <p className="text-gray-600 mb-4">
-              Confirmation email will be sent to your email
-            </p>
-            {purchaseDetails.reference && (
-              <p className="text-sm text-gray-500 mb-4">
-                Reference: {purchaseDetails.reference}
+      <DialogContent className="sm:max-w-[500px] rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md p-0 overflow-hidden gap-0">
+        <div className="p-6 sm:p-8">
+          {purchaseComplete ? (
+            <div className="text-center py-6">
+              <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-300">
+                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-2">Payment Successful!</h3>
+              <p className="text-gray-600 mb-6 font-medium">
+                Your ticket has been booked successfully.
+                <br />A confirmation email has been sent.
               </p>
-            )}
-            <Button
-              onClick={() => onOpenChange(false)}
-              className="mt-2"
-            >
-              Close
-            </Button>
-          </div>
-        ) : (
-          <>
-            <DialogHeader>
-              <DialogTitle>Purchase Tickets</DialogTitle>
-              <DialogDescription>
-                Complete your ticket purchase for {event.name}
-              </DialogDescription>
-            </DialogHeader>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Full Name</Label>
-                <Input
-                  id="customerName"
-                  name="customerName"
-                  value={formData.customerName}
-                  onChange={handleInputChange}
-                  placeholder="John Doe"
-                  required
-                  minLength={2}
-                  maxLength={100}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="customerEmail">Email</Label>
-                <Input
-                  id="customerEmail"
-                  name="customerEmail"
-                  type="email"
-                  value={formData.customerEmail}
-                  onChange={handleInputChange}
-                  placeholder="you@example.com"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phoneNumber">Phone Number</Label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <span className="text-gray-500">+254</span>
-                  </div>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    placeholder="712 345 678"
-                    className={`pl-14 ${phoneError ? 'border-red-500' : ''}`}
-                    value={formData.phoneNumber}
-                    onChange={handlePhoneNumberChange}
-                    onBlur={(e) => setPhoneError(validatePhoneNumber(e.target.value))}
-                    required
-                    maxLength={9}
-                  />
-                </div>
-                {phoneError && (
-                  <p className="text-sm text-red-500 mt-1">{phoneError}</p>
-                )}
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter 9-digit number starting with 7 or 1 (e.g., 712345678)
-                </p>
-              </div>
-
-              {ticketTypes.length > 0 && (
-                <div className="space-y-2">
-                  <Label>Ticket Type</Label>
-                  <Select
-                    value={formData.ticketTypeId}
-                    onValueChange={(value) => setFormData(prev => ({
-                      ...prev,
-                      ticketTypeId: value,
-                      quantity: 1 // Reset quantity when ticket type changes
-                    }))}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a ticket type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ticketTypes.map((ticket) => (
-                        <SelectItem
-                          key={ticket.id}
-                          value={String(ticket.id)}
-                          disabled={ticket.is_sold_out}
-                        >
-                          <div className="flex justify-between items-center w-full">
-                            <span>{ticket.name}</span>
-                            <span className="text-sm text-gray-500 ml-2">
-                              {formatPrice(ticket.price)}
-                              {ticket.is_sold_out && ' (Sold Out)'}
-                            </span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {selectedTicket?.description && (
-                    <p className="text-sm text-gray-500 mt-1 bg-gray-50 p-2 rounded-md border border-gray-100 italic">
-                      {selectedTicket.description}
-                    </p>
-                  )}
+              {purchaseDetails.reference && (
+                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
+                  <p className="text-sm text-gray-500 mb-1 uppercase tracking-wider font-bold">Transaction Reference</p>
+                  <p className="font-mono text-gray-900 font-medium">{purchaseDetails.reference}</p>
                 </div>
               )}
+              <Button
+                onClick={() => onOpenChange(false)}
+                className="w-full bg-gray-900 text-white hover:bg-gray-800 rounded-xl h-11 font-semibold"
+              >
+                Close & View Ticket
+              </Button>
+            </div>
+          ) : waitingForStk ? (
+            <div className="text-center py-10">
+              <div className="relative mx-auto w-20 h-20 mb-6">
+                <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-75"></div>
+                <div className="relative w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
+                  <Smartphone className="h-10 w-10 text-blue-600" />
+                </div>
+              </div>
+              <h3 className="text-2xl font-black text-gray-900 mb-3">Check Your Phone</h3>
+              <p className="text-gray-600 mb-8 max-w-xs mx-auto text-lg leading-relaxed">
+                We've sent an M-PESA prompt to <span className="font-bold text-black block mt-1">{formData.phoneNumber}</span>
+              </p>
+              <div className="inline-flex items-center justify-center space-x-3 bg-blue-50 text-blue-700 px-6 py-3 rounded-full font-medium animate-pulse">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>Waiting for PIN...</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <DialogHeader className="mb-6 space-y-4">
+                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-inner">
+                  <Ticket className="h-8 w-8 text-yellow-600" />
+                </div>
+                <div className="space-y-1">
+                  <DialogTitle className="text-2xl font-black text-center text-gray-900">Purchase Tickets</DialogTitle>
+                  <DialogDescription className="text-center text-base font-medium text-gray-600">
+                    {event.name}
+                  </DialogDescription>
+                </div>
+              </DialogHeader>
 
-              {selectedTicket && (
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Quantity</Label>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleQuantityChange(formData.quantity - 1)}
-                      disabled={formData.quantity <= (selectedTicket.min_per_order || 1)}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <div className="flex-1 text-center">
-                      {formData.quantity}
+                  <Label htmlFor="customerName">Full Name</Label>
+                  <Input
+                    id="customerName"
+                    name="customerName"
+                    value={formData.customerName}
+                    onChange={handleInputChange}
+                    placeholder="John Doe"
+                    required
+                    minLength={2}
+                    maxLength={100}
+                    className="rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="customerEmail">Email</Label>
+                  <Input
+                    id="customerEmail"
+                    name="customerEmail"
+                    type="email"
+                    value={formData.customerEmail}
+                    onChange={handleInputChange}
+                    placeholder="you@example.com"
+                    required
+                    className="rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <span className="text-gray-500">+254</span>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => handleQuantityChange(formData.quantity + 1)}
-                      disabled={formData.quantity >= maxQuantity}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+                    <Input
+                      id="phoneNumber"
+                      type="tel"
+                      placeholder="712 345 678"
+                      className={`pl-14 rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50 ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      value={formData.phoneNumber}
+                      onChange={handlePhoneNumberChange}
+                      onBlur={(e) => setPhoneError(validatePhoneNumber(e.target.value))}
+                      required
+                      maxLength={9}
+                    />
                   </div>
-                  <p className="text-xs text-gray-500">
-                    {maxQuantity > 0
-                      ? `${maxQuantity} ${maxQuantity === 1 ? 'ticket' : 'tickets'} available`
-                      : 'No tickets available'}
+                  {phoneError && (
+                    <p className="text-sm text-red-500 mt-1">{phoneError}</p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter 9-digit number starting with 7 or 1 (e.g., 712345678)
                   </p>
                 </div>
-              )}
 
-              {selectedTicket && (
+                {ticketTypes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Ticket Type</Label>
+                    <Select
+                      value={formData.ticketTypeId}
+                      onValueChange={(value) => setFormData(prev => ({
+                        ...prev,
+                        ticketTypeId: value,
+                        quantity: 1 // Reset quantity when ticket type changes
+                      }))}
+                      required
+                    >
+                      <SelectTrigger className="rounded-xl border-gray-200 focus:ring-yellow-400 h-11 bg-gray-50/50">
+                        <SelectValue placeholder="Select a ticket type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ticketTypes.map((ticket) => (
+                          <SelectItem
+                            key={ticket.id}
+                            value={String(ticket.id)}
+                            disabled={ticket.is_sold_out}
+                          >
+                            <div className="flex justify-between items-center w-full">
+                              <span>{ticket.name}</span>
+                              <span className="text-sm text-gray-500 ml-2">
+                                {formatPrice(ticket.price)}
+                                {ticket.is_sold_out && ' (Sold Out)'}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedTicket?.description && (
+                      <p className="text-sm text-gray-500 mt-1 bg-gray-50 p-2 rounded-md border border-gray-100 italic">
+                        {selectedTicket.description}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {selectedTicket && (
+                  <div className="space-y-2">
+                    <Label>Quantity</Label>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        type="button"
+                        size="icon"
+                        onClick={() => handleQuantityChange(formData.quantity - 1)}
+                        disabled={formData.quantity <= (selectedTicket.min_per_order || 1)}
+                        className="rounded-xl border-gray-200 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200"
+                      >
+                        <Minus className="h-4 w-4" />
+                      </Button>
+                      <div className="flex-1 text-center font-bold text-lg">
+                        {formData.quantity}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        onClick={() => handleQuantityChange(formData.quantity + 1)}
+                        disabled={formData.quantity >= maxQuantity}
+                        className="rounded-xl border-gray-200 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {maxQuantity > 0
+                        ? `${maxQuantity} ${maxQuantity === 1 ? 'ticket' : 'tickets'} available`
+                        : 'No tickets available'}
+                    </p>
+                  </div>
+                )}
+
+                {selectedTicket && (
+                  <div className="pt-2">
+                    <DiscountCodeInput
+                      eventId={String(event.id)}
+                      orderAmount={basePrice}
+                      onDiscountApplied={handleDiscountApplied}
+                      onDiscountRemoved={handleDiscountRemoved}
+                    />
+                  </div>
+                )}
+
                 <div className="pt-2">
-                  <DiscountCodeInput
-                    eventId={String(event.id)}
-                    orderAmount={basePrice}
-                    onDiscountApplied={handleDiscountApplied}
-                    onDiscountRemoved={handleDiscountRemoved}
-                  />
-                </div>
-              )}
-
-              <div className="pt-2">
-                <div className="flex items-center justify-between border-t border-gray-200 pt-4">
-                  <div>
-                    <span className="font-medium">Subtotal</span>
-                    {discountAmount > 0 && (
-                      <div className="text-sm text-green-600">
-                        Discount: -{formatPrice(discountAmount)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {/* Debug log for subtotal display */}
-                    {(() => {
-                      console.log('=== SUBTOTAL RENDER DEBUG ===');
-                      console.log('Rendering subtotal with:', {
-                        finalPrice,
-                        basePrice,
-                        discountAmount,
-                        formattedFinalPrice: formatPrice(finalPrice),
-                        formattedBasePrice: formatPrice(basePrice)
-                      });
-                      return null;
-                    })()}
-                    <span className="text-lg font-bold">{formatPrice(finalPrice)}</span>
-                    {discountAmount > 0 && (
-                      <div className="text-sm text-gray-500 line-through">
-                        {formatPrice(basePrice)}
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                    <div>
+                      <span className="font-medium">Subtotal</span>
+                      {discountAmount > 0 && (
+                        <div className="text-sm text-green-600">
+                          Discount: -{formatPrice(discountAmount)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-lg font-bold">{formatPrice(finalPrice)}</span>
+                      {discountAmount > 0 && (
+                        <div className="text-sm text-gray-500 line-through">
+                          {formatPrice(basePrice)}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="pt-2">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Pay {formatPrice(finalPrice)} with Paystack
-                    </>
-                  )}
-                </Button>
+                <div className="pt-2">
+                  <Button
+                    type="submit"
+                    className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg shadow-yellow-200 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-[1.02]"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="mr-2 h-5 w-5" />
+                        Pay {formatPrice(finalPrice)} with M-PESA
+                      </>
+                    )}
+                  </Button>
 
-                <p className="text-xs text-gray-500 text-center mt-2">
-                  You'll be redirected to Paystack's secure payment modal
-                </p>
-              </div>
-            </form>
-          </>
-        )}
-      </DialogContent>
-
-      {/* Paystack Modal */}
-      {showPaystackModal && paymentInitiationData && (
-        <PaystackPayment
-          email={paymentInitiationData.email}
-          amount={paymentInitiationData.amount}
-          reference={paymentInitiationData.reference}
-          onSuccess={handlePaystackSuccess}
-          onClose={handlePaystackClose}
-          onOpen={handlePaystackModalOpen}
-          metadata={{
-            event_id: event.id.toString(),
-            ticket_type_id: formData.ticketTypeId,
-            quantity: formData.quantity.toString(),
-            customer_name: formData.customerName,
-            phone: formData.phoneNumber
-          }}
-        />
-      )}
-    </Dialog>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Check your phone for the M-PESA prompt after clicking
+                  </p>
+                </div>
+              </form>
+            </>
+          )
+          }
+        </div >
+      </DialogContent >
+    </Dialog >
   );
 }

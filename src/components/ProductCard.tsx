@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone, FileText, Handshake, Calendar, MapPin } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
-import { Product, Seller } from '@/types';
+import { Product, Seller, PaymentProvider } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -305,7 +305,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         productName: product.name,
         customerName: buyerInfo.fullName,
         narrative: `Purchase of ${product.name}`,
-        paymentMethod: 'paystack',
+        paymentMethod: 'payd',
         metadata: activeBookingData ? {
           booking_date: format(activeBookingData.date, 'yyyy-MM-dd'),
           booking_time: activeBookingData.time,
@@ -347,17 +347,76 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         throw new Error(errorMessage);
       }
 
-      // Extract redirect URL from Paystack response
-      const redirectUrl = responseData.data?.authorization_url;
+      // 5. Handle success (STK Push sent)
+      if (responseData.status === 'success') {
+        toast({
+          title: 'STK Push Sent',
+          description: 'Please check your phone to complete the payment.',
+          duration: 10000
+        });
 
-      if (!redirectUrl) {
-        console.error('Invalid response format from payment gateway:', responseData);
-        throw new Error('Invalid response from payment gateway');
+        // Start polling for payment status
+        const invoiceId = responseData.data?.reference || responseData.data?.invoice_id; // Payd returns reference
+        if (invoiceId) {
+          const checkStatus = async () => {
+            let attempts = 0;
+            const maxAttempts = 24; // 2 minutes (5s interval)
+
+            const interval = setInterval(async () => {
+              attempts++;
+              try {
+                // Use base URL logic again or just relative path if proxy is set up correctly (it is)
+                // But need to be careful about the URL construction
+                const checkUrl = `${baseURL}/payments/status/${invoiceId}`;
+                const statusRes = await fetch(checkUrl, {
+                  headers: { 'Authorization': `Bearer ${token || buyerToken}` }
+                });
+                const statusData = await statusRes.json();
+
+                const status = statusData.data?.status || statusData.status;
+
+                if (status === 'success' || status === 'completed') {
+                  clearInterval(interval);
+                  setIsProcessingPurchase(false);
+                  toast({
+                    title: 'Payment Successful',
+                    description: 'Your purchase has been confirmed!',
+                    variant: 'default',
+                    className: 'bg-green-600 text-white'
+                  });
+                  // Here we could trigger a refresh or redirect
+                } else if (status === 'failed') {
+                  clearInterval(interval);
+                  setIsProcessingPurchase(false);
+                  toast({
+                    title: 'Payment Failed',
+                    description: 'The transaction was declined.',
+                    variant: 'destructive'
+                  });
+                }
+
+                if (attempts >= maxAttempts) {
+                  clearInterval(interval);
+                  setIsProcessingPurchase(false);
+                  // Timeout - don't show error, just stop loading
+                }
+              } catch (e) {
+                console.error('Polling error', e);
+                // Ignore
+              }
+            }, 5000);
+          };
+          checkStatus();
+
+          // Keep loading state true while polling? 
+          // Yes, but maybe we should allow user to close/cancel?
+          // For now, let's keep it simple.
+          return; // Don't set isProcessingPurchase(false) yet
+        }
+
+      } else {
+        throw new Error(responseData.message || 'Payment initiation failed');
       }
-
-      // 6. Redirect to Paystack payment page
-      console.debug('Redirecting to Paystack:', redirectUrl);
-      window.location.href = redirectUrl;
 
     } catch (error) {
       console.error('Payment error:', error);
@@ -367,8 +426,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         variant: 'destructive',
         duration: 5000
       });
-    } finally {
       setIsProcessingPurchase(false);
+    } finally {
+      // Only turn off loading if we didn't start polling (which returns early)
+      // logic above returns early if success. 
+      // So we need to handle the case where we DON'T return.
     }
   };
 

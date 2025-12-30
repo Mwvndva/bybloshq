@@ -171,6 +171,8 @@ export interface Address {
   notes?: string;
 }
 
+export type PaymentProvider = 'paystack' | 'payd' | 'mpesa';
+
 export interface PaymentMethod {
   id: string;
   type: 'card' | 'paypal' | 'mobile_money' | 'bank_transfer';

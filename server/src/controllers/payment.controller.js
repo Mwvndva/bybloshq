@@ -8,9 +8,9 @@ import Order from '../models/order.model.js';
 
 class PaymentController {
   /**
-   * Handle Paystack webhook
+   * Handle Payd webhook
    */
-  async handlePaystackWebhook(req, res) {
+  async handlePaydWebhook(req, res) {
     try {
       const webhookData = req.body;
       const headers = req.headers;
@@ -21,8 +21,9 @@ class PaymentController {
       });
 
       // Process the webhook
-      const clientIp = req.ip || req.connection.remoteAddress;
-      const result = await paymentService.handlePaystackWebhook(webhookData, headers, clientIp);
+      // Process the webhook
+      // Payd webhook handling
+      const result = await paymentService.handlePaydCallback(webhookData);
 
       // Return appropriate response
       if (result.status === 'ignored') {
@@ -165,7 +166,7 @@ class PaymentController {
         phone_number: paymentData.phone,
         amount: paymentData.amount,
         status: 'pending',
-        payment_method: 'paystack',
+        payment_method: 'payd', // Update to payd
         event_id: paymentData.event_id,
         organizer_id: paymentData.organizer_id,
         ticket_type_id: paymentData.ticket_type_id,
@@ -182,22 +183,26 @@ class PaymentController {
         }
       });
 
+      // Initiate Payd STK Push
       const result = await paymentService.initiatePayment(paymentData);
 
-      // Update payment record with Paystack reference
+      // Update payment record with Payd reference
       await Payment.update(payment.id, {
         provider_reference: result.reference,
         api_ref: result.reference,
         metadata: {
           ...payment.metadata,
-          paystack_response: result
+          payd_response: result.original_response
         }
       });
 
       res.status(200).json({
         status: 'success',
-        message: 'Payment initiated successfully',
-        data: result
+        message: 'Payment initiated. Please check your phone for the STK prompt.',
+        data: {
+          ...result,
+          message: 'STK Push sent'
+        }
       });
 
     } catch (error) {
@@ -293,7 +298,7 @@ class PaymentController {
       const orderData = {
         buyerId: buyerInfo?.id || null,
         sellerId: parseInt(product.seller_id),
-        paymentMethod: 'paystack',
+        paymentMethod: 'payd',
         buyerName: customerName,
         buyerEmail: email,
         buyerPhone: phone,
@@ -346,17 +351,17 @@ class PaymentController {
           amount: amount,
           currency: 'KES',
           status: 'pending',
-          payment_method: 'paystack',
+          payment_method: 'payd', // Updated to payd
           phone_number: phone,
           email: email,
-          provider_reference: result.reference, // Store Paystack reference in provider_reference field
-          api_ref: result.reference, // Also store in api_ref for backup
+          provider_reference: result.reference,
+          api_ref: result.reference,
           metadata: {
             ...paymentData,
             order_id: order.id,
             order_number: order.order_number,
             reference: result.reference,
-            seller_id: sellerId // Store seller_id in metadata for product payments
+            seller_id: sellerId
           }
         });
 
@@ -365,7 +370,7 @@ class PaymentController {
 
       res.status(200).json({
         status: 'success',
-        message: 'Product payment initiated successfully',
+        message: 'Product payment initiated. Check your phone.',
         data: {
           ...result,
           order_id: order.id,
