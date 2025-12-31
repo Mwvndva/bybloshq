@@ -7,6 +7,7 @@ import { useToast } from '@/components/ui/use-toast';
 
 import api from '@/lib/api';
 import { useOrganizerAuth } from '@/hooks/use-organizer-auth';
+import { ApiResponse } from '@/types';
 
 interface TicketType {
   id: string;
@@ -45,9 +46,12 @@ interface EventData {
 // Fetch event data from API
 const fetchEvent = async (id: string): Promise<EventData> => {
   try {
-    const response = await api.get(`/organizers/events/${id}`);
+    interface EventResponse {
+      event: any; // Using any for raw event data as it comes from API
+    }
+    const response = await api.get<ApiResponse<EventResponse>>(`/organizers/events/${id}`);
     const event = response.data.data.event;
-    
+
     // Transform the API response to match our form's expected format
     return {
       ...event,
@@ -83,14 +87,14 @@ export default function EditEventPage() {
   useEffect(() => {
     const loadEvent = async () => {
       if (!id) return;
-      
+
       try {
         setIsLoading(true);
         const token = await getToken();
         if (!token) {
           throw new Error('Authentication required');
         }
-        
+
         const eventData = await fetchEvent(id);
         setEvent(eventData);
       } catch (error) {
@@ -100,7 +104,7 @@ export default function EditEventPage() {
           description: error.response?.data?.message || 'Failed to load event. Please try again.',
           variant: 'destructive',
         });
-        
+
         // Redirect to events list if event not found
         if (error.response?.status === 404) {
           navigate('/organizer/events');
@@ -115,16 +119,16 @@ export default function EditEventPage() {
 
   const handleSubmit = async (formData: EventData) => {
     if (!id) return;
-    
+
     try {
       setIsSubmitting(true);
       const token = await getToken();
       if (!token) {
         throw new Error('Authentication required');
       }
-      
+
       const formDataToSend = new FormData();
-      
+
       // Add basic fields
       formDataToSend.append('title', formData.title);
       formDataToSend.append('description', formData.description);
@@ -133,16 +137,16 @@ export default function EditEventPage() {
       formDataToSend.append('location', formData.location);
       formDataToSend.append('venue', formData.venue);
       formDataToSend.append('is_online', String(formData.isOnline));
-      
+
       if (formData.onlineUrl) {
         formDataToSend.append('online_url', formData.onlineUrl);
       }
-      
+
       // Add image if it's a new file
       if (formData.image instanceof File) {
         formDataToSend.append('image', formData.image);
       }
-      
+
       // Add ticket types
       formDataToSend.append('ticket_types', JSON.stringify(
         formData.ticketTypes.map(ticket => ({
@@ -155,19 +159,19 @@ export default function EditEventPage() {
           sales_end_date: ticket.salesEndDate?.toISOString(),
         }))
       ));
-      
+
       await api.put(`/organizers/events/${id}`, formDataToSend, {
         headers: {
           'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`
         }
       });
-      
+
       toast({
         title: 'Event updated',
         description: 'Your event has been updated successfully.',
       });
-      
+
       navigate(`/organizer/events/${id}`);
     } catch (error) {
       console.error('Error updating event:', error);
@@ -210,7 +214,7 @@ export default function EditEventPage() {
       </div>
 
       <div className="bg-white rounded-lg shadow-sm border p-6">
-        <EventForm 
+        <EventForm
           defaultValues={{
             ...event,
             // Ensure ticket types have proper dates
@@ -220,8 +224,9 @@ export default function EditEventPage() {
               salesEndDate: ticket.salesEndDate ? new Date(ticket.salesEndDate) : undefined
             }))
           }}
-          onSubmit={handleSubmit} 
-          isSubmitting={isSubmitting} 
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          submitLabel="Update Event"
         />
       </div>
     </div>

@@ -15,7 +15,7 @@ export default function CreateEventPage() {
   const handleSubmit = async (formData: any) => {
     try {
       setIsSubmitting(true);
-      
+
       // Convert image to base64 if present
       let imageDataUrl = '';
       if (formData.image) {
@@ -29,13 +29,13 @@ export default function CreateEventPage() {
       // Ensure all ticket type values are properly converted to numbers
       const processedTicketTypes = formData.ticketTypes.map((type: any) => {
         // Ensure price is a number
-        const price = typeof type.price === 'string' ? 
-          parseFloat(type.price) || 0 : 
+        const price = typeof type.price === 'string' ?
+          parseFloat(type.price) || 0 :
           Number(type.price) || 0;
 
         // Ensure quantity is an integer
-        const quantity = typeof type.quantity === 'string' ? 
-          parseInt(type.quantity, 10) || 1 : 
+        const quantity = typeof type.quantity === 'string' ?
+          parseInt(type.quantity, 10) || 1 :
           Math.max(1, Math.floor(Number(type.quantity) || 1));
 
         return {
@@ -59,17 +59,17 @@ export default function CreateEventPage() {
         image_data_url: imageDataUrl,
         ticketTypes: processedTicketTypes
       };
-      
+
       // Make the API request
       console.log('Submitting event data:', eventData);
       const response = await api.post<ApiResponse<{ event: any }>>('/organizers/events', eventData);
-      
+
       if (response.data.status === 'success') {
         toast({
           title: 'Event created successfully!',
           description: 'Your event has been published.',
         });
-        
+
         // Redirect to event list
         navigate('/organizer/events');
       } else {
@@ -102,16 +102,16 @@ export default function CreateEventPage() {
             Back to Events
           </Button>
         </div>
-        
+
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-black text-black mb-4">Create New Event</h1>
           <p className="text-gray-600 text-lg font-medium">Fill in the details below to create your event</p>
         </div>
-        
+
         {/* Form Card */}
         <div className="bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl p-8">
-          <EventForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+          <EventForm onSubmit={handleSubmit} isSubmitting={isSubmitting} submitLabel="Create Event" />
         </div>
       </div>
     </div>

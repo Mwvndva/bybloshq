@@ -36,10 +36,10 @@ const eventFormSchema = z.object({
       salesEndDate: z.date().optional(),
     })
   ).min(1, 'At least one ticket type is required')
-  .refine(tickets => tickets.some(t => t.price > 0), {
-    message: 'At least one ticket type must have a price greater than 0',
-    path: ['ticketTypes'],
-  }),
+    .refine(tickets => tickets.some(t => t.price > 0), {
+      message: 'At least one ticket type must have a price greater than 0',
+      path: ['ticketTypes'],
+    }),
 });
 
 type EventFormValues = z.infer<typeof eventFormSchema>;
@@ -48,9 +48,11 @@ interface EventFormProps {
   defaultValues?: Partial<EventFormValues>;
   onSubmit: (data: EventFormValues) => void;
   isSubmitting: boolean;
+  submitLabel?: string;
 }
 
-export function EventForm({ defaultValues, onSubmit, isSubmitting }: EventFormProps) {
+export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel }: EventFormProps) {
+
   const [imagePreview, setImagePreview] = useState<string | null>(
     defaultValues?.image ? URL.createObjectURL(defaultValues.image as unknown as Blob) : null
   );
@@ -99,10 +101,10 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting }: EventFormPr
   const addTicketType = () => {
     setValue('ticketTypes', [
       ...ticketTypes,
-      { 
-        name: '', 
-        price: 0, 
-        quantity: 100, 
+      {
+        name: '',
+        price: 0,
+        quantity: 100,
         description: '',
         salesStartDate: new Date(),
         salesEndDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days from now
@@ -175,7 +177,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting }: EventFormPr
         {/* Event Details */}
         <div className="space-y-6">
           <h3 className="text-2xl font-black text-black">Event Details</h3>
-          
+
           <div>
             <Label htmlFor="title" className="text-base font-semibold text-black mb-2 block">Event Title *</Label>
             <Input
@@ -238,7 +240,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting }: EventFormPr
                         const [hours, minutes] = e.target.value.split(':').map(Number);
                         const currentDate = watch('startDate');
                         const date = currentDate ? new Date(currentDate) : new Date();
-                        
+
                         // Only update if we have valid hours and minutes
                         if (!isNaN(hours) && !isNaN(minutes)) {
                           date.setHours(hours, minutes, 0, 0);
@@ -289,7 +291,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting }: EventFormPr
                         const [hours, minutes] = e.target.value.split(':').map(Number);
                         const currentDate = watch('endDate');
                         const date = currentDate ? new Date(currentDate) : new Date();
-                        
+
                         // Only update if we have valid hours and minutes
                         if (!isNaN(hours) && !isNaN(minutes)) {
                           date.setHours(hours, minutes, 0, 0);
@@ -409,13 +411,13 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting }: EventFormPr
                       onKeyDown={(e) => {
                         // Allow: backspace, delete, tab, escape, enter, numbers
                         if (
-                          [46, 8, 9, 27, 13].includes(e.keyCode) || 
+                          [46, 8, 9, 27, 13].includes(e.keyCode) ||
                           // Allow: Ctrl+A, Command+A
-                          (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) || 
+                          (e.keyCode === 65 && (e.ctrlKey === true || e.metaKey === true)) ||
                           // Allow: Ctrl+C, Command+C
-                          (e.keyCode === 67 && (e.ctrlKey === true || e.metaKey === true)) || 
+                          (e.keyCode === 67 && (e.ctrlKey === true || e.metaKey === true)) ||
                           // Allow: Ctrl+V, Command+V
-                          (e.keyCode === 86 && (e.ctrlKey === true || e.metaKey === true)) || 
+                          (e.keyCode === 86 && (e.ctrlKey === true || e.metaKey === true)) ||
                           // Allow: home, end, left, right
                           (e.keyCode >= 35 && e.keyCode <= 39) ||
                           // Allow: 0-9 and numpad 0-9
@@ -487,12 +489,12 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting }: EventFormPr
       </div>
 
       <div className="flex justify-center pt-8">
-        <Button 
-          type="submit" 
+        <Button
+          type="submit"
           disabled={isSubmitting}
           className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-12 py-4 rounded-xl font-semibold text-lg disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Creating Event...' : 'Create Event'}
+          {isSubmitting ? (submitLabel ? 'Saving...' : 'Creating Event...') : (submitLabel || 'Create Event')}
         </Button>
       </div>
     </form>

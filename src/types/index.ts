@@ -221,7 +221,8 @@ export interface Notification {
 }
 
 export interface ApiResponse<T> {
-  success: boolean;
+  status?: string;
+  success?: boolean;
   data?: T;
   message?: string;
   error?: string;
