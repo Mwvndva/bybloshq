@@ -32,12 +32,12 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
     try {
       if (showLoading) setLoading(true);
       setRefreshing(!showLoading);
-      
+
       const data = await getUpcomingEvents(20); // Get up to 20 upcoming events
-      
+
       // Debug log the raw API response
       console.log('Raw API response:', data);
-      
+
       // The backend already filters for upcoming events, so we just need to ensure they're valid
       const validEvents = data.filter(event => {
         const isValid = event && event.start_date && event.end_date;
@@ -51,7 +51,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
         }
         return isValid;
       });
-      
+
       setEvents(validEvents);
       setError(null);
     } catch (err) {
@@ -61,7 +61,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
         response: err.response?.data,
         status: err.response?.status,
       });
-      
+
       setError(errorMessage);
       toast({
         title: 'Error',
@@ -76,12 +76,12 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
 
   useEffect(() => {
     fetchEvents();
-    
+
     // Set up auto-refresh every 30 seconds
     const refreshInterval = setInterval(() => {
       fetchEvents(false);
     }, 30000);
-    
+
     return () => clearInterval(refreshInterval);
   }, []);
 
@@ -102,7 +102,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
   const isEventHappeningNow = (event: Event) => {
     const now = new Date();
     return (
-      isBefore(parseISO(event.start_date), now) && 
+      isBefore(parseISO(event.start_date), now) &&
       isAfter(parseISO(event.end_date), now)
     );
   };
@@ -115,14 +115,14 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
         const available = type.available !== undefined ? type.available : (type.quantity - (type.sold || 0));
         return sum + Math.max(0, available);
       }, 0);
-      
+
       console.log(`Event ${event.id} (${event.name}) has ${availableTickets} tickets available across all types`);
       return availableTickets;
     }
-    
+
     // Fall back to event-level ticket availability
     let available = 0;
-    
+
     if (typeof event.available_tickets === 'number' && !isNaN(event.available_tickets)) {
       available = event.available_tickets;
     } else if (typeof event.tickets_sold === 'number' && typeof event.ticket_quantity === 'number') {
@@ -130,7 +130,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
     } else if (typeof event.ticket_quantity === 'number') {
       available = event.ticket_quantity;
     }
-    
+
     // Ensure we don't return negative numbers
     return Math.max(0, available);
   };
@@ -146,42 +146,42 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
       console.log('Setting selected event and showing loading state');
       setSelectedEvent(event);
       setLoadingTicketTypes(true);
-      
+
       // First check if the event is sold out using available_tickets
       const availableTickets = event.available_tickets ?? event.ticket_quantity;
       if (availableTickets <= 0) {
         throw new Error('This event is sold out');
       }
-      
+
       console.log('Fetching ticket types...');
       const types = await getEventTicketTypes(event.id);
       console.log('Received ticket types:', types);
-      
+
       // Check if we have valid ticket types with available quantities
-      const hasAvailableTickets = types.length === 0 || types.some(type => 
+      const hasAvailableTickets = types.length === 0 || types.some(type =>
         type.quantity_available > 0 || type.quantity_available === undefined
       );
-      
+
       if (!hasAvailableTickets) {
         throw new Error('No tickets available for this event');
       }
-      
+
       // Set the ticket types and show the form
       console.log('Setting ticket types in state');
       setTicketTypes(types);
       setShowTicketForm(true);
-      
+
       console.log('Ticket form is now visible with types');
     } catch (error) {
       console.error('Error in handleBuyTicket:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load ticket information';
-      
+
       toast({
         title: 'Tickets Unavailable',
         description: errorMessage,
         variant: 'destructive',
       });
-      
+
       // Always hide the form on error
       setShowTicketForm(false);
     } finally {
@@ -203,10 +203,10 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
     if (!selectedEvent) {
       throw new Error('No event selected');
     }
-    
+
     try {
       console.log('Starting ticket purchase with data:', data);
-      
+
       // Trim all string fields and ensure proper types
       const trimmedData = {
         ...data,
@@ -216,18 +216,18 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
         quantity: Number(data.quantity) || 1,
         ticketTypeId: data.ticketTypeId ? Number(data.ticketTypeId) : null
       };
-      
+
       console.log('Processed form data:', trimmedData);
-      
+
       // Validate required fields
       const validationErrors: string[] = [];
-      
+
       if (!trimmedData.customerName || trimmedData.customerName.length < 2) {
         validationErrors.push('Please enter a valid name (at least 2 characters)');
       } else if (trimmedData.customerName.length > 100) {
         validationErrors.push('Name cannot exceed 100 characters');
       }
-      
+
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!trimmedData.customerEmail) {
         validationErrors.push('Please enter your email address');
@@ -236,17 +236,17 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
       } else if (trimmedData.customerEmail.length > 255) {
         validationErrors.push('Email address cannot exceed 255 characters');
       }
-      
+
       if (!trimmedData.phoneNumber) {
         validationErrors.push('Please enter your phone number');
       } else if (!/^\+?[0-9\s-]{8,20}$/.test(trimmedData.phoneNumber)) {
         validationErrors.push('Please enter a valid phone number (8-20 digits)');
       }
-      
+
       if (isNaN(trimmedData.quantity) || trimmedData.quantity < 1) {
         validationErrors.push('Please enter a valid quantity');
       }
-      
+
       if (validationErrors.length > 0) {
         throw new Error(validationErrors.join('\n'));
       }
@@ -254,7 +254,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
       // Check ticket availability before proceeding
       const availableTickets = selectedEvent.available_tickets ?? selectedEvent.ticket_quantity;
       const requestedQuantity = Number(data.quantity) || 1;
-      
+
       if (availableTickets <= 0) {
         toast({
           title: 'Tickets Sold Out',
@@ -264,7 +264,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
         setShowTicketForm(false);
         return;
       }
-      
+
       if (requestedQuantity > availableTickets) {
         toast({
           title: 'Not Enough Tickets',
@@ -276,10 +276,10 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
 
       // Prepare purchase data with proper types
       let ticketTypeId: number | undefined;
-      
+
       if (trimmedData.ticketTypeId) {
         // If ticketTypeId is a string, convert it to a number
-        ticketTypeId = typeof trimmedData.ticketTypeId === 'string' 
+        ticketTypeId = typeof trimmedData.ticketTypeId === 'string'
           ? parseInt(trimmedData.ticketTypeId, 10)
           : trimmedData.ticketTypeId;
       } else if (selectedEvent.ticketTypes?.[0]?.id) {
@@ -295,12 +295,12 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
         phoneNumber: trimmedData.phoneNumber,
         ticketTypeId: ticketTypeId !== undefined ? ticketTypeId : undefined
       };
-      
+
       console.log('Prepared purchase data:', purchaseData);
-      
+
       // Call the API to process the ticket purchase
       const result = await purchaseTickets(purchaseData);
-      
+
       // Show success message with transaction details
       toast({
         title: 'Purchase Successful!',
@@ -308,30 +308,30 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
         variant: 'default',
         duration: 10000,
       });
-      
+
       // Refresh events to update available tickets
       await fetchEvents(false);
-      
+
       // Close the form
       setShowTicketForm(false);
-      
+
     } catch (error) {
       console.error('Error purchasing tickets:', error);
-      
+
       // Show user-friendly error message
       toast({
         title: 'Purchase Failed',
         description: error.message || 'Failed to process ticket purchase. Please try again.',
         variant: 'destructive',
       });
-      
+
       // If the error is about ticket availability, close the form
-      if (error.message?.toLowerCase().includes('ticket') && 
-          (error.message.toLowerCase().includes('sold out') || 
-           error.message.toLowerCase().includes('available'))) {
-            setShowTicketForm(false);
+      if (error.message?.toLowerCase().includes('ticket') &&
+        (error.message.toLowerCase().includes('sold out') ||
+          error.message.toLowerCase().includes('available'))) {
+        setShowTicketForm(false);
       }
-      
+
       throw error; // Re-throw for form handling if needed
     }
   };
@@ -414,7 +414,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
               </div>
             </div>
           </div>
-          </div>
+        </div>
 
         {/* Error Content */}
         <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4 sm:px-6 lg:px-8">
@@ -427,23 +427,23 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
               <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
                 {error || 'Something went wrong while loading events. Please try again.'}
               </p>
-            <Button 
-              onClick={handleRefresh}
-              disabled={refreshing}
+              <Button
+                onClick={handleRefresh}
+                disabled={refreshing}
                 className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
-            >
-              {refreshing ? (
-                <>
+              >
+                {refreshing ? (
+                  <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Refreshing...
-                </>
-              ) : (
+                    Refreshing...
+                  </>
+                ) : (
                   <>
                     <RefreshCw className="mr-2 h-5 w-5" />
                     Try Again
                   </>
-              )}
-            </Button>
+                )}
+              </Button>
             </div>
           </div>
         </div>
@@ -452,21 +452,21 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-x-hidden w-full">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-            <Button 
+              <Button
                 variant="ghost"
                 size="sm"
-              onClick={() => navigate('/')}
+                onClick={() => navigate('/')}
                 className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl px-3 py-2"
-            >
+              >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
+                Back to Home
+              </Button>
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
                   <Calendar className="h-5 w-5 text-white" />
@@ -474,7 +474,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                 <span className="text-xl font-black text-black">Events</span>
               </div>
             </div>
-            <Button 
+            <Button
               variant="outline"
               onClick={handleRefresh}
               disabled={refreshing}
@@ -499,9 +499,9 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-black mb-4">Upcoming Events</h1>
-          <p className="text-gray-600 text-lg font-medium">Find and book tickets for amazing events</p>
+        <div className="text-center mb-8 sm:mb-12">
+          <h1 className="text-3xl sm:text-4xl font-black text-black mb-3 sm:mb-4">Upcoming Events</h1>
+          <p className="text-base sm:text-lg text-gray-600 font-medium">Find and book tickets for amazing events</p>
         </div>
 
         {events.length === 0 ? (
@@ -515,22 +515,22 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
             {events.map((event) => {
               const isUpcoming = isEventUpcoming(event);
               const isHappeningNow = isEventHappeningNow(event);
-              
+
               return (
                 <Card key={event.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2 overflow-hidden">
                   <div className="relative">
-                    <img 
-                      src={event.image_url || 'https://images.unsplash.com/photo-1505373877841-8d25f96d3b4a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80'} 
+                    <img
+                      src={event.image_url || 'https://images.unsplash.com/photo-1505373877841-8d25f96d3b4a?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1470&q=80'}
                       alt={event.name}
-                      className="w-full h-48 object-cover"
+                      className="w-full h-44 sm:h-48 object-cover"
                     />
                     {(() => {
                       const availableTickets = getAvailableTickets(event);
-                      
+
                       if (availableTickets <= 0) {
                         return (
                           <Badge className="absolute top-4 right-4 bg-gradient-to-r from-red-500 to-red-600 text-white px-3 py-1 text-xs font-bold rounded-xl shadow-lg">
@@ -558,25 +558,25 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                       }
                     })()}
                   </div>
-                  
-                  <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-black text-black mb-2 line-clamp-2">{event.name}</h3>
-                        <p className="text-gray-600 text-sm mb-3">{event.location}</p>
+
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="flex justify-between items-start mb-3 sm:mb-4">
+                      <div className="flex-1 mr-2">
+                        <h3 className="text-lg sm:text-xl font-black text-black mb-1 sm:mb-2 line-clamp-2 leading-tight">{event.name}</h3>
+                        <p className="text-gray-600 text-xs sm:text-sm mb-2 sm:mb-3 line-clamp-1">{event.location}</p>
                       </div>
                       <Badge variant="outline" className="text-sm font-bold border-yellow-300 text-yellow-600 bg-yellow-50">
-                        {event.ticket_price && !isNaN(Number(event.ticket_price)) && Number(event.ticket_price) > 0 
-                          ? `KSh ${Number(event.ticket_price).toLocaleString('en-US')}` 
+                        {event.ticket_price && !isNaN(Number(event.ticket_price)) && Number(event.ticket_price) > 0
+                          ? `KSh ${Number(event.ticket_price).toLocaleString('en-US')}`
                           : 'Free'}
                       </Badge>
                     </div>
-                    
+
                     <div className="space-y-3 mb-6">
                       <div className="flex items-center text-sm text-gray-600">
                         <Calendar className="h-4 w-4 mr-2 text-gray-500" />
                         <span className="font-medium">{formatEventDate(event.start_date)}</span>
-                        </div>
+                      </div>
                       <div className="flex items-center text-sm text-gray-600">
                         <Clock className="h-4 w-4 mr-2 text-gray-500" />
                         <span>{formatEventTime(event.start_date)} - {formatEventTime(event.end_date)}</span>
@@ -592,9 +592,9 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                         </span>
                       </div>
                     </div>
-                    
+
                     {getAvailableTickets(event) > 0 ? (
-                      <Button 
+                      <Button
                         onClick={() => handleBuyTicket(event)}
                         className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
                         disabled={!isUpcoming && !isHappeningNow}
@@ -603,8 +603,8 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                         <ArrowRight className="ml-2 h-5 w-5" />
                       </Button>
                     ) : (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         className="w-full h-12 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl font-bold"
                         disabled
                       >
