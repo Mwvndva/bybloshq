@@ -118,26 +118,14 @@ export const login = async (req, res) => {
       });
     }
 
-    // 1) Check if seller exists
-
+    // 1) Check if seller exists and password is valid
     const seller = await findSellerByEmail(email);
+    const isPasswordValid = seller ? await verifyPassword(password, seller.password) : false;
 
-    if (!seller) {
-
+    if (!seller || !isPasswordValid) {
       return res.status(401).json({
         status: 'error',
-        message: 'Incorrect email or password'
-      });
-    }
-
-
-    const isPasswordValid = await verifyPassword(password, seller.password);
-
-    if (!isPasswordValid) {
-
-      return res.status(401).json({
-        status: 'error',
-        message: 'Incorrect email or password'
+        message: 'Invalid email or password'
       });
     }
 
