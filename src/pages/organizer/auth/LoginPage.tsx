@@ -120,7 +120,7 @@ export default function LoginPage() {
               <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-lg">
                 <Calendar className="h-8 w-8 text-yellow-600" />
               </div>
-              <h1 className="text-3xl font-black text-black mb-2">Welcome Back</h1>
+              <h1 className="text-2xl md:text-3xl font-black text-black mb-2">Welcome Back</h1>
               <p className="text-gray-600 font-medium">Sign in to your organizer account</p>
             </div>
 

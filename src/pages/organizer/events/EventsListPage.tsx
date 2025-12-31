@@ -362,7 +362,7 @@ export default function EventsListPage() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-black mb-4">Event Management</h1>
+          <h1 className="text-2xl md:text-4xl font-black text-black mb-4">Event Management</h1>
           <p className="text-gray-600 text-lg font-medium">Manage all your events in one place</p>
         </div>
 
@@ -370,7 +370,7 @@ export default function EventsListPage() {
         <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50 mb-12">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
             <div>
-              <h3 className="text-3xl font-black text-black">Quick Actions</h3>
+              <h3 className="text-xl md:text-3xl font-black text-black">Quick Actions</h3>
               <p className="text-gray-600 font-medium mt-2">Common tasks for your events</p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
@@ -440,7 +440,7 @@ export default function EventsListPage() {
         <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h3 className="text-3xl font-black text-black">Your Events</h3>
+              <h3 className="text-xl md:text-3xl font-black text-black">Your Events</h3>
               <p className="text-gray-600 font-medium mt-2">
                 {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'} total
               </p>

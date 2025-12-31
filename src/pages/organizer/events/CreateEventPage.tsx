@@ -89,30 +89,32 @@ export default function CreateEventPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
-        <div className="mb-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/organizer/events')}
-            className="inline-flex items-center gap-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Events
-          </Button>
-        </div>
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 sm:p-8">
+      <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-black mb-4">Create New Event</h1>
-          <p className="text-gray-600 text-lg font-medium">Fill in the details below to create your event</p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/organizer/events')}
+              className="rounded-full hover:bg-white/50 text-gray-500 hover:text-black transition-colors"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </Button>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900">
+                Create New Event
+              </h1>
+              <p className="text-lg text-gray-500 font-medium mt-1">
+                Fill in the details to launch your next big event
+              </p>
+            </div>
+          </div>
         </div>
 
-        {/* Form Card */}
-        <div className="bg-white/80 backdrop-blur-sm border-0 shadow-xl rounded-3xl p-8">
-          <EventForm onSubmit={handleSubmit} isSubmitting={isSubmitting} submitLabel="Create Event" />
-        </div>
+        {/* Form Container */}
+        <EventForm onSubmit={handleSubmit} isSubmitting={isSubmitting} submitLabel="Create Event" />
       </div>
     </div>
   );

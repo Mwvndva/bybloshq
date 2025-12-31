@@ -47,6 +47,18 @@ interface Ticket {
   quantity?: number;
 }
 
+interface TicketsResponse {
+  status: string;
+  data: {
+    tickets: Ticket[];
+  };
+}
+
+interface TicketStatusResponse {
+  status: string;
+  message: string;
+}
+
 export default function TicketsListPage() {
   const { eventId } = useParams<{ eventId?: string }>();
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -59,10 +71,10 @@ export default function TicketsListPage() {
     const fetchTickets = async () => {
       try {
         setLoading(true);
-        const endpoint = eventId 
+        const endpoint = eventId
           ? `/organizers/tickets/events/${eventId}`
           : '/organizers/tickets';
-        const response = await api.get(endpoint);
+        const response = await api.get<TicketsResponse>(endpoint);
         console.log('Tickets API Response:', response.data);
         const ticketsData = response.data.data.tickets || [];
         console.log('Processed Tickets:', ticketsData);
@@ -84,14 +96,14 @@ export default function TicketsListPage() {
 
   const handleStatusUpdate = async (ticketId: number, newStatus: 'pending' | 'paid' | 'cancelled' | 'refunded') => {
     try {
-      const response = await api.patch(`/organizers/tickets/${ticketId}/status`, { status: newStatus });
-      
+      const response = await api.patch<TicketStatusResponse>(`/organizers/tickets/${ticketId}/status`, { status: newStatus });
+
       if (response.data.status === 'success') {
         // Update the local state with the updated ticket
-        setTickets(tickets.map(ticket => 
+        setTickets(tickets.map(ticket =>
           ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket
         ));
-        
+
         toast({
           title: 'Success',
           description: 'Ticket status updated successfully',
@@ -109,7 +121,7 @@ export default function TicketsListPage() {
     }
   };
 
-  const filteredTickets = tickets.filter(ticket => 
+  const filteredTickets = tickets.filter(ticket =>
     (ticket.customer_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (ticket.customer_email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
     (ticket.ticket_number?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
@@ -129,7 +141,7 @@ export default function TicketsListPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-3xl font-bold">Tickets</h1>
+          <h1 className="text-2xl md:text-3xl font-bold">Tickets</h1>
           {eventId && (
             <p className="text-muted-foreground mt-1">
               Viewing tickets for this event
@@ -179,7 +191,7 @@ export default function TicketsListPage() {
                   </TableCell>
                   {!eventId && (
                     <TableCell>
-                      <Link 
+                      <Link
                         to={`/organizer/events/${ticket.event_id}`}
                         className="hover:underline text-primary"
                       >
@@ -200,18 +212,17 @@ export default function TicketsListPage() {
                     ticket.ticket_type ||      // Fall back to ticket_type
                     (ticket.metadata?.ticketType || 'General') // Then check metadata
                   }</TableCell>
-                  <TableCell>KSh {Number(ticket.price || 0).toLocaleString('en-KE', {minimumFractionDigits: 0, maximumFractionDigits: 0})}</TableCell>
+                  <TableCell>KSh {Number(ticket.price || 0).toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</TableCell>
                   <TableCell>
                     <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        ticket.status === 'paid'
-                          ? 'bg-green-100 text-green-800'
-                          : ticket.status === 'pending'
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${ticket.status === 'paid'
+                        ? 'bg-green-100 text-green-800'
+                        : ticket.status === 'pending'
                           ? 'bg-yellow-100 text-yellow-800'
                           : ticket.status === 'cancelled'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
+                            ? 'bg-red-100 text-red-800'
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
                     >
                       {ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1)}
                     </span>
@@ -236,7 +247,7 @@ export default function TicketsListPage() {
                           View Details
                         </DropdownMenuItem>
                         {ticket.status !== 'cancelled' && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-red-600"
                             onClick={() => handleStatusUpdate(ticket.id, 'cancelled')}
                           >
@@ -244,7 +255,7 @@ export default function TicketsListPage() {
                           </DropdownMenuItem>
                         )}
                         {ticket.status === 'cancelled' && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-green-600"
                             onClick={() => handleStatusUpdate(ticket.id, 'paid')}
                           >
@@ -252,7 +263,7 @@ export default function TicketsListPage() {
                           </DropdownMenuItem>
                         )}
                         {ticket.status === 'pending' && (
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleStatusUpdate(ticket.id, 'paid')}
                           >
                             Mark as Paid
@@ -265,8 +276,8 @@ export default function TicketsListPage() {
               ))
             ) : (
               <TableRow>
-                <TableCell 
-                  colSpan={eventId ? 7 : 8} 
+                <TableCell
+                  colSpan={eventId ? 7 : 8}
                   className="text-center py-8 text-muted-foreground"
                 >
                   {tickets.length === 0 ? (
@@ -301,7 +312,7 @@ export default function TicketsListPage() {
                       <p className="font-medium">{selectedTicket.ticket_number}</p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <div>
@@ -319,7 +330,7 @@ export default function TicketsListPage() {
                         <p className="font-medium">{selectedTicket.event_name}</p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                       <CreditCard className="h-4 w-4 text-muted-foreground" />
                       <div>
@@ -333,15 +344,14 @@ export default function TicketsListPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Status</p>
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                            selectedTicket.status === 'paid'
-                              ? 'bg-green-100 text-green-800'
-                              : selectedTicket.status === 'pending'
+                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${selectedTicket.status === 'paid'
+                            ? 'bg-green-100 text-green-800'
+                            : selectedTicket.status === 'pending'
                               ? 'bg-yellow-100 text-yellow-800'
                               : selectedTicket.status === 'cancelled'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}
                         >
                           {selectedTicket.status.charAt(0).toUpperCase() + selectedTicket.status.slice(1)}
                         </span>
@@ -353,13 +363,13 @@ export default function TicketsListPage() {
                       <div>
                         <p className="text-sm text-muted-foreground">Price</p>
                         <p className="font-medium">
-                          KSh {Number(selectedTicket.price || 0).toLocaleString('en-KE', {minimumFractionDigits: 0, maximumFractionDigits: 0})}
+                          KSh {Number(selectedTicket.price || 0).toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  
+
                   <div className="pt-2 border-t">
                     <p className="text-sm text-muted-foreground">Purchase Date</p>
                     <p className="text-sm">

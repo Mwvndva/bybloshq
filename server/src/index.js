@@ -392,17 +392,18 @@ protectedRouter.use('/tickets', ticketRoutes); // This will be mounted at /api/o
 // Mount order routes
 app.use('/api', orderRoutes);
 
-// Mount protected organizer routes (payouts, etc.)
-protectedRouter.use('/', protectedOrganizerRoutes);
-
 // Mount protected event routes under /api/organizers/events
 const protectedEventRouter = express.Router();
 protectedEventRouter.get('/', eventController.getOrganizerEvents);
 protectedEventRouter.post('/', eventController.createEvent);
 protectedEventRouter.get('/dashboard', eventController.getDashboardEvents);
 protectedEventRouter.get('/:id', eventController.getEvent);
+protectedEventRouter.put('/:id', eventController.updateEvent);
 protectedEventRouter.delete('/:id', eventController.deleteEvent);
 protectedRouter.use('/events', protectedEventRouter);
+
+// Mount protected organizer routes (payouts, etc.)
+protectedRouter.use('/', protectedOrganizerRoutes);
 
 // Mount the protected router under /api/organizers
 app.use('/api/organizers', protectedRouter);
