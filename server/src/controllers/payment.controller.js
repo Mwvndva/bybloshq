@@ -326,7 +326,7 @@ class PaymentController {
         phone,
         email,
         amount,
-        invoice_id: order.id, // Use order ID (integer) as invoice ID
+        invoice_id: String(order.id), // Use order ID (string) as invoice ID
         firstName: customerName?.split(' ')[0] || 'Customer',
         lastName: customerName?.split(' ').slice(1).join(' ') || '',
         narrative: narrative || `Payment for product ${productName}`,

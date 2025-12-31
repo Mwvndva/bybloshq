@@ -41,13 +41,13 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Enter Your Phone Number</DialogTitle>
+      <DialogContent className="sm:max-w-[425px] rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md">
+        <DialogHeader className="space-y-3">
+          <DialogTitle className="text-2xl font-black text-center text-gray-900">Enter Your Phone Number</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number *</Label>
+        <form onSubmit={handleSubmit} className="space-y-6 py-2">
+          <div className="space-y-3">
+            <Label htmlFor="phone" className="text-base font-semibold text-gray-700 ml-1">Phone Number</Label>
             <Input
               id="phone"
               type="tel"
@@ -56,23 +56,29 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
               onChange={(e) => setPhone(e.target.value)}
               required
               disabled={isLoading}
+              className="rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-12 bg-gray-50/50 text-lg px-4"
             />
-            {error && <p className="text-sm text-red-500">{error}</p>}
-            <p className="text-sm text-gray-500">
+            {error && <p className="text-sm text-red-500 font-medium ml-1">{error}</p>}
+            <p className="text-sm text-gray-500 ml-1">
               We'll check if you have an account with us
             </p>
           </div>
-          <div className="flex gap-2 justify-end">
+          <div className="flex flex-col gap-3 pt-2">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full h-12 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl font-bold text-lg shadow-lg shadow-yellow-200 transition-all"
+            >
+              {isLoading ? 'Checking...' : 'Continue'}
+            </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               onClick={onClose}
               disabled={isLoading}
+              className="w-full rounded-xl text-gray-500 hover:text-gray-900 hover:bg-gray-100"
             >
               Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? 'Checking...' : 'Continue'}
             </Button>
           </div>
         </form>
