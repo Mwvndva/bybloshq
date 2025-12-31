@@ -314,6 +314,172 @@ export const createEvent = async (req, res) => {
   }
 };
 
+
+export const updateEvent = async (req, res) => {
+  const client = await pool.connect();
+
+  try {
+    const { id } = req.params;
+    console.log(`Updating event with ID: ${id}`);
+    console.log('Raw request body:', JSON.stringify(req.body, null, 2));
+
+    const {
+      name,
+      description,
+      location,
+      ticket_quantity,
+      ticket_price,
+      start_date,
+      end_date,
+      ticketTypes = [],
+      image_data_url
+    } = req.body;
+
+    // Check if event exists and belongs to organizer
+    const checkQuery = 'SELECT * FROM events WHERE id = $1';
+    const checkResult = await client.query(checkQuery, [id]);
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Event not found'
+      });
+    }
+
+    const currentEvent = checkResult.rows[0];
+
+    if (currentEvent.organizer_id !== req.user.id) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You are not authorized to update this event'
+      });
+    }
+
+    // Validate request same as create
+    // Validate required fields (only if provided, but for edit form usually all valid fields sent)
+    if (end_date && start_date) {
+      const startDate = new Date(start_date);
+      const endDate = new Date(end_date);
+      if (endDate <= startDate) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'End date must be after start date'
+        });
+      }
+    }
+
+    // Process image if provided
+    let imageUrl = currentEvent.image_url;
+    if (image_data_url && image_data_url.startsWith('data:image/')) {
+      // Ideally we upload to storage, but here we assume base64 or similar handling as in create
+      imageUrl = image_data_url;
+    }
+
+    // Start transaction
+    await client.query('BEGIN');
+
+    // For events with ticket types, we don't use the event-level ticket_quantity
+    // Instead, we'll use 0 to indicate that ticket types should be used
+    const useTicketTypes = ticketTypes && ticketTypes.length > 0;
+
+    // Only use the provided ticket_quantity if we're not using ticket types
+    const totalQuantity = useTicketTypes ? 0 : (ticket_quantity ? Number(ticket_quantity) : 0);
+
+    // Calculate minimum price for display purposes only
+    const minPrice = useTicketTypes ?
+      Math.min(...ticketTypes.map(t => Number(t.price) || 0)) :
+      (ticket_price ? Number(ticket_price) : 0);
+
+    const safeTotalQuantity = Number.isInteger(totalQuantity) ? totalQuantity : 0;
+    const safeMinPrice = !isNaN(parseFloat(minPrice)) ? parseFloat(minPrice) : 0;
+
+    // Update event details
+    const updateQuery = `
+      UPDATE events 
+      SET name = COALESCE($1, name),
+          description = COALESCE($2, description),
+          location = COALESCE($3, location),
+          ticket_quantity = $4,
+          ticket_price = $5,
+          start_date = COALESCE($6, start_date),
+          end_date = COALESCE($7, end_date),
+          image_url = COALESCE($8, image_url),
+          updated_at = NOW()
+      WHERE id = $9
+      RETURNING *
+    `;
+
+    const values = [
+      name,
+      description,
+      location,
+      safeTotalQuantity,
+      safeMinPrice,
+      start_date,
+      end_date,
+      imageUrl, // Use the processed image URL/data
+      id
+    ];
+
+    const result = await client.query(updateQuery, values);
+    const updatedEvent = result.rows[0];
+
+    // Handle ticket types
+    if (ticketTypes && ticketTypes.length > 0) {
+      for (const type of ticketTypes) {
+
+        const price = typeof type.price === 'string' ? parseFloat(type.price) : Number(type.price);
+        const quantity = typeof type.quantity === 'string' ?
+          parseInt(type.quantity, 10) :
+          Math.max(1, Math.floor(Number(type.quantity) || 1));
+
+        const salesStartDate = type.salesStartDate ? new Date(type.salesStartDate) : null;
+        const salesEndDate = type.salesEndDate ? new Date(type.salesEndDate) : null;
+
+        if (type.id && !type.id.startsWith('new-')) {
+          // Update existing ticket type
+          // Verify it belongs to this event
+          await client.query(
+            `UPDATE event_ticket_types 
+                     SET name = $1, description = $2, price = $3, quantity = $4, sales_start_date = $5, sales_end_date = $6, updated_at = NOW()
+                     WHERE id = $7 AND event_id = $8`,
+            [type.name, type.description || '', price, quantity, salesStartDate, salesEndDate, type.id, id]
+          );
+        } else {
+          // Insert new ticket type
+          await client.query(
+            `INSERT INTO event_ticket_types (
+                      event_id, name, description, price, quantity, sales_start_date, sales_end_date, created_at, updated_at
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+            [id, type.name, type.description || '', price, quantity, salesStartDate, salesEndDate]
+          );
+        }
+      }
+    }
+
+    await client.query('COMMIT');
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        event: updatedEvent
+      }
+    });
+
+  } catch (error) {
+    await client.query('ROLLBACK');
+    console.error('Update event error:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'An error occurred while updating the event'
+    });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+};
+
 export const getEvent = async (req, res) => {
   try {
     const { id } = req.params;

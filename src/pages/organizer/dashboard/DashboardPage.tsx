@@ -526,8 +526,8 @@ const DashboardPage = () => {
           <button
             onClick={() => { setActiveSection('overview'); setShowMobileMenu(false); }}
             className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'overview'
-                ? 'bg-yellow-50 text-yellow-700'
-                : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
+              ? 'bg-yellow-50 text-yellow-700'
+              : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
               }`}
           >
             <BarChart3 className="w-5 h-5 mr-3 text-yellow-500 flex-shrink-0" />
@@ -537,8 +537,8 @@ const DashboardPage = () => {
           <button
             onClick={() => { setActiveSection('events'); setShowMobileMenu(false); }}
             className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'events'
-                ? 'bg-yellow-50 text-yellow-700'
-                : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
+              ? 'bg-yellow-50 text-yellow-700'
+              : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
               }`}
           >
             <Calendar className="w-5 h-5 mr-3 text-blue-500 flex-shrink-0" />
@@ -548,8 +548,8 @@ const DashboardPage = () => {
           <button
             onClick={() => { setActiveSection('tickets'); setShowMobileMenu(false); }}
             className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'tickets'
-                ? 'bg-yellow-50 text-yellow-700'
-                : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
+              ? 'bg-yellow-50 text-yellow-700'
+              : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
               }`}
           >
             <Ticket className="w-5 h-5 mr-3 text-green-500 flex-shrink-0" />
@@ -559,8 +559,8 @@ const DashboardPage = () => {
           <button
             onClick={() => { setActiveSection('settings'); setShowMobileMenu(false); }}
             className={`flex w-full items-center px-4 py-3.5 text-sm font-medium rounded-xl transition-colors ${activeSection === 'settings'
-                ? 'bg-yellow-50 text-yellow-700'
-                : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
+              ? 'bg-yellow-50 text-yellow-700'
+              : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
               }`}
           >
             <Settings className="w-5 h-5 mr-3 text-purple-500 flex-shrink-0" />
@@ -636,8 +636,8 @@ const DashboardPage = () => {
             variant={activeSection === 'overview' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('overview')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'overview'
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
+              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
             <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
@@ -647,8 +647,8 @@ const DashboardPage = () => {
             variant={activeSection === 'events' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('events')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'events'
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
+              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
             <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
@@ -658,8 +658,8 @@ const DashboardPage = () => {
             variant={activeSection === 'tickets' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('tickets')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'tickets'
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
+              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
             <Ticket className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
@@ -669,8 +669,8 @@ const DashboardPage = () => {
             variant={activeSection === 'settings' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('settings')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'settings'
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
+              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
             <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
@@ -682,7 +682,7 @@ const DashboardPage = () => {
         {activeSection === 'overview' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Dashboard Overview</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Dashboard Overview</h2>
               <p className="text-gray-600 text-lg font-medium">Your event management at a glance</p>
             </div>
 
@@ -690,7 +690,7 @@ const DashboardPage = () => {
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h3 className="text-3xl font-black text-black">Quick Actions</h3>
+                  <h3 className="text-xl md:text-3xl font-black text-black">Quick Actions</h3>
                   <p className="text-gray-600 font-medium mt-2">Common tasks for your events</p>
                 </div>
                 <Button
@@ -746,7 +746,7 @@ const DashboardPage = () => {
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h3 className="text-3xl font-black text-black">Recent Events</h3>
+                  <h3 className="text-xl md:text-3xl font-black text-black">Recent Events</h3>
                   <p className="text-gray-600 font-medium mt-2">Your most recent event activities</p>
                 </div>
               </div>
@@ -813,7 +813,7 @@ const DashboardPage = () => {
         {activeSection === 'events' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Event Management</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Event Management</h2>
               <p className="text-gray-600 text-lg font-medium">Create and manage your events</p>
             </div>
 
@@ -821,7 +821,7 @@ const DashboardPage = () => {
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h3 className="text-3xl font-black text-black">All Events</h3>
+                  <h3 className="text-xl md:text-3xl font-black text-black">All Events</h3>
                   <p className="text-gray-600 font-medium mt-2">Manage all your events in one place</p>
                 </div>
                 <div className="flex space-x-3">
@@ -1064,7 +1064,7 @@ const DashboardPage = () => {
         {activeSection === 'tickets' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Ticket Management</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Ticket Management</h2>
               <p className="text-gray-600 text-lg font-medium">Track and manage your ticket sales</p>
             </div>
 
@@ -1072,7 +1072,7 @@ const DashboardPage = () => {
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h3 className="text-3xl font-black text-black">All Tickets</h3>
+                  <h3 className="text-xl md:text-3xl font-black text-black">All Tickets</h3>
                   <p className="text-gray-600 font-medium mt-2">Manage tickets across all your events</p>
                 </div>
                 <Button
@@ -1113,77 +1113,79 @@ const DashboardPage = () => {
                 </div>
               ) : tickets.length > 0 ? (
                 <div className="bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-200">
-                        <TableHead className="font-bold text-black">Ticket #</TableHead>
-                        <TableHead className="font-bold text-black">Event</TableHead>
-                        <TableHead className="font-bold text-black">Type</TableHead>
-                        <TableHead className="font-bold text-black">Customer</TableHead>
-                        <TableHead className="font-bold text-black">Price</TableHead>
-                        <TableHead className="font-bold text-black">Status</TableHead>
-                        <TableHead className="font-bold text-black">Scanned</TableHead>
-                        <TableHead className="font-bold text-black">Purchased</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {tickets.map((ticket) => (
-                        <TableRow key={ticket.id} className="border-gray-200 hover:bg-gray-50/50">
-                          <TableCell className="font-medium">
-                            {ticket.ticket_number || `TKT-${ticket.id?.toString().padStart(6, '0')}`}
-                          </TableCell>
-                          <TableCell>
-                            <span className="font-medium">Event #{ticket.id}</span>
-                          </TableCell>
-                          <TableCell>
-                            {ticket.ticket_type_name || 'General'}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col">
-                              <span className="font-medium">{ticket.customer_name || 'Guest'}</span>
-                              {ticket.customer_email && (
-                                <span className="text-xs text-gray-500">
-                                  {ticket.customer_email}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="font-medium">
-                            KSh {ticket.price?.toLocaleString('en-KE', { minimumFractionDigits: 2 }) || '0.00'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              className={`px-3 py-1 text-xs font-bold rounded-xl ${ticket.status === 'paid' ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' :
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-200">
+                          <TableHead className="font-bold text-black min-w-[100px]">Ticket #</TableHead>
+                          <TableHead className="font-bold text-black min-w-[120px]">Event</TableHead>
+                          <TableHead className="font-bold text-black min-w-[120px]">Type</TableHead>
+                          <TableHead className="font-bold text-black min-w-[150px]">Customer</TableHead>
+                          <TableHead className="font-bold text-black min-w-[100px]">Price</TableHead>
+                          <TableHead className="font-bold text-black min-w-[100px]">Status</TableHead>
+                          <TableHead className="font-bold text-black min-w-[120px]">Scanned</TableHead>
+                          <TableHead className="font-bold text-black min-w-[120px]">Purchased</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {tickets.map((ticket) => (
+                          <TableRow key={ticket.id} className="border-gray-200 hover:bg-gray-50/50">
+                            <TableCell className="font-medium whitespace-nowrap">
+                              {ticket.ticket_number || `TKT-${ticket.id?.toString().padStart(6, '0')}`}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <span className="font-medium">Event #{ticket.id}</span>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {ticket.ticket_type_name || 'General'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col">
+                                <span className="font-medium whitespace-nowrap">{ticket.customer_name || 'Guest'}</span>
+                                {ticket.customer_email && (
+                                  <span className="text-xs text-gray-500 truncate max-w-[150px]">
+                                    {ticket.customer_email}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium whitespace-nowrap">
+                              KSh {ticket.price?.toLocaleString('en-KE', { minimumFractionDigits: 2 }) || '0.00'}
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <Badge
+                                className={`px-3 py-1 text-xs font-bold rounded-xl ${ticket.status === 'paid' ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' :
                                   ticket.status === 'pending' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
                                     ticket.status === 'cancelled' ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800' :
                                       'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
-                                }`}
-                            >
-                              {ticket.status ? ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1) : 'Unknown'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center">
-                              <div
-                                className={`h-3 w-3 rounded-full mr-3 ${ticket.scanned ? 'bg-green-500' : 'bg-gray-300'
                                   }`}
-                              />
-                              <span className={`font-medium ${ticket.scanned ? 'text-green-600' : 'text-gray-600'}`}>
-                                {ticket.scanned ? 'Scanned' : 'Not Scanned'}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-gray-600">
-                            {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            }) : 'N/A'}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                              >
+                                {ticket.status ? ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1) : 'Unknown'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              <div className="flex items-center">
+                                <div
+                                  className={`h-3 w-3 rounded-full mr-3 ${ticket.scanned ? 'bg-green-500' : 'bg-gray-300'
+                                    }`}
+                                />
+                                <span className={`font-medium ${ticket.scanned ? 'text-green-600' : 'text-gray-600'}`}>
+                                  {ticket.scanned ? 'Scanned' : 'Not Scanned'}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-gray-600 whitespace-nowrap">
+                              {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                              }) : 'N/A'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-20">
@@ -1268,7 +1270,7 @@ const DashboardPage = () => {
         {activeSection === 'settings' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-4xl font-black text-black mb-4">Account Settings</h2>
+              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Account Settings</h2>
               <p className="text-gray-600 text-lg font-medium">Manage your account information and preferences</p>
             </div>
 

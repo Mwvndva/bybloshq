@@ -95,12 +95,12 @@ export default function SettingsPage() {
 
         {/* Header */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-black mb-4">Account Settings</h1>
+          <h1 className="text-2xl md:text-4xl font-black text-black mb-4">Account Settings</h1>
           <p className="text-gray-600 text-lg font-medium">Manage your account information and preferences</p>
         </div>
 
         {/* Settings Sections */}
-    <div className="space-y-8">
+        <div className="space-y-8">
           {/* Profile Information */}
           <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
             <div className="flex items-center justify-between mb-6">
@@ -164,7 +164,7 @@ export default function SettingsPage() {
                       <p className="text-sm text-red-600">{profileForm.formState.errors.phone.message}</p>
                     )}
                   </div>
-      </div>
+                </div>
 
                 <div className="flex justify-end space-x-3">
                   <Button
@@ -195,63 +195,63 @@ export default function SettingsPage() {
                 </div>
               </form>
             ) : (
-      <div className="space-y-6">
+              <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-3">
                     <Label className="text-sm font-bold text-gray-700">Full Name</Label>
                     <div className="flex items-center space-x-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                       <User className="h-5 w-5 text-gray-500" />
                       <span className="font-medium text-black">
-              {profileForm.getValues('full_name') || 'Not provided'}
+                        {profileForm.getValues('full_name') || 'Not provided'}
                       </span>
-            </div>
-          </div>
+                    </div>
+                  </div>
 
                   <div className="space-y-3">
                     <Label className="text-sm font-bold text-gray-700">Email Address</Label>
                     <div className="flex items-center space-x-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                       <Mail className="h-5 w-5 text-gray-500" />
                       <span className="font-medium text-black">
-              {profileForm.getValues('email') || 'Not provided'}
+                        {profileForm.getValues('email') || 'Not provided'}
                       </span>
-            </div>
-          </div>
+                    </div>
+                  </div>
 
                   <div className="space-y-3">
                     <Label className="text-sm font-bold text-gray-700">Phone Number</Label>
                     <div className="flex items-center space-x-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
                       <Phone className="h-5 w-5 text-gray-500" />
                       <span className="font-medium text-black">
-              {profileForm.getValues('phone') || 'Not provided'}
+                        {profileForm.getValues('phone') || 'Not provided'}
                       </span>
-            </div>
-          </div>
-        </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
-      </div>
-      
+          </div>
+
 
           {/* Danger Zone */}
           <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
             <h3 className="text-2xl font-black text-red-600 mb-6">Danger Zone</h3>
             <div className="p-6 border-2 border-red-200 rounded-2xl bg-red-50/50">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
+                <div>
                   <h4 className="font-bold text-red-600 text-lg">Delete Account</h4>
                   <p className="text-sm text-gray-600 mt-1">
                     Permanently delete your account and all associated data. This action cannot be undone.
-              </p>
-            </div>
-            <Button 
+                  </p>
+                </div>
+                <Button
                   variant="destructive"
                   size="sm"
                   onClick={handleDeleteAccount}
                   className="bg-red-600 hover:bg-red-700 rounded-xl px-6 py-3"
                 >
                   <Trash2 className="h-4 w-4 mr-2" />
-              Delete Account
-            </Button>
+                  Delete Account
+                </Button>
               </div>
             </div>
           </div>

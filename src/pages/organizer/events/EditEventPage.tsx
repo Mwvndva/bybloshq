@@ -55,6 +55,9 @@ const fetchEvent = async (id: string): Promise<EventData> => {
     // Transform the API response to match our form's expected format
     return {
       ...event,
+      title: event.name, // Map backend 'name' to frontend 'title'
+      venue: event.venue || event.location, // Map venue or fallback to location
+      location: event.location,
       startDate: new Date(event.start_date),
       endDate: new Date(event.end_date),
       // Map ticket types if they exist
@@ -127,45 +130,41 @@ export default function EditEventPage() {
         throw new Error('Authentication required');
       }
 
-      const formDataToSend = new FormData();
-
-      // Add basic fields
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('description', formData.description);
-      formDataToSend.append('start_date', formData.startDate.toISOString());
-      formDataToSend.append('end_date', formData.endDate.toISOString());
-      formDataToSend.append('location', formData.location);
-      formDataToSend.append('venue', formData.venue);
-      formDataToSend.append('is_online', String(formData.isOnline));
-
-      if (formData.onlineUrl) {
-        formDataToSend.append('online_url', formData.onlineUrl);
-      }
-
-      // Add image if it's a new file
+      // Convert image to base64 if present
+      let imageDataUrl = formData.image_url; // Default to existing URL
       if (formData.image instanceof File) {
-        formDataToSend.append('image', formData.image);
+        imageDataUrl = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(formData.image as File);
+        });
       }
 
-      // Add ticket types
-      formDataToSend.append('ticket_types', JSON.stringify(
-        formData.ticketTypes.map(ticket => ({
-          id: ticket.id,
-          name: ticket.name,
-          price: ticket.price,
-          quantity: ticket.quantity,
-          description: ticket.description || '',
-          sales_start_date: ticket.salesStartDate?.toISOString(),
-          sales_end_date: ticket.salesEndDate?.toISOString(),
-        }))
-      ));
+      // Ensure all ticket type values are properly converted
+      const processedTicketTypes = formData.ticketTypes.map(ticket => ({
+        id: ticket.id,
+        name: ticket.name,
+        price: Number(ticket.price),
+        quantity: Number(ticket.quantity),
+        description: ticket.description || '',
+        salesStartDate: ticket.salesStartDate?.toISOString(),
+        salesEndDate: ticket.salesEndDate?.toISOString(),
+      }));
 
-      await api.put(`/organizers/events/${id}`, formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      // Prepare event data as JSON
+      const eventData = {
+        name: formData.title,
+        description: formData.description,
+        location: formData.location,
+        start_date: formData.startDate.toISOString(),
+        end_date: formData.endDate.toISOString(),
+        ticketTypes: processedTicketTypes,
+        image_data_url: imageDataUrl !== formData.image_url ? imageDataUrl : undefined, // Only send if changed
+        is_online: formData.isOnline,
+        online_url: formData.onlineUrl
+      };
+
+      await api.put(`/organizers/events/${id}`, eventData);
 
       toast({
         title: 'Event updated',
@@ -173,11 +172,11 @@ export default function EditEventPage() {
       });
 
       navigate(`/organizer/events/${id}`);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating event:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update event. Please try again.',
+        description: error.response?.data?.message || 'Failed to update event. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -194,26 +193,26 @@ export default function EditEventPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(-1)}
-          className="mr-2"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Edit Event</h1>
-          <p className="text-muted-foreground">
-            Update the details of your event
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 sm:p-8">
+      <div className="max-w-5xl mx-auto space-y-8">
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate(`/organizer/events/${id}`)} // Navigate back to specific event details
+            className="mr-4 text-gray-500 hover:text-black hover:bg-white/50"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            <span className="text-base font-medium">Back to Event</span>
+          </Button>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900">Edit Event</h1>
+            <p className="text-lg text-gray-500 font-medium">
+              Update the details of your event
+            </p>
+          </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-lg shadow-sm border p-6">
         <EventForm
           defaultValues={{
             ...event,
@@ -227,6 +226,7 @@ export default function EditEventPage() {
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
           submitLabel="Update Event"
+          readOnlyOverview={true}
         />
       </div>
     </div>
