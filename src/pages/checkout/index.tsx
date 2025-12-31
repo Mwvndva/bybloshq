@@ -26,13 +26,13 @@ export default function CheckoutPage() {
     icon: <Loader2 className="h-12 w-12 animate-spin text-blue-500" />,
     isError: false
   });
-  
+
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const pollingInterval = useRef<NodeJS.Timeout>();
 
   const updateStatusUI = (status: string, message?: string | null) => {
     const normalizedStatus = status.toLowerCase();
-    
+
     switch (normalizedStatus) {
       case 'success':
       case 'completed':
@@ -48,7 +48,7 @@ export default function CheckoutPage() {
         if (message) newSearchParams.set('message', message);
         window.history.replaceState({}, '', `${window.location.pathname}?${newSearchParams.toString()}`);
         break;
-        
+
       case 'pending':
       case 'processing':
         setStatusData({
@@ -58,7 +58,7 @@ export default function CheckoutPage() {
           isError: false
         });
         break;
-        
+
       case 'error':
       case 'failed':
       case 'declined':
@@ -69,7 +69,7 @@ export default function CheckoutPage() {
           isError: true
         });
         break;
-        
+
       default:
         setStatusData({
           title: 'Payment Status',
@@ -82,12 +82,12 @@ export default function CheckoutPage() {
 
   const checkPaymentStatus = async (reference: string) => {
     if (isCheckingStatus) return;
-    
+
     try {
       setIsCheckingStatus(true);
       const response = await axios.get<PaymentStatusResponse>(`/api/orders/reference/${reference}`);
       const { status, message } = response.data;
-      
+
       // Consider 'completed' as a success status
       if (status === 'success' || status === 'completed' || status === 'error') {
         // Stop polling when we get a final status
@@ -98,7 +98,7 @@ export default function CheckoutPage() {
         updateStatusUI(status, message);
       }
       // If still pending, the UI will continue showing the pending state
-      
+
       return response.data;
     } catch (error) {
       console.error('Error checking payment status:', error);
@@ -111,21 +111,21 @@ export default function CheckoutPage() {
       setIsCheckingStatus(false);
     }
   };
-  
+
   const startStatusPolling = (reference: string) => {
     // Clear any existing interval
     if (pollingInterval.current) {
       clearInterval(pollingInterval.current);
     }
-    
+
     // Initial check
     checkPaymentStatus(reference);
-    
+
     // Set up polling every 10 seconds
     pollingInterval.current = setInterval(() => {
       checkPaymentStatus(reference);
     }, 10000);
-    
+
     // Clean up interval on component unmount
     return () => {
       if (pollingInterval.current) {
@@ -133,7 +133,7 @@ export default function CheckoutPage() {
       }
     };
   };
-  
+
   useEffect(() => {
     const status = searchParams.get('status');
     const reference = searchParams.get('reference');
@@ -142,7 +142,7 @@ export default function CheckoutPage() {
     if (status) {
       setIsLoading(false);
       updateStatusUI(status, message);
-      
+
       // If status is pending, start polling for updates
       if (status === 'pending' && reference) {
         startStatusPolling(reference);
@@ -168,7 +168,7 @@ export default function CheckoutPage() {
           <div className="flex justify-center">
             {statusData.icon}
           </div>
-          <CardTitle className="text-2xl font-bold">
+          <CardTitle className="text-xl font-bold">
             {statusData.title}
           </CardTitle>
           <CardDescription className="text-muted-foreground">
@@ -188,11 +188,11 @@ export default function CheckoutPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
-          <Button 
+          <Button
             onClick={() => {
               // Navigate to buyer dashboard with orders tab active
-              navigate('/buyer/dashboard', { 
-                state: { activeSection: 'orders' } 
+              navigate('/buyer/dashboard', {
+                state: { activeSection: 'orders' }
               });
             }}
             className="w-full"
@@ -202,9 +202,9 @@ export default function CheckoutPage() {
             View My Orders
           </Button>
           {searchParams.get('status') === 'error' && (
-            <Button 
-              variant="outline" 
-              className="w-full" 
+            <Button
+              variant="outline"
+              className="w-full"
               onClick={() => navigate(-1)}
             >
               Try Again

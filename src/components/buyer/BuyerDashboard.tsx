@@ -8,11 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  ArrowLeft, 
-  Heart, 
-  User, 
-  Settings, 
+import {
+  ArrowLeft,
+  Heart,
+  User,
+  Settings,
   LogOut,
   TrendingUp,
   Package,
@@ -48,12 +48,12 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
     <CardContent className="relative p-3 sm:p-4 md:p-5">
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] sm:text-xs md:text-sm font-semibold text-gray-600 uppercase tracking-wide truncate">{title}</p>
-          <p className="text-xl sm:text-2xl md:text-3xl font-black text-black leading-tight">{value}</p>
-          <p className="text-[10px] sm:text-xs md:text-sm text-gray-500 font-medium truncate">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs font-semibold text-gray-600 uppercase tracking-wide truncate">{title}</p>
+          <p className="text-lg sm:text-xl md:text-2xl font-black text-black leading-tight">{value}</p>
+          <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">{subtitle}</p>
         </div>
-        <div className="shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-500 w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 grid place-items-center shadow">
-          <Icon className="text-white h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+        <div className="shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-500 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 grid place-items-center shadow">
+          <Icon className="text-white h-4 w-4 sm:h-5 sm:w-5" />
         </div>
       </div>
     </CardContent>
@@ -101,10 +101,10 @@ function BuyerDashboard() {
       setIsSavingProfile(false);
     }
   };
-  
+
   // Removed auto-filter by user location - now shows all products by default
   // Users can manually select their city/location if they want to filter
-  
+
   // Log when filter values change
   useEffect(() => {
     console.log('Filters updated:', { filterCity, filterArea });
@@ -138,8 +138,8 @@ function BuyerDashboard() {
           <div className="flex items-center justify-between py-3 sm:py-4 lg:h-20">
             {/* Mobile: Stack vertically, Desktop: Horizontal */}
             <div className="flex flex-col sm:flex-row sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 lg:space-x-6">
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={handleBackToHome}
                 className="text-gray-600 hover:text-black hover:bg-gray-100 rounded-xl sm:rounded-2xl px-2 sm:px-4 py-1.5 sm:py-2 font-semibold transition-all duration-200 text-sm sm:text-base self-start"
               >
@@ -152,8 +152,8 @@ function BuyerDashboard() {
                   <User className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-lg sm:text-xl lg:text-2xl font-black text-black truncate">Welcome back!</h1>
-                  <p className="text-sm sm:text-base text-gray-600 font-medium truncate">{user?.fullName || 'Buyer'}</p>
+                  <h1 className="text-lg sm:text-xl font-black text-black truncate">Welcome back!</h1>
+                  <p className="text-xs sm:text-sm text-gray-600 font-medium truncate">{user?.fullName || 'Buyer'}</p>
                 </div>
                 {(!user?.city || !user?.location) && (
                   <span className="ml-2 inline-flex items-center text-xs text-red-600 font-medium">
@@ -162,7 +162,7 @@ function BuyerDashboard() {
                 )}
               </div>
             </div>
-            
+
             {/* Header logout button removed as requested */}
           </div>
         </div>
@@ -187,13 +187,12 @@ function BuyerDashboard() {
             <button
               key={id}
               onClick={() => setActiveSection(id as any)}
-              className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg transition-all duration-300 ${
-                activeSection === id
+              className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 lg:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm lg:text-base transition-all duration-300 ${activeSection === id
                   ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                   : 'text-gray-600 hover:text-black hover:bg-white/80'
-              }`}
+                }`}
             >
-              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>{label}</span>
               {id === 'wishlist' && wishlist.length > 0 && (
                 <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
@@ -210,12 +209,12 @@ function BuyerDashboard() {
         {/* Content Sections */}
         {activeSection === 'shop' && (
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
-            <div className="mb-6 sm:mb-8">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-black mb-2 sm:mb-4">Discover Amazing Products</h2>
-              <p className="text-gray-600 text-sm sm:text-base lg:text-lg font-medium mb-6 sm:mb-8">
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-black mb-1.5 sm:mb-2">Discover Amazing Products</h2>
+              <p className="text-gray-600 text-xs sm:text-sm lg:text-base font-medium mb-4 sm:mb-6">
                 Browse through our curated collection of unique items
               </p>
-              
+
               <div className="mb-6 sm:mb-8">
                 {/* Filters */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
@@ -284,12 +283,12 @@ function BuyerDashboard() {
                     />
                   </div>
                 </div>
-                
-                <AestheticCategories 
-                  selectedAesthetic={selectedAesthetic} 
-                  onAestheticChange={handleAestheticChange} 
+
+                <AestheticCategories
+                  selectedAesthetic={selectedAesthetic}
+                  onAestheticChange={handleAestheticChange}
                 />
-                
+
                 {/* Search Bar */}
                 <div className="relative mt-6">
                   <div className="relative">
@@ -326,15 +325,15 @@ function BuyerDashboard() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="mb-4 sm:mb-6">
                 <p className="text-sm sm:text-base lg:text-lg font-bold text-black">
-                  {selectedAesthetic 
-                    ? `Showing ${selectedAesthetic} products` 
+                  {selectedAesthetic
+                    ? `Showing ${selectedAesthetic} products`
                     : 'Showing all products'
                   }
                   {selectedAesthetic && (
-                    <button 
+                    <button
                       onClick={() => setSelectedAesthetic('')}
                       className="ml-2 sm:ml-4 text-yellow-600 hover:text-yellow-700 underline font-medium text-sm sm:text-base"
                     >
@@ -343,7 +342,7 @@ function BuyerDashboard() {
                   )}
                 </p>
               </div>
-              
+
               {selectedAesthetic && (
                 <div className="mb-4 sm:mb-6">
                   <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm">
@@ -352,9 +351,9 @@ function BuyerDashboard() {
                 </div>
               )}
             </div>
-            
-            <ProductGrid 
-              selectedAesthetic={selectedAesthetic} 
+
+            <ProductGrid
+              selectedAesthetic={selectedAesthetic}
               searchQuery={searchQuery}
               locationCity={filterCity}
               locationArea={filterArea}
@@ -366,8 +365,8 @@ function BuyerDashboard() {
 
         {activeSection === 'wishlist' && (
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 space-y-2 sm:space-y-0">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-black">Your Wishlist</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 space-y-2 sm:space-y-0">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-black">Your Wishlist</h2>
               <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg self-start sm:self-auto">
                 {wishlist.length} {wishlist.length === 1 ? 'item' : 'items'}
               </Badge>
@@ -378,8 +377,8 @@ function BuyerDashboard() {
 
         {activeSection === 'orders' && (
           <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 shadow-lg border border-gray-200/50">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 space-y-2 sm:space-y-0">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-black">Your Orders</h2>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 space-y-2 sm:space-y-0">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-black">Your Orders</h2>
             </div>
             <Suspense fallback={
               <div className="space-y-4">
@@ -393,7 +392,7 @@ function BuyerDashboard() {
           </div>
         )}
 
-{activeSection === 'profile' && (
+        {activeSection === 'profile' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
             <div className="space-y-6 sm:space-y-8">
               {/* Profile Card */}
@@ -520,7 +519,7 @@ function BuyerDashboard() {
                 </CardContent>
               </Card>
             </div>
-            
+
             <div className="space-y-6 sm:space-y-8">
               {/* Actions Card */}
               <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg">
@@ -536,7 +535,7 @@ function BuyerDashboard() {
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Button 
+                  <Button
                     onClick={handleLogout}
                     className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl sm:rounded-2xl py-3 sm:py-4 font-bold text-sm sm:text-base lg:text-lg shadow-lg transition-all duration-200"
                   >
@@ -545,7 +544,7 @@ function BuyerDashboard() {
                   </Button>
                 </CardContent>
               </Card>
-              
+
               {/* Refund Card */}
               <RefundCard refundAmount={refundAmount} />
             </div>

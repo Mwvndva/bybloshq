@@ -147,18 +147,18 @@ const StatCard = ({ title, value, icon: Icon, iconColor, change, changeType, des
   <Card className="overflow-hidden hover:shadow-lg transition-shadow duration-300 border-0 bg-white/80 backdrop-blur-sm h-full">
     <div className="p-4 sm:p-6">
       <div className="flex items-center justify-between mb-3 sm:mb-4">
-        <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl ${iconColor}`}>
-          <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${iconColor.includes('yellow') ? 'text-yellow-600' : iconColor.includes('blue') ? 'text-blue-600' : iconColor.includes('green') ? 'text-green-600' : iconColor.includes('red') ? 'text-red-600' : 'text-gray-600'}`} />
+        <div className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl ${iconColor}`}>
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor.includes('yellow') ? 'text-yellow-600' : iconColor.includes('blue') ? 'text-blue-600' : iconColor.includes('green') ? 'text-green-600' : iconColor.includes('red') ? 'text-red-600' : 'text-gray-600'}`} />
         </div>
         {change && (
-          <span className={`inline-flex items-center px-1.5 sm:px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-medium ${changeType === 'increase' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+          <span className={`inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-medium ${changeType === 'increase' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
             }`}>
             {changeType === 'increase' ? '↑' : '↓'} {change}
           </span>
         )}
       </div>
-      <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-1">{value}</h3>
-      <p className="text-xs sm:text-sm text-gray-500">{title} <span className="text-gray-400">{description && `(${description})`}</span></p>
+      <h3 className="text-lg sm:text-xl font-black text-gray-900 mb-0.5">{value}</h3>
+      <p className="text-[10px] sm:text-xs text-gray-500">{title} <span className="text-gray-400">{description && `(${description})`}</span></p>
     </div>
   </Card>
 );
@@ -583,8 +583,8 @@ const DashboardPage = () => {
               Back to Homepage
             </Button>
           </div>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-gray-900 mb-2 md:mb-3">Event Management</h1>
-          <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 mb-1.5 md:mb-2">Event Management</h1>
+          <p className="text-gray-600 text-xs sm:text-sm md:text-base font-medium max-w-2xl mx-auto">
             {activeSection === 'overview' && 'Manage your events and track your success'}
             {activeSection === 'events' && 'Create and manage your upcoming events'}
             {activeSection === 'tickets' && 'View and manage ticket sales and attendees'}
@@ -635,45 +635,45 @@ const DashboardPage = () => {
           <Button
             variant={activeSection === 'overview' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('overview')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'overview'
+            className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-xl transition-all duration-300 font-semibold text-xs sm:text-sm flex-1 sm:flex-none min-w-0 ${activeSection === 'overview'
               ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
               : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
-            <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
+            <BarChart3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Overview</span>
           </Button>
           <Button
             variant={activeSection === 'events' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('events')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'events'
+            className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-xl transition-all duration-300 font-semibold text-xs sm:text-sm flex-1 sm:flex-none min-w-0 ${activeSection === 'events'
               ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
               : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
-            <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Events</span>
           </Button>
           <Button
             variant={activeSection === 'tickets' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('tickets')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'tickets'
+            className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-xl transition-all duration-300 font-semibold text-xs sm:text-sm flex-1 sm:flex-none min-w-0 ${activeSection === 'tickets'
               ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
               : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
-            <Ticket className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
+            <Ticket className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Tickets</span>
           </Button>
           <Button
             variant={activeSection === 'settings' ? 'default' : 'ghost'}
             onClick={() => setActiveSection('settings')}
-            className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeSection === 'settings'
+            className={`px-3 sm:px-6 py-1.5 sm:py-2 rounded-xl transition-all duration-300 font-semibold text-xs sm:text-sm flex-1 sm:flex-none min-w-0 ${activeSection === 'settings'
               ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
               : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
               }`}
           >
-            <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Settings</span>
           </Button>
         </div>
@@ -682,16 +682,16 @@ const DashboardPage = () => {
         {activeSection === 'overview' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Dashboard Overview</h2>
-              <p className="text-gray-600 text-lg font-medium">Your event management at a glance</p>
+              <h2 className="text-xl md:text-3xl font-black text-black mb-3">Dashboard Overview</h2>
+              <p className="text-gray-600 text-sm md:text-base font-medium">Your event management at a glance</p>
             </div>
 
             {/* Quick Actions */}
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h3 className="text-xl md:text-3xl font-black text-black">Quick Actions</h3>
-                  <p className="text-gray-600 font-medium mt-2">Common tasks for your events</p>
+                  <h3 className="text-lg md:text-2xl font-black text-black">Quick Actions</h3>
+                  <p className="text-gray-600 font-medium text-xs sm:text-sm mt-1">Common tasks for your events</p>
                 </div>
                 <Button
                   size="sm"
@@ -746,8 +746,8 @@ const DashboardPage = () => {
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-8">
                 <div>
-                  <h3 className="text-xl md:text-3xl font-black text-black">Recent Events</h3>
-                  <p className="text-gray-600 font-medium mt-2">Your most recent event activities</p>
+                  <h3 className="text-lg md:text-2xl font-black text-black">Recent Events</h3>
+                  <p className="text-gray-600 font-medium text-xs sm:text-sm mt-1">Your most recent event activities</p>
                 </div>
               </div>
 

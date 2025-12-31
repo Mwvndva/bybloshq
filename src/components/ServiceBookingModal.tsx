@@ -135,13 +135,13 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-[425px] rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md">
-                <DialogHeader className="space-y-2">
-                    <DialogTitle className="flex items-center justify-center gap-2 text-2xl font-black text-gray-900">
+                <DialogHeader className="space-y-1">
+                    <DialogTitle className="flex items-center justify-center gap-2 text-xl font-black text-gray-900">
                         Book Service
                         {isHybrid && <Badge variant="secondary" className="bg-purple-100 text-purple-800 hover:bg-purple-100 rounded-lg">Hybrid</Badge>}
                     </DialogTitle>
-                    <DialogDescription className="text-center text-gray-600 font-medium">
-                        Select your preferred date, time, and location for <br /> <span className="font-bold text-gray-900">{product.name}</span>
+                    <DialogDescription className="text-center text-gray-600 font-medium text-xs">
+                        Select your preferred date, time, and location for <span className="font-bold text-gray-900">{product.name}</span>
                     </DialogDescription>
                 </DialogHeader>
 
@@ -172,7 +172,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                             Select Time Slot
                         </Label>
                         <Select value={time} onValueChange={setTime}>
-                            <SelectTrigger className="items-start [&_[data-description]]:hidden rounded-xl border-gray-200 h-11 focus:ring-purple-400 bg-gray-50/50">
+                            <SelectTrigger className="items-start [&_[data-description]]:hidden rounded-xl border-gray-200 h-10 focus:ring-purple-400 bg-gray-50/50">
                                 <SelectValue placeholder="Choose a time slot" />
                             </SelectTrigger>
                             <SelectContent>
@@ -237,7 +237,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                 <input
                                     type="text"
                                     placeholder="Enter your address/location"
-                                    className="flex h-11 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:cursor-not-allowed disabled:opacity-50"
                                     value={customLocation}
                                     onChange={(e) => setCustomLocation(e.target.value)}
                                 />
@@ -253,7 +253,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                     <Button
                         onClick={handleConfirm}
                         disabled={!isValid}
-                        className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-lg shadow-purple-200"
+                        className="w-full h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md shadow-purple-200"
                     >
                         Confirm Booking
                     </Button>
