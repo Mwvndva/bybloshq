@@ -47,12 +47,12 @@ export const register = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000, // 24 hours
       path: '/'
     };
-    
+
     // For localhost, don't set domain to allow it to work
     if (process.env.NODE_ENV === 'development') {
       delete cookieOptions.domain;
     }
-    
+
     res.cookie('token', token, cookieOptions);
 
     res.status(201).json({
@@ -78,20 +78,14 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Check if organizer exists
+    // Check if organizer exists and password is correct (Generic error for security)
     const organizer = await Organizer.findByEmail(email);
-    if (!organizer) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid credentials'
-      });
-    }
+    const isPasswordValid = organizer ? await Organizer.comparePassword(password, organizer.password) : false;
 
-    // Check if password is correct
-    const isPasswordValid = await Organizer.comparePassword(password, organizer.password);
-    if (!isPasswordValid) {
+    if (!organizer || !isPasswordValid) {
       return res.status(401).json({
         status: 'error',
-        message: 'Invalid credentials'
+        message: 'Invalid email or password'
       });
     }
 
@@ -100,7 +94,7 @@ export const login = async (req, res) => {
 
     // Generate JWT token with organizer role
     const token = generateToken(organizer.id, 'organizer');
-    
+
     // Set token as HTTP-only cookie with proper cross-origin settings
     const cookieOptions = {
       httpOnly: true,
@@ -109,12 +103,12 @@ export const login = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/'
     };
-    
+
     // For localhost, don't set domain to allow it to work
     if (process.env.NODE_ENV === 'development') {
       delete cookieOptions.domain;
     }
-    
+
     res.cookie('token', token, cookieOptions);
 
     // Also send token in response body for clients that can't use cookies
@@ -126,7 +120,7 @@ export const login = async (req, res) => {
         // Token is handled via HTTP-only cookie
       }
     });
-    
+
     console.log('Login successful for organizer:', '[REDACTED]');
   } catch (error) {
     console.error('Login error:', error);
@@ -142,23 +136,23 @@ export const getCurrentUser = async (req, res) => {
   try {
     // Get user ID from req.user which is set by the auth middleware
     const userId = req.user?.id;
-    
+
     if (!userId) {
       return res.status(401).json({
         status: 'error',
         message: 'User not authenticated'
       });
     }
-    
+
     const organizer = await Organizer.findById(userId);
-    
+
     if (!organizer) {
       return res.status(404).json({
         status: 'error',
         message: 'Organizer not found'
       });
     }
-    
+
     res.status(200).json({
       status: 'success',
       data: {
@@ -238,7 +232,7 @@ export const updatePassword = async (req, res) => {
 
     // Find organizer
     const organizer = await Organizer.findById(organizerId).select('+password');
-    
+
     if (!organizer) {
       return res.status(404).json({
         status: 'error',
@@ -316,7 +310,7 @@ export const protect = async (req, res, next) => {
         message: 'Your token has expired. Please log in again!'
       });
     }
-    
+
     console.error('Authentication error:', error);
     res.status(500).json({
       status: 'error',

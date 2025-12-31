@@ -81,7 +81,7 @@ export const login = async (req, res, next) => {
     const buyer = await Buyer.findByEmail(email);
 
     if (!buyer || !(await Buyer.validatePassword(password, buyer.password))) {
-      return next(new AppError('Incorrect email or password', 401));
+      return next(new AppError('Invalid email or password', 401));
     }
 
     // 3) Update last login
