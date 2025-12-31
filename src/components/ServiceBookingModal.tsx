@@ -134,25 +134,25 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
+            <DialogContent className="sm:max-w-[425px] rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md">
+                <DialogHeader className="space-y-2">
+                    <DialogTitle className="flex items-center justify-center gap-2 text-2xl font-black text-gray-900">
                         Book Service
-                        {isHybrid && <Badge variant="secondary" className="bg-purple-100 text-purple-800 hover:bg-purple-100">Hybrid Service</Badge>}
+                        {isHybrid && <Badge variant="secondary" className="bg-purple-100 text-purple-800 hover:bg-purple-100 rounded-lg">Hybrid</Badge>}
                     </DialogTitle>
-                    <DialogDescription>
-                        Select your preferred date, time, and location for {product.name}.
+                    <DialogDescription className="text-center text-gray-600 font-medium">
+                        Select your preferred date, time, and location for <br /> <span className="font-bold text-gray-900">{product.name}</span>
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                     {/* Date Selection */}
                     <div className="flex flex-col gap-2">
-                        <Label className="flex items-center gap-2">
-                            <CalendarIcon className="h-4 w-4" />
+                        <Label className="flex items-center gap-2 font-semibold text-gray-700">
+                            <CalendarIcon className="h-4 w-4 text-purple-600" />
                             Select Date
                         </Label>
-                        <div className="border rounded-md p-2 flex justify-center">
+                        <div className="border border-gray-100 rounded-xl p-2 flex justify-center bg-white shadow-sm">
                             <Calendar
                                 mode="single"
                                 selected={date}
@@ -167,12 +167,12 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
                     {/* Time Selection */}
                     <div className="flex flex-col gap-2">
-                        <Label className="flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
+                        <Label className="flex items-center gap-2 font-semibold text-gray-700">
+                            <Clock className="h-4 w-4 text-purple-600" />
                             Select Time Slot
                         </Label>
                         <Select value={time} onValueChange={setTime}>
-                            <SelectTrigger>
+                            <SelectTrigger className="items-start [&_[data-description]]:hidden rounded-xl border-gray-200 h-11 focus:ring-purple-400 bg-gray-50/50">
                                 <SelectValue placeholder="Choose a time slot" />
                             </SelectTrigger>
                             <SelectContent>
@@ -185,8 +185,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
                     {/* Location Selection Logic */}
                     <div className="flex flex-col gap-2">
-                        <Label className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
+                        <Label className="flex items-center gap-2 font-semibold text-gray-700">
+                            <MapPin className="h-4 w-4 text-purple-600" />
                             Select Location
                         </Label>
 
@@ -237,7 +237,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                 <input
                                     type="text"
                                     placeholder="Enter your address/location"
-                                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="flex h-11 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:cursor-not-allowed disabled:opacity-50"
                                     value={customLocation}
                                     onChange={(e) => setCustomLocation(e.target.value)}
                                 />
@@ -249,10 +249,20 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                     </div>
                 </div>
 
-                <DialogFooter>
-                    <Button variant="outline" onClick={onClose}>Cancel</Button>
-                    <Button onClick={handleConfirm} disabled={!isValid} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <DialogFooter className="flex-col gap-2 sm:flex-col mt-4">
+                    <Button
+                        onClick={handleConfirm}
+                        disabled={!isValid}
+                        className="w-full h-11 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-lg shadow-purple-200"
+                    >
                         Confirm Booking
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        onClick={onClose}
+                        className="w-full rounded-xl text-gray-500 hover:text-gray-900"
+                    >
+                        Cancel
                     </Button>
                 </DialogFooter>
             </DialogContent>

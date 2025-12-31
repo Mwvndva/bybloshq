@@ -35,14 +35,16 @@ class PaymentCompletionService {
       // Check if this is a product payment
       const metadata = payment.metadata || {};
       if (metadata.product_id || metadata.order_id) {
-        logger.info(`Payment ${payment.id} is a product payment, skipping ticket creation`, {
+        logger.info(`Processing product payment ${payment.id}`, {
           paymentId: payment.id,
           invoiceId: payment.invoice_id,
           productId: metadata.product_id,
           orderId: metadata.order_id
         });
-        await client.query('ROLLBACK');
-        return { success: true, isProductPayment: true };
+
+        const result = await this._completeProductOrder(client, payment);
+        await client.query('COMMIT');
+        return result;
       }
 
       logger.info(`Processing successful payment ${payment.id} for invoice ${payment.invoice_id}`, {
@@ -702,6 +704,94 @@ class PaymentCompletionService {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  /**
+   * Complete a product order after successful payment
+   * @private
+   */
+  static async _completeProductOrder(client, payment) {
+    try {
+      const { metadata = {} } = payment;
+      const orderId = metadata.order_id; // Using order_id from metadata since invoice_id can be same/different
+
+      if (!orderId) {
+        logger.warn(`No order_id found in metadata for payment ${payment.id}, cannot complete product order`);
+        return { success: false, error: 'No order_id found' };
+      }
+
+      logger.info(`Completing product order ${orderId} for payment ${payment.id}`);
+
+      // 1. Get the current order status
+      const orderResult = await client.query(
+        'SELECT status, product_type, delivery_status FROM product_orders WHERE id = $1 FOR UPDATE',
+        [orderId]
+      );
+
+      if (orderResult.rows.length === 0) {
+        logger.error(`Order ${orderId} not found`);
+        return { success: false, error: 'Order not found' };
+      }
+
+      const order = orderResult.rows[0];
+
+      // 2. Determine new status based on product type
+      // - Digital/Services -> COMPLETED or CONFIRMED
+      // - Physical -> DELIVERY_PENDING
+
+      let newStatus = 'CONFIRMED'; // Default for services/others
+
+      // Check metadata for product type if available, or fetch from order items
+      const productType = order.product_type || metadata.product_type || 'physical';
+      const isDigital = order.is_digital || metadata.is_digital || false;
+
+      if (isDigital) {
+        newStatus = 'COMPLETED';
+      } else if (productType === 'service') {
+        newStatus = 'CONFIRMED'; // Ready for service delivery
+      } else {
+        newStatus = 'DELIVERY_PENDING'; // Physical goods need shipping
+      }
+
+      logger.info(`Updating order ${orderId} status from ${order.status} to ${newStatus}`);
+
+      // 3. Update Order Status
+      await client.query(
+        `UPDATE product_orders 
+         SET status = $1, 
+             payment_status = 'completed', 
+             paid_at = NOW(),
+             updated_at = NOW()
+         WHERE id = $2`,
+        [newStatus, orderId]
+      );
+
+      // 4. Update Payment Status to completed
+      await client.query(
+        `UPDATE payments 
+         SET status = 'completed',
+             metadata = jsonb_set(
+               COALESCE(metadata, '{}'::jsonb), 
+               '{order_completed_at}', 
+               to_jsonb(NOW())
+             )
+         WHERE id = $1`,
+        [payment.id]
+      );
+
+      logger.info(`Successfully completed product order ${orderId}`);
+
+      return {
+        success: true,
+        isProductPayment: true,
+        orderId,
+        newStatus
+      };
+
+    } catch (error) {
+      logger.error('Error completing product order:', error);
+      throw error;
     }
   }
 }

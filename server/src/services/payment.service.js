@@ -91,9 +91,9 @@ class PaymentService {
                 callback_url: process.env.PAYD_CALLBACK_URL || (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` : "https://bybloshq.space/api/payments/webhook/payd"),
                 transaction_channel: "mobile",
                 // Pass our invoice_id as reference to help linking
-                reference: invoice_id,
-                client_reference: invoice_id,
-                external_reference: invoice_id,
+                reference: String(invoice_id),
+                client_reference: String(invoice_id),
+                external_reference: String(invoice_id),
                 customer_info: {
                     country: "Kenya",
                     address: "Nairobi", // Placeholder/Default
@@ -141,6 +141,7 @@ class PaymentService {
                 headers: error.response.headers
             } : { message: error.message };
 
+            console.error('PAYD ERROR DETAILS:', JSON.stringify(errorDetails, null, 2));
             logger.error('Payd initialization error:', errorDetails);
 
             // Extract meaningful message
