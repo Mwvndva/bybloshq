@@ -399,7 +399,7 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-x-hidden w-full">
       <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
@@ -449,17 +449,17 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
               <div className="space-y-6">
                 <div>
-                  <h1 className="text-4xl font-black text-black mb-4">{event.name}</h1>
-                  <p className="text-gray-600 text-lg leading-relaxed">{event.description}</p>
+                  <h1 className="text-2xl sm:text-3xl font-black text-black mb-3">{event.name}</h1>
+                  <p className="text-gray-600 text-sm sm:text-base leading-relaxed">{event.description}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
-                    <div className="flex items-center text-gray-700 mb-2">
-                      <Calendar className="mr-3 h-5 w-5 text-yellow-600" />
-                      <span className="font-semibold">Date</span>
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6">
+                    <div className="flex items-center text-gray-700 mb-1.5">
+                      <Calendar className="mr-2 h-4 w-4 text-yellow-600" />
+                      <span className="font-semibold text-sm">Date</span>
                     </div>
-                    <p className="text-gray-600 ml-8">
+                    <p className="text-gray-600 text-sm ml-6">
                       {formatEventDate(event.start_date)}
                       {event.end_date && event.end_date !== event.start_date && (
                         <span> - {formatEventDate(event.end_date)}</span>
@@ -467,12 +467,12 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                     </p>
                   </div>
 
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
-                    <div className="flex items-center text-gray-700 mb-2">
-                      <Clock className="mr-3 h-5 w-5 text-yellow-600" />
-                      <span className="font-semibold">Time</span>
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6">
+                    <div className="flex items-center text-gray-700 mb-1.5">
+                      <Clock className="mr-2 h-4 w-4 text-yellow-600" />
+                      <span className="font-semibold text-sm">Time</span>
                     </div>
-                    <p className="text-gray-600 ml-8">
+                    <p className="text-gray-600 text-sm ml-6">
                       {formatEventTime(event.start_date)}
                       {event.end_date && event.end_date !== event.start_date && (
                         <span> - {formatEventTime(event.end_date)}</span>
@@ -480,12 +480,12 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                     </p>
                   </div>
 
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 md:col-span-2">
-                    <div className="flex items-center text-gray-700 mb-2">
-                      <MapPin className="mr-3 h-5 w-5 text-yellow-600" />
-                      <span className="font-semibold">Location</span>
+                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 md:col-span-2">
+                    <div className="flex items-center text-gray-700 mb-1.5">
+                      <MapPin className="mr-2 h-4 w-4 text-yellow-600" />
+                      <span className="font-semibold text-sm">Location</span>
                     </div>
-                    <p className="text-gray-600 ml-8">{event.location}</p>
+                    <p className="text-gray-600 text-sm ml-6">{event.location}</p>
                   </div>
                 </div>
               </div>
@@ -497,25 +497,25 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
             <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50 sticky top-8">
               <div className="space-y-6">
                 <div className="text-center">
-                  <h3 className="text-2xl font-black text-black mb-6">Get Your Tickets</h3>
+                  <h3 className="text-xl font-black text-black mb-4">Get Your Tickets</h3>
                 </div>
 
                 <Button
                   onClick={handleBuyTicket}
-                  className={`w-full h-14 text-lg font-bold rounded-xl transition-all duration-200 ${availableTickets <= 0
-                      ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed text-gray-500'
-                      : 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
+                  className={`w-full h-12 text-base font-bold rounded-xl transition-all duration-200 ${availableTickets <= 0
+                    ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed text-gray-500'
+                    : 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
                     }`}
                   disabled={availableTickets <= 0 || loadingTicketTypes}
                 >
                   {loadingTicketTypes ? (
                     <>
-                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Loading...
                     </>
                   ) : (
                     <>
-                      <Ticket className="mr-3 h-5 w-5" />
+                      <Ticket className="mr-2 h-5 w-5" />
                       {availableTickets <= 0 ? 'Sold Out' : 'Buy Tickets Now'}
                     </>
                   )}
@@ -573,7 +573,7 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl max-w-md">
+        <DialogContent className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl max-w-md max-h-[85vh] overflow-y-auto">
           <DialogHeader className="text-center pb-6">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-green-200 shadow-lg">
               <CheckCircle2 className="h-8 w-8 text-green-600" />

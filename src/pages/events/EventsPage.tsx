@@ -471,7 +471,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                 <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
                   <Calendar className="h-5 w-5 text-white" />
                 </div>
-                <span className="text-xl font-black text-black">Events</span>
+                <span className="text-lg font-black text-black">Events</span>
               </div>
             </div>
             <Button
@@ -500,8 +500,8 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="text-center mb-8 sm:mb-12">
-          <h1 className="text-3xl sm:text-4xl font-black text-black mb-3 sm:mb-4">Upcoming Events</h1>
-          <p className="text-base sm:text-lg text-gray-600 font-medium">Find and book tickets for amazing events</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-black mb-2 sm:mb-3">Upcoming Events</h1>
+          <p className="text-sm sm:text-base text-gray-600 font-medium">Find and book tickets for amazing events</p>
         </div>
 
         {events.length === 0 ? (
@@ -562,8 +562,8 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                   <CardContent className="p-4 sm:p-6">
                     <div className="flex justify-between items-start mb-3 sm:mb-4">
                       <div className="flex-1 mr-2">
-                        <h3 className="text-lg sm:text-xl font-black text-black mb-1 sm:mb-2 line-clamp-2 leading-tight">{event.name}</h3>
-                        <p className="text-gray-600 text-xs sm:text-sm mb-2 sm:mb-3 line-clamp-1">{event.location}</p>
+                        <h3 className="text-base sm:text-lg font-black text-black mb-1 line-clamp-2 leading-tight">{event.name}</h3>
+                        <p className="text-gray-600 text-xs mb-2 line-clamp-1">{event.location}</p>
                       </div>
                       <Badge variant="outline" className="text-sm font-bold border-yellow-300 text-yellow-600 bg-yellow-50">
                         {event.ticket_price && !isNaN(Number(event.ticket_price)) && Number(event.ticket_price) > 0
@@ -573,19 +573,19 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                     </div>
 
                     <div className="space-y-3 mb-6">
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="h-4 w-4 mr-2 text-gray-500" />
+                      <div className="flex items-center text-xs text-gray-600">
+                        <Calendar className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
                         <span className="font-medium">{formatEventDate(event.start_date)}</span>
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Clock className="h-4 w-4 mr-2 text-gray-500" />
+                      <div className="flex items-center text-xs text-gray-600">
+                        <Clock className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
                         <span>{formatEventTime(event.start_date)} - {formatEventTime(event.end_date)}</span>
                       </div>
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="h-4 w-4 mr-2 text-gray-500" />
+                      <div className="flex items-center text-xs text-gray-600">
+                        <MapPin className="h-3.5 w-3.5 mr-1.5 text-gray-500" />
                         <span className="truncate">{event.location}</span>
                       </div>
-                      <div className="flex items-center text-sm">
+                      <div className="flex items-center text-xs">
                         <Ticket className={`h-4 w-4 mr-2 ${getAvailableTickets(event) > 0 ? 'text-green-500' : 'text-red-500'}`} />
                         <span className={`font-medium ${getAvailableTickets(event) > 0 ? 'text-green-600' : 'text-red-600'}`}>
                           {getAvailableTickets(event) > 0 ? 'Tickets Available' : 'Sold Out'}
@@ -596,11 +596,11 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
                     {getAvailableTickets(event) > 0 ? (
                       <Button
                         onClick={() => handleBuyTicket(event)}
-                        className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
+                        className="w-full h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-md rounded-xl font-bold text-sm transition-all duration-200"
                         disabled={!isUpcoming && !isHappeningNow}
                       >
                         {isHappeningNow ? 'Join Now' : 'Get Tickets'}
-                        <ArrowRight className="ml-2 h-5 w-5" />
+                        <ArrowRight className="ml-1.5 h-4 w-4" />
                       </Button>
                     ) : (
                       <Button
