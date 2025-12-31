@@ -42,10 +42,17 @@ export function WithdrawalHistoryModal({
         }
     }, [isOpen, eventId]);
 
+    interface WithdrawalHistoryResponse {
+        status: string;
+        data: {
+            withdrawals: Withdrawal[];
+        };
+    }
+
     const fetchHistory = async () => {
         try {
             setIsLoading(true);
-            const response = await api.get(`/organizers/events/${eventId}/withdrawals`);
+            const response = await api.get<WithdrawalHistoryResponse>(`/organizers/events/${eventId}/withdrawals`);
             if (response.data.status === 'success') {
                 setWithdrawals(response.data.data.withdrawals);
             }
