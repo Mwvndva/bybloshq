@@ -383,8 +383,8 @@ const ShopPage = () => {
           />
         )}
         <div className={`absolute inset-0 ${themeClasses.bgGradient.includes('from-gray-900')
-            ? 'bg-gradient-to-t from-black/70 to-transparent'
-            : 'bg-gradient-to-t from-black/40 to-transparent'
+          ? 'bg-gradient-to-t from-black/70 to-transparent'
+          : 'bg-gradient-to-t from-black/40 to-transparent'
           }`} />
       </div>
 
@@ -413,9 +413,9 @@ const ShopPage = () => {
                 <div className="w-full text-center">
                   <Link
                     to={`/shop/${sellerInfo?.shopName || ''}`}
-                    className={`text-[20px] xs:text-[24px] md:text-[32px] font-black hover:opacity-90 transition-opacity ${themeClasses.textColor} ${themeClasses.textColor === 'text-white'
-                        ? 'hover:text-white/90'
-                        : 'hover:text-opacity-90'
+                    className={`text-[18px] xs:text-[20px] md:text-[24px] font-black hover:opacity-90 transition-opacity ${themeClasses.textColor} ${themeClasses.textColor === 'text-white'
+                      ? 'hover:text-white/90'
+                      : 'hover:text-opacity-90'
                       } block w-full uppercase tracking-wide leading-tight`}
                     title={sellerInfo?.shopName ? sellerInfo.shopName.toUpperCase() : 'SHOP'}
                     style={{ lineHeight: '1' }}
@@ -424,9 +424,9 @@ const ShopPage = () => {
                   </Link>
                 </div>
                 {sellerInfo?.fullName && (
-                  <p className={`text-[9px] font-medium ${themeClasses.textColor === 'text-white'
-                      ? 'text-white/80'
-                      : 'text-gray-600'
+                  <p className={`text-[9px] sm:text-[10px] font-medium ${themeClasses.textColor === 'text-white'
+                    ? 'text-white/80'
+                    : 'text-gray-600'
                     } truncate max-w-[180px] xs:max-w-[250px] sm:max-w-[300px] mx-auto`}>
                     By {sellerInfo.fullName}
                   </p>
@@ -477,14 +477,14 @@ const ShopPage = () => {
           <div className={`${themeClasses.cardBg} backdrop-blur-sm rounded-3xl p-8 shadow-lg border ${themeClasses.borderColor}/50`}>
             <div className="flex justify-between items-center mb-8">
               <div>
-                <h2 className={`text-3xl font-black ${themeClasses.textColor}`}>
+                <h2 className={`text-xl sm:text-2xl font-black ${themeClasses.textColor}`}>
                   Available Products
                 </h2>
-                <p className={`${themeClasses.textColor === 'text-white' ? 'text-white/80' : 'text-gray-600'} font-medium mt-2`}>
+                <p className={`${themeClasses.textColor === 'text-white' ? 'text-white/80' : 'text-gray-600'} text-xs sm:text-sm font-medium mt-1`}>
                   Browse through {products.length} {products.length === 1 ? 'item' : 'items'} from this shop
                 </p>
               </div>
-              <div className={`${themeClasses.buttonGradient} text-white px-4 py-2 rounded-xl font-bold text-sm`}>
+              <div className={`${themeClasses.buttonGradient} text-white px-3 py-1.5 rounded-lg font-bold text-xs`}>
                 {products.length} Items
               </div>
             </div>
@@ -557,8 +557,8 @@ const ShopPage = () => {
               <Button
                 variant="outline"
                 className={`${themeClasses.borderColor} ${themeClasses.textColor === 'text-white'
-                    ? 'text-white border-white/30 hover:bg-white/10'
-                    : 'hover:bg-gray-100'
+                  ? 'text-white border-white/30 hover:bg-white/10'
+                  : 'hover:bg-gray-100'
                   }`}
                 onClick={() => setSearchQuery('')}
               >

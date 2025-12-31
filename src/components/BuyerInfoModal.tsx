@@ -172,9 +172,9 @@ export function BuyerInfoModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className={`sm:max-w-md ${themeClasses.bg} ${themeClasses.text} border-0 shadow-2xl rounded-3xl`}>
         <DialogHeader>
-          <DialogTitle className={`text-2xl font-black text-center ${themeClasses.text} flex items-center justify-center gap-2 mb-2`}>
-            <div className="w-10 h-10 rounded-full bg-yellow-100 flex items-center justify-center">
-              <User className="h-5 w-5 text-yellow-600" />
+          <DialogTitle className={`text-xl font-black text-center ${themeClasses.text} flex items-center justify-center gap-2 mb-1`}>
+            <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+              <User className="h-4 w-4 text-yellow-600" />
             </div>
             Complete Your Info
           </DialogTitle>
@@ -201,18 +201,18 @@ export function BuyerInfoModal({
 
           {/* Full Name */}
           <div className="space-y-2">
-            <Label htmlFor="fullName" className={`text-sm font-medium ${themeClasses.label}`}>
+            <Label htmlFor="fullName" className={`text-xs font-semibold ${themeClasses.label}`}>
               Full Name *
             </Label>
             <div className="relative">
-              <User className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 ${themeClasses.text} opacity-40`} />
+              <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
               <Input
                 id="fullName"
                 type="text"
                 placeholder="Enter your full name"
                 value={buyerInfo.fullName}
                 onChange={(e) => setBuyerInfo(prev => ({ ...prev, fullName: e.target.value }))}
-                className={`pl-12 h-12 rounded-xl text-base ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
+                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
                 disabled={isLoading}
               />
             </div>
@@ -223,18 +223,18 @@ export function BuyerInfoModal({
 
           {/* Email */}
           <div className="space-y-2">
-            <Label htmlFor="email" className={`text-sm font-medium ${themeClasses.label}`}>
+            <Label htmlFor="email" className={`text-xs font-semibold ${themeClasses.label}`}>
               Email Address *
             </Label>
             <div className="relative">
-              <Mail className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 ${themeClasses.text} opacity-40`} />
+              <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
               <Input
                 id="email"
                 type="email"
                 placeholder="Enter your email address"
                 value={buyerInfo.email}
                 onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
-                className={`pl-12 h-12 rounded-xl text-base ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
+                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
                 disabled={isLoading}
               />
             </div>
@@ -245,18 +245,18 @@ export function BuyerInfoModal({
 
           {/* City */}
           <div className="space-y-2">
-            <Label htmlFor="city" className={`text-sm font-medium ${themeClasses.label}`}>
+            <Label htmlFor="city" className={`text-xs font-semibold ${themeClasses.label}`}>
               City
             </Label>
             <div className="relative">
-              <MapPin className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 ${themeClasses.text} opacity-40`} />
+              <MapPin className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
               <Input
                 id="city"
                 type="text"
                 placeholder="Enter your city (optional)"
                 value={buyerInfo.city}
                 onChange={(e) => setBuyerInfo(prev => ({ ...prev, city: e.target.value }))}
-                className={`pl-12 h-12 rounded-xl text-base ${themeClasses.input}`}
+                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input}`}
                 disabled={isLoading}
               />
             </div>
@@ -264,18 +264,18 @@ export function BuyerInfoModal({
 
           {/* Location */}
           <div className="space-y-2">
-            <Label htmlFor="location" className={`text-sm font-medium ${themeClasses.label}`}>
+            <Label htmlFor="location" className={`text-xs font-semibold ${themeClasses.label}`}>
               Location/Address
             </Label>
             <div className="relative">
-              <MapPin className={`absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 ${themeClasses.text} opacity-40`} />
+              <MapPin className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
               <Input
                 id="location"
                 type="text"
-                placeholder="Enter your location/address (optional)"
+                placeholder="Enter your location (optional)"
                 value={buyerInfo.location}
                 onChange={(e) => setBuyerInfo(prev => ({ ...prev, location: e.target.value }))}
-                className={`pl-12 h-12 rounded-xl text-base ${themeClasses.input}`}
+                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input}`}
                 disabled={isLoading}
               />
             </div>
@@ -285,7 +285,7 @@ export function BuyerInfoModal({
             <Button
               type="submit"
               disabled={isLoading}
-              className={`w-full h-12 rounded-xl font-bold text-lg transition-all ${themeClasses.button} ${isLoading ? 'opacity-70' : ''}`}
+              className={`w-full h-10 rounded-xl font-bold text-sm transition-all ${themeClasses.button} ${isLoading ? 'opacity-70' : ''}`}
             >
               {isLoading ? (
                 <>

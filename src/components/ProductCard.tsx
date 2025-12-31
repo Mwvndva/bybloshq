@@ -590,12 +590,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       </div>
 
       <CardContent className="p-4 sm:p-6">
-        <h3 className={cn("font-bold mb-2 line-clamp-1 text-sm sm:text-base lg:text-lg",
+        <h3 className={cn("font-bold mb-1.5 line-clamp-1 text-sm sm:text-base",
           theme === 'black' ? 'text-white' : 'text-gray-900'
         )}>
           {product.name}
         </h3>
-        <p className={cn("font-black text-lg sm:text-xl mb-2 sm:mb-3 flex items-center gap-2",
+        <p className={cn("font-black text-base sm:text-lg mb-1.5 sm:mb-2 flex items-center gap-2",
           (product.product_type === 'service' || (product as any).productType === 'service')
             ? 'text-purple-600'
             : themeClasses.price
@@ -613,35 +613,35 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </p>
 
         {product.description && (
-          <p className={cn("text-xs sm:text-sm line-clamp-2 leading-relaxed mb-3 sm:mb-4", themeClasses.description)}>
+          <p className={cn("text-xs leading-relaxed mb-2 sm:mb-3 line-clamp-2", themeClasses.description)}>
             {product.description}
           </p>
         )}
 
         {/* Service Location Info */}
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
-          <div className={cn("flex items-start gap-2 mb-3 text-xs sm:text-sm",
+          <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
             theme === 'black' ? 'text-gray-400' : 'text-gray-500'
           )}>
-            <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+            <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
             <span className="line-clamp-2">
               {(product.service_options?.location_type === 'seller_visits_buyer' || (product as any).serviceOptions?.location_type === 'seller_visits_buyer') ? (
-                "Mobile Service - We come to you"
+                "Mobile Service"
               ) : (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') ? (
-                "Service available In-store & Mobile"
+                "In-store & Mobile"
               ) : (
-                product.service_locations || (product as any).serviceLocations || "In-store Service"
+                product.service_locations || (product as any).serviceLocations || "In-store"
               )}
             </span>
           </div>
         )}
 
         {/* Seller Info */}
-        <div className={cn("flex items-center gap-2 pt-2 border-t mt-3",
+        <div className={cn("flex items-center gap-1.5 pt-2 border-t mt-2",
           theme === 'black' ? 'border-gray-800' : 'border-gray-100'
         )}>
-          <Store className={cn("h-4 w-4", themeClasses.icon)} />
-          <span className={cn("text-sm font-medium truncate flex-1", themeClasses.seller)}>{displaySellerName}</span>
+          <Store className={cn("h-3.5 w-3.5", themeClasses.icon)} />
+          <span className={cn("text-xs font-medium truncate flex-1", themeClasses.seller)}>{displaySellerName}</span>
         </div>
 
         {/* Buy Button */}
@@ -660,7 +660,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                 : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital)
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : themeClasses.button,
-            (product.product_type !== 'service' && (product as any).productType !== 'service' && product.product_type !== 'digital' && (product as any).productType !== 'digital' && !product.is_digital && !(product as any).isDigital) && themeClasses.button
+            (product.product_type !== 'service' && (product as any).productType !== 'service' && product.product_type !== 'digital' && (product as any).productType !== 'digital' && !product.is_digital && !(product as any).isDigital) && themeClasses.button,
+            'h-9 text-sm'
           )}
           onClick={(e) => {
             e.preventDefault();

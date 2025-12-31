@@ -102,7 +102,7 @@ export function BuyerLogin() {
               <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-lg">
                 <ShoppingBag className="h-8 w-8 text-yellow-600" />
               </div>
-              <h1 className="text-3xl font-black text-black mb-2">Welcome Back</h1>
+              <h1 className="text-2xl font-black text-black mb-2">Welcome Back</h1>
               <p className="text-gray-600 font-medium">Sign in to your buyer account</p>
             </div>
 
@@ -118,8 +118,8 @@ export function BuyerLogin() {
                   Email Address
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-gray-400" />
                   </div>
                   <Input
                     id="email"
@@ -130,7 +130,7 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -140,8 +140,8 @@ export function BuyerLogin() {
                   Password
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-gray-400" />
                   </div>
                   <Input
                     id="password"
@@ -152,7 +152,7 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-10 pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                   <button
                     type="button"
@@ -171,7 +171,7 @@ export function BuyerLogin() {
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
+                className="w-full h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-sm transition-all duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (

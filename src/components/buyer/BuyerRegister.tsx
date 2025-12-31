@@ -196,7 +196,7 @@ export function BuyerRegister() {
               <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-lg">
                 <ShoppingBag className="h-8 w-8 text-yellow-600" />
               </div>
-              <h1 className="text-3xl font-black text-black mb-2">Create Account</h1>
+              <h1 className="text-2xl font-black text-black mb-2">Create Account</h1>
               <p className="text-gray-600 font-medium">Join our buyer community</p>
             </div>
 
@@ -206,8 +206,8 @@ export function BuyerRegister() {
                   Full Name
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-4 w-4 text-gray-400" />
                   </div>
                   <Input
                     id="fullName"
@@ -217,7 +217,7 @@ export function BuyerRegister() {
                     value={formData.fullName}
                     onChange={handleInputChange}
                     required
-                    className={`pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.fullName ? 'border-red-500' : ''}`}
+                    className={`pl-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.fullName ? 'border-red-500' : ''}`}
                   />
                 </div>
                 {errors.fullName && <p className="text-sm text-red-500 mt-1 ml-1">{errors.fullName}</p>}
@@ -228,8 +228,8 @@ export function BuyerRegister() {
                   Email Address
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-gray-400" />
                   </div>
                   <Input
                     id="email"
@@ -239,7 +239,7 @@ export function BuyerRegister() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className={`pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.email ? 'border-red-500' : ''}`}
+                    className={`pl-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.email ? 'border-red-500' : ''}`}
                   />
                 </div>
                 {errors.email && <p className="text-sm text-red-500 mt-1 ml-1">{errors.email}</p>}
@@ -250,8 +250,8 @@ export function BuyerRegister() {
                   Phone Number
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="h-4 w-4 text-gray-400" />
                   </div>
                   <Input
                     id="phone"
@@ -261,7 +261,7 @@ export function BuyerRegister() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     required
-                    className={`pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.phone ? 'border-red-500' : ''}`}
+                    className={`pl-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.phone ? 'border-red-500' : ''}`}
                   />
                 </div>
                 {errors.phone && <p className="text-sm text-red-500 mt-1 ml-1">{errors.phone}</p>}
@@ -272,8 +272,8 @@ export function BuyerRegister() {
                   City
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-4 w-4 text-gray-400" />
                   </div>
                   <Select
                     value={formData.city}
@@ -285,7 +285,7 @@ export function BuyerRegister() {
                       }));
                     }}
                   >
-                    <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
+                    <SelectTrigger className="pl-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
                       <SelectValue placeholder="Select your city" />
                     </SelectTrigger>
                     <SelectContent>
@@ -304,8 +304,8 @@ export function BuyerRegister() {
                   Area/Location
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <MapPin className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <MapPin className="h-4 w-4 text-gray-400" />
                   </div>
                   <Select
                     value={formData.location}
@@ -317,7 +317,7 @@ export function BuyerRegister() {
                     }}
                     disabled={!formData.city}
                   >
-                    <SelectTrigger className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
+                    <SelectTrigger className="pl-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400">
                       <SelectValue placeholder={formData.city ? "Select your area" : "Select city first"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -336,8 +336,8 @@ export function BuyerRegister() {
                   Password
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-gray-400" />
                   </div>
                   <Input
                     id="password"
@@ -347,7 +347,7 @@ export function BuyerRegister() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className={`pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.password ? 'border-red-500' : ''}`}
+                    className={`pl-10 pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.password ? 'border-red-500' : ''}`}
                   />
                   <button
                     type="button"
@@ -398,8 +398,8 @@ export function BuyerRegister() {
                   Confirm Password
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-gray-400" />
                   </div>
                   <Input
                     id="confirmPassword"
@@ -409,7 +409,7 @@ export function BuyerRegister() {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     required
-                    className={`pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                    className={`pl-10 pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 ${errors.confirmPassword ? 'border-red-500' : ''}`}
                   />
                   <button
                     type="button"
@@ -428,7 +428,7 @@ export function BuyerRegister() {
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
+                className="w-full h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-sm transition-all duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (

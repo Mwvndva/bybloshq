@@ -45,7 +45,7 @@ export default function PaymentSuccess() {
           {status === 'success' && <CheckCircle className="mx-auto h-12 w-12 text-green-600" />}
           {status === 'error' && <XCircle className="mx-auto h-12 w-12 text-red-600" />}
 
-          <CardTitle className="mt-4">
+          <CardTitle className="mt-4 text-xl font-bold">
             {status === 'loading' && 'Processing Payment'}
             {status === 'success' && 'Payment Successful'}
             {status === 'error' && 'Payment Failed'}
