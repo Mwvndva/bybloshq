@@ -163,7 +163,7 @@ export const DiscountCodeInput = ({
               onChange={(e) => setCode(e.target.value.toUpperCase())}
               onKeyPress={handleKeyPress}
               disabled={isValidating}
-              className="uppercase"
+              className="text-base uppercase"
             />
 
             <Button

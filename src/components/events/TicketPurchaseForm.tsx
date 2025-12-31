@@ -521,8 +521,8 @@ export function TicketPurchaseForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md p-0 overflow-hidden gap-0">
-        <div className="p-6 sm:p-8">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-[500px] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md p-0 gap-0">
+        <div className="p-4 sm:p-8">
           {purchaseComplete ? (
             <div className="text-center py-6">
               <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-300">
@@ -589,7 +589,7 @@ export function TicketPurchaseForm({
                     required
                     minLength={2}
                     maxLength={100}
-                    className="rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
+                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
                   />
                 </div>
 
@@ -603,7 +603,7 @@ export function TicketPurchaseForm({
                     onChange={handleInputChange}
                     placeholder="you@example.com"
                     required
-                    className="rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
+                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
                   />
                 </div>
 
@@ -617,7 +617,7 @@ export function TicketPurchaseForm({
                       id="phoneNumber"
                       type="tel"
                       placeholder="712 345 678"
-                      className={`pl-14 rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50 ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`text-base pl-14 rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50 ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       value={formData.phoneNumber}
                       onChange={handlePhoneNumberChange}
                       onBlur={(e) => setPhoneError(validatePhoneNumber(e.target.value))}
@@ -645,7 +645,7 @@ export function TicketPurchaseForm({
                       }))}
                       required
                     >
-                      <SelectTrigger className="rounded-xl border-gray-200 focus:ring-yellow-400 h-11 bg-gray-50/50">
+                      <SelectTrigger className="text-base rounded-xl border-gray-200 focus:ring-yellow-400 h-11 bg-gray-50/50">
                         <SelectValue placeholder="Select a ticket type" />
                       </SelectTrigger>
                       <SelectContent>
