@@ -565,21 +565,21 @@ export function TicketPurchaseForm({
             </div>
           ) : (
             <>
-              <DialogHeader className="mb-6 space-y-4">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-inner">
-                  <Ticket className="h-8 w-8 text-yellow-600" />
+              <DialogHeader className="mb-4 space-y-3">
+                <div className="mx-auto w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center shadow-inner">
+                  <Ticket className="h-6 w-6 text-yellow-600" />
                 </div>
-                <div className="space-y-1">
-                  <DialogTitle className="text-2xl font-black text-center text-gray-900">Purchase Tickets</DialogTitle>
-                  <DialogDescription className="text-center text-base font-medium text-gray-600">
+                <div className="space-y-0.5">
+                  <DialogTitle className="text-xl font-black text-center text-gray-900">Purchase Tickets</DialogTitle>
+                  <DialogDescription className="text-center text-sm font-medium text-gray-600">
                     {event.name}
                   </DialogDescription>
                 </div>
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customerName">Full Name</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="customerName" className="text-xs font-semibold text-gray-700">Full Name</Label>
                   <Input
                     id="customerName"
                     name="customerName"
@@ -589,12 +589,12 @@ export function TicketPurchaseForm({
                     required
                     minLength={2}
                     maxLength={100}
-                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
+                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-10 bg-gray-50/50"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="customerEmail">Email</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="customerEmail" className="text-xs font-semibold text-gray-700">Email</Label>
                   <Input
                     id="customerEmail"
                     name="customerEmail"
@@ -603,21 +603,21 @@ export function TicketPurchaseForm({
                     onChange={handleInputChange}
                     placeholder="you@example.com"
                     required
-                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50"
+                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-10 bg-gray-50/50"
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="phoneNumber" className="text-xs font-semibold text-gray-700">Phone Number</Label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <span className="text-gray-500">+254</span>
+                      <span className="text-gray-500 text-sm">+254</span>
                     </div>
                     <Input
                       id="phoneNumber"
                       type="tel"
                       placeholder="712 345 678"
-                      className={`text-base pl-14 rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-11 bg-gray-50/50 ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`text-base pl-14 rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-10 bg-gray-50/50 ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       value={formData.phoneNumber}
                       onChange={handlePhoneNumberChange}
                       onBlur={(e) => setPhoneError(validatePhoneNumber(e.target.value))}
@@ -634,8 +634,8 @@ export function TicketPurchaseForm({
                 </div>
 
                 {ticketTypes.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Ticket Type</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-700">Ticket Type</Label>
                     <Select
                       value={formData.ticketTypeId}
                       onValueChange={(value) => setFormData(prev => ({
@@ -645,7 +645,7 @@ export function TicketPurchaseForm({
                       }))}
                       required
                     >
-                      <SelectTrigger className="text-base rounded-xl border-gray-200 focus:ring-yellow-400 h-11 bg-gray-50/50">
+                      <SelectTrigger className="text-base rounded-xl border-gray-200 focus:ring-yellow-400 h-10 bg-gray-50/50">
                         <SelectValue placeholder="Select a ticket type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -682,8 +682,8 @@ export function TicketPurchaseForm({
                 )}
 
                 {selectedTicket && (
-                  <div className="space-y-2">
-                    <Label>Quantity</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-semibold text-gray-700">Quantity</Label>
                     <div className="flex items-center space-x-2">
                       <Button
                         type="button"
@@ -751,7 +751,7 @@ export function TicketPurchaseForm({
                 <div className="pt-2">
                   <Button
                     type="submit"
-                    className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg shadow-yellow-200 rounded-xl font-bold text-lg transition-all duration-200 transform hover:scale-[1.02]"
+                    className="w-full h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg shadow-yellow-200 rounded-xl font-bold text-sm transition-all duration-200 transform hover:scale-[1.02]"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
