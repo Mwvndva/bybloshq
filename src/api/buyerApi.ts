@@ -154,10 +154,18 @@ buyerApiInstance.interceptors.response.use(
 );
 
 // Response interceptor for error handling
+// Response interceptor for error handling
 buyerApiInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Don't redirect if we're just checking the profile/auth status
+      // This prevents redirect loops when the app initializes with an expired token
+      if (error.config?.url?.includes('/buyers/profile')) {
+        localStorage.removeItem('buyer_token');
+        return Promise.reject(error);
+      }
+
       localStorage.removeItem('buyer_token');
       if (!window.location.pathname.includes('login')) {
         window.location.href = '/buyer/login';
