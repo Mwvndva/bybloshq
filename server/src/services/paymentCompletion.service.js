@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import QRCode from 'qrcode';
 import logger from '../utils/logger.js';
 import Buyer from '../models/buyer.model.js';
+import whatsappService from './whatsapp.service.js';
 
 class PaymentCompletionService {
   /**
@@ -723,9 +724,12 @@ class PaymentCompletionService {
 
       logger.info(`Completing product order ${orderId} for payment ${payment.id}`);
 
-      // 1. Get the current order status
+      // 1. Get the current order status and details for notification
       const orderResult = await client.query(
-        'SELECT status, product_type, delivery_status FROM product_orders WHERE id = $1 FOR UPDATE',
+        `SELECT po.*, s.phone as seller_phone, s.location as seller_location, s.city as seller_city
+         FROM product_orders po
+         JOIN sellers s ON po.seller_id = s.id
+         WHERE po.id = $1 FOR UPDATE`,
         [orderId]
       );
 
@@ -781,6 +785,61 @@ class PaymentCompletionService {
       );
 
       logger.info(`Successfully completed product order ${orderId}`);
+
+      // 5. Send WhatsApp Notifications
+      // We wrap this in a try-catch so it doesn't fail the transaction if notifications fail
+      try {
+        // Fetch items if they aren't in the order row (they likely aren't selected above)
+        // We'll trust the metadata.items if available, or query them
+        let items = metadata.items;
+        if (!items || items.length === 0) {
+          const itemsResult = await client.query('SELECT * FROM order_items WHERE order_id = $1', [orderId]);
+          items = itemsResult.rows.map(item => ({
+            ...item,
+            name: item.product_name,
+            price: item.product_price
+          }));
+        }
+
+        const notificationData = {
+          seller: {
+            phone: order.seller_phone,
+            location: order.seller_location,
+            city: order.seller_city
+          },
+          buyer: {
+            phone: order.buyer_phone, // Directly from order table
+            full_name: order.buyer_name
+          },
+          order: {
+            ...order,
+            orderNumber: order.order_number, // Ensure consistent naming
+            totalAmount: order.total_amount,
+            metadata: {
+              ...order.metadata,
+              ...metadata // Merge payment metadata for extra context
+            }
+          },
+          items: items || []
+        };
+
+        logger.info(`Sending WhatsApp notifications for Order ${orderId}...`);
+
+        // Notify Seller
+        await whatsappService.notifySellerNewOrder(notificationData);
+
+        // Notify Buyer
+        await whatsappService.notifyBuyerOrderConfirmation(notificationData);
+
+        // Notify Logistics (if physical)
+        await whatsappService.sendLogisticsNotification(notificationData.order, notificationData.buyer, notificationData.seller);
+
+        logger.info(`WhatsApp notifications sent for Order ${orderId}`);
+
+      } catch (notifyError) {
+        logger.error(`Failed to send WhatsApp notifications for Order ${orderId}:`, notifyError);
+        // Do not re-throw, we want the payment to remain successful
+      }
 
       return {
         success: true,
