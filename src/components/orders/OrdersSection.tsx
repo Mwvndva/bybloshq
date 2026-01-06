@@ -138,10 +138,12 @@ const getPaymentStatusBadge = (status?: string) => {
         </Badge>
       );
     case 'success':
+    case 'completed':
+    case 'paid':
       return (
         <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
           <CheckCircle className="h-3 w-3 mr-1" />
-          Success
+          Paid
         </Badge>
       );
     case 'failed':

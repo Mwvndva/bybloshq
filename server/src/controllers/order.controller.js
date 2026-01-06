@@ -706,12 +706,12 @@ const updateOrderStatus = async (req, res) => {
     let paymentStatus = order.payment_status; // Default to current payment status
 
     // Update payment status based on order status
-    if (status === 'completed') {
+    if (newStatus === 'COMPLETED') {
       // If order is marked as completed, ensure payment is marked as completed if it was pending
       if (order.payment_status === 'pending') {
         paymentStatus = 'completed';
       }
-    } else if (status === 'cancelled') {
+    } else if (newStatus === 'CANCELLED') {
       // If order is cancelled, update payment status accordingly
       if (order.payment_status === 'pending') {
         paymentStatus = 'cancelled';
@@ -723,15 +723,15 @@ const updateOrderStatus = async (req, res) => {
     const queryParams = [status, id, paymentStatus];
 
     // Set appropriate timestamps based on status
-    if (status === 'paid') {
+    if (newStatus === 'PAID') { // Assuming 'PAID' might be a valid status in future or if mapped
       updateQuery += ', paid_at = NOW()';
-    } else if (status === 'completed') {
+    } else if (newStatus === 'COMPLETED') {
       updateQuery += ', completed_at = NOW()';
       // If payment was pending and we're marking as completed, set payment completed_at
       if (order.payment_status === 'pending') {
         updateQuery += ', payment_completed_at = NOW()';
       }
-    } else if (status === 'cancelled') {
+    } else if (newStatus === 'CANCELLED') {
       updateQuery += ', cancelled_at = NOW()';
     }
 
