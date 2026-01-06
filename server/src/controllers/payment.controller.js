@@ -332,7 +332,10 @@ class PaymentController {
         narrative: narrative || `Payment for product ${productName}`,
         product_id: productId,
         seller_id: sellerId,
+        seller_id: sellerId,
         order_id: order.id, // Link payment to order
+        product_type: product.product_type,
+        is_digital: product.is_digital,
         metadata: req.body.metadata // Pass metadata from frontend
       };
 

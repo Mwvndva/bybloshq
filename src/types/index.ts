@@ -1,4 +1,6 @@
 
+export type ProductType = 'physical' | 'digital' | 'service';
+
 export type Aesthetic =
   | 'all'
   | 'clothes-style'
@@ -61,8 +63,8 @@ export interface Product {
   is_digital?: boolean;
   digital_file_path?: string;
   digital_file_name?: string;
-  product_type?: 'physical' | 'digital' | 'service';
-  productType?: 'physical' | 'digital' | 'service';
+  product_type?: ProductType;
+  productType?: ProductType;
   service_locations?: string;
   service_options?: {
     availability_days?: string[];

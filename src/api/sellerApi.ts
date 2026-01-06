@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { Order, OrderStatus } from '@/types/order';
+import { ProductType } from '@/types/index';
 
 // Get the base URL from environment variables
 const API_URL = (import.meta.env.VITE_API_URL ||
@@ -53,6 +54,7 @@ export interface Product {
   is_digital?: boolean;
   digital_file_path?: string;
   digital_file_name?: string;
+  productType?: ProductType;
 }
 
 // Order types are now imported from '@/types/order'
