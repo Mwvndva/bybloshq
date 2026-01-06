@@ -755,36 +755,57 @@ class PaymentCompletionService {
 
       let newStatus = 'CONFIRMED'; // Default for services/others
 
+      // Parse order metadata safely
+      let orderMetadata = order.metadata;
+      if (typeof orderMetadata === 'string') {
+        try {
+          orderMetadata = JSON.parse(orderMetadata);
+        } catch (e) {
+          logger.warn(`Failed to parse order metadata string for order ${orderId}`, e);
+          orderMetadata = {};
+        }
+      }
+
       // Check metadata for product type if available
       let productType = order.product_type || metadata.product_type || metadata.metadata?.product_type;
       let isDigital = order.is_digital || metadata.is_digital || metadata.metadata?.is_digital;
 
+      // Detailed logging for debugging
+      logger.info(`Status Check - OrderID: ${orderId}`, {
+        foundProductType: productType,
+        foundIsDigital: isDigital,
+        orderMetadataKeys: orderMetadata ? Object.keys(orderMetadata) : 'null'
+      });
+
       // Fallback: Check order metadata items if product type is missing
-      // This is crucial because product_orders table doesn't have a product_type column
-      if (!productType && order.metadata) {
-        try {
-          const orderMetadata = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : order.metadata;
+      if (!productType && orderMetadata) {
+        // Check top-level metadata first
+        if (orderMetadata.product_type) productType = orderMetadata.product_type;
+        if (orderMetadata.is_digital) isDigital = true;
 
-          if (orderMetadata.items && Array.isArray(orderMetadata.items) && orderMetadata.items.length > 0) {
-            const items = orderMetadata.items;
-            const hasPhysical = items.some(item => item.productType === 'physical' || (!item.productType && !item.isDigital));
-            const hasService = items.some(item => item.productType === 'service');
-            const hasDigital = items.some(item => item.productType === 'digital' || item.isDigital);
+        // Check items array
+        if (orderMetadata.items && Array.isArray(orderMetadata.items) && orderMetadata.items.length > 0) {
+          const items = orderMetadata.items;
+          const hasPhysical = items.some(item => item.productType === 'physical' || (!item.productType && !item.isDigital));
+          const hasService = items.some(item => item.productType === 'service');
+          const hasDigital = items.some(item => item.productType === 'digital' || item.isDigital);
 
-            // Prioritize status based on content
-            if (hasService && !hasPhysical) {
-              productType = 'service';
-            } else if (hasDigital && !hasService && !hasPhysical) {
-              productType = 'digital';
-              isDigital = true;
-            } else {
-              productType = 'physical';
-            }
+          logger.info(`Item Analysis for Order ${orderId}:`, { hasPhysical, hasService, hasDigital });
+
+          // Prioritize status based on content
+          if (hasService && !hasPhysical) {
+            productType = 'service';
+          } else if (hasDigital && !hasService && !hasPhysical) {
+            productType = 'digital';
+            isDigital = true;
+          } else {
+            productType = 'physical';
           }
-        } catch (e) {
-          logger.warn(`Failed to parse order metadata for order ${orderId}:`, e);
         }
       }
+
+      // Explicitly set digital type if isDigital is true
+      if (isDigital) productType = 'digital';
 
       // Default to physical if still not determined
       if (!productType) productType = 'physical';
@@ -823,13 +844,13 @@ class PaymentCompletionService {
         [payment.id]
       );
 
-      // 4b. If status is COMPLETED (Digital), Process Payout Immediately
+      // 4b. If status is COMPLETED (Digital), Add to Wallet (No Automatic Payout)
       if (newStatus === 'COMPLETED') {
         const platformFeePercentage = 0.03;
         const platformFee = order.total_amount * platformFeePercentage;
         const sellerPayout = order.total_amount - platformFee;
 
-        // Update seller balance
+        // Update seller balance - Money goes to wallet
         await client.query(`
           UPDATE sellers 
           SET 
@@ -840,24 +861,7 @@ class PaymentCompletionService {
           WHERE id = $3
         `, [order.total_amount, sellerPayout, order.seller_id]);
 
-        // Insert payout record
-        // Check if payouts table exists first to avoid errors
-        const tableCheck = await client.query(`
-          SELECT EXISTS (
-            SELECT FROM information_schema.tables 
-            WHERE table_name = 'payouts'
-          )
-        `);
-
-        if (tableCheck.rows[0].exists) {
-          await client.query(`
-            INSERT INTO payouts (
-              seller_id, order_id, amount, platform_fee, status, payment_method, reference_number, notes, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, 'completed', 'wallet', $5, 'Automatic payout for digital order', NOW(), NOW())
-           `, [order.seller_id, orderId, sellerPayout, platformFee, `digital_${orderId}_${Date.now()}`]);
-        }
-
-        logger.info(`Processed immediate payout for digital order ${orderId}`);
+        logger.info(`Added funds to seller wallet for digital order ${orderId}`);
       }
 
       logger.info(`Successfully completed product order ${orderId}`);
