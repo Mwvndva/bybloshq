@@ -41,7 +41,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[425px] rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-[425px] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md p-4 sm:p-6">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-xl font-black text-center text-gray-900">Enter Your Phone Number</DialogTitle>
         </DialogHeader>
