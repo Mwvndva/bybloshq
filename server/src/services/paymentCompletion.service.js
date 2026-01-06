@@ -756,8 +756,9 @@ class PaymentCompletionService {
       let newStatus = 'CONFIRMED'; // Default for services/others
 
       // Check metadata for product type if available, or fetch from order items
-      const productType = order.product_type || metadata.product_type || 'physical';
-      const isDigital = order.is_digital || metadata.is_digital || false;
+      // Check metadata for product type if available, or fetch from order items
+      const productType = order.product_type || metadata.product_type || metadata.metadata?.product_type || 'physical';
+      const isDigital = order.is_digital || metadata.is_digital || metadata.metadata?.is_digital || false;
 
       if (isDigital) {
         newStatus = 'COMPLETED';

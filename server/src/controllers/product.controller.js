@@ -93,6 +93,15 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    // Validate product_type enum
+    const validProductTypes = ['physical', 'digital', 'service'];
+    if (product_type && !validProductTypes.includes(product_type)) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Invalid product type. Must be one of: physical, digital, service'
+      });
+    }
+
     // Validate service product fields
     if (product_type === 'service' && (!service_options || !service_options.availability_days)) {
       return res.status(400).json({
