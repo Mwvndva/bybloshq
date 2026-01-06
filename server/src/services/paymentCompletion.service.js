@@ -40,8 +40,17 @@ class PaymentCompletionService {
           paymentId: payment.id,
           invoiceId: payment.invoice_id,
           productId: metadata.product_id,
-          orderId: metadata.order_id
+          orderId: metadata.order_id,
+          status: payment.status
         });
+
+        // IDEMPOTENCY CHECK: If payment is already completed, don't re-process
+        // unless we specifically want to retry notifications (which we should handle carefully)
+        if (payment.status === 'completed' && metadata.order_completed_at) {
+          logger.info(`Product payment ${payment.id} already completed at ${metadata.order_completed_at}. Skipping to prevent duplicate notifications.`);
+          await client.query('ROLLBACK');
+          return { success: true, alreadyProcessed: true };
+        }
 
         const result = await this._completeProductOrder(client, payment);
         await client.query('COMMIT');
