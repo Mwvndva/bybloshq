@@ -134,7 +134,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="w-full max-w-[95vw] sm:max-w-[425px] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md p-4 sm:p-6 m-auto">
+            <DialogContent className="block w-full max-w-[95vw] sm:max-w-[425px] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md p-4 sm:p-6 scrollbar-hide">
                 <DialogHeader className="space-y-1">
                     <DialogTitle className="flex items-center justify-center gap-2 text-xl font-black text-gray-900">
                         Book Service
