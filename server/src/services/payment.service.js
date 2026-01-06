@@ -163,9 +163,9 @@ class PaymentService {
         const status = callbackData.status; // Fallback if they send status
 
         // DEBUG: Force log to console for visibility
-        console.log('=== PAYD WEBHOOK RAW ===');
-        console.log(JSON.stringify(callbackData, null, 2));
-        console.log('========================');
+        // console.log('=== PAYD WEBHOOK RAW ===');
+        // console.log(JSON.stringify(callbackData, null, 2));
+        // console.log('========================');
 
         logger.info('Payd Webhook Data Extraction:', {
             extractedReference: reference,
@@ -191,11 +191,57 @@ class PaymentService {
         }
 
         if (!isSuccess) {
-            await pool.query(
+            const { rowCount } = await pool.query(
                 "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE provider_reference = $2",
                 [JSON.stringify({ failure_reason: callbackData.remarks || callbackData.status_description || 'Failed', raw_callback: callbackData }), reference]
             );
-            return { status: 'failed', message: 'Payment marked as failed' };
+
+            if (rowCount > 0) {
+                return { status: 'failed', message: 'Payment marked as failed' };
+            }
+
+            // Check if it's a Withdrawal Request (Payout Failure)
+            const { rows: withdrawalRows } = await pool.query(
+                'SELECT * FROM withdrawal_requests WHERE provider_reference = $1 OR id::text = $1',
+                [reference]
+            );
+
+            if (withdrawalRows.length > 0) {
+                const withdrawal = withdrawalRows[0];
+                if (withdrawal.status === 'failed') return { status: 'success', message: 'Already marked failed' };
+
+                // Handle Failure - REFUND SELLER
+                const client = await pool.connect();
+                try {
+                    await client.query('BEGIN');
+
+                    // 1. Mark as failed
+                    await client.query(
+                        "UPDATE withdrawal_requests SET status = 'failed', raw_response = COALESCE(raw_response, '{}'::jsonb) || $1::jsonb WHERE id = $2",
+                        [JSON.stringify(callbackData), withdrawal.id]
+                    );
+
+                    // 2. Refund Balance
+                    await client.query(
+                        "UPDATE sellers SET balance = balance + $1 WHERE id = $2",
+                        [withdrawal.amount, withdrawal.seller_id]
+                    );
+
+                    await client.query('COMMIT');
+                    logger.info(`Withdrawal ${withdrawal.id} FAILED. Computed refund of ${withdrawal.amount} to seller ${withdrawal.seller_id}`);
+                    return { status: 'success', message: 'Withdrawal failure processed and refunded' };
+
+                } catch (err) {
+                    await client.query('ROLLBACK');
+                    logger.error(`Error processing withdrawal refund for ${withdrawal.id}`, err);
+                    throw err;
+                } finally {
+                    client.release();
+                }
+            }
+
+            logger.warn(`Failed transaction not found in payments or withdrawals: ${reference}`);
+            return { status: 'failed', message: 'Transaction not found' };
         }
 
         // Handle Success
@@ -266,8 +312,32 @@ class PaymentService {
         // const payment = rows[0]; // Logic below handles if (!payment)
 
         if (!payment) {
-            logger.warn(`Payment not found for reference: ${reference}`);
-            return { status: 'error', message: 'Payment record not found' };
+            // Check if it's a Withdrawal Request (Payout)
+            const { rows: withdrawalRows } = await pool.query(
+                'SELECT * FROM withdrawal_requests WHERE provider_reference = $1 OR id::text = $1',
+                [reference]
+            );
+
+            if (withdrawalRows.length > 0) {
+                const withdrawal = withdrawalRows[0];
+                logger.info(`Payout Callback received for Withdrawal ${withdrawal.id}`);
+
+                if (withdrawal.status === 'completed' || withdrawal.status === 'failed') {
+                    return { status: 'success', message: 'Withdrawal already processed' };
+                }
+
+                // Mark as Completed
+                // Since we are in handleSuccessfulPayment, we assume success
+                await pool.query(
+                    "UPDATE withdrawal_requests SET status = 'completed', raw_response = COALESCE(raw_response, '{}'::jsonb) || $1::jsonb, processed_at = NOW() WHERE id = $2",
+                    [JSON.stringify(data.metadata || {}), withdrawal.id]
+                );
+                logger.info(`Withdrawal ${withdrawal.id} marked as COMPLETED`);
+                return { status: 'success', message: 'Withdrawal processed successfully' };
+            }
+
+            logger.warn(`Payment/Withdrawal not found for reference: ${reference}`);
+            return { status: 'error', message: 'Record not found' };
         }
 
         if (payment.status === 'completed' || payment.status === 'success') {
