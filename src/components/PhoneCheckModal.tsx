@@ -41,12 +41,12 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="block w-[95vw] max-w-[425px] max-h-[85dvh] overflow-y-auto rounded-2xl border-0 shadow-xl bg-white/95 backdrop-blur-md p-4 sm:p-6 scrollbar-hide">
-        <DialogHeader className="space-y-2">
+      <DialogContent className="flex flex-col w-[95vw] max-w-[425px] max-h-[85dvh] p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-xl bg-white/95 backdrop-blur-md">
+        <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0">
           <DialogTitle className="text-xl font-black text-center text-gray-900">Enter Your Phone Number</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-6 py-2">
-          <div className="space-y-3">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 py-2 space-y-3">
             <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 ml-1">Phone Number</Label>
             <Input
               id="phone"
@@ -63,7 +63,7 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
               We'll check if you have an account with us
             </p>
           </div>
-          <div className="flex flex-col gap-3 pt-2">
+          <div className="flex flex-col gap-3 p-4 sm:p-6 pt-2 mt-auto border-t shrink-0 bg-white/50 backdrop-blur-sm">
             <Button
               type="submit"
               disabled={isLoading}
