@@ -398,7 +398,7 @@ export default function SellerOrdersSection() {
                         </div>
                       )}
                       {order.status === 'DELIVERY_PENDING' &&
-                        (order.paymentStatus?.toLowerCase() === 'success') && (
+                        (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')) && (
                           <div className="space-y-2">
                             <Button
                               size="sm"
@@ -423,7 +423,7 @@ export default function SellerOrdersSection() {
                           </div>
                         )}
                       {order.status === 'SERVICE_PENDING' &&
-                        (order.paymentStatus?.toLowerCase() === 'success') && (
+                        (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')) && (
                           <div className="space-y-2">
                             <Button
                               size="sm"
