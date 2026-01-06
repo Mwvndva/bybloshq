@@ -170,7 +170,7 @@ export function BuyerInfoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={`block w-full max-w-[95vw] sm:max-w-md max-h-[85vh] overflow-y-auto overflow-x-hidden ${themeClasses.bg} ${themeClasses.text} border-0 shadow-2xl rounded-3xl p-4 sm:p-6 scrollbar-hide`}>
+      <DialogContent className={`block w-[95vw] max-w-[425px] max-h-[85dvh] overflow-y-auto ${themeClasses.bg} ${themeClasses.text} border-0 shadow-xl rounded-2xl p-4 sm:p-6 scrollbar-hide`}>
         <DialogHeader>
           <DialogTitle className={`text-xl font-black text-center ${themeClasses.text} flex items-center justify-center gap-2 mb-1`}>
             <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
