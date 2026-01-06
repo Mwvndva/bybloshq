@@ -755,10 +755,39 @@ class PaymentCompletionService {
 
       let newStatus = 'CONFIRMED'; // Default for services/others
 
-      // Check metadata for product type if available, or fetch from order items
-      // Check metadata for product type if available, or fetch from order items
-      const productType = order.product_type || metadata.product_type || metadata.metadata?.product_type || 'physical';
-      const isDigital = order.is_digital || metadata.is_digital || metadata.metadata?.is_digital || false;
+      // Check metadata for product type if available
+      let productType = order.product_type || metadata.product_type || metadata.metadata?.product_type;
+      let isDigital = order.is_digital || metadata.is_digital || metadata.metadata?.is_digital;
+
+      // Fallback: Check order metadata items if product type is missing
+      // This is crucial because product_orders table doesn't have a product_type column
+      if (!productType && order.metadata) {
+        try {
+          const orderMetadata = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : order.metadata;
+
+          if (orderMetadata.items && Array.isArray(orderMetadata.items) && orderMetadata.items.length > 0) {
+            const items = orderMetadata.items;
+            const hasPhysical = items.some(item => item.productType === 'physical' || (!item.productType && !item.isDigital));
+            const hasService = items.some(item => item.productType === 'service');
+            const hasDigital = items.some(item => item.productType === 'digital' || item.isDigital);
+
+            // Prioritize status based on content
+            if (hasService && !hasPhysical) {
+              productType = 'service';
+            } else if (hasDigital && !hasService && !hasPhysical) {
+              productType = 'digital';
+              isDigital = true;
+            } else {
+              productType = 'physical';
+            }
+          }
+        } catch (e) {
+          logger.warn(`Failed to parse order metadata for order ${orderId}:`, e);
+        }
+      }
+
+      // Default to physical if still not determined
+      if (!productType) productType = 'physical';
 
       if (isDigital) {
         newStatus = 'COMPLETED';
