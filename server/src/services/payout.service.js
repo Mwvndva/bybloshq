@@ -64,7 +64,7 @@ class PayoutService {
                 provider_name: "Mobile Wallet (M-PESA)",
                 provider_code: "MPESA",
                 // Ideally we should have a callback URL
-                callback_url: process.env.PAYD_CALLBACK_URL || "https://example.com/callback"
+                callback_url: process.env.PAYD_CALLBACK_URL || "https://bybloshq-f1rz.onrender.com/api/payments/callback"
             };
 
             logger.info('Initiating Payd Payout');
