@@ -170,118 +170,124 @@ export function BuyerInfoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={`block w-[95vw] max-w-[425px] max-h-[85dvh] overflow-y-auto ${themeClasses.bg} ${themeClasses.text} border-0 shadow-xl rounded-2xl p-4 sm:p-6 scrollbar-hide`}>
-        <DialogHeader>
-          <DialogTitle className={`text-xl font-black text-center ${themeClasses.text} flex items-center justify-center gap-2 mb-1`}>
-            <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
-              <User className="h-4 w-4 text-yellow-600" />
-            </div>
-            Complete Your Info
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className={`w-[95vw] max-w-[425px] max-h-[85dvh] p-0 overflow-hidden ${themeClasses.bg} ${themeClasses.text} border-0 shadow-xl rounded-2xl`}>
+        <form onSubmit={handleSubmit} className="flex flex-col h-full w-full">
+          <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0">
+            <DialogTitle className={`text-xl font-black text-center ${themeClasses.text} flex items-center justify-center gap-2 mb-1`}>
+              <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
+                <User className="h-4 w-4 text-yellow-600" />
+              </div>
+              Complete Your Info
+            </DialogTitle>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Phone Number - Read Only */}
-          <div className="space-y-2">
-            <Label htmlFor="phone" className={`text-sm font-medium ${themeClasses.label}`}>
-              Phone Number
-            </Label>
-            <div className="relative">
-              <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-60`} />
-              <Input
-                id="phone"
-                type="tel"
-                value={phoneNumber}
-                disabled
-                className={`pl-10 bg-gray-100 ${theme === 'black' ? 'bg-gray-800' : ''} cursor-not-allowed opacity-75`}
-              />
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 py-2 space-y-4">
+            {/* Phone Number - Read Only */}
+            <div className="space-y-2">
+              <Label htmlFor="phone" className={`text-sm font-medium ${themeClasses.label}`}>
+                Phone Number
+              </Label>
+              <div className="relative">
+                <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-60`} />
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phoneNumber}
+                  disabled
+                  className={`pl-10 bg-gray-100 ${theme === 'black' ? 'bg-gray-800' : ''} cursor-not-allowed opacity-75`}
+                />
+              </div>
+              <p className={`text-xs ${themeClasses.text} opacity-60`}>Your registered phone number</p>
             </div>
-            <p className={`text-xs ${themeClasses.text} opacity-60`}>Your registered phone number</p>
+
+            {/* Full Name */}
+            <div className="space-y-2">
+              <Label htmlFor="fullName" className={`text-xs font-semibold ${themeClasses.label}`}>
+                Full Name *
+              </Label>
+              <div className="relative">
+                <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
+                <Input
+                  id="fullName"
+                  type="text"
+                  placeholder="Enter your full name"
+                  value={buyerInfo.fullName}
+                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, fullName: e.target.value }))}
+                  className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
+                  disabled={isLoading}
+                />
+              </div>
+              {errors.fullName && (
+                <p className={`text-xs ${themeClasses.error}`}>{errors.fullName}</p>
+              )}
+            </div>
+
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="email" className={`text-xs font-semibold ${themeClasses.label}`}>
+                Email Address *
+              </Label>
+              <div className="relative">
+                <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={buyerInfo.email}
+                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
+                  className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
+                  disabled={isLoading}
+                />
+              </div>
+              {errors.email && (
+                <p className={`text-xs ${themeClasses.error}`}>{errors.email}</p>
+              )}
+            </div>
+
+            {/* City */}
+            <div className="space-y-2">
+              <Label htmlFor="city" className={`text-xs font-semibold ${themeClasses.label}`}>
+                City
+              </Label>
+              <div className="relative">
+                <MapPin className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
+                <Input
+                  id="city"
+                  type="text"
+                  placeholder="Enter your city (optional)"
+                  value={buyerInfo.city}
+                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, city: e.target.value }))}
+                  className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input}`}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {/* Location */}
+            <div className="space-y-2">
+              <Label htmlFor="location" className={`text-xs font-semibold ${themeClasses.label}`}>
+                Location/Address
+              </Label>
+              <div className="relative">
+                <MapPin className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
+                <Input
+                  id="location"
+                  type="text"
+                  placeholder="Enter your location (optional)"
+                  value={buyerInfo.location}
+                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, location: e.target.value }))}
+                  className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input}`}
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <p className={`text-xs ${themeClasses.text} opacity-70 text-center mt-2`}>
+              Your information will be saved securely and used only for this purchase.
+            </p>
           </div>
 
-          {/* Full Name */}
-          <div className="space-y-2">
-            <Label htmlFor="fullName" className={`text-xs font-semibold ${themeClasses.label}`}>
-              Full Name *
-            </Label>
-            <div className="relative">
-              <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Enter your full name"
-                value={buyerInfo.fullName}
-                onChange={(e) => setBuyerInfo(prev => ({ ...prev, fullName: e.target.value }))}
-                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
-                disabled={isLoading}
-              />
-            </div>
-            {errors.fullName && (
-              <p className={`text-xs ${themeClasses.error}`}>{errors.fullName}</p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className={`text-xs font-semibold ${themeClasses.label}`}>
-              Email Address *
-            </Label>
-            <div className="relative">
-              <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
-              <Input
-                id="email"
-                type="email"
-                placeholder="Enter your email address"
-                value={buyerInfo.email}
-                onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
-                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
-                disabled={isLoading}
-              />
-            </div>
-            {errors.email && (
-              <p className={`text-xs ${themeClasses.error}`}>{errors.email}</p>
-            )}
-          </div>
-
-          {/* City */}
-          <div className="space-y-2">
-            <Label htmlFor="city" className={`text-xs font-semibold ${themeClasses.label}`}>
-              City
-            </Label>
-            <div className="relative">
-              <MapPin className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
-              <Input
-                id="city"
-                type="text"
-                placeholder="Enter your city (optional)"
-                value={buyerInfo.city}
-                onChange={(e) => setBuyerInfo(prev => ({ ...prev, city: e.target.value }))}
-                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input}`}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          {/* Location */}
-          <div className="space-y-2">
-            <Label htmlFor="location" className={`text-xs font-semibold ${themeClasses.label}`}>
-              Location/Address
-            </Label>
-            <div className="relative">
-              <MapPin className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 ${themeClasses.text} opacity-40`} />
-              <Input
-                id="location"
-                type="text"
-                placeholder="Enter your location (optional)"
-                value={buyerInfo.location}
-                onChange={(e) => setBuyerInfo(prev => ({ ...prev, location: e.target.value }))}
-                className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input}`}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 pt-6">
+          <div className="flex flex-col gap-3 p-4 sm:p-6 pt-2 mt-auto border-t shrink-0">
             <Button
               type="submit"
               disabled={isLoading}
@@ -307,10 +313,6 @@ export function BuyerInfoModal({
             </Button>
           </div>
         </form>
-
-        <p className={`text-xs ${themeClasses.text} opacity-70 text-center mt-4`}>
-          Your information will be saved securely and used only for this purchase.
-        </p>
       </DialogContent>
     </Dialog>
   );
