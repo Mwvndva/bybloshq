@@ -747,27 +747,13 @@ const updateOrderStatus = async (req, res) => {
       [id, status, notes || `Order status updated to ${status}`]
     );
 
-    // If order is delivered, schedule payout after 24 hours
+    // Payouts are now handled immediately upon 'COMPLETED' status (Buyer Confirmation)
+    // See confirmReceipt controller or paymentCompletion service for payout logic
+    /*
     if (status === 'delivered') {
-      const payoutDate = new Date();
-      payoutDate.setHours(payoutDate.getHours() + 24); // 24 hours from now
-
-      await client.query(
-        `INSERT INTO payouts (
-          order_id, seller_id, amount, status, scheduled_date
-        ) VALUES ($1, $2, $3, $4, $5)
-        ON CONFLICT (order_id) DO UPDATE
-        SET status = EXCLUDED.status,
-            scheduled_date = EXCLUDED.scheduled_date`,
-        [
-          id,
-          order.seller_id,
-          order.seller_payout,
-          'scheduled',
-          payoutDate
-        ]
-      );
+      // Logic removed to support immediate payouts on completion
     }
+    */
 
     await client.query('COMMIT');
 

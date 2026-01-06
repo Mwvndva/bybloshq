@@ -792,7 +792,7 @@ class PaymentCompletionService {
       if (isDigital) {
         newStatus = 'COMPLETED';
       } else if (productType === 'service') {
-        newStatus = 'CONFIRMED'; // Ready for service delivery
+        newStatus = 'SERVICE_PENDING'; // Waiting for seller to confirm booking
       } else {
         newStatus = 'DELIVERY_PENDING'; // Physical goods need shipping
       }
@@ -822,6 +822,43 @@ class PaymentCompletionService {
          WHERE id = $1`,
         [payment.id]
       );
+
+      // 4b. If status is COMPLETED (Digital), Process Payout Immediately
+      if (newStatus === 'COMPLETED') {
+        const platformFeePercentage = 0.03;
+        const platformFee = order.total_amount * platformFeePercentage;
+        const sellerPayout = order.total_amount - platformFee;
+
+        // Update seller balance
+        await client.query(`
+          UPDATE sellers 
+          SET 
+            total_sales = COALESCE(total_sales, 0) + $1,
+            net_revenue = COALESCE(net_revenue, 0) + $2,
+            balance = COALESCE(balance, 0) + $2,
+            updated_at = NOW()
+          WHERE id = $3
+        `, [order.total_amount, sellerPayout, order.seller_id]);
+
+        // Insert payout record
+        // Check if payouts table exists first to avoid errors
+        const tableCheck = await client.query(`
+          SELECT EXISTS (
+            SELECT FROM information_schema.tables 
+            WHERE table_name = 'payouts'
+          )
+        `);
+
+        if (tableCheck.rows[0].exists) {
+          await client.query(`
+            INSERT INTO payouts (
+              seller_id, order_id, amount, platform_fee, status, payment_method, reference_number, notes, created_at, updated_at
+            ) VALUES ($1, $2, $3, $4, 'completed', 'wallet', $5, 'Automatic payout for digital order', NOW(), NOW())
+           `, [order.seller_id, orderId, sellerPayout, platformFee, `digital_${orderId}_${Date.now()}`]);
+        }
+
+        logger.info(`Processed immediate payout for digital order ${orderId}`);
+      }
 
       logger.info(`Successfully completed product order ${orderId}`);
 

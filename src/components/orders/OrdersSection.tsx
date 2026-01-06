@@ -472,7 +472,7 @@ export default function OrdersSection() {
                             </Badge>
                           )}
                         </div>
-                        {item.isDigital && (order.paymentStatus === 'success' || order.status === 'COMPLETED') && (
+                        {item.isDigital && (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '') || order.status === 'COMPLETED') && (
                           <Button
                             variant="ghost"
                             size="sm"
