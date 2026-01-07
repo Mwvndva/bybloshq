@@ -473,6 +473,24 @@ CREATE TABLE IF NOT EXISTS withdrawal_requests (
     )
 );
 
+-- Ensure columns exist for withdrawal_requests (for existing tables)
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdrawal_requests' AND column_name='metadata') THEN
+        ALTER TABLE withdrawal_requests ADD COLUMN metadata JSONB;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdrawal_requests' AND column_name='provider_reference') THEN
+        ALTER TABLE withdrawal_requests ADD COLUMN provider_reference VARCHAR(255) UNIQUE;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='withdrawal_requests' AND column_name='raw_response') THEN
+        ALTER TABLE withdrawal_requests ADD COLUMN raw_response JSONB;
+    END IF;
+    
+    -- Update constraints if needed (optional for this specific fix, but good for completeness if status check changed)
+END $$;
+
 -- Wishlist table
 CREATE TABLE IF NOT EXISTS wishlist (
     id SERIAL PRIMARY KEY,
