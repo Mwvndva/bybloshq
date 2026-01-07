@@ -1,5 +1,6 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
+import logger from '../utils/logger.js';
 
 dotenv.config();
 
@@ -18,7 +19,7 @@ const dbConfig = {
 };
 
 // Log database connection details (without password)
-console.log('Database connection details:', {
+logger.info('Database connection details:', {
   host: dbConfig.host,
   port: dbConfig.port,
   database: dbConfig.database,
@@ -30,16 +31,11 @@ export const pool = new Pool(dbConfig);
 
 // Event listeners for the pool
 pool.on('connect', () => {
-  console.log('Successfully connected to the database');
+  logger.info('Successfully connected to the database');
 });
 
 pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
-  process.exit(-1);
-});
-
-pool.on('error', (err) => {
-  console.error('Unexpected error on idle client', err);
+  logger.error('Unexpected error on idle client', err);
   process.exit(-1);
 });
 
@@ -47,17 +43,17 @@ export const query = async (text, params) => {
   const start = Date.now();
   const client = await pool.connect();
   try {
-    console.log('Executing query:', { text, params });
+    logger.debug('Executing query:', { text, params });
     const res = await client.query(text, params);
     const duration = Date.now() - start;
-    console.log('Query executed successfully', {
+    logger.debug('Query executed successfully', {
       text,
       duration: `${duration}ms`,
       rows: res.rowCount
     });
     return res;
   } catch (error) {
-    console.error('Database query error:', {
+    logger.error('Database query error:', {
       error: error.message,
       code: error.code,
       detail: error.detail,
@@ -73,12 +69,12 @@ export const query = async (text, params) => {
 // Test database connection on startup
 export const testConnection = async () => {
   try {
-    console.log('Testing database connection...');
+    logger.info('Testing database connection...');
     const result = await pool.query('SELECT NOW()');
-    console.log('Database connection successful. Current time:', result.rows[0].now);
+    logger.info('Database connection successful. Current time:', result.rows[0].now);
     return true;
   } catch (error) {
-    console.error('Database connection test failed:', error);
+    logger.error('Database connection test failed:', error);
     throw error;
   }
 };

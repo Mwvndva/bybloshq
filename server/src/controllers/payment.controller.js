@@ -16,7 +16,7 @@ class PaymentController {
       const webhookData = req.body;
       const headers = req.headers;
 
-      logger.info('Paystack webhook received', {
+      logger.info('Payd webhook received', {
         event: webhookData.event,
         reference: webhookData.data?.reference
       });
@@ -41,9 +41,9 @@ class PaymentController {
       });
 
     } catch (error) {
-      logger.error('Paystack webhook processing failed:', error);
+      logger.error('Payd webhook processing failed:', error);
 
-      // Still return 200 to acknowledge receipt (Paystack expects this)
+      // Still return 200 to acknowledge receipt (Payd expects this)
       res.status(200).json({
         status: 'error',
         message: 'Webhook processing failed',

@@ -9,10 +9,11 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import mongoSanitize from 'express-mongo-sanitize';
 import xss from 'express-xss-sanitizer';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
+import morgan from 'morgan';
+import logger from './utils/logger.js';
 import organizerRoutes from './routes/organizer.routes.js';
 import sellerRoutes from './routes/seller.routes.js';
 import buyerRoutes from './routes/buyer.routes.js';
@@ -45,30 +46,19 @@ const candidateEnvPaths = [
 ].filter(Boolean);
 
 // Debug: Log all candidate paths
-console.log('Checking for .env files in these locations:');
-candidateEnvPaths.forEach((envPath, index) => {
-  const exists = existsSync(envPath);
-  console.log(`${index + 1}. ${envPath} - ${exists ? 'EXISTS' : 'NOT FOUND'}`);
-});
+logger.info('Checking for .env files in candidate locations');
 
 const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
-console.log(`Using .env file: ${chosenEnvPath || 'NONE FOUND'}`);
+logger.info(`Using .env file: ${chosenEnvPath || 'NONE FOUND'}`);
 
 dotenv.config({ path: chosenEnvPath });
 
 // Debug log environment variables (without sensitive data)
-console.log('Environment variables loaded:');
-console.log({
+logger.info('Environment variables loaded', {
   NODE_ENV: process.env.NODE_ENV,
   PORT: process.env.PORT,
   DB_HOST: process.env.DB_HOST,
-  DB_PORT: process.env.DB_PORT,
   DB_NAME: process.env.DB_NAME,
-  DB_USER: process.env.DB_USER,
-  DB_PASSWORD: process.env.DB_PASSWORD ? '***' : undefined,
-  ENV_PATH: chosenEnvPath,
-  // Paystack specific variables
-  PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY ? 'SET' : 'NOT SET',
   PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'NOT SET'
 });
 
@@ -91,23 +81,16 @@ app.use(requestId);
 // Set security HTTP headers
 app.use(helmet());
 
-// CORS configuration is now consolidated below
-
-// Log all requests
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl} [${req.id}]`);
-  next();
-});
+// Use Morgan for logging HTTP requests
+app.use(morgan('combined', { stream: logger.stream }));
 
 // Limit requests from same API
 const limiter = rateLimit({
   max: 100,
   windowMs: 60 * 60 * 1000,
   message: 'Too many requests from this IP, please try again in an hour!',
-  keyGenerator: (req) => {
-    // Use both IP and request ID for rate limiting
-    return `${req.ip}:${req.id}`;
-  }
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
 app.use('/api', limiter);
@@ -289,15 +272,13 @@ const testConnection = async () => {
 };
 
 // Add request logging and fix API prefix middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-  console.log('Request headers:', {
-    'authorization': req.headers.authorization ? '***' : 'none',
-    'content-type': req.headers['content-type'],
-    'user-agent': req.headers['user-agent']
+// Add detailed request logging in development
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    logger.debug(`${req.method} ${req.originalUrl}`);
+    next();
   });
-  next();
-});
+}
 
 // Fix double /api prefixes in URLs
 app.use(fixApiPrefix);
@@ -472,14 +453,14 @@ const startServer = async () => {
 
     const port = process.env.PORT || 3000;
     const server = app.listen(port, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
-      console.log(`📡 API available at http://localhost:${port}/api`);
+      logger.info(`🚀 Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
+      logger.info(`📡 API available at http://localhost:${port}/api`);
 
       // Initialize WhatsApp service (non-blocking)
-      console.log('📱 Initializing WhatsApp service...');
+      logger.info('📱 Initializing WhatsApp service...');
       whatsappService.initialize().catch(err => {
-        console.error('⚠️  WhatsApp initialization failed:', err.message);
-        console.log('ℹ️  WhatsApp notifications will be unavailable. Use /api/whatsapp/initialize to retry.');
+        logger.error('⚠️  WhatsApp initialization failed:', err.message);
+        logger.info('ℹ️  WhatsApp notifications will be unavailable. Use /api/whatsapp/initialize to retry.');
       });
     });
 

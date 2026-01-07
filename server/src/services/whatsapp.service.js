@@ -3,6 +3,7 @@ import pino from 'pino';
 import qrcode from 'qrcode-terminal';
 import path from 'path';
 import fs from 'fs';
+import logger from '../utils/logger.js';
 
 class WhatsAppService {
     constructor() {
@@ -13,12 +14,12 @@ class WhatsAppService {
     }
 
     async initialize() {
-        console.log('🔄 Initializing WhatsApp Client (Baileys)...');
+        logger.info('🔄 Initializing WhatsApp Client (Baileys)...');
 
         try {
             const { state, saveCreds } = await useMultiFileAuthState(this.authFolder);
             const { version, isLatest } = await fetchLatestBaileysVersion();
-            console.log(`ℹ️ Using WA v${version.join('.')}, isLatest: ${isLatest}`);
+            logger.info(`ℹ️ Using WA v${version.join('.')}, isLatest: ${isLatest}`);
 
             this.sock = makeWASocket({
                 version,
@@ -38,32 +39,32 @@ class WhatsAppService {
 
                 if (qr) {
                     this.qrCode = qr;
-                    console.log('📱 START AUTHENTICATION: Scan the QR code below');
+                    logger.info('📱 START AUTHENTICATION: Scan the QR code below');
                     qrcode.generate(qr, { small: true });
-                    console.log('------------------------------------------------');
-                    console.log('🌐 QR also available at /api/whatsapp/qr');
+                    logger.info('------------------------------------------------');
+                    logger.info('🌐 QR also available at /api/whatsapp/qr');
                 }
 
                 if (connection === 'close') {
                     const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-                    console.log('🔌 Connection closed due to ', lastDisconnect?.error, ', reconnecting: ', shouldReconnect);
+                    logger.warn('🔌 Connection closed due to ', lastDisconnect?.error, ', reconnecting: ', shouldReconnect);
 
                     this.isReady = false;
                     // Auto-reconnect if not strictly logged out
                     if (shouldReconnect) {
                         this.initialize();
                     } else {
-                        console.log('❌ Logged out. Delete baileys_auth_info and restart to scan again.');
+                        logger.error('❌ Logged out. Delete baileys_auth_info and restart to scan again.');
                     }
                 } else if (connection === 'open') {
-                    console.log('✅ WhatsApp (Baileys) is READY and CONNECTED!');
+                    logger.info('✅ WhatsApp (Baileys) is READY and CONNECTED!');
                     this.isReady = true;
                     this.qrCode = null;
                 }
             });
 
         } catch (error) {
-            console.error('❌ Failed to initialize Baileys:', error);
+            logger.error('❌ Failed to initialize Baileys:', error);
         }
     }
 
@@ -72,7 +73,7 @@ class WhatsAppService {
      */
     async sendMessage(phone, message) {
         if (!this.isReady || !this.sock) {
-            console.warn('⚠️ Cannot send message: Client not ready');
+            logger.warn('⚠️ Cannot send message: Client not ready');
             return false;
         }
 
@@ -81,10 +82,10 @@ class WhatsAppService {
             if (!jid) throw new Error('Invalid phone number');
 
             await this.sock.sendMessage(jid, { text: message });
-            console.log(`✅ Message sent to ${jid}`);
+            logger.info(`✅ Message sent to ${jid}`);
             return true;
         } catch (error) {
-            console.error(`❌ Failed to send message to ${phone}:`, error.message);
+            logger.error(`❌ Failed to send message to ${phone}:`, error.message);
             return false;
         }
     }
@@ -118,9 +119,9 @@ class WhatsAppService {
         if (this.sock) {
             try {
                 this.sock.end(undefined);
-                console.log('✅ Socket closed');
+                logger.info('✅ Socket closed');
             } catch (e) {
-                console.error('⚠️ Error closing socket:', e.message);
+                logger.error('⚠️ Error closing socket:', e.message);
             }
             this.sock = null;
             this.isReady = false;
@@ -346,7 +347,7 @@ Your refund balance remains available for future withdrawal requests.
         const isDigital = productType === 'digital';
 
         if (isService || isDigital) {
-            console.log(`Skipping logistics notification for ${productType} order #${order.order_number}`);
+            logger.info(`Skipping logistics notification for ${productType} order #${order.order_number}`);
             return true; // Return success (skipped)
         }
 
