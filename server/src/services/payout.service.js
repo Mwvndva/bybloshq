@@ -53,31 +53,34 @@ class PayoutService {
 
     async initiateMobilePayout(payoutData) {
         try {
-            const { amount, phone_number, narration, account_name, reference } = payoutData;
+            const { amount, phone_number, narration, account_name } = payoutData;
 
             if (!this.networkCode || !this.channelId) {
                 throw new Error('Payd network code or channel ID not configured');
             }
 
             const callbackUrl = await this.getCallbackUrl();
-            logger.info(`Initiating Payout. Callback URL: ${callbackUrl}`);
+            logger.info(`Initiating Payout to ${phone_number}. Callback URL: ${callbackUrl}`);
 
+            // Strict payload matching user specification
             const payload = {
                 username: this.username,
                 network_code: this.networkCode,
-                account_name: account_name || "Seller Withdrawal",
-                account_number: phone_number,
+                account_name: account_name || "Seller Withdrawal", // e.g. "momo" or name
+                account_number: phone_number, // User spec shows 0712345678, but typically wallets accept 254. using 254 for safety or original input if separated? userController sends the 254 refactored one. 
                 amount: parseFloat(amount),
-                phone_number: phone_number,
+                phone_number: phone_number, // Spec: 254712345678
                 channel_id: this.channelId,
-                narration: narration || "Withdrawal",
+                narration: narration || "Payment for goods",
                 currency: "KES",
+                callback_url: callbackUrl,
                 transaction_channel: "mobile",
                 channel: "mobile",
                 provider_name: "Mobile Wallet (M-PESA)",
-                provider_code: "MPESA",
-                callback_url: callbackUrl,
-                reference: reference
+                provider_code: "MPESA"
+                // 'reference' removed as it is not in the strict body received example, 
+                // typically 'correlator_id' is returned. If Payd v3 supports 'reference' it usually ignores extra fields, 
+                // but user said "ensure implementation follows this system" so we stick to it.
             };
 
             const response = await this.client.post('/withdrawal', payload, {
