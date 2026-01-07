@@ -15,79 +15,81 @@ class PayoutService {
             headers: {
                 'Content-Type': 'application/json',
             },
-            timeout: 30000, // 30 seconds
+            timeout: 30000,
         });
     }
 
-    /**
-     * Get Authorization Header
-     */
     getAuthHeader() {
         if (!this.username || !this.password) {
             throw new Error('Payd credentials not configured');
         }
         const authString = `${this.username}:${this.password}`;
-        const base64Auth = Buffer.from(authString).toString('base64');
-        return `Basic ${base64Auth}`;
+        return `Basic ${Buffer.from(authString).toString('base64')}`;
     }
 
-    /**
-     * Initiate a mobile payout
-     * @param {Object} payoutData
-     * @returns {Promise<Object>}
-     */
+    async getCallbackUrl() {
+        if (process.env.PAYD_CALLBACK_URL) {
+            return process.env.PAYD_CALLBACK_URL;
+        }
+
+        if (process.env.NODE_ENV === 'development') {
+            try {
+                // Try to fetch current ngrok URL
+                const response = await axios.get('http://localhost:4040/api/tunnels');
+                const tunnel = response.data.tunnels.find(t => t.proto === 'https');
+                if (tunnel?.public_url) {
+                    logger.info(`Using dynamic ngrok URL: ${tunnel.public_url}`);
+                    return `${tunnel.public_url}/api/callbacks/payd`;
+                }
+            } catch (error) {
+                logger.warn('Failed to fetch ngrok URL:', error.message);
+            }
+        }
+
+        // Fallback for production or failed ngrok fetch
+        const baseUrl = process.env.BASE_URL || 'https://bybloshq-f1rz.onrender.com';
+        return `${baseUrl}/api/callbacks/payd`;
+    }
+
     async initiateMobilePayout(payoutData) {
         try {
-            const { amount, phone_number, narration, account_name } = payoutData;
+            const { amount, phone_number, narration, account_name, reference } = payoutData;
 
             if (!this.networkCode || !this.channelId) {
                 throw new Error('Payd network code or channel ID not configured');
             }
 
-            // Format amount as number
-            const payoutAmount = parseFloat(amount);
+            const callbackUrl = await this.getCallbackUrl();
+            logger.info(`Initiating Payout. Callback URL: ${callbackUrl}`);
 
-            // Construct payload based on documentation
             const payload = {
                 username: this.username,
                 network_code: this.networkCode,
                 account_name: account_name || "Seller Withdrawal",
                 account_number: phone_number,
-                amount: payoutAmount,
+                amount: parseFloat(amount),
                 phone_number: phone_number,
                 channel_id: this.channelId,
                 narration: narration || "Withdrawal",
                 currency: "KES",
-                // Using a transaction channel appropriate for mobile money
                 transaction_channel: "mobile",
                 channel: "mobile",
                 provider_name: "Mobile Wallet (M-PESA)",
                 provider_code: "MPESA",
-                // Ideally we should have a callback URL
-                callback_url: process.env.PAYD_CALLBACK_URL || "https://bybloshq-f1rz.onrender.com/api/payments/callback"
+                callback_url: callbackUrl,
+                reference: reference
             };
 
-            logger.info('Initiating Payd Payout');
-
             const response = await this.client.post('/withdrawal', payload, {
-                headers: {
-                    Authorization: this.getAuthHeader()
-                }
+                headers: { Authorization: this.getAuthHeader() }
             });
 
-            logger.info('Payd Payout Status:', response.data.status || 'Success');
-
+            logger.info(`Payd Response Status: ${response.status}`);
             return response.data;
         } catch (error) {
-            logger.error('Payd Payout Error:', error.response?.data || error.message);
-
-            // Enhance error with response data if available
-            if (error.response?.data) {
-                const errorData = error.response.data;
-                throw new Error(errorData.message || 'Payout initialization failed');
-            }
-
-            throw new Error(error.message || 'Payout initialization failed');
+            const errorMsg = error.response?.data?.message || error.message || 'Payout initialization failed';
+            logger.error('Payd Payout Error:', errorMsg);
+            throw new Error(errorMsg);
         }
     }
 }

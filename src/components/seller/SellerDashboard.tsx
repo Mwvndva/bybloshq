@@ -63,10 +63,11 @@ interface WithdrawalRequest {
   amount: number;
   mpesaNumber: string;
   mpesaName: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed';
   createdAt: string;
   processedAt?: string;
   processedBy?: string;
+  failureReason?: string;
 }
 
 interface Product {
@@ -142,7 +143,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className={`space-y-0.5 flex-1 min-w-0 ${className}`}>
           <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wide truncate">{title}</p>
-          <p className={`text-lg sm:text-2xl md:text-4xl font-bold ${textColor} break-words leading-tight`}>
+          <p className={`text-base sm:text-xl md:text-2xl font-bold ${textColor} break-words leading-tight`}>
             {value}
           </p>
           <p className="text-[10px] sm:text-xs md:text-base text-gray-500 font-medium truncate">{subtitle}</p>
@@ -1119,7 +1120,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
               <div className="flex justify-between items-center mb-6 sm:mb-8">
                 <div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Withdrawal Requests</h3>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-black">Withdrawal Requests</h3>
                   <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Track your withdrawal request history</p>
                 </div>
               </div>
@@ -1132,7 +1133,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                         <div className="flex justify-between items-start">
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
-                              <p className="text-xl sm:text-2xl font-black text-black">
+                              <p className="text-lg sm:text-xl font-black text-black">
                                 {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(request.amount)}
                               </p>
                               <Badge
@@ -1141,7 +1142,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                                   ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
                                   : request.status === 'approved'
                                     ? 'bg-green-100 text-green-800 border-green-200'
-                                    : request.status === 'rejected'
+                                    : request.status === 'rejected' || request.status === 'failed'
                                       ? 'bg-red-100 text-red-800 border-red-200'
                                       : 'bg-blue-100 text-blue-800 border-blue-200'
                                   } rounded-full px-3 py-1 font-semibold`}
@@ -1155,6 +1156,14 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                             <p className="text-xs text-gray-500">
                               Requested on {new Date(request.createdAt).toLocaleDateString()}
                             </p>
+                            {request.status === 'failed' && request.failureReason && (
+                              <div className="mt-2 p-2 bg-red-50 border border-red-100 rounded-lg">
+                                <p className="text-xs text-red-700 font-medium flex items-center gap-1">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                  Reason: {request.failureReason}
+                                </p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -1166,7 +1175,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                   <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center shadow-lg">
                     <Wallet className="h-12 w-12 text-gray-400" />
                   </div>
-                  <h3 className="text-2xl font-black text-black mb-3">No withdrawal requests</h3>
+                  <h3 className="text-xl font-black text-black mb-3">No withdrawal requests</h3>
                   <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
                 </div>
               )}
@@ -1177,7 +1186,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         {activeTab === 'overview' && (
           <div className="space-y-6 sm:space-y-8 md:space-y-12">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Store Overview</h2>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-black mb-2 sm:mb-3 md:mb-4">Store Overview</h2>
               <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">Manage your products and track your store performance</p>
             </div>
 
@@ -1185,7 +1194,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
             <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
                 <div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Recent Products</h3>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-black">Recent Products</h3>
                   <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Your most recently added products</p>
                 </div>
                 <Button
