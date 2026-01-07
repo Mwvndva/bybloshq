@@ -679,6 +679,9 @@ export const getSellerById = async (req, res) => {
 // @desc    Create withdrawal request
 // @route   POST /api/sellers/withdrawal-request
 // @access  Private
+// @desc    Create withdrawal request
+// @route   POST /api/sellers/withdrawal-request
+// @access  Private
 export const createWithdrawalRequest = async (req, res) => {
   const client = await pool.connect();
   const sellerId = req.user?.id;
@@ -697,7 +700,6 @@ export const createWithdrawalRequest = async (req, res) => {
       mpesaNumber = mpesaNumber.substring(1);
     } else if (!mpesaNumber.startsWith('254')) {
       // Assume it needs prefix if strictly 9 digits, otherwise might be invalid but let it pass to API or strict check
-      // For safety, users typically enter 07xx or 7xx
       if (mpesaNumber.length === 9) mpesaNumber = `254${mpesaNumber}`;
     }
 
@@ -751,7 +753,6 @@ export const createWithdrawalRequest = async (req, res) => {
 
       // Update request with raw response (non-blocking for user response)
       // CRITICAL FIX: Update provider_reference with the ACTUAL ID from Payd (correlator_id)
-      // so we can match the callback later.
       const paydId = payoutResponse.correlator_id || payoutResponse.transaction_id;
       if (paydId) {
         await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2 WHERE id = $3',

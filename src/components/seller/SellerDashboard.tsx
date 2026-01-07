@@ -478,8 +478,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       });
 
       toast({
-        title: 'Success',
-        description: 'Withdrawal request submitted successfully',
+        title: 'Withdrawal Initiated',
+        description: 'Your request is processing. Please check your phone for the M-Pesa prompt.',
+        className: 'bg-green-50 border-green-200 text-green-900',
       });
 
       // Reset form and hide it
@@ -492,11 +493,13 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
 
       // Refresh withdrawal requests
       await fetchWithdrawalRequests();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error requesting withdrawal:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to submit withdrawal request. Please try again.';
+
       toast({
-        title: 'Error',
-        description: 'Failed to submit withdrawal request. Please try again.',
+        title: 'Withdrawal Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

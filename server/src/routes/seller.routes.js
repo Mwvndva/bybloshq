@@ -76,6 +76,4 @@ router.post('/products/upload-digital',
 router.post('/withdrawal-request', sellerController.createWithdrawalRequest);
 router.get('/withdrawal-requests', sellerController.getWithdrawalRequests);
 
-// Withdrawal route removed - no longer needed since button was removed from frontend
-
 export default router;
