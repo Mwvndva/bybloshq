@@ -1,7 +1,7 @@
--- 999_complete_schema_consolidated.sql
+-- 20260107_complete_schema.sql
 -- Complete consolidated schema for Byblos platform
--- This file contains all tables, enums, indexes, triggers, and functions
--- Generated from analyzing all migration files
+-- Generated and Consolidated on 2026-01-07
+-- Includes all previous migrations (999, 1000-1007) and recent manual fixes
 
 -- Enable UUID extension if not exists
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -41,11 +41,13 @@ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN
         CREATE TYPE order_status AS ENUM (
             'PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'FAILED',
-            'DELIVERY_PENDING', 'DELIVERY_COMPLETE', 'SERVICE_PENDING'
+            'DELIVERY_PENDING', 'DELIVERY_COMPLETE', 'SERVICE_PENDING', 'CONFIRMED'
         );
     ELSE
-        -- Add SERVICE_PENDING to existing enum if not present
+        -- Add SERVICE_PENDING if missing
         ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'SERVICE_PENDING';
+        -- Add CONFIRMED if missing
+        ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'CONFIRMED';
     END IF;
     
     -- Payment status enum (aligned with Paystack)
@@ -221,6 +223,7 @@ CREATE TABLE IF NOT EXISTS organizers (
     password VARCHAR(255) NOT NULL,
     status user_status DEFAULT 'active' NOT NULL,
     is_verified BOOLEAN DEFAULT FALSE,
+    balance DECIMAL(12, 2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP WITH TIME ZONE,
@@ -261,6 +264,7 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     status event_status DEFAULT 'published' NOT NULL,
     tickets_sold INTEGER DEFAULT 0,
+    balance DECIMAL(12, 2) DEFAULT 0,
     CONSTRAINT valid_dates CHECK (end_date > start_date)
 );
 
@@ -348,13 +352,6 @@ CREATE TABLE IF NOT EXISTS tickets (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='tickets' AND column_name='purchase_id') THEN
-        ALTER TABLE tickets ADD COLUMN purchase_id INTEGER REFERENCES ticket_purchases(id) ON DELETE SET NULL;
-    END IF;
-END $$;
-
 -- Products table
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
@@ -377,40 +374,6 @@ CREATE TABLE IF NOT EXISTS products (
     digital_file_name TEXT,
     CONSTRAINT valid_price_positive CHECK (price >= 0)
 );
-
--- Ensure columns exist even if table was already created
-DO $$
-BEGIN
-    -- Product Type
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'product_type') THEN
-        CREATE TYPE product_type AS ENUM ('physical', 'digital', 'service');
-    END IF;
-
-    -- Add columns
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='product_type') THEN
-        ALTER TABLE products ADD COLUMN product_type product_type DEFAULT 'physical';
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='service_locations') THEN
-        ALTER TABLE products ADD COLUMN service_locations TEXT;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='service_options') THEN
-        ALTER TABLE products ADD COLUMN service_options JSONB;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='is_digital') THEN
-        ALTER TABLE products ADD COLUMN is_digital BOOLEAN DEFAULT FALSE;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='digital_file_path') THEN
-        ALTER TABLE products ADD COLUMN digital_file_path TEXT;
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='digital_file_name') THEN
-        ALTER TABLE products ADD COLUMN digital_file_name TEXT;
-    END IF;
-END $$;
 
 -- Product orders table
 CREATE TABLE IF NOT EXISTS product_orders (
@@ -484,18 +447,30 @@ CREATE TABLE IF NOT EXISTS payouts (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Withdrawal requests table
+-- Withdrawal requests table (Consolidated with new columns)
 CREATE TABLE IF NOT EXISTS withdrawal_requests (
     id SERIAL PRIMARY KEY,
-    seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+    seller_id INTEGER REFERENCES sellers(id) ON DELETE CASCADE,
+    organizer_id INTEGER REFERENCES organizers(id) ON DELETE CASCADE,
+    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
     amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
     mpesa_number VARCHAR(15) NOT NULL,
     mpesa_name VARCHAR(255) NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'completed')),
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    provider_reference VARCHAR(255) UNIQUE,
+    raw_response JSONB,
+    metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMP WITH TIME ZONE,
     processed_by VARCHAR(100),
-    CONSTRAINT valid_mpesa_number CHECK (mpesa_number ~ '^[0-9]{10,15}$')
+    CONSTRAINT valid_mpesa_number CHECK (mpesa_number ~ '^[0-9]{10,15}$'),
+    CONSTRAINT withdrawal_requests_owner_check CHECK (
+        (seller_id IS NOT NULL AND organizer_id IS NULL AND event_id IS NULL) OR 
+        (seller_id IS NULL AND organizer_id IS NOT NULL)
+    ),
+    CONSTRAINT withdrawal_requests_status_check CHECK (
+        status IN ('pending', 'processing', 'approved', 'rejected', 'completed', 'failed')
+    )
 );
 
 -- Wishlist table
@@ -564,6 +539,37 @@ CREATE TABLE IF NOT EXISTS recent_sales (
     status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Discount Codes table
+CREATE TABLE IF NOT EXISTS discount_codes (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    discount_type VARCHAR(20) NOT NULL CHECK (discount_type IN ('percentage', 'fixed')),
+    discount_value DECIMAL(10, 2) NOT NULL CHECK (discount_value > 0),
+    min_order_amount DECIMAL(10, 2) DEFAULT 0,
+    max_discount_amount DECIMAL(10, 2),
+    usage_limit INTEGER,
+    usage_count INTEGER DEFAULT 0,
+    valid_from TIMESTAMP WITH TIME ZONE,
+    valid_until TIMESTAMP WITH TIME ZONE,
+    created_by INTEGER REFERENCES organizers(id) ON DELETE SET NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Discount Code Usage table
+CREATE TABLE IF NOT EXISTS discount_code_usage (
+    id SERIAL PRIMARY KEY,
+    discount_code_id INTEGER NOT NULL REFERENCES discount_codes(id) ON DELETE CASCADE,
+    ticket_id INTEGER REFERENCES tickets(id) ON DELETE CASCADE,
+    order_id INTEGER,
+    discount_amount DECIMAL(10, 2) NOT NULL,
+    customer_email VARCHAR(255) NOT NULL,
+    used_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================================
@@ -636,6 +642,7 @@ CREATE INDEX IF NOT EXISTS idx_payouts_order_id ON payouts(order_id);
 CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_seller_id ON withdrawal_requests(seller_id);
 CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_status ON withdrawal_requests(status);
 CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_created_at ON withdrawal_requests(created_at);
+CREATE INDEX IF NOT EXISTS idx_withdrawal_requests_organizer_id ON withdrawal_requests(organizer_id);
 
 -- Payments indexes
 CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
@@ -663,11 +670,17 @@ CREATE INDEX IF NOT EXISTS idx_refund_requests_buyer_id ON refund_requests(buyer
 CREATE INDEX IF NOT EXISTS idx_refund_requests_status ON refund_requests(status);
 CREATE INDEX IF NOT EXISTS idx_refund_requests_requested_at ON refund_requests(requested_at);
 
+-- Discount codes indexes
+CREATE INDEX IF NOT EXISTS idx_discount_codes_event_id ON discount_codes(event_id);
+CREATE INDEX IF NOT EXISTS idx_discount_codes_code ON discount_codes(code);
+CREATE INDEX IF NOT EXISTS idx_discount_codes_validity ON discount_codes(valid_from, valid_until, is_active);
+CREATE INDEX IF NOT EXISTS idx_discount_code_usage_code_id ON discount_code_usage(discount_code_id);
+CREATE INDEX IF NOT EXISTS idx_discount_code_usage_email ON discount_code_usage(customer_email);
+
 -- ============================================================================
 -- TRIGGERS
 -- ============================================================================
 
--- Updated_at triggers
 -- Updated_at triggers
 DO $$
 BEGIN
@@ -754,6 +767,12 @@ BEGIN
         BEFORE UPDATE ON recent_sales
         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
     END IF;
+    
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_discount_codes_updated_at') THEN
+        CREATE TRIGGER update_discount_codes_updated_at
+        BEFORE UPDATE ON discount_codes
+        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    END IF;
 END $$;
 
 -- Specialized triggers
@@ -798,91 +817,34 @@ BEGIN
     END IF;
 END $$;
 
--- ============================================================================
--- CONSTRAINTS
--- ============================================================================
-
--- Add unique constraint for ticket numbers
-DO $$
+-- Event balance triggers
+CREATE OR REPLACE FUNCTION update_event_balance_on_ticket_change()
+RETURNS TRIGGER AS $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'tickets_ticket_number_unique') THEN
-        ALTER TABLE tickets ADD CONSTRAINT tickets_ticket_number_unique UNIQUE (ticket_number);
+    -- If ticket marked as paid (inserted or updated)
+    IF (TG_OP = 'INSERT' AND NEW.status = 'paid') THEN
+        UPDATE events SET balance = balance + NEW.price WHERE id = NEW.event_id;
+    ELSIF (TG_OP = 'UPDATE') THEN
+        -- If status changed TO paid
+        IF (OLD.status != 'paid' AND NEW.status = 'paid') THEN
+            UPDATE events SET balance = balance + NEW.price WHERE id = NEW.event_id;
+        -- If status changed FROM paid (e.g. refunded/cancelled)
+        ELSIF (OLD.status = 'paid' AND NEW.status != 'paid') THEN
+            UPDATE events SET balance = balance - OLD.price WHERE id = OLD.event_id;
+        END IF;
+    ELSIF (TG_OP = 'DELETE' AND OLD.status = 'paid') THEN
+        UPDATE events SET balance = balance - OLD.price WHERE id = OLD.event_id;
     END IF;
-END $$;
-
--- Add check constraints
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_product_orders_amount_positive') THEN
-        ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_amount_positive CHECK (total_amount >= 0);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_product_orders_platform_fee_positive') THEN
-        ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_platform_fee_positive CHECK (platform_fee_amount >= 0);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'chk_product_orders_payout_positive') THEN
-        ALTER TABLE product_orders ADD CONSTRAINT chk_product_orders_payout_positive CHECK (seller_payout_amount >= 0);
-    END IF;
-END $$;
-
--- ============================================================================
--- COMMENTS
--- ============================================================================
-
-COMMENT ON TYPE order_status IS 'Order status enum supporting delivery flow: PENDING -> DELIVERY_PENDING -> DELIVERY_COMPLETE -> COMPLETED';
-COMMENT ON TYPE payment_status IS 'Payment status enum: pending, paid, completed, failed, cancelled';
-
-COMMENT ON TABLE sellers IS 'Table storing seller information including shop details';
-COMMENT ON TABLE buyers IS 'Table storing buyer information';
-COMMENT ON TABLE product_orders IS 'Table storing product orders with delivery flow support';
-COMMENT ON TABLE order_status_history IS 'Tracks order status changes with audit trail';
-COMMENT ON TABLE payouts IS 'Table storing seller payout information';
-COMMENT ON TABLE withdrawal_requests IS 'Table storing seller withdrawal requests';
-COMMENT ON TABLE wishlist IS 'Stores products that buyers have added to their wishlist';
-
--- ============================================================================
--- INITIAL DATA UPDATES (if needed)
--- ============================================================================
-
--- Update existing sellers with default shop names if needed
-UPDATE sellers 
-SET shop_name = 'shop-' || id 
-WHERE shop_name IS NULL;
-
--- Update existing buyers with location defaults if needed
-UPDATE buyers 
-SET city = COALESCE(city, 'Nairobi'),
-    location = COALESCE(location, 'CBD')
-WHERE city IS NULL OR location IS NULL;
-
--- ============================================================================
--- SCHEMA UPDATES (Consolidated from separate migrations)
--- ============================================================================
-
--- Add digital product fields to products table
-ALTER TABLE products ADD COLUMN IF NOT EXISTS is_digital BOOLEAN DEFAULT FALSE;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_file_path TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS digital_file_name TEXT;
-
--- Add last_login to buyers
-ALTER TABLE buyers ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
-CREATE INDEX IF NOT EXISTS idx_buyers_last_login ON buyers(last_login);
-
--- Add service columns to products
-ALTER TABLE products ADD COLUMN IF NOT EXISTS product_type product_type DEFAULT 'physical';
-ALTER TABLE products ADD COLUMN IF NOT EXISTS service_locations TEXT;
-ALTER TABLE products ADD COLUMN IF NOT EXISTS service_options JSONB;
-
--- ============================================================================
--- COMPLETION LOG
--- ============================================================================
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
 
 DO $$
 BEGIN
-    RAISE NOTICE 'Complete schema migration executed successfully at %', NOW();
-    RAISE NOTICE 'Tables created: sellers, organizers, buyers, events, event_ticket_types, tickets, ticket_purchases, products, product_orders, order_items, order_status_history, payouts, withdrawal_requests, payments, wishlist, dashboard_stats, recent_events, recent_sales';
-    RAISE NOTICE 'Enums created: product_status, ticket_status, event_status, user_status, order_status, payment_status, payment_method, payout_status';
-    RAISE NOTICE 'Functions created: update_updated_at_column, generate_ticket_number, generate_order_number, update_order_status_history, handle_order_completion';
-    RAISE NOTICE 'Indexes and triggers created for all tables';
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_update_event_balance') THEN
+        CREATE TRIGGER trigger_update_event_balance
+        AFTER INSERT OR UPDATE OR DELETE ON tickets
+        FOR EACH ROW
+        EXECUTE FUNCTION update_event_balance_on_ticket_change();
+    END IF;
 END $$;
