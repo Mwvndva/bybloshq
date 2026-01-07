@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { query, pool } from '../config/database.js';
 import payoutService from '../services/payout.service.js';
+import whatsappService from '../services/whatsapp.service.js';
 import logger from '../utils/logger.js';
 import {
   createSeller,
@@ -764,21 +765,41 @@ export const createWithdrawalRequest = async (req, res) => {
       // Update request with raw response (non-blocking for user response)
       // CRITICAL FIX: Update provider_reference with the ACTUAL ID from Payd (correlator_id)
       const paydId = payoutResponse.correlator_id || payoutResponse.transaction_id;
+
+      // Check for immediate success in response body
+      const isImmediateSuccess = payoutResponse.status === 'SUCCESS' || payoutResponse.status === 'COMPLETED';
+      const finalStatus = isImmediateSuccess ? 'completed' : 'processing';
+
       if (paydId) {
-        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2 WHERE id = $3',
-          [JSON.stringify(payoutResponse), paydId, request.id]
+        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2, status = $3 WHERE id = $4',
+          [JSON.stringify(payoutResponse), paydId, finalStatus, request.id]
         );
-        logger.info(`Withdrawal: Updated ReqID ${request.id} with ProviderRef ${paydId}`);
+        logger.info(`Withdrawal: Updated ReqID ${request.id} with ProviderRef ${paydId}, Status: ${finalStatus}`);
       } else {
-        await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
-          [JSON.stringify(payoutResponse), request.id]
+        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, status = $2 WHERE id = $3',
+          [JSON.stringify(payoutResponse), finalStatus, request.id]
         );
         logger.warn(`Withdrawal: No provider ref returned for ReqID ${request.id}`);
       }
 
+      // WhatsApp Notification for Success
+      if (seller.phone) {
+        whatsappService.notifySellerWithdrawalUpdate(seller.phone, {
+          amount: withdrawalAmount,
+          status: finalStatus,
+          reference: paydId || reference || 'N/A',
+          reason: null,
+          newBalance: null
+        }).catch(err => logger.error('Failed to send withdrawal WA notification:', err));
+      }
+
       res.status(201).json({
         status: 'success',
-        data: { ...request, message: 'Withdrawal initiated successfully.' }
+        data: {
+          ...request,
+          status: finalStatus,
+          message: isImmediateSuccess ? 'Withdrawal completed successfully.' : 'Withdrawal initiated successfully.'
+        }
       });
 
     } catch (apiError) {
@@ -788,11 +809,22 @@ export const createWithdrawalRequest = async (req, res) => {
       const refundClient = await pool.connect();
       try {
         await refundClient.query('BEGIN');
-        await refundClient.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2', [withdrawalAmount, sellerId]);
+        const { rows: [updatedSeller] } = await refundClient.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2 RETURNING balance', [withdrawalAmount, sellerId]);
         await refundClient.query('UPDATE withdrawal_requests SET status = $1 WHERE id = $2', ['failed', request.id]);
         await refundClient.query('COMMIT');
 
-        logger.info(`Withdrawal: Refunded ReqID ${request.id} due to API failure`);
+        logger.info(`Withdrawal: Refunded ReqID ${request.id} due to API failure. New Balance: ${updatedSeller?.balance}`);
+
+        // WhatsApp Notification for Failure
+        if (seller.phone) {
+          whatsappService.notifySellerWithdrawalUpdate(seller.phone, {
+            amount: withdrawalAmount,
+            status: 'failed',
+            reference: reference || 'N/A',
+            reason: apiError.message,
+            newBalance: updatedSeller?.balance
+          }).catch(err => logger.error('Failed to send withdrawal failure WA notification:', err));
+        }
 
         return res.status(502).json({
           status: 'error',
