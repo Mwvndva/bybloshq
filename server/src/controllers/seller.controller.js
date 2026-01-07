@@ -676,177 +676,101 @@ export const getSellerById = async (req, res) => {
 // @desc    Create withdrawal request
 // @route   POST /api/sellers/withdrawal-request
 // @access  Private
+// @desc    Create withdrawal request
+// @route   POST /api/sellers/withdrawal-request
+// @access  Private
 export const createWithdrawalRequest = async (req, res) => {
   const client = await pool.connect();
+  const sellerId = req.user?.id;
+  const { amount, mpesaNumber, mpesaName } = req.body;
 
   try {
-    const sellerId = req.user?.id;
-    const { amount, mpesaNumber, mpesaName } = req.body;
+    if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    if (!amount || !mpesaNumber || !mpesaName) return res.status(400).json({ status: 'error', message: 'Missing required fields' });
 
-    if (!sellerId) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required'
-      });
-    }
-
-    // Validate required fields
-    if (!amount || !mpesaNumber || !mpesaName) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Amount, M-Pesa number, and M-Pesa name are required'
-      });
-    }
-
-    // Validate amount is positive number
     const withdrawalAmount = parseFloat(amount);
-    if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Amount must be a positive number'
-      });
-    }
+    if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) return res.status(400).json({ status: 'error', message: 'Invalid amount' });
 
-    // Start database transaction
     await client.query('BEGIN');
 
-    // Get seller's current balance and lock the row for update
-    const balanceResult = await client.query(
+    // 1. Lock & Check Balance
+    const { rows: [seller] } = await client.query(
       'SELECT balance, full_name, email FROM sellers WHERE id = $1 FOR UPDATE',
       [sellerId]
     );
 
-    if (balanceResult.rows.length === 0) {
+    if (!seller) {
       await client.query('ROLLBACK');
-      return res.status(404).json({
-        status: 'error',
-        message: 'Seller not found'
-      });
+      return res.status(404).json({ status: 'error', message: 'Seller not found' });
     }
 
-    const seller = balanceResult.rows[0];
     const currentBalance = parseFloat(seller.balance || 0);
-
-    // Check if withdrawal amount exceeds balance
     if (withdrawalAmount > currentBalance) {
       await client.query('ROLLBACK');
-      return res.status(400).json({
-        status: 'error',
-        message: `Withdrawal amount (KSh ${withdrawalAmount.toLocaleString()}) cannot exceed available balance (KSh ${currentBalance.toLocaleString()})`
-      });
+      return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
     }
 
-    // Deduct amount from seller's balance
-    await client.query(
-      'UPDATE sellers SET balance = balance - $1 WHERE id = $2',
-      [withdrawalAmount, sellerId]
-    );
+    // 2. Deduct Balance & Create Request
+    await client.query('UPDATE sellers SET balance = balance - $1 WHERE id = $2', [withdrawalAmount, sellerId]);
 
-    // Create withdrawal request record
-    const requestResult = await client.query(
-      `INSERT INTO withdrawal_requests (
-          seller_id, 
-          amount, 
-          mpesa_number, 
-          mpesa_name, 
-          status, 
-          created_at
-       )
+    const { rows: [request] } = await client.query(
+      `INSERT INTO withdrawal_requests (seller_id, amount, mpesa_number, mpesa_name, status, created_at)
        VALUES ($1, $2, $3, $4, 'processing', NOW())
-       RETURNING id, seller_id, amount, mpesa_number, mpesa_name, status, created_at`,
+       RETURNING id, amount, mpesa_number, status, created_at`,
       [sellerId, withdrawalAmount, mpesaNumber, mpesaName]
     );
 
-    const withdrawalRequest = requestResult.rows[0];
+    // 3. Generate Reference & Update
+    const reference = `WR-${request.id}-${Date.now()}`;
+    await client.query('UPDATE withdrawal_requests SET provider_reference = $1 WHERE id = $2', [reference, request.id]);
 
-    // Commit the transaction (Money is deducted, request is recorded)
-    await client.query('COMMIT');
+    await client.query('COMMIT'); // Commit early so DB state is consistent
 
-    // Now initiate the payout with Payd
+    // 4. Initiate Payout (External API)
     try {
-
-
       const payoutResponse = await payoutService.initiateMobilePayout({
         amount: withdrawalAmount,
         phone_number: mpesaNumber,
-        narration: `Withdrawal for ${seller.full_name || 'Seller'}`,
-        account_name: mpesaName
+        narration: `Withdrawal for ${seller.full_name}`,
+        account_name: mpesaName,
+        reference: reference
       });
 
+      // Update request with raw response (non-blocking for user response)
+      await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2', [JSON.stringify(payoutResponse), request.id]);
 
-
-      // Extract transaction ID from response
-      const providerRef = payoutResponse.transaction_id || payoutResponse.reference || payoutResponse.data?.transaction_id || null;
-
-      // Update the withdrawal request with provider reference
-      await client.query(
-        'UPDATE withdrawal_requests SET provider_reference = $1, raw_response = $2 WHERE id = $3',
-        [providerRef, JSON.stringify(payoutResponse), withdrawalRequest.id]
-      );
+      res.status(201).json({
+        status: 'success',
+        data: { ...request, message: 'Withdrawal initiated successfully.' }
+      });
 
     } catch (apiError) {
-      console.error('Payd API failed after balance deduction. Rolling back...', apiError);
-
-      // Compensating Transaction: Refund the money and mark as failed
+      // 5. Compensating Transaction on Failure
+      const refundClient = await pool.connect();
       try {
-        await client.query('BEGIN');
-
-        // Refund balance
-        await client.query(
-          'UPDATE sellers SET balance = balance + $1 WHERE id = $2',
-          [withdrawalAmount, sellerId]
-        );
-
-        // Update request status to failed
-        await client.query(
-          'UPDATE withdrawal_requests SET status = $1 WHERE id = $2',
-          ['failed', withdrawalRequest.id]
-        );
-
-        await client.query('COMMIT');
+        await refundClient.query('BEGIN');
+        await refundClient.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2', [withdrawalAmount, sellerId]);
+        await refundClient.query('UPDATE withdrawal_requests SET status = $1 WHERE id = $2', ['failed', request.id]);
+        await refundClient.query('COMMIT');
 
         return res.status(502).json({
           status: 'error',
-          message: 'Payout provider unavailable. Your funds have been refunded.',
+          message: 'Payout provider unavailable. Funds refunded.',
           detail: apiError.message
         });
-
-      } catch (refundError) {
-        console.error('CRITICAL: Failed to refund balance after payout failure!', refundError);
-        // This is a bad state requiring manual intervention
-        // We'll throw to the outer catch
-        throw refundError;
+      } catch (refundErr) {
+        await refundClient.query('ROLLBACK');
+        console.error('CRITICAL: Refund failed', refundErr);
+        throw refundErr;
+      } finally {
+        refundClient.release();
       }
     }
-
-    // Success response
-    res.status(201).json({
-      status: 'success',
-      data: {
-        id: withdrawalRequest.id,
-        amount: withdrawalRequest.amount,
-        mpesaNumber: withdrawalRequest.mpesa_number,
-        mpesaName: withdrawalRequest.mpesa_name,
-        status: withdrawalRequest.status, // processing
-        createdAt: withdrawalRequest.created_at,
-        message: 'Withdrawal initiated successfully. You will receive an M-Pesa notification shortly.'
-      }
-    });
 
   } catch (error) {
-    // Rollback any open transaction if client is still connected (though intermediate commits/rollbacks might have happened)
-    try {
-      await client.query('ROLLBACK');
-    } catch (e) {
-      // Ignore rollback error if no transaction is active
-    }
-
-    console.error('Error creating withdrawal request:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to create withdrawal request',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    if (client) await client.query('ROLLBACK');
+    console.error('Withdrawal Error:', error);
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   } finally {
     client.release();
   }
@@ -869,7 +793,7 @@ export const getWithdrawalRequests = async (req, res) => {
     // Get withdrawal requests for the seller
     const result = await query(
       `SELECT wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name, wr.status,
-              wr.created_at, wr.processed_at, wr.processed_by,
+              wr.created_at, wr.processed_at, wr.processed_by, wr.metadata,
               s.full_name as seller_name, s.email as seller_email
        FROM withdrawal_requests wr
        JOIN sellers s ON wr.seller_id = s.id
@@ -888,7 +812,8 @@ export const getWithdrawalRequests = async (req, res) => {
       processedAt: row.processed_at,
       processedBy: row.processed_by,
       sellerName: row.seller_name,
-      sellerEmail: row.email
+      sellerEmail: row.email,
+      failureReason: row.status === 'failed' && row.metadata ? (row.metadata.failure_reason || row.metadata.message || row.metadata.status_description || 'Unknown error') : null
     }));
 
     res.status(200).json({
