@@ -6,18 +6,23 @@ export const handlePaydCallback = async (req, res) => {
     // Default response to acknowledge receipt immediately
     // Payd might retry if we error out, but we want to log internal errors
     try {
-        const callbackData = req.body;
-        logger.info('Received Payd Callback:', callbackData);
+        logger.info('Received Payd Callback Headers:', req.headers);
+        logger.info('Received Payd Callback Body (Raw):', JSON.stringify(req.body, null, 2));
+
+        // Normalize payload: Payd sometimes matches success/fail inside a 'data' wrapper
+        const payload = req.body.data || req.body;
+        const callbackData = payload;
 
         // 1. Extract Info
         // Payd V3 uses correlator_id, others might use transaction_id
-        const providerRef = callbackData.correlator_id || callbackData.transaction_id || callbackData.reference || callbackData.original_reference;
-        const status = callbackData.status || callbackData.status_code;
+        // We also check for 'reference' as a fallback
+        const providerRef = payload.correlator_id || payload.transaction_id || payload.reference || payload.original_reference;
+        const status = payload.status || payload.status_code;
 
         logger.info(`Processing Callback Ref: ${providerRef}, Status: ${status}`);
 
         if (!providerRef) {
-            logger.warn('Callback missing reference. Data:', callbackData);
+            logger.warn('Callback missing reference. Payload:', payload);
             return res.status(400).json({ status: 'error', message: 'Missing transaction reference' });
         }
 
