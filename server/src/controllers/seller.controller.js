@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import { query, pool } from '../config/database.js';
 import payoutService from '../services/payout.service.js';
+import logger from '../utils/logger.js';
 import {
   createSeller,
   findSellerByEmail,
@@ -709,6 +710,8 @@ export const createWithdrawalRequest = async (req, res) => {
     await client.query('BEGIN');
 
     // 1. Lock & Check Balance
+    logger.info(`Withdrawal: Checking balance for seller ${sellerId}, amount: ${withdrawalAmount}`);
+
     const { rows: [seller] } = await client.query(
       'SELECT balance, full_name, email FROM sellers WHERE id = $1 FOR UPDATE',
       [sellerId]
@@ -716,12 +719,14 @@ export const createWithdrawalRequest = async (req, res) => {
 
     if (!seller) {
       await client.query('ROLLBACK');
+      logger.warn(`Withdrawal: Seller not found ${sellerId}`);
       return res.status(404).json({ status: 'error', message: 'Seller not found' });
     }
 
     const currentBalance = parseFloat(seller.balance || 0);
     if (withdrawalAmount > currentBalance) {
       await client.query('ROLLBACK');
+      logger.warn(`Withdrawal: Insufficient funds. Seller ${sellerId} has ${currentBalance}, requested ${withdrawalAmount}`);
       return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
     }
 
@@ -740,9 +745,12 @@ export const createWithdrawalRequest = async (req, res) => {
     await client.query('UPDATE withdrawal_requests SET provider_reference = $1 WHERE id = $2', [reference, request.id]);
 
     await client.query('COMMIT'); // Commit early so DB state is consistent
+    logger.info(`Withdrawal: DB transaction committed. Created request ID ${request.id} with ref ${reference}`);
 
     // 4. Initiate Payout (External API)
     try {
+      logger.info(`Withdrawal: Initiating Payd API call for ReqID ${request.id} to ${mpesaNumber}`);
+
       const payoutResponse = await payoutService.initiateMobilePayout({
         amount: withdrawalAmount,
         phone_number: mpesaNumber,
@@ -751,6 +759,8 @@ export const createWithdrawalRequest = async (req, res) => {
         reference: reference
       });
 
+      logger.info(`Withdrawal: Payd API success for ReqID ${request.id}. Response: ${JSON.stringify(payoutResponse)}`);
+
       // Update request with raw response (non-blocking for user response)
       // CRITICAL FIX: Update provider_reference with the ACTUAL ID from Payd (correlator_id)
       const paydId = payoutResponse.correlator_id || payoutResponse.transaction_id;
@@ -758,10 +768,12 @@ export const createWithdrawalRequest = async (req, res) => {
         await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2 WHERE id = $3',
           [JSON.stringify(payoutResponse), paydId, request.id]
         );
+        logger.info(`Withdrawal: Updated ReqID ${request.id} with ProviderRef ${paydId}`);
       } else {
         await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
           [JSON.stringify(payoutResponse), request.id]
         );
+        logger.warn(`Withdrawal: No provider ref returned for ReqID ${request.id}`);
       }
 
       res.status(201).json({
@@ -771,12 +783,16 @@ export const createWithdrawalRequest = async (req, res) => {
 
     } catch (apiError) {
       // 5. Compensating Transaction on Failure
+      logger.error(`Withdrawal: Payd API Failed for ReqID ${request.id}. Error: ${apiError.message}`);
+
       const refundClient = await pool.connect();
       try {
         await refundClient.query('BEGIN');
         await refundClient.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2', [withdrawalAmount, sellerId]);
         await refundClient.query('UPDATE withdrawal_requests SET status = $1 WHERE id = $2', ['failed', request.id]);
         await refundClient.query('COMMIT');
+
+        logger.info(`Withdrawal: Refunded ReqID ${request.id} due to API failure`);
 
         return res.status(502).json({
           status: 'error',
