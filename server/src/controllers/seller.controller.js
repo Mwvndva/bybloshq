@@ -750,7 +750,18 @@ export const createWithdrawalRequest = async (req, res) => {
       });
 
       // Update request with raw response (non-blocking for user response)
-      await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2', [JSON.stringify(payoutResponse), request.id]);
+      // CRITICAL FIX: Update provider_reference with the ACTUAL ID from Payd (correlator_id)
+      // so we can match the callback later.
+      const paydId = payoutResponse.correlator_id || payoutResponse.transaction_id;
+      if (paydId) {
+        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2 WHERE id = $3',
+          [JSON.stringify(payoutResponse), paydId, request.id]
+        );
+      } else {
+        await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
+          [JSON.stringify(payoutResponse), request.id]
+        );
+      }
 
       res.status(201).json({
         status: 'success',
