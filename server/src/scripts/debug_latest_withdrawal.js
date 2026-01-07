@@ -1,17 +1,18 @@
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import pg from 'pg';
+const { Pool } = pg;
 
-// Load environment variables first
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.join(__dirname, '../../.env') });
-
-import { pool } from '../config/database.js';
+// Explicit configuration provided by user
+const pool = new Pool({
+    host: 'localhost',
+    port: 5432,
+    database: 'bybloshqdb',
+    user: 'byblos_user',
+    password: 'ByblosSecure2025!',
+});
 
 async function debugLatestWithdrawal() {
     try {
-        console.log('--- DEBUGGING LATEST WITHDRAWAL ---');
+        console.log('--- DEBUGGING LATEST WITHDRAWAL (Correct Config) ---');
         const { rows } = await pool.query(`
             SELECT id, status, provider_reference, raw_response, created_at 
             FROM withdrawal_requests 
@@ -27,8 +28,8 @@ async function debugLatestWithdrawal() {
             console.log('Status:', row.status);
             console.log('Provider Reference:', row.provider_reference);
             console.log('Created At:', row.created_at);
-            console.log('Raw Response (from Payd):');
-            console.log(JSON.stringify(row.raw_response, null, 2));
+            // console.log('Raw Response (from Payd):');
+            // console.log(JSON.stringify(row.raw_response, null, 2));
         }
     } catch (error) {
         console.error('Error querying database:', error);
