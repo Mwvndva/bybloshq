@@ -66,7 +66,7 @@ logger.info('Environment variables loaded', {
 const app = express();
 
 // Enable trust proxy to correctly detect client IPs from proxies like Vercel or Cloudflare
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
 
 // Mount test routes first - completely public
 import testRoutes from './controllers/test.controller.js';
