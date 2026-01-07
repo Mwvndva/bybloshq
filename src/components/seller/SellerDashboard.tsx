@@ -479,7 +479,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
 
       toast({
         title: 'Withdrawal Initiated',
-        description: 'Your request is processing. Please check your phone for the M-Pesa prompt.',
+        description: 'Your withdrawal has been successfully initiated. Funds should reflect shortly.',
         className: 'bg-green-50 border-green-200 text-green-900',
       });
 

@@ -455,6 +455,53 @@ Please disregard instructions for this order. If picked up, please return to sel
 
         return this.sendMessage(logisticsNumber, message);
     }
+    async notifySellerWithdrawalUpdate(phone, withdrawalData) {
+        if (!phone) return false;
+
+        const { amount, status, reference, reason, newBalance } = withdrawalData;
+
+        let header = '';
+        let message = '';
+        const fmtAmount = parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        if (status === 'completed') {
+            header = '✅ *WITHDRAWAL SUCCESSFUL*';
+            message = `
+${header}
+
+💰 *Amount:* KSh ${fmtAmount}
+🏦 *Ref:* ${reference}
+
+Your funds have been successfully sent to your M-Pesa.
+            `.trim();
+        } else if (status === 'failed') {
+            header = '❌ *WITHDRAWAL FAILED*';
+            message = `
+${header}
+
+💰 *Amount:* KSh ${fmtAmount}
+🏦 *Ref:* ${reference}
+⚠️ *Reason:* ${reason || 'Transaction failed'}
+
+The amount has been returned to your wallet.
+💵 *New Balance:* KSh ${parseFloat(newBalance || 0).toLocaleString()}
+            `.trim();
+        } else if (status === 'processing') {
+            header = '⏳ *WITHDRAWAL PROCESSING*';
+            message = `
+${header}
+
+💰 *Amount:* KSh ${fmtAmount}
+🏦 *Ref:* ${reference}
+
+Your request has been received and is being processed. You will be notified once completed.
+            `.trim();
+        } else {
+            return false;
+        }
+
+        return this.sendMessage(phone, message);
+    }
 }
 
 export default new WhatsAppService();

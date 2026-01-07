@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
+import whatsappService from '../services/whatsapp.service.js';
 
 export const handlePaydCallback = async (req, res) => {
     const client = await pool.connect();
@@ -39,9 +40,15 @@ export const handlePaydCallback = async (req, res) => {
 
         await client.query('BEGIN');
 
-        // 3. Find Request
+        // 3. Find Request with User Phone details
         const { rows: [request] } = await client.query(
-            'SELECT id, status, amount, seller_id, organizer_id, event_id FROM withdrawal_requests WHERE provider_reference = $1 FOR UPDATE',
+            `SELECT wr.id, wr.status, wr.amount, wr.seller_id, wr.organizer_id, wr.event_id, 
+                    COALESCE(s.phone, o.phone) as phone
+             FROM withdrawal_requests wr 
+             LEFT JOIN sellers s ON wr.seller_id = s.id 
+             LEFT JOIN organizers o ON wr.organizer_id = o.id
+             WHERE wr.provider_reference = $1 
+             FOR UPDATE OF wr`,
             [providerRef]
         );
 
@@ -65,13 +72,26 @@ export const handlePaydCallback = async (req, res) => {
         );
 
         // 6. Handle failure (Refunds)
+        let refundNewBalance = null;
         if (newStatus === 'failed') {
-            await refundBalance(client, request);
+            refundNewBalance = await refundBalance(client, request);
             logger.info(`Refunded ${request.amount} for ref: ${providerRef}`);
         }
 
         await client.query('COMMIT');
         logger.info(`Callback processed. Ref: ${providerRef} -> ${newStatus}`);
+
+        // 7. WhatsApp Notification
+        if (request.phone) {
+            whatsappService.notifySellerWithdrawalUpdate(request.phone, {
+                amount: request.amount,
+                status: newStatus,
+                reference: providerRef,
+                reason: failureReason,
+                newBalance: refundNewBalance
+            }).catch(err => logger.error('Failed to send callback WA notification:', err));
+        }
+
         res.status(200).json({ status: 'success' });
 
     } catch (error) {
@@ -87,13 +107,27 @@ export const handlePaydCallback = async (req, res) => {
  * Refund helper to keep main logic clean
  */
 async function refundBalance(client, request) {
+    let newBalance = null;
+    let table = '';
+
     if (request.event_id) {
         const feePercentage = 0.06;
         const grossRefund = request.amount / (1 - feePercentage);
-        await client.query('UPDATE events SET balance = balance + $1 WHERE id = $2', [grossRefund, request.event_id]);
+        const { rows } = await client.query('UPDATE events SET balance = balance + $1 WHERE id = $2 RETURNING balance', [grossRefund, request.event_id]);
+        newBalance = rows[0]?.balance;
+        table = 'events';
     } else if (request.seller_id) {
-        await client.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2', [request.amount, request.seller_id]);
+        const { rows } = await client.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2 RETURNING balance', [request.amount, request.seller_id]);
+        newBalance = rows[0]?.balance;
+        table = 'sellers';
     } else if (request.organizer_id) {
-        await client.query('UPDATE organizers SET balance = balance + $1 WHERE id = $2', [request.amount, request.organizer_id]);
+        const { rows } = await client.query('UPDATE organizers SET balance = balance + $1 WHERE id = $2 RETURNING balance', [request.amount, request.organizer_id]);
+        newBalance = rows[0]?.balance;
+        table = 'organizers';
     }
+
+    if (newBalance !== null) {
+        logger.info(`Refund Successful. Entity: ${table}, Amount: ${request.amount}, New Balance: ${newBalance}`);
+    }
+    return newBalance;
 }
