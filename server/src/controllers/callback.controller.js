@@ -10,8 +10,11 @@ export const handlePaydCallback = async (req, res) => {
         logger.info('Received Payd Callback:', callbackData);
 
         // 1. Extract Info
-        const providerRef = callbackData.transaction_id || callbackData.reference || callbackData.original_reference;
+        // Payd V3 uses correlator_id, others might use transaction_id
+        const providerRef = callbackData.correlator_id || callbackData.transaction_id || callbackData.reference || callbackData.original_reference;
         const status = callbackData.status || callbackData.status_code;
+
+        logger.info(`Processing Callback Ref: ${providerRef}, Status: ${status}`);
 
         if (!providerRef) {
             logger.warn('Callback missing reference. Data:', callbackData);
