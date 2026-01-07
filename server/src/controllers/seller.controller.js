@@ -682,11 +682,24 @@ export const getSellerById = async (req, res) => {
 export const createWithdrawalRequest = async (req, res) => {
   const client = await pool.connect();
   const sellerId = req.user?.id;
-  const { amount, mpesaNumber, mpesaName } = req.body;
+  const { amount, mpesaName } = req.body;
+  let { mpesaNumber } = req.body;
 
   try {
     if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
     if (!amount || !mpesaNumber || !mpesaName) return res.status(400).json({ status: 'error', message: 'Missing required fields' });
+
+    // Ensure mpesaNumber starts with 254
+    mpesaNumber = mpesaNumber.toString();
+    if (mpesaNumber.startsWith('0')) {
+      mpesaNumber = `254${mpesaNumber.substring(1)}`;
+    } else if (mpesaNumber.startsWith('+254')) {
+      mpesaNumber = mpesaNumber.substring(1);
+    } else if (!mpesaNumber.startsWith('254')) {
+      // Assume it needs prefix if strictly 9 digits, otherwise might be invalid but let it pass to API or strict check
+      // For safety, users typically enter 07xx or 7xx
+      if (mpesaNumber.length === 9) mpesaNumber = `254${mpesaNumber}`;
+    }
 
     const withdrawalAmount = parseFloat(amount);
     if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) return res.status(400).json({ status: 'error', message: 'Invalid amount' });
