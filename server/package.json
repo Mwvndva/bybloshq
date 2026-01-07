@@ -60,7 +60,6 @@
     "joi": "^17.13.3",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
-    "knex": "^3.1.0",
     "lucide-react": "^0.526.0",
     "mocha": "^11.5.0",
     "morgan": "^1.10.0",
@@ -73,7 +72,6 @@
     "pino": "^9.0.0",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
-    "sequelize": "^6.37.7",
     "uuid": "^9.0.1",
     "winston": "^3.11.0",
     "zod": "^3.25.67"
