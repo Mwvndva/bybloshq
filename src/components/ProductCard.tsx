@@ -47,6 +47,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isPhoneCheckModalOpen, setIsPhoneCheckModalOpen] = useState(false);
   const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
   const [currentPhone, setCurrentPhone] = useState('');
+  const [initialBuyerData, setInitialBuyerData] = useState<{ fullName?: string; email?: string; city?: string; location?: string } | undefined>(undefined);
+  const [shouldSkipSave, setShouldSkipSave] = useState(false);
 
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
@@ -197,25 +199,44 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       setIsPhoneCheckModalOpen(false);
 
       if (result.exists && result.buyer) {
-        // Buyer exists - use their data to initiate payment
+        // Buyer exists - check if they have an email (REQUIRED for payment)
+        if (result.buyer.email && result.buyer.email.trim() !== '') {
+          // Use their data to initiate payment
 
-        // Store token if provided
-        if (result.token) {
-          localStorage.setItem('buyer_token', result.token);
+          // Store token if provided
+          if (result.token) {
+            localStorage.setItem('buyer_token', result.token);
+          }
+
+          // Proceed directly to payment with existing buyer info
+          await handleBuyerInfoSubmit({
+            fullName: result.buyer.fullName || '',
+            email: result.buyer.email || '',
+            phone: result.buyer.phone || phone,
+            city: result.buyer.city,
+            location: result.buyer.location
+          }, null, true); // true = skipSave
+        } else {
+          // Buyer exists but MISSING EMAIL - Prompt them to complete info
+          toast({
+            title: "Email Required",
+            description: "Please provide your email address to receive the receipt.",
+            variant: "default"
+          });
+
+          setInitialBuyerData({
+            fullName: result.buyer.fullName,
+            city: result.buyer.city,
+            location: result.buyer.location,
+            email: '' // Explicitly empty to force entry
+          });
+          setShouldSkipSave(true);
+          setIsBuyerModalOpen(true);
         }
-
-        // Proceed directly to payment with existing buyer info
-        // We skip saving buyer info because they already exist
-        await handleBuyerInfoSubmit({
-          fullName: result.buyer.fullName || '',
-          email: result.buyer.email || '',
-          phone: result.buyer.phone || phone,
-          city: result.buyer.city,
-          location: result.buyer.location
-        }, null, true); // true = skipSave
       } else {
         // Buyer doesn't exist - show form to collect full details
-
+        setInitialBuyerData(undefined);
+        setShouldSkipSave(false);
         setIsBuyerModalOpen(true);
       }
     } catch (error: any) {
@@ -765,11 +786,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           await handleBuyerInfoSubmit({
             ...buyerInfo,
             phone: currentPhone
-          });
+          }, null, shouldSkipSave);
         }}
         isLoading={isProcessingPurchase}
         theme={theme}
         phoneNumber={currentPhone}
+        initialData={initialBuyerData}
       />
 
       <ServiceBookingModal
