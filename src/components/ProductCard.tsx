@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Image as ImageIcon, X, Heart, Loader2, ShoppingCart, Phone, FileText, Handshake, Calendar, MapPin } from 'lucide-react';
+import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
-import { Product, Seller, PaymentProvider } from '@/types';
+import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -14,6 +14,8 @@ import PhoneCheckModal from '@/components/PhoneCheckModal';
 import { ServiceBookingModal } from '@/components/ServiceBookingModal';
 import buyerApi from '@/api/buyerApi';
 import { format } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
+import apiClient from '@/lib/apiClient';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
@@ -28,13 +30,13 @@ interface ProductCardProps {
 
 export function ProductCard({ product, seller, hideWishlist = false, theme = 'default' }: ProductCardProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
+
   // Safely use wishlist context
   let wishlistContext = null;
-
   try {
     wishlistContext = useWishlist?.();
   } catch (error) {
-    // If useWishlist throws an error, use null
     console.warn('ProductCard: Wishlist not available');
   }
 
@@ -59,18 +61,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
-  const sellerLocation = displaySeller?.location;
   const isSold = product.status === 'sold' || product.isSold;
-
-  const hasContactInfo = Boolean(
-    displaySeller?.phone ||
-    displaySeller?.email ||
-    displaySeller?.website ||
-    sellerLocation
-  );
-
   const isWishlisted = isInWishlist(product.id);
-
 
 
   useEffect(() => {
@@ -107,7 +99,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   };
 
   const handleCardClick = (e: React.MouseEvent) => {
-    // Don't open image dialog if clicking on interactive elements
     const target = e.target as HTMLElement;
     const isInteractiveElement =
       target.closest('button') ||
@@ -127,15 +118,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   // Safely use buyer auth context
   let isAuthenticated = false;
   let userData = null;
-  let isLoading = false;
 
   try {
     const buyerAuth = useBuyerAuth?.();
     isAuthenticated = buyerAuth?.isAuthenticated || false;
     userData = buyerAuth?.user || null;
-    isLoading = buyerAuth?.isLoading || false;
   } catch (error) {
-    // If useBuyerAuth throws an error, use default values
     console.warn('ProductCard: BuyerAuth not available');
   }
 
@@ -187,7 +175,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handlePhoneSubmit = async (phone: string) => {
     setIsCheckingPhone(true);
     try {
+      // Use buyerApi (which uses the old axios instance? No, let's just use it as is for now, it works)
+      // Actually, let's verify buyerApi uses the same base logic.
       const result = await buyerApi.checkBuyerByPhone(phone);
+
       setCurrentPhone(phone);
       setIsPhoneCheckModalOpen(false);
 
@@ -195,7 +186,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         // CASE A: Buyer Exists
         if (result.buyer.email && result.buyer.email.trim() !== '') {
           // Has Email -> PROCEED TO PAYMENT
-          // We don't need to save anything, just use the data
           await executePayment({
             fullName: result.buyer.fullName || '',
             email: result.buyer.email,
@@ -245,16 +235,21 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       // If it's a new user (not just updating email for existing), save them first
       if (!isExistingUserUpdate && !shouldSkipSave) {
         const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
+
         if (saveResult.requiresLogin) {
-          // This shouldn't happen if checkPhone logic is correct, but fail-safe
           window.location.href = '/buyer/login';
           return;
         }
+
+        // **CRITICAL**: Save token for the NEW GUEST so they are logged in!
+        if (saveResult.token) {
+          localStorage.setItem('buyer_token', saveResult.token);
+        }
+
         // Proceed with new ID
         await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
       } else {
-        // Existing user (skipped save) -> Proceed with null ID (backend handles lookup) or passed ID if available
-        // For simplistic 'skipSave' flow, we rely on backend lookup or just passing data
+        // Existing user (skipped save) -> Proceed using backend lookup
         await executePayment(buyerInfo, explicitBookingData);
       }
 
@@ -291,44 +286,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         } : undefined
       };
 
-      // Use a simpler fetch for clarity
-      const token = localStorage.getItem('buyer_token');
-      // 4. Call Paystack product payment API
-      const isDevelopment = import.meta.env.DEV;
-      // Ensure we don't duplicate /api if it's already in the VITE_API_URL or if we are using the proxy
-      // The proxy in vite.config usually maps /api -> localhost:3002/api
-      // So if we use /api/payments..., it works with proxy.
-      // If we use full URL, we should be careful.
-
-      let endpoint = '/payments/initiate-product';
-      let baseURL = '';
-
-      if (isDevelopment && !import.meta.env.VITE_API_URL) {
-        // Using Vite Proxy
-        baseURL = '/api';
-      } else {
-        // Using configured URL (e.g. production)
-        baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '');
-        // If baseURL doesn't end in /api, append it, OR assume routes are mounted at root?
-        // Based on server/index.js, routes are usually at /api/v1 or /api.
-        // Let's assume standard /api prefix is needed if not present
-        if (!baseURL.endsWith('/api')) {
-          baseURL = `${baseURL}/api`;
-        }
-      }
-
-      const response = await fetch(`${baseURL}${endpoint}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': token ? `Bearer ${token}` : ''
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data.message || 'Payment initiation failed');
+      // USE NEW API CLIENT
+      const response = await apiClient.post('/payments/initiate-product', payload);
+      const data: any = response.data;
 
       if (data.status === 'success') {
         toast({
@@ -337,9 +297,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           duration: 10000
         });
 
-        // Start Polling (Simplified)
-        const invoiceId = data.data?.reference;
-        if (invoiceId) pollPaymentStatus(invoiceId, baseURL, token);
+        // Start Polling
+        const invoiceId = data.data?.reference || data.data?.invoice_id; // Payd returns reference
+        if (invoiceId) pollPaymentStatus(invoiceId);
 
       } else {
         throw new Error(data.message);
@@ -356,17 +316,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const pollPaymentStatus = (invoiceId: string, baseURL: string, token: string | null) => {
+  const pollPaymentStatus = (invoiceId: string) => {
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
       if (attempts > 24) { clearInterval(interval); setIsProcessingPurchase(false); return; }
 
       try {
-        const res = await fetch(`${baseURL}/api/payments/status/${invoiceId}`, {
-          headers: { 'Authorization': token ? `Bearer ${token}` : '' }
-        });
-        const data = await res.json();
+        // USE NEW API CLIENT
+        const response = await apiClient.get(`/payments/status/${invoiceId}`);
+        const data: any = response.data;
         const status = data.data?.status || data.status;
 
         if (status === 'success' || status === 'completed') {
@@ -377,6 +336,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             description: 'Your purchase has been confirmed!',
             className: 'bg-green-600 text-white'
           });
+
+          // **NAVIGATION**: Redirect to Orders Tab
+          // Delay slightly to let toast be seen
+          setTimeout(() => {
+            navigate('/buyer/dashboard?tab=orders');
+          }, 1000);
+
         } else if (status === 'failed') {
           clearInterval(interval);
           setIsProcessingPurchase(false);
@@ -472,6 +438,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         themeClasses.card
       )}
       aria-label={`Product: ${product.name}`}
+      onClick={handleCardClick}
     >
       {/* Wishlist Button */}
       {!hideWishlist && (
@@ -534,10 +501,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           )}
           onLoad={handleImageLoad}
           onError={handleImageError}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsImageDialogOpen(true);
-          }}
         />
       </div>
 
@@ -734,4 +697,3 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     </Card>
   );
 }
-
