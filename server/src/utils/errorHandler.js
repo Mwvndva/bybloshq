@@ -17,7 +17,7 @@ export const globalErrorHandler = (err, req, res, next) => {
 
   if (process.env.NODE_ENV === 'development') {
     console.error('ERROR 💥', err);
-    
+
     res.status(err.statusCode).json({
       status: err.status,
       error: err,
@@ -26,17 +26,29 @@ export const globalErrorHandler = (err, req, res, next) => {
     });
   } else {
     // Production error handling
-    
+    let error = { ...err };
+    // Copy name and message as they might not enumerable
+    error.message = err.message;
+    error.name = err.name;
+    error.stack = err.stack;
+
+    // Handle specific error types
+    if (error.name === 'CastError') error = handleCastErrorDB(error);
+    if (error.code === 11000) error = handleDuplicateFieldsDB(error);
+    if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
+    if (error.name === 'JsonWebTokenError') error = handleJWTError();
+    if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+
     // Operational, trusted error: send message to client
-    if (err.isOperational) {
-      res.status(err.statusCode).json({
-        status: err.status,
-        message: err.message,
+    if (error.isOperational) {
+      res.status(error.statusCode).json({
+        status: error.status,
+        message: error.message,
       });
     } else {
       // Programming or other unknown error: don't leak error details
-      console.error('ERROR 💥', err);
-      
+      console.error('ERROR 💥', err); // Log original error
+
       // Send generic message
       res.status(500).json({
         status: 'error',

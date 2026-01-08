@@ -51,15 +51,17 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     console.log('Login attempt with PIN:', pin ? '***' : '(empty)');
     setLoading(true);
     setError(null);
-    
+
     try {
       console.log('Calling adminApi.login()');
       const response = await adminApi.login(pin);
       console.log('Login response:', response);
-      
-      const success = !!response?.data?.token;
+
+      // With cookie auth, we don't get a token back necessarily, 
+      // but the API call success implies we are logged in.
+      const success = response?.status === 'success' || !!response?.data?.token;
       console.log('Login success:', success);
-      
+
       if (success) {
         console.log('Setting isAuthenticated to true');
         setIsAuthenticated(true);
@@ -70,7 +72,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
         console.log('Login failed:', errorMsg);
         setError(errorMsg);
       }
-      
+
       return success;
     } catch (error: any) {
       console.error('Login error:', error);

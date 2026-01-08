@@ -1,4 +1,4 @@
-import pool from '../db/index.js';
+import { pool } from '../config/database.js';
 import { AppError } from '../utils/errorHandler.js';
 
 /**

@@ -95,30 +95,23 @@ interface WithdrawalRequest {
 // Create axios instance for seller API
 const sellerApiInstance = axios.create({
   baseURL,
+  withCredentials: true, // Enable cookies
   headers: {
     'Content-Type': 'application/json',
   },
 });
-
-// Request interceptor for auth token
-sellerApiInstance.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('sellerToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
 
 // Response interceptor for error handling
 sellerApiInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Clean up any client side state if needed
       localStorage.removeItem('sellerToken');
-      if (!window.location.pathname.includes('login')) {
+      localStorage.removeItem('seller');
+
+      // Only redirect if we're not already on the login page
+      if (!window.location.pathname.includes('/seller/login')) {
         window.location.href = '/seller/login';
       }
     }
@@ -197,14 +190,12 @@ export const checkShopNameAvailability = async (shopName: string): Promise<{ ava
 interface LoginResponse {
   data: {
     seller: Seller;
-    token: string;
   };
 }
 
 interface RegisterResponse {
   data: {
     seller: Seller;
-    token: string;
   };
 }
 
@@ -237,7 +228,7 @@ interface ResetPasswordResponse {
 // API methods
 export const sellerApi = {
   // Auth
-  login: async (credentials: { email: string; password: string }): Promise<{ seller: Seller; token: string }> => {
+  login: async (credentials: { email: string; password: string }): Promise<{ seller: Seller }> => {
     try {
       const response = await sellerApiInstance.post<LoginResponse>('/sellers/login', credentials);
       const responseData = response.data.data;
@@ -246,14 +237,14 @@ export const sellerApi = {
         throw new Error('Invalid response from server');
       }
 
-      const { seller, token } = responseData;
+      const { seller } = responseData;
 
-      if (!seller || !token) {
-        throw new Error('Invalid response from server - missing seller or token');
+      if (!seller) {
+        throw new Error('Invalid response from server - missing seller');
       }
 
-      localStorage.setItem('sellerToken', token);
-      return { seller: transformSeller(seller), token };
+      // Token is handled via HttpOnly cookie
+      return { seller: transformSeller(seller) };
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.response?.data?.message) {
@@ -272,7 +263,7 @@ export const sellerApi = {
     confirmPassword: string;
     city?: string;
     location?: string;
-  }): Promise<{ seller: Seller; token: string }> => {
+  }): Promise<{ seller: Seller }> => {
     try {
       const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
         fullName: data.fullName,
@@ -285,21 +276,21 @@ export const sellerApi = {
         location: data.location
       });
 
-      // The response data structure is { data: { seller, token } }
+      // The response data structure is { data: { seller } }
       const responseData = response.data?.data;
 
       if (!responseData) {
         throw new Error('Invalid response from server');
       }
 
-      const { seller, token } = responseData;
+      const { seller } = responseData;
 
-      if (!seller || !token) {
-        throw new Error('Invalid response from server - missing seller or token');
+      if (!seller) {
+        throw new Error('Invalid response from server - missing seller');
       }
 
-      localStorage.setItem('sellerToken', token);
-      return { seller: transformSeller(seller), token };
+      // Token is handled via HttpOnly cookie
+      return { seller: transformSeller(seller) };
     } catch (error: any) {
       console.error('Registration error:', error);
       if (error.response?.data?.message) {

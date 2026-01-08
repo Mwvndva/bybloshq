@@ -4,27 +4,39 @@ import { signToken } from '../utils/jwt.js';
 import crypto from 'crypto';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import { pool } from '../config/database.js';
+import { sanitizeBuyer } from '../utils/sanitize.js';
 
-// Helper to sanitize buyer object
-const sanitizeBuyer = (buyer) => {
-  if (!buyer) return null;
-  const safeBuyer = { ...buyer };
-  delete safeBuyer.password;
-  delete safeBuyer.resetPasswordToken;
-  delete safeBuyer.resetPasswordExpires;
-  delete safeBuyer.verificationToken;
-  delete safeBuyer.verificationTokenExpires;
-  // Also remove internal timestamps if not needed, but password is the main concern
-  return safeBuyer;
+// Helper to send token via cookie
+const createSendToken = (user, statusCode, req, res) => {
+  const token = signToken(user.id, 'buyer');
+
+  const cookieOptions = {
+    expires: new Date(
+      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+    ),
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Important for cross-site
+    path: '/'
+  };
+
+  res.cookie('jwt', token, cookieOptions);
+
+  // Remove password from output
+  user.password = undefined;
+
+  res.status(statusCode).json({
+    status: 'success',
+    // token, // SILENCED: Token removed from body
+    data: {
+      buyer: sanitizeBuyer(user),
+    },
+  });
 };
 
 export const register = async (req, res, next) => {
   try {
     const { fullName, email, phone, password, confirmPassword, city, location } = req.body;
-
-    // Debug log to verify payload during integration
-    // Remove or lower log level in production if too noisy
-
 
     // 1) Check if passwords match
     if (password !== confirmPassword) {
@@ -52,17 +64,7 @@ export const register = async (req, res, next) => {
       location,
     });
 
-    // 5) Generate JWT token with buyer role
-    const token = signToken(newBuyer.id, 'buyer');
-
-    res.status(201).json({
-      status: 'success',
-      message: 'Registration successful! You can now log in.',
-      token,
-      data: {
-        buyer: sanitizeBuyer(newBuyer),
-      },
-    });
+    createSendToken(newBuyer, 201, req, res);
   } catch (error) {
     next(error);
   }
@@ -87,16 +89,8 @@ export const login = async (req, res, next) => {
     // 3) Update last login
     await Buyer.update(buyer.id, { last_login: new Date() });
 
-    // 4) If everything ok, send token to client
-    const token = signToken(buyer.id, 'buyer');
-
-    res.status(200).json({
-      status: 'success',
-      token,
-      data: {
-        buyer: sanitizeBuyer(buyer),
-      },
-    });
+    // 4) If everything ok, send token via cookie
+    createSendToken(buyer, 200, req, res);
   } catch (error) {
     next(error);
   }
@@ -116,8 +110,8 @@ export const forgotPassword = async (req, res, next) => {
     // Find buyer by email
     const buyer = await Buyer.findByEmail(email);
 
+    // Always return success even if user not found (Security)
     if (!buyer) {
-      // For security, don't reveal if the email exists or not
       return res.status(200).json({
         status: 'success',
         message: 'If an account exists with this email, you will receive a password reset link.'
@@ -131,7 +125,7 @@ export const forgotPassword = async (req, res, next) => {
       // 2. Send the password reset email
       await sendPasswordResetEmail(email, resetToken, 'buyer');
 
-      console.log(`Password reset email sent to [REDACTED]`);
+      // console.log(`Password reset email sent`); // Silenced
 
       return res.status(200).json({
         status: 'success',
@@ -139,7 +133,6 @@ export const forgotPassword = async (req, res, next) => {
       });
     } catch (emailError) {
       console.error('Error sending password reset email:', emailError);
-      // Still return success to the client for security
       return res.status(200).json({
         status: 'success',
         message: 'If an account exists with this email, you will receive a password reset link.'
@@ -294,14 +287,14 @@ export const checkBuyerByPhone = async (req, res, next) => {
 
     // Normalize the phone number
     const normalizedPhone = normalizePhoneNumber(phone);
-    console.log('Normalized phone number:', normalizedPhone ? '[REDACTED]' : 'missing');
+    // console.log('Normalized phone number:', normalizedPhone ? '[REDACTED]' : 'missing');
 
     // Check if buyer exists by normalized phone number
     const existingBuyer = await Buyer.findByPhone(normalizedPhone);
 
     if (existingBuyer) {
       // Buyer exists - return buyer info BUT NO TOKEN
-      console.log('Buyer found with phone');
+      // console.log('Buyer found with phone');
 
       // SECURITY FIX: Do not generate token here
       // const token = signToken(existingBuyer.id, 'buyer');
@@ -310,20 +303,13 @@ export const checkBuyerByPhone = async (req, res, next) => {
         status: 'success',
         data: {
           exists: true,
-          buyer: {
-            id: existingBuyer.id,
-            fullName: existingBuyer.fullName,
-            email: existingBuyer.email, // Consider masking this in future
-            phone: existingBuyer.phone,
-            city: existingBuyer.city,
-            location: existingBuyer.location
-          }
+          buyer: sanitizeBuyer(existingBuyer)
           // token - REMOVED for security
         }
       });
     } else {
       // Buyer does not exist
-      console.log('No buyer found with phone:', '[REDACTED]');
+      // console.log('No buyer found with phone:', '[REDACTED]');
 
       res.status(200).json({
         status: 'success',
@@ -444,7 +430,7 @@ export const saveBuyerInfo = async (req, res, next) => {
 
     // Normalize the phone number
     const normalizedPhone = normalizePhoneNumber(phone);
-    console.log('Normalized phone number for save:', normalizedPhone ? '[REDACTED]' : 'missing');
+    // console.log('Normalized phone number for save:', normalizedPhone ? '[REDACTED]' : 'missing');
 
     // Check if buyer already exists by normalized phone number (primary identifier)
     const existingBuyer = await Buyer.findByPhone(normalizedPhone);
@@ -455,7 +441,7 @@ export const saveBuyerInfo = async (req, res, next) => {
     if (existingBuyer) {
       // Buyer exists - DO NOT ALLOW GUEST CHECKOUT FOR EXISTING USERS
       // They must log in to secure their account
-      console.log('Buyer already exists with phone:', '[REDACTED]', '- Requiring login');
+      // console.log('Buyer already exists with phone:', '[REDACTED]', '- Requiring login');
 
       return res.status(200).json({
         status: 'success',
@@ -470,7 +456,7 @@ export const saveBuyerInfo = async (req, res, next) => {
       });
     } else {
       // Buyer does not exist - create new buyer with the collected details
-      console.log('Buyer phone not found in database - Creating new buyer for guest checkout');
+      // console.log('Buyer phone not found in database - Creating new buyer for guest checkout'); // Silenced
 
       buyer = await Buyer.createGuest({
         fullName,

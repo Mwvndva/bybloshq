@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import ejs from 'ejs';
 import { qrCodeToBuffer, saveQrCodeAsPng } from '../utils/qrCodeUtils.js';
+import logger from '../utils/logger.js';
 
 // Path to email templates
 import { fileURLToPath } from 'url';
@@ -35,12 +36,12 @@ const readTemplate = async (templateName, data) => {
   try {
     const templatePath = path.join(emailTemplatesDir, `${templateName}.ejs`);
     console.log(`Looking for template at: ${templatePath}`);
-    
+
     // Check if file exists
     if (!fs.existsSync(templatePath)) {
       throw new Error(`Template file not found at: ${templatePath}`);
     }
-    
+
     const template = fs.readFileSync(templatePath, 'utf-8');
     return ejs.render(template, data);
   } catch (error) {
@@ -68,41 +69,41 @@ export const sendTicketEmail = async (req, res) => {
     if (!to || !subject || !ticketData) {
       const error = new Error('Missing required fields');
       error.statusCode = 400;
-      error.details = { 
+      error.details = {
         missing: [
-          !to && 'to', 
-          !subject && 'subject', 
+          !to && 'to',
+          !subject && 'subject',
           !ticketData && 'ticketData'
         ].filter(Boolean)
       };
       throw error;
     }
-    
+
     if (!ticketData.qrCode) {
       console.warn('No QR code data provided in ticket data');
     }
 
     // Ensure price is a valid number
     let price = 0;
-    
+
     // Try to get price from different possible locations
     if (ticketData.price !== undefined && ticketData.price !== null) {
-      price = typeof ticketData.price === 'number' ? ticketData.price : 
-             parseFloat(ticketData.price) || 0;
+      price = typeof ticketData.price === 'number' ? ticketData.price :
+        parseFloat(ticketData.price) || 0;
     } else if (ticketData.totalPrice !== undefined && ticketData.totalPrice !== null) {
       // If price is not set but totalPrice is, use that
-      price = typeof ticketData.totalPrice === 'number' ? ticketData.totalPrice : 
-             parseFloat(ticketData.totalPrice) || 0;
-      
+      price = typeof ticketData.totalPrice === 'number' ? ticketData.totalPrice :
+        parseFloat(ticketData.totalPrice) || 0;
+
       // If quantity is provided, calculate price per ticket
       if (ticketData.quantity && ticketData.quantity > 1) {
         price = price / ticketData.quantity;
       }
     }
-    
+
     // Ensure price is a positive number
     price = Math.max(0, price);
-    
+
     // Format price with KES currency
     const formattedPrice = new Intl.NumberFormat('en-KE', {
       style: 'currency',
@@ -110,13 +111,13 @@ export const sendTicketEmail = async (req, res) => {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price);
-    
-    console.log('Formatted price:', { 
-      original: ticketData.price, 
+
+    console.log('Formatted price:', {
+      original: ticketData.price,
       totalPrice: ticketData.totalPrice,
       quantity: ticketData.quantity,
-      processed: price, 
-      formatted: formattedPrice 
+      processed: price,
+      formatted: formattedPrice
     });
 
     // Format purchase date with validation
@@ -124,12 +125,12 @@ export const sendTicketEmail = async (req, res) => {
     try {
       // Try to parse the date if it exists
       const purchaseDate = ticketData.purchaseDate ? new Date(ticketData.purchaseDate) : new Date();
-      
+
       // Check if the date is valid
       if (isNaN(purchaseDate.getTime())) {
         throw new Error('Invalid date');
       }
-      
+
       // Format the date
       formattedDate = purchaseDate.toLocaleDateString('en-US', {
         year: 'numeric',
@@ -154,7 +155,7 @@ export const sendTicketEmail = async (req, res) => {
 
     // Prepare QR code as an embedded image
     let qrCodeBuffer = null;
-    
+
     if (ticketData.qrCode) {
       try {
         // If it's a data URL, convert it to a buffer
@@ -182,20 +183,20 @@ export const sendTicketEmail = async (req, res) => {
       appName: process.env.APP_NAME || 'Byblos',
       subject: subject, // Add subject to template data
       ...ticketData,
-      
+
       // Price information - ensure it's always available in multiple formats
       price: price, // The numeric price
       formattedPrice: formattedPrice, // Formatted price string (e.g., 'KSh 1,000')
-      
+
       // Date information
       purchaseDate: ticketData.purchaseDate,
       formattedDate: formattedDate,
-      
+
       // Ensure all template variables are defined
       title: subject, // Some templates might use 'title' instead of 'subject'
       eventName: ticketData.eventName, // Make sure eventName is available
       event: ticketData.eventName, // Alias for eventName
-      
+
       // Structured ticket data
       ticket: {
         number: ticketData.ticketNumber,
@@ -206,22 +207,22 @@ export const sendTicketEmail = async (req, res) => {
         formattedDate: formattedDate,
         quantity: ticketData.quantity || 1
       },
-      
+
       // User information
       user: {
         name: ticketData.customerName,
         email: ticketData.customerEmail
       },
-      
+
       // Also add customerName at root level for template compatibility
       customerName: ticketData.customerName,
-      
+
       // QR code is embedded as an attachment with cid:qrcode
-      
+
       // Add quantity at root level for easier access
       quantity: ticketData.quantity || 1
     };
-    
+
     console.log('Template data prepared:', {
       price: templateData.price,
       formattedPrice: templateData.formattedPrice,
@@ -236,27 +237,27 @@ export const sendTicketEmail = async (req, res) => {
       ...templateData,
       qrCode: templateData.qrCode ? '***[BASE64_DATA]***' : 'MISSING'
     });
-    
+
     let html;
     try {
       // Get the path to the email templates directory
       const emailTemplatesDir = path.join(process.cwd(), 'email-templates');
       const templatePath = path.join(emailTemplatesDir, 'ticket-confirmation.ejs');
-      
+
       // Check if template exists
       if (!fs.existsSync(templatePath)) {
         throw new Error(`Email template not found at: ${templatePath}`);
       }
-      
+
       // Read and render the template
       const template = fs.readFileSync(templatePath, 'utf-8');
       html = ejs.render(template, templateData);
-      
+
       // Verify the rendered HTML
       if (!html || typeof html !== 'string' || html.trim() === '') {
         throw new Error('Rendered template is empty');
       }
-      
+
       console.log('Email template rendered successfully');
     } catch (templateError) {
       console.error('Failed to render email template:', {
@@ -266,8 +267,8 @@ export const sendTicketEmail = async (req, res) => {
         templateData: Object.keys(templateData),
         currentWorkingDir: process.cwd(),
         emailTemplatesDir: emailTemplatesDir || 'Not determined',
-        dirContents: emailTemplatesDir && fs.existsSync(emailTemplatesDir) 
-          ? fs.readdirSync(emailTemplatesDir) 
+        dirContents: emailTemplatesDir && fs.existsSync(emailTemplatesDir)
+          ? fs.readdirSync(emailTemplatesDir)
           : 'Directory does not exist'
       });
       throw new Error(`Failed to render email template: ${templateError.message}`);
@@ -324,10 +325,10 @@ Thank you for choosing Byblos Experience!`,
       statusCode: error.statusCode,
       details: error.details
     });
-    
+
     const statusCode = error.statusCode || 500;
     const errorMessage = error.message || 'Failed to send ticket email';
-    
+
     res.status(statusCode).json({
       success: false,
       message: errorMessage,

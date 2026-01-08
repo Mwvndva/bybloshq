@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { formatCurrency, decodeJwt, isTokenExpired } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
+import { useSellerAuth } from '@/contexts/SellerAuthContext';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
 import SellerOrdersSection from './SellerOrdersSection';
@@ -156,10 +157,14 @@ const StatsCard: React.FC<StatsCardProps> = ({
   </Card>
 );
 
-const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
+export default function SellerDashboard({ children }: SellerDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+
+  // Use seller auth context - same pattern as BuyerDashboard
+  const { seller: sellerProfile, logout: handleLogout, isLoading: isAuthLoading } = useSellerAuth();
+
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -167,7 +172,6 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [sellerProfile, setSellerProfile] = useState<SellerProfile | null>(null);
 
   const [formData, setFormData] = useState({
     city: '',
@@ -220,21 +224,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     }));
   }, []);
 
-  // Handle seller logout
-  const handleLogout = () => {
-    // Clear seller token and user data from localStorage
-    localStorage.removeItem('sellerToken');
-    localStorage.removeItem('seller');
-
-    // Redirect to login page
-    navigate('/seller/login');
-
-    // Show success message
-    toast({
-      title: 'Logged out successfully',
-      description: 'You have been logged out of your seller account.',
-    });
-  };
+  // handleLogout removed - now using logout from SellerAuthContext
 
   // Fetch data function
   const fetchData = useCallback(async (): Promise<AnalyticsData> => {
@@ -325,7 +315,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [navigate, toast, location.pathname]);
+  }, [navigate]); // Removed toast and location.pathname - toast is stable, location causes loops
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -375,12 +365,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         location: formData.location
       });
 
-      setSellerProfile(prev => ({
-        ...prev,
-        city: formData.city,
-        location: formData.location
-      }));
-
+      // Profile will be automatically updated by SellerAuthContext
       setIsEditing(false);
 
       toast({
@@ -397,31 +382,9 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     } finally {
       setIsSaving(false);
     }
-  }, [formData, toast]);
+  }, [formData]); // toast is stable, no need to track it
 
-  const fetchProfile = useCallback(async () => {
-    try {
-      const profile = await sellerApi.getProfile();
-      const profileData = {
-        fullName: profile.fullName || profile.full_name,
-        shopName: profile.shopName || profile.shop_name,
-        email: profile.email,
-        phone: profile.phone,
-        city: profile.city,
-        location: profile.location,
-        bannerImage: profile.bannerImage || profile.banner_image,
-        theme: profile.theme
-      };
-      setSellerProfile(profileData);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load profile. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  }, [toast]);
+  // fetchProfile removed - profile data now comes from useSellerAuth context
 
   const fetchWithdrawalRequests = useCallback(async () => {
     try {
@@ -435,7 +398,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
         variant: 'destructive',
       });
     }
-  }, [toast]);
+  }, []); // toast is stable, no need to track it
 
   const handleWithdrawalRequest = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -507,75 +470,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     }
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
 
-  // Active Token Expiration Check
-  useEffect(() => {
-    const checkToken = () => {
-      const token = localStorage.getItem('sellerToken');
-
-      if (!token) {
-        // If no token and we are on a protected route, redirect to login
-        // But since this is the dashboard, we should probably redirect
-        if (!location.pathname.includes('/login')) {
-          navigate('/seller/login');
-        }
-        return;
-      }
-
-      if (isTokenExpired(token)) {
-        handleLogout();
-        toast({
-          title: 'Session Expired',
-          description: 'Your session has expired. Please log in again.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Set up a timer to auto-logout when the token expires
-      const decoded = decodeJwt(token);
-      if (decoded && decoded.exp) {
-        const expirationTime = decoded.exp * 1000; // Convert to ms
-        const timeUntilExpiry = expirationTime - Date.now();
-
-        if (timeUntilExpiry > 0) {
-          // Set timeout to logout exactly when token expires
-          // Limit to 24 hours (standard max settimeout limit usually safe enough, but good practice)
-          // If time is very long, we re-check periodically anyway? 
-          // Actually, just setting one timeout is cleaner if the user stays on this page.
-          const timerId = setTimeout(() => {
-            handleLogout();
-            toast({
-              title: 'Session Expired',
-              description: 'Your session has expired. Please log in again.',
-              variant: 'destructive',
-            });
-          }, timeUntilExpiry);
-
-          return () => clearTimeout(timerId);
-        } else {
-          // Already expired (should be caught by isTokenExpired check, but safeguard)
-          handleLogout();
-        }
-      }
-    };
-
-    checkToken();
-
-    // Also check periodically (every minute) just in case system time changes or tab was inactive
-    const intervalId = setInterval(() => {
-      const token = localStorage.getItem('sellerToken');
-      if (token && isTokenExpired(token)) {
-        handleLogout();
-        toast({
-          title: 'Session Expired',
-          description: 'Your session has expired. Please log in again.',
-          variant: 'destructive',
-        });
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(intervalId);
-  }, [navigate]);
+  // Token expiration check removed - auth is now handled by SellerAuthContext with HttpOnly cookies
 
   useEffect(() => {
 
@@ -599,8 +494,11 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
   // Prefetch data on initial mount to make tabs render instantly like Settings
   useEffect(() => {
     let isMounted = true;
+
     const prefetch = async () => {
       setIsLoading(true);
+      console.log('[Debug] Starting prefetch - Products & Analytics');
+
       try {
         const [productsData, analyticsData] = await Promise.all([
           sellerApi.getProducts(),
@@ -712,17 +610,26 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
       }
     };
 
+    console.log('[Debug] Initiating prefetch useEffect');
     prefetch();
-    fetchProfile();
+    // fetchProfile() removed - profile is already fetched by SellerAuthContext
     return () => { isMounted = false; };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Fetch profile data when settings tab is active
+  // Debug: Log state changes
   useEffect(() => {
-    if (activeTab === 'settings') {
-      fetchProfile();
-    }
-  }, [activeTab, fetchProfile]);
+    console.log('[Debug] State update:', {
+      isLoading,
+      isAuthLoading,
+      hasAnalytics: !!analytics,
+      hasProducts: products.length,
+      hasError: !!error,
+      sellerProfileExists: !!sellerProfile
+    });
+  }, [isLoading, isAuthLoading, analytics, products, error, sellerProfile]);
+
+  // Removed: Profile data is already available from SellerAuthContext
+  // No need to fetch separately when settings tab is active
 
   // Create context value to pass to child routes
   const outletContext = {
@@ -740,8 +647,8 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     );
   }
 
-  // Loading state
-  if (isLoading) {
+  // Loading state - show skeleton while auth is loading OR data is being fetched
+  if (isAuthLoading || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
         <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
@@ -1425,7 +1332,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 <BannerUpload
                   currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
-                    setSellerProfile(prev => prev ? { ...prev, bannerImage: bannerUrl } : {});
+                    // Profile will be automatically updated by SellerAuthContext
                   }}
                 />
               </div>
@@ -1568,7 +1475,7 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
                 <ThemeSelector
                   currentTheme={sellerProfile?.theme}
                   onThemeChange={(theme) => {
-                    setSellerProfile((prev) => (prev ? { ...prev, theme } : null));
+                    // Profile will be automatically updated by SellerAuthContext
                   }}
                 />
               </div>
@@ -1580,5 +1487,3 @@ const SellerDashboard: React.FC<SellerDashboardProps> = ({ children }) => {
     </div>
   );
 };
-
-export default SellerDashboard;

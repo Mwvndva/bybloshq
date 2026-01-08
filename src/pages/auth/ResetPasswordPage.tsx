@@ -13,7 +13,7 @@ export function ResetPasswordPage() {
   const token = searchParams.get('token');
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,8 +23,9 @@ export function ResetPasswordPage() {
 
   // Verify token on component mount
   useEffect(() => {
-    console.log('Token from URL:', token);
-    
+    // Token verification logic
+
+
     if (!token) {
       console.error('No token found in URL');
       setIsValidToken(false);
@@ -35,16 +36,16 @@ export function ResetPasswordPage() {
       });
       return;
     }
-    
+
     const verifyToken = async () => {
       try {
         // In a real app, you might want to verify the token with the server
         // For now, we'll just check if it exists and looks like a JWT
         const isJWT = token.split('.').length === 3;
-        console.log('Token is JWT format:', isJWT);
-        
+        // console.log('Token is JWT format:', isJWT);
+
         setIsValidToken(isJWT);
-        
+
         if (!isJWT) {
           console.error('Invalid token format');
           toast({
@@ -53,7 +54,6 @@ export function ResetPasswordPage() {
             variant: 'destructive',
           });
         } else {
-          console.log('Token is valid');
         }
       } catch (error) {
         console.error('Error verifying token:', error);
@@ -65,13 +65,13 @@ export function ResetPasswordPage() {
         });
       }
     };
-    
+
     verifyToken();
   }, [token, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (password !== confirmPassword) {
       toast({
         variant: 'destructive',
@@ -80,7 +80,7 @@ export function ResetPasswordPage() {
       });
       return;
     }
-    
+
     if (password.length < 8) {
       toast({
         variant: 'destructive',
@@ -89,16 +89,16 @@ export function ResetPasswordPage() {
       });
       return;
     }
-    
+
     try {
       setIsLoading(true);
       await sellerApi.resetPassword(token!, password);
-      
+
       toast({
         title: 'Success',
         description: 'Your password has been reset successfully. You can now log in with your new password.',
       });
-      
+
       // Redirect to login page after successful password reset
       navigate('/seller/login');
     } catch (error: any) {
@@ -123,7 +123,7 @@ export function ResetPasswordPage() {
       </div>
     );
   }
-  
+
   if (!isValidToken) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
@@ -140,14 +140,14 @@ export function ResetPasswordPage() {
             </p>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
-            <Button 
-              className="w-full" 
+            <Button
+              className="w-full"
               onClick={() => navigate('/seller/forgot-password')}
             >
               Request New Reset Link
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="w-full"
               onClick={() => navigate('/seller/login')}
             >
@@ -168,7 +168,7 @@ export function ResetPasswordPage() {
             Please enter your new password below.
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -205,7 +205,7 @@ export function ResetPasswordPage() {
                 Password must be at least 8 characters long.
               </p>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm New Password</Label>
               <div className="relative">
@@ -237,10 +237,10 @@ export function ResetPasswordPage() {
                 </button>
               </div>
             </div>
-            
-            <Button 
-              type="submit" 
-              className="w-full" 
+
+            <Button
+              type="submit"
+              className="w-full"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -254,10 +254,10 @@ export function ResetPasswordPage() {
             </Button>
           </form>
         </CardContent>
-        
+
         <CardFooter className="flex justify-center">
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             className="text-muted-foreground"
             onClick={() => navigate('/seller/login')}
           >

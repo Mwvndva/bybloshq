@@ -11,6 +11,13 @@ import fs from 'fs';
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
+import { sanitizeOrder } from '../utils/sanitize.js';
+
+/**
+ * Create a new order
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
 const createOrder = async (req, res) => {
   try {
     const { items, shippingAddress, paymentMethod } = req.body;
@@ -119,7 +126,7 @@ const createOrder = async (req, res) => {
 
       res.status(201).json({
         success: true,
-        data: order
+        data: sanitizeOrder(order, 'buyer') // Default return is as buyer unless specified otherwise
       });
     } catch (error) {
       console.error('Error in Order.createOrder:', error);
@@ -232,9 +239,13 @@ const getUserOrders = async (req, res) => {
 
 
 
+
+
+    const sanitizedOrders = result.rows.map(order => sanitizeOrder(order, 'buyer'));
+
     res.json({
       success: true,
-      data: result.rows,
+      data: sanitizedOrders,
       pagination: {
         subtotal,
         page: parseInt(page),
@@ -444,31 +455,12 @@ const getSellerOrders = async (req, res) => {
 
     // Transform the data to match the frontend expectations
     const transformedOrders = result.rows.map(row => ({
-      id: row.id,
-      orderNumber: row.orderNumber,
-      status: row.status,
-      paymentStatus: row.paymentStatus,
-      totalAmount: parseFloat(row.totalAmount || 0),
-      platformFeeAmount: parseFloat(row.platformFeeAmount || 0),
-      sellerPayoutAmount: parseFloat(row.sellerPayoutAmount || 0),
-      shippingAddress: row.shippingAddress || {},
-      paymentMethod: row.paymentMethod,
-      buyerName: row.buyerName,
-      buyerEmail: row.buyerEmail,
-      buyerPhone: row.buyerPhone,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      paidAt: row.paidAt,
-      completedAt: row.completedAt,
-      cancelledAt: row.cancelledAt,
-      paymentReference: row.paymentReference,
-      notes: row.notes || '',
+      ...row,
       items: (row.items || []).filter(item => item.id !== null).map(item => ({
         id: item.id,
         productId: item.productId,
         name: item.name,
         price: parseFloat(item.price),
-        quantity: parseInt(item.quantity),
         quantity: parseInt(item.quantity),
         imageUrl: item.imageUrl,
         productType: item.productType,
@@ -477,12 +469,14 @@ const getSellerOrders = async (req, res) => {
       })),
       metadata: row.metadata || {},
       customer: row.customer || {},
-      currency: 'KSH' // Default currency
+      currency: 'KSH'
     }));
+
+    const sanitizedOrders = transformedOrders.map(order => sanitizeOrder(order, 'seller'));
 
     res.json({
       success: true,
-      data: transformedOrders,
+      data: sanitizedOrders,
       pagination: {
         subtotal,
         page: parseInt(page),
@@ -579,9 +573,12 @@ const getOrderById = async (req, res) => {
       });
     }
 
+    // Determine user type for sanitization
+    const userType = order.seller_id === userId ? 'seller' : 'buyer';
+
     res.json({
       success: true,
-      data: order
+      data: sanitizeOrder(order, userType)
     });
 
   } catch (error) {
@@ -764,7 +761,7 @@ const updateOrderStatus = async (req, res) => {
 
     res.json({
       success: true,
-      data: updatedOrder
+      data: sanitizeOrder(updatedOrder, 'seller') // Only sellers can update status thus only self-view here
     });
 
   } catch (error) {

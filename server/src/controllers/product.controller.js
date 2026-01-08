@@ -1,4 +1,5 @@
 import { pool } from '../config/database.js';
+import logger from '../utils/logger.js';
 
 // Upload digital file handler
 export const uploadDigitalFile = async (req, res) => {
@@ -52,7 +53,7 @@ export const createProduct = async (req, res) => {
 
     const sellerId = req.user?.id;
 
-    console.log('Received product data:', {
+    logger.info('Received product data:', {
       name: name?.substring(0, 50),
       price,
       description: description?.substring(0, 50) + '...',
@@ -69,7 +70,7 @@ export const createProduct = async (req, res) => {
 
     // Validate required fields
     if (!sellerId) {
-      console.error('No seller ID found in request');
+      logger.error('No seller ID found in request');
       return res.status(401).json({
         status: 'error',
         message: 'Authentication required'
@@ -78,7 +79,7 @@ export const createProduct = async (req, res) => {
 
     // Check for required fields
     if (!name || !price || !description || (!image && !image_url)) {
-      console.error('Missing required fields:', { name: !!name, price: !!price, description: !!description, image: !!image, image_url: !!image_url });
+      logger.error('Missing required fields:', { name: !!name, price: !!price, description: !!description, image: !!image, image_url: !!image_url });
       return res.status(400).json({
         status: 'error',
         message: 'Name, price, description, and image are required'
@@ -115,7 +116,7 @@ export const createProduct = async (req, res) => {
 
     // Validate image format
     if (!imageData.startsWith('data:image/')) {
-      console.error('Invalid image format:', imageData?.substring(0, 50));
+      logger.error('Invalid image format:', imageData?.substring(0, 50));
       return res.status(400).json({
         status: 'error',
         message: 'Invalid image format. Must be a data URL starting with data:image/'
@@ -125,14 +126,14 @@ export const createProduct = async (req, res) => {
     // Validate image size (max 2MB)
     const imageSize = (imageData.length * 0.75); // Convert base64 to bytes
     if (imageSize > 2 * 1024 * 1024) { // 2MB
-      console.error('Image size exceeds limit:', { size: imageSize });
+      logger.error('Image size exceeds limit:', { size: imageSize });
       return res.status(400).json({
         status: 'error',
         message: 'Image size exceeds 2MB limit'
       });
     }
 
-    console.log('Creating product with validated image data');
+    logger.info('Creating product with validated image data');
 
     // Determine final product_type if strictly is_digital passed
     let finalProductType = product_type;
@@ -175,7 +176,7 @@ export const createProduct = async (req, res) => {
     );
 
     const product = result.rows[0];
-    console.log('Product created successfully:', {
+    logger.info('Product created successfully:', {
       id: product.id,
       name: product.name,
       imageUrlLength: product.image_url?.length || 0,
@@ -192,7 +193,7 @@ export const createProduct = async (req, res) => {
       data: { product }
     });
   } catch (error) {
-    console.error('Error creating product:', error);
+    logger.error('Error creating product:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to create product'
@@ -203,7 +204,7 @@ export const createProduct = async (req, res) => {
 export const getSellerProducts = async (req, res) => {
   try {
     const sellerId = req.user.id;
-    console.log('Fetching products for seller:', sellerId);
+    logger.info('Fetching products for seller:', sellerId);
 
     // First check if the seller exists
     const sellerCheck = await pool.query('SELECT id FROM sellers WHERE id = $1', [sellerId]);
@@ -229,7 +230,7 @@ export const getSellerProducts = async (req, res) => {
       ORDER BY p.created_at DESC
     `;
 
-    console.log('Executing query:', query);
+    logger.debug('Executing query:', query);
 
     const result = await pool.query(query, [sellerId]);
 
@@ -248,7 +249,7 @@ export const getSellerProducts = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching products:', error);
+    logger.error('Error fetching products:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch products'
@@ -275,7 +276,7 @@ export const getProduct = async (req, res) => {
       WHERE p.id = $1 AND p.seller_id = $2
     `;
 
-    console.log('Executing query:', query);
+    logger.debug('Executing query:', query);
 
     const result = await pool.query(query, [id, sellerId]);
 
@@ -297,7 +298,7 @@ export const getProduct = async (req, res) => {
       data: { product }
     });
   } catch (error) {
-    console.error('Error fetching product:', error);
+    logger.error('Error fetching product:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch product',
@@ -314,7 +315,7 @@ export const updateProduct = async (req, res) => {
     const sellerId = req.user.id;
     const { name, price, description, image_url, aesthetic, status, soldAt } = req.body;
 
-    console.log('Updating product with data:', {
+    logger.info('Updating product with data:', {
       id,
       sellerId,
       name,
@@ -340,7 +341,7 @@ export const updateProduct = async (req, res) => {
     const soldAtColumnExists = checkColumns.rows.some(row => row.column_name === 'sold_at');
     const updatedAtColumnExists = checkColumns.rows.some(row => row.column_name === 'updated_at');
 
-    console.log('Database columns:', { soldAtColumnExists, updatedAtColumnExists });
+    logger.debug('Database columns:', { soldAtColumnExists, updatedAtColumnExists });
 
     // Verify the product exists and belongs to the seller
     const productResult = await client.query(
@@ -350,7 +351,7 @@ export const updateProduct = async (req, res) => {
 
     if (productResult.rows.length === 0) {
       await client.query('ROLLBACK');
-      console.error('Product not found or unauthorized:', { id, sellerId });
+      logger.error('Product not found or unauthorized:', { id, sellerId });
       return res.status(404).json({
         status: 'error',
         message: 'Product not found or unauthorized'
@@ -418,7 +419,7 @@ export const updateProduct = async (req, res) => {
     updateValues.push(sellerId);
 
     // Log the update query for debugging
-    console.log('Update query:', {
+    logger.debug('Update query:', {
       query: `UPDATE products SET ${updateFields.join(', ')} WHERE id = $${updateValues.length - 1} AND seller_id = $${updateValues.length} RETURNING *`,
       values: updateValues,
       paramCount,
@@ -433,7 +434,7 @@ export const updateProduct = async (req, res) => {
       RETURNING *
     `;
 
-    console.log('Executing update query:', {
+    logger.debug('Executing update query:', {
       query: query.replace(/\s+/g, ' ').trim(),
       values: updateValues.map(v =>
         typeof v === 'string' && v.length > 50 ? '[long string]' : v
@@ -444,7 +445,7 @@ export const updateProduct = async (req, res) => {
     try {
       result = await client.query(query, updateValues);
     } catch (queryError) {
-      console.error('Database query error:', {
+      logger.error('Database query error:', {
         error: queryError,
         query,
         params: updateValues,
@@ -455,7 +456,7 @@ export const updateProduct = async (req, res) => {
 
     if (result.rows.length === 0) {
       await client.query('ROLLBACK');
-      console.error('No rows affected by update');
+      logger.error('No rows affected by update');
       return res.status(500).json({
         status: 'error',
         message: 'Failed to update product'
@@ -464,7 +465,7 @@ export const updateProduct = async (req, res) => {
 
     await client.query('COMMIT');
 
-    console.log('Product updated successfully:', result.rows[0]);
+    logger.info('Product updated successfully:', result.rows[0]);
 
     res.status(200).json({
       status: 'success',
@@ -473,13 +474,13 @@ export const updateProduct = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error updating product:', error);
+    logger.error('Error updating product:', error);
 
     // Rollback transaction if it's still active
     try {
       await client.query('ROLLBACK');
     } catch (rollbackError) {
-      console.error('Error rolling back transaction:', rollbackError);
+      logger.error('Error rolling back transaction:', rollbackError);
     }
 
     // Check for specific error types
@@ -533,7 +534,7 @@ export const deleteProduct = async (req, res) => {
       data: null
     });
   } catch (error) {
-    console.error('Error deleting product:', error);
+    logger.error('Error deleting product:', error);
     res.status(500).json({
       status: 'error',
       message: 'Failed to delete product'

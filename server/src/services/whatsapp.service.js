@@ -82,10 +82,10 @@ class WhatsAppService {
             if (!jid) throw new Error('Invalid phone number');
 
             await this.sock.sendMessage(jid, { text: message });
-            logger.info(`✅ Message sent to ${jid}`);
+            // logger.info(`✅ WhatsApp message sent successfully`); // Redacted phone
             return true;
         } catch (error) {
-            logger.error(`❌ Failed to send message to ${phone}:`, error.message);
+            logger.error(`❌ Failed to send message:`, error.message); // Redacted phone
             return false;
         }
     }
