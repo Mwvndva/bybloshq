@@ -190,7 +190,12 @@ export const getProfile = async (req, res, next) => {
     if (buyer.phone) userData.phone = buyer.phone;
     // Also restore fullName which might be sanitized out but is needed for frontend checks
     if (buyer.full_name) userData.fullName = buyer.full_name;
-    else if (buyer.first_name || buyer.last_name) userData.fullName = `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim();
+    else if (buyer.fullName) userData.fullName = buyer.fullName;
+    else {
+      const first = buyer.first_name || buyer.firstName || '';
+      const last = buyer.last_name || buyer.lastName || '';
+      userData.fullName = `${first} ${last}`.trim();
+    }
 
     res.status(200).json({
       status: 'success',
