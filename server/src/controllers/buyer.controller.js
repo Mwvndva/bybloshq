@@ -188,6 +188,9 @@ export const getProfile = async (req, res, next) => {
     const userData = sanitizeBuyer(buyer);
     if (buyer.email) userData.email = buyer.email;
     if (buyer.phone) userData.phone = buyer.phone;
+    // Also restore fullName which might be sanitized out but is needed for frontend checks
+    if (buyer.full_name) userData.fullName = buyer.full_name;
+    else if (buyer.first_name || buyer.last_name) userData.fullName = `${buyer.first_name || ''} ${buyer.last_name || ''}`.trim();
 
     res.status(200).json({
       status: 'success',

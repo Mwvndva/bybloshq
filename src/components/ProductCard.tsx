@@ -241,12 +241,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           return;
         }
 
-        // **CRITICAL**: Save token for the NEW GUEST so they are logged in!
-        if (saveResult.token) {
-          localStorage.setItem('buyer_token', saveResult.token);
-        }
+        // **CRITICAL**: The server sets a HttpOnly cookie. We don't need to manually save to localStorage.
+        // Registration automatically logs the user in via cookie.
 
-        // Proceed with new ID
+        // Proceed with new ID (or let backend infer from cookie)
         await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
       } else {
         // Existing user (skipped save) -> Proceed using backend lookup
