@@ -293,9 +293,31 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       // Use a simpler fetch for clarity
       const token = localStorage.getItem('buyer_token');
-      const baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '');
+      // 4. Call Paystack product payment API
+      const isDevelopment = import.meta.env.DEV;
+      // Ensure we don't duplicate /api if it's already in the VITE_API_URL or if we are using the proxy
+      // The proxy in vite.config usually maps /api -> localhost:3002/api
+      // So if we use /api/payments..., it works with proxy.
+      // If we use full URL, we should be careful.
 
-      const response = await fetch(`${baseURL}/api/payments/initiate-product`, {
+      let endpoint = '/payments/initiate-product';
+      let baseURL = '';
+
+      if (isDevelopment && !import.meta.env.VITE_API_URL) {
+        // Using Vite Proxy
+        baseURL = '/api';
+      } else {
+        // Using configured URL (e.g. production)
+        baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '');
+        // If baseURL doesn't end in /api, append it, OR assume routes are mounted at root?
+        // Based on server/index.js, routes are usually at /api/v1 or /api.
+        // Let's assume standard /api prefix is needed if not present
+        if (!baseURL.endsWith('/api')) {
+          baseURL = `${baseURL}/api`;
+        }
+      }
+
+      const response = await fetch(`${baseURL}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

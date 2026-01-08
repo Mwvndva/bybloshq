@@ -184,10 +184,15 @@ export const getProfile = async (req, res, next) => {
       return next(new AppError('No buyer found with that ID', 404));
     }
 
+    // Ensure the user gets their OWN private data
+    const userData = sanitizeBuyer(buyer);
+    if (buyer.email) userData.email = buyer.email;
+    if (buyer.phone) userData.phone = buyer.phone;
+
     res.status(200).json({
       status: 'success',
       data: {
-        buyer: sanitizeBuyer(buyer),
+        buyer: userData,
       },
     });
   } catch (error) {
