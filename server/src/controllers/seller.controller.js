@@ -740,34 +740,29 @@ export const createWithdrawalRequest = async (req, res) => {
         // Removed: reference field (not in PayD v3 spec)
       });
 
-      logger.info(`Withdrawal: Payd API success for ReqID ${request.id}. Status: ${payoutResponse.status}`);
+      logger.info(`Withdrawal: Payd API accepted request for ReqID ${request.id}. HTTP Status: 202, Response Status: ${payoutResponse.status}`);
 
-      // Update request with raw response (non-blocking for user response)
-      // CRITICAL FIX: Update provider_reference with the ACTUAL ID from Payd (correlator_id)
+      // Update request with raw response and provider reference
+      // CRITICAL: Keep status as 'processing' - only the callback should mark as completed/failed
       const paydId = payoutResponse.correlator_id || payoutResponse.transaction_id;
 
-      // Check for immediate success in response body
-      const isImmediateSuccess = payoutResponse.status === 'SUCCESS' || payoutResponse.status === 'COMPLETED';
-      const finalStatus = isImmediateSuccess ? 'completed' : 'processing';
-
       if (paydId) {
-        // Redacted raw response logging
-        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2, status = $3 WHERE id = $4',
-          [JSON.stringify(payoutResponse), paydId, finalStatus, request.id]
+        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2 WHERE id = $3',
+          [JSON.stringify(payoutResponse), paydId, request.id]
         );
-        logger.info(`Withdrawal: Updated ReqID ${request.id} with ProviderRef ${paydId}, Status: ${finalStatus}`);
+        logger.info(`Withdrawal: Updated ReqID ${request.id} with ProviderRef ${paydId}. Status remains 'processing' until callback.`);
       } else {
-        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, status = $2 WHERE id = $3',
-          [JSON.stringify(payoutResponse), finalStatus, request.id]
+        await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
+          [JSON.stringify(payoutResponse), request.id]
         );
-        logger.warn(`Withdrawal: No provider ref returned for ReqID ${request.id}`);
+        logger.warn(`Withdrawal: No provider ref returned for ReqID ${request.id}. Status remains 'processing'.`);
       }
 
-      // WhatsApp Notification for Success
+      // WhatsApp Notification - inform seller withdrawal is being processed
       if (seller.phone) {
         whatsappService.notifySellerWithdrawalUpdate(seller.phone, {
           amount: withdrawalAmount,
-          status: finalStatus,
+          status: 'processing',
           reference: paydId || reference || 'N/A',
           reason: null,
           newBalance: null
@@ -778,8 +773,8 @@ export const createWithdrawalRequest = async (req, res) => {
         status: 'success',
         data: sanitizeWithdrawalRequest({
           ...request,
-          status: finalStatus,
-          message: isImmediateSuccess ? 'Withdrawal completed successfully.' : 'Withdrawal initiated successfully.'
+          status: 'processing',
+          message: 'Withdrawal request submitted successfully. You will be notified once it is processed.'
         })
       });
 
