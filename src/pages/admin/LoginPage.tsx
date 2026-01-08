@@ -14,7 +14,7 @@ export function AdminLogin() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
+
     // Basic validation
     if (!pin || pin.length !== 6) {
       setError('Please enter a 6-digit PIN');
@@ -22,13 +22,13 @@ export function AdminLogin() {
     }
 
     setIsLoading(true);
-    console.log('Attempting login with PIN:', pin);
-    
+    // console.log('Attempting login with PIN:', pin);
+
     try {
       // Call the admin login API
       const response = await adminApi.login(pin);
-      console.log('Login response:', response);
-      
+      // console.log('Login response:', response);
+
       // Check if login was successful
       if (response?.status === 'success') {
         console.log('Login successful, navigating to dashboard');
@@ -79,9 +79,9 @@ export function AdminLogin() {
               />
               {error && <p className="text-sm text-red-500 text-center">{error}</p>}
             </div>
-            <Button 
-              type="submit" 
-              className="w-full h-11" 
+            <Button
+              type="submit"
+              className="w-full h-11"
               disabled={isLoading || pin.length !== 6}
             >
               {isLoading ? 'Signing in...' : 'Sign In'}

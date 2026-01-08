@@ -240,7 +240,7 @@ const DashboardPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []); // Removed toast from dependencies to prevent infinite loops if toast instance is unstable
 
   // Set initial form values when organizer data is available
   useEffect(() => {

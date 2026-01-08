@@ -1,6 +1,6 @@
 // Simple API client using fetch
 console.log('Environment variables:', import.meta.env);
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
   (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api');
 
 export interface ApiResponse<T> {
@@ -17,7 +17,7 @@ export interface ApiError {
 
 async function handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
   const data = await response.json().catch(() => ({}));
-  
+
   if (!response.ok) {
     const error: ApiError = {
       message: data.message || 'An error occurred',
@@ -43,32 +43,27 @@ export const apiRequest = async <T>(
   }
 ): Promise<ApiResponse<T>> => {
   const { url, method = 'GET', data, headers = {} } = config;
-  
-  // Get auth token from localStorage
-  const token = localStorage.getItem('buyer_token');
-  
+
   // Set up request headers
   const requestHeaders: HeadersInit = {
     'Content-Type': 'application/json',
     ...headers,
   };
-  
-  if (token) {
-    requestHeaders['Authorization'] = `Bearer ${token}`;
-  }
-  
+
+  // Token handling is now done via HttpOnly cookies automatically included by credentials: 'include'
+
   // Build request options
   const requestOptions: RequestInit = {
     method,
     headers: requestHeaders,
     credentials: 'include', // Include cookies for cross-origin requests
   };
-  
+
   // Add request body for non-GET requests
   if (data && method !== 'GET') {
     requestOptions.body = JSON.stringify(data);
   }
-  
+
   try {
     const response = await fetch(`${API_BASE_URL}${url}`, requestOptions);
     return await handleResponse<T>(response);

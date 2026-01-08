@@ -21,8 +21,18 @@ interface ApiError {
 
 // Default API configuration
 // Include /api in the base URL since our routes are prefixed with /api
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api');
+// Default API configuration
+// Get the base URL from environment variables
+const API_URL = (import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api')
+).replace(/\/$/, '');
+const isDevelopment = import.meta.env.DEV;
+
+// For development, we'll use the proxy if VITE_API_URL is not set
+const API_BASE_URL = isDevelopment && !import.meta.env.VITE_API_URL
+  ? '/api'  // Use proxy in development when VITE_API_URL is not set
+  : API_URL; // Otherwise use the provided API_URL or default
+
 console.log('Using API base URL:', API_BASE_URL);
 
 // Helper function to determine product status based on stock
@@ -34,8 +44,8 @@ function getProductStatus(stock: number): 'In Stock' | 'Low Stock' | 'Out of Sto
 
 // Helper function to determine event status
 function getEventStatus(
-  startDate?: string, 
-  endDate?: string, 
+  startDate?: string,
+  endDate?: string,
   status?: string
 ): 'Upcoming' | 'Ongoing' | 'Completed' | 'Cancelled' {
   if (status) {
@@ -48,7 +58,7 @@ function getEventStatus(
 
   // Otherwise determine status based on dates
   if (!startDate) return 'Upcoming';
-  
+
   const now = new Date();
   const start = new Date(startDate);
   const end = endDate ? new Date(endDate) : null;
@@ -67,29 +77,17 @@ const api: AxiosInstance = axios.create({
   },
 });
 
-// Add a request interceptor to include the token
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('admin_token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Add a response interceptor to handle 401 Unauthorized responses
+// Response interceptor to handle 401 Unauthorized responses
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Clear the token and redirect to login
-      localStorage.removeItem('admin_token');
+      // Clear client-side auth state marker if used
       localStorage.removeItem('admin_authenticated');
-      window.location.href = '/admin/login';
+      // Optional: Redirect if not already on login
+      if (!window.location.pathname.includes('/admin/login')) {
+        window.location.href = '/admin/login';
+      }
     }
     return Promise.reject(error);
   }
@@ -103,16 +101,14 @@ export const adminApi = {
       console.log('Starting admin login with PIN:', pin);
       const response = await api.post('/admin/login', { pin });
       console.log('Login response:', response.data);
-      
-      // Store the token in localStorage if it exists in the response
-      if (response.data?.data?.token) {
-        localStorage.setItem('admin_token', response.data.data.token);
+
+      // We rely on HttpOnly cookies now. 
+      // We can set a simple flag to indicate we believe we are logged in, 
+      // but the real source of truth is the cookie.
+      if (response.data?.status === 'success') {
         localStorage.setItem('admin_authenticated', 'true');
-        console.log('Token stored in localStorage');
-      } else {
-        console.warn('No token found in login response');
       }
-      
+
       return response.data;
     } catch (error) {
       // Type assertion for the error object
@@ -123,14 +119,16 @@ export const adminApi = {
   },
 
   logout(): void {
-    localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_authenticated');
+    // Ideally call a backend logout endpoint here too
+    // await api.post('/admin/logout');
   },
 
   isAuthenticated(): boolean {
-    const token = localStorage.getItem('admin_token');
-    console.log('Checking authentication, token exists:', !!token);
-    return !!token;
+    // This is a weak check, real check happens on API calls.
+    // We keep this for simple UI guarding until proper check implementation.
+    const authenticated = localStorage.getItem('admin_authenticated');
+    return !!authenticated;
   },
 
   // Sellers
@@ -139,7 +137,7 @@ export const adminApi = {
       console.log('Fetching sellers from API...');
       const response = await api.get('/admin/sellers');
       console.log('Sellers API response:', response);
-      
+
       // Handle different response formats
       let sellersData = [];
       if (response.data && Array.isArray(response.data.data)) {
@@ -150,7 +148,7 @@ export const adminApi = {
         console.error('Unexpected API response format:', response);
         return [];
       }
-      
+
       const sellers = sellersData.map((seller: any) => ({
         id: String(seller.id || `seller-${Math.random().toString(36).substr(2, 9)}`),
         name: String(seller.name || `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || 'Unnamed Seller'),
@@ -162,7 +160,7 @@ export const adminApi = {
         // Use camelCase for consistency
         createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
       }));
-      
+
       console.log(`Fetched ${sellers.length} sellers with location data`);
       return sellers;
     } catch (error) {
@@ -190,7 +188,7 @@ export const adminApi = {
       console.log('Fetching events from API...');
       const response = await api.get('/admin/events');
       console.log('Raw API response:', response);
-      
+
       // Handle different response formats
       let eventsData = [];
       if (response.data && Array.isArray(response.data.data)) {
@@ -201,7 +199,7 @@ export const adminApi = {
         console.error('Unexpected API response format:', response);
         return [];
       }
-      
+
       const events = eventsData.map((event: any) => ({
         id: String(event.id || `event-${Math.random().toString(36).substr(2, 9)}`),
         title: String(event.title || 'Untitled Event'),
@@ -216,10 +214,10 @@ export const adminApi = {
         // Use camelCase for consistency
         createdAt: event.created_at || event.createdAt || new Date().toISOString()
       }));
-      
+
       // Sort events by date (newest first)
       events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
+
       console.log(`Fetched ${events.length} events`);
       return events;
     } catch (error) {
@@ -235,7 +233,7 @@ export const adminApi = {
       console.log('Fetching products from API...');
       const { data } = await api.get('/admin/products');
       console.log('Products API response:', data);
-      
+
       // Handle different response formats
       let productsData = [];
       if (data && Array.isArray(data.data)) {
@@ -246,7 +244,7 @@ export const adminApi = {
         console.error('Unexpected API response format:', data);
         return [];
       }
-      
+
       const products = productsData.map((product: any) => ({
         id: String(product.id || `product-${Math.random().toString(36).substr(2, 9)}`),
         name: String(product.name || 'Unnamed Product'),
@@ -260,7 +258,7 @@ export const adminApi = {
         image: product.image_url || product.image || '',
         description: product.description || ''
       }));
-      
+
       console.log(`Fetched ${products.length} products`);
       return products;
     } catch (error) {
@@ -276,18 +274,18 @@ export const adminApi = {
       console.log('Fetching monthly events...');
       const { data } = await api.get('/admin/events/monthly');
       console.log('Monthly events response:', data);
-      
+
       // Transform the data to match the expected format
-      const monthlyEvents = Array.isArray(data.data) 
+      const monthlyEvents = Array.isArray(data.data)
         ? data.data.map((item: any) => ({
-            month: item.month || '',
-            count: item.count || 0,
-            revenue: item.revenue || 0,
-            // Include any additional fields
-            ...item
-          }))
+          month: item.month || '',
+          count: item.count || 0,
+          revenue: item.revenue || 0,
+          // Include any additional fields
+          ...item
+        }))
         : [];
-      
+
       console.log('Transformed monthly events:', monthlyEvents);
       return monthlyEvents;
     } catch (error) {
@@ -303,7 +301,7 @@ export const adminApi = {
       console.log('Fetching dashboard analytics...');
       const { data } = await api.get('/admin/dashboard');
       console.log('Dashboard analytics response:', data);
-      
+
       // Transform the response to match the expected frontend format
       const analytics = {
         totalRevenue: data.data?.total_revenue || 0,
@@ -322,7 +320,7 @@ export const adminApi = {
         },
         recentActivities: data.data?.recent_activities || []
       };
-      
+
       console.log('Transformed analytics:', analytics);
       return analytics;
     } catch (error) {
@@ -347,14 +345,14 @@ export const adminApi = {
       };
     }
   },
-  
+
   // Buyers
   async getBuyers() {
     try {
       console.log('Fetching buyers from API...');
       const response = await api.get('/admin/buyers');
       console.log('Buyers API response:', response);
-      
+
       // Handle different response formats
       let buyersData = [];
       if (response.data && Array.isArray(response.data.data)) {
@@ -365,7 +363,7 @@ export const adminApi = {
         console.error('Unexpected API response format:', response);
         return [];
       }
-      
+
       const buyers = buyersData.map((buyer: any) => ({
         id: String(buyer.id || `buyer-${Math.random().toString(36).substr(2, 9)}`),
         name: String(buyer.name || buyer.full_name || 'Unnamed Buyer'),
@@ -377,7 +375,7 @@ export const adminApi = {
         // Transform snake_case to camelCase for the frontend
         createdAt: buyer.created_at || buyer.createdAt || new Date().toISOString()
       }));
-      
+
       console.log(`Fetched ${buyers.length} buyers with location data`);
       return buyers;
     } catch (error) {
@@ -393,7 +391,7 @@ export const adminApi = {
       console.log('Fetching organizers from API...');
       const response = await api.get('/admin/organizers');
       console.log('Organizers API response:', response);
-      
+
       // Handle different response formats
       let organizersData = [];
       if (response.data && Array.isArray(response.data.data)) {
@@ -404,7 +402,7 @@ export const adminApi = {
         console.error('Unexpected API response format:', response);
         return [];
       }
-      
+
       const organizers = organizersData.map((organizer: any) => ({
         id: String(organizer.id || `org-${Math.random().toString(36).substr(2, 9)}`),
         name: String(organizer.name || organizer.full_name || 'Unnamed Organizer'),
@@ -414,7 +412,7 @@ export const adminApi = {
         // Transform snake_case to camelCase for the frontend
         createdAt: organizer.created_at || organizer.createdAt || new Date().toISOString()
       }));
-      
+
       console.log(`Fetched ${organizers.length} organizers`);
       return organizers;
     } catch (error) {
@@ -443,7 +441,7 @@ export const adminApi = {
       const response = await api.get(`/admin/events/${eventId}/tickets`);
       console.log('API Response:', response.data);
       const tickets = response.data?.data?.tickets || [];
-      
+
       // Map the response to match the frontend's expected format
       return {
         data: {
@@ -493,7 +491,7 @@ export const adminApi = {
         }
       };
       console.error('Error fetching event ticket buyers:', errorDetails);
-      
+
       // Log the error to the server if needed
       try {
         await api.post('/error-log', {
@@ -504,24 +502,24 @@ export const adminApi = {
       } catch (logError) {
         console.error('Failed to log error:', logError);
       }
-      
+
       // Return empty data that matches the EventTicketsResponse type
-      return { 
-        data: { 
+      return {
+        data: {
           event: null,
-          tickets: [] 
+          tickets: []
         }
       };
     }
   },
-  
+
   // Get monthly metrics for sellers, products, and products sold
   async getMonthlyMetrics() {
     try {
       console.log('Fetching monthly metrics...');
       const response = await api.get('/admin/metrics/monthly');
       console.log('Monthly metrics response:', response.data);
-      
+
       // Transform the data to match the expected format
       if (response.data && response.data.data) {
         return {
@@ -534,7 +532,7 @@ export const adminApi = {
           }))
         };
       }
-      
+
       return response.data;
     } catch (error) {
       console.error('Error fetching monthly metrics:', error);
@@ -546,17 +544,17 @@ export const adminApi = {
   markEventAsPaid(eventId: string, withdrawalMethod?: string, withdrawalDetails?: any) {
     return api.patch(`/admin/events/${eventId}/mark-paid`, { withdrawalMethod, ...withdrawalDetails });
   },
-  
+
   // Update organizer status
   updateOrganizerStatus(organizerId: string, data: { status: string }) {
     return api.patch(`/admin/organizers/${organizerId}/status`, data);
   },
-  
+
   // Update seller status
   updateSellerStatus(sellerId: string, data: { status: string }) {
     return api.patch(`/admin/sellers/${sellerId}/status`, data);
   },
-  
+
   // Update buyer status
   updateBuyerStatus(buyerId: string, data: { status: string }) {
     return api.patch(`/admin/buyers/${buyerId}/status`, data);

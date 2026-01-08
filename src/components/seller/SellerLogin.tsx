@@ -6,12 +6,13 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { sellerApi } from '@/api/sellerApi';
+import { useSellerAuth } from '@/contexts/SellerAuthContext';
 import { Eye, EyeOff, Loader2, Mail, ArrowLeft, Store } from 'lucide-react';
 
 export function SellerLogin() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { login, forgotPassword } = useSellerAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -35,7 +36,7 @@ export function SellerLogin() {
     setIsLoading(true);
 
     try {
-      await sellerApi.login({ email: formData.email, password: formData.password });
+      await login({ email: formData.email, password: formData.password });
       navigate('/seller/dashboard');
       toast({
         title: 'Success',
@@ -65,15 +66,23 @@ export function SellerLogin() {
 
     setIsSendingResetLink(true);
     try {
-      // Call the forgot password API
-      await sellerApi.forgotPassword(forgotPasswordEmail);
-      
-      toast({
-        title: 'Reset link sent',
-        description: 'If an account exists with this email, you will receive a password reset link.',
-      });
-      setShowForgotPassword(false);
-      setForgotPasswordEmail('');
+      // Call the forgot password from context
+      const success = await forgotPassword(forgotPasswordEmail);
+
+      if (success) {
+        toast({
+          title: 'Reset link sent',
+          description: 'If an account exists with this email, you will receive a password reset link.',
+        });
+        setShowForgotPassword(false);
+        setForgotPasswordEmail('');
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to send reset link. Please try again later.',
+          variant: 'destructive',
+        });
+      }
     } catch (error: any) {
       console.error('Error sending reset link:', error);
       toast({
@@ -125,7 +134,7 @@ export function SellerLogin() {
               <h1 className="text-3xl font-black text-black mb-2">Welcome Back</h1>
               <p className="text-gray-600 font-medium">Sign in to your seller account</p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-sm font-bold text-black">
@@ -135,28 +144,28 @@ export function SellerLogin() {
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Mail className="h-5 w-5 text-gray-400" />
                   </div>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
+                  <Input
+                    id="email"
+                    name="email"
+                    type="email"
                     placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleInputChange}
+                    value={formData.email}
+                    onChange={handleInputChange}
                     required
                     className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                />
+                  />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password" className="text-sm font-bold text-black">
                     Password
                   </Label>
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="px-0 text-sm text-yellow-600 hover:text-yellow-500 font-medium" 
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="px-0 text-sm text-yellow-600 hover:text-yellow-500 font-medium"
                     onClick={() => setShowForgotPassword(true)}
                   >
                     Forgot password?
@@ -189,7 +198,7 @@ export function SellerLogin() {
                   </button>
                 </div>
               </div>
-              
+
               <Button
                 type="submit"
                 className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-lg transition-all duration-200"
@@ -203,12 +212,12 @@ export function SellerLogin() {
                 ) : 'Sign In'}
               </Button>
             </form>
-            
+
             <div className="mt-6 text-center">
               <p className="text-gray-600 font-medium">
                 Don't have an account?{' '}
-                <Link 
-                  to="/seller/register" 
+                <Link
+                  to="/seller/register"
                   className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
                 >
                   Create Account
@@ -218,7 +227,7 @@ export function SellerLogin() {
           </div>
         </div>
       </div>
-      
+
       {/* Forgot Password Dialog */}
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
         <DialogContent className="sm:max-w-[425px] bg-white/95 backdrop-blur-sm border border-gray-200/50 rounded-2xl">
@@ -233,18 +242,18 @@ export function SellerLogin() {
               <Label htmlFor="forgot-email" className="text-sm font-bold text-black">Email Address</Label>
               <div className="relative">
                 <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <Input
-                id="forgot-email"
-                type="email"
-                placeholder="your@email.com"
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  placeholder="your@email.com"
                   className="pl-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
-                value={forgotPasswordEmail}
-                onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                required
-              />
+                  value={forgotPasswordEmail}
+                  onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                  required
+                />
+              </div>
             </div>
-            </div>
-            <Button 
+            <Button
               type="submit"
               disabled={isSendingResetLink}
               className="w-full h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold"

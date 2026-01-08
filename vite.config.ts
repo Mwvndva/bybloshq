@@ -8,13 +8,13 @@ import type { IncomingMessage, ServerResponse } from 'http';
 export default defineConfig(({ command, mode }) => {
   // Load env file based on `mode` in the current directory.
   const env = loadEnv(mode, process.cwd(), '');
-  
+
   // Determine if we're building for production
   const isProduction = mode === 'production';
-  
+
   // Base URL for the application - always use relative paths to avoid CORS
   const base = '/';
-  
+
   return {
     base,
     define: {
@@ -87,6 +87,9 @@ export default defineConfig(({ command, mode }) => {
       sourcemap: isProduction ? false : 'inline',
       minify: isProduction ? 'esbuild' : false,
       cssMinify: isProduction,
+      esbuild: {
+        drop: isProduction ? ['console', 'debugger'] : [],
+      },
       copyPublicDir: true,
       chunkSizeWarningLimit: 1000,
       // Ensure static files are copied with proper content types

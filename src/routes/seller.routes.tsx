@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { RouteObject, Navigate, Outlet, useOutletContext, useNavigate } from 'react-router-dom';
+import { useSellerAuth } from '../contexts/SellerAuthContext';
 import { SellerLayout } from '../components/layout/SellerLayout';
 import SellerDashboard from '../components/seller/SellerDashboard';
 import SellerRegistration from '../components/seller/SellerRegistration';
@@ -59,7 +60,7 @@ function ProductsListWrapper() {
     };
 
     fetchData();
-  }, [toast]);
+  }, []); // toast is stable, no need to track it
 
   const handleDeleteClick = (id: string) => {
     setProductToDelete(id);
@@ -68,20 +69,20 @@ function ProductsListWrapper() {
 
   const handleDelete = async () => {
     if (!productToDelete) return;
-    
+
     try {
       setIsDeleting(true);
       await sellerApi.deleteProduct(productToDelete);
-      
+
       // Refresh the products list
       const response = await sellerApi.getProducts();
       setProducts(response);
-      
+
       toast({
         title: 'Success',
         description: 'Product deleted successfully',
       });
-      
+
       setShowDeleteDialog(false);
       setProductToDelete(null);
     } catch (error) {
@@ -104,7 +105,7 @@ function ProductsListWrapper() {
   const handleStatusUpdate = async (productId: string, isSold: boolean) => {
     try {
       // Start with optimistic update
-      setProducts(products.map(product => 
+      setProducts(products.map(product =>
         product.id === productId ? {
           ...product,
           status: isSold ? 'sold' : 'available',
@@ -127,7 +128,7 @@ function ProductsListWrapper() {
       setStatusUpdate(null);
     } catch (error) {
       // If there's an error, revert the local state
-      setProducts(products.map(product => 
+      setProducts(products.map(product =>
         product.id === productId ? {
           ...product,
           status: isSold ? 'available' : 'sold',
@@ -186,19 +187,19 @@ function ProductsListWrapper() {
               <h3 className="text-3xl font-black text-black">Quick Actions</h3>
               <p className="text-gray-600 font-medium mt-2">Common tasks for your products</p>
             </div>
-        <Button
-              size="sm" 
-          onClick={handleAddProduct}
+            <Button
+              size="sm"
+              onClick={handleAddProduct}
               className="gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
-        >
+            >
               <Plus className="h-4 w-4" />
-          Add Product
-        </Button>
-      </div>
+              Add Product
+            </Button>
+          </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
               onClick={() => window.location.reload()}
             >
@@ -208,9 +209,9 @@ function ProductsListWrapper() {
                 <p className="text-sm text-gray-500">Reload all products</p>
               </div>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
               onClick={handleAddProduct}
             >
@@ -220,9 +221,9 @@ function ProductsListWrapper() {
                 <p className="text-sm text-gray-500">Create a new listing</p>
               </div>
             </Button>
-            
-            <Button 
-              variant="outline" 
+
+            <Button
+              variant="outline"
               className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
               onClick={() => navigate('/seller/dashboard')}
             >
@@ -248,7 +249,7 @@ function ProductsListWrapper() {
               {products.filter(p => p.status === 'available' || !p.isSold).length} Active
             </Badge>
           </div>
-          
+
           {products.length > 0 ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {products.map((product) => (
@@ -260,7 +261,7 @@ function ProductsListWrapper() {
                       className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                    <Badge 
+                    <Badge
                       variant={product.status === 'sold' || product.isSold ? 'destructive' : 'secondary'}
                       className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
                     >
@@ -314,7 +315,7 @@ function ProductsListWrapper() {
               </div>
               <h3 className="text-2xl font-black text-black mb-3">No products found</h3>
               <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
-              <Button 
+              <Button
                 onClick={handleAddProduct}
                 className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
               >
@@ -325,78 +326,78 @@ function ProductsListWrapper() {
           )}
         </div>
 
-      {statusUpdate && (
-        <AlertDialog open={statusUpdate.isOpen} onOpenChange={handleCloseStatusDialog}>
-          <AlertDialogContent>
+        {statusUpdate && (
+          <AlertDialog open={statusUpdate.isOpen} onOpenChange={handleCloseStatusDialog}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>
+                  {statusUpdate.isSold ? 'Mark as Sold' : 'Mark as Available'}
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to {statusUpdate.isSold ? 'mark this product as sold' : 'mark this product as available'}?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => handleStatusUpdate(statusUpdate.productId, statusUpdate.isSold)}
+                >
+                  {statusUpdate.isSold ? 'Mark as Sold' : 'Mark as Available'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+
+        {/* Delete Product Confirmation Dialog */}
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl">
             <AlertDialogHeader>
-              <AlertDialogTitle>
-                {statusUpdate.isSold ? 'Mark as Sold' : 'Mark as Available'}
+              <AlertDialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
+                  <Trash2 className="h-4 w-4 text-white" />
+                </div>
+                Delete Product
               </AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to {statusUpdate.isSold ? 'mark this product as sold' : 'mark this product as available'}?
+              <AlertDialogDescription className="text-sm text-gray-600 leading-relaxed">
+                Are you sure you want to delete this product? This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => handleStatusUpdate(statusUpdate.productId, statusUpdate.isSold)}
+
+            <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-3 mb-4">
+              <p className="text-sm text-red-800 font-semibold">
+                ⚠️ This action cannot be undone. The product will be permanently removed from your store.
+              </p>
+            </div>
+
+            <AlertDialogFooter className="mt-4 gap-2">
+              <AlertDialogCancel
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setProductToDelete(null);
+                }}
+                disabled={isDeleting}
+                className="border-gray-300 hover:bg-gray-50"
               >
-                {statusUpdate.isSold ? 'Mark as Sold' : 'Mark as Available'}
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                disabled={isDeleting}
+                className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete Product'
+                )}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      )}
-
-      {/* Delete Product Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-              <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-red-600 rounded-full flex items-center justify-center">
-                <Trash2 className="h-4 w-4 text-white" />
-              </div>
-              Delete Product
-            </AlertDialogTitle>
-            <AlertDialogDescription className="text-sm text-gray-600 leading-relaxed">
-              Are you sure you want to delete this product? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          
-          <div className="bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-xl p-3 mb-4">
-            <p className="text-sm text-red-800 font-semibold">
-              ⚠️ This action cannot be undone. The product will be permanently removed from your store.
-            </p>
-          </div>
-
-          <AlertDialogFooter className="mt-4 gap-2">
-            <AlertDialogCancel 
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setProductToDelete(null);
-              }}
-              disabled={isDeleting}
-              className="border-gray-300 hover:bg-gray-50"
-            >
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete Product'
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       </div>
     </div>
   );
@@ -404,14 +405,32 @@ function ProductsListWrapper() {
 
 // Protected route component
 const ProtectedRoute = () => {
-  const token = localStorage.getItem('sellerToken');
-  return token ? <Outlet /> : <Navigate to="/seller/login" replace />;
+  const { isAuthenticated, isLoading } = useSellerAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-yellow-600" />
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <Outlet /> : <Navigate to="/seller/login" replace />;
 };
 
 // Routes accessible only to unauthenticated users
 const GuestRoute = () => {
-  const token = localStorage.getItem('sellerToken');
-  return !token ? <Outlet /> : <Navigate to="/seller/dashboard" replace />;
+  const { isAuthenticated, isLoading } = useSellerAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-yellow-600" />
+      </div>
+    );
+  }
+
+  return !isAuthenticated ? <Outlet /> : <Navigate to="/seller/dashboard" replace />;
 };
 
 // Create the seller routes
@@ -421,7 +440,7 @@ export const sellerRoutes: RouteObject[] = [
     path: '/seller/reset-password',
     element: <ResetPasswordPage />,
   },
-  
+
   // Main seller routes with layout
   {
     path: '/seller',
@@ -441,7 +460,7 @@ export const sellerRoutes: RouteObject[] = [
           },
         ],
       },
-      
+
       // Protected routes
       {
         element: <ProtectedRoute />,
@@ -469,11 +488,11 @@ export const sellerRoutes: RouteObject[] = [
           },
           {
             path: 'products/:id/edit',
-            element: <EditProductForm onSuccess={() => {}} />,
+            element: <EditProductForm onSuccess={() => { }} />,
           },
           {
             path: 'add-product',
-            element: <AddProductForm onSuccess={() => {}} />,
+            element: <AddProductForm onSuccess={() => { }} />,
           },
           // Redirects for protected routes
           {
@@ -486,7 +505,7 @@ export const sellerRoutes: RouteObject[] = [
           },
         ],
       },
-      
+
       // Redirects for non-protected routes
       {
         path: '',

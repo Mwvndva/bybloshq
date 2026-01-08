@@ -19,8 +19,8 @@ interface ApiResponse<T> {
 }
 
 interface LoginResponseData {
-  token: string;
   buyer: Buyer;
+  // Token is now in cookie
 }
 
 export interface WishlistItem {
@@ -40,7 +40,6 @@ export interface WishlistItem {
 
 interface LoginApiResponse {
   status: string;
-  token: string;
   data: {
     buyer: Buyer;
   };
@@ -48,7 +47,6 @@ interface LoginApiResponse {
 
 interface LoginResponse {
   buyer: Buyer;
-  token: string;
 }
 
 interface RegisterData {
@@ -86,47 +84,6 @@ const buyerApiInstance = axios.create({
   timeout: 30000, // Increase timeout to 30 seconds
 });
 
-// Helper function to get the token
-const getAuthToken = (): string | null => {
-  return localStorage.getItem('buyer_token');
-};
-
-// Add a request interceptor to include the token from localStorage
-buyerApiInstance.interceptors.request.use(
-  (config) => {
-    // Skip for login/register routes or if it's an OPTIONS request (preflight)
-    const isAuthRequest = config.url?.includes('/login') || config.url?.includes('/register');
-    const isOptionsRequest = config.method?.toLowerCase() === 'options';
-
-    if (isAuthRequest || isOptionsRequest) {
-      return config;
-    }
-
-    // Get token from localStorage
-    const token = getAuthToken();
-
-    if (token) {
-      // Ensure headers object exists
-      config.headers = config.headers || {};
-
-      // Set the Authorization header
-      config.headers.Authorization = `Bearer ${token}`;
-
-      // Log the token being sent (remove in production)
-      if (isDevelopment) {
-        // Removed sensitive token log
-      }
-    } else if (isDevelopment) {
-      console.warn('No auth token found for request to:', config.url);
-    }
-
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
 // Add a response interceptor to handle 404s for wishlist deletions
 buyerApiInstance.interceptors.response.use(
   (response) => response,
@@ -154,7 +111,6 @@ buyerApiInstance.interceptors.response.use(
 );
 
 // Response interceptor for error handling
-// Response interceptor for error handling
 buyerApiInstance.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -162,12 +118,11 @@ buyerApiInstance.interceptors.response.use(
       // Don't redirect if we're just checking the profile/auth status
       // This prevents redirect loops when the app initializes with an expired token
       if (error.config?.url?.includes('/buyers/profile')) {
-        localStorage.removeItem('buyer_token');
         return Promise.reject(error);
       }
 
-      localStorage.removeItem('buyer_token');
       if (!window.location.pathname.includes('login')) {
+        // Redirect to login if unauthorized for other requests
         window.location.href = '/buyer/login';
       }
     }
@@ -204,13 +159,9 @@ const buyerApi = {
       const loginUrl = '/buyers/login';
       console.log(`Sending login request to ${loginUrl}`);
 
-      // Clear any existing token first
-      localStorage.removeItem('buyer_token');
-      delete buyerApiInstance.defaults.headers.common['Authorization'];
-
       // Create a clean axios instance for login to avoid any interceptor issues
       const loginInstance = axios.create({
-        baseURL: API_URL,
+        baseURL,
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -227,8 +178,6 @@ const buyerApi = {
 
       console.log('=== LOGIN RESPONSE ===');
       console.log('Status:', response.status);
-      console.log('Headers:', JSON.stringify(response.headers, null, 2));
-
 
       const responseData = response.data;
 
@@ -236,11 +185,10 @@ const buyerApi = {
         throw new Error('Invalid response from server - no data received');
       }
 
-      const { token, data } = responseData;
+      // Backend now sets HttpOnly cookie. We minimaly expect buyer data.
+      // If token is present in body we ignore it for storage, but it might be there during transition.
 
-      if (!token) {
-        throw new Error('No token received in login response');
-      }
+      const { data } = responseData;
 
       if (!data?.buyer) {
         throw new Error('Invalid response from server - missing buyer data');
@@ -248,17 +196,10 @@ const buyerApi = {
 
       const { buyer } = data;
 
-      // Store the token in localStorage
-      localStorage.setItem('buyer_token', token);
+      // Set the default Authorization header to empty/null just in case
+      delete buyerApiInstance.defaults.headers.common['Authorization'];
 
-      // Set the default Authorization header for future requests
-      buyerApiInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-
-      // Verify the token is stored correctly
-      const storedToken = localStorage.getItem('buyer_token');
-      // Removed token storage log
-
-      return { buyer: transformBuyer(buyer), token };
+      return { buyer: transformBuyer(buyer) };
     } catch (error: any) {
       console.error('Login error:', error);
       throw error;
@@ -271,7 +212,6 @@ const buyerApi = {
       const response = await buyerApiInstance.post<{
         status: string;
         message: string;
-        token: string;
         data: {
           buyer: Buyer;
         };
@@ -280,7 +220,6 @@ const buyerApi = {
       console.log('=== REGISTRATION RESPONSE ===');
       console.log('Status:', response.status);
 
-
       const responseData = response.data;
 
       if (!responseData) {
@@ -288,14 +227,12 @@ const buyerApi = {
       }
 
       const { buyer } = responseData.data;
-      const { token } = responseData;
 
-      if (!buyer || !token) {
-        throw new Error('Invalid response from server - missing buyer or token');
+      if (!buyer) {
+        throw new Error('Invalid response from server - missing buyer');
       }
 
-      localStorage.setItem('buyer_token', token);
-      return { buyer: transformBuyer(buyer), token };
+      return { buyer: transformBuyer(buyer) };
     } catch (error: any) {
       console.error('Registration error:', error);
       throw error;
@@ -308,7 +245,8 @@ const buyerApi = {
         `${baseURL}/buyers/forgot-password`,
         { email: email.trim().toLowerCase() },
         {
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
+          withCredentials: true
         }
       );
 
@@ -336,7 +274,8 @@ const buyerApi = {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
-          }
+          },
+          withCredentials: true
         }
       );
 
@@ -369,9 +308,8 @@ const buyerApi = {
         };
       }
 
+      // We rely on the browser sending the HttpOnly cookie
       const response = await buyerApiInstance.get<ProfileResponse>('/buyers/profile');
-
-
 
       // The buyer data is in response.data.data.buyer
       const buyerData = response.data.data?.buyer;
@@ -433,9 +371,7 @@ const buyerApi = {
 
       // Handle 401 Unauthorized
       if (error.response?.status === 401) {
-        console.log('🔒 Authentication failed, clearing token and redirecting to login');
-        localStorage.removeItem('buyer_token');
-        delete buyerApiInstance.defaults.headers.common['Authorization'];
+        console.log('🔒 Authentication failed, redirecting to login');
         window.location.href = '/buyer/login';
       }
 
@@ -466,9 +402,7 @@ const buyerApi = {
       });
 
       if (error.response?.status === 401) {
-        console.log('Authentication failed, clearing token and redirecting to login');
-        localStorage.removeItem('buyer_token');
-        delete buyerApiInstance.defaults.headers.common['Authorization'];
+        console.log('Authentication failed, redirecting to login');
         window.location.href = '/buyer/login';
       }
 
@@ -507,9 +441,7 @@ const buyerApi = {
         console.error('Response data:', error.response.data);
 
         if (error.response.status === 401) {
-          console.log('Authentication failed, clearing token and redirecting to login');
-          localStorage.removeItem('buyer_token');
-          delete buyerApiInstance.defaults.headers.common['Authorization'];
+          console.log('Authentication failed, redirecting to login');
           window.location.href = '/buyer/login';
         }
 
@@ -536,8 +468,6 @@ const buyerApi = {
       console.error('Error syncing wishlist:', error);
 
       if ((error as any).response?.status === 401) {
-        localStorage.removeItem('buyer_token');
-        delete buyerApiInstance.defaults.headers.common['Authorization'];
         window.location.href = '/buyer/login';
       }
 

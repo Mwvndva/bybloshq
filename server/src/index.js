@@ -243,7 +243,8 @@ console.log('CORS Configuration:', {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-// Cookie parser is already imported and used above
+// Enable cookie parsing
+app.use(cookieParser());
 
 // Log CORS configuration for debugging
 console.log('CORS Configuration:', {
@@ -451,7 +452,7 @@ const startServer = async () => {
     // Test database connection before starting the server
     await testConnection();
 
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 3002;
     const server = app.listen(port, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
       logger.info(`📡 API available at http://localhost:${port}/api`);

@@ -3,6 +3,7 @@ import { query, pool } from '../config/database.js';
 import payoutService from '../services/payout.service.js';
 import whatsappService from '../services/whatsapp.service.js';
 import logger from '../utils/logger.js';
+
 import {
   createSeller,
   findSellerByEmail,
@@ -13,20 +14,41 @@ import {
   verifyPassword,
   verifyPasswordResetToken,
   updatePassword,
+
   isShopNameAvailable
 } from '../models/seller.model.js';
+import {
+  sanitizeSeller,
+  sanitizePublicSeller,
+  sanitizeWithdrawalRequest
+} from '../utils/sanitize.js';
 
-// Helper to sanitize seller object
-const sanitizeSeller = (seller) => {
-  const sellerObj = seller.toObject ? seller.toObject() : { ...seller };
-  delete sellerObj.password;
-  delete sellerObj.password_reset_token;
-  delete sellerObj.password_reset_expires;
-  // Add other sensitive fields if any
-  return sellerObj;
+// Helper to send token via cookie
+const sendTokenResponse = (seller, statusCode, res, message) => {
+  const token = generateAuthToken(seller);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours default
+    path: '/'
+  };
+
+  if (process.env.NODE_ENV === 'development') {
+    delete cookieOptions.domain;
+  }
+
+  res.cookie('jwt', token, cookieOptions);
+
+  res.status(statusCode).json({
+    status: 'success',
+    // token, // SILENCED
+    data: {
+      seller: sanitizeSeller(seller)
+    }
+  });
 };
-
-// Email validation regex removed (handled by middleware)
 
 export const checkShopNameAvailability = async (req, res) => {
   try {
@@ -59,8 +81,6 @@ export const checkShopNameAvailability = async (req, res) => {
 export const register = async (req, res) => {
   const { fullName, shopName, email, phone, password, city, location } = req.body;
 
-  // Validation is now handled by middleware
-
   // Check if shop name is available (still needed as business logic check)
   const isShopAvailable = await isShopNameAvailable(shopName);
   if (!isShopAvailable) {
@@ -72,18 +92,7 @@ export const register = async (req, res) => {
 
   try {
     const seller = await createSeller({ fullName, shopName, email, phone, password, city, location });
-    const token = generateAuthToken(seller);
-
-    // Sanitize seller object
-    const sanitizedSeller = sanitizeSeller(seller);
-
-    res.status(201).json({
-      status: 'success',
-      data: {
-        seller: sanitizedSeller,
-        token
-      }
-    });
+    sendTokenResponse(seller, 201, res, 'Registration successful');
   } catch (error) {
     if (error.code === '23505') { // Unique violation
       if (error.constraint === 'sellers_email_key') {
@@ -109,11 +118,9 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-
     const { email, password } = req.body;
 
     if (!email || !password) {
-
       return res.status(400).json({
         status: 'error',
         message: 'Please provide email and password'
@@ -132,20 +139,7 @@ export const login = async (req, res) => {
     }
 
     // 2) If everything is ok, send token to client
-
-    const token = generateAuthToken(seller);
-
-    // Sanitize seller object
-    const sanitizedSeller = sanitizeSeller(seller);
-
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        seller: sanitizedSeller,
-        token
-      }
-    });
+    sendTokenResponse(seller, 200, res, 'Login successful');
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
@@ -171,20 +165,12 @@ export const getSellerByShopName = async (req, res) => {
       });
     }
 
-    console.log('Found seller:', {
-      id: seller.id,
-      shopName: seller.shop_name,
-      hasBannerImage: !!seller.banner_image,
-      bannerImageLength: seller.banner_image ? seller.banner_image.length : 0
-    });
+    // console.log('Found seller:', { ... });
 
     res.status(200).json({
       status: 'success',
       data: {
-        seller: {
-          ...sanitizeSeller(seller),
-          banner_image: seller.banner_image || null
-        }
+        seller: sanitizePublicSeller(seller)
       }
     });
   } catch (error) {
@@ -207,19 +193,13 @@ export const getProfile = async (req, res) => {
       });
     }
 
-    // Sanitize seller object
+    // Sanitize seller object - this returns ONLY safe fields
     const sanitizedSeller = sanitizeSeller(seller);
-
-    // Map banner_image to bannerImage for frontend compatibility
-    const sellerData = {
-      ...sanitizedSeller,
-      bannerImage: sanitizedSeller.banner_image || null
-    };
 
     res.status(200).json({
       status: 'success',
       data: {
-        seller: sellerData
+        seller: sanitizedSeller  // Return ONLY sanitized data
       }
     });
   } catch (error) {
@@ -646,13 +626,13 @@ export const getSellerById = async (req, res) => {
       });
     }
 
-    console.log('Found seller:', {
+    /* console.log('Found seller:', {
       id: seller.id,
       shopName: seller.shop_name,
-      email: seller.email ? '[REDACTED]' : 'missing',
-      phone: seller.phone ? '[REDACTED]' : 'missing',
+      // email: seller.email ? '[REDACTED]' : 'missing',
+      // phone: seller.phone ? '[REDACTED]' : 'missing',
       isActive: seller.is_active
-    });
+    }); */
 
     // Format the response to match the expected frontend format
     const sellerData = {
@@ -756,11 +736,11 @@ export const createWithdrawalRequest = async (req, res) => {
         amount: withdrawalAmount,
         phone_number: mpesaNumber,
         narration: `Withdrawal for ${seller.full_name}`,
-        account_name: mpesaName,
-        reference: reference
+        account_name: mpesaName
+        // Removed: reference field (not in PayD v3 spec)
       });
 
-      logger.info(`Withdrawal: Payd API success for ReqID ${request.id}. Response: ${JSON.stringify(payoutResponse)}`);
+      logger.info(`Withdrawal: Payd API success for ReqID ${request.id}. Status: ${payoutResponse.status}`);
 
       // Update request with raw response (non-blocking for user response)
       // CRITICAL FIX: Update provider_reference with the ACTUAL ID from Payd (correlator_id)
@@ -771,6 +751,7 @@ export const createWithdrawalRequest = async (req, res) => {
       const finalStatus = isImmediateSuccess ? 'completed' : 'processing';
 
       if (paydId) {
+        // Redacted raw response logging
         await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2, status = $3 WHERE id = $4',
           [JSON.stringify(payoutResponse), paydId, finalStatus, request.id]
         );
@@ -795,11 +776,11 @@ export const createWithdrawalRequest = async (req, res) => {
 
       res.status(201).json({
         status: 'success',
-        data: {
+        data: sanitizeWithdrawalRequest({
           ...request,
           status: finalStatus,
           message: isImmediateSuccess ? 'Withdrawal completed successfully.' : 'Withdrawal initiated successfully.'
-        }
+        })
       });
 
     } catch (apiError) {

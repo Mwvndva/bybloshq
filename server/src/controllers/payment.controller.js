@@ -100,9 +100,10 @@ class PaymentController {
    */
   async initiatePayment(req, res) {
     try {
-      console.log('=== TICKET PAYMENT INITIATION ===');
-      console.log('Request body:', req.body);
-      console.log('Endpoint: /api/payments/initiate');
+      logger.info('=== TICKET PAYMENT INITIATION ===', {
+        body: req.body,
+        endpoint: '/api/payments/initiate'
+      });
       const { phone, email, ticketId, eventId, quantity = 1, discountCode } = req.body;
       let { amount } = req.body; // Still capture for logging/matching if needed, but we recalculate
 
@@ -220,9 +221,10 @@ class PaymentController {
    */
   async initiateProductPayment(req, res) {
     try {
-      console.log('=== PRODUCT PAYMENT INITIATION ===');
-      console.log('Request body:', req.body);
-      console.log('Endpoint: /api/payments/initiate-product');
+      logger.info('=== PRODUCT PAYMENT INITIATION ===', {
+        body: req.body,
+        endpoint: '/api/payments/initiate-product'
+      });
       const { phone, email, amount, productId, sellerId, productName, customerName, narrative } = req.body;
 
       // Get buyer info from authenticated user or create guest buyer
@@ -240,7 +242,7 @@ class PaymentController {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
             buyerInfo = { id: decoded.id, email, phone };
           } catch (error) {
-            console.log('Invalid token, proceeding as guest');
+            logger.warn('Invalid token, proceeding as guest');
           }
         }
       }
@@ -320,7 +322,7 @@ class PaymentController {
       };
 
       const order = await Order.createOrder(orderData);
-      console.log('Created order:', order);
+      logger.info('Created order:', { orderId: order.id });
 
       const paymentData = {
         phone,
@@ -339,11 +341,11 @@ class PaymentController {
         metadata: req.body.metadata // Pass metadata from frontend
       };
 
-      console.log('=== PAYMENT DATA DEBUG ===');
-      console.log('order.id:', order.id);
-      console.log('order.order_number:', order.order_number);
-      console.log('paymentData.invoice_id:', paymentData.invoice_id);
-      console.log('========================');
+      logger.debug('=== PAYMENT DATA DEBUG ===', {
+        orderId: order.id,
+        orderNumber: order.order_number,
+        invoiceId: paymentData.invoice_id
+      });
 
       const result = await paymentService.initiatePayment(paymentData);
 
@@ -368,7 +370,7 @@ class PaymentController {
           }
         });
 
-        console.log('Payment record created:', paymentRecord);
+        logger.info('Payment record created:', { id: paymentRecord.id, reference: result.reference });
       }
 
       res.status(200).json({

@@ -24,8 +24,9 @@ const logger = winston.createLogger({
     )
   ),
   transports: [
-    // Console transport
-    new winston.transports.Console(),
+    // Console transport - ONLY if NOT in production or if explicitly enabled
+    ...(process.env.NODE_ENV !== 'production' ? [new winston.transports.Console()] : []),
+
     // Simple file transport for errors
     new winston.transports.File({
       filename: path.join(logsDir, 'error.log'),
@@ -38,6 +39,16 @@ const logger = winston.createLogger({
   ],
   exitOnError: false, // Don't exit on handled exceptions
 });
+
+// Production Silencer: Override global console methods if in production
+if (process.env.NODE_ENV === 'production') {
+  console.log = () => { };
+  console.info = () => { };
+  console.debug = () => { };
+  // Keep console.error and console.warn for critical issues, but maybe redirect to winston
+  console.error = (...args) => logger.error(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+  console.warn = (...args) => logger.warn(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+}
 
 // Create a stream object for morgan
 logger.stream = {

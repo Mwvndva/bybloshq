@@ -1,5 +1,6 @@
 import { AppError } from '../utils/errorHandler.js';
 import TicketRepository from '../repositories/ticket.repository.js';
+import logger from '../utils/logger.js';
 
 export default class TicketController {
   /**
@@ -11,17 +12,17 @@ export default class TicketController {
   static async validateTicket(req, res, next) {
     try {
       const { ticketNumber } = req.params;
-      
+
       if (!ticketNumber) {
         return res.status(400).json({
           success: false,
           message: 'Ticket number is required'
         });
       }
-      
+
       // Find the ticket by ticket number
       const ticket = await TicketRepository.findByTicketNumber(ticketNumber);
-      
+
       if (!ticket) {
         return res.status(404).json({
           valid: false,
@@ -29,7 +30,7 @@ export default class TicketController {
           message: 'Ticket not found'
         });
       }
-      
+
       // Check if ticket is already scanned
       if (ticket.scanned) {
         return res.status(200).json({
@@ -46,10 +47,10 @@ export default class TicketController {
           }
         });
       }
-      
+
       // Mark ticket as scanned
       const updatedTicket = await TicketRepository.markAsScanned(ticket.id);
-      
+
       // Return success response
       return res.status(200).json({
         valid: true,
@@ -64,7 +65,7 @@ export default class TicketController {
           scannedAt: updatedTicket.scanned_at
         }
       });
-      
+
     } catch (error) {
       console.error('Error validating ticket:', error);
       return res.status(500).json({
@@ -74,7 +75,7 @@ export default class TicketController {
       });
     }
   }
-  
+
   /**
    * Get all tickets for an organizer
    */
@@ -84,20 +85,24 @@ export default class TicketController {
         return next(new AppError('Authentication required', 401));
       }
 
-      console.log('=== Ticket Controller Debug ===');
-      console.log('Request params:', req.params);
-      console.log('Request query:', req.query);
-      console.log('User ID:', req.user.id);
+      logger.debug('=== Ticket Controller Debug ===', {
+        params: req.params,
+        query: req.query,
+        userId: req.user.id
+      });
 
       const { eventId } = req.params;
-      
+
       // For event-specific tickets, don't apply pagination
       if (eventId) {
-        console.log(`Fetching tickets for event ${eventId}`);
+        logger.info(`Fetching tickets for event ${eventId}`);
         const tickets = await TicketRepository.getAllTicketsForEvent(eventId, req.user.id);
-        console.log(`Found ${tickets.length} tickets for event ${eventId}`);
-        console.log('Sample ticket:', tickets[0]);
-        
+        logger.info(`Found ${tickets.length} tickets for event ${eventId}`);
+
+        if (tickets.length > 0) {
+          logger.debug('Sample ticket:', tickets[0]);
+        }
+
         // Format ticket data for response
         const formattedTickets = tickets.map(ticket => ({
           id: ticket.id,
@@ -135,15 +140,15 @@ export default class TicketController {
       const { page = 1, limit = 50 } = req.query;
       const offset = (parseInt(page, 10) - 1) * parseInt(limit, 10);
 
-      console.log(`Fetching tickets for organizer ${req.user.id} with limit=${limit}, offset=${offset}`);
+      logger.debug(`Fetching tickets for organizer ${req.user.id} with limit=${limit}, offset=${offset}`);
       const result = await TicketRepository.getTicketsByOrganizer(
         req.user.id,
         parseInt(limit, 10),
         offset
       );
-      console.log(`Found ${result.tickets.length} tickets out of ${result.total}`);
+      logger.info(`Found ${result.tickets.length} tickets out of ${result.total}`);
       if (result.tickets.length > 0) {
-        console.log('Sample ticket:', result.tickets[0]);
+        logger.debug('Sample ticket:', result.tickets[0]);
       }
 
       // Format ticket data for response
@@ -178,7 +183,7 @@ export default class TicketController {
         }
       });
     } catch (error) {
-      console.error('Error fetching tickets:', error);
+      logger.error('Error fetching tickets:', error);
       next(new AppError(error.message || 'Failed to fetch tickets', 500));
     }
   }
@@ -316,19 +321,19 @@ export default class TicketController {
     try {
       const { ticketNumber } = req.params;
       const { force = false } = req.query; // Optional force parameter to re-scan already scanned tickets
-      
-      console.log(`Validating ticket: ${ticketNumber}`);
-      
+
+      logger.info(`Validating ticket: ${ticketNumber}`);
+
       if (!ticketNumber) {
-        console.error('No ticket number provided');
+        logger.error('No ticket number provided');
         return next(new AppError('Ticket number is required', 400));
       }
 
       // Find the ticket by ticket number
       const ticket = await TicketRepository.findByTicketNumber(ticketNumber);
-      
+
       if (!ticket) {
-        console.error(`Ticket not found: ${ticketNumber}`);
+        logger.error(`Ticket not found: ${ticketNumber}`);
         return res.status(200).json({
           success: false,
           valid: false,
@@ -340,7 +345,7 @@ export default class TicketController {
 
       // Check if ticket is already scanned
       if (ticket.scanned && !force) {
-        console.log(`Ticket already scanned: ${ticketNumber} at ${ticket.scanned_at}`);
+        logger.info(`Ticket already scanned: ${ticketNumber} at ${ticket.scanned_at}`);
         return res.status(200).json({
           success: false,
           valid: false,
@@ -365,10 +370,10 @@ export default class TicketController {
 
       try {
         // Mark ticket as scanned
-        console.log(`Marking ticket ${ticket.id} as scanned...`);
+        logger.info(`Marking ticket ${ticket.id} as scanned...`);
         const updatedTicket = await TicketRepository.markAsScanned(ticket.id);
-        
-        console.log(`Successfully validated ticket: ${ticketNumber}`);
+
+        logger.info(`Successfully validated ticket: ${ticketNumber}`);
         return res.status(200).json({
           success: true,
           valid: true,
@@ -389,14 +394,14 @@ export default class TicketController {
           },
           timestamp: new Date().toISOString()
         });
-        
+
       } catch (updateError) {
-        console.error(`Error updating ticket ${ticket.id}:`, updateError);
+        logger.error(`Error updating ticket ${ticket.id}:`, updateError);
         return next(new AppError('Error updating ticket status', 500));
       }
 
     } catch (error) {
-      console.error('Error validating ticket:', error);
+      logger.error('Error validating ticket:', error);
       next(new AppError(error.message || 'Error validating ticket', 500));
     }
   }

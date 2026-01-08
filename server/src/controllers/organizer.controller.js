@@ -1,6 +1,8 @@
 import { sendEmail } from '../utils/email.js';
 import { pool } from '../config/database.js';
+
 import payoutService from '../services/payout.service.js';
+import { sanitizeWithdrawalRequest } from '../utils/sanitize.js';
 
 export const sendWithdrawalEmail = async (req, res) => {
   try {
@@ -223,14 +225,10 @@ export const createWithdrawalRequest = async (req, res) => {
     // Success response
     res.status(201).json({
       status: 'success',
-      data: {
-        id: withdrawalRequest.id,
-        eventId: withdrawalRequest.event_id,
-        amount: withdrawalRequest.amount,
-        status: withdrawalRequest.status,
-        createdAt: withdrawalRequest.created_at,
+      data: sanitizeWithdrawalRequest({
+        ...withdrawalRequest,
         message: 'Withdrawal initiated successfully.'
-      }
+      })
     });
 
   } catch (error) {
@@ -280,7 +278,9 @@ export const getEventWithdrawals = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        withdrawals: result.rows
+        data: {
+          withdrawals: result.rows.map(sanitizeWithdrawalRequest)
+        }
       }
     });
   } catch (error) {

@@ -1,4 +1,4 @@
-import pool from '../db/index.js';
+import { pool } from '../config/database.js';
 import AppError from '../utils/appError.js';
 import whatsappService from '../services/whatsapp.service.js';
 import Buyer from '../models/buyer.model.js';
@@ -24,7 +24,7 @@ export const getAllRefundRequests = async (req, res, next) => {
     `;
 
     const queryParams = [];
-    
+
     if (status) {
       query += ` WHERE rr.status = $1`;
       queryParams.push(status);
@@ -36,7 +36,7 @@ export const getAllRefundRequests = async (req, res, next) => {
     const result = await pool.query(query, queryParams);
 
     // Get total count
-    const countQuery = status 
+    const countQuery = status
       ? `SELECT COUNT(*) FROM refund_requests WHERE status = $1`
       : `SELECT COUNT(*) FROM refund_requests`;
     const countParams = status ? [status] : [];
@@ -105,7 +105,7 @@ export const getRefundRequestById = async (req, res, next) => {
  */
 export const confirmRefundRequest = async (req, res, next) => {
   const client = await pool.connect();
-  
+
   try {
     const { id } = req.params;
     const { adminNotes } = req.body;
@@ -150,7 +150,7 @@ export const confirmRefundRequest = async (req, res, next) => {
     // Update refund request status to completed
     // Only set processed_by if adminId is a valid number
     const processedBy = typeof adminId === 'number' ? adminId : null;
-    
+
     await client.query(
       `UPDATE refund_requests
        SET status = 'completed',
@@ -231,7 +231,7 @@ export const rejectRefundRequest = async (req, res, next) => {
     // Update refund request status to rejected
     // Only set processed_by if adminId is a valid number
     const processedBy = typeof adminId === 'number' ? adminId : null;
-    
+
     await pool.query(
       `UPDATE refund_requests
        SET status = 'rejected',
@@ -251,11 +251,11 @@ export const rejectRefundRequest = async (req, res, next) => {
         'SELECT buyer_id, amount FROM refund_requests WHERE id = $1',
         [id]
       );
-      
+
       if (buyerQuery.rows.length > 0) {
         const { buyer_id, amount } = buyerQuery.rows[0];
         const buyer = await Buyer.findById(buyer_id);
-        
+
         if (buyer) {
           await whatsappService.sendRefundRejectedNotification(buyer, amount, adminNotes);
         }
