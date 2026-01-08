@@ -172,7 +172,22 @@ const getUserOrders = async (req, res) => {
     }
 
     let query = `
-      SELECT o.*, 
+      SELECT o.id,
+             o.order_number,
+             o.status,
+             o.payment_status,
+             o.total_amount,
+             o.platform_fee_amount,
+             o.seller_payout_amount,
+             o.payment_method,
+             o.shipping_address,
+             o.notes,
+             o.metadata,
+             o.created_at,
+             o.updated_at,
+             o.paid_at,
+             o.completed_at,
+             o.cancelled_at,
              COALESCE(
                json_agg(
                  json_build_object(
@@ -217,7 +232,10 @@ const getUserOrders = async (req, res) => {
     }
 
     query += `
-      GROUP BY o.id
+      GROUP BY o.id, o.order_number, o.status, o.payment_status, o.total_amount, 
+               o.platform_fee_amount, o.seller_payout_amount, o.payment_method, 
+               o.shipping_address, o.notes, o.metadata, o.created_at, o.updated_at, 
+               o.paid_at, o.completed_at, o.cancelled_at
       ORDER BY o.created_at DESC
       LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
     `;
