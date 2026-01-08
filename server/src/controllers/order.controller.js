@@ -288,9 +288,10 @@ const getUserOrders = async (req, res) => {
         status: sanitizedOrders[0].status,
         paymentStatus: sanitizedOrders[0].paymentStatus
       });
+      console.log('Full sanitized order 63:', JSON.stringify(sanitizedOrders.find(o => o.id === 63), null, 2));
     }
 
-    res.json({
+    const responseData = {
       success: true,
       data: sanitizedOrders,
       pagination: {
@@ -299,7 +300,16 @@ const getUserOrders = async (req, res) => {
         limit: parseInt(limit),
         totalPages: Math.ceil(subtotal / limit)
       }
-    });
+    };
+
+    console.log('=== SENDING RESPONSE ===');
+    console.log('Response keys:', Object.keys(responseData));
+    console.log('Data array length:', responseData.data.length);
+    if (responseData.data.length > 0) {
+      console.log('First order in response:', JSON.stringify(responseData.data[0], null, 2));
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('Error fetching user orders:', error);
