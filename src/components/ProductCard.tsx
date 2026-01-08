@@ -143,21 +143,18 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string; locationType?: string } | null>(null);
 
   const handleBuyClick = async (e: React.MouseEvent) => {
-    // Prevent default behavior and stop propagation
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    e?.nativeEvent?.stopImmediatePropagation?.();
 
-    // Check if it's a service product
+    // 1. Service Product? -> Booking Flow
     if (product.product_type === 'service' || (product as any).productType === 'service') {
       setIsBookingModalOpen(true);
       return;
     }
 
-    // Check if user is authenticated with complete information
+    // 2. Authenticated? -> Direct Payment
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
-      // User has complete information, proceed directly with payment
-      await handleBuyerInfoSubmit({
+      await executePayment({
         fullName: userData.fullName,
         email: userData.email,
         phone: userData.phone,
@@ -165,7 +162,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         location: userData.location
       });
     } else {
-      // Show phone check modal to verify if buyer exists
+      // 3. Not Authenticated? -> Phone Check
       setIsPhoneCheckModalOpen(true);
     }
   };
@@ -174,10 +171,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setBookingData(data);
     setIsBookingModalOpen(false);
 
-    // Proceed to payment flow after booking details are collected
-    // Check if user is authenticated with complete information
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
-      await handleBuyerInfoSubmit({
+      await executePayment({
         fullName: userData.fullName,
         email: userData.email,
         phone: userData.phone,
@@ -192,58 +187,48 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handlePhoneSubmit = async (phone: string) => {
     setIsCheckingPhone(true);
     try {
-
       const result = await buyerApi.checkBuyerByPhone(phone);
-
       setCurrentPhone(phone);
       setIsPhoneCheckModalOpen(false);
 
       if (result.exists && result.buyer) {
-        // Buyer exists - check if they have an email (REQUIRED for payment)
+        // CASE A: Buyer Exists
         if (result.buyer.email && result.buyer.email.trim() !== '') {
-          // Use their data to initiate payment
-
-          // Store token if provided
-          if (result.token) {
-            localStorage.setItem('buyer_token', result.token);
-          }
-
-          // Proceed directly to payment with existing buyer info
-          await handleBuyerInfoSubmit({
+          // Has Email -> PROCEED TO PAYMENT
+          // We don't need to save anything, just use the data
+          await executePayment({
             fullName: result.buyer.fullName || '',
-            email: result.buyer.email || '',
+            email: result.buyer.email,
             phone: result.buyer.phone || phone,
             city: result.buyer.city,
             location: result.buyer.location
-          }, null, true); // true = skipSave
+          }, null, result.buyer.id);
         } else {
-          // Buyer exists but MISSING EMAIL - Prompt them to complete info
+          // Missing Email -> Prompt to Complete Profile
           toast({
             title: "Email Required",
             description: "Please provide your email address to receive the receipt.",
             variant: "default"
           });
-
           setInitialBuyerData({
             fullName: result.buyer.fullName,
             city: result.buyer.city,
             location: result.buyer.location,
-            email: '' // Explicitly empty to force entry
+            email: ''
           });
-          setShouldSkipSave(true);
+          setShouldSkipSave(true); // Don't try to register again, just valid email
           setIsBuyerModalOpen(true);
         }
       } else {
-        // Buyer doesn't exist - show form to collect full details
+        // CASE B: New Buyer -> Registration Form
         setInitialBuyerData(undefined);
         setShouldSkipSave(false);
         setIsBuyerModalOpen(true);
       }
     } catch (error: any) {
-      console.error('Error checking phone:', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to check phone number. Please try again.',
+        description: error.message || 'Failed to check phone number.',
         variant: 'destructive'
       });
     } finally {
@@ -253,206 +238,130 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const handleBuyerInfoSubmit = async (
     buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string },
-    explicitBookingData?: { date: Date; time: string; location: string; locationType?: string } | null,
-    skipSave: boolean = false
+    explicitBookingData?: any,
+    isExistingUserUpdate: boolean = false
   ) => {
-    setIsProcessingPurchase(true);
-
     try {
-      console.debug('Buyer Info:', buyerInfo);
-
-      // 1. Check if user is already authenticated
-      let buyerId: string;
-      let buyerToken: string;
-
-      if (isAuthenticated && userData?.id) {
-        // User is already authenticated, use their existing buyer ID
-        buyerId = String(userData.id);
-        buyerToken = localStorage.getItem('buyer_token') || '';
-
-
-      } else if (!skipSave) {
-        // User is not authenticated and not explicitly skipping save, save buyer info first
-        try {
-          const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
-
-          if (saveResult.requiresLogin) {
-            toast({
-              title: "Account Exists",
-              description: "This phone number is already registered. Please log in to complete your purchase.",
-              variant: "default",
-            });
-            setTimeout(() => {
-              window.location.href = '/buyer/login';
-            }, 2000);
-            return;
-          }
-
-          if (!saveResult.buyer?.id) {
-            throw new Error('Failed to create buyer account');
-          }
-
-          buyerId = String(saveResult.buyer.id);
-          buyerToken = saveResult.token || '';
-
-          // Store token if provided (for new buyer)
-          if (buyerToken) {
-            localStorage.setItem('buyer_token', buyerToken);
-          }
-
-
-
-        } catch (saveError) {
-          console.error('Error saving buyer info:', saveError);
-          throw new Error('Failed to save buyer information. Please try again.');
+      // If it's a new user (not just updating email for existing), save them first
+      if (!isExistingUserUpdate && !shouldSkipSave) {
+        const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
+        if (saveResult.requiresLogin) {
+          // This shouldn't happen if checkPhone logic is correct, but fail-safe
+          window.location.href = '/buyer/login';
+          return;
         }
+        // Proceed with new ID
+        await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
       } else {
-        // User not authenticated but skipping save (likely existing user via phone check)
-        // We don't have a token, so we'll proceed as guest/unauthenticated using the provided info
-        buyerId = ''; // No ID available without auth
-        buyerToken = '';
+        // Existing user (skipped save) -> Proceed with null ID (backend handles lookup) or passed ID if available
+        // For simplistic 'skipSave' flow, we rely on backend lookup or just passing data
+        await executePayment(buyerInfo, explicitBookingData);
       }
 
-      // Determine booking data to use (explicit argument takes precedence over state)
-      const activeBookingData = explicitBookingData || bookingData;
+    } catch (error: any) {
+      console.error('Save error:', error);
+      toast({ title: "Error", description: "Failed to save information." });
+    }
+  };
 
-      // 2. Prepare payment payload for Paystack product payment
+  const executePayment = async (
+    buyerDetails: { fullName: string; email: string; phone: string; city?: string; location?: string },
+    bookingDetails: any = null,
+    buyerId?: string | number
+  ) => {
+    setIsProcessingPurchase(true);
+    try {
+      const activeBooking = bookingDetails || bookingData;
       const payload = {
-        phone: buyerInfo.phone,
-        email: buyerInfo.email,
+        phone: buyerDetails.phone,
+        email: buyerDetails.email,
         amount: product.price,
         productId: product.id,
         sellerId: product.sellerId || displaySeller?.id,
         productName: product.name,
-        customerName: buyerInfo.fullName,
+        customerName: buyerDetails.fullName,
         narrative: `Purchase of ${product.name}`,
         paymentMethod: 'payd',
-        metadata: activeBookingData ? {
-          booking_date: format(activeBookingData.date, 'yyyy-MM-dd'),
-          booking_time: activeBookingData.time,
-          service_location: activeBookingData.location,
-          location_type: activeBookingData.locationType,
+        metadata: activeBooking ? {
+          booking_date: format(activeBooking.date, 'yyyy-MM-dd'),
+          booking_time: activeBooking.time,
+          service_location: activeBooking.location,
+          location_type: activeBooking.locationType,
           product_type: 'service'
         } : undefined
       };
 
-      console.debug('Payment Request:', { payload });
-
-      // 3. Get authentication token
+      // Use a simpler fetch for clarity
       const token = localStorage.getItem('buyer_token');
-      if (!token && buyerToken) {
-        localStorage.setItem('buyer_token', buyerToken);
-      }
+      const baseURL = (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '');
 
-      // 4. Call Paystack product payment API
-      const isDevelopment = import.meta.env.DEV;
-      const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
-        ? '/api'  // Use proxy in development when VITE_API_URL is not set
-        : (import.meta.env.VITE_API_URL || 'http://localhost:3002').replace(/\/$/, '');
-
-      const response = await fetch(`${baseURL}/payments/initiate-product`, {
+      const response = await fetch(`${baseURL}/api/payments/initiate-product`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || buyerToken}`
+          'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
 
-      // 5. Handle API response
-      const responseData = await response.json().catch(() => ({}));
+      const data = await response.json();
 
-      if (!response.ok) {
-        const errorMessage = responseData.message || 'Failed to initiate payment';
-        console.error('Payment API Error:', { status: response.status, responseData });
-        throw new Error(errorMessage);
-      }
+      if (!response.ok) throw new Error(data.message || 'Payment initiation failed');
 
-      // 5. Handle success (STK Push sent)
-      if (responseData.status === 'success') {
+      if (data.status === 'success') {
         toast({
           title: 'STK Push Sent',
           description: 'Please check your phone to complete the payment.',
           duration: 10000
         });
 
-        // Start polling for payment status
-        const invoiceId = responseData.data?.reference || responseData.data?.invoice_id; // Payd returns reference
-        if (invoiceId) {
-          const checkStatus = async () => {
-            let attempts = 0;
-            const maxAttempts = 24; // 2 minutes (5s interval)
-
-            const interval = setInterval(async () => {
-              attempts++;
-              try {
-                // Use base URL logic again or just relative path if proxy is set up correctly (it is)
-                // But need to be careful about the URL construction
-                const checkUrl = `${baseURL}/payments/status/${invoiceId}`;
-                const statusRes = await fetch(checkUrl, {
-                  headers: { 'Authorization': `Bearer ${token || buyerToken}` }
-                });
-                const statusData = await statusRes.json();
-
-                const status = statusData.data?.status || statusData.status;
-
-                if (status === 'success' || status === 'completed') {
-                  clearInterval(interval);
-                  setIsProcessingPurchase(false);
-                  toast({
-                    title: 'Payment Successful',
-                    description: 'Your purchase has been confirmed!',
-                    variant: 'default',
-                    className: 'bg-green-600 text-white'
-                  });
-                  // Here we could trigger a refresh or redirect
-                } else if (status === 'failed') {
-                  clearInterval(interval);
-                  setIsProcessingPurchase(false);
-                  toast({
-                    title: 'Payment Failed',
-                    description: 'The transaction was declined.',
-                    variant: 'destructive'
-                  });
-                }
-
-                if (attempts >= maxAttempts) {
-                  clearInterval(interval);
-                  setIsProcessingPurchase(false);
-                  // Timeout - don't show error, just stop loading
-                }
-              } catch (e) {
-                console.error('Polling error', e);
-                // Ignore
-              }
-            }, 5000);
-          };
-          checkStatus();
-
-          // Keep loading state true while polling? 
-          // Yes, but maybe we should allow user to close/cancel?
-          // For now, let's keep it simple.
-          return; // Don't set isProcessingPurchase(false) yet
-        }
+        // Start Polling (Simplified)
+        const invoiceId = data.data?.reference;
+        if (invoiceId) pollPaymentStatus(invoiceId, baseURL, token);
 
       } else {
-        throw new Error(responseData.message || 'Payment initiation failed');
+        throw new Error(data.message);
       }
 
-    } catch (error) {
-      console.error('Payment error:', error);
+    } catch (error: any) {
+      console.error(error);
       toast({
         title: 'Payment Failed',
-        description: error.message || 'Failed to process your payment. Please try again.',
-        variant: 'destructive',
-        duration: 5000
+        description: error.message || 'Could not initiate payment.',
+        variant: 'destructive'
       });
       setIsProcessingPurchase(false);
-    } finally {
-      // Only turn off loading if we didn't start polling (which returns early)
-      // logic above returns early if success. 
-      // So we need to handle the case where we DON'T return.
     }
+  };
+
+  const pollPaymentStatus = (invoiceId: string, baseURL: string, token: string | null) => {
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      if (attempts > 24) { clearInterval(interval); setIsProcessingPurchase(false); return; }
+
+      try {
+        const res = await fetch(`${baseURL}/api/payments/status/${invoiceId}`, {
+          headers: { 'Authorization': token ? `Bearer ${token}` : '' }
+        });
+        const data = await res.json();
+        const status = data.data?.status || data.status;
+
+        if (status === 'success' || status === 'completed') {
+          clearInterval(interval);
+          setIsProcessingPurchase(false);
+          toast({
+            title: 'Payment Successful',
+            description: 'Your purchase has been confirmed!',
+            className: 'bg-green-600 text-white'
+          });
+        } else if (status === 'failed') {
+          clearInterval(interval);
+          setIsProcessingPurchase(false);
+          toast({ title: 'Payment Failed', description: 'Transaction declined.', variant: 'destructive' });
+        }
+      } catch (e) { console.error(e); }
+    }, 5000);
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {

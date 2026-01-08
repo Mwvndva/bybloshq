@@ -248,14 +248,23 @@ class PaymentController {
         }
 
         // If still no buyer info, try to find by phone (for existing unauthenticated buyers)
+        logger.info('Checking for buyer lookup:', { hasBuyerInfo: !!buyerInfo, phone });
         if (!buyerInfo && phone) {
+          logger.info('Attempting to find existing buyer by phone:', phone);
           const existingBuyer = await Buyer.findByPhone(phone);
           if (existingBuyer) {
             buyerInfo = existingBuyer;
             logger.info('Found existing buyer by phone for payment:', { id: buyerInfo.id });
+          } else {
+            logger.warn('No existing buyer found for phone:', phone);
           }
         }
       }
+
+      logger.info('Proceeding with order creation', {
+        buyerId: buyerInfo?.id || 'null',
+        hasBuyerInfo: !!buyerInfo
+      });
 
       // Fetch product data to verify price and availability
       const productResult = await pool.query(
