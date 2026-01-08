@@ -750,72 +750,51 @@ class PaymentCompletionService {
       const order = orderResult.rows[0];
 
       // 2. Determine new status based on product type
-      // - Digital/Services -> COMPLETED or CONFIRMED
-      // - Physical -> DELIVERY_PENDING
+      // Explicitly check the items in the database to be sure
+      const itemsQuery = `
+        SELECT oi.*, p.product_type, p.is_digital
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1
+      `;
+      const itemsResult = await client.query(itemsQuery, [orderId]);
+      const dbItems = itemsResult.rows;
 
-      let newStatus = 'CONFIRMED'; // Default for services/others
+      let hasPhysical = false;
+      let hasService = false;
+      let hasDigital = false;
 
-      // Parse order metadata safely
-      let orderMetadata = order.metadata;
-      if (typeof orderMetadata === 'string') {
-        try {
-          orderMetadata = JSON.parse(orderMetadata);
-        } catch (e) {
-          logger.warn(`Failed to parse order metadata string for order ${orderId}`, e);
-          orderMetadata = {};
-        }
-      }
+      if (dbItems.length > 0) {
+        hasPhysical = dbItems.some(item => item.product_type === 'physical');
+        hasService = dbItems.some(item => item.product_type === 'service');
+        // Check both product_type and is_digital flag
+        hasDigital = dbItems.some(item => item.product_type === 'digital' || item.is_digital === true);
 
-      // Check metadata for product type if available
-      let productType = order.product_type || metadata.product_type || metadata.metadata?.product_type;
-      let isDigital = order.is_digital || metadata.is_digital || metadata.metadata?.is_digital;
-
-      // Detailed logging for debugging
-      logger.info(`Status Check - OrderID: ${orderId}`, {
-        foundProductType: productType,
-        foundIsDigital: isDigital,
-        orderMetadataKeys: orderMetadata ? Object.keys(orderMetadata) : 'null'
-      });
-
-      // Fallback: Check order metadata items if product type is missing
-      if (!productType && orderMetadata) {
-        // Check top-level metadata first
-        if (orderMetadata.product_type) productType = orderMetadata.product_type;
-        if (orderMetadata.is_digital) isDigital = true;
-
-        // Check items array
-        if (orderMetadata.items && Array.isArray(orderMetadata.items) && orderMetadata.items.length > 0) {
-          const items = orderMetadata.items;
-          const hasPhysical = items.some(item => item.productType === 'physical' || (!item.productType && !item.isDigital));
-          const hasService = items.some(item => item.productType === 'service');
-          const hasDigital = items.some(item => item.productType === 'digital' || item.isDigital);
-
-          logger.info(`Item Analysis for Order ${orderId}:`, { hasPhysical, hasService, hasDigital });
-
-          // Prioritize status based on content
-          if (hasService && !hasPhysical) {
-            productType = 'service';
-          } else if (hasDigital && !hasService && !hasPhysical) {
-            productType = 'digital';
-            isDigital = true;
-          } else {
-            productType = 'physical';
-          }
-        }
-      }
-
-      // Explicitly set digital type if isDigital is true
-      if (isDigital) productType = 'digital';
-
-      // Default to physical if still not determined
-      if (!productType) productType = 'physical';
-
-      if (isDigital) {
-        newStatus = 'COMPLETED';
-      } else if (productType === 'service') {
-        newStatus = 'SERVICE_PENDING'; // Waiting for seller to confirm booking
+        logger.info(`DB Item Check for Order ${orderId}:`, { hasPhysical, hasService, hasDigital, itemCount: dbItems.length });
       } else {
-        newStatus = 'DELIVERY_PENDING'; // Physical goods need shipping
+        // Fallback to metadata if DB items empty (rare race condition?)
+        logger.warn(`No DB items found for Order ${orderId}, falling back to metadata`);
+        // ... keep existing metadata logic or default ...
+        const metaItems = metadata.items || [];
+        if (metaItems.length > 0) {
+          hasPhysical = metaItems.some(i => i.productType === 'physical');
+          hasService = metaItems.some(i => i.productType === 'service');
+          hasDigital = metaItems.some(i => i.productType === 'digital' || i.isDigital);
+        }
+      }
+
+      // Determine Status Priority: Physical (shipping) > Service (booking) > Digital (instant)
+      let newStatus = 'CONFIRMED'; // Fallback
+
+      if (hasPhysical) {
+        newStatus = 'DELIVERY_PENDING';
+      } else if (hasService) {
+        newStatus = 'SERVICE_PENDING';
+      } else if (hasDigital) {
+        newStatus = 'COMPLETED'; // Instant fulfillment
+      } else {
+        // Default if unknown
+        newStatus = 'DELIVERY_PENDING';
       }
 
       logger.info(`Updating order ${orderId} status from ${order.status} to ${newStatus}`);
