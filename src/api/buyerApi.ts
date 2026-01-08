@@ -493,26 +493,21 @@ const buyerApi = {
       if (response.data.data && response.data.data.length > 0) {
         console.log('Sample raw order:', {
           id: response.data.data[0].id,
-          order_number: response.data.data[0].order_number,
+          orderNumber: response.data.data[0].orderNumber,
           status: response.data.data[0].status,
-          payment_status: response.data.data[0].payment_status
+          paymentStatus: response.data.data[0].paymentStatus
         });
       }
 
-      // Transform the response to match the Order type
+      // Backend already sends camelCase, just ensure uppercase for status fields
       const transformedOrders = response.data.data.map(order => ({
         ...order,
-        // Map snake_case to camelCase for the frontend
-        orderNumber: order.order_number,
-        totalAmount: order.total_amount,
-        paymentMethod: order.payment_method,
-        shippingAddress: order.shipping_address,
         // Ensure items is always an array
         items: order.items || [],
-        // Ensure status is in uppercase to match backend
+        // Ensure status is in uppercase
         status: order.status?.toUpperCase() || 'PENDING',
-        // Ensure paymentStatus is in uppercase to match backend
-        paymentStatus: order.payment_status?.toUpperCase() || 'PENDING'
+        // Ensure paymentStatus is in uppercase
+        paymentStatus: order.paymentStatus?.toUpperCase() || 'PENDING'
       }));
 
       console.log('=== TRANSFORMED ORDERS ===');
