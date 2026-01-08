@@ -86,6 +86,15 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
     if (!order) return null;
     const orderObj = order.toObject ? order.toObject() : order;
 
+    // Debug logging
+    if (orderObj.id === 63) {
+        console.log('=== SANITIZING ORDER 63 ===');
+        console.log('Raw order object keys:', Object.keys(orderObj));
+        console.log('payment_status:', orderObj.payment_status);
+        console.log('paymentStatus:', orderObj.paymentStatus);
+        console.log('status:', orderObj.status);
+    }
+
     const baseOrder = {
         id: orderObj.id,
         orderNumber: orderObj.orderNumber || orderObj.order_number,
