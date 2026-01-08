@@ -282,7 +282,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
     return (
       <div className="space-y-8">
         <div className="text-center">
-          <h2 className="text-4xl font-black text-black mb-2 capitalize">
+          <h2 className="mobile-heading mb-2 capitalize">
             {searchQuery
               ? `Search Results${selectedAesthetic ? ` in ${selectedAesthetic.replace(/-/g, ' ')}` : ''}`
               : `${selectedAesthetic.replace(/-/g, ' ')} Collection`
@@ -293,7 +293,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
             {searchQuery && ` for "${searchQuery}"`}
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
+        <div className="grid-mobile-3">
           {filteredProducts.map((product) => {
             // Use the seller from the product if available, otherwise try to get it from the sellers map
             const productSeller = product.seller || sellers[product.sellerId];
@@ -338,7 +338,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
         <section key={id} className="space-y-8" id={`aesthetic-${id}`}>
           <div className="flex justify-between items-center">
             <div>
-              <h3 className="text-3xl font-black text-black capitalize">
+              <h3 className="mobile-heading-sm capitalize">
                 {name}
               </h3>
               <p className="text-gray-600 font-medium mt-1">
@@ -350,7 +350,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
+          <div className="grid-mobile-3">
             {productsByAesthetic[id].slice(0, 4).map((product) => {
               // Use the seller from the product if available, otherwise try to get it from the sellers map
               const productSeller = product.seller || sellers[product.sellerId];

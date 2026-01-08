@@ -379,7 +379,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
               <Loader2 className="h-12 w-12 text-yellow-600 animate-spin" />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-black mb-3">Loading Events</h3>
+              <h3 className="mobile-heading-sm mb-2 sm:mb-3">Loading Events</h3>
               <p className="text-gray-600 text-lg font-medium">Fetching the latest events for you...</p>
             </div>
           </div>
@@ -423,7 +423,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
               <AlertCircle className="h-12 w-12 text-red-600" />
             </div>
             <div>
-              <h3 className="text-2xl font-black text-black mb-3">Unable to Load Events</h3>
+              <h3 className="mobile-heading-sm mb-2 sm:mb-3">Unable to Load Events</h3>
               <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
                 {error || 'Something went wrong while loading events. Please try again.'}
               </p>
@@ -500,7 +500,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="text-center mb-8 sm:mb-12">
-          <h1 className="text-2xl sm:text-3xl font-black text-black mb-2 sm:mb-3">Upcoming Events</h1>
+          <h1 className="mobile-heading mb-1.5 sm:mb-2 md:mb-3">Upcoming Events</h1>
           <p className="text-sm sm:text-base text-gray-600 font-medium">Find and book tickets for amazing events</p>
         </div>
 
@@ -509,7 +509,7 @@ export default function EventsPage({ eventId, isEmbed = false }: EventsPageProps
             <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
               <Calendar className="h-12 w-12 text-yellow-600" />
             </div>
-            <h3 className="text-2xl font-black text-black mb-3">No Upcoming Events</h3>
+            <h3 className="mobile-heading-sm mb-2 sm:mb-3">No Upcoming Events</h3>
             <p className="text-gray-600 text-lg font-medium max-w-md mx-auto">
               There are no upcoming events at the moment. Please check back later for new events.
             </p>

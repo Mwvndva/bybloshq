@@ -526,8 +526,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <button
           onClick={toggleWishlist}
           className={cn(
-            'absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-2 rounded-xl sm:rounded-2xl bg-white/90 hover:bg-white shadow-lg backdrop-blur-sm transition-all duration-300',
-            'h-8 w-8 sm:h-10 sm:w-10 flex items-center justify-center',
+            'absolute top-2 right-2 z-10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white/90 hover:bg-white shadow-md backdrop-blur-sm transition-all duration-300',
+            'h-7 w-7 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center',
             wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110',
             isWishlisted ? 'text-red-500' : 'text-gray-600'
           )}
@@ -536,15 +536,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           aria-busy={wishlistActionLoading}
         >
           {wishlistActionLoading || isWishlistLoading ? (
-            <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 animate-spin" />
           ) : (
-            <Heart className={cn('h-4 w-4 sm:h-5 sm:w-5', isWishlisted ? 'fill-current' : '')} />
+            <Heart className={cn('h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5', isWishlisted ? 'fill-current' : '')} />
           )}
         </button>
       )}
 
       {/* Image */}
-      <div className="relative overflow-hidden rounded-t-xl sm:rounded-t-2xl">
+      <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
         {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
           <div className="absolute top-2 left-2 z-10">
             <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
@@ -577,7 +577,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           src={product.image_url}
           alt={product.name}
           className={cn(
-            'w-full h-40 sm:h-48 lg:h-56 object-cover transition-transform duration-500 group-hover:scale-110',
+            'w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover transition-transform duration-500 group-hover:scale-110',
             isImageLoading ? 'opacity-0' : 'opacity-100'
           )}
           onLoad={handleImageLoad}
@@ -589,13 +589,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         />
       </div>
 
-      <CardContent className="p-4 sm:p-6">
-        <h3 className={cn("font-bold mb-1.5 line-clamp-1 text-sm sm:text-base",
+      <CardContent className="mobile-compact">
+        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg",
           theme === 'black' ? 'text-white' : 'text-gray-900'
         )}>
           {product.name}
         </h3>
-        <p className={cn("font-black text-base sm:text-lg mb-1.5 sm:mb-2 flex items-center gap-2",
+        <p className={cn("font-black mobile-text-lg mb-1 sm:mb-1.5 flex items-center gap-1.5 sm:gap-2",
           (product.product_type === 'service' || (product as any).productType === 'service')
             ? 'text-purple-600'
             : themeClasses.price
@@ -613,7 +613,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </p>
 
         {product.description && (
-          <p className={cn("text-xs leading-relaxed mb-2 sm:mb-3 line-clamp-2", themeClasses.description)}>
+          <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2", themeClasses.description)}>
             {product.description}
           </p>
         )}
@@ -637,11 +637,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         )}
 
         {/* Seller Info */}
-        <div className={cn("flex items-center gap-1.5 pt-2 border-t mt-2",
+        <div className={cn("flex items-center gap-1 sm:gap-1.5 pt-1.5 sm:pt-2 border-t mt-1.5 sm:mt-2",
           theme === 'black' ? 'border-gray-800' : 'border-gray-100'
         )}>
-          <Store className={cn("h-3.5 w-3.5", themeClasses.icon)} />
-          <span className={cn("text-xs font-medium truncate flex-1", themeClasses.seller)}>{displaySellerName}</span>
+          <Store className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
+          <span className={cn("mobile-text font-medium truncate flex-1", themeClasses.seller)}>{displaySellerName}</span>
         </div>
 
         {/* Buy Button */}
@@ -649,9 +649,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           variant="default"
           size="default"
           className={cn(
-            'w-full font-semibold transition-colors mt-3',
+            'button-mobile w-full font-semibold transition-colors mt-2 sm:mt-2.5',
             'focus-visible:ring-2 focus-visible:ring-offset-2',
-            'flex items-center justify-center space-x-2',
+            'flex items-center justify-center gap-1.5 sm:gap-2',
             'disabled:opacity-50 disabled:pointer-events-none',
             isSold
               ? 'bg-gray-400 hover:bg-gray-400'
@@ -660,8 +660,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                 : (product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital)
                   ? 'bg-red-600 hover:bg-red-700 text-white'
                   : themeClasses.button,
-            (product.product_type !== 'service' && (product as any).productType !== 'service' && product.product_type !== 'digital' && (product as any).productType !== 'digital' && !product.is_digital && !(product as any).isDigital) && themeClasses.button,
-            'h-9 text-sm'
+            (product.product_type !== 'service' && (product as any).productType !== 'service' && product.product_type !== 'digital' && (product as any).productType !== 'digital' && !product.is_digital && !(product as any).isDigital) && themeClasses.button
           )}
           onClick={(e) => {
             e.preventDefault();

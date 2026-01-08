@@ -10,7 +10,7 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
   const navigate = useNavigate();
-  
+
   const handleStartThrifting = () => {
     navigate('/buyer/login');
   };
@@ -18,8 +18,8 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
     <section className="relative min-h-screen flex items-center justify-center bg-black overflow-hidden">
       {/* Background elements */}
       <div className="absolute inset-0 bg-black/30 z-0" />
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat" 
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
           backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(/herowallpaper/blackboredapewallpaper.png)',
           backgroundSize: 'cover',
@@ -35,42 +35,42 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
         }}
       />
 
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          
-        
+      <div className="container-mobile text-center relative z-10">
+        <div className="max-w-4xl mx-auto mobile-compact-x">
+
+
           {/* Main Heading */}
-          <h1 className="text-3xl sm:text-5xl md:text-6xl font-bold text-yellow-500 mb-4 sm:mb-6 font-mono">
-          BYBLOS — JUST START
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-yellow-500 mb-3 sm:mb-4 md:mb-6 font-mono">
+            BYBLOS — JUST START
           </h1>
-          
+
           {/* SEO Description */}
-          <div className="mb-8 sm:mb-12 max-w-3xl mx-auto">
-            <p className="text-white text-lg sm:text-xl mb-4">
-            Kenya’s #1 interactive online marketplace.
-            Everyone’s got a hustle — make yours official.
-            Set up your shop in minutes, get your own link, take orders on WhatsApp, and deliver fast across Nairobi.
-            No excuses. No stress. Just start.           </p>
-            <div className="text-yellow-400 text-sm sm:text-base">
+          <div className="mb-6 sm:mb-8 md:mb-12 max-w-3xl mx-auto">
+            <p className="text-white mobile-text-lg mb-3 sm:mb-4">
+              Kenya’s #1 interactive online marketplace.
+              Everyone’s got a hustle — make yours official.
+              Set up your shop in minutes, get your own link, take orders on WhatsApp, and deliver fast across Nairobi.
+              No excuses. No stress. Just start.           </p>
+            <div className="text-yellow-400 mobile-text">
               <p>✓ 100% Authentic Items</p>
               <p>✓ Delivery in Nairobi</p>
               <p>✓ Secure Online Payments</p>
               <p>✓ Your Business, All in One Link</p>
             </div>
           </div>
-          
+
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 w-full">
-            <Button 
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center mb-8 sm:mb-12 w-full">
+            <Button
               onClick={handleStartThrifting}
-              className="bg-yellow-300 hover:bg-white hover:text-black text-black px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium transition-colors duration-200 w-full sm:w-auto"
+              className="button-mobile bg-yellow-300 hover:bg-white hover:text-black text-black px-4 sm:px-6 font-medium transition-colors duration-200 w-full sm:w-auto"
             >
-                Start Shopping
+              Start Shopping
             </Button>
-            <Button 
+            <Button
               onClick={onEventsClick}
               variant="outline"
-              className="border-yellow-300 text-black hover:bg-yellow-300 hover:border-yellow-300 hover:text-black px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg font-medium transition-colors duration-200 w-full sm:w-auto"
+              className="button-mobile border-yellow-300 text-black hover:bg-yellow-300 hover:border-yellow-300 hover:text-black px-4 sm:px-6 font-medium transition-colors duration-200 w-full sm:w-auto"
             >
               View Events & Tickets
             </Button>

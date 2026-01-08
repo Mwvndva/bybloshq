@@ -18,7 +18,7 @@ const Header = () => {
       'border-b border-yellow-300 sticky top-0 z-50',
       location.pathname === '/' ? 'bg-yellow-300' : 'bg-white/80 backdrop-blur-sm'
     )}>
-      <div className="container mx-auto px-4 py-3 sm:py-4">
+      <div className="container-mobile mobile-compact-y">
         <div className="flex items-center justify-between w-full">
           {/* Mobile menu button */}
           <button
@@ -30,17 +30,17 @@ const Header = () => {
           </button>
 
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2 mx-auto md:mx-0">
-            <h1 className="font-serif text-xl sm:text-2xl font-bold text-black">
+          <Link to="/" className="flex items-center gap-1.5 sm:gap-2 mx-auto md:mx-0">
+            <h1 className="font-serif mobile-heading-sm font-bold text-black">
               Byblos
             </h1>
           </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
-            <a 
-              href="https://www.instagram.com/bybloshq" 
-              target="_blank" 
+            <a
+              href="https://www.instagram.com/bybloshq"
+              target="_blank"
               rel="noopener noreferrer"
               className="p-2 text-pink-600 hover:text-pink-500 transition-colors"
               aria-label="Visit our Instagram"
@@ -49,20 +49,20 @@ const Header = () => {
             </a>
             <div className="flex items-center space-x-2">
               <Link to="/organizer/events/new">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="border-black text-black hover:bg-black/10 hover:text-black flex items-center gap-1 h-8 px-3"
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="button-mobile border-black text-black hover:bg-black/10 hover:text-black flex items-center gap-1"
                   aria-label="Organizer"
                 >
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span className="text-xs font-medium">Organizer</span>
+                  <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  <span className="mobile-text font-medium">Organizer</span>
                 </Button>
               </Link>
               <Link to="/seller">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="border-black text-black hover:bg-black/10 hover:text-black flex items-center gap-1 h-8 px-3"
                   aria-label="Sell Clothes"
                 >
@@ -82,23 +82,23 @@ const Header = () => {
           )}
         >
           <div className="flex flex-col space-y-4 py-4 border-t border-gray-200 mt-4">
-            <a 
-              href="https://www.instagram.com/bybloshq" 
-              target="_blank" 
+            <a
+              href="https://www.instagram.com/bybloshq"
+              target="_blank"
               rel="noopener noreferrer"
               className="flex items-center text-pink-600 hover:text-pink-500 px-2 py-2 text-base"
             >
               <Instagram className="h-5 w-5 mr-2" />
               Follow us on Instagram
             </a>
-            <Link 
+            <Link
               to="/organizer/events/new"
               className="flex items-center text-black hover:bg-black/10 px-2 py-2 rounded text-base"
             >
               <Calendar className="h-5 w-5 mr-2" />
               Event Organizer
             </Link>
-            <Link 
+            <Link
               to="/seller"
               className="flex items-center text-black hover:bg-black/10 px-2 py-2 rounded text-base"
             >
