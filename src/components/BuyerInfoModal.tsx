@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ interface BuyerInfoModalProps {
   isLoading?: boolean;
   theme?: string;
   phoneNumber: string; // Pre-filled from first step
+  initialData?: Partial<BuyerInfo>;
 }
 
 export function BuyerInfoModal({
@@ -28,17 +29,28 @@ export function BuyerInfoModal({
   onSubmit,
   isLoading = false,
   theme = 'default',
-  phoneNumber
+  phoneNumber,
+  initialData
 }: BuyerInfoModalProps) {
   const { toast } = useToast();
   const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>({
-    fullName: '',
-    email: '',
-    city: '',
-    location: ''
+    fullName: initialData?.fullName || '',
+    email: initialData?.email || '',
+    city: initialData?.city || '',
+    location: initialData?.location || ''
   });
 
   const [errors, setErrors] = useState<Partial<BuyerInfo>>({});
+
+  // Update state when initialData changes
+  useEffect(() => {
+    if (initialData) {
+      setBuyerInfo(prev => ({
+        ...prev,
+        ...initialData
+      }));
+    }
+  }, [initialData]);
 
   const validateForm = (): boolean => {
     const newErrors: Partial<BuyerInfo> = {};
