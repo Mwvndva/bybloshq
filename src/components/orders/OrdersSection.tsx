@@ -472,28 +472,47 @@ export default function OrdersSection() {
                             </Badge>
                           )}
                         </div>
-                        {item.isDigital && (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '') || order.status === 'COMPLETED') && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="mt-2 sm:mt-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
-                            onClick={async () => {
-                              try {
-                                toast.loading('Starting download...', { id: 'download-toast' });
-                                await buyerApi.downloadDigitalProduct(order.id, item.productId);
-                                toast.success('Download started', { id: 'download-toast' });
-                              } catch (error) {
-                                console.error('Download failed:', error);
-                                toast.error('Failed to download file', { id: 'download-toast' });
-                              }
-                            }}
-                          >
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
-                            Download
-                          </Button>
-                        )}
+                        {(() => {
+                          const isDigitalProduct = item.isDigital || item.productType === 'digital' || (item as any).is_digital;
+                          const isPaymentComplete = ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '') || order.status === 'COMPLETED';
+
+                          // Debug logging for order 63
+                          if (String(order.id) === '63') {
+                            console.log('Download button check for order 63:', {
+                              itemName: item.name,
+                              isDigital: item.isDigital,
+                              productType: item.productType,
+                              isDigitalProduct,
+                              paymentStatus: order.paymentStatus,
+                              orderStatus: order.status,
+                              isPaymentComplete,
+                              shouldShowButton: isDigitalProduct && isPaymentComplete
+                            });
+                          }
+
+                          return isDigitalProduct && isPaymentComplete ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="mt-2 sm:mt-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
+                              onClick={async () => {
+                                try {
+                                  toast.loading('Starting download...', { id: 'download-toast' });
+                                  await buyerApi.downloadDigitalProduct(order.id, item.productId);
+                                  toast.success('Download started', { id: 'download-toast' });
+                                } catch (error) {
+                                  console.error('Download failed:', error);
+                                  toast.error('Failed to download file', { id: 'download-toast' });
+                                }
+                              }}
+                            >
+                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                              </svg>
+                              Download
+                            </Button>
+                          ) : null;
+                        })()}
                       </li>
                     ))}
                   </ul>
