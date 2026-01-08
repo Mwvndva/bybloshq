@@ -193,6 +193,12 @@ const getUserOrders = async (req, res) => {
                      WHERE p.id::text = oi.product_id::text
                      LIMIT 1
                    ),
+                   'productType', (
+                     SELECT p.product_type::text
+                     FROM products p 
+                     WHERE p.id::text = oi.product_id::text
+                     LIMIT 1
+                   ),
                    'subtotal', oi.quantity * oi.product_price
                  )
                ) FILTER (WHERE oi.id IS NOT NULL),
@@ -218,11 +224,25 @@ const getUserOrders = async (req, res) => {
 
     queryParams.push(parseInt(limit), offset);
 
-
-
+    console.log('=== FETCHING USER ORDERS ===');
+    console.log('User ID:', numericUserId);
+    console.log('Query params:', queryParams);
 
     const result = await pool.query(query, queryParams);
 
+    console.log('=== ORDERS FETCHED ===');
+    console.log('Total orders:', result.rows.length);
+    if (result.rows.length > 0) {
+      // Log first order for debugging
+      const firstOrder = result.rows[0];
+      console.log('Sample order:', {
+        id: firstOrder.id,
+        order_number: firstOrder.order_number,
+        status: firstOrder.status,
+        payment_status: firstOrder.payment_status,
+        total_amount: firstOrder.total_amount
+      });
+    }
 
     // Get subtotal count for pagination with proper type casting
     let countQuery = 'SELECT COUNT(*) FROM product_orders WHERE buyer_id = $1::integer';
@@ -240,8 +260,17 @@ const getUserOrders = async (req, res) => {
 
 
 
-
     const sanitizedOrders = result.rows.map(order => sanitizeOrder(order, 'buyer'));
+
+    console.log('=== SANITIZED ORDERS ===');
+    if (sanitizedOrders.length > 0) {
+      console.log('Sample sanitized order:', {
+        id: sanitizedOrders[0].id,
+        orderNumber: sanitizedOrders[0].orderNumber,
+        status: sanitizedOrders[0].status,
+        paymentStatus: sanitizedOrders[0].paymentStatus
+      });
+    }
 
     res.json({
       success: true,
