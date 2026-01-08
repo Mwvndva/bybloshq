@@ -36,6 +36,11 @@ export interface WishlistItem {
   createdAt: string;
   updatedAt: string;
   aesthetic: string;
+  product_type?: 'physical' | 'digital' | 'service';
+  is_digital?: boolean;
+  service_options?: any;
+  service_locations?: string;
+  images?: string[];
 }
 
 interface LoginApiResponse {

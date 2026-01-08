@@ -8,8 +8,7 @@ import { authLimiter } from '../middleware/authRateLimiter.js';
 
 const router = express.Router();
 
-console.log('Buyer routes loaded successfully');
-console.log('Available buyer controller methods:', Object.keys(buyerController));
+console.log('Buyer routes loaded');
 
 // Public routes
 router.post('/register', authLimiter, validateRegistration, buyerController.register);
@@ -38,14 +37,7 @@ router.get('/refund-requests/pending', buyerController.getPendingRefundRequests)
 router.use('/wishlist', wishlistRoutes);
 
 
-// Log all registered routes
-console.log('Registered buyer routes:');
-router.stack.forEach(layer => {
-  if (layer.route) {
-    const methods = Object.keys(layer.route.methods).filter(method => layer.route.methods[method]);
-    console.log(`${methods.join(', ').toUpperCase()} /api/buyers${layer.route.path}`);
-  }
-});
+
 
 export default router;
 

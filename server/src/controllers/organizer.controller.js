@@ -165,7 +165,8 @@ export const createWithdrawalRequest = async (req, res) => {
 
 
       // Extract transaction ID from response
-      const providerRef = payoutResponse.transaction_id || payoutResponse.reference || payoutResponse.data?.transaction_id || null;
+      // Prioritize correlator_id as per Payd v3 docs
+      const providerRef = payoutResponse.correlator_id || payoutResponse.transaction_id || payoutResponse.reference || payoutResponse.data?.transaction_id || null;
 
       // Update the withdrawal request with provider reference
       await client.query(

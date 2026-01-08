@@ -45,22 +45,8 @@ const candidateEnvPaths = [
   process.env.NODE_ENV === 'production' ? path.join(__dirname, '.env.production') : null,
 ].filter(Boolean);
 
-// Debug: Log all candidate paths
-logger.info('Checking for .env files in candidate locations');
-
 const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
-logger.info(`Using .env file: ${chosenEnvPath || 'NONE FOUND'}`);
-
 dotenv.config({ path: chosenEnvPath });
-
-// Debug log environment variables (without sensitive data)
-logger.info('Environment variables loaded', {
-  NODE_ENV: process.env.NODE_ENV,
-  PORT: process.env.PORT,
-  DB_HOST: process.env.DB_HOST,
-  DB_NAME: process.env.DB_NAME,
-  PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL || 'NOT SET'
-});
 
 // Create Express app
 const app = express();
@@ -68,12 +54,7 @@ const app = express();
 // Enable trust proxy to correctly detect client IPs from proxies like Vercel or Cloudflare
 app.set('trust proxy', 1);
 
-// Mount test routes first - completely public
-import testRoutes from './controllers/test.controller.js';
-import testOrderRoutes from './routes/test.routes.js';
-
-app.use('/test', testRoutes);
-app.use('/api/test', testOrderRoutes);
+// Test routes removed
 
 // Add request ID middleware
 app.use(requestId);
@@ -233,25 +214,12 @@ app.options('*', cors(corsOptions), (req, res) => {
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.status(200).end();
 });
-
-// Log CORS configuration
-console.log('CORS Configuration:', {
-  whitelist: [...whitelist, ...additionalOrigins],
-  environment: process.env.NODE_ENV || 'development'
-});
 // Increase JSON and URL-encoded payload size limit to 50MB
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Enable cookie parsing
 app.use(cookieParser());
-
-// Log CORS configuration for debugging
-console.log('CORS Configuration:', {
-  whitelist,
-  additionalOrigins,
-  nodeEnv: process.env.NODE_ENV || 'development'
-});
 
 // Test database connection
 const testConnection = async () => {
@@ -321,46 +289,6 @@ app.use('/api/orders', orderRoutes);
 // Mount WhatsApp routes
 app.use('/api/whatsapp', whatsappRoutes);
 
-// Debug: Log all registered routes in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('\n=== Registered Routes ===');
-
-  // Simple route printing function
-  const printRoutes = (router, prefix = '') => {
-    if (!router || !router.stack) return;
-
-    router.stack.forEach(layer => {
-      if (layer.route) {
-        // Routes registered directly on the app
-        const methods = Object.keys(layer.route.methods).join(',').toUpperCase();
-        console.log(`${methods.padEnd(7)} ${prefix}${layer.route.path}`);
-      } else if (layer.name === 'router' && layer.handle) {
-        // Nested router - just print the routes without the prefix for now
-        printRoutes(layer.handle, '');
-      }
-    });
-  };
-
-  // Print all routes
-  app._router.stack.forEach(middleware => {
-    if (middleware.route) {
-      // Direct routes
-      const methods = Object.keys(middleware.route.methods).join(',').toUpperCase();
-      console.log(`${methods.padEnd(7)} ${middleware.route.path}`);
-    } else if (middleware.name === 'router' && middleware.handle) {
-      // Router middleware - print the routes
-      printRoutes(middleware.handle, '');
-    }
-  });
-
-  // Log Paystack routes
-  console.log('\n=== Paystack Routes ===');
-  console.log('POST    /api/payments/initiate');
-  console.log('POST    /api/payments/initiate-product');
-  console.log('GET     /api/payments/status/:invoiceId');
-  console.log('POST    /api/payments/webhook');
-}
-
 // Organizer protected routes
 const protectedRouter = express.Router();
 
@@ -389,51 +317,6 @@ protectedRouter.use('/', protectedOrganizerRoutes);
 
 // Mount the protected router under /api/organizers
 app.use('/api/organizers', protectedRouter);
-
-// Log all registered routes for debugging
-const printRoutes = (router, prefix = '') => {
-  // Skip if router or router.stack is undefined
-  if (!router || !router.stack) {
-    console.log('No routes to display - router or router.stack is undefined');
-    return;
-  }
-
-  router.stack.forEach((middleware) => {
-    if (!middleware) return;
-
-    if (middleware.route) {
-      // Routes registered directly on the app
-      const methods = middleware.route.methods ?
-        Object.keys(middleware.route.methods).join(',').toUpperCase() : 'ALL';
-      console.log(`${methods.padEnd(7)} ${prefix}${middleware.route.path || ''}`);
-    } else if (middleware.name === 'router' && middleware.handle && middleware.handle.stack) {
-      // Router middleware
-      let path = '';
-      if (middleware.regexp) {
-        path = middleware.regexp.toString()
-          .replace(/^\^\\\//, '')  // Remove leading ^\/
-          .replace(/\\\/\?/g, '')  // Remove escaped /?
-          .replace(/\(\?=[^)]*\$\//, '') // Remove lookahead groups
-          .replace(/\(([^)]+)\)/g, ':$1'); // Convert (param) to :param
-      }
-
-      middleware.handle.stack.forEach((handler) => {
-        if (handler && handler.route) {
-          const methods = handler.route.methods ?
-            Object.keys(handler.route.methods).join(',').toUpperCase() : 'ALL';
-          console.log(`${methods.padEnd(7)} ${prefix}${path}${handler.route.path || ''}`);
-        }
-      });
-    }
-  });
-};
-
-// Log all routes when in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('\n=== Registered Routes ===');
-  printRoutes(app, '/api');
-  console.log('========================\n');
-}
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

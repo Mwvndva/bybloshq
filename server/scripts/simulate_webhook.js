@@ -1,16 +1,15 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:3002/api/payments/webhook/payd';
-const REFERENCE = 'REF-1767717299595';
+const API_URL = 'http://localhost:3002/api/callbacks/payd';
+const REFERENCE = 'REF-TEST-' + Date.now();
 
 const payload = {
-    transaction_reference: REFERENCE,
-    reference: REFERENCE,
-    result_code: 200,
-    status: 'SUCCESS',
-    amount: 1.00,
-    phone_number: '0111548797', // From logs
-    remarks: 'Simulated successful payment'
+    correlator_id: REFERENCE, // Payd v3 style
+    status: 'FAILED',
+    status_description: 'Simulation: Insufficient funds',
+    amount: 100.00,
+    phone_number: '254712345678',
+    timestamp: new Date().toISOString()
 };
 
 /*
