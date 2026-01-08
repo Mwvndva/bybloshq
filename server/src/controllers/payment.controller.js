@@ -238,12 +238,21 @@ class PaymentController {
         // This will be handled by the frontend creating buyer info first
         const token = req.headers.authorization?.replace('Bearer ', '');
         if (token) {
-          // Decode JWT to get buyer info (simplified - in production, verify token properly)
+          // Decode JWT to get buyer info
           try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            buyerInfo = { id: decoded.id, email, phone };
+
+            // Validate that this buyer actually exists in the DB (prevent stale token FK errors)
+            const validBuyer = await Buyer.findById(decoded.id);
+
+            if (validBuyer) {
+              buyerInfo = validBuyer;
+            } else {
+              logger.warn('Token valid but user ID not found in DB (Stale Token)', { id: decoded.id });
+              // Leave buyerInfo as null -> proceeds to phone lookup
+            }
           } catch (error) {
-            logger.warn('Invalid token, proceeding as guest');
+            logger.warn('Invalid token, proceeding as guest', { error: error.message });
           }
         }
 
