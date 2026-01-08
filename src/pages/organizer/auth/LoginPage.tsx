@@ -143,7 +143,7 @@ export default function LoginPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="pl-14 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="!pl-14 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -174,7 +174,7 @@ export default function LoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="pl-14 pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="!pl-14 !pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                   <button
                     type="button"

@@ -19,10 +19,15 @@ export async function findByBuyerId(buyerId) {
       p.created_at as "createdAt",
       p.updated_at as "updatedAt",
       s.id AS "sellerId",
-      s.shop_name AS "sellerName"
+      s.shop_name AS "sellerName",
+      p.product_type,
+      p.is_digital,
+      p.service_options,
+      p.service_locations,
+      p.digital_file_name
     FROM wishlist w
-    JOIN products p ON w.product_id = p.id
-    JOIN sellers s ON p.seller_id = s.id
+    LEFT JOIN products p ON w.product_id = p.id
+    LEFT JOIN sellers s ON p.seller_id = s.id
     WHERE w.buyer_id = $1
     ORDER BY w.created_at DESC
   `;
@@ -42,16 +47,16 @@ export async function add(buyerId, productId) {
     SELECT id FROM wishlist 
     WHERE buyer_id = $1 AND product_id = $2
   `;
-  
+
   const { rows: existing } = await query(checkSql, [buyerId, productId]);
-  
+
   // If item already exists, throw an error
   if (existing.length > 0) {
     const error = new Error('Product already in wishlist');
     error.code = 'DUPLICATE_WISHLIST_ITEM';
     throw error;
   }
-  
+
   // Otherwise, insert the new item
   const insertSql = `
     INSERT INTO wishlist (buyer_id, product_id)
