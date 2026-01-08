@@ -6,6 +6,7 @@ import Event from '../models/event.model.js';
 import jwt from 'jsonwebtoken';
 import Order from '../models/order.model.js';
 import DiscountCode from '../models/discountCode.model.js';
+import Buyer from '../models/buyer.model.js';
 
 class PaymentController {
   /**
@@ -243,6 +244,15 @@ class PaymentController {
             buyerInfo = { id: decoded.id, email, phone };
           } catch (error) {
             logger.warn('Invalid token, proceeding as guest');
+          }
+        }
+
+        // If still no buyer info, try to find by phone (for existing unauthenticated buyers)
+        if (!buyerInfo && phone) {
+          const existingBuyer = await Buyer.findByPhone(phone);
+          if (existingBuyer) {
+            buyerInfo = existingBuyer;
+            logger.info('Found existing buyer by phone for payment:', { id: buyerInfo.id });
           }
         }
       }
