@@ -7,12 +7,12 @@ const Footer = () => {
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   return (
     <footer className="bg-yellow-300 border-t-4 border-yellow-400">
-      <div className="container mx-auto px-4 py-8 md:py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:py-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 mb-8 text-center md:text-left">
           {/* Location */}
-          <div>
-            <h3 className="font-bold text-black mb-4 text-lg flex items-center">
-              <MapPin className="h-5 w-5 mr-2" />
+          <div className="flex flex-col items-center md:items-start">
+            <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
+              <MapPin className="h-5 w-5" />
               Location
             </h3>
             <p className="text-gray-800 text-sm leading-relaxed">
@@ -23,54 +23,55 @@ const Footer = () => {
           </div>
 
           {/* Contact */}
-          <div>
-            <h3 className="font-bold text-black mb-4 text-lg">Contact Us</h3>
-            <div className="space-y-2 text-sm">
+          <div className="flex flex-col items-center md:items-start">
+            <h3 className="font-bold text-black mb-3 text-lg">Contact Us</h3>
+            <div className="space-y-2 text-sm flex flex-col items-center md:items-start">
               <a
                 href="mailto:official@bybloshq.com"
-                className="flex items-center text-gray-800 hover:text-black transition-colors"
+                className="flex items-center gap-2 text-gray-800 hover:text-black transition-colors"
               >
-                <Mail className="h-4 w-4 mr-2" />
+                <Mail className="h-4 w-4" />
                 official@bybloshq.com
               </a>
               <a
                 href="tel:+254111548797"
-                className="flex items-center text-gray-800 hover:text-black transition-colors"
+                className="flex items-center gap-2 text-gray-800 hover:text-black transition-colors"
               >
-                <Phone className="h-4 w-4 mr-2" />
+                <Phone className="h-4 w-4" />
                 +254 111 548 797
               </a>
               <a
                 href="https://www.instagram.com/bybloshq"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center text-gray-800 hover:text-pink-600 transition-colors"
+                className="flex items-center gap-2 text-gray-800 hover:text-pink-600 transition-colors"
+                aria-label="Instagram"
               >
-                <Instagram className="h-4 w-4 mr-2" />
+                <Instagram className="h-4 w-4" />
                 @bybloshq
               </a>
             </div>
           </div>
 
           {/* Links */}
-          <div>
-            <h3 className="font-bold text-black mb-4 text-lg">Quick Links</h3>
-            <div className="space-y-2 text-sm">
+          <div className="flex flex-col items-center md:items-start">
+            <h3 className="font-bold text-black mb-3 text-lg">Quick Links</h3>
+            <div className="space-y-2 text-sm flex flex-col items-center md:items-start">
               <button
                 onClick={() => setIsTermsModalOpen(true)}
-                className="block text-gray-800 hover:text-black transition-colors cursor-pointer text-left"
+                className="text-gray-800 hover:text-black transition-colors cursor-pointer"
               >
                 Terms & Conditions
               </button>
               <Link
                 to="/seller"
-                className="block text-gray-800 hover:text-black transition-colors"
+                className="text-gray-800 hover:text-black transition-colors"
               >
                 Sell on Byblos
               </Link>
               <Link
                 to="/organizer/events/new"
-                className="block text-gray-800 hover:text-black transition-colors"
+                className="text-gray-800 hover:text-black transition-colors"
               >
                 Create an Event
               </Link>
@@ -79,11 +80,11 @@ const Footer = () => {
         </div>
 
         {/* Copyright */}
-        <div className="border-t border-yellow-400 pt-6 text-center">
-          <p className="text-gray-800 text-sm">
+        <div className="border-t border-yellow-400/50 pt-6 text-center">
+          <p className="text-gray-900 text-xs sm:text-sm font-medium">
             © 2025 Byblos Experience. All rights reserved.
           </p>
-          <p className="text-gray-800 text-sm mt-1 font-medium">
+          <p className="text-gray-600 text-[10px] sm:text-xs mt-1 uppercase tracking-wider">
             Powered by EVOLVE
           </p>
         </div>
