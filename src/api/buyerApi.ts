@@ -483,9 +483,24 @@ const buyerApi = {
   // Order methods
   getOrders: async (): Promise<Order[]> => {
     try {
+      console.log('=== FETCHING ORDERS FROM API ===');
       const response = await buyerApiInstance.get<ApiResponse<any[]>>('/orders/user');
+
+      console.log('=== RAW API RESPONSE ===');
+      console.log('Response data:', response.data);
+      console.log('Total orders:', response.data.data?.length || 0);
+
+      if (response.data.data && response.data.data.length > 0) {
+        console.log('Sample raw order:', {
+          id: response.data.data[0].id,
+          order_number: response.data.data[0].order_number,
+          status: response.data.data[0].status,
+          payment_status: response.data.data[0].payment_status
+        });
+      }
+
       // Transform the response to match the Order type
-      return response.data.data.map(order => ({
+      const transformedOrders = response.data.data.map(order => ({
         ...order,
         // Map snake_case to camelCase for the frontend
         orderNumber: order.order_number,
@@ -499,6 +514,18 @@ const buyerApi = {
         // Ensure paymentStatus is in uppercase to match backend
         paymentStatus: order.payment_status?.toUpperCase() || 'PENDING'
       }));
+
+      console.log('=== TRANSFORMED ORDERS ===');
+      if (transformedOrders.length > 0) {
+        console.log('Sample transformed order:', {
+          id: transformedOrders[0].id,
+          orderNumber: transformedOrders[0].orderNumber,
+          status: transformedOrders[0].status,
+          paymentStatus: transformedOrders[0].paymentStatus
+        });
+      }
+
+      return transformedOrders;
     } catch (error) {
       console.error('Error fetching orders:', error);
       throw error;
