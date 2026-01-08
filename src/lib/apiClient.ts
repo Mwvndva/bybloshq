@@ -23,15 +23,6 @@ const apiClient = axios.create({
     withCredentials: true, // Send cookies
 });
 
-// Request Interceptor: Attach Token if available
-apiClient.interceptors.request.use((config) => {
-    const token = localStorage.getItem('buyer_token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
 // Response Interceptor: Error Handling
 apiClient.interceptors.response.use(
     (response) => {
