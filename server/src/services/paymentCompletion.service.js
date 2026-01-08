@@ -752,7 +752,7 @@ class PaymentCompletionService {
       // 2. Determine new status based on product type
       // Explicitly check the items in the database to be sure
       const itemsQuery = `
-        SELECT oi.*, p.product_type, p.is_digital
+        SELECT oi.*, p.product_type::text as product_type, p.is_digital
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = $1
@@ -764,17 +764,33 @@ class PaymentCompletionService {
       let hasService = false;
       let hasDigital = false;
 
-      if (dbItems.length > 0) {
-        hasPhysical = dbItems.some(item => item.product_type === 'physical');
-        hasService = dbItems.some(item => item.product_type === 'service');
-        // Check both product_type and is_digital flag
-        hasDigital = dbItems.some(item => item.product_type === 'digital' || item.is_digital === true);
+      logger.info(`DB Item Check for Order ${orderId}:`, {
+        itemCount: dbItems.length,
+        items: dbItems.map(i => ({
+          product_id: i.product_id,
+          product_type: i.product_type,
+          is_digital: i.is_digital
+        }))
+      });
 
-        logger.info(`DB Item Check for Order ${orderId}:`, { hasPhysical, hasService, hasDigital, itemCount: dbItems.length });
+      if (dbItems.length > 0) {
+        for (const item of dbItems) {
+          const productType = item.product_type;
+          const isDigital = item.is_digital;
+
+          if (productType === 'physical') {
+            hasPhysical = true;
+          } else if (productType === 'service') {
+            hasService = true;
+          } else if (productType === 'digital' || isDigital === true) {
+            hasDigital = true;
+          }
+        }
+
+        logger.info(`Product Type Analysis for Order ${orderId}:`, { hasPhysical, hasService, hasDigital });
       } else {
         // Fallback to metadata if DB items empty (rare race condition?)
         logger.warn(`No DB items found for Order ${orderId}, falling back to metadata`);
-        // ... keep existing metadata logic or default ...
         const metaItems = metadata.items || [];
         if (metaItems.length > 0) {
           hasPhysical = metaItems.some(i => i.productType === 'physical');
@@ -793,7 +809,8 @@ class PaymentCompletionService {
       } else if (hasDigital) {
         newStatus = 'COMPLETED'; // Instant fulfillment
       } else {
-        // Default if unknown
+        // Default if unknown - assume physical for safety
+        logger.warn(`Could not determine product type for order ${orderId}, defaulting to DELIVERY_PENDING`);
         newStatus = 'DELIVERY_PENDING';
       }
 
