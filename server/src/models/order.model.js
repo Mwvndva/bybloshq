@@ -116,13 +116,30 @@ class Order {
 
       // Insert order items with transaction
       if (items.length > 0) {
+        // First, fetch product details for all items to store type information
+        const productIds = items.map(item => parseInt(item.productId, 10));
+        const productsQuery = `
+          SELECT id, product_type::text as product_type, is_digital
+          FROM products
+          WHERE id = ANY($1)
+        `;
+        const productsResult = await client.query(productsQuery, [productIds]);
+        const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
+
+        logger.info('Fetched product details for order items:', {
+          productIds,
+          foundProducts: productsResult.rows.length
+        });
+
         const itemValues = items.map(item => {
           // Ensure all required fields are present and valid
           const subtotal = item.subtotal || (item.price * item.quantity);
+          const productId = parseInt(item.productId, 10);
+          const productDetails = productsMap.get(productId);
 
           return [
             order.id,
-            parseInt(item.productId, 10), // Ensure productId is an integer
+            productId,
             item.name || `Product ${item.productId}`,
             parseFloat(item.price).toFixed(2),
             parseInt(item.quantity, 10),
@@ -130,7 +147,10 @@ class Order {
             JSON.stringify({
               ...(item.metadata || {}),
               original_price: item.price,
-              original_quantity: item.quantity
+              original_quantity: item.quantity,
+              // Store product type info for future reference
+              productType: productDetails?.product_type || item.productType || 'physical',
+              isDigital: productDetails?.is_digital || item.isDigital || false
             })
           ];
         });

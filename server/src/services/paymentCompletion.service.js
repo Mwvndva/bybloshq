@@ -769,14 +769,23 @@ class PaymentCompletionService {
         items: dbItems.map(i => ({
           product_id: i.product_id,
           product_type: i.product_type,
-          is_digital: i.is_digital
+          is_digital: i.is_digital,
+          has_metadata: !!i.metadata
         }))
       });
 
       if (dbItems.length > 0) {
         for (const item of dbItems) {
-          const productType = item.product_type;
-          const isDigital = item.is_digital;
+          let productType = item.product_type;
+          let isDigital = item.is_digital;
+
+          // Fallback: If product was deleted (null from JOIN), check order_items.metadata
+          if (!productType && item.metadata) {
+            const itemMeta = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+            productType = itemMeta.productType || itemMeta.product_type;
+            isDigital = itemMeta.isDigital || itemMeta.is_digital;
+            logger.info(`Using metadata fallback for item ${item.id}:`, { productType, isDigital });
+          }
 
           if (productType === 'physical') {
             hasPhysical = true;
@@ -789,8 +798,8 @@ class PaymentCompletionService {
 
         logger.info(`Product Type Analysis for Order ${orderId}:`, { hasPhysical, hasService, hasDigital });
       } else {
-        // Fallback to metadata if DB items empty (rare race condition?)
-        logger.warn(`No DB items found for Order ${orderId}, falling back to metadata`);
+        // Fallback to payment metadata if DB items empty (rare race condition?)
+        logger.warn(`No DB items found for Order ${orderId}, falling back to payment metadata`);
         const metaItems = metadata.items || [];
         if (metaItems.length > 0) {
           hasPhysical = metaItems.some(i => i.productType === 'physical');
