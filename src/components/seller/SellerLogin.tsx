@@ -152,7 +152,7 @@ export function SellerLogin() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="input-mobile pl-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="input-mobile pl-14 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -183,7 +183,7 @@ export function SellerLogin() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="pl-12 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-14 pr-12 h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                   <button
                     type="button"

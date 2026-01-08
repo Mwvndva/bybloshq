@@ -1,7 +1,7 @@
 
 import { Button } from '@/components/ui/button';
-import { ArrowDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Ticket } from 'lucide-react';
 
 interface HeroSectionProps {
   onExploreClick?: () => void;
@@ -14,67 +14,95 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
   const handleStartThrifting = () => {
     navigate('/buyer/login');
   };
+
   return (
-    <section className="relative min-h-screen flex items-center justify-center bg-black overflow-hidden">
-      {/* Background elements */}
-      <div className="absolute inset-0 bg-black/30 z-0" />
+    <section className="relative flex items-center justify-center min-h-[75vh] overflow-hidden py-10 sm:py-14 md:py-16">
+      {/* Background Image with Overlay */}
       <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0"
         style={{
-          backgroundImage: 'linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url(/herowallpaper/blackboredapewallpaper.png)',
+          backgroundImage: 'url(/herowallpaper/blackboredapewallpaper.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          backgroundAttachment: 'fixed',
-          imageRendering: 'crisp-edges',
-          WebkitFontSmoothing: 'antialiased',
-          MozOsxFontSmoothing: 'grayscale',
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden',
-          transformStyle: 'preserve-3d',
-          willChange: 'transform'
         }}
       />
+      {/* Dark overlay for better text contrast */}
+      <div className="absolute inset-0 bg-black/60 z-0 backdrop-blur-[2px]" />
 
-      <div className="container-mobile text-center relative z-10">
-        <div className="max-w-4xl mx-auto mobile-compact-x">
+      <div className="container-mobile relative z-10 w-full">
+        <div className="max-w-5xl mx-auto mobile-compact-x">
 
+          {/* Glassmorphism Card */}
+          <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-[2rem] p-6 sm:p-10 md:p-14 shadow-2xl relative overflow-hidden group">
 
-          {/* Main Heading */}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-yellow-500 mb-3 sm:mb-4 md:mb-6 font-mono">
-            BYBLOS — JUST START
-          </h1>
+            {/* Subtle glow effects inside the card */}
+            <div className="absolute -top-24 -left-24 w-64 h-64 bg-yellow-500/20 rounded-full blur-[100px] pointer-events-none" />
+            <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-pink-500/20 rounded-full blur-[100px] pointer-events-none" />
 
-          {/* SEO Description */}
-          <div className="mb-6 sm:mb-8 md:mb-12 max-w-3xl mx-auto">
-            <p className="text-white mobile-text-lg mb-3 sm:mb-4">
-              Kenya’s #1 interactive online marketplace.
-              Everyone’s got a hustle — make yours official.
-              Set up your shop in minutes, get your own link, take orders on WhatsApp, and deliver fast across Nairobi.
-              No excuses. No stress. Just start.           </p>
-            <div className="text-yellow-400 mobile-text">
-              <p>✓ 100% Authentic Items</p>
-              <p>✓ Delivery in Nairobi</p>
-              <p>✓ Secure Online Payments</p>
-              <p>✓ Your Business, All in One Link</p>
+            {/* Content */}
+            <div className="relative z-10 text-center space-y-6 sm:space-y-8">
+
+              {/* Main Heading */}
+              <div className="space-y-2">
+                <h2 className="text-yellow-400 font-bold tracking-widest text-xs sm:text-sm uppercase mb-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                  Welcome to the Future of Thrifting
+                </h2>
+                <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white font-mono tracking-tighter leading-none animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100">
+                  BYBLOS
+                  <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-300 mt-1 sm:mt-2">
+                    JUST START.
+                  </span>
+                </h1>
+              </div>
+
+              {/* Description */}
+              <p className="text-gray-200 mobile-text-lg max-w-2xl mx-auto leading-relaxed font-light animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+                Kenya’s #1 interactive online marketplace.
+                <span className="text-white font-semibold block sm:inline mt-1 sm:mt-0"> Make your hustle official.</span>
+                <br className="hidden sm:block" />
+                Set up shop, take orders, and deliver fast across Nairobi.
+              </p>
+
+              {/* Features Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 max-w-3xl mx-auto py-4 sm:py-6 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
+                {[
+                  "100% Authentic",
+                  "Nairobi Delivery",
+                  "Secure Payments",
+                  "One Link Shop"
+                ].map((feature, i) => (
+                  <div key={i} className="bg-white/5 border border-white/10 rounded-xl p-2 sm:p-3 backdrop-blur-sm">
+                    <p className="text-yellow-300 text-xs sm:text-sm font-semibold whitespace-nowrap">✓ {feature}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center w-full animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
+                <Button
+                  onClick={handleStartThrifting}
+                  className="group relative overflow-hidden bg-yellow-400 hover:bg-yellow-300 text-black px-8 py-6 rounded-xl text-lg font-bold transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(250,204,21,0.5)] w-full sm:w-auto"
+                >
+                  <span className="relative z-10 flex items-center justify-center gap-2">
+                    Start Shopping
+                    <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
+                  </span>
+                </Button>
+
+                <Button
+                  onClick={onEventsClick}
+                  className="group border-2 border-white/20 bg-black/50 hover:bg-black/70 text-white px-8 py-6 rounded-xl text-lg font-bold transition-all duration-300 backdrop-blur-sm w-full sm:w-auto"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    View Events
+                    <Ticket className="w-5 h-5 transition-transform group-hover:rotate-12" />
+                  </span>
+                </Button>
+              </div>
+
             </div>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 justify-center mb-8 sm:mb-12 w-full">
-            <Button
-              onClick={handleStartThrifting}
-              className="button-mobile bg-yellow-300 hover:bg-white hover:text-black text-black px-4 sm:px-6 font-medium transition-colors duration-200 w-full sm:w-auto"
-            >
-              Start Shopping
-            </Button>
-            <Button
-              onClick={onEventsClick}
-              variant="outline"
-              className="button-mobile border-yellow-300 text-black hover:bg-yellow-300 hover:border-yellow-300 hover:text-black px-4 sm:px-6 font-medium transition-colors duration-200 w-full sm:w-auto"
-            >
-              View Events & Tickets
-            </Button>
-          </div>
         </div>
       </div>
     </section>

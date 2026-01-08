@@ -130,7 +130,7 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="input-mobile pl-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="input-mobile pl-14 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -152,7 +152,7 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="pl-10 pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-14 pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                   <button
                     type="button"
