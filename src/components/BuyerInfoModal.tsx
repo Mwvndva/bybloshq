@@ -172,8 +172,8 @@ export function BuyerInfoModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className={`w-[95vw] max-w-[425px] max-h-[85dvh] p-0 overflow-hidden ${themeClasses.bg} ${themeClasses.text} border-0 shadow-xl rounded-2xl`}>
         <form onSubmit={handleSubmit} className="flex flex-col h-full w-full">
-          <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0">
-            <DialogTitle className={`text-xl font-black text-center ${themeClasses.text} flex items-center justify-center gap-2 mb-1`}>
+          <DialogHeader className="mobile-compact pb-2 shrink-0">
+            <DialogTitle className={`mobile-heading-sm font-black text-center ${themeClasses.text} flex items-center justify-center gap-1.5 sm:gap-2 mb-1`}>
               <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center">
                 <User className="h-4 w-4 text-yellow-600" />
               </div>
@@ -181,7 +181,7 @@ export function BuyerInfoModal({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 py-2 space-y-4">
+          <div className="flex-1 overflow-y-auto mobile-compact py-2 space-y-3 sm:space-y-4">
             {/* Phone Number - Read Only */}
             <div className="space-y-2">
               <Label htmlFor="phone" className={`text-sm font-medium ${themeClasses.label}`}>
@@ -213,7 +213,7 @@ export function BuyerInfoModal({
                   placeholder="Enter your full name"
                   value={buyerInfo.fullName}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, fullName: e.target.value }))}
-                  className={`pl-10 h-10 rounded-xl text-base ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
+                  className={`input-mobile pl-10 rounded-xl ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
@@ -287,11 +287,11 @@ export function BuyerInfoModal({
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 p-4 sm:p-6 pt-2 mt-auto border-t shrink-0">
+          <div className="flex flex-col gap-2 sm:gap-3 mobile-compact pt-2 mt-auto border-t shrink-0">
             <Button
               type="submit"
               disabled={isLoading}
-              className={`w-full h-10 rounded-xl font-bold text-sm transition-all ${themeClasses.button} ${isLoading ? 'opacity-70' : ''}`}
+              className={`button-mobile w-full rounded-xl font-bold mobile-text transition-all ${themeClasses.button} ${isLoading ? 'opacity-70' : ''}`}
             >
               {isLoading ? (
                 <>

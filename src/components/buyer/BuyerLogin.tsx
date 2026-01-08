@@ -97,13 +97,13 @@ export function BuyerLogin() {
       <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
           {/* Login Card */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-lg">
-                <ShoppingBag className="h-8 w-8 text-yellow-600" />
+          <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl mobile-compact shadow-lg border border-gray-200/50">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
+                <ShoppingBag className="h-6 w-6 sm:h-8 sm:w-8 text-yellow-600" />
               </div>
-              <h1 className="text-2xl font-black text-black mb-2">Welcome Back</h1>
-              <p className="text-gray-600 font-medium">Sign in to your buyer account</p>
+              <h1 className="mobile-heading-sm mb-1.5 sm:mb-2">Welcome Back</h1>
+              <p className="mobile-text text-gray-600 font-medium">Sign in to your buyer account</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -130,7 +130,7 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="pl-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="input-mobile pl-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -171,7 +171,7 @@ export function BuyerLogin() {
 
               <Button
                 type="submit"
-                className="w-full h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-sm transition-all duration-200"
+                className="button-mobile w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold transition-all duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (
