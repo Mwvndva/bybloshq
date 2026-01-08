@@ -299,11 +299,18 @@ export const checkBuyerByPhone = async (req, res, next) => {
       // SECURITY FIX: Do not generate token here
       // const token = signToken(existingBuyer.id, 'buyer');
 
+      const sanitizedBuyer = sanitizeBuyer(existingBuyer);
+
+      // Explicitly include email for checkout validation if present
+      if (existingBuyer.email) {
+        sanitizedBuyer.email = existingBuyer.email;
+      }
+
       res.status(200).json({
         status: 'success',
         data: {
           exists: true,
-          buyer: sanitizeBuyer(existingBuyer)
+          buyer: sanitizedBuyer
           // token - REMOVED for security
         }
       });
