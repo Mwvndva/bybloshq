@@ -8,7 +8,7 @@ const Footer = () => {
   return (
     <footer className="bg-yellow-300 border-t-4 border-yellow-400">
       <div className="max-w-7xl mx-auto px-4 py-8 sm:py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 mb-8 text-center md:text-left">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-8 lg:gap-6 mb-8 text-center md:text-left">
           {/* Location */}
           <div className="flex flex-col items-center md:items-start">
             <h3 className="font-bold text-black mb-3 text-lg flex items-center gap-2">
@@ -20,6 +20,14 @@ const Footer = () => {
               <br />
               East Africa
             </p>
+
+            {/* Powered by EVOLVE */}
+            <div className="mt-6 space-y-2">
+              <h3 className="font-bold text-black text-lg">Powered by EVOLVE</h3>
+              <p className="text-gray-800 text-sm">
+                © 2025 Byblos Experience. All rights reserved.
+              </p>
+            </div>
           </div>
 
           {/* Contact */}
@@ -77,16 +85,23 @@ const Footer = () => {
               </Link>
             </div>
           </div>
-        </div>
 
-        {/* Copyright */}
-        <div className="border-t border-yellow-400/50 pt-6 text-center">
-          <p className="text-gray-900 text-xs sm:text-sm font-medium">
-            © 2025 Byblos Experience. All rights reserved.
-          </p>
-          <p className="text-gray-600 text-[10px] sm:text-xs mt-1 uppercase tracking-wider">
-            Powered by EVOLVE
-          </p>
+          {/* Partners */}
+          <div className="flex flex-col items-center md:items-start">
+            <h3 className="font-bold text-black mb-3 text-lg">Partners</h3>
+            <div className="flex flex-col gap-4 items-center md:items-start">
+              <img
+                src="/mzigoego-logo.png"
+                alt="Mzigoego"
+                className="h-12 w-auto object-contain rounded-lg border-2 border-yellow-400 p-2 bg-white"
+              />
+              <img
+                src="/payd-logo.png"
+                alt="Payd"
+                className="h-12 w-auto object-contain rounded-lg border-2 border-yellow-400 p-2 bg-white"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
