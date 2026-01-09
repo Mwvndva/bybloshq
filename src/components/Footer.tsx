@@ -89,17 +89,13 @@ const Footer = () => {
           {/* Partners */}
           <div className="flex flex-col items-center md:items-start">
             <h3 className="font-bold text-black mb-3 text-lg">Partners</h3>
-            <div className="flex flex-col gap-4 items-center md:items-start">
-              <img
-                src="/mzigoego-logo.png"
-                alt="Mzigoego"
-                className="h-12 w-auto object-contain rounded-lg border-2 border-yellow-400 p-2 bg-white"
-              />
-              <img
-                src="/payd-logo.png"
-                alt="Payd"
-                className="h-12 w-auto object-contain rounded-lg border-2 border-yellow-400 p-2 bg-white"
-              />
+            <div className="flex flex-col gap-3 items-center md:items-start text-sm">
+              <div className="font-semibold text-black px-4 py-2 rounded-lg border-2 border-yellow-400 bg-white">
+                Mzigo Ego
+              </div>
+              <div className="font-semibold text-black px-4 py-2 rounded-lg border-2 border-yellow-400 bg-white">
+                Payd
+              </div>
             </div>
           </div>
         </div>
