@@ -181,6 +181,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
 
+  // Order notification state
+  const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
+  const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
+    localStorage.getItem('seller_last_viewed_orders')
+  );
+
   // Withdrawal request form state
   const [withdrawalForm, setWithdrawalForm] = useState({
     amount: '',
@@ -628,6 +634,32 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     });
   }, [isLoading, isAuthLoading, analytics, products, error, sellerProfile]);
 
+  // Check for new orders
+  useEffect(() => {
+    const checkForNewOrders = async () => {
+      try {
+        const orders = await sellerApi.getOrders();
+        if (orders.length > 0) {
+          const latestOrderTime = new Date(orders[0].createdAt).getTime();
+          const lastViewed = lastViewedOrdersTime
+            ? new Date(lastViewedOrdersTime).getTime()
+            : 0;
+
+          setHasUnreadOrders(latestOrderTime > lastViewed);
+        } else {
+          setHasUnreadOrders(false);
+        }
+      } catch (error) {
+        console.error('Error checking for new orders:', error);
+      }
+    };
+
+    // Check when analytics data is available
+    if (analytics) {
+      checkForNewOrders();
+    }
+  }, [analytics, lastViewedOrdersTime]);
+
   // Removed: Profile data is already available from SellerAuthContext
   // No need to fetch separately when settings tab is active
 
@@ -881,7 +913,16 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
-              onClick={() => setActiveTab(id)}
+              onClick={() => {
+                setActiveTab(id);
+                // Mark orders as viewed when Orders tab is clicked
+                if (id === 'orders') {
+                  const now = new Date().toISOString();
+                  setLastViewedOrdersTime(now);
+                  localStorage.setItem('seller_last_viewed_orders', now);
+                  setHasUnreadOrders(false);
+                }
+              }}
               className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${activeTab === id
                 ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
                 : 'text-gray-600 hover:text-black hover:bg-white/80'
@@ -889,6 +930,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             >
               <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span>{label}</span>
+
+              {/* Notification Badge - Red Dot */}
+              {id === 'orders' && hasUnreadOrders && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+              )}
             </button>
           ))}
         </div>
