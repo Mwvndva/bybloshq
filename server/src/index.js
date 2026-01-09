@@ -401,7 +401,7 @@ const startServer = async () => {
 };
 
 // Start the server and initialize cron jobs
-startServer().then(() => {
+startServer().then(async () => {
   // Start the payment processing cron job when server starts
   if (process.env.ENABLE_PAYMENT_CRON !== 'false') {
     console.log('🚀 Starting payment processing cron job...');
@@ -417,6 +417,22 @@ startServer().then(() => {
     }
   } else {
     console.log('ℹ️  Payment processing cron job is disabled (ENABLE_PAYMENT_CRON=false)');
+  }
+
+  // Start the order deadline cron job
+  if (process.env.ENABLE_ORDER_DEADLINE_CRON !== 'false') {
+    console.log('🚀 Starting order deadline cron job...');
+    try {
+      const { scheduleOrderDeadlineChecks } = await import('./cron/orderDeadlineCron.js');
+      scheduleOrderDeadlineChecks({
+        schedule: '*/30 * * * *' // Every 30 minutes
+      });
+      console.log('✅ Order deadline cron job started successfully');
+    } catch (error) {
+      console.error('❌ Failed to start order deadline cron job:', error.message);
+    }
+  } else {
+    console.log('ℹ️  Order deadline cron job is disabled (ENABLE_ORDER_DEADLINE_CRON=false)');
   }
 }).catch(error => {
   console.error('❌ Failed to start server:', error);

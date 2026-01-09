@@ -132,6 +132,53 @@ class WhatsAppService {
     // NOTIFICATION LOGIC (Business Logic)
     // ==========================================
 
+    /**
+     * Extract service provider type from order data
+     */
+    getServiceProviderType(order) {
+        const productName = (order.items?.[0]?.name || order.items?.[0]?.product_name || '').toLowerCase();
+
+        const serviceMap = {
+            'plumb': 'Plumber',
+            'electric': 'Electrician',
+            'clean': 'Cleaner',
+            'paint': 'Painter',
+            'carpenter': 'Carpenter',
+            'carpentry': 'Carpenter',
+            'mechanic': 'Mechanic',
+            'repair': 'Technician',
+            'hvac': 'HVAC Technician',
+            'garden': 'Gardener',
+            'landscap': 'Landscaper',
+            'chef': 'Chef',
+            'cook': 'Cook',
+            'cater': 'Caterer',
+            'photogra': 'Photographer',
+            'video': 'Videographer',
+            'tutor': 'Tutor',
+            'teacher': 'Teacher',
+            'driver': 'Driver',
+            'transport': 'Driver',
+            'security': 'Security Guard',
+            'massage': 'Massage Therapist',
+            'hair': 'Hairstylist',
+            'barber': 'Barber',
+            'makeup': 'Makeup Artist',
+            'nail': 'Nail Technician',
+            'tailor': 'Tailor',
+            'laundry': 'Laundry Service',
+            'pest': 'Pest Control Specialist',
+        };
+
+        for (const [keyword, type] of Object.entries(serviceMap)) {
+            if (productName.includes(keyword)) {
+                return type;
+            }
+        }
+
+        return 'Service Provider';
+    }
+
     async notifySellerNewOrder(orderData) {
         const { seller, order, items } = orderData;
         if (!seller?.phone) return false;
@@ -161,12 +208,13 @@ class WhatsAppService {
 `.trim();
         }
 
-        let instructionText = `📍 *ACTION REQUIRED:* Please drop off items at Dynamic Mall, Shop SL 32 within 48h.`;
+        let instructionText = `⚠️ *ACTION REQUIRED:*\nPlease drop off items at Dynamic Mall, Shop SL 32 within 48 hours.\n\n⏰ *DEADLINE:* Order will be auto-cancelled if not delivered by deadline.\n💰 Payment will be released 24 hours after buyer pickup.`;
 
         if (isService) {
-            instructionText = `ℹ️ *ACTION REQUIRED:* Please review the booking details above and contact the client if needed.`;
+            const serviceType = this.getServiceProviderType(order);
+            instructionText = `⏰ *ACTION REQUIRED:*\nPlease review the booking details above and contact ${buyer?.full_name?.split(' ')[0] || 'the client'} to confirm the appointment.\n\n🔒 Payment (KSh ${total.toLocaleString()}) is secured and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
-            instructionText = `ℹ️ *INFO:* Customer has received download link. No action required.`;
+            instructionText = `✅ *INFO:* Customer has received download link. No action required.\n\n💰 Revenue (KSh ${total.toLocaleString()}) will be added to your balance automatically.`;
         }
 
         const header = isDigital ? '🎉 *NEW DIGITAL ORDER!*' : '🎉 *NEW ORDER RECEIVED!*';
@@ -214,15 +262,16 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 `.trim();
         }
 
-        let nextSteps = "We'll notify you when it's ready for pickup!";
+        let nextSteps = "📍 *NEXT STEPS:*\nWe'll notify you when it's ready for pickup at Dynamic Mall, Shop SL 32.\n\n⏰ *SELLER DEADLINE:* Seller has 48 hours to drop off your order or it will be auto-cancelled and refunded.";
         if (isService) {
-            nextSteps = "The seller has been notified of your booking and will prepare for your appointment.";
+            const serviceType = this.getServiceProviderType(order);
+            nextSteps = `⏰ *WHAT'S NEXT:*\nYour ${serviceType} has been notified and will contact you to confirm the appointment details.\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
-            nextSteps = `Your digital product is ready for download!\n🔗 Access it here: ${dashboardUrl}`;
+            nextSteps = `✅ *YOUR DOWNLOAD IS READY!*\n🔗 Access it here: ${dashboardUrl}`;
         }
 
-        const header = isDigital ? '✅ *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
+        const header = isDigital ? '🎉 *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
 
         const msg = `
 ${header}
@@ -252,23 +301,70 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
         let msg = '';
         if (newStatus === 'DELIVERY_PENDING') {
             if (isService) {
-                msg = `✅ *BOOKING CONFIRMED*\n\nOrder #${order.orderNumber} payment received. Your service booking is confirmed.`;
+                const serviceType = this.getServiceProviderType(order);
+                const amount = parseFloat(order.totalAmount || 0);
+                msg = `✅ *BOOKING CONFIRMED*
+
+🎉 Payment received! Your ${serviceType} booking is confirmed.
+
+💰 Amount Held: KSh ${amount.toLocaleString()}
+🔒 Your payment is secure and will be released to the service provider 24 hours after job completion.
+
+Order #${order.orderNumber}`;
             } else if (isDigital) {
                 msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} payment received. Your download is ready.`;
             } else {
-                msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} is confirmed. We will prepare it for pickup.`;
+                const amount = parseFloat(order.totalAmount || 0);
+                msg = `✅ *PAYMENT SUCCESSFUL*
+
+💰 Amount: KSh ${amount.toLocaleString()}
+📦 Order #${order.orderNumber} is confirmed.
+
+⏰ *NEXT STEPS:*
+We are preparing your order for pickup. You'll be notified when it's ready at Dynamic Mall, Shop SL 32.`;
             }
         } else if (newStatus === 'DELIVERY_COMPLETE') {
             if (isService) {
-                // Should not really happen for services but handle gracefully
-                msg = `✅ *SERVICE COMPLETED*\n\nOrder #${order.orderNumber} marked as complete.`;
+                const serviceType = this.getServiceProviderType(order);
+                const amount = parseFloat(order.totalAmount || 0);
+                msg = `⚠️ *ACTION REQUIRED*
+
+Your ${serviceType} has marked the job as DONE.
+
+💰 Amount: KSh ${amount.toLocaleString()}
+⏰ Payment Release: We will release your payment to them in 24 hours.
+
+✅ If the work is satisfactory, no action needed.
+❌ If there are issues, please contact support immediately.`;
             } else if (isDigital) {
                 msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
             } else {
-                msg = `📦 *READY FOR PICKUP*\n\nOrder #${order.orderNumber} is ready!\n📍 Dynamic Mall, Tom Mboya St, Shop SL 32\n\nPlease verify item before accepting!`;
+                const amount = parseFloat(order.totalAmount || 0);
+                msg = `⚠️ *ACTION REQUIRED: PICKUP READY*
+
+📦 Order #${order.orderNumber} is ready for pickup!
+💰 Amount: KSh ${amount.toLocaleString()}
+
+📍 *PICKUP LOCATION:*
+Dynamic Mall, Tom Mboya St, Shop SL 32
+Nairobi, Kenya
+
+⏰ *PICKUP DEADLINE:* 
+🚨 You have 24 hours to pick up or order will be auto-cancelled and refunded.
+
+*IMPORTANT:* 
+• Inspect items BEFORE accepting
+• Payment released to seller 24 hours after pickup
+• Report any issues immediately`;
             }
         } else if (newStatus === 'CONFIRMED' && isService) { // Custom status for Service
-            msg = `✅ *BOOKING ACCEPTED*\n\nThe seller has accepted your booking for Order #${order.orderNumber}.`;
+            const serviceType = this.getServiceProviderType(order);
+            msg = `✅ *BOOKING ACCEPTED*
+
+Great news! Your ${serviceType} has accepted your booking.
+
+📦 Order #${order.orderNumber}
+⏰ They will contact you shortly to confirm the appointment details.`;
         } else if (newStatus === 'COMPLETED') {
             msg = `🎉 *ORDER COMPLETED*\n\nOrder #${order.orderNumber} is complete. Thanks for shopping with Byblos!`;
         } else {
@@ -288,11 +384,34 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
         let msg = `📋 Order #${order.orderNumber} status: ${newStatus}`;
 
         if (newStatus === 'DELIVERY_PENDING') {
-            msg = `💰 *PAYMENT RECEIVED*\n\nOrder #${order.orderNumber} is paid. Please prepare for drop-off/service.`;
+            const amount = parseFloat(order.totalAmount || 0);
+            if (productType === 'service') {
+                msg = `💰 *PAYMENT RECEIVED*
+
+✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+
+⏰ *PAYMENT HOLD:*
+Funds will be held for 24 hours after job completion to ensure customer satisfaction.
+
+📋 Please prepare for the service appointment.`;
+            } else {
+                msg = `💰 *PAYMENT RECEIVED*
+
+✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+
+📦 *ACTION REQUIRED:*
+Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.`;
+            }
         } else if (newStatus === 'CONFIRMED' && productType === 'service') {
             msg = `✅ *BOOKING CONFIRMED*\n\nYou have confirmed the booking for Order #${order.orderNumber}.`;
         } else if (newStatus === 'COMPLETED') {
-            msg = `🎉 *ORDER COMPLETED*\n\nOrder #${order.orderNumber} is finished. Revenue added to balance.`;
+            const amount = parseFloat(order.totalAmount || 0);
+            msg = `🎉 *ORDER COMPLETED*
+
+✅ Order #${order.orderNumber} is finished.
+💰 Revenue (KSh ${amount.toLocaleString()}) added to your balance.
+
+You can withdraw your earnings from your seller dashboard.`;
         }
 
         return this.sendMessage(seller.phone, msg);
