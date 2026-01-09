@@ -77,6 +77,12 @@ function BuyerDashboard() {
   const [locationArea, setLocationArea] = useState<string>(user?.location || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
+  // Order notification state
+  const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
+  const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
+    localStorage.getItem('buyer_last_viewed_orders')
+  );
+
   const isMissingLocation = !user?.city || !user?.location;
 
   const locationData: Record<string, string[]> = {
@@ -109,6 +115,43 @@ function BuyerDashboard() {
   useEffect(() => {
     console.log('Filters updated:', { filterCity, filterArea });
   }, [filterCity, filterArea]);
+
+  // Check for order updates
+  useEffect(() => {
+    const checkForOrderUpdates = async () => {
+      try {
+        const buyerApiModule = await import('@/api/buyerApi');
+        const buyerApi = buyerApiModule.default;
+        const orders = await buyerApi.getOrders();
+
+        if (orders.length > 0) {
+          // Get the most recent order update time (could be createdAt or updatedAt)
+          const latestUpdateTime = Math.max(
+            ...orders.map(order => {
+              const created = new Date(order.createdAt).getTime();
+              const updated = order.updatedAt ? new Date(order.updatedAt).getTime() : created;
+              return Math.max(created, updated);
+            })
+          );
+
+          const lastViewed = lastViewedOrdersTime
+            ? new Date(lastViewedOrdersTime).getTime()
+            : 0;
+
+          setHasUnreadOrders(latestUpdateTime > lastViewed);
+        } else {
+          setHasUnreadOrders(false);
+        }
+      } catch (error) {
+        console.error('Error checking for order updates:', error);
+      }
+    };
+
+    // Check when component mounts and when user changes
+    if (user) {
+      checkForOrderUpdates();
+    }
+  }, [user, lastViewedOrdersTime]);
 
   const handleBackToHome = () => {
     navigate('/');
@@ -185,15 +228,29 @@ function BuyerDashboard() {
             { id: 'profile', label: 'Profile', icon: User },
           ].map(({ id, label, icon: Icon }) => (
             <button
-              key={id}
-              onClick={() => setActiveSection(id as any)}
+              onClick={() => {
+                setActiveSection(id as any);
+                // Mark orders as viewed when Orders tab is clicked
+                if (id === 'orders') {
+                  const now = new Date().toISOString();
+                  setLastViewedOrdersTime(now);
+                  localStorage.setItem('buyer_last_viewed_orders', now);
+                  setHasUnreadOrders(false);
+                }
+              }}
               className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 lg:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm lg:text-base transition-all duration-300 ${activeSection === id
-                  ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                  : 'text-gray-600 hover:text-black hover:bg-white/80'
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
+                : 'text-gray-600 hover:text-black hover:bg-white/80'
                 }`}
             >
               <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>{label}</span>
+
+              {/* Notification Badge - Red Dot for Orders */}
+              {id === 'orders' && hasUnreadOrders && (
+                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+              )}
+
               {id === 'wishlist' && wishlist.length > 0 && (
                 <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                   {wishlist.length}
