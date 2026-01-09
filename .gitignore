@@ -96,7 +96,7 @@ dist
 
 # Gatsby files
 .cache/
-# public  # COMMENTED OUT - Vite projects need public folder for static assets
+public
 
 # vuepress build output
 .vuepress/dist
