@@ -1,4 +1,5 @@
 import axios from 'axios';
+import https from 'https';
 import crypto from 'crypto';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
@@ -21,6 +22,10 @@ class PaymentService {
                 'Content-Type': 'application/json',
             },
             timeout: 30000,
+            // Allow self-signed certs (needed for some Payd environments or proxy configs)
+            httpsAgent: new https.Agent({
+                rejectUnauthorized: false
+            })
         });
     }
 
