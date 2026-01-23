@@ -44,9 +44,6 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
 
               {/* Main Heading */}
               <div className="space-y-2">
-                <h2 className="text-yellow-400 font-bold tracking-widest text-xs sm:text-sm uppercase mb-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                  Turn Your DMs Into A Real Business.
-                </h2>
                 <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-8xl font-black text-white font-mono tracking-tighter leading-none animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-100">
                   BYBLOS
                   <span className="block text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-300 mt-1 sm:mt-2">
@@ -57,8 +54,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
 
               {/* Description */}
               <p className="text-gray-200 mobile-text-lg max-w-2xl mx-auto leading-relaxed font-light animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-                The operating system for Kenyan Instagram sellers.
-                <span className="text-white font-semibold block sm:inline mt-1 sm:mt-0"> Get Verified.</span>
+                The operating system for digital shops.
                 <br className="hidden sm:block" />
                 Auto-order notifications, instant M-Pesa payments, and zero stress delivery.
               </p>

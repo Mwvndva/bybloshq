@@ -1,211 +1,92 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
+import Fees from '../config/fees.js';
+import { OrderStatus, PaymentStatus, ProductType } from '../constants/enums.js';
 
 class Order {
-  static async createOrder(orderData) {
-    const client = await pool.connect();
-    try {
-      const {
-        buyerId,
-        sellerId,
-        paymentMethod,
-        buyerName,
-        buyerEmail,
-        buyerPhone,
-        shippingAddress,
-        notes,
-        metadata = {}
-      } = orderData;
+  /**
+   * Pure DAO method to insert an order record
+   * Expects client to be passed for transaction support
+   */
+  static async insert(client, data) {
+    const query = `
+      INSERT INTO product_orders (
+        buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
+        payment_method, buyer_name, buyer_email, buyer_phone, shipping_address,
+        notes, metadata, status, payment_status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      RETURNING *
+    `;
 
-      logger.info('Starting order creation with data:', JSON.stringify(orderData, null, 2));
-      await client.query('BEGIN');
+    const values = [
+      data.buyer_id,
+      data.seller_id,
+      data.total_amount,
+      data.platform_fee_amount,
+      data.seller_payout_amount,
+      data.payment_method,
+      data.buyer_name,
+      data.buyer_email,
+      data.buyer_phone,
+      data.shipping_address,
+      data.notes,
+      data.metadata,
+      data.status,
+      data.payment_status || 'pending'
+    ];
 
-      // Verify seller exists and is active (double-check)
-      const sellerCheck = await client.query(
-        'SELECT id FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
-        [sellerId, 'active']
-      );
+    const result = await client.query(query, values);
+    return result.rows[0];
+  }
 
-      if (sellerCheck.rows.length === 0) {
-        throw new Error(`Seller with ID ${sellerId} not found or inactive`);
-      }
+  /**
+   * Pure DAO method to insert order items
+   */
+  static async insertItems(client, orderId, items) {
+    // Fetch product details for type info
+    const productIds = items.map(item => parseInt(item.productId, 10));
+    const productsQuery = `
+      SELECT id, product_type::text as product_type, is_digital
+      FROM products
+      WHERE id = ANY($1)
+    `;
+    const productsResult = await client.query(productsQuery, [productIds]);
+    const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
 
-      // Process and validate order items
-      const items = metadata.items || [];
-      logger.info('Processing order items:', JSON.stringify(items, null, 2));
+    const itemValues = items.map(item => {
+      const subtotal = item.subtotal || (item.price * item.quantity);
+      const productId = parseInt(item.productId, 10);
+      const productDetails = productsMap.get(productId);
 
-      // Validate each item
-      items.forEach((item, index) => {
-        if (typeof item.price !== 'number' || isNaN(item.price) || item.price <= 0) {
-          throw new Error(`Invalid price for item at index ${index}: ${item.price}`);
-        }
-        if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity <= 0) {
-          throw new Error(`Invalid quantity for item ${item.productId}: ${item.quantity}`);
-        }
-        if (typeof item.subtotal !== 'number' || isNaN(item.subtotal) || item.subtotal <= 0) {
-          throw new Error(`Invalid subtotal for item ${item.productId}: ${item.subtotal}`);
-        }
-
-        // Log item details for debugging
-        logger.info(`Item ${index + 1}:`, {
-          productId: item.productId,
-          name: item.name,
-          price: item.price,
-          quantity: item.quantity,
-          subtotal: item.subtotal
-        });
-      });
-
-      // Calculate total amount from items
-      const totalAmount = items.reduce((sum, item) => {
-        const calculatedSubtotal = item.price * item.quantity;
-        // Verify the calculated subtotal matches the provided subtotal
-        if (Math.abs(calculatedSubtotal - item.subtotal) > 0.01) {
-          logger.warn(`Subtotal mismatch for item ${item.productId}: calculated=${calculatedSubtotal}, provided=${item.subtotal}`);
-        }
-        return sum + item.subtotal;
-      }, 0);
-
-      const platformFee = parseFloat((totalAmount * 0.03).toFixed(2));
-      const sellerPayout = parseFloat((totalAmount - platformFee).toFixed(2));
-
-      logger.info(`Calculated totals - Total: ${totalAmount}, Platform Fee: ${platformFee}, Seller Payout: ${sellerPayout}`);
-
-      // Determine initial status based on product types
-      // Default to PENDING (waiting for payment)
-      let initialStatus = 'PENDING';
-
-      // Check if order contains only service items or mixed items
-      const hasPhysical = items.some(item => item.productType === 'physical' || (!item.productType && !item.isDigital));
-      const hasService = items.some(item => item.productType === 'service');
-      const isServiceOnly = hasService && !hasPhysical;
-
-      // Use SERVICE_PENDING for service-only orders to distinguish them immediately
-      if (isServiceOnly) {
-        initialStatus = 'SERVICE_PENDING';
-      }
-
-      // Insert order
-      const orderQuery = `
-        INSERT INTO product_orders (
-          buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
-          payment_method, buyer_name, buyer_email, buyer_phone, shipping_address,
-          notes, metadata, status, payment_status
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'pending')
-        RETURNING *
-      `;
-
-      const orderValues = [
-        buyerId,
-        sellerId,
-        totalAmount,
-        platformFee,
-        sellerPayout,
-        paymentMethod,
-        buyerName,
-        buyerEmail,
-        buyerPhone,
-        shippingAddress ? JSON.stringify(shippingAddress) : null,
-        notes,
-        JSON.stringify(metadata),
-        initialStatus
+      return [
+        orderId,
+        productId,
+        item.name || `Product ${item.productId}`,
+        parseFloat(item.price).toFixed(2),
+        parseInt(item.quantity, 10),
+        parseFloat(subtotal).toFixed(2),
+        JSON.stringify({
+          ...(item.metadata || {}),
+          original_price: item.price,
+          original_quantity: item.quantity,
+          productType: productDetails?.product_type || item.productType || 'physical',
+          isDigital: productDetails?.is_digital || item.isDigital || false
+        })
       ];
+    });
 
-      const orderResult = await client.query(orderQuery, orderValues);
-      const order = orderResult.rows[0];
+    const itemQuery = `
+      INSERT INTO order_items (
+        order_id, product_id, product_name, product_price, quantity, subtotal, metadata
+      ) VALUES ${itemValues.map((_, i) =>
+      `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}::numeric, $${i * 7 + 5}, $${i * 7 + 6}::numeric, $${i * 7 + 7}::jsonb)`
+    ).join(', ')}
+      RETURNING *
+    `;
 
-      // Insert order items with transaction
-      if (items.length > 0) {
-        // First, fetch product details for all items to store type information
-        const productIds = items.map(item => parseInt(item.productId, 10));
-        const productsQuery = `
-          SELECT id, product_type::text as product_type, is_digital
-          FROM products
-          WHERE id = ANY($1)
-        `;
-        const productsResult = await client.query(productsQuery, [productIds]);
-        const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
-
-        logger.info('Fetched product details for order items:', {
-          productIds,
-          foundProducts: productsResult.rows.length
-        });
-
-        const itemValues = items.map(item => {
-          // Ensure all required fields are present and valid
-          const subtotal = item.subtotal || (item.price * item.quantity);
-          const productId = parseInt(item.productId, 10);
-          const productDetails = productsMap.get(productId);
-
-          return [
-            order.id,
-            productId,
-            item.name || `Product ${item.productId}`,
-            parseFloat(item.price).toFixed(2),
-            parseInt(item.quantity, 10),
-            parseFloat(subtotal).toFixed(2),
-            JSON.stringify({
-              ...(item.metadata || {}),
-              original_price: item.price,
-              original_quantity: item.quantity,
-              // Store product type info for future reference
-              productType: productDetails?.product_type || item.productType || 'physical',
-              isDigital: productDetails?.is_digital || item.isDigital || false
-            })
-          ];
-        });
-
-        const itemQuery = `
-          INSERT INTO order_items (
-            order_id, product_id, product_name, product_price, quantity, subtotal, metadata
-          ) VALUES ${itemValues.map((_, i) =>
-          `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}::numeric, $${i * 7 + 5}, $${i * 7 + 6}::numeric, $${i * 7 + 7}::jsonb)`
-        ).join(', ')}
-          RETURNING *
-        `;
-
-        const flattenedValues = itemValues.flat();
-        logger.info('Executing order items insert query:', itemQuery);
-        logger.info('With values:', JSON.stringify(flattenedValues, null, 2));
-
-        try {
-          const result = await client.query(itemQuery, flattenedValues);
-          logger.info('Order items inserted successfully:', JSON.stringify(result.rows, null, 2));
-
-          // Verify the inserted items
-          const insertedItems = result.rows;
-          if (insertedItems.length !== items.length) {
-            throw new Error(`Expected to insert ${items.length} items but only inserted ${insertedItems.length}`);
-          }
-
-          // Log the inserted items for verification
-          insertedItems.forEach((item, index) => {
-            logger.info(`Inserted item ${index + 1}:`, {
-              id: item.id,
-              order_id: item.order_id,
-              product_id: item.product_id,
-              product_name: item.product_name,
-              product_price: item.product_price,
-              quantity: item.quantity,
-              subtotal: item.subtotal
-            });
-          });
-
-        } catch (error) {
-          logger.error('Error inserting order items:', error);
-          throw new Error(`Failed to insert order items: ${error.message}`);
-        }
-      }
-
-      await client.query('COMMIT');
-      return order;
-    } catch (error) {
-      await client.query('ROLLBACK');
-      logger.error('Error creating order:', error);
-      throw error;
-    } finally {
-      client.release();
-    }
+    const flattenedValues = itemValues.flat();
+    const result = await client.query(itemQuery, flattenedValues);
+    return result.rows;
   }
 
   static async updateOrderStatus(orderId, status, notes = null) {
@@ -419,52 +300,41 @@ class Order {
     return rows[0];
   }
 
-  static async cancelOrder(orderId, reason = null) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+  static async updateStatusWithSideEffects(client, orderId, status, paymentStatus) {
+    const query = `
+      UPDATE product_orders 
+      SET 
+        status = $1,
+        payment_status = $2,
+        updated_at = NOW(),
+        paid_at = CASE WHEN $2 = 'completed' AND paid_at IS NULL THEN NOW() ELSE paid_at END,
+        completed_at = CASE WHEN $1 = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END,
+        cancelled_at = CASE WHEN $1 = 'cancelled' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END
+      WHERE id = $3
+      RETURNING *
+    `;
+    const { rows } = await client.query(query, [status, paymentStatus, orderId]);
+    return rows[0];
+  }
 
-      // Update order status
-      const updateOrderQuery = `
-        UPDATE product_orders 
-        SET 
-          status = 'cancelled',
-          metadata = jsonb_set(
-            COALESCE(metadata, '{}'::jsonb), 
-            '{cancellation_reason}', 
-            $1::jsonb,
-            true
-          ),
-          cancelled_at = NOW(),
-          updated_at = NOW()
-        WHERE id = $2
-        RETURNING *
-      `;
-
-      const orderResult = await client.query(updateOrderQuery, [JSON.stringify(reason), orderId]);
-
-      // Update inventory if needed (restock products)
-      const order = orderResult.rows[0];
-      if (order) {
-        const itemsQuery = 'SELECT product_id, quantity FROM order_items WHERE order_id = $1';
-        const itemsResult = await client.query(itemsQuery, [orderId]);
-
-        for (const item of itemsResult.rows) {
-          await client.query(
-            'UPDATE products SET quantity = quantity + $1 WHERE id = $2',
-            [item.quantity, item.product_id]
-          );
-        }
-      }
-
-      await client.query('COMMIT');
-      return orderResult.rows[0];
-    } catch (error) {
-      await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
-    }
+  static async updateStatusWithReason(client, orderId, status, reason) {
+    const updateOrderQuery = `
+      UPDATE product_orders 
+      SET 
+        status = $1,
+        metadata = jsonb_set(
+          COALESCE(metadata, '{}'::jsonb), 
+          '{cancellation_reason}', 
+          $2::jsonb,
+          true
+        ),
+        cancelled_at = CASE WHEN $1 = 'cancelled' THEN NOW() ELSE cancelled_at END,
+        updated_at = NOW()
+      WHERE id = $3
+      RETURNING *
+    `;
+    const { rows } = await client.query(updateOrderQuery, [status, JSON.stringify(reason), orderId]);
+    return rows[0];
   }
 
   static async getOrderStats(sellerId = null) {

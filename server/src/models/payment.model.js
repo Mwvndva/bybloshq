@@ -1,51 +1,22 @@
 import { pool } from '../config/database.js';
 
 class Payment {
-  static async create(paymentData) {
-    const {
-      invoice_id,
-      amount,
-      currency = 'KES',
-      status = 'pending',
-      payment_method = 'mpesa',
-      phone_number = null,
-      email = null,
-      ticket_type_id = null,  // Use ticket_type_id instead of ticket_id
-      event_id = null,
-      organizer_id = null,
-      provider_reference = null,
-      api_ref = null,
-      metadata = null
-    } = paymentData;
-
-    // Build the query dynamically based on provided fields
-    const fields = [
-      'invoice_id', 'amount', 'currency', 'status', 'payment_method',
-      'phone_number', 'email', 'event_id', 'organizer_id', 'ticket_type_id', 'ticket_id',
-      'provider_reference', 'api_ref', 'metadata'
-    ];
-
-    // Only include fields that are not null/undefined
-    const providedFields = fields.filter(field => paymentData[field] !== undefined && paymentData[field] !== null);
-
-    const placeholders = providedFields.map((_, i) => `$${i + 1}`).join(', ');
-    const fieldList = providedFields.join(', ');
-
+  /**
+   * Insert a new payment record
+   */
+  static async insert(client, data) {
+    const fields = Object.keys(data);
+    const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
     const query = `
-      INSERT INTO payments (${fieldList})
+      INSERT INTO payments (${fields.join(', ')})
       VALUES (${placeholders})
       RETURNING *
     `;
+    const values = fields.map(f => typeof data[f] === 'object' && data[f] !== null ? JSON.stringify(data[f]) : data[f]);
 
-    const values = providedFields.map(field => {
-      // Handle metadata serialization if needed
-      if (field === 'metadata' && paymentData[field] && typeof paymentData[field] === 'object') {
-        return JSON.stringify(paymentData[field]);
-      }
-      return paymentData[field];
-    });
-
-    const { rows } = await pool.query(query, values);
+    // Support both pool and client (for transactions)
+    const executor = client || pool;
+    const { rows } = await executor.query(query, values);
     return rows[0];
   }
 
@@ -128,23 +99,19 @@ class Payment {
     return parseFloat(rows[0].total_sales) || 0;
   }
 
-  static async update(id, updateData) {
+  static async update(client, id, updateData) {
     const fields = Object.keys(updateData);
-
-    if (fields.length === 0) {
-      throw new Error('No fields to update');
-    }
+    if (fields.length === 0) return null;
 
     const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
     const values = fields.map(field => {
-      // Handle metadata serialization if needed
       if (field === 'metadata' && updateData[field] && typeof updateData[field] === 'object') {
         return JSON.stringify(updateData[field]);
       }
       return updateData[field];
     });
 
-    values.push(id); // Add ID as the last parameter
+    values.push(id);
 
     const query = `
       UPDATE payments 
@@ -153,7 +120,8 @@ class Payment {
       RETURNING *
     `;
 
-    const { rows } = await pool.query(query, values);
+    const executor = client || pool;
+    const { rows } = await executor.query(query, values);
     return rows[0];
   }
 }

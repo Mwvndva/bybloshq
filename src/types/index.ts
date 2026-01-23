@@ -24,6 +24,10 @@ export interface Seller {
   avatarUrl?: string;
   location?: string;
   city?: string;
+  physicalAddress?: string;
+  latitude?: number;
+  longitude?: number;
+  hasPhysicalShop?: boolean;
   website?: string;
   socialMedia?: {
     instagram?: string;

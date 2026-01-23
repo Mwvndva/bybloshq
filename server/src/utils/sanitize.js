@@ -59,7 +59,10 @@ export const sanitizeSeller = (seller) => {
         city: sellerObj.city,
         location: sellerObj.location,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
-        theme: sellerObj.theme
+        theme: sellerObj.theme,
+        physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
+        latitude: sellerObj.latitude,
+        longitude: sellerObj.longitude
         // Removed: createdAt, updatedAt, userId, totalSales, netRevenue, balance
         // Balance and revenue should come from analytics endpoint, not profile
     };
@@ -76,7 +79,10 @@ export const sanitizePublicSeller = (seller) => {
         city: sellerObj.city,
         location: sellerObj.location,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
-        theme: sellerObj.theme
+        theme: sellerObj.theme,
+        physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
+        latitude: sellerObj.latitude,
+        longitude: sellerObj.longitude
         // Removed: createdAt - no need to expose when shop was created
         // NO email, phone, balance, revenue, internal IDs
     };

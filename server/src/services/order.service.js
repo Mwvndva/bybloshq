@@ -1,447 +1,341 @@
-import Order from '../models/order.model.js';
+import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
-import { sendEmail } from '../utils/email.js';
-import NotificationService from './notification.service.js';
+import Fees from '../config/fees.js';
+import { OrderStatus, ProductType } from '../constants/enums.js';
+import Order from '../models/order.model.js';
 
 class OrderService {
-  constructor() {
-    this.notificationService = new NotificationService();
-  }
-
   /**
-   * Create a new order
-   * @param {Object} orderData - Order data
-   * @param {number} orderData.buyerId - ID of the buyer
-   * @param {number} orderData.sellerId - ID of the seller
-   * @param {string} orderData.paymentMethod - Payment method (mpesa, card, etc.)
-   * @param {string} orderData.buyerName - Name of the buyer
-   * @param {string} orderData.buyerEmail - Email of the buyer
-   * @param {string} orderData.buyerPhone - Phone number of the buyer
-   * @param {Object} orderData.shippingAddress - Shipping address
-   * @param {string} orderData.notes - Order notes
-   * @param {Array} orderData.items - Array of order items
-   * @returns {Promise<Object>} Created order
+   * Create a new order with fee calculations and status determination
    */
-  async createOrder(orderData) {
+  static async createOrder(orderData) {
+    const client = await pool.connect();
     try {
-      // Validate order items
-      if (!orderData.items || !Array.isArray(orderData.items) || orderData.items.length === 0) {
-        throw new Error('Order must contain at least one item');
+      const {
+        buyerId,
+        sellerId,
+        paymentMethod,
+        buyerName,
+        buyerEmail,
+        buyerPhone,
+        shippingAddress,
+        notes,
+        metadata = {}
+      } = orderData;
+
+      logger.info('OrderService: Starting order creation', { buyerId, sellerId });
+      await client.query('BEGIN');
+
+      // 1. Verify seller exists and is active
+      const sellerCheck = await client.query(
+        'SELECT id FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+        [sellerId, 'active']
+      );
+
+      if (sellerCheck.rows.length === 0) {
+        throw new Error(`Seller with ID ${sellerId} not found or inactive`);
       }
 
-      // Create order in database
-      const order = await Order.createOrder(orderData);
+      // 2. Process and validate order items
+      const items = metadata.items || [];
+      this._validateItems(items);
 
-      // Send order confirmation email
-      await this.sendOrderConfirmationEmail(order);
+      // 3. Calculate totals and fees
+      const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
+      logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
-      // Send notification to seller
-      await this.notificationService.sendNotification({
-        userId: order.sellerId,
-        type: 'new_order',
-        title: 'New Order Received',
-        message: `You have a new order #${order.order_number}`,
-        metadata: { orderId: order.id }
-      });
+      // 4. Determine initial status
+      const initialStatus = this._determineInitialStatus(items);
 
-      return order;
-    } catch (error) {
-      logger.error('Error creating order:', error);
-      throw error;
-    }
-  }
+      // 5. Prepare Order Record
+      const orderRecord = {
+        buyer_id: buyerId,
+        seller_id: sellerId,
+        total_amount: totalAmount,
+        platform_fee_amount: platformFee,
+        seller_payout_amount: sellerPayout,
+        payment_method: paymentMethod,
+        buyer_name: buyerName,
+        buyer_email: buyerEmail,
+        buyer_phone: buyerPhone,
+        shipping_address: shippingAddress ? JSON.stringify(shippingAddress) : null,
+        notes: notes,
+        metadata: JSON.stringify(metadata),
+        status: initialStatus,
+        payment_status: 'pending' // Default
+      };
 
-  /**
-   * Update order status
-   * @param {number} orderId - ID of the order
-   * @param {string} status - New status
-   * @param {string} [notes] - Optional notes
-   * @returns {Promise<Object>} Updated order
-   */
-  async updateOrderStatus(orderId, status, notes = null) {
-    try {
-      const order = await Order.updateOrderStatus(orderId, status, notes);
+      // 6. Insert Order (Using Model as DAO)
+      // We will create a new 'create' method in Order model that is pure INSERT
+      const order = await Order.insert(client, orderRecord);
 
-      // Send notification to buyer
-      await this.notificationService.sendNotification({
-        userId: order.buyerId,
-        type: 'order_status_update',
-        title: `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-        message: `Your order #${order.order_number} is now ${status}`,
-        metadata: { orderId: order.id, status }
-      });
-
-      return order;
-    } catch (error) {
-      logger.error(`Error updating order ${orderId} status:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Update payment status for an order
-   * @param {number} orderId - ID of the order
-   * @param {string} status - Payment status (pending, completed, failed, etc.)
-   * @param {string} [paymentReference] - Payment reference number
-   * @returns {Promise<Object>} Updated order
-   */
-  async updatePaymentStatus(orderId, status, paymentReference = null) {
-    try {
-      const order = await Order.updatePaymentStatus(orderId, status, paymentReference);
-
-      if (status === 'completed') {
-        // Send payment confirmation email
-        await this.sendPaymentConfirmationEmail(order);
-
-        // Send notification to buyer
-        await this.notificationService.sendNotification({
-          userId: order.buyerId,
-          type: 'payment_received',
-          title: 'Payment Received',
-          message: `Your payment for order #${order.order_number} has been received`,
-          metadata: { orderId: order.id }
-        });
+      // 7. Insert Order Items (Using Model as DAO)
+      if (items.length > 0) {
+        await Order.insertItems(client, order.id, items);
       }
 
+      await client.query('COMMIT');
+      logger.info(`OrderService: Order ${order.id} created successfully`);
       return order;
+
     } catch (error) {
-      logger.error(`Error updating payment status for order ${orderId}:`, error);
+      await client.query('ROLLBACK');
+      logger.error('OrderService: Error creating order:', error);
       throw error;
+    } finally {
+      client.release();
     }
   }
 
   /**
-   * Mark order as shipped
-   * @param {number} orderId - ID of the order
-   * @param {string} [trackingNumber] - Tracking number
-   * @returns {Promise<Object>} Updated order
+   * Update order status with transition validation
    */
-  async markAsShipped(orderId, trackingNumber = null) {
+  static async updateOrderStatus(orderId, userId, status) {
+    const client = await pool.connect();
     try {
-      const order = await Order.markAsShipped(orderId, trackingNumber);
+      await client.query('BEGIN');
 
-      // Send shipping confirmation email
-      await this.sendShippingConfirmationEmail(order);
+      // 1. Lock and Fetch Order
+      const lockResult = await client.query(
+        `SELECT id FROM product_orders WHERE id = $1 FOR UPDATE`,
+        [orderId]
+      );
+      if (lockResult.rows.length === 0) throw new Error('Order not found');
 
-      // Send notification to buyer
-      await this.notificationService.sendNotification({
-        userId: order.buyerId,
-        type: 'order_shipped',
-        title: 'Order Shipped',
-        message: `Your order #${order.order_number} has been shipped`,
-        metadata: {
-          orderId: order.id,
-          trackingNumber
-        }
-      });
+      const orderResult = await client.query(
+        `SELECT * FROM product_orders WHERE id = $1`,
+        [orderId]
+      );
+      const order = orderResult.rows[0];
 
-      return order;
+      // 2. Permission Check
+      if (order.seller_id !== userId) {
+        throw new Error('Unauthorized: You can only update your own orders');
+      }
+
+      // 3. Validate Status Transition
+      const validTransitions = {
+        [OrderStatus.PENDING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.CANCELLED],
+        [OrderStatus.DELIVERY_PENDING]: [OrderStatus.DELIVERY_COMPLETE, OrderStatus.CANCELLED],
+        [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+        [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.COMPLETED]: [],
+        [OrderStatus.CANCELLED]: [],
+        [OrderStatus.FAILED]: []
+      };
+
+      const currentStatus = order.status || OrderStatus.PENDING;
+      const newStatus = status;
+
+      if (!validTransitions[currentStatus]?.includes(newStatus)) {
+        throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
+      }
+
+      // 4. Determine side-effects (payment status updates)
+      let paymentStatus = order.payment_status;
+      if (newStatus === OrderStatus.COMPLETED && order.payment_status === 'pending') {
+        paymentStatus = 'completed';
+      } else if (newStatus === OrderStatus.CANCELLED && order.payment_status === 'pending') {
+        paymentStatus = 'cancelled';
+      }
+
+      // 5. Update Order
+      const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, paymentStatus);
+
+      await client.query('COMMIT');
+      return updatedOrder;
+
     } catch (error) {
-      logger.error(`Error marking order ${orderId} as shipped:`, error);
+      await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
     }
   }
 
   /**
-   * Mark order as delivered
-   * @param {number} orderId - ID of the order
-   * @returns {Promise<Object>} Updated order
+   * Cancel an order and handle inventory restoration and buyer refund tracking
    */
-  async markAsDelivered(orderId) {
+  static async cancelOrder(orderId, reason = null) {
+    const client = await pool.connect();
     try {
-      const order = await Order.markAsDelivered(orderId);
+      await client.query('BEGIN');
 
-      // Send delivery confirmation email
-      await this.sendDeliveryConfirmationEmail(order);
+      // 1. Fetch Order
+      const orderQuery = 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE';
+      const orderResult = await client.query(orderQuery, [orderId]);
 
-      // Send notification to buyer and seller
-      await Promise.all([
-        // Buyer notification
-        this.notificationService.sendNotification({
-          userId: order.buyerId,
-          type: 'order_delivered',
-          title: 'Order Delivered',
-          message: `Your order #${order.order_number} has been delivered`,
-          metadata: { orderId: order.id }
-        }),
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
 
-        // Seller notification
-        this.notificationService.sendNotification({
-          userId: order.sellerId,
-          type: 'order_delivered_seller',
-          title: 'Order Delivered',
-          message: `Order #${order.order_number} has been delivered to the customer`,
-          metadata: { orderId: order.id }
-        })
-      ]);
+      // 2. Validate Status
+      if (order.status === OrderStatus.COMPLETED) throw new Error('Cannot cancel a completed order');
+      if (order.status === OrderStatus.CANCELLED) throw new Error('Order is already cancelled');
 
-      return order;
+      // 3. Update Status
+      const updatedOrder = await Order.updateStatusWithReason(client, orderId, OrderStatus.CANCELLED, reason);
+
+      if (updatedOrder) {
+        // 4. Restore Inventory
+        await this._restoreInventory(client, orderId);
+
+        // 5. Update Buyer Refunds (Track cumulative refunds)
+        const refundAmount = parseFloat(order.total_amount);
+        await client.query(
+          `UPDATE buyers 
+           SET refunds = COALESCE(refunds, 0) + $1,
+               updated_at = NOW()
+           WHERE id = $2`,
+          [refundAmount, order.buyer_id]
+        );
+      }
+
+      await client.query('COMMIT');
+      return updatedOrder;
     } catch (error) {
-      logger.error(`Error marking order ${orderId} as delivered:`, error);
+      await client.query('ROLLBACK');
       throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  // --- Private Helpers ---
+
+  static _validateItems(items) {
+    items.forEach((item, index) => {
+      if (typeof item.price !== 'number' || isNaN(item.price) || item.price <= 0) {
+        throw new Error(`Invalid price for item at index ${index}`);
+      }
+      if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity <= 0) {
+        throw new Error(`Invalid quantity for item ${item.productId}`);
+      }
+    });
+  }
+
+  static _calculateTotals(items) {
+    const totalAmount = items.reduce((sum, item) => {
+      const subtotal = item.subtotal || (item.price * item.quantity);
+      return sum + subtotal;
+    }, 0);
+
+    const platformFee = parseFloat((totalAmount * Fees.PLATFORM_COMMISSION_RATE).toFixed(2));
+    const sellerPayout = parseFloat((totalAmount - platformFee).toFixed(2));
+
+    return { totalAmount, platformFee, sellerPayout };
+  }
+
+  static _determineInitialStatus(items) {
+    let initialStatus = OrderStatus.PENDING;
+
+    const hasPhysical = items.some(item => item.productType === ProductType.PHYSICAL || (!item.productType && !item.isDigital));
+    const hasService = items.some(item => item.productType === ProductType.SERVICE);
+    const isServiceOnly = hasService && !hasPhysical;
+
+    if (isServiceOnly) {
+      initialStatus = OrderStatus.SERVICE_PENDING;
+    }
+    return initialStatus;
+  }
+
+  static async _restoreInventory(client, orderId) {
+    const itemsQuery = 'SELECT product_id, quantity FROM order_items WHERE order_id = $1';
+    const itemsResult = await client.query(itemsQuery, [orderId]);
+
+    for (const item of itemsResult.rows) {
+      await client.query(
+        'UPDATE products SET quantity = quantity + $1 WHERE id = $2',
+        [item.quantity, item.product_id]
+      );
     }
   }
 
   /**
-   * Cancel an order
-   * @param {number} orderId - ID of the order
-   * @param {string} [reason] - Reason for cancellation
-   * @returns {Promise<Object>} Cancelled order
+   * Complete an order after successful payment
    */
-  async cancelOrder(orderId, reason = null) {
+  static async completeOrder(payment) {
+    const client = await pool.connect();
     try {
-      const order = await Order.cancelOrder(orderId, reason);
+      const { metadata = {} } = payment;
+      const orderId = metadata.order_id;
 
-      // Send cancellation email
-      await this.sendCancellationEmail(order, reason);
+      if (!orderId) throw new Error('No order_id found in payment metadata');
 
-      // Send notification to buyer and seller
-      await Promise.all([
-        // Buyer notification
-        this.notificationService.sendNotification({
-          userId: order.buyerId,
-          type: 'order_cancelled',
-          title: 'Order Cancelled',
-          message: `Your order #${order.order_number} has been cancelled`,
-          metadata: {
-            orderId: order.id,
-            reason: reason || 'No reason provided'
-          }
-        }),
+      await client.query('BEGIN');
 
-        // Seller notification
-        this.notificationService.sendNotification({
-          userId: order.sellerId,
-          type: 'order_cancelled_seller',
-          title: 'Order Cancelled',
-          message: `Order #${order.order_number} has been cancelled`,
-          metadata: {
-            orderId: order.id,
-            reason: reason || 'No reason provided'
-          }
-        })
-      ]);
+      // 1. Fetch Order
+      const orderResult = await client.query(
+        'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE',
+        [orderId]
+      );
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
 
-      return order;
-    } catch (error) {
-      logger.error(`Error cancelling order ${orderId}:`, error);
-      throw error;
-    }
-  }
+      // 2. Idempotency Check
+      if (order.status === OrderStatus.COMPLETED && order.payment_status === 'completed') {
+        await client.query('ROLLBACK');
+        return { success: true, message: 'Order already completed' };
+      }
 
-  /**
-   * Get order by ID
-   * @param {number} orderId - ID of the order
-   * @returns {Promise<Object>} Order details
-   */
-  async getOrderById(orderId) {
-    try {
-      return await Order.findById(orderId);
-    } catch (error) {
-      logger.error(`Error getting order ${orderId}:`, error);
-      throw error;
-    }
-  }
+      // 3. Mark as Paid & Completed
+      // Logic from PaymentCompletionService: 
+      // Physical -> DELIVERY_PENDING (usually, or just COMPLETED for simplicity if no shipping logic yet?)
+      // Service -> CONFIRMED
+      // Digital -> COMPLETED
+      // The original code checked items. Let's replicate that logic smarty.
 
-  /**
-   * Get order by reference
-   * @param {string} reference - Order number or payment reference
-   * @returns {Promise<Object>} Order details
-   */
-  async getOrderByReference(reference) {
-    try {
-      return await Order.findByReference(reference);
-    } catch (error) {
-      logger.error(`Error getting order by reference ${reference}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get orders for a buyer
-   * @param {number} buyerId - ID of the buyer
-   * @param {Object} [options] - Pagination and filtering options
-   * @param {number} [options.page=1] - Page number
-   * @param {number} [options.limit=10] - Items per page
-   * @param {string} [options.status] - Filter by status
-   * @returns {Promise<Object>} Paginated orders
-   */
-  async getBuyerOrders(buyerId, options = {}) {
-    try {
-      return await Order.findByBuyerId(buyerId, options);
-    } catch (error) {
-      logger.error(`Error getting orders for buyer ${buyerId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get orders for a seller
-   * @param {number} sellerId - ID of the seller
-   * @param {Object} [options] - Pagination and filtering options
-   * @param {number} [options.page=1] - Page number
-   * @param {number} [options.limit=10] - Items per page
-   * @param {string} [options.status] - Filter by status
-   * @returns {Promise<Object>} Paginated orders
-   */
-  async getSellerOrders(sellerId, options = {}) {
-    try {
-      return await Order.findBySellerId(sellerId, options);
-    } catch (error) {
-      logger.error(`Error getting orders for seller ${sellerId}:`, error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get order statistics
-   * @param {number} [sellerId] - Optional seller ID to filter by
-   * @returns {Promise<Object>} Order statistics
-   */
-  async getOrderStats(sellerId = null) {
-    try {
-      return await Order.getOrderStats(sellerId);
-    } catch (error) {
-      logger.error('Error getting order stats:', error);
-      throw error;
-    }
-  }
-
-  // Email templates and sending methods
-
-  /**
-   * Send order confirmation email
-   * @private
-   * @param {Object} order - Order details
-   */
-  async sendOrderConfirmationEmail(order) {
-    try {
-      const subject = `Order Confirmation - #${order.order_number}`;
-      const html = `
-        <h1>Thank you for your order!</h1>
-        <p>Your order #${order.order_number} has been received and is being processed.</p>
-        <h2>Order Summary</h2>
-        <p>Total Amount: KES ${order.total_amount}</p>
-        <p>Payment Method: ${order.payment_method}</p>
-        <p>Status: ${order.status}</p>
+      const itemsQuery = `
+        SELECT oi.*, p.product_type::text as product_type, p.is_digital
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1
       `;
+      const itemsResult = await client.query(itemsQuery, [orderId]);
+      const items = itemsResult.rows;
 
-      await sendEmail({
-        to: order.buyer_email,
-        subject,
-        html
-      });
+      let hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL);
+      let hasService = items.some(i => i.product_type === ProductType.SERVICE);
+      // Fallback logic for metadata if product/type missing
+      if (!items.length && metadata.product_type) {
+        if (metadata.product_type === ProductType.PHYSICAL) hasPhysical = true;
+        if (metadata.product_type === ProductType.SERVICE) hasService = true;
+      }
+
+      let newStatus = OrderStatus.COMPLETED;
+      if (hasPhysical) newStatus = OrderStatus.DELIVERY_PENDING;
+      if (hasService && !hasPhysical) newStatus = OrderStatus.CONFIRMED;
+
+      await this.updateStatusWithSideEffects(client, orderId, newStatus, 'completed');
+
+      // 4. Update Payment Metadata
+      await client.query(
+        `UPDATE payments 
+         SET metadata = jsonb_set(
+           COALESCE(metadata, '{}'::jsonb), 
+           '{order_completed_at}', 
+           to_jsonb(NOW())
+         )
+         WHERE id = $1`,
+        [payment.id]
+      );
+
+      await client.query('COMMIT');
+
+      // TODO: Trigger Notifications (WhatsApp/Email) here or return instruction to do so.
+      // OrderService shouldn't directly depend on WhatsAppService if possible to avoid circular dep if WhatsApp uses Order?
+      // But WhatsAppService assumes Order.
+      // For now, return the updated order and let PaymentService trigger notifications.
+
+      return { success: true, orderId, newStatus };
+
     } catch (error) {
-      logger.error('Error sending order confirmation email:', error);
-      // Don't throw error, just log it
-    }
-  }
-
-  /**
-   * Send payment confirmation email
-   * @private
-   * @param {Object} order - Order details
-   */
-  async sendPaymentConfirmationEmail(order) {
-    try {
-      const subject = `Payment Received - Order #${order.order_number}`;
-      const html = `
-        <h1>Payment Received</h1>
-        <p>We've received your payment for order #${order.order_number}.</p>
-        <h2>Payment Details</h2>
-        <p>Amount: KES ${order.total_amount}</p>
-        <p>Payment Method: ${order.payment_method}</p>
-        <p>Transaction ID: ${order.payment_reference || 'N/A'}</p>
-      `;
-
-      await sendEmail({
-        to: order.buyer_email,
-        subject,
-        html
-      });
-    } catch (error) {
-      logger.error('Error sending payment confirmation email:', error);
-    }
-  }
-
-  /**
-   * Send shipping confirmation email
-   * @private
-   * @param {Object} order - Order details
-   */
-  async sendShippingConfirmationEmail(order) {
-    try {
-      const trackingNumber = order.metadata?.tracking?.number || 'Not available';
-      const subject = `Your Order Has Shipped - #${order.order_number}`;
-      const html = `
-        <h1>Your Order is on the Way!</h1>
-        <p>Your order #${order.order_number} has been shipped.</p>
-        ${trackingNumber !== 'Not available' ?
-          `<p>Tracking Number: ${trackingNumber}</p>` : ''}
-        <p>Expected Delivery: Within 3-5 business days</p>
-      `;
-
-      await sendEmail({
-        to: order.buyer_email,
-        subject,
-        html
-      });
-    } catch (error) {
-      logger.error('Error sending shipping confirmation email:', error);
-    }
-  }
-
-  /**
-   * Send delivery confirmation email
-   * @private
-   * @param {Object} order - Order details
-   */
-  async sendDeliveryConfirmationEmail(order) {
-    try {
-      const subject = `Your Order Has Been Delivered - #${order.order_number}`;
-      const html = `
-        <h1>Your Order Has Been Delivered!</h1>
-        <p>Your order #${order.order_number} has been successfully delivered.</p>
-        <p>We hope you're enjoying your purchase!</p>
-        <p>If you have any questions about your order, please contact our support team.</p>
-      `;
-
-      await sendEmail({
-        to: order.buyer_email,
-        subject,
-        html
-      });
-    } catch (error) {
-      logger.error('Error sending delivery confirmation email:', error);
-    }
-  }
-
-  /**
-   * Send order cancellation email
-   * @private
-   * @param {Object} order - Order details
-   * @param {string} reason - Reason for cancellation
-   */
-  async sendCancellationEmail(order, reason = 'No reason provided') {
-    try {
-      const subject = `Order #${order.order_number} Has Been Cancelled`;
-      const html = `
-        <h1>Order Cancelled</h1>
-        <p>Your order #${order.order_number} has been cancelled.</p>
-        <p>Reason: ${reason}</p>
-        ${order.status === 'cancelled' && order.payment_status === 'completed' ?
-          `<p>Your refund will be processed within 5-7 business days.</p>` : ''}
-      `;
-
-      await sendEmail({
-        to: order.buyer_email,
-        subject,
-        html
-      });
-    } catch (error) {
-      logger.error('Error sending cancellation email:', error);
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
   }
 }
 
-export default new OrderService();
+export default OrderService;

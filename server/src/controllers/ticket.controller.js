@@ -1,5 +1,6 @@
 import { AppError } from '../utils/errorHandler.js';
 import TicketRepository from '../repositories/ticket.repository.js';
+import TicketService from '../services/ticket.service.js';
 import logger from '../utils/logger.js';
 
 export default class TicketController {
@@ -12,58 +13,28 @@ export default class TicketController {
   static async validateTicket(req, res, next) {
     try {
       const { ticketNumber } = req.params;
+      const { force } = req.query; // Check if user forcing rescan? Logic in Service supports force.
 
-      if (!ticketNumber) {
-        return res.status(400).json({
-          success: false,
-          message: 'Ticket number is required'
-        });
+      const result = await TicketService.validateTicket(ticketNumber, force === 'true');
+
+      if (!result) {
+        return res.status(404).json({ valid: false, status: 'not_found', message: 'Ticket not found' });
       }
 
-      // Find the ticket by ticket number
-      const ticket = await TicketRepository.findByTicketNumber(ticketNumber);
-
-      if (!ticket) {
-        return res.status(404).json({
-          valid: false,
-          status: 'not_found',
-          message: 'Ticket not found'
-        });
-      }
-
-      // Check if ticket is already scanned
-      if (ticket.scanned) {
+      if (result.status === 'already_scanned') {
         return res.status(200).json({
           valid: false,
           status: 'already_scanned',
           message: 'This ticket has already been scanned',
-          ticket: {
-            id: ticket.id,
-            ticketNumber: ticket.ticket_number,
-            eventName: ticket.event_name,
-            customerName: ticket.customer_name,
-            scanned: true,
-            scannedAt: ticket.scanned_at
-          }
+          ticket: result.ticket
         });
       }
 
-      // Mark ticket as scanned
-      const updatedTicket = await TicketRepository.markAsScanned(ticket.id);
-
-      // Return success response
       return res.status(200).json({
         valid: true,
         status: 'valid',
         message: 'Ticket is valid',
-        ticket: {
-          id: updatedTicket.id,
-          ticketNumber: updatedTicket.ticket_number,
-          eventName: ticket.event_name,
-          customerName: updatedTicket.customer_name,
-          scanned: updatedTicket.scanned,
-          scannedAt: updatedTicket.scanned_at
-        }
+        ticket: result.ticket
       });
 
     } catch (error) {
