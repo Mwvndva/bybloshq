@@ -12,7 +12,7 @@ class ImageService {
         // Images will be stored in /uploads/images/ at project root
         // This matches the static file serving in index.js: app.use('/uploads', express.static(uploadsDir))
         // where uploadsDir = process.cwd() + '/uploads'
-        this.uploadDir = path.join(process.cwd(), 'server', 'uploads', 'images');
+        this.uploadDir = path.join(process.cwd(), 'uploads', 'images');
         this.baseUrl = process.env.BACKEND_URL || 'https://bybloshq.space';
 
         // Ensure upload directory exists
