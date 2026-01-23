@@ -52,6 +52,13 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
         email: product.seller.email || '',
         phone: product.seller.phone || '',
         location: product.seller.location || null,
+        city: product.seller.city || null,
+        // New physical shop fields
+        hasPhysicalShop: product.seller.hasPhysicalShop || false,
+        physicalAddress: product.seller.physicalAddress || null,
+        latitude: product.seller.latitude || null,
+        longitude: product.seller.longitude || null,
+
         createdAt: product.seller.createdAt || product.seller.created_at || new Date().toISOString(),
         updatedAt: product.seller.updatedAt || product.seller.updated_at,
         ...(product.seller.bio && { bio: product.seller.bio }),

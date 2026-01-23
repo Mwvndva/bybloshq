@@ -16,15 +16,14 @@ const toCamelCase = (obj) => {
 
 class Buyer {
   // Create a new buyer
+  // Create a new buyer
   static async create({ fullName, email, phone, password, city, location }) {
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const query = `
       INSERT INTO buyers (full_name, email, phone, password, city, location, created_at, updated_at)
       VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
       RETURNING *
     `;
-
     const values = [fullName, email, phone, hashedPassword, city, location];
     const result = await pool.query(query, values);
     return toCamelCase(result.rows[0]);
@@ -65,16 +64,16 @@ class Buyer {
   // Find buyer by phone number (checks multiple formats)
   static async findByPhone(phone) {
     if (!phone) return null;
-    
+
     // Generate all possible phone formats to check
     let normalized = phone.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
-    
+
     // Create variations to search for
     const phoneVariations = [];
-    
+
     // Add the phone as-is
     phoneVariations.push(normalized);
-    
+
     // If starts with +254, add variations
     if (normalized.startsWith('+254')) {
       phoneVariations.push(normalized.substring(1)); // Remove +
@@ -96,20 +95,20 @@ class Buyer {
       phoneVariations.push('+254' + normalized); // 712... -> +254712...
       phoneVariations.push('254' + normalized); // 712... -> 254712...
     }
-    
+
     // Remove duplicates
     const uniqueVariations = [...new Set(phoneVariations)];
-    
+
     console.log('Searching for phone variations:', uniqueVariations);
-    
+
     // Search for any of these variations
     const query = `SELECT * FROM buyers WHERE phone = ANY($1)`;
     const result = await pool.query(query, [uniqueVariations]);
-    
+
     if (result.rows.length > 0) {
       console.log('Found buyer with phone:', result.rows[0].phone);
     }
-    
+
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
@@ -140,7 +139,7 @@ class Buyer {
     for (const [key, value] of Object.entries(updateData)) {
       // Skip password updates here - handle separately with updatePassword
       if (key === 'password') continue;
-      
+
       // Convert camelCase to snake_case for database columns
       const dbField = fieldMap[key] || key;
       fields.push(`${dbField} = $${paramIndex}`);
@@ -150,7 +149,7 @@ class Buyer {
 
     // Add updated_at
     fields.push('updated_at = NOW()');
-    
+
     if (fields.length === 0) {
       throw new Error('No valid fields to update');
     }
@@ -161,120 +160,14 @@ class Buyer {
       WHERE id = $${paramIndex}
       RETURNING *
     `;
-    
+
     values.push(id);
     const result = await pool.query(query, values);
     return result.rows.length ? toCamelCase(result.rows[0]) : null;
   }
 
-  // Update password
-  static async updatePassword(id, newPassword) {
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    const query = `
-      UPDATE buyers 
-      SET password = $1, 
-          password_changed_at = NOW(),
-          updated_at = NOW()
-      WHERE id = $2
-      RETURNING *
-    `;
-    
-    const result = await pool.query(query, [hashedPassword, id]);
-    return result.rows.length ? toCamelCase(result.rows[0]) : null;
-  }
+  // Auth methods removed
 
-  // Check if password was changed after JWT was issued
-  changedPasswordAfter(JWTTimestamp) {
-    if (this.passwordChangedAt) {
-      const changedTimestamp = parseInt(
-        new Date(this.passwordChangedAt).getTime() / 1000,
-        10
-      );
-      return JWTTimestamp < changedTimestamp;
-    }
-    // False means NOT changed
-    return false;
-  }
-
-  // Set password reset token
-  static async setPasswordResetToken(email) {
-    const { resetToken, hashedToken, resetPasswordExpires } = this.createPasswordResetToken();
-    
-    const query = `
-      UPDATE buyers 
-      SET reset_password_token = $1, 
-          reset_password_expires = $2,
-          updated_at = NOW()
-      WHERE email = $3
-      RETURNING *
-    `;
-    
-    const result = await pool.query(query, [hashedToken, resetPasswordExpires, email]);
-    
-    if (!result.rows.length) {
-      throw new Error('No buyer found with that email');
-    }
-    
-    return {
-      resetToken,
-      buyer: toCamelCase(result.rows[0])
-    };
-  }
-
-  // Create password reset token
-  static createPasswordResetToken() {
-    const resetToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(resetToken)
-      .digest('hex');
-      
-    const resetPasswordExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-    
-    return { resetToken, hashedToken, resetPasswordExpires };
-  }
-
-  // Reset password with token
-  static async resetPassword(token, newPassword) {
-    const hashedToken = crypto
-      .createHash('sha256')
-      .update(token)
-      .digest('hex');
-    
-    // Check if token is valid and not expired
-    const checkQuery = `
-      SELECT * FROM buyers 
-      WHERE reset_password_token = $1 
-      AND reset_password_expires > NOW()
-    `;
-    
-    const checkResult = await pool.query(checkQuery, [hashedToken]);
-    
-    if (!checkResult.rows.length) {
-      throw new Error('Invalid or expired token');
-    }
-    
-    // Update password and clear reset token
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    
-    const updateQuery = `
-      UPDATE buyers 
-      SET password = $1,
-          reset_password_token = NULL,
-          reset_password_expires = NULL,
-          updated_at = NOW()
-      WHERE reset_password_token = $2
-      RETURNING *
-    `;
-    
-    const result = await pool.query(updateQuery, [hashedPassword, hashedToken]);
-    return toCamelCase(result.rows[0]);
-  }
-
-  // Validate password
-  static async validatePassword(candidatePassword, hashedPassword) {
-    return await bcrypt.compare(candidatePassword, hashedPassword);
-  }
 }
 
 export default Buyer;

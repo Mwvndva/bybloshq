@@ -5,6 +5,10 @@ export const getProducts = async (req, res) => {
   try {
     const { aesthetic, city, location } = req.query;
 
+    // TODO: move filtering logic to ProductModel later when it expands
+    // For now we use the raw query builder style if filters exist, or the model for simple fetch
+    // Actually, let's keep the controller logic but UPDATE query to include location fields
+
     let query = `
       SELECT p.*,
              p.is_digital as "isDigital",
@@ -15,6 +19,9 @@ export const getProducts = async (req, res) => {
              s.email as seller_email,
              s.city as seller_city,
              s.location as seller_location,
+             s.physical_address as physical_address,
+             s.latitude as latitude,
+             s.longitude as longitude,
              s.avatar_url as seller_avatar_url,
              s.bio as seller_bio,
              s.shop_name as seller_shop_name,
@@ -65,6 +72,10 @@ export const getProducts = async (req, res) => {
           phone: row.seller_phone,
           location: row.seller_location,
           city: row.seller_city,
+          physicalAddress: row.physical_address,
+          latitude: row.latitude,
+          longitude: row.longitude,
+          hasPhysicalShop: !!row.physical_address,
           avatarUrl: row.seller_avatar_url,
           avatar_url: row.seller_avatar_url,
           bio: row.seller_bio,
@@ -84,6 +95,9 @@ export const getProducts = async (req, res) => {
       delete product.seller_email;
       delete product.seller_city;
       delete product.seller_location;
+      delete product.physical_address;
+      delete product.latitude;
+      delete product.longitude;
       delete product.seller_avatar_url;
       delete product.seller_bio;
       delete product.seller_shop_name;

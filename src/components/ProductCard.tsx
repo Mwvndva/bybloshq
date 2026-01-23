@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart, ExternalLink } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -555,6 +556,57 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         )}>
           <Store className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
           <span className={cn("mobile-text font-medium truncate flex-1", themeClasses.seller)}>{displaySellerName}</span>
+          {displaySeller?.hasPhysicalShop && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className={`h-6 px-2 text-[10px] font-medium gap-1 ${theme === 'black'
+                        ? 'bg-green-900/30 text-green-400 border-green-800/50 hover:bg-green-900/50'
+                        : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                      } border transition-colors`}
+                  >
+                    <Store className="w-3 h-3" />
+                    Visit Shop
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-0 shadow-xl border-green-100 overflow-hidden z-50">
+                  <div className="bg-green-50/50 p-3 border-b border-green-100">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="bg-green-100 p-1.5 rounded-full">
+                        <MapPin className="w-4 h-4 text-green-700" />
+                      </div>
+                      <span className="font-semibold text-green-900 text-sm">Physical Store</span>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-white space-y-3">
+                    <div className="text-sm text-gray-600 leading-relaxed">
+                      {displaySeller.physicalAddress}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 text-xs h-8"
+                      onClick={() => {
+                        // Open Google Maps
+                        const query = encodeURIComponent(displaySeller.physicalAddress || '');
+                        if (displaySeller.latitude && displaySeller.longitude) {
+                          window.open(`https://www.google.com/maps/search/?api=1&query=${displaySeller.latitude},${displaySeller.longitude}`, '_blank');
+                        } else {
+                          window.open(`https://www.google.com/maps/search/?api=1&query=${query}`, '_blank');
+                        }
+                      }}
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      Get Directions
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
         </div>
 
         {/* Buy Button */}

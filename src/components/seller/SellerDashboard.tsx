@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { PLATFORM_FEE_RATE } from '@/lib/constants';
 import { formatCurrency, decodeJwt, isTokenExpired } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +40,7 @@ import { useSellerAuth } from '@/contexts/SellerAuthContext';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
 import SellerOrdersSection from './SellerOrdersSection';
+import ShopLocationPicker from './ShopLocationPicker';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
@@ -55,6 +57,9 @@ interface SellerProfile {
   phone?: string;
   city?: string;
   location?: string;
+  physicalAddress?: string;
+  latitude?: number;
+  longitude?: number;
   bannerImage?: string;
   theme?: Theme;
 }
@@ -173,9 +178,18 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    city: string;
+    location: string;
+    physicalAddress: string;
+    latitude: number | null;
+    longitude: number | null;
+  }>({
     city: '',
-    location: ''
+    location: '',
+    physicalAddress: '',
+    latitude: null,
+    longitude: null
   });
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -227,6 +241,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     setFormData(prev => ({
       ...prev,
       location: e.target.value
+    }));
+  }, []);
+
+  const handleShopLocationChange = useCallback((address: string, coordinates: { lat: number; lng: number } | null) => {
+    setFormData(prev => ({
+      ...prev,
+      physicalAddress: address,
+      latitude: coordinates?.lat || null,
+      longitude: coordinates?.lng || null
     }));
   }, []);
 
@@ -346,7 +369,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       if (!prev) {
         setFormData({
           city: sellerProfile?.city || '',
-          location: sellerProfile?.location || ''
+          location: sellerProfile?.location || '',
+          physicalAddress: sellerProfile?.physicalAddress || '',
+          latitude: sellerProfile?.latitude || null,
+          longitude: sellerProfile?.longitude || null
         });
       }
       return !prev;
@@ -366,10 +392,18 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     setIsSaving(true);
 
     try {
-      const updatedProfile = await sellerApi.updateProfile({
+      const payload: any = {
         city: formData.city,
-        location: formData.location
-      });
+        location: formData.location,
+        physicalAddress: formData.physicalAddress
+      };
+
+      if (formData.latitude && formData.longitude) {
+        payload.latitude = formData.latitude;
+        payload.longitude = formData.longitude;
+      }
+
+      await sellerApi.updateProfile(payload);
 
       // Profile will be automatically updated by SellerAuthContext
       setIsEditing(false);
@@ -603,7 +637,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           const transformedData: AnalyticsData = {
             ...analyticsData,
             totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
-            totalPayout: analyticsData.totalRevenue * 0.97, // Calculate payout as 97% of revenue (3% platform fee)
+            totalPayout: analyticsData.totalRevenue * (1 - PLATFORM_FEE_RATE), // Calculate payout using constant
             recentOrders: [] // Initialize as empty array since we don't have this data
           };
           setAnalytics(transformedData);
@@ -775,8 +809,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       title: 'Net',
       value: (() => {
         const totalSales = parseFloat((((analytics as any)?.totalSales ?? 0)).toFixed(2));
-        const platformFeeRate = 0.03; // 3%
-        const platformFee = parseFloat((totalSales * platformFeeRate).toFixed(2));
+        const platformFee = parseFloat((totalSales * PLATFORM_FEE_RATE).toFixed(2));
         const netSales = parseFloat((totalSales - platformFee).toFixed(2));
 
         console.log('Net Sales Calculation:', {
@@ -802,7 +835,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           maximumFractionDigits: 2
         }).format(netSales);
       })(),
-      subtitle: 'After 3%',
+      subtitle: 'After 1%',
       iconColor: 'text-white',
       bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
       textColor: 'text-black'
@@ -1512,6 +1545,39 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         </p>
                       )}
                     </div>
+                  </div>
+
+                  {/* Physical Shop Address */}
+                  <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl lg:rounded-2xl border border-gray-200">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Physical Shop Address</p>
+                    {isEditing ? (
+                      <div className="mt-2">
+                        <ShopLocationPicker
+                          initialAddress={formData.physicalAddress}
+                          initialCoordinates={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
+                          onLocationChange={handleShopLocationChange}
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {sellerProfile?.physicalAddress ? (
+                          <>
+                            <p className="text-xs sm:text-sm lg:text-base font-semibold text-black">
+                              {sellerProfile.physicalAddress}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {sellerProfile.latitude && sellerProfile.longitude ?
+                                `Coordinates: ${sellerProfile.latitude.toFixed(6)}, ${sellerProfile.longitude.toFixed(6)}` :
+                                'No map location pinned'}
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 italic">
+                            No physical address set
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

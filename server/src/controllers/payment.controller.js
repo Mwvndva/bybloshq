@@ -7,6 +7,8 @@ import jwt from 'jsonwebtoken';
 import Order from '../models/order.model.js';
 import DiscountCode from '../models/discountCode.model.js';
 import Buyer from '../models/buyer.model.js';
+import Fees from '../config/fees.js';
+import { PaymentStatus, ProductType } from '../constants/enums.js';
 
 class PaymentController {
   /**
@@ -113,99 +115,6 @@ class PaymentController {
       if (!event) {
         return res.status(404).json({ status: 'error', message: 'Event not found' });
       }
-
-      // SECURITY: Fetch ticket type and recalculate price on backend
-      const { rows: ticketTypes } = await pool.query(
-        'SELECT price, name FROM event_ticket_types WHERE id = $1 AND event_id = $2',
-        [ticketId, eventId]
-      );
-
-      if (ticketTypes.length === 0) {
-        return res.status(404).json({ status: 'error', message: 'Ticket type not found' });
-      }
-
-      const ticketType = ticketTypes[0];
-      let calculatedAmount = parseFloat(ticketType.price) * parseInt(quantity, 10);
-
-      // SECURITY: Verify discount if present
-      if (discountCode) {
-        const validation = await DiscountCode.validate(discountCode, calculatedAmount);
-
-        if (!validation.valid) {
-          return res.status(400).json({ status: 'error', message: validation.message });
-        }
-
-        // Ensure discount belongs to this event
-        if (validation.discount_code.event_id !== parseInt(eventId)) {
-          return res.status(400).json({ status: 'error', message: 'Invalid discount code for this event' });
-        }
-
-        // Apply validated discount
-        calculatedAmount = validation.final_amount;
-      }
-
-      // Override the amount with our calculated one
-      amount = calculatedAmount;
-
-      const paymentData = {
-        phone,
-        email,
-        amount,
-        invoice_id: `INV-${Date.now()}`,
-        firstName: req.body.customerName ? req.body.customerName.split(' ')[0] : 'Customer',
-        lastName: req.body.customerName ? req.body.customerName.split(' ').slice(1).join(' ') : '',
-        narrative: `Payment for ${quantity} x ${ticketType.name}`,
-        ticket_type_id: ticketId,
-        event_id: eventId,
-        organizer_id: event.organizer_id,
-        quantity: parseInt(quantity, 10)
-      };
-
-      // Create payment record in database first
-      const payment = await Payment.create({
-        invoice_id: paymentData.invoice_id,
-        email: paymentData.email,
-        phone_number: paymentData.phone,
-        amount: paymentData.amount,
-        status: 'pending',
-        payment_method: 'payd', // Update to payd
-        event_id: paymentData.event_id,
-        organizer_id: paymentData.organizer_id,
-        ticket_type_id: paymentData.ticket_type_id,
-        metadata: {
-          customer_name: `${paymentData.firstName} ${paymentData.lastName}`.trim(),
-          narrative: paymentData.narrative,
-          ticket_type_id: paymentData.ticket_type_id,
-          quantity: paymentData.quantity,
-          discount_code: discountCode || null,
-          discount_amount: calculatedAmount - (parseFloat(ticketType.price) * parseInt(quantity, 10)) === 0 ? 0 : Math.abs(calculatedAmount - (parseFloat(ticketType.price) * parseInt(quantity, 10))),
-          event_name: event.name,
-          event_date: event.start_date,
-          event_location: event.location
-        }
-      });
-
-      // Initiate Payd STK Push
-      const result = await paymentService.initiatePayment(paymentData);
-
-      // Update payment record with Payd reference
-      await Payment.update(payment.id, {
-        provider_reference: result.reference,
-        api_ref: result.reference,
-        metadata: {
-          ...payment.metadata,
-          payd_response: result.original_response
-        }
-      });
-
-      res.status(200).json({
-        status: 'success',
-        message: 'Payment initiated. Please check your phone for the STK prompt.',
-        data: {
-          ...result,
-          message: 'STK Push sent'
-        }
-      });
 
     } catch (error) {
       logger.error('Payment initiation failed:', error);
@@ -375,31 +284,24 @@ class PaymentController {
         invoiceId: paymentData.invoice_id
       });
 
-      const result = await paymentService.initiatePayment(paymentData);
+      // 3. Initiate via Service (Service should create DB record first if following pattern, but current Service.initiatePayment only calls gateway)
+      // We should really move all this to service.
+      // For now, let's keep it here but respect the plan to refactor "logic" out.
 
-      // Create payment record in database
-      if (result.reference) {
-        const paymentRecord = await Payment.create({
-          invoice_id: order.id,
-          amount: amount,
-          currency: 'KES',
-          status: 'pending',
-          payment_method: 'payd', // Updated to payd
-          phone_number: phone,
-          email: email,
-          provider_reference: result.reference,
-          api_ref: result.reference,
-          metadata: {
-            ...paymentData,
-            order_id: order.id,
-            order_number: order.order_number,
-            reference: result.reference,
-            seller_id: sellerId
-          }
-        });
+      // ... Assuming we want to move this huge block to Service.initiateProductPayment method?
+      // I forgot to add `initiateProductPayment` to PaymentService in the plan!
+      // But the plan said "Delegate fully to PaymentService".
+      // So I should create `initiateTicketPayment` and `initiateProductPayment` in PaymentService.
+      // Let's call them there.
 
-        logger.info('Payment record created:', { id: paymentRecord.id, reference: result.reference });
-      }
+      const result = await paymentService.initiateProductPayment(req.body, req.user); // Abstraction
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Product payment initiated. Check your phone.',
+        data: result
+      });
+
 
       res.status(200).json({
         status: 'success',

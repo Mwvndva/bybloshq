@@ -4,6 +4,7 @@ import { useSellerAuth } from '../contexts/SellerAuthContext';
 import { SellerLayout } from '../components/layout/SellerLayout';
 import SellerDashboard from '../components/seller/SellerDashboard';
 import SellerRegistration from '../components/seller/SellerRegistration';
+import ShopSetup from '../components/seller/ShopSetup';
 import { SellerLogin } from '../components/seller/SellerLogin';
 import { ProductsList } from '../components/seller/ProductsList';
 import AddProductForm from '../components/seller/AddProductForm';
@@ -485,6 +486,10 @@ export const sellerRoutes: RouteObject[] = [
           {
             path: 'products',
             element: <ProductsListWrapper />,
+          },
+          {
+            path: 'shop-setup',
+            element: <ShopSetup />,
           },
           {
             path: 'products/:id/edit',

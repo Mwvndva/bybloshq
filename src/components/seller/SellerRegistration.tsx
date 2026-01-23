@@ -38,8 +38,11 @@ const locationData: Record<string, string[]> = {
   'Busia': ['Busia Town', 'Bunyala', 'Samia', 'Teso North', 'Teso South', 'Nambale', 'Matayos']
 };
 
+import { useSellerAuth } from '@/contexts/SellerAuthContext';
+
 const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const navigate = useNavigate();
+  const { register } = useSellerAuth();
   const [formData, setFormData] = useState({
     fullName: '',
     shopName: '',
@@ -221,7 +224,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     setIsLoading(true);
 
     try {
-      const { token } = await sellerApi.register({
+      await register({
         fullName: formData.fullName,
         shopName: formData.shopName.trim(),
         email: formData.email,
@@ -232,16 +235,15 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         location: formData.location
       });
 
-      // Store the token in localStorage
-      localStorage.setItem('sellerToken', token);
+      // Token is handled via HttpOnly cookie, no need to store it manually
 
       toast({
         title: "Registration Successful!",
         description: "Welcome to your seller dashboard!",
       });
 
-      // Redirect to seller dashboard
-      navigate('/seller/dashboard');
+      // Redirect to shop setup
+      navigate('/seller/shop-setup');
 
       if (onSuccess) onSuccess();
     } catch (error: any) {
@@ -424,7 +426,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                       <SelectValue placeholder="Select your city" />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.keys(locationData).sort().map((city) => (
+                      {Object.keys(locationData).sort((a, b) => a.localeCompare(b)).map((city) => (
                         <SelectItem key={city} value={city}>
                           {city}
                         </SelectItem>
@@ -449,7 +451,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                       <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} />
                     </SelectTrigger>
                     <SelectContent>
-                      {formData.city && locationData[formData.city]?.sort().map((area) => (
+                      {formData.city && locationData[formData.city]?.sort((a, b) => a.localeCompare(b)).map((area) => (
                         <SelectItem key={area} value={area}>{area}</SelectItem>
                       ))}
                     </SelectContent>

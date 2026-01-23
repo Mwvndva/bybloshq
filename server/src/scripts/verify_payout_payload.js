@@ -13,7 +13,7 @@ payoutService.getCallbackUrl = async () => "https://bybloshq.space/api/callbacks
 
 // Use dummy env vars for the test if not present (although service constructor loaded them already)
 payoutService.username = "test_user";
-payoutService.password = "test_password";
+payoutService.password = process.env.PAYD_PASSWORD || "test_password_placeholder";
 payoutService.networkCode = "test_net_code";
 payoutService.channelId = "test_channel_id";
 

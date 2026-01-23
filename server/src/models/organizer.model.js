@@ -1,87 +1,31 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import { pool } from '../config/database.js';
 
-const SALT_ROUNDS = 10;
-
 const Organizer = {
-  // Add matchPassword method to the instance
-  async matchPassword(plainPassword) {
-    return await bcrypt.compare(plainPassword, this.password);
-  },
-  
-  // Add method to update password
-  async updatePassword(id, newPassword) {
-    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-    const result = await pool.query(
-      'UPDATE organizers SET password = $1 WHERE id = $2 RETURNING id, full_name, email, phone',
-      [hashedPassword, id]
-    );
-    return result.rows[0];
-  },
-  
-  // Add method to find by ID and update
-  async findByIdAndUpdate(id, updates) {
-    const fields = [];
-    const values = [];
-    let paramIndex = 1;
-    
-    // Build the SET clause dynamically based on provided updates
-    for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
-        fields.push(`${key} = $${paramIndex}`);
-        values.push(value);
-        paramIndex++;
-      }
-    }
-    
-    if (fields.length === 0) {
-      throw new Error('No valid fields provided for update');
-    }
-    
-    // Add the ID as the last parameter
-    values.push(id);
-    
-    const query = `
-      UPDATE organizers 
-      SET ${fields.join(', ')}
-      WHERE id = $${paramIndex}
-      RETURNING id, full_name, email, phone
-    `;
-    
-    const result = await pool.query(query, values);
-    return result.rows[0];
-  },
-  
-  // Existing methods
+  // Find by Email
   async findByEmail(email) {
     const result = await pool.query('SELECT * FROM organizers WHERE email = $1', [email]);
     return result.rows[0];
   },
 
+  // Find by ID
   async findById(id) {
     const result = await pool.query('SELECT * FROM organizers WHERE id = $1', [id]);
     return result.rows[0];
   },
 
+  // Create Organizer
   async create({ full_name, email, phone, password }) {
-    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-    
     const result = await pool.query(
       `INSERT INTO organizers 
        (full_name, email, phone, password, is_verified)
        VALUES ($1, $2, $3, $4, false)
        RETURNING id, full_name, email, phone, created_at`,
-      [full_name, email, phone, hashedPassword]
+      [full_name, email, phone, password] // Password assumed hashed by service
     );
-
     return result.rows[0];
   },
 
-  async comparePassword(plainPassword, hashedPassword) {
-    return await bcrypt.compare(plainPassword, hashedPassword);
-  },
-
+  // Update Last Login
   async updateLastLogin(id) {
     await pool.query(
       'UPDATE organizers SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
@@ -89,18 +33,37 @@ const Organizer = {
     );
   },
 
-  async createPasswordResetToken(email) {
-    // Generate a random token
-    const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    
-    // Hash the token before saving to database
-    const hashedToken = await bcrypt.hash(token, SALT_ROUNDS);
-    
-    // Set token expiration (1 hour from now)
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
-    
-    // Save the hashed token and expiration to the database
+  // Update Organizer fields
+  async findByIdAndUpdate(id, updates) {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    for (const [key, value] of Object.entries(updates)) {
+      if (value !== undefined) {
+        fields.push(`${key} = $${paramIndex}`);
+        values.push(value);
+        paramIndex++;
+      }
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(id);
+
+    const query = `
+      UPDATE organizers 
+      SET ${fields.join(', ')}, updated_at = NOW()
+      WHERE id = $${paramIndex}
+      RETURNING id, full_name, email, phone, created_at
+    `;
+
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  },
+
+  // Token Management (DB only)
+  async savePasswordResetToken(email, hashedToken, expiresAt) {
     await pool.query(
       `UPDATE organizers 
        SET password_reset_token = $1, 
@@ -108,33 +71,27 @@ const Organizer = {
        WHERE email = $3`,
       [hashedToken, expiresAt, email]
     );
-    
-    // Return the unhashed token (to be sent via email)
-    return token;
   },
 
-  async verifyPasswordResetToken(email, token) {
-    // Find the organizer with the given email and a valid reset token
+  async findByResetToken(token) {
+    // Logic often requires checking hash match, but traditionally we search by token if stored plain.
+    // If stored hashed, we must query by email first, or if we don't have email, we can't search.
+    // The previous implementation queried by email first then checked token.
+    // We will provide a lookup by email helper.
+    return null; // Not typically used directly if tokens are hashed
+  },
+
+  async getResetTokenData(email) {
     const result = await pool.query(
       `SELECT password_reset_token, password_reset_expires 
-       FROM organizers 
-       WHERE email = $1 AND password_reset_expires > NOW()`,
+         FROM organizers 
+         WHERE email = $1 AND password_reset_expires > NOW()`,
       [email]
     );
-    
-    if (!result.rows[0]) {
-      return false;
-    }
-    
-    const { password_reset_token: hashedToken } = result.rows[0];
-    
-    // Verify the token matches the hashed version in the database
-    return await bcrypt.compare(token, hashedToken);
+    return result.rows[0];
   },
 
-  async updatePassword(email, newPassword) {
-    const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-    
+  async clearResetTokenAndUpdatePassword(email, hashedPassword) {
     const result = await pool.query(
       `UPDATE organizers 
        SET password = $1, 
@@ -144,7 +101,6 @@ const Organizer = {
        RETURNING id, full_name, email, phone`,
       [hashedPassword, email]
     );
-    
     return result.rows[0];
   }
 };

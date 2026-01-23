@@ -247,6 +247,12 @@ const ShopPage = () => {
           city: seller.city,
           location: seller.location,
           theme: seller.theme as Theme || 'default', // Add theme with default value
+          // Physical shop fields
+          hasPhysicalShop: !!seller.physicalAddress,
+          physicalAddress: seller.physicalAddress,
+          latitude: seller.latitude,
+          longitude: seller.longitude,
+
           // Required fields from Seller interface
           createdAt: seller.createdAt || new Date().toISOString()
         };
@@ -502,6 +508,11 @@ const ShopPage = () => {
                     shopName: sellerInfo.shopName || '',
                     bannerUrl: sellerInfo.bannerImage || '',
                     location: sellerInfo.location || '',
+                    // New physical shop fields
+                    hasPhysicalShop: !!sellerInfo.physicalAddress,
+                    physicalAddress: sellerInfo.physicalAddress,
+                    latitude: sellerInfo.latitude,
+                    longitude: sellerInfo.longitude,
                     // Add any other required fields from Seller interface with defaults
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString()
@@ -517,6 +528,12 @@ const ShopPage = () => {
                   shopName: sellerInfo.shopName || '',
                   bannerUrl: sellerInfo.bannerImage || '',
                   location: sellerInfo.location || '',
+                  city: sellerInfo.city || '',
+                  // New physical shop fields
+                  hasPhysicalShop: !!sellerInfo.physicalAddress,
+                  physicalAddress: sellerInfo.physicalAddress,
+                  latitude: sellerInfo.latitude,
+                  longitude: sellerInfo.longitude,
                   createdAt: sellerInfo.createdAt || new Date().toISOString(),
                   updatedAt: sellerInfo.updatedAt || new Date().toISOString(),
                   // Optional fields with defaults

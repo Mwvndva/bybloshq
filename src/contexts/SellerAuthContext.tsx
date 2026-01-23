@@ -84,9 +84,7 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
             const { seller } = await sellerApi.register(data);
             setSeller(seller);
             setIsAuthenticated(true);
-            // Optional: Navigate to dashboard handled by component or here? 
-            // Usually better to let component handle navigation on success, or do it here.
-            // Doing it here for consistency with BuyerAuthContext if that's what we did.
+            return; // Resolve successfully
         } catch (error) {
             setIsAuthenticated(false);
             setSeller(null);

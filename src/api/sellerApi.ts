@@ -26,6 +26,11 @@ export interface Seller {
   phone: string;
   city?: string;
   location?: string;
+  hasPhysicalShop?: boolean;
+  physicalAddress?: string;
+  physical_address?: string;
+  latitude?: number;
+  longitude?: number;
   bannerImage?: string;
   banner_image?: string;
   theme?: Theme;
@@ -110,8 +115,12 @@ sellerApiInstance.interceptors.response.use(
       localStorage.removeItem('sellerToken');
       localStorage.removeItem('seller');
 
-      // Only redirect if we're not already on the login page
-      if (!window.location.pathname.includes('/seller/login')) {
+      // Check if the request was for the profile
+      // We don't want to redirect if checking auth status on load fails
+      const isProfileCheck = error.config?.url?.includes('/sellers/profile');
+
+      // Only redirect if we're not already on the login page and it's not a profile check
+      if (!window.location.pathname.includes('/seller/login') && !isProfileCheck) {
         window.location.href = '/seller/login';
       }
     }
@@ -161,6 +170,10 @@ const transformSeller = (data: any): Seller => {
     phone: seller.phone || '',
     city: seller.city || '',
     location: seller.location || '',
+    physicalAddress: seller.physicalAddress || seller.physical_address || '',
+    hasPhysicalShop: seller.hasPhysicalShop || !!seller.physicalAddress || !!seller.physical_address,
+    latitude: seller.latitude,
+    longitude: seller.longitude,
     bannerImage: seller.bannerImage || seller.banner_image || null,
     theme: seller.theme || 'default',
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
@@ -509,7 +522,7 @@ export const sellerApi = {
   },
 
   // Update seller profile
-  updateProfile: async (data: { city?: string; location?: string; theme?: Theme }): Promise<Seller> => {
+  updateProfile: async (data: { city?: string; location?: string; theme?: Theme; physicalAddress?: string; latitude?: number; longitude?: number }): Promise<Seller> => {
     try {
       const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
       return transformSeller(response.data.data);

@@ -1,16 +1,18 @@
+import Fees from '../config/fees.js';
+
 /**
  * Calculate platform fee for an order
  * @param {number} amount - Order amount
- * @param {number} commissionRate - Platform commission rate (default: 0.03 for 3%)
+ * @param {number} commissionRate - Platform commission rate (default: from config)
  * @returns {number} Calculated platform fee
  */
-const calculatePlatformFee = (amount, commissionRate = 0.03) => {
+const calculatePlatformFee = (amount, commissionRate = Fees.PLATFORM_COMMISSION_RATE) => {
   if (typeof amount !== 'number' || isNaN(amount) || amount < 0) {
     throw new Error('Invalid amount provided for fee calculation');
   }
 
   // Ensure commission rate is between 0 and 1
-  const rate = Math.max(0, Math.min(1, commissionRate || 0.03));
+  const rate = Math.max(0, Math.min(1, commissionRate));
 
   // Calculate fee and round to 2 decimal places
   const fee = Math.round(amount * rate * 100) / 100;
@@ -21,10 +23,10 @@ const calculatePlatformFee = (amount, commissionRate = 0.03) => {
 /**
  * Calculate seller payout after platform fee
  * @param {number} amount - Order amount
- * @param {number} commissionRate - Platform commission rate (default: 0.03 for 3%)
+ * @param {number} commissionRate - Platform commission rate (default: from config)
  * @returns {number} Seller payout amount
  */
-const calculateSellerPayout = (amount, commissionRate = 0.03) => {
+const calculateSellerPayout = (amount, commissionRate = Fees.PLATFORM_COMMISSION_RATE) => {
   if (typeof amount !== 'number' || isNaN(amount) || amount < 0) {
     throw new Error('Invalid amount provided for payout calculation');
   }

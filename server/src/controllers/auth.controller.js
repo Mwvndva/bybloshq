@@ -1,15 +1,9 @@
-import jwt from 'jsonwebtoken';
-import Organizer from '../models/organizer.model.js';
+import OrganizerService from '../services/organizer.service.js';
 import { sanitizeOrganizer } from '../utils/sanitize.js';
-
-const generateToken = (id, role = 'buyer') => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: '24h' // 24 hours expiration
-  });
-};
+import jwt from 'jsonwebtoken';
 
 const sendTokenResponse = (organizer, statusCode, res, message) => {
-  const token = generateToken(organizer.id, 'organizer');
+  const token = OrganizerService.generateToken(organizer.id);
 
   const cookieOptions = {
     httpOnly: true,
@@ -23,7 +17,7 @@ const sendTokenResponse = (organizer, statusCode, res, message) => {
     delete cookieOptions.domain;
   }
 
-  res.cookie('jwt', token, cookieOptions); // Standardize cookie name to 'jwt'
+  res.cookie('jwt', token, cookieOptions);
 
   res.status(statusCode).json({
     status: 'success',
@@ -38,167 +32,85 @@ export const register = async (req, res) => {
   try {
     const { full_name, email, phone, password, passwordConfirm } = req.body;
 
-    // Check if organizer already exists
-    const organizerExists = await Organizer.findByEmail(email);
-    if (organizerExists) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid input data' // Generalized error
-      });
-    }
-
-    // Check if passwords match
     if (password !== passwordConfirm) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid input data'
-      });
+      return res.status(400).json({ status: 'error', message: 'Passwords do not match' });
     }
 
-    // Create new organizer
-    const organizer = await Organizer.create({
-      full_name,
-      email,
-      phone,
-      password
-    });
-
-    sendTokenResponse(organizer, 201, res, 'Registration successful');
+    try {
+      const organizer = await OrganizerService.register({ full_name, email, phone, password });
+      sendTokenResponse(organizer, 201, res, 'Registration successful');
+    } catch (err) {
+      if (err.code === '23505') { // Unique constraint
+        return res.status(400).json({ status: 'error', message: 'Email already exists' });
+      }
+      throw err;
+    }
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error'
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    const organizer = await OrganizerService.login(email, password);
 
-    // Check if organizer exists
-    const organizer = await Organizer.findByEmail(email);
-    const isPasswordValid = organizer ? await Organizer.comparePassword(password, organizer.password) : false;
-
-    if (!organizer || !isPasswordValid) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Invalid email or password'
-      });
+    if (!organizer) {
+      return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
     }
-
-    // Update last login
-    await Organizer.updateLastLogin(organizer.id);
-
-    // console.log('Login successful for organizer:', organizer.id); // Removed/Silenced by logger util globally if production
 
     sendTokenResponse(organizer, 200, res, 'Login successful');
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error'
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const getCurrentUser = async (req, res) => {
   try {
     const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ status: 'error', message: 'User not authenticated' });
 
-    if (!userId) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'User not authenticated'
-      });
-    }
-
-    const organizer = await Organizer.findById(userId);
-
-    if (!organizer) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User not found'
-      });
-    }
+    const organizer = await OrganizerService.getProfile(userId);
+    if (!organizer) return res.status(404).json({ status: 'error', message: 'User not found' });
 
     res.status(200).json({
       status: 'success',
-      data: {
-        organizer: sanitizeOrganizer(organizer)
-      }
+      data: { organizer: sanitizeOrganizer(organizer) }
     });
   } catch (error) {
     console.error('Get current user error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error'
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const updateProfile = async (req, res) => {
   try {
     const { full_name, email, phone } = req.body;
-    const organizerId = req.organizer.id;
+    const organizerId = req.user.id; // Standardized req.user
 
-    // Check availability logic omitted for brevity/security in this specific refactor step, assuming model handles constraints or error catch will catch unique constraint violation
+    const updatedOrganizer = await OrganizerService.updateProfile(organizerId, { full_name, email, phone });
 
-    // Update organizer
-    const updatedOrganizer = await Organizer.findByIdAndUpdate(
-      organizerId,
-      { full_name, email, phone },
-      { new: true, runValidators: true }
-    );
-
-    if (!updatedOrganizer) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User not found'
-      });
-    }
+    if (!updatedOrganizer) return res.status(404).json({ status: 'error', message: 'User not found' });
 
     res.status(200).json({
       status: 'success',
       message: 'Profile updated successfully',
-      data: {
-        organizer: sanitizeOrganizer(updatedOrganizer)
-      }
+      data: { organizer: sanitizeOrganizer(updatedOrganizer) }
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error'
-    });
+    res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    const organizerId = req.organizer.id;
+    const organizerId = req.user.id; // Standardized
 
-    const organizer = await Organizer.findById(organizerId).select('+password');
-
-    if (!organizer) {
-      return res.status(404).json({
-        status: 'error',
-        message: 'User not found'
-      });
-    }
-
-    const isMatch = await organizer.matchPassword(currentPassword);
-    if (!isMatch) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Current password is incorrect'
-      });
-    }
-
-    organizer.password = newPassword;
-    await organizer.save();
+    await OrganizerService.updatePassword(organizerId, currentPassword, newPassword);
 
     res.status(200).json({
       status: 'success',
@@ -206,18 +118,14 @@ export const updatePassword = async (req, res) => {
     });
   } catch (error) {
     console.error('Update password error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error'
-    });
+    const status = error.message.includes('incorrect') ? 401 : 500;
+    res.status(status).json({ status: 'error', message: error.message });
   }
 };
 
 export const protect = async (req, res, next) => {
   try {
     let token;
-
-    // Get token from header (Legacy/Mobile) OR Cookie (Preferred)
     if (req.cookies && req.cookies.jwt) {
       token = req.cookies.jwt;
     } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
@@ -225,31 +133,20 @@ export const protect = async (req, res, next) => {
     }
 
     if (!token) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'You are not logged in due to missing token. Please log in.'
-      });
+      return res.status(401).json({ status: 'error', message: 'Not authorized' });
     }
 
-    // Verify token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const currentOrganizer = await OrganizerService.getProfile(decoded.id);
 
-    const currentOrganizer = await Organizer.findById(decoded.id);
     if (!currentOrganizer) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'The user belonging to this token no longer exists.'
-      });
+      return res.status(401).json({ status: 'error', message: 'User no longer exists' });
     }
 
-    req.user = currentOrganizer; // Standardize on req.user
-    req.organizer = currentOrganizer; // Keep for backward compatibility if used
+    req.user = currentOrganizer;
+    req.organizer = currentOrganizer; // Compat
     next();
   } catch (error) {
-    // Standardize auth errors
-    return res.status(401).json({
-      status: 'error',
-      message: 'Not authorized, please login again'
-    });
+    return res.status(401).json({ status: 'error', message: 'Not authorized' });
   }
 };

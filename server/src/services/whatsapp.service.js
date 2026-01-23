@@ -262,7 +262,8 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 `.trim();
         }
 
-        let nextSteps = "📍 *NEXT STEPS:*\nWe'll notify you when it's ready for pickup at Dynamic Mall, Shop SL 32.\n\n⏰ *SELLER DEADLINE:* Seller has 48 hours to drop off your order or it will be auto-cancelled and refunded.";
+        const pickupLocation = seller?.physicalAddress || 'Dynamic Mall, Shop SL 32';
+        let nextSteps = `📍 *NEXT STEPS:*\nWe'll notify you when it's ready for pickup at ${pickupLocation}.\n\n⏰ *SELLER DEADLINE:* Seller has 48 hours to drop off your order or it will be auto-cancelled and refunded.`;
         if (isService) {
             const serviceType = this.getServiceProviderType(order);
             nextSteps = `⏰ *WHAT'S NEXT:*\nYour ${serviceType} has been notified and will contact you to confirm the appointment details.\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
@@ -315,13 +316,15 @@ Order #${order.orderNumber}`;
                 msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} payment received. Your download is ready.`;
             } else {
                 const amount = parseFloat(order.totalAmount || 0);
+                const sellerAddr = updateData.seller?.physicalAddress || 'Dynamic Mall, Shop SL 32';
+
                 msg = `✅ *PAYMENT SUCCESSFUL*
 
 💰 Amount: KSh ${amount.toLocaleString()}
 📦 Order #${order.orderNumber} is confirmed.
 
 ⏰ *NEXT STEPS:*
-We are preparing your order for pickup. You'll be notified when it's ready at Dynamic Mall, Shop SL 32.`;
+We are preparing your order for pickup. You'll be notified when it's ready at ${sellerAddr}.`;
             }
         } else if (newStatus === 'DELIVERY_COMPLETE') {
             if (isService) {
@@ -340,14 +343,17 @@ Your ${serviceType} has marked the job as DONE.
                 msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
             } else {
                 const amount = parseFloat(order.totalAmount || 0);
+                const sellerAddr = updateData.seller?.physicalAddress || 'Dynamic Mall, Tom Mboya St, Shop SL 32';
+                // Improve address formatting if it doesn't clearly state city/country
+                const locationText = sellerAddr.includes('Nairobi') ? sellerAddr : `${sellerAddr}\nNairobi, Kenya`;
+
                 msg = `⚠️ *ACTION REQUIRED: PICKUP READY*
 
 📦 Order #${order.orderNumber} is ready for pickup!
 💰 Amount: KSh ${amount.toLocaleString()}
 
 📍 *PICKUP LOCATION:*
-Dynamic Mall, Tom Mboya St, Shop SL 32
-Nairobi, Kenya
+${locationText}
 
 ⏰ *PICKUP DEADLINE:* 
 🚨 You have 24 hours to pick up or order will be auto-cancelled and refunded.
