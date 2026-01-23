@@ -450,9 +450,14 @@ class OrderService {
 
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
 
+      logger.info(`[PURCHASE-FLOW] 8a. Order Status Updated to: ${newStatus}, Payment Status: completed`, {
+        orderId, newStatus
+      });
+
       // Check if we accidentally auto-completed it (e.g. digital) - handle payout?
       // Digital usually goes to COMPLETED immediately.
       if (newStatus === OrderStatus.COMPLETED) {
+        logger.info(`[PURCHASE-FLOW] 8b. Auto-completing Order (Digital/Collection), Processing Payout...`);
         await this._processSellerPayout(client, updatedOrder);
       }
 
@@ -588,7 +593,7 @@ class OrderService {
         [order.id]
       );
 
-      logger.info(`Processed payout of KES ${payoutAmount} to Seller ${order.seller_id} for Order ${order.id}`);
+      logger.info(`[PURCHASE-FLOW] 8c. Processed payout of KES ${payoutAmount} to Seller ${order.seller_id} for Order ${order.id}`);
     }
   }
 

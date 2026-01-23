@@ -231,6 +231,7 @@ ${itemsList}
 ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         `.trim();
 
+        logger.info(`[PURCHASE-FLOW] 9a. Sending New Order Notification to Seller ${seller.phone}`);
         return this.sendMessage(seller.phone, msg);
     }
 
@@ -241,7 +242,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
             const price = parseFloat(item.price || item.product_price || 0);
-            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
+            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()} `;
         }).join('\n');
 
         const total = parseFloat(order.totalAmount || 0);
@@ -255,7 +256,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
             const locationLabel = locationType === 'seller_visits_buyer' ? 'Client Location' : 'Service Location';
 
             bookingInfo = `
-📅 *YOUR BOOKING IS CONFIRMED*
+📅 * YOUR BOOKING IS CONFIRMED *
 • Date: ${order.metadata.booking_date}
 • Time: ${order.metadata.booking_time}
 • ${locationLabel}: ${order.metadata.service_location || seller?.physicalAddress || seller?.location || seller?.city || 'Not specified'}
@@ -267,7 +268,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 
         if (isService) {
             const serviceType = this.getServiceProviderType(order);
-            nextSteps = `⏰ *WHAT'S NEXT:*\nYour ${serviceType} has been notified and will contact you to confirm the appointment details.\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
+            nextSteps = `⏰ * WHAT'S NEXT:*\nYour ${serviceType} has been notified and will contact you to confirm the appointment details.\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
             nextSteps = `✅ *YOUR DOWNLOAD IS READY!*\n🔗 Access it here: ${dashboardUrl}`;
@@ -305,6 +306,7 @@ ${itemsList}
 ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
         `.trim();
 
+        logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyer.phone}`);
         return this.sendMessage(buyer.phone, msg);
     }
 
@@ -461,6 +463,7 @@ Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.`;
 You can withdraw your earnings from your seller dashboard.`;
         }
 
+        logger.info(`[PURCHASE-FLOW] 9d. Sending Status Update (${newStatus}) to Seller ${seller.phone}`);
         return this.sendMessage(seller.phone, msg);
     }
 

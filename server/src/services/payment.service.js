@@ -61,6 +61,10 @@ class PaymentService {
                 throw new Error('Payd network code or channel ID not configured');
             }
 
+            logger.info(`[PURCHASE-FLOW] 1. Initiating Payment for Invoice: ${invoice_id}`, {
+                email, amount, phone, narrative
+            });
+
             const paydAmount = parseFloat(amount);
             const fullName = firstName && lastName ? `${firstName} ${lastName}` : "Customer";
             const customerEmail = email || "customer@example.com";
@@ -131,7 +135,10 @@ class PaymentService {
                 }
             });
 
-            logger.info('Payd Response:', response.data);
+            logger.info(`[PURCHASE-FLOW] 2. Payd API Response Recieved`, {
+                status: response.data.status,
+                reference: response.data.transaction_id || response.data.reference
+            });
 
             // Return standardized response
             return {
@@ -164,7 +171,7 @@ class PaymentService {
      * Handle Payd Webhook/Callback
      */
     async handlePaydCallback(callbackData) {
-        logger.info('Processing Payd Callback:', callbackData);
+        logger.info('[PURCHASE-FLOW] 3. Webhook Received - Raw Data:', callbackData);
 
         // Map fields based on user documentation
         // { "transaction_reference": "TX...", "result_code": 200, "remarks": "...", ... }
@@ -172,20 +179,14 @@ class PaymentService {
         const resultCode = callbackData.result_code;
         const status = callbackData.status; // Fallback if they send status
 
-        // DEBUG: Force log to console for visibility
-        // console.log('=== PAYD WEBHOOK RAW ===');
-        // console.log(JSON.stringify(callbackData, null, 2));
-        // console.log('========================');
-
-        logger.info('Payd Webhook Data Extraction:', {
-            extractedReference: reference,
+        logger.info(`[PURCHASE-FLOW] 4. Processing Callback for Ref: ${reference}`, {
             resultCode,
             status,
-            rawKeys: Object.keys(callbackData)
+            successCheck: (resultCode == 200 || resultCode === '200' || resultCode == 0 || resultCode === '0')
         });
 
         if (!reference) {
-            console.error('Missing reference', callbackData);
+            console.error('[PURCHASE-FLOW] ERROR: Missing reference', callbackData);
             // Don't throw immediately, check if we can find by invoice_id in other fields?
             // For now, throw but log visibly
             throw new Error('No transaction_reference provided in callback');
@@ -201,6 +202,7 @@ class PaymentService {
         }
 
         if (!isSuccess) {
+            logger.warn(`[PURCHASE-FLOW] 4b. Transaction Failed - Marking DB as Failed`, { reference, reason: callbackData.remarks });
             const { rowCount } = await pool.query(
                 "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE provider_reference = $2",
                 [JSON.stringify({ failure_reason: callbackData.remarks || callbackData.status_description || 'Failed', raw_callback: callbackData }), reference]
@@ -238,7 +240,7 @@ class PaymentService {
                     );
 
                     await client.query('COMMIT');
-                    logger.info(`Withdrawal ${withdrawal.id} FAILED. Computed refund of ${withdrawal.amount} to seller ${withdrawal.seller_id}`);
+                    logger.info(`[PURCHASE-FLOW] Withdrawal ${withdrawal.id} FAILED. Computed refund of ${withdrawal.amount} to seller ${withdrawal.seller_id}`);
                     return { status: 'success', message: 'Withdrawal failure processed and refunded' };
 
                 } catch (err) {
@@ -255,6 +257,7 @@ class PaymentService {
         }
 
         // Handle Success
+        logger.info(`[PURCHASE-FLOW] 5. Transaction Successful - Proceeding to Completion logic`, { reference });
         return await this.handleSuccessfulPayment({
             reference,
             amount: callbackData.amount,
@@ -268,6 +271,8 @@ class PaymentService {
     async handleSuccessfulPayment(data) {
         const { reference, amount, metadata } = data;
 
+        logger.info(`[PURCHASE-FLOW] 6. Handling Successful Payment logic for Ref: ${reference}, Amount: ${amount}`);
+
         let payment = null;
 
         // 1. Find payment by reference OR invoice_id
@@ -278,6 +283,7 @@ class PaymentService {
 
         if (refRows.length > 0) {
             payment = refRows[0];
+            logger.info(`[PURCHASE-FLOW] 6a. Found Payment via Reference: ${payment.id}`);
         } else {
             // 1b. Fuzzy match: Find by Status + Amount + Phone (if available)
             // This handles cases where Payd generates a new reference we don't know
@@ -381,11 +387,11 @@ class PaymentService {
             // Call OrderService to complete
             import('./order.service.js').then(async ({ default: OrderService }) => {
                 try {
-                    await OrderService.completeOrder(updatedPayment);
-                    // Can trigger Whatsapp from here or OrderService?
-                    // Ideally event driven.
+                    logger.info(`[PURCHASE-FLOW] 7. Completing Order ${paymentMeta.order_id} via OrderService`);
+                    const completionResult = await OrderService.completeOrder(updatedPayment);
+                    logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
                 } catch (e) {
-                    logger.error('Error completing order after payment:', e);
+                    logger.error('[PURCHASE-FLOW] ERROR Step 7/8 - Error completing order after payment:', e);
                 }
             });
             return { status: 'success', message: 'Payment processed and Order completion queued' };
