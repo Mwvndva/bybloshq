@@ -92,7 +92,7 @@ export interface OrderItem {
 export interface Order {
   id: string;
   orderNumber: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'collection_pending' | 'completed';
   items: OrderItem[];
   subtotal: number;
   shipping: number;

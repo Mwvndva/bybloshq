@@ -204,7 +204,7 @@ class WhatsAppService {
 📅 *SERVICE BOOKING DETAILS*
 • Date: ${order.metadata.booking_date}
 • Time: ${order.metadata.booking_time}
-• ${locationLabel}: ${order.metadata.service_location || seller.location || seller.city || 'Not specified'}
+• ${locationLabel}: ${order.metadata.service_location || seller.physicalAddress || seller.location || seller.city || 'Not specified'}
 `.trim();
         }
 
@@ -258,7 +258,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 📅 *YOUR BOOKING IS CONFIRMED*
 • Date: ${order.metadata.booking_date}
 • Time: ${order.metadata.booking_time}
-• ${locationLabel}: ${order.metadata.service_location || seller?.location || seller?.city || 'Not specified'}
+• ${locationLabel}: ${order.metadata.service_location || seller?.physicalAddress || seller?.location || seller?.city || 'Not specified'}
 `.trim();
         }
 

@@ -143,6 +143,11 @@ class OrderService {
       // 5. Update Order
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, paymentStatus);
 
+      // 6. Handle Seller Payout if Completed
+      if (newStatus === OrderStatus.COMPLETED && currentStatus !== OrderStatus.COMPLETED) {
+        await this._processSellerPayout(client, updatedOrder);
+      }
+
       await client.query('COMMIT');
       return updatedOrder;
 
@@ -296,6 +301,9 @@ class OrderService {
 
       let hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL);
       let hasService = items.some(i => i.product_type === ProductType.SERVICE);
+      // Check for Service Locations (Shop Address) in metadata
+      let hasShopAddress = items.some(i => i.metadata?.serviceLocations && i.metadata.serviceLocations.length > 0);
+
       // Fallback logic for metadata if product/type missing
       if (!items.length && metadata.product_type) {
         if (metadata.product_type === ProductType.PHYSICAL) hasPhysical = true;
@@ -303,10 +311,21 @@ class OrderService {
       }
 
       let newStatus = OrderStatus.COMPLETED;
-      if (hasPhysical) newStatus = OrderStatus.DELIVERY_PENDING;
-      if (hasService && !hasPhysical) newStatus = OrderStatus.CONFIRMED;
+      if (hasPhysical) {
+        newStatus = OrderStatus.DELIVERY_PENDING;
+      } else if (hasShopAddress) {
+        newStatus = OrderStatus.COLLECTION_PENDING;
+      } else if (hasService && !hasPhysical) {
+        newStatus = OrderStatus.CONFIRMED;
+      }
 
-      await this.updateStatusWithSideEffects(client, orderId, newStatus, 'completed');
+      const updatedOrder = await this.updateStatusWithSideEffects(client, orderId, newStatus, 'completed');
+
+      // Check if we accidentally auto-completed it (e.g. digital) - handle payout?
+      // Digital usually goes to COMPLETED immediately.
+      if (newStatus === OrderStatus.COMPLETED) {
+        await this._processSellerPayout(client, updatedOrder);
+      }
 
       // 4. Update Payment Metadata
       await client.query(
@@ -334,6 +353,45 @@ class OrderService {
       throw error;
     } finally {
       client.release();
+    }
+  }
+  static async _processSellerPayout(client, order) {
+    // Ensure we haven't paid out for this order yet to be idempotent
+    // Check if payout_processed flag exists in metadata? Or trust the status transition?
+    // Status transition check (in caller) + Transaction lock is reasonably safe.
+    // But let's add a metadata flag for extra safety.
+
+    const orderCheck = await client.query("SELECT metadata FROM product_orders WHERE id = $1", [order.id]);
+    const currentMeta = orderCheck.rows[0]?.metadata || {};
+
+    if (currentMeta.payout_processed) {
+      logger.info(`Payout for Order ${order.id} already processed. Skipping.`);
+      return;
+    }
+
+    const payoutAmount = parseFloat(order.seller_payout_amount);
+    const totalAmount = parseFloat(order.total_amount || 0);
+
+    if (payoutAmount > 0) {
+      await client.query(
+        `UPDATE sellers 
+         SET 
+           balance = balance + $1,
+           net_revenue = net_revenue + $1,
+           total_sales = total_sales + $2
+         WHERE id = $3`,
+        [payoutAmount, totalAmount, order.seller_id]
+      );
+
+      // Mark as processed
+      await client.query(
+        `UPDATE product_orders 
+             SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{payout_processed}', 'true'::jsonb)
+             WHERE id = $1`,
+        [order.id]
+      );
+
+      logger.info(`Processed payout of KES ${payoutAmount} to Seller ${order.seller_id} for Order ${order.id}`);
     }
   }
 }

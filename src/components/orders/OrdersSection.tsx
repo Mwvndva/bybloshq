@@ -109,6 +109,13 @@ const getStatusBadge = (status: string) => {
           Service Pending
         </Badge>
       );
+    case 'COLLECTION_PENDING':
+      return (
+        <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+          <Package className="h-3 w-3 mr-1" />
+          Ready for Collection
+        </Badge>
+      );
     case 'CONFIRMED':
       return (
         <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -557,6 +564,29 @@ export default function OrdersSection() {
                       <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                       <span className="hidden sm:inline">Confirm Receipt</span>
                       <span className="sm:hidden">Confirm Receipt</span>
+                    </Button>
+                  )}
+                  {order.status === 'COLLECTION_PENDING' && (
+                    <Button
+                      size="sm"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                      onClick={async () => {
+                        if (!confirm("Confirm that you have collected this item? Funds will be released to the seller.")) return;
+                        try {
+                          toast.loading("Marking as collected...");
+                          await buyerApi.markOrderAsCollected(order.id);
+                          toast.dismiss();
+                          toast.success("Order completed!");
+                          fetchOrders();
+                        } catch (e) {
+                          toast.dismiss();
+                          toast.error("Failed to mark as collected");
+                        }
+                      }}
+                    >
+                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                      <span className="hidden sm:inline">Mark as Collected</span>
+                      <span className="sm:hidden">Collected</span>
                     </Button>
                   )}
                   {order.status === 'CONFIRMED' && (

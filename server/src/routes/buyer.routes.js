@@ -33,6 +33,9 @@ router.post('/refund-request', buyerController.requestRefund);
 // Get pending refund requests
 router.get('/refund-requests/pending', buyerController.getPendingRefundRequests);
 
+// Mark order as collected
+router.post('/orders/:orderId/collected', buyerController.markOrderAsCollected);
+
 // Wishlist routes
 router.use('/wishlist', wishlistRoutes);
 

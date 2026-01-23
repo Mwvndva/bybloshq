@@ -276,6 +276,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         customerName: buyerDetails.fullName,
         narrative: `Purchase of ${product.name}`,
         paymentMethod: 'payd',
+        city: buyerDetails.city,
+        location: buyerDetails.location,
         metadata: activeBooking ? {
           booking_date: format(activeBooking.date, 'yyyy-MM-dd'),
           booking_time: activeBooking.time,
@@ -564,8 +566,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                     variant="ghost"
                     size="sm"
                     className={`h-6 px-2 text-[10px] font-medium gap-1 ${theme === 'black'
-                        ? 'bg-green-900/30 text-green-400 border-green-800/50 hover:bg-green-900/50'
-                        : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                      ? 'bg-green-900/30 text-green-400 border-green-800/50 hover:bg-green-900/50'
+                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
                       } border transition-colors`}
                   >
                     <Store className="w-3 h-3" />

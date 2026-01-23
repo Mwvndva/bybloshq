@@ -23,6 +23,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 
 export default function SellerOrdersSection() {
+  // Force TS re-check
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -319,6 +320,10 @@ export default function SellerOrdersSection() {
                         ) : order.status === 'SERVICE_PENDING' ? (
                           <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
                             <CheckCircle className="h-3 w-3 mr-1" /> Service Pending
+                          </Badge>
+                        ) : order.status === 'COLLECTION_PENDING' ? (
+                          <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                            <Package className="h-3 w-3 mr-1" /> Ready for Collection
                           </Badge>
                         ) : (
                           <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
