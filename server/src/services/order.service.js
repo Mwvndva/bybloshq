@@ -506,12 +506,16 @@ class OrderService {
             .catch(err => logger.error('Error sending buyer confirmation:', err));
 
 
+
           // Notify Seller of New Order (now that payment is confirmed)
+          logger.info(`[PURCHASE-FLOW] 9d. Sending New Order Notification to Seller ${sellerData.phone || 'NO_PHONE'}`);
           whatsappService.notifySellerNewOrder({
             seller: sellerData,
             order: notificationPayload.order,
             items: items
-          }).catch(err => logger.error('Error sending seller new order notification:', err));
+          })
+            .then(() => logger.info(`[PURCHASE-FLOW] 9e. Seller notification sent successfully`))
+            .catch(err => logger.error('Error sending seller new order notification:', err));
         }
       } catch (e) {
         logger.error('Error triggering completion notifications:', e);

@@ -216,7 +216,9 @@ export default function OrdersSection() {
   const [isConfirming, setIsConfirming] = useState<string | null>(null);
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+
 
   const getConfirmationContent = () => {
     const order = orders.find(o => o.id === currentOrderId);
@@ -360,6 +362,34 @@ export default function OrdersSection() {
 
     }
   };
+
+  const handleCollectionClick = (orderId: string) => {
+    setCurrentOrderId(orderId);
+    setShowCollectionDialog(true);
+  };
+
+  const handleMarkAsCollected = async () => {
+    if (!currentOrderId) return;
+
+    setShowCollectionDialog(false);
+    setIsConfirming(currentOrderId);
+    const loadingToast = toast.loading('Marking as collected...');
+
+    try {
+      await buyerApi.markOrderAsCollected(currentOrderId);
+      toast.success('Order completed! Funds released to seller.', { id: loadingToast });
+
+      // Refresh orders
+      await fetchOrders();
+    } catch (error: any) {
+      console.error('Error marking as collected:', error);
+      const errorMsg = error.response?.data?.message || error.message || 'Failed to mark as collected';
+      toast.error(errorMsg, { id: loadingToast });
+    } finally {
+      setIsConfirming(null);
+    }
+  };
+
 
   // Always use real data from the API
   const displayOrders = orders;
@@ -570,19 +600,7 @@ export default function OrdersSection() {
                     <Button
                       size="sm"
                       className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-                      onClick={async () => {
-                        if (!confirm("Confirm that you have collected this item? Funds will be released to the seller.")) return;
-                        try {
-                          toast.loading("Marking as collected...");
-                          await buyerApi.markOrderAsCollected(order.id);
-                          toast.dismiss();
-                          toast.success("Order completed!");
-                          fetchOrders();
-                        } catch (e) {
-                          toast.dismiss();
-                          toast.error("Failed to mark as collected");
-                        }
-                      }}
+                      onClick={() => handleCollectionClick(order.id)}
                     >
                       <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                       <span className="hidden sm:inline">Mark as Collected</span>
@@ -721,6 +739,66 @@ export default function OrdersSection() {
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Confirm Receipt
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Collection Confirmation Dialog */}
+      <Dialog open={showCollectionDialog} onOpenChange={setShowCollectionDialog}>
+        <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                <Package className="h-4 w-4 text-white" />
+              </div>
+              Confirm Collection
+            </DialogTitle>
+            <DialogDescription className="text-sm text-gray-600 leading-relaxed">
+              Please confirm that you have physically collected this item from the seller's shop.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 my-4">
+            <p className="text-sm text-blue-900 font-semibold mb-2">
+              📍 Collection Location
+            </p>
+            <p className="text-sm text-blue-800">
+              Please verify you picked up from the seller's shop as indicated in your order details.
+            </p>
+          </div>
+
+          <div className="bg-gradient-to-r from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl p-3 mb-4">
+            <p className="text-sm text-yellow-800 font-semibold">
+              ⚠️ Funds will be immediately released to the seller once you confirm collection.
+            </p>
+          </div>
+
+          <DialogFooter className="mt-4 gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowCollectionDialog(false)}
+              disabled={isConfirming === currentOrderId}
+              className="border-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleMarkAsCollected}
+              disabled={isConfirming === currentOrderId}
+              className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              {isConfirming === currentOrderId ? (
+                <>
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Yes, I Collected It
                 </>
               )}
             </Button>
