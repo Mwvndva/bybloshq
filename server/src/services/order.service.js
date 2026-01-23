@@ -426,10 +426,12 @@ class OrderService {
       const itemsResult = await client.query(itemsQuery, [orderId]);
       const items = itemsResult.rows;
 
+      // Fetch Seller to check for Shop Address
+      const { rows: sellers } = await client.query('SELECT physical_address FROM sellers WHERE id = $1', [order.seller_id]);
+      const sellerHasShop = sellers.length > 0 && !!sellers[0].physical_address;
+
       let hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL);
       let hasService = items.some(i => i.product_type === ProductType.SERVICE);
-      // Check for Service Locations (Shop Address) in metadata
-      let hasShopAddress = items.some(i => i.metadata?.serviceLocations && i.metadata.serviceLocations.length > 0);
 
       // Fallback logic for metadata if product/type missing
       if (!items.length && metadata.product_type) {
@@ -439,7 +441,7 @@ class OrderService {
 
       let newStatus = OrderStatus.COMPLETED;
       if (hasPhysical) {
-        if (hasShopAddress) {
+        if (sellerHasShop) {
           newStatus = OrderStatus.COLLECTION_PENDING;
         } else {
           newStatus = OrderStatus.DELIVERY_PENDING;
@@ -450,7 +452,7 @@ class OrderService {
 
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
 
-      logger.info(`[PURCHASE-FLOW] 8a. Order Status Updated to: ${newStatus}, Payment Status: completed`, {
+      logger.info(`[PURCHASE-FLOW] 8a. Order Status Updated to: ${newStatus}, Payment Status: completed, Shop Detected: ${sellerHasShop}`, {
         orderId, newStatus
       });
 
