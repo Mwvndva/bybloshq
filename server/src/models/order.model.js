@@ -304,12 +304,12 @@ class Order {
     const query = `
       UPDATE product_orders 
       SET 
-        status = $1,
-        payment_status = $2,
+        status = $1::order_status,
+        payment_status = $2::payment_status,
         updated_at = NOW(),
-        paid_at = CASE WHEN $2 = 'completed' AND paid_at IS NULL THEN NOW() ELSE paid_at END,
-        completed_at = CASE WHEN $1 = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END,
-        cancelled_at = CASE WHEN $1 = 'cancelled' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END
+        paid_at = CASE WHEN $2::text = 'completed' AND paid_at IS NULL THEN NOW() ELSE paid_at END,
+        completed_at = CASE WHEN $1::text = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END,
+        cancelled_at = CASE WHEN $1::text = 'cancelled' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END
       WHERE id = $3
       RETURNING *
     `;
