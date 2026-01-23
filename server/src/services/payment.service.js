@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
+import OrderService from './order.service.js';
 
 class PaymentService {
     constructor() {
@@ -296,6 +297,7 @@ class PaymentService {
                      WHERE status = '${PaymentStatus.PENDING}' 
                      AND amount = $1 
                      AND phone_number LIKE '%' || $2 
+                     AND created_at > NOW() - INTERVAL '30 minute'
                      ORDER BY created_at DESC LIMIT 1`,
                     [webhookAmount, phoneTail]
                 );
@@ -561,24 +563,17 @@ class PaymentService {
 
         // 3. Discount
         if (discountCode) {
-            // Basic discount check logic (simplified for DB access without Model import if possible, or import Model?)
-            // Importing Model is fine.
-            // But let's do a direct query for speed/simplicity
-            // "DiscountCode.validate" was logic rich. 
-            // Ideally we kept that model logic. 
-            // I'll assume standard fee for now or minimal validation to avoid bugs.
-            // Actually, I should probably skip discount logic re-implementation in this quick edit 
-            // UNLESS it's critical. It IS critical for money.
-            // But I don't have the DiscountCode model source in front of me to copy logic exactly.
-            // I will skip discount for now and add TODO.
-            // Re-reading: I can query discount_codes table.
-
             const { rows: discounts } = await pool.query("SELECT * FROM discount_codes WHERE code = $1 AND event_id = $2 AND status = 'active'", [discountCode, eventId]);
             if (discounts.length > 0) {
                 const d = discounts[0];
-                // Apply % or fixed?
-                // Assuming model handled it.
-                // I'll leave it as TODO or treat as no discount to be safe.
+                if (d.type === 'percentage') {
+                    // e.g. value 10 means 10% off
+                    discountAmount = (amount * parseFloat(d.value)) / 100;
+                } else {
+                    // Fixed amount
+                    discountAmount = parseFloat(d.value);
+                }
+                amount = Math.max(0, amount - discountAmount);
             }
         }
 
@@ -679,7 +674,7 @@ class PaymentService {
         // So `OrderService.createOrder` EXISTS.
         // Let's import it.
 
-        const OrderService = (await import('./order.service.js')).default;
+        // const OrderService = (await import('./order.service.js')).default; // Refactored to static import
 
         const orderData = {
             buyerId,
