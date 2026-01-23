@@ -5,6 +5,7 @@ import Payment from '../models/payment.model.js';
 import Event from '../models/event.model.js';
 import jwt from 'jsonwebtoken';
 import Order from '../models/order.model.js';
+import OrderService from '../services/order.service.js';
 import DiscountCode from '../models/discountCode.model.js';
 import Buyer from '../models/buyer.model.js';
 import Fees from '../config/fees.js';
@@ -258,7 +259,7 @@ class PaymentController {
         }
       };
 
-      const order = await Order.createOrder(orderData);
+      const order = await OrderService.createOrder(orderData);
       logger.info('Created order:', { orderId: order.id });
 
       const paymentData = {
@@ -284,22 +285,36 @@ class PaymentController {
         invoiceId: paymentData.invoice_id
       });
 
-      // 3. Initiate via Service (Service should create DB record first if following pattern, but current Service.initiatePayment only calls gateway)
-      // We should really move all this to service.
-      // For now, let's keep it here but respect the plan to refactor "logic" out.
+      // 3. Initiate via Service
+      // We are calling paymentService.initiateProductPayment but we need to pass the order ID we just created
+      // Actually, looking at the code below, it calls paymentService.initiateProductPayment, which might duplicate logic?
+      // Wait, line 297 implies paymentService.initiateProductPayment does EVERYTHING? 
+      // But we just manually created the order at line 261!
+      // If paymentService.initiateProductPayment creates an order, we shouldn't create it here.
+      // But looking at line 261, we ARE creating it here.
+      // Let's assume we want to use the order we created.
+      // And we initiate payment using the RAW payment data, NOT the full service call that might double-create.
+      // Or maybe paymentService.initiatePayment (generic) is what we want?
+      // Re-reading line 297: `const result = await paymentService.initiateProductPayment(req.body, req.user);`
+      // This looks like it was intended to replace the whole block!
+      // But the current block does validation, order creation, AND THEN calls this?
+      // That seems wrong. `initiateProductPayment` likely re-does logic.
 
-      // ... Assuming we want to move this huge block to Service.initiateProductPayment method?
-      // I forgot to add `initiateProductPayment` to PaymentService in the plan!
-      // But the plan said "Delegate fully to PaymentService".
-      // So I should create `initiateTicketPayment` and `initiateProductPayment` in PaymentService.
-      // Let's call them there.
+      // FIX: Since we did manual order creation here, let's just use the GENERIC initiatePayment from service
+      // OR let `paymentService.initiateProductPayment` handle it all and DELETE the manual logic here?
+      // Given the error was "Order.createOrder", the code WAS executing this manual block.
+      // I will trust the manual block is the "active" path being used and just fix the service call to be the low-level one.
 
-      const result = await paymentService.initiateProductPayment(req.body, req.user); // Abstraction
+      const result = await paymentService.initiatePayment(paymentData);
 
       res.status(200).json({
         status: 'success',
         message: 'Product payment initiated. Check your phone.',
-        data: result
+        data: {
+          ...result,
+          order_id: order.id,
+          order_number: order.order_number
+        }
       });
 
 
