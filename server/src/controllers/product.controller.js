@@ -1,5 +1,6 @@
 import ProductService from '../services/product.service.js';
 import logger from '../utils/logger.js';
+import ImageService from '../services/image.service.js';
 
 // Upload digital file handler
 export const uploadDigitalFile = async (req, res) => {
@@ -26,6 +27,11 @@ export const createProduct = async (req, res) => {
   try {
     const sellerId = req.user?.id;
     if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
+
+    // Convert base64 image to file if present
+    if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
+      req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'product');
+    }
 
     const product = await ProductService.createProduct(sellerId, req.body);
 
@@ -106,6 +112,11 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const sellerId = req.user.id;
+
+    // Convert base64 image to file if present
+    if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
+      req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'product');
+    }
 
     const updatedProduct = await ProductService.updateProduct(sellerId, id, req.body);
 

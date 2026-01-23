@@ -3,6 +3,7 @@ import { query, pool } from '../config/database.js';
 import payoutService from '../services/payout.service.js';
 import whatsappService from '../services/whatsapp.service.js';
 import logger from '../utils/logger.js';
+import ImageService from '../services/image.service.js';
 
 import SellerService from '../services/seller.service.js';
 import * as SellerModel from '../models/seller.model.js';
@@ -486,7 +487,7 @@ export const uploadBanner = async (req, res) => {
       });
     }
 
-    const { bannerImage } = req.body;
+    let { bannerImage } = req.body;
 
     // Allow empty string to remove banner
     if (bannerImage === undefined || bannerImage === null) {
@@ -494,6 +495,11 @@ export const uploadBanner = async (req, res) => {
         status: 'error',
         message: 'Banner image is required'
       });
+    }
+
+    // Convert base64 to file if present
+    if (bannerImage && ImageService.isBase64Image(bannerImage)) {
+      bannerImage = await ImageService.base64ToFile(bannerImage, 'seller_banner');
     }
 
     // Convert empty string to NULL for database (to remove the banner)
