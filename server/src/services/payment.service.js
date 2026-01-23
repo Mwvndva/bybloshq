@@ -27,10 +27,10 @@ class PaymentService {
             },
             timeout: 60000,
             // Allow self-signed certs and enable keepAlive to prevent socket hang up
-            // Allow self-signed certs and enable keepAlive to prevent socket hang up
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
-                keepAlive: false // Disable keepAlive to prevent socket hang up on some servers
+                keepAlive: false, // Disable keepAlive to prevent socket hang up on some servers
+                family: 4 // FORCE IPv4 to avoid socket hang up on IPv6 timeout
             })
         });
     }
@@ -86,7 +86,7 @@ class PaymentService {
             }
 
             logger.info(`[PURCHASE-FLOW] 1. Initiating Payment for Invoice: ${invoice_id}`, {
-                email, amount, phone, narrative
+                amount, phone
             });
 
             const paydAmount = parseFloat(amount);
@@ -95,25 +95,22 @@ class PaymentService {
 
             // Normalize phone: remove non-digits
             let cleanPhone = phone.replace(/\D/g, '');
-            // Ensure 10 digits starting with 0 for local usage in phone_number?
-            // Docs curl example: "phone_number": "07712345671"
-            // Docs curl example: "account_number": "+254712434671"
 
-            // Let's try to match the curl example logic:
-            // If it starts with 254, replace with 0 for phone_number if needed, or keep as is?
-            // Usually '07...' is standard for 'phone_number' in Kenya for STK push.
+            // Standardize to 07... / 01... format
             if (cleanPhone.startsWith('254')) {
                 cleanPhone = '0' + cleanPhone.substring(3);
             } else if (cleanPhone.length === 9) {
+                // assume 7xx...
                 cleanPhone = '0' + cleanPhone;
             }
+            // If it's already 07... or 01... leave it. 
 
-            // For account_number, valid format is often MSISDN (254...) or same as phone.
-            // Curl example uses +254 for account_number.
-            // Let's generate a +254 version for account_number
+            // Account Number: Payd often uses the MSISDN as the account identifier.
+            // Let's use the full international format for account_number just to be distinct and robust.
+            // e.g. 254712345678
             let accountNumber = cleanPhone;
             if (accountNumber.startsWith('0')) {
-                accountNumber = '+254' + accountNumber.substring(1);
+                accountNumber = '254' + accountNumber.substring(1);
             }
 
             const payload = {
