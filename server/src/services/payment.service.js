@@ -15,6 +15,8 @@ class PaymentService {
         // Use separate variable for payload username to avoid system USERNAME conflict
         this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx'; // Fallback for immediate test consistency if user hasn't renamed yet
 
+        logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl}`);
+
         // Create axios instance with default config
         this.client = axios.create({
             baseURL: this.baseUrl,
