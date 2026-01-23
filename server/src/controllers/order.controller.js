@@ -949,7 +949,8 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
         businessName: seller.full_name,
         full_name: seller.full_name,
         phone: seller.phone,
-        email: seller.email
+        email: seller.email,
+        physicalAddress: seller.physical_address
       }
     };
 
@@ -1093,7 +1094,8 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         businessName: seller.full_name,
         full_name: seller.full_name,
         phone: seller.phone,
-        email: seller.email
+        email: seller.email,
+        physicalAddress: seller.physical_address
       }
     };
 

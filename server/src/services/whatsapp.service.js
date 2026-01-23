@@ -476,6 +476,12 @@ Your refund balance remains available for future withdrawal requests.
             return true; // Return success (skipped)
         }
 
+        // Skip logistics notification for products with physical shop address (Seller handles logistics/pickup)
+        if (seller?.physicalAddress) {
+            logger.info(`Skipping logistics notification for order #${order.order_number} (Seller has physical shop)`);
+            return true; // Return success (skipped)
+        }
+
         const logisticsNumber = '+254748137819';
 
         let itemsList = '';
