@@ -12,10 +12,10 @@ class SellerService {
 
     // --- Auth ---
     static async register(data) {
-        const { fullName, shopName, email, phone, password, city, location } = data;
+        const { fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude } = data;
         const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
         const seller = await SellerModel.createSeller({
-            fullName, shopName, email, phone, password: hashedPassword, city, location
+            fullName, shopName, email, phone, password: hashedPassword, city, location, physicalAddress, latitude, longitude
         });
         return seller;
     }

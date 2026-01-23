@@ -256,10 +256,7 @@ class OrderService {
       const updatedOrder = await Order.updateStatusWithReason(client, orderId, OrderStatus.CANCELLED, reason);
 
       if (updatedOrder) {
-        // 4. Restore Inventory
-        await this._restoreInventory(client, orderId);
-
-        // 5. Update Buyer Refunds (Track cumulative refunds)
+        // 4. Update Buyer Refunds (Track cumulative refunds)
         const refundAmount = parseFloat(order.total_amount);
         await client.query(
           `UPDATE buyers 
@@ -382,17 +379,6 @@ class OrderService {
     return initialStatus;
   }
 
-  static async _restoreInventory(client, orderId) {
-    const itemsQuery = 'SELECT product_id, quantity FROM order_items WHERE order_id = $1';
-    const itemsResult = await client.query(itemsQuery, [orderId]);
-
-    for (const item of itemsResult.rows) {
-      await client.query(
-        'UPDATE products SET quantity = quantity + $1 WHERE id = $2',
-        [item.quantity, item.product_id]
-      );
-    }
-  }
 
   /**
    * Complete an order after successful payment
@@ -459,7 +445,7 @@ class OrderService {
         newStatus = OrderStatus.CONFIRMED;
       }
 
-      const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed');
+      const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
 
       // Check if we accidentally auto-completed it (e.g. digital) - handle payout?
       // Digital usually goes to COMPLETED immediately.
@@ -576,7 +562,20 @@ class OrderService {
         [payoutAmount, totalAmount, order.seller_id]
       );
 
-      // Mark as processed
+      // Harmonize with DB Trigger:
+      // The trigger 'handle_order_completion' creates a payout record with status 'pending' on order completion.
+      // Since we just updated the balance, we should mark that payout as 'completed'.
+      await client.query(
+        `UPDATE payouts 
+         SET status = 'completed', 
+             processed_at = NOW(),
+             completed_at = NOW(), 
+             metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{processed_by_service}', '"OrderService"'::jsonb)
+         WHERE order_id = $1`,
+        [order.id]
+      );
+
+      // Mark as processed in Order Metadata (Legacy/Extra Safety)
       await client.query(
         `UPDATE product_orders 
              SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{payout_processed}', 'true'::jsonb)

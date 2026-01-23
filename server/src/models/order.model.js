@@ -300,20 +300,21 @@ class Order {
     return rows[0];
   }
 
-  static async updateStatusWithSideEffects(client, orderId, status, paymentStatus) {
+  static async updateStatusWithSideEffects(client, orderId, status, paymentStatus, paymentReference = null) {
     const query = `
       UPDATE product_orders 
       SET 
         status = $1::order_status,
         payment_status = $2::payment_status,
+        payment_reference = COALESCE($3, payment_reference),
         updated_at = NOW(),
         paid_at = CASE WHEN $2::text = 'completed' AND paid_at IS NULL THEN NOW() ELSE paid_at END,
         completed_at = CASE WHEN $1::text = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END,
         cancelled_at = CASE WHEN $1::text = 'cancelled' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END
-      WHERE id = $3
+      WHERE id = $4
       RETURNING *
     `;
-    const { rows } = await client.query(query, [status, paymentStatus, orderId]);
+    const { rows } = await client.query(query, [status, paymentStatus, paymentReference, orderId]);
     return rows[0];
   }
 
