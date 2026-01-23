@@ -78,28 +78,7 @@ class OrderService {
       await client.query('COMMIT');
       logger.info(`OrderService: Order ${order.id} created successfully`);
 
-      // 8. Send Notification (Non-blocking)
-      try {
-        const sellerInfo = await pool.query('SELECT phone, email, full_name FROM sellers WHERE id = $1', [sellerId]);
-        if (sellerInfo.rows.length > 0) {
-          whatsappService.notifySellerNewOrder({
-            seller: {
-              phone: sellerInfo.rows[0].phone,
-              name: sellerInfo.rows[0].full_name,
-              email: sellerInfo.rows[0].email
-            },
-            order: {
-              order_number: order.order_number,
-              total_amount: totalAmount,
-              status: initialStatus,
-              metadata: metadata
-            },
-            items: items
-          }).catch(err => logger.error('Error sending new order notification:', err));
-        }
-      } catch (notifyError) {
-        logger.error('Error preparing notification data:', notifyError);
-      }
+      // 8. Notification removed from here - moved to completeOrder to ensure payment success first
 
       return order;
 
