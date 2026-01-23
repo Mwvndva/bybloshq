@@ -733,6 +733,8 @@ class PaymentService {
         // 5. Initiate Gateway
         const gwPayload = {
             ...paymentData,
+            // initiatePayment expects 'phone' key for the number
+            phone: paymentData.phone_number,
             firstName: customerName?.split(' ')[0],
             narrative: paymentData.metadata.narrative
         };
