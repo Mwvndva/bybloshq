@@ -263,13 +263,30 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         }
 
         const pickupLocation = seller?.physicalAddress || 'Dynamic Mall, Shop SL 32';
-        let nextSteps = `📍 *NEXT STEPS:*\nWe'll notify you when it's ready for pickup at ${pickupLocation}.\n\n⏰ *SELLER DEADLINE:* Seller has 48 hours to drop off your order or it will be auto-cancelled and refunded.`;
+        let nextSteps = '';
+
         if (isService) {
             const serviceType = this.getServiceProviderType(order);
             nextSteps = `⏰ *WHAT'S NEXT:*\nYour ${serviceType} has been notified and will contact you to confirm the appointment details.\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
             nextSteps = `✅ *YOUR DOWNLOAD IS READY!*\n🔗 Access it here: ${dashboardUrl}`;
+        } else {
+            // Physical Product Logic
+            if (seller?.physicalAddress) {
+                // Shop Collection Logic
+                let mapsLink = '';
+                if (seller.latitude && seller.longitude) {
+                    mapsLink = `https://www.google.com/maps?q=${seller.latitude},${seller.longitude}`;
+                } else {
+                    mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(seller.physicalAddress)}`;
+                }
+
+                nextSteps = `📍 *PICKUP INSTRUCTIONS:*\nPlease pick up your order at:\n*${seller.shop_name}*\n${pickupLocation}\n\n🗺️ *Location:* ${mapsLink}\n\n⏰ *TIMING:* Order is ready for collection immediately.`;
+            } else {
+                // Logistics/Drop-off Logic
+                nextSteps = `📍 *NEXT STEPS:*\nWe'll notify you when it's ready for pickup at Dynamic Mall, Shop SL 32.\n\n⏰ *SELLER DEADLINE:* Seller has 48 hours to drop off your order.`;
+            }
         }
 
         const header = isDigital ? '🎉 *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
@@ -300,7 +317,31 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
         const isDigital = productType === 'digital';
 
         let msg = '';
-        if (newStatus === 'DELIVERY_PENDING') {
+        if (newStatus === 'COLLECTION_PENDING') {
+            const amount = parseFloat(order.totalAmount || 0);
+            const sellerAddr = updateData.seller?.physicalAddress || 'the shop';
+
+            let mapsLink = '';
+            if (updateData.seller?.latitude && updateData.seller?.longitude) {
+                mapsLink = `https://www.google.com/maps?q=${updateData.seller.latitude},${updateData.seller.longitude}`;
+            } else if (updateData.seller?.physicalAddress) {
+                mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(updateData.seller.physicalAddress)}`;
+            }
+
+            msg = `✅ *READY FOR COLLECTION*
+
+💰 Amount: KSh ${amount.toLocaleString()}
+📦 Order #${order.orderNumber} is confirmed.
+
+📍 *PICKUP LOCATION:*
+${sellerAddr}
+${mapsLink ? `\n🗺️ *Map:* ${mapsLink}` : ''}
+
+⏰ *INSTRUCTIONS:*
+Please proceed to the shop to collect your items.`;
+
+        } else if (newStatus === 'DELIVERY_PENDING') {
+            // Existing logic for Service/Digital...
             if (isService) {
                 const serviceType = this.getServiceProviderType(order);
                 const amount = parseFloat(order.totalAmount || 0);
@@ -315,8 +356,8 @@ Order #${order.orderNumber}`;
             } else if (isDigital) {
                 msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} payment received. Your download is ready.`;
             } else {
+                // FALLBACK for Logistics (No Shop Address)
                 const amount = parseFloat(order.totalAmount || 0);
-                const sellerAddr = updateData.seller?.physicalAddress || 'Dynamic Mall, Shop SL 32';
 
                 msg = `✅ *PAYMENT SUCCESSFUL*
 
@@ -324,7 +365,7 @@ Order #${order.orderNumber}`;
 📦 Order #${order.orderNumber} is confirmed.
 
 ⏰ *NEXT STEPS:*
-We are preparing your order for pickup. You'll be notified when it's ready at ${sellerAddr}.`;
+We are preparing your order for pickup. You'll be notified when it's ready at Dynamic Mall, Shop SL 32.`;
             }
         } else if (newStatus === 'DELIVERY_COMPLETE') {
             if (isService) {

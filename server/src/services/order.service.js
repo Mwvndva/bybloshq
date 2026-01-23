@@ -180,7 +180,8 @@ class OrderService {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
                   b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address
+                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, 
+                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
@@ -199,7 +200,9 @@ class OrderService {
             name: fullOrder.seller_name,
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
-            physicalAddress: fullOrder.seller_address
+            physicalAddress: fullOrder.seller_address,
+            latitude: fullOrder.seller_latitude,
+            longitude: fullOrder.seller_longitude
           };
 
           const notificationPayload = {
@@ -492,7 +495,9 @@ class OrderService {
             name: fullOrder.seller_name,
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
-            physicalAddress: fullOrder.seller_address
+            physicalAddress: fullOrder.seller_address,
+            latitude: fullOrder.seller_latitude,
+            longitude: fullOrder.seller_longitude
           };
 
           const notificationPayload = {
@@ -625,7 +630,7 @@ class OrderService {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
                   b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address
+                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
@@ -644,7 +649,9 @@ class OrderService {
             name: fullOrder.seller_name,
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
-            physicalAddress: fullOrder.seller_address
+            physicalAddress: fullOrder.seller_address,
+            latitude: fullOrder.seller_latitude,
+            longitude: fullOrder.seller_longitude
           };
 
           const notificationPayload = {
