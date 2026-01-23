@@ -218,10 +218,8 @@ class WhatsAppService {
         } else {
             // Physical Product Logic
             if (seller?.physicalAddress) {
-                // Shop Collection Logic
-                instructionText = `✅ *NEXT STEP:*
-Wait for the buyer to arrive.
-When they pick it up, ask them to mark the order as 'collected' to release funds.`;
+                // Shop Collection Logic - No instruction needed, just notification
+                instructionText = ``;
             } else {
                 // Logistics / Drop-off Logic
                 instructionText = `⚠️ *ACTION REQUIRED:*

@@ -1,8 +1,14 @@
 import EventService from '../services/event.service.js';
 import AppError from '../utils/appError.js';
+import ImageService from '../services/image.service.js';
 
 export const createEvent = async (req, res, next) => {
   try {
+    // Convert base64 image to file if present
+    if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
+      req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'event');
+    }
+
     const event = await EventService.createEvent(req.user.id, req.body);
     res.status(201).json({ status: 'success', data: { event } });
   } catch (error) {
@@ -13,6 +19,11 @@ export const createEvent = async (req, res, next) => {
 
 export const updateEvent = async (req, res, next) => {
   try {
+    // Convert base64 image to file if present
+    if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
+      req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'event');
+    }
+
     const event = await EventService.updateEvent(req.params.id, req.user.id, req.body);
     res.status(200).json({ status: 'success', data: { event } });
   } catch (error) {
