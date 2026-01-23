@@ -3,6 +3,7 @@ import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';
 import { OrderStatus, ProductType } from '../constants/enums.js';
 import Order from '../models/order.model.js';
+import whatsappService from './whatsapp.service.js';
 
 class OrderService {
   /**
@@ -76,6 +77,30 @@ class OrderService {
 
       await client.query('COMMIT');
       logger.info(`OrderService: Order ${order.id} created successfully`);
+
+      // 8. Send Notification (Non-blocking)
+      try {
+        const sellerInfo = await pool.query('SELECT phone, email, full_name FROM sellers WHERE id = $1', [sellerId]);
+        if (sellerInfo.rows.length > 0) {
+          whatsappService.notifySellerNewOrder({
+            seller: {
+              phone: sellerInfo.rows[0].phone,
+              name: sellerInfo.rows[0].full_name,
+              email: sellerInfo.rows[0].email
+            },
+            order: {
+              order_number: order.order_number,
+              total_amount: totalAmount,
+              status: initialStatus,
+              metadata: metadata
+            },
+            items: items
+          }).catch(err => logger.error('Error sending new order notification:', err));
+        }
+      } catch (notifyError) {
+        logger.error('Error preparing notification data:', notifyError);
+      }
+
       return order;
 
     } catch (error) {
@@ -149,6 +174,55 @@ class OrderService {
       }
 
       await client.query('COMMIT');
+
+      // 7. Send Notification
+      try {
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
+
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+          const buyerData = {
+            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
+          };
+          const sellerData = {
+            name: fullOrder.seller_name,
+            phone: fullOrder.seller_phone,
+            email: fullOrder.seller_email,
+            physicalAddress: fullOrder.seller_address
+          };
+
+          const notificationPayload = {
+            buyer: buyerData,
+            seller: sellerData,
+            order: {
+              orderNumber: fullOrder.order_number,
+              totalAmount: fullOrder.total_amount,
+              status: newStatus,
+              metadata: fullOrder.metadata
+            },
+            oldStatus: currentStatus,
+            newStatus: newStatus,
+            notes: 'Status updated by seller'
+          };
+
+          whatsappService.notifyBuyerStatusUpdate(notificationPayload)
+            .catch(err => logger.error('Error sending status update notification:', err));
+        }
+      } catch (e) {
+        logger.error('Error sending status notification:', e);
+      }
+
       return updatedOrder;
 
     } catch (error) {
@@ -197,6 +271,70 @@ class OrderService {
       }
 
       await client.query('COMMIT');
+
+      // 6. Send Notification
+      try {
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
+
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+
+          // Prepare minimal data for notification helper
+          const orderData = {
+            id: fullOrder.id,
+            order_id: fullOrder.order_number || fullOrder.id, // match helper expectation
+            total_amount: fullOrder.total_amount,
+            amount: fullOrder.total_amount,
+            buyer_phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            // We might need items for detailed notification?
+            // Helper likely expects items. But we don't have them in 'fullOrder' unless we join.
+            // Let's rely on basic info for now or fetch items.
+            // fetching items is better.
+          };
+
+          // Fetch items for better notification
+          const itemsResult = await pool.query('SELECT product_name, quantity, product_price FROM order_items WHERE order_id = $1', [orderId]);
+          orderData.items = itemsResult.rows.map(i => ({
+            product_name: i.product_name,
+            quantity: i.quantity,
+            product_price: i.product_price
+          }));
+
+          const buyer = {
+            full_name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual, // Use normalized if possible
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
+          };
+
+          const seller = {
+            id: fullOrder.seller_id,
+            full_name: fullOrder.seller_name,
+            phone: fullOrder.seller_phone,
+            shop_name: fullOrder.seller_name // fallback
+          };
+
+          // Notify Buyer "You cancelled"
+          whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Buyer')
+            .catch(err => logger.error('Error sending buyer cancellation notification:', err));
+
+          // Notify Seller "Buyer cancelled"
+          whatsappService.sendSellerOrderCancellationNotification(orderData, seller, 'Buyer')
+            .catch(err => logger.error('Error sending seller cancellation notification:', err));
+        }
+      } catch (e) {
+        logger.error('Error sending cancellation notifications:', e);
+      }
+
       return updatedOrder;
     } catch (error) {
       await client.query('ROLLBACK');
@@ -312,10 +450,12 @@ class OrderService {
 
       let newStatus = OrderStatus.COMPLETED;
       if (hasPhysical) {
-        newStatus = OrderStatus.DELIVERY_PENDING;
-      } else if (hasShopAddress) {
-        newStatus = OrderStatus.COLLECTION_PENDING;
-      } else if (hasService && !hasPhysical) {
+        if (hasShopAddress) {
+          newStatus = OrderStatus.COLLECTION_PENDING;
+        } else {
+          newStatus = OrderStatus.DELIVERY_PENDING;
+        }
+      } else if (hasService) {
         newStatus = OrderStatus.CONFIRMED;
       }
 
@@ -341,10 +481,63 @@ class OrderService {
 
       await client.query('COMMIT');
 
-      // TODO: Trigger Notifications (WhatsApp/Email) here or return instruction to do so.
-      // OrderService shouldn't directly depend on WhatsAppService if possible to avoid circular dep if WhatsApp uses Order?
-      // But WhatsAppService assumes Order.
-      // For now, return the updated order and let PaymentService trigger notifications.
+      // Trigger Notifications (WhatsApp/Email)
+      try {
+        // Fetch full order details with buyer and seller for notification
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
+
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+          const buyerData = {
+            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
+          };
+          const sellerData = {
+            name: fullOrder.seller_name,
+            phone: fullOrder.seller_phone,
+            email: fullOrder.seller_email,
+            physicalAddress: fullOrder.seller_address
+          };
+
+          const notificationPayload = {
+            buyer: buyerData,
+            seller: sellerData,
+            order: {
+              orderNumber: fullOrder.order_number,
+              totalAmount: fullOrder.total_amount,
+              status: newStatus,
+              metadata: fullOrder.metadata
+            },
+            items: items
+          };
+
+          whatsappService.notifyBuyerOrderConfirmation(notificationPayload)
+            .catch(err => logger.error('Error sending buyer confirmation:', err));
+
+          // Also notify seller of payment success? 
+          // notifyBuyerOrderConfirmation usually sends to Buyer. 
+          // notifySellerNewOrder was sent at creation. 
+          // Maybe notifySellerStatusUpdate?
+          whatsappService.notifySellerStatusUpdate({
+            ...notificationPayload,
+            oldStatus: OrderStatus.PENDING,
+            newStatus: newStatus,
+            notes: 'Payment Received'
+          }).catch(err => logger.error('Error sending seller payment notification:', err));
+        }
+      } catch (e) {
+        logger.error('Error triggering completion notifications:', e);
+      }
 
       return { success: true, orderId, newStatus };
 
@@ -426,6 +619,59 @@ class OrderService {
       await this._processSellerPayout(client, updatedOrder);
 
       await client.query('COMMIT');
+
+      // 5. Send Notification
+      try {
+        // Re-fetch order details or reuse
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
+
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+          const buyerData = {
+            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
+          };
+          const sellerData = {
+            name: fullOrder.seller_name,
+            phone: fullOrder.seller_phone,
+            email: fullOrder.seller_email,
+            physicalAddress: fullOrder.seller_address
+          };
+
+          const notificationPayload = {
+            buyer: buyerData,
+            seller: sellerData,
+            order: {
+              orderNumber: fullOrder.order_number,
+              totalAmount: fullOrder.total_amount,
+              status: OrderStatus.COMPLETED,
+              metadata: fullOrder.metadata
+            },
+            oldStatus: OrderStatus.COLLECTION_PENDING,
+            newStatus: OrderStatus.COMPLETED,
+            notes: 'Order collected by buyer'
+          };
+
+          whatsappService.notifySellerStatusUpdate(notificationPayload) // Notify Seller their item was collected
+            .catch(err => logger.error('Error sending collection notification to seller:', err));
+
+          whatsappService.notifyBuyerStatusUpdate(notificationPayload) // Notify Buyer "Thanks for collecting"
+            .catch(err => logger.error('Error sending collection notification to buyer:', err));
+        }
+      } catch (e) {
+        logger.error('Error sending collection notifications:', e);
+      }
+
       return updatedOrder;
 
     } catch (error) {

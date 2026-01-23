@@ -1167,9 +1167,7 @@ const cancelOrder = async (req, res) => {
     // Let's extract notification logic to a helper or keep it here.
     // To keep it simple, I'll reuse the existing Notification block but fetch necessary data.
 
-    sendCancellationNotifications(id, userId, order.seller_id).catch(err => {
-      console.error('Error sending cancellation notifications:', err);
-    });
+    // Notifications handled in OrderService.cancelOrder
 
     res.status(200).json({
       success: true,
