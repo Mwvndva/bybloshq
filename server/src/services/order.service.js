@@ -482,6 +482,7 @@ class OrderService {
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
             physicalAddress: fullOrder.seller_address,
+            shop_name: fullOrder.shop_name,
             latitude: fullOrder.seller_latitude,
             longitude: fullOrder.seller_longitude
           };
@@ -501,16 +502,12 @@ class OrderService {
           whatsappService.notifyBuyerOrderConfirmation(notificationPayload)
             .catch(err => logger.error('Error sending buyer confirmation:', err));
 
-          // Also notify seller of payment success? 
-          // notifyBuyerOrderConfirmation usually sends to Buyer. 
-          // notifySellerNewOrder was sent at creation. 
-          // Maybe notifySellerStatusUpdate?
-          whatsappService.notifySellerStatusUpdate({
-            ...notificationPayload,
-            oldStatus: OrderStatus.PENDING,
-            newStatus: newStatus,
-            notes: 'Payment Received'
-          }).catch(err => logger.error('Error sending seller payment notification:', err));
+          // Notify Seller of New Order (now that payment is confirmed)
+          whatsappService.notifySellerNewOrder({
+            seller: sellerData,
+            order: notificationPayload.order,
+            items: items
+          }).catch(err => logger.error('Error sending seller new order notification:', err));
         }
       } catch (e) {
         logger.error('Error triggering completion notifications:', e);
