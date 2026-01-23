@@ -219,13 +219,9 @@ class WhatsAppService {
             // Physical Product Logic
             if (seller?.physicalAddress) {
                 // Shop Collection Logic
-                instructionText = `🏷️ *SHOP COLLECTION:*
-Buyer has selected to pick up this order from your shop.
-📍 Location: ${seller.shop_name || 'Your Shop'}
-
-✅ *NEXT STEP:*
-Wait for the buyer to arrive. Do NOT drop off this item.
-When they pick it up, mark the order as COMPLETED to release funds.`;
+                instructionText = `✅ *NEXT STEP:*
+Wait for the buyer to arrive.
+When they pick it up, ask them to mark the order as 'collected' to release funds.`;
             } else {
                 // Logistics / Drop-off Logic
                 instructionText = `⚠️ *ACTION REQUIRED:*

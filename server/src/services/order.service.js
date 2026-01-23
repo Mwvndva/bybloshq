@@ -499,8 +499,12 @@ class OrderService {
             items: items
           };
 
+
+          logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyerData.phone || 'NO_PHONE'}`);
           whatsappService.notifyBuyerOrderConfirmation(notificationPayload)
+            .then(() => logger.info(`[PURCHASE-FLOW] 9c. Buyer confirmation sent successfully`))
             .catch(err => logger.error('Error sending buyer confirmation:', err));
+
 
           // Notify Seller of New Order (now that payment is confirmed)
           whatsappService.notifySellerNewOrder({
