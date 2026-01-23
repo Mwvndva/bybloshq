@@ -29,7 +29,7 @@ class PaymentService {
             // Allow self-signed certs and enable keepAlive to prevent socket hang up
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
-                keepAlive: true
+                keepAlive: false // Disable keepAlive to prevent socket hang up on some servers
             })
         });
     }
