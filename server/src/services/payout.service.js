@@ -47,7 +47,7 @@ class PayoutService {
         }
 
         // Fallback for production or failed ngrok fetch
-        const baseUrl = process.env.BACKEND_URL || process.env.BASE_URL || 'https://bybloshq-f1rz.onrender.com';
+        const baseUrl = process.env.BACKEND_URL || process.env.BASE_URL || 'https://bybloshq.space';
         return `${baseUrl}/api/callbacks/payd`;
     }
 

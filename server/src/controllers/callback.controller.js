@@ -20,7 +20,8 @@ export const handlePaydCallback = async (req, res) => {
         const providerRef = payload.correlator_id || payload.transaction_id || payload.reference || payload.original_reference;
         const status = payload.status || payload.status_code;
 
-        logger.info(`Processing Callback Ref: ${providerRef}, Status: ${status}`);
+        logger.info(`[PAYD-CALLBACK] Processing Callback. Derived Ref: '${providerRef}', Derived Status: '${status}'`);
+        logger.info(`[PAYD-CALLBACK] Payload content:`, JSON.stringify(payload, null, 2));
 
         if (!providerRef) {
             logger.warn('Callback missing reference. Payload:', payload);
@@ -29,9 +30,10 @@ export const handlePaydCallback = async (req, res) => {
 
         // 2. Map Status
         let newStatus = null;
-        if (['SUCCESS', 'COMPLETED', '0'].includes(status)) {
+        const statusStr = String(status).toUpperCase();
+        if (['SUCCESS', 'COMPLETED', '0'].includes(statusStr)) {
             newStatus = 'completed';
-        } else if (['FAILED', 'REJECTED'].includes(status)) {
+        } else if (['FAILED', 'REJECTED'].includes(statusStr)) {
             newStatus = 'failed';
         } else {
             logger.info(`Callback ignored status: '${status}'`);
