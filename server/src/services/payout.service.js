@@ -16,6 +16,7 @@ class PayoutService {
             baseURL: this.baseUrl,
             headers: {
                 'Content-Type': 'application/json',
+                'User-Agent': 'ByblosHQ/1.0 (Node.js)'
             },
             timeout: 30000,
             // Bypass self-signed certificate errors and ensure connection stability
