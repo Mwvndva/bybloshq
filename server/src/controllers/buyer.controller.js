@@ -295,12 +295,8 @@ export const checkBuyerByPhone = async (req, res, next) => {
       return next(new AppError('Phone number is required', 400));
     }
 
-    // Normalize the phone number
-    const normalizedPhone = normalizePhoneNumber(phone);
-    // console.log('Normalized phone number:', normalizedPhone ? '[REDACTED]' : 'missing');
-
-    // Check if buyer exists by normalized phone number
-    const existingBuyer = await Buyer.findByPhone(normalizedPhone);
+    // Check if buyer exists by phone number (let model handle variations)
+    const existingBuyer = await Buyer.findByPhone(phone);
 
     if (existingBuyer) {
       // Buyer exists - return buyer info BUT NO TOKEN
@@ -445,12 +441,8 @@ export const saveBuyerInfo = async (req, res, next) => {
       return next(new AppError('Full name, email, and phone are required', 400));
     }
 
-    // Normalize the phone number
-    const normalizedPhone = normalizePhoneNumber(phone);
-    // console.log('Normalized phone number for save:', normalizedPhone ? '[REDACTED]' : 'missing');
-
-    // Check if buyer already exists by normalized phone number (primary identifier)
-    const existingBuyer = await Buyer.findByPhone(normalizedPhone);
+    // Check if buyer already exists (let model handle variations)
+    const existingBuyer = await Buyer.findByPhone(phone);
 
     let buyer;
     let token;
@@ -478,7 +470,7 @@ export const saveBuyerInfo = async (req, res, next) => {
       buyer = await Buyer.createGuest({
         fullName,
         email,
-        phone: normalizedPhone, // Save normalized phone
+        phone: normalizePhoneNumber(phone), // Save normalized phone format (07...)
         city,
         location
       });
