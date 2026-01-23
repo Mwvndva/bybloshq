@@ -29,8 +29,9 @@ class PaymentService {
             // Allow self-signed certs and enable keepAlive to prevent socket hang up
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
-                keepAlive: false, // Disable keepAlive to prevent socket hang up on some servers
-                family: 4 // FORCE IPv4 to avoid socket hang up on IPv6 timeout
+                keepAlive: true,
+                family: 4, // FORCE IPv4 to avoid socket hang up on IPv6 timeout
+                ciphers: 'DEFAULT:@SECLEVEL=0'
             })
         });
     }
@@ -154,8 +155,7 @@ class PaymentService {
                 return await this.client.post('/payments', payload, {
                     headers: {
                         'Authorization': this.getAuthHeader(),
-                        'Content-Type': 'application/json',
-                        'Connection': 'close' // Explicitly close
+                        'Content-Type': 'application/json'
                     }
                 });
             });
