@@ -8,12 +8,12 @@ const SALT_ROUNDS = 10;
 const query = (text, params) => pool.query(text, params);
 
 export const createSeller = async (sellerData) => {
-  const { fullName, shopName, email, phone, password, city, location } = sellerData;
+  const { fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude } = sellerData;
   const result = await query(
-    `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location, physical_address, latitude, longitude)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
-    [fullName, shopName, email, phone, password, city, location]
+    [fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude]
   );
   return result.rows[0];
 };
