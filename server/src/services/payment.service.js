@@ -614,17 +614,25 @@ class PaymentService {
 
         // 1. Resolve Buyer Info
         let buyerId = user?.id || null;
-        let buyerEmail = email;
-        let buyerPhone = phone;
+        // Fallback to user email/phone if not in payload
+        let buyerEmail = email || user?.email;
+        let buyerPhone = phone || user?.phone;
 
         // Basic buyer cleanup if user is not authenticated
         if (!buyerId) {
             // Logic from controller: try to find buyer by phone if not auth
-            const { rows: buyers } = await pool.query('SELECT * FROM buyers WHERE phone = $1', [phone]);
-            if (buyers.length > 0) {
-                buyerId = buyers[0].id;
-                // Ideally use buyer's stored email if simpler? kept payload email as primary contact
+            if (buyerPhone) {
+                const { rows: buyers } = await pool.query('SELECT * FROM buyers WHERE phone = $1', [buyerPhone]);
+                if (buyers.length > 0) {
+                    buyerId = buyers[0].id;
+                    // If we found them in DB, we could prefer DB email if payload email is missing
+                    if (!buyerEmail) buyerEmail = buyers[0].email;
+                }
             }
+        }
+
+        if (!buyerPhone) {
+            throw new Error('Phone number is required for payment');
         }
 
         // 2. Validate Product (Replicating Controller Logic)
@@ -718,7 +726,7 @@ class PaymentService {
         const insertRes = await pool.query(
             `INSERT INTO payments (invoice_id, email, phone_number, amount, status, payment_method, metadata)
               VALUES ($1, $2, $3, $4, 'pending', 'payd', $5) RETURNING *`,
-            [paymentData.invoice_id, email, phone, amount, JSON.stringify(paymentData.metadata)]
+            [paymentData.invoice_id, buyerEmail, buyerPhone, amount, JSON.stringify(paymentData.metadata)]
         );
         const payment = insertRes.rows[0];
 
