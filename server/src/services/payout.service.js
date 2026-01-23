@@ -1,6 +1,8 @@
 import axios from 'axios';
 import logger from '../utils/logger.js';
 
+import https from 'https';
+
 class PayoutService {
     constructor() {
         this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
@@ -16,6 +18,10 @@ class PayoutService {
                 'Content-Type': 'application/json',
             },
             timeout: 30000,
+            // Bypass self-signed certificate errors (common in some VPS environments or with specific API certs)
+            httpsAgent: new https.Agent({
+                rejectUnauthorized: false
+            })
         });
     }
 
