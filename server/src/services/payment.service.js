@@ -22,6 +22,7 @@ class PaymentService {
             baseURL: this.baseUrl,
             headers: {
                 'Content-Type': 'application/json',
+                'User-Agent': 'Byblos/1.0',
             },
             timeout: 30000,
             // Allow self-signed certs and enable keepAlive to prevent socket hang up
