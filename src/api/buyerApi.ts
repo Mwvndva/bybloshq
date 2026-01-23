@@ -725,6 +725,20 @@ const buyerApi = {
       console.error('Error downloading digital product:', error);
       throw new Error(error.response?.data?.message || 'Failed to download digital product');
     }
+  },
+
+  markOrderAsCollected: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
+    try {
+      console.log(`Sending mark as collected request for order ${orderId}...`);
+      await buyerApiInstance.post(`/buyers/orders/${orderId}/collected`);
+      return { success: true };
+    } catch (error: any) {
+      console.error(`Error marking order ${orderId} as collected:`, error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to mark order as collected'
+      };
+    }
   }
 };
 
