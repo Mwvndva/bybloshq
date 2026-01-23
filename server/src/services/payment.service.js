@@ -22,9 +22,10 @@ class PaymentService {
                 'Content-Type': 'application/json',
             },
             timeout: 30000,
-            // Allow self-signed certs (needed for some Payd environments or proxy configs)
+            // Allow self-signed certs and enable keepAlive to prevent socket hang up
             httpsAgent: new https.Agent({
-                rejectUnauthorized: false
+                rejectUnauthorized: false,
+                keepAlive: true
             })
         });
     }
