@@ -13,47 +13,22 @@ async function convertBase64Images() {
 
         let totalConverted = 0;
 
-        // 1. Convert product images
+        // 1. Convert product images (only image_url column exists)
         console.log('📦 Converting product images...');
         const { rows: products } = await client.query(
-            `SELECT id, image_url, images FROM products 
-       WHERE image_url LIKE 'data:image%' OR images::text LIKE '%data:image%'`
+            `SELECT id, image_url FROM products 
+       WHERE image_url LIKE 'data:image%'`
         );
 
         for (const product of products) {
-            const updates = {};
-
-            // Convert main image_url
-            if (product.image_url && ImageService.isBase64Image(product.image_url)) {
-                updates.image_url = await ImageService.base64ToFile(product.image_url, 'product');
-                console.log(`  ✓ Converted product ${product.id} main image`);
-                totalConverted++;
-            }
-
-            // Convert images array
-            if (product.images && Array.isArray(product.images)) {
-                const convertedImages = [];
-                for (const img of product.images) {
-                    if (ImageService.isBase64Image(img)) {
-                        convertedImages.push(await ImageService.base64ToFile(img, 'product'));
-                        totalConverted++;
-                    } else {
-                        convertedImages.push(img);
-                    }
-                }
-                if (convertedImages.length > 0) {
-                    updates.images = JSON.stringify(convertedImages);
-                    console.log(`  ✓ Converted product ${product.id} image array (${convertedImages.length} images)`);
-                }
-            }
-
-            // Update database
-            if (Object.keys(updates).length > 0) {
-                const setClause = Object.keys(updates).map((key, i) => `${key} = $${i + 1}`).join(', ');
+            if (ImageService.isBase64Image(product.image_url)) {
+                const shortUrl = await ImageService.base64ToFile(product.image_url, 'product');
                 await client.query(
-                    `UPDATE products SET ${setClause} WHERE id = $${Object.keys(updates).length + 1}`,
-                    [...Object.values(updates), product.id]
+                    'UPDATE products SET image_url = $1 WHERE id = $2',
+                    [shortUrl, product.id]
                 );
+                console.log(`  ✓ Converted product ${product.id} image`);
+                totalConverted++;
             }
         }
 
@@ -75,7 +50,7 @@ async function convertBase64Images() {
             }
         }
 
-        // 3. Convert event images (if events table has images)
+        // 3. Convert event images
         console.log('\n🎫 Converting event images...');
         const { rows: events } = await client.query(
             `SELECT id, image_url FROM events WHERE image_url LIKE 'data:image%'`
