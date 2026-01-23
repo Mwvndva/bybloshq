@@ -73,20 +73,21 @@ class WhatsAppService {
      */
     async sendMessage(phone, message) {
         if (!this.isReady || !this.sock) {
-            logger.warn('⚠️ Cannot send message: Client not ready');
-            return false;
+            const error = new Error('WhatsApp client not ready or not connected');
+            logger.error('⚠️ Cannot send message: Client not ready');
+            throw error;
         }
 
         try {
             const jid = this.formatToJid(phone);
-            if (!jid) throw new Error('Invalid phone number');
+            if (!jid) throw new Error(`Invalid phone number format: ${phone}`);
 
             await this.sock.sendMessage(jid, { text: message });
-            // logger.info(`✅ WhatsApp message sent successfully`); // Redacted phone
+            logger.info(`✅ WhatsApp message sent successfully to ${phone}`);
             return true;
         } catch (error) {
-            logger.error(`❌ Failed to send message:`, error.message); // Redacted phone
-            return false;
+            logger.error(`❌ Failed to send WhatsApp message to ${phone}:`, error.message);
+            throw error; // Re-throw to allow calling code to handle
         }
     }
 
@@ -181,7 +182,15 @@ class WhatsAppService {
 
     async notifySellerNewOrder(orderData) {
         const { seller, order, items } = orderData;
-        if (!seller?.phone) return false;
+        logger.info(`[WHATSAPP-SERVICE] notifySellerNewOrder called for seller: ${seller?.phone || 'NO_PHONE'}`);
+
+        if (!seller?.phone) {
+            logger.error('[WHATSAPP-SERVICE] ❌ Seller phone is missing!');
+            return false;
+        }
+
+        logger.info(`[WHATSAPP-SERVICE] Processing ${items?.length || 0} items for order ${order?.orderNumber}`);
+        logger.info(`[WHATSAPP-SERVICE] Seller data:`, JSON.stringify({ phone: seller.phone, name: seller.name, physicalAddress: seller.physicalAddress }, null, 2));
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
@@ -192,6 +201,8 @@ class WhatsAppService {
         const total = parseFloat(order.totalAmount || 0);
         const productType = order.metadata?.product_type;
         const isService = productType === 'service';
+
+        logger.info(`[WHATSAPP-SERVICE] Product type: ${productType}, isService: ${isService}`);
         const isDigital = productType === 'digital';
 
         // Check for Service Booking Metadata
@@ -244,8 +255,18 @@ ${itemsList}
 ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         `.trim();
 
-        logger.info(`[PURCHASE-FLOW] 9a. Sending New Order Notification to Seller ${seller.phone}`);
-        return this.sendMessage(seller.phone, msg);
+        logger.info(`[WHATSAPP-SERVICE] Message prepared, length: ${msg.length} chars`);
+        logger.info(`[WHATSAPP-SERVICE] Attempting to send to: ${seller.phone}`);
+
+        try {
+            const result = await this.sendMessage(seller.phone, msg);
+            logger.info(`[WHATSAPP-SERVICE] ✅ Message sent successfully to ${seller.phone}`);
+            return result;
+        } catch (error) {
+            logger.error(`[WHATSAPP-SERVICE] ❌ Failed to send message to ${seller.phone}:`, error.message);
+            logger.error(`[WHATSAPP-SERVICE] Error stack:`, error.stack);
+            throw error;
+        }
     }
 
     async notifyBuyerOrderConfirmation(orderData) {

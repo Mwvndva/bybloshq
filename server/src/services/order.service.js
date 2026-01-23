@@ -510,13 +510,20 @@ class OrderService {
 
           // Notify Seller of New Order (now that payment is confirmed)
           logger.info(`[PURCHASE-FLOW] 9d. Sending New Order Notification to Seller ${sellerData.phone || 'NO_PHONE'}`);
+          logger.info(`[PURCHASE-FLOW] 9d-DEBUG. Seller Data:`, JSON.stringify(sellerData, null, 2));
+          logger.info(`[PURCHASE-FLOW] 9d-DEBUG. Order Data:`, JSON.stringify(notificationPayload.order, null, 2));
+          logger.info(`[PURCHASE-FLOW] 9d-DEBUG. Items:`, JSON.stringify(items, null, 2));
+
           whatsappService.notifySellerNewOrder({
             seller: sellerData,
             order: notificationPayload.order,
             items: items
           })
-            .then(() => logger.info(`[PURCHASE-FLOW] 9e. Seller notification sent successfully`))
-            .catch(err => logger.error('Error sending seller new order notification:', err));
+            .then(() => logger.info(`[PURCHASE-FLOW] 9e. ✅ Seller notification sent successfully to ${sellerData.phone}`))
+            .catch(err => {
+              logger.error(`[PURCHASE-FLOW] 9e. ❌ Error sending seller new order notification to ${sellerData.phone}:`, err);
+              logger.error(`[PURCHASE-FLOW] 9e. Error stack:`, err.stack);
+            });
         }
       } catch (e) {
         logger.error('Error triggering completion notifications:', e);
