@@ -319,7 +319,7 @@ class OrderService {
         newStatus = OrderStatus.CONFIRMED;
       }
 
-      const updatedOrder = await this.updateStatusWithSideEffects(client, orderId, newStatus, 'completed');
+      const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed');
 
       // Check if we accidentally auto-completed it (e.g. digital) - handle payout?
       // Digital usually goes to COMPLETED immediately.
@@ -392,6 +392,47 @@ class OrderService {
       );
 
       logger.info(`Processed payout of KES ${payoutAmount} to Seller ${order.seller_id} for Order ${order.id}`);
+    }
+  }
+
+  /**
+   * Buyer marks order as collected
+   */
+  static async markAsCollected(orderId, buyerId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Fetch Order and lock
+      const orderQuery = 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE';
+      const orderResult = await client.query(orderQuery, [orderId]);
+
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
+
+      // 2. Validate Ownership & Status
+      if (order.buyer_id !== buyerId) {
+        throw new Error('Unauthorized: You can only update your own orders');
+      }
+
+      if (order.status !== OrderStatus.COLLECTION_PENDING) {
+        throw new Error('Order is not ready for collection or already collected');
+      }
+
+      // 3. Update Status
+      const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, OrderStatus.COMPLETED, 'completed');
+
+      // 4. Process Payout
+      await this._processSellerPayout(client, updatedOrder);
+
+      await client.query('COMMIT');
+      return updatedOrder;
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
   }
 }
