@@ -614,13 +614,21 @@ class PaymentService {
     }
 
     async initiateProductPayment(payload, user) {
-        const { phone, email, amount, productId, sellerId, productName, customerName, narrative } = payload;
+        const { phone, email, amount, productId, sellerId, productName, customerName, narrative, city, location } = payload;
 
         // 1. Resolve Buyer Info
         let buyerId = user?.id || null;
         // Fallback to user email/phone if not in payload
         let buyerEmail = email || user?.email;
         let buyerPhone = phone || user?.phone;
+
+        // Define fallback location info from User if authenticated and not provided
+        let shippingAddress = null;
+        if (city || location) {
+            shippingAddress = { city, location };
+        } else if (user?.city || user?.location) {
+            shippingAddress = { city: user.city, location: user.location };
+        }
 
         // Basic buyer cleanup if user is not authenticated
         if (!buyerId) {
@@ -683,6 +691,7 @@ class PaymentService {
             buyerName: customerName,
             buyerEmail,
             buyerPhone,
+            shippingAddress, // Pass the resolved address
             metadata: {
                 ...(payload.metadata || {}),
                 product_type: product.product_type,
@@ -694,7 +703,8 @@ class PaymentService {
                     quantity: 1,
                     subtotal: dbPrice,
                     productType: product.product_type,
-                    isDigital: product.is_digital
+                    isDigital: product.is_digital,
+                    serviceLocations: product.service_locations // Pass location info
                 }],
                 paymentInitiation: true
             }

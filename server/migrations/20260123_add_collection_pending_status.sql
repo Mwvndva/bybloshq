@@ -1,0 +1,2 @@
+-- Add COLLECTION_PENDING to order_status enum
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'COLLECTION_PENDING';

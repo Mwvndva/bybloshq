@@ -61,6 +61,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
       end_time: '17:00'
     }
   });
+  const [sellerProfile, setSellerProfile] = useState<any>(null); // Store full seller profile
 
   // Get the current seller ID from the API
   const getSellerId = async () => {
@@ -69,6 +70,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
       if (!seller?.id) {
         throw new Error('Invalid seller data. Please log in again.');
       }
+      setSellerProfile(seller); // Save profile for shop address logic
       return String(seller.id);
     } catch (error) {
       console.error('Error getting seller profile:', error);
@@ -81,6 +83,11 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
       throw error; // Re-throw to stop further execution
     }
   };
+
+  // Effect to fetch seller profile on mount
+  useState(() => {
+    getSellerId();
+  });
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -437,7 +444,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
                   <div className="space-y-3">
                     <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Product Type</Label>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2 relative">
                       <Button
                         type="button"
                         variant={formData.product_type === 'physical' ? "default" : "outline"}
@@ -454,14 +461,35 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       >
                         Digital
                       </Button>
-                      <Button
-                        type="button"
-                        variant={formData.product_type === 'service' ? "default" : "outline"}
-                        onClick={() => setFormData(prev => ({ ...prev, product_type: 'service', is_digital: false }))}
-                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
-                      >
-                        Service
-                      </Button>
+                      <div className="flex-1 relative group">
+                        <Button
+                          type="button"
+                          variant={formData.product_type === 'service' ? "default" : "outline"}
+                          disabled={!sellerProfile?.hasPhysicalShop}
+                          onClick={() => {
+                            if (sellerProfile?.hasPhysicalShop) {
+                              setFormData(prev => ({
+                                ...prev,
+                                product_type: 'service',
+                                is_digital: false,
+                                service_locations: sellerProfile.physicalAddress || '',
+                                service_options: {
+                                  ...prev.service_options,
+                                  location_type: 'buyer_visits_seller' // Force shop location
+                                }
+                              }));
+                            }
+                          }}
+                          className={`w-full h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
+                        >
+                          Service
+                        </Button>
+                        {!sellerProfile?.hasPhysicalShop && (
+                          <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 text-center">
+                            Shop address required for services
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -578,44 +606,25 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       </div>
 
                       {/* Location Type */}
-                      <div className="space-y-3">
-                        <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Location Preference</Label>
-                        <Select
-                          value={formData.service_options.location_type || 'buyer_visits_seller'}
-                          onValueChange={(val: 'buyer_visits_seller' | 'seller_visits_buyer' | 'hybrid') =>
-                            setFormData(prev => ({
-                              ...prev,
-                              service_options: { ...prev.service_options, location_type: val }
-                            }))
-                          }
-                        >
-                          <SelectTrigger className="h-12 bg-white rounded-xl">
-                            <SelectValue placeholder="Select location logic" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="buyer_visits_seller">Client visits me (My Location)</SelectItem>
-                            <SelectItem value="seller_visits_buyer">I visit client</SelectItem>
-                            <SelectItem value="hybrid">Hybrid (Both Options)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* Explicit Service Location Input */}
-                      {(formData.service_options.location_type === 'buyer_visits_seller' || formData.service_options.location_type === 'hybrid') && (
-                        <div className="space-y-3">
-                          <Label htmlFor="service_location" className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                            Where should the client come? (Hybrid implies you have a location)
-                          </Label>
-                          <Input
-                            id="service_location"
-                            value={formData.service_locations || ''}
-                            onChange={(e) => setFormData(prev => ({ ...prev, service_locations: e.target.value }))}
-                            placeholder="e.g. 123 Studio Street, Floor 2"
-                            className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
-                            required={formData.service_options.location_type === 'buyer_visits_seller' || formData.service_options.location_type === 'hybrid'}
-                          />
+                      {/* Location Type - Hidden/Fixed for Services now */}
+                      <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-1 bg-yellow-100 p-2 rounded-lg">
+                            <svg className="h-5 w-5 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-yellow-900 text-sm">Service Location</h4>
+                            <p className="text-yellow-700 text-sm mt-1">
+                              All services will be performed at your shop address:
+                              <br />
+                              <span className="font-medium text-black">{sellerProfile?.physicalAddress || 'Loading address...'}</span>
+                            </p>
+                          </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
 
@@ -764,7 +773,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </div >
   );
 }
 
