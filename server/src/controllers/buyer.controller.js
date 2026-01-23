@@ -1,4 +1,5 @@
 import BuyerService from '../services/buyer.service.js';
+import Buyer from '../models/buyer.model.js';
 import AppError from '../utils/appError.js';
 import { sanitizeBuyer } from '../utils/sanitize.js';
 
@@ -156,7 +157,7 @@ export const resetPassword = async (req, res, next) => {
     const buyer = await Buyer.resetPassword(token, newPassword);
 
     // 3) Log the buyer in, send JWT
-    const authToken = signToken(buyer.id, 'buyer');
+    const authToken = BuyerService.signToken(buyer);
 
     res.status(200).json({
       status: 'success',
@@ -483,7 +484,7 @@ export const saveBuyerInfo = async (req, res, next) => {
       });
 
       // Generate token for the new buyer
-      token = signToken(buyer.id, 'buyer');
+      token = BuyerService.signToken(buyer);
 
 
     }
