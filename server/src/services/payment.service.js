@@ -25,13 +25,37 @@ class PaymentService {
                 'Content-Type': 'application/json',
                 'User-Agent': 'Byblos/1.0',
             },
-            timeout: 30000,
+            timeout: 60000,
+            // Allow self-signed certs and enable keepAlive to prevent socket hang up
             // Allow self-signed certs and enable keepAlive to prevent socket hang up
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
                 keepAlive: false // Disable keepAlive to prevent socket hang up on some servers
             })
         });
+    }
+
+    /**
+     * Helper to retry requests with exponential backoff
+     */
+    async _retryRequest(fn, retries = 3, delay = 1000) {
+        try {
+            return await fn();
+        } catch (error) {
+            if (retries === 0) throw error;
+
+            // Retro only on network errors or 5xx
+            const isNetworkError = error.message === 'socket hang up' || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
+            const isServerError = error.response && error.response.status >= 500;
+
+            if (isNetworkError || isServerError) {
+                logger.warn(`[PURCHASE-FLOW] Request failed (${error.message}). Retrying in ${delay}ms... (${retries} attempts left)`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                return this._retryRequest(fn, retries - 1, delay * 2);
+            }
+
+            throw error;
+        }
     }
 
     /**
@@ -128,11 +152,15 @@ class PaymentService {
                 payload: { ...payload, username: '***' }
             });
 
-            const response = await this.client.post('/payments', payload, {
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Content-Type': 'application/json'
-                }
+            // WRAP IN RETRY LOGIC
+            const response = await this._retryRequest(async () => {
+                return await this.client.post('/payments', payload, {
+                    headers: {
+                        'Authorization': this.getAuthHeader(),
+                        'Content-Type': 'application/json',
+                        'Connection': 'close' // Explicitly close
+                    }
+                });
             });
 
             logger.info(`[PURCHASE-FLOW] 2. Payd API Response Recieved`, {
