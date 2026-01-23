@@ -18,9 +18,11 @@ class PayoutService {
                 'Content-Type': 'application/json',
             },
             timeout: 30000,
-            // Bypass self-signed certificate errors (common in some VPS environments or with specific API certs)
+            // Bypass self-signed certificate errors and ensure connection stability
             httpsAgent: new https.Agent({
-                rejectUnauthorized: false
+                rejectUnauthorized: false,
+                keepAlive: true,
+                family: 4 // Force IPv4
             })
         });
     }
