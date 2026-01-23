@@ -28,6 +28,7 @@ export default function CheckoutPage() {
   });
 
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [redirectCountdown, setRedirectCountdown] = useState<number | null>(null);
   const pollingInterval = useRef<NodeJS.Timeout>();
 
   const updateStatusUI = (status: string, message?: string | null) => {
@@ -47,6 +48,22 @@ export default function CheckoutPage() {
         newSearchParams.set('status', 'success');
         if (message) newSearchParams.set('message', message);
         window.history.replaceState({}, '', `${window.location.pathname}?${newSearchParams.toString()}`);
+
+
+        // Automatically redirect to buyer dashboard after 3 seconds with countdown
+        setRedirectCountdown(3);
+        const countdownInterval = setInterval(() => {
+          setRedirectCountdown(prev => {
+            if (prev === null || prev <= 1) {
+              clearInterval(countdownInterval);
+              navigate('/buyer/dashboard', {
+                state: { activeSection: 'orders' }
+              });
+              return null;
+            }
+            return prev - 1;
+          });
+        }, 1000);
         break;
 
       case 'pending':
@@ -188,6 +205,11 @@ export default function CheckoutPage() {
           )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
+          {(searchParams.get('status') === 'success' || searchParams.get('status') === 'completed') && redirectCountdown !== null && (
+            <div className="w-full rounded-md bg-green-50 p-3 text-center text-sm text-green-700 dark:bg-green-900/20 dark:text-green-400">
+              Redirecting to your dashboard in {redirectCountdown} second{redirectCountdown !== 1 ? 's' : ''}...
+            </div>
+          )}
           <Button
             onClick={() => {
               // Navigate to buyer dashboard with orders tab active
