@@ -426,7 +426,7 @@ class OrderService {
           newStatus = OrderStatus.DELIVERY_PENDING;
         }
       } else if (hasService) {
-        newStatus = OrderStatus.CONFIRMED;
+        newStatus = OrderStatus.SERVICE_PENDING;
       }
 
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
