@@ -33,7 +33,7 @@ class ProductService {
 
         // Image Handling
         const imageData = image_url || image;
-        if (!imageData.startsWith('data:image/')) {
+        if (!imageData.startsWith('data:image/') && !imageData.startsWith('/uploads/')) {
             throw new Error('Invalid image format');
         }
         const imageSize = (imageData.length * 0.75);
