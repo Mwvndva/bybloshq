@@ -6,7 +6,7 @@ import https from 'https';
 
 class PayoutService {
     constructor() {
-        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
+        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v2';
         this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
@@ -101,37 +101,22 @@ class PayoutService {
 
     async initiateMobilePayout(payoutData) {
         try {
-            let { amount, phone_number, narration, account_name, reference } = payoutData;
+            let { amount, phone_number, narration } = payoutData;
 
             // 1. Validate and Normalize
             amount = this.validateWithdrawal(amount);
             phone_number = this.normalizePhoneNumber(phone_number);
 
-            if (!this.networkCode || !this.channelId) {
-                throw new Error('Payd network code or channel ID not configured');
-            }
-
             const callbackUrl = await this.getCallbackUrl();
-            logger.info(`Initiating Payout to ${phone_number}. Callback URL: ${callbackUrl}`);
+            logger.info(`Initiating Payd V2 Payout to ${phone_number}. Callback URL: ${callbackUrl}`);
 
-            // Strict payload matching user specification
+            // Simplified V2 payload as per documentation
             const payload = {
-                username: this.username,
-                network_code: this.networkCode,
-                account_name: account_name || "Seller Withdrawal",
-                account_number: phone_number,
-                amount: parseFloat(amount),
                 phone_number: phone_number,
-                channel_id: this.channelId,
-                narration: narration || "Payment for goods",
-                currency: "KES",
+                amount: parseFloat(amount),
+                narration: narration || "Withdrawal request",
                 callback_url: callbackUrl,
-                transaction_channel: "mobile",
-                channel: "mobile",
-                provider_name: "Mobile Wallet (M-PESA)",
-                provider_code: "MPESA",
-                // Pass internal reference for outbound idempotency if supported by Payd V3 backend
-                reference: reference || `REF-${Date.now()}`
+                channel: "MPESA"
             };
 
             const response = await this.client.post('/withdrawal', payload, {

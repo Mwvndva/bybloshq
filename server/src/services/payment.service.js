@@ -8,7 +8,7 @@ import OrderService from './order.service.js';
 
 class PaymentService {
     constructor() {
-        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
+        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v2';
         this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
@@ -114,32 +114,20 @@ class PaymentService {
                 accountNumber = '254' + accountNumber.substring(1);
             }
 
+            const callbackUrl = process.env.PAYD_CALLBACK_URL || (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` : "https://bybloshq.space/api/payments/webhook/payd");
+
+            logger.info(`[PURCHASE-FLOW] 1. Initiating Payd V2 Payment (STK Push) for Invoice: ${invoice_id}`, {
+                amount: paydAmount, phone: cleanPhone
+            });
+
             const payload = {
                 username: this.payloadUsername,
-                network_code: this.networkCode,
-                account_name: fullName,
-                account_number: accountNumber, // e.g. +254...
+                channel: "MPESA",
                 amount: paydAmount,
-                phone_number: cleanPhone, // e.g. 07...
-                channel_id: this.channelId,
+                phone_number: cleanPhone,
                 narration: narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
-                callback_url: process.env.PAYD_CALLBACK_URL || (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` : "https://bybloshq.space/api/payments/webhook/payd"),
-                transaction_channel: "mobile",
-                // Pass our invoice_id as reference to help linking
-                reference: String(invoice_id),
-                client_reference: String(invoice_id),
-                external_reference: String(invoice_id),
-                customer_info: {
-                    country: "Kenya",
-                    address: "Nairobi", // Placeholder/Default
-                    id_type: "National ID", // Placeholder/Default
-                    id_number: "00000000", // Placeholder/Default
-                    dob: "1990-01-01", // Placeholder/Default
-                    name: fullName,
-                    email: customerEmail,
-                    phone: accountNumber // Use international format for customer info phone often
-                }
+                callback_url: callbackUrl
             };
 
             logger.info('Sending Payd Request:', {

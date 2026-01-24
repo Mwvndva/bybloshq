@@ -16,10 +16,9 @@ export const handlePaydCallback = async (req, res) => {
         const callbackData = payload;
 
         // 1. Extract Info
-        // Payd V3 uses correlator_id, others might use transaction_id
-        // We also check for 'reference' as a fallback
-        const providerRef = payload.correlator_id || payload.transaction_id || payload.reference || payload.original_reference;
-        const status = payload.status || payload.status_code;
+        // Payd V2 uses transaction_reference, V3 uses correlator_id
+        const providerRef = payload.transaction_reference || payload.correlator_id || payload.transaction_id || payload.reference || payload.original_reference;
+        const status = payload.status || payload.status_code || payload.result_code;
 
         logger.info(`[PAYD-CALLBACK] Processing Callback. Derived Ref: '${providerRef}', Derived Status: '${status}'`);
         logger.info(`[PAYD-CALLBACK] Payload content:`, JSON.stringify(payload, null, 2));
@@ -68,7 +67,7 @@ export const handlePaydCallback = async (req, res) => {
         }
 
         // 5. Update Status
-        const failureReason = callbackData.status_description || callbackData.message || 'Unknown provider error';
+        const failureReason = callbackData.remarks || callbackData.status_description || callbackData.message || 'Unknown provider error';
         await client.query(
             'UPDATE withdrawal_requests SET status = $1, processed_at = NOW(), metadata = $2 WHERE id = $3',
             [newStatus, JSON.stringify({ ...callbackData, failure_reason: failureReason }), request.id]
