@@ -17,6 +17,7 @@ import buyerApi from '@/api/buyerApi';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/lib/apiClient';
+import { clearAllAuthData } from '@/lib/authCleanup';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
 
@@ -330,6 +331,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         if (status === 'success' || status === 'completed') {
           clearInterval(interval);
           setIsProcessingPurchase(false);
+
+          // Purge all old identification artifacts (Seller tokens, etc.)
+          // before the new buyer session is taken into account by the dashboard.
+          clearAllAuthData();
 
           toast({
             title: 'Payment Successful',

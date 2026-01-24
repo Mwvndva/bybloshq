@@ -53,13 +53,8 @@ export const verifyToken = (token) => {
  * @returns {string} Token string or null if not found
  */
 export const getTokenFromRequest = (req) => {
-  // 1) Check Authorization header (case-insensitive check)
-  const authHeader = req.headers.authorization || req.headers.Authorization;
-  if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
-    return authHeader.split(' ')[1];
-  }
-
-  // 2) Check cookies (look for both 'token' and 'jwt' for compatibility)
+  // 1) Check cookies (look for both 'token' and 'jwt' for compatibility)
+  // Preference given to cookies for reliable web sessions
   if (req.cookies?.token) {
     return req.cookies.token;
   }
@@ -68,10 +63,11 @@ export const getTokenFromRequest = (req) => {
     return req.cookies.jwt;
   }
 
-  // 3) Query parameters check REMOVED for security
-  // if (req.query?.token) {
-  //   return req.query.token;
-  // }
+  // 2) Check Authorization header (case-insensitive check)
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (authHeader && typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.split(' ')[1];
+  }
 
   return null;
 };
