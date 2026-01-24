@@ -30,7 +30,6 @@ class PaymentService {
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
                 keepAlive: true,
-                family: 4, // FORCE IPv4 to avoid socket hang up on IPv6 timeout
                 ciphers: 'DEFAULT:@SECLEVEL=0'
             })
         });
