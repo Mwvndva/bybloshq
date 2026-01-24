@@ -370,11 +370,13 @@ export const searchSellers = async (req, res) => {
       });
     }
 
-    const sellers = await searchSellersInDB(city, location || null);
+    // Sanitize results to remove sensitive info
+    // searchSellersInDB returns raw rows, so we map them to sanitized public objects
+    const sanitizedSellers = sellers.map(s => sanitizePublicSeller(s));
 
     res.status(200).json({
       status: 'success',
-      data: sellers
+      data: sanitizedSellers
     });
 
   } catch (error) {
@@ -607,18 +609,19 @@ export const getSellerById = async (req, res) => {
       isActive: seller.is_active
     }); */
 
-    // Format the response to match the expected frontend format
-    const sellerData = {
-      id: seller.id,
-      fullName: seller.full_name || seller.fullName,
-      email: seller.email,
-      phone: seller.phone,
-      location: seller.location || null,
-      createdAt: seller.created_at || seller.createdAt,
-      updatedAt: seller.updated_at || seller.updatedAt
-    };
+    // Check if the requesting user is the owner of this profile
+    const isOwner = req.user && (
+      String(req.user.id) === String(seller.id) ||
+      (req.user.userId && String(req.user.userId) === String(seller.user_id))
+    );
 
-    res.status(200).json(sellerData);
+    // If owner, return full (but sanitized) details. If not, return public details only.
+    const responseData = isOwner ? sanitizeSeller(seller) : sanitizePublicSeller(seller);
+
+    res.status(200).json({
+      status: 'success',
+      data: responseData
+    });
   } catch (error) {
     console.error('Error fetching seller:', error);
     res.status(500).json({

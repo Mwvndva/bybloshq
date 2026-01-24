@@ -186,11 +186,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       if (result.exists && result.buyer) {
         // CASE A: Buyer Exists
-        if (result.buyer.email && result.buyer.email.trim() !== '') {
+        // Check hasEmail flag instead of explicit email string to avoid PII leak
+        if (result.buyer.hasEmail || (result.buyer.email && result.buyer.email.trim() !== '')) {
           // Has Email -> PROCEED TO PAYMENT
+          // We pass empty email if we only have the flag; backend will resolve it from DB
           await executePayment({
             fullName: result.buyer.fullName || '',
-            email: result.buyer.email,
+            email: result.buyer.email || '', // Can be empty if we have hasEmail=true
             phone: result.buyer.phone || phone,
             city: result.buyer.city,
             location: result.buyer.location

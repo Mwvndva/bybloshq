@@ -61,7 +61,6 @@ export default function CreateEventPage() {
       };
 
       // Make the API request
-      console.log('Submitting event data:', eventData);
       const response = await api.post<ApiResponse<{ event: any }>>('/organizers/events', eventData);
 
       if (response.data.status === 'success') {

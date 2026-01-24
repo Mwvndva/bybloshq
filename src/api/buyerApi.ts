@@ -10,6 +10,7 @@ interface Buyer {
   refunds?: number;
   createdAt: string;
   updatedAt?: string;
+  hasEmail?: boolean;
 }
 
 interface ApiResponse<T> {

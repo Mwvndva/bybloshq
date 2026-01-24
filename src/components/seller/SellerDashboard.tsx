@@ -273,15 +273,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         sellerApi.getAnalytics()
       ]);
 
-      console.log('Analytics data received:', {
-        totalProducts: analyticsData.totalProducts,
-        totalSales: analyticsData.totalSales,
-        totalRevenue: analyticsData.totalRevenue,
-        balance: analyticsData.balance,
-        monthlySales: analyticsData.monthlySales,
-        recentOrders: analyticsData.recentOrders
-      });
-
       setProducts(productsData);
 
       // Create analytics data structure
@@ -537,7 +528,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
     const prefetch = async () => {
       setIsLoading(true);
-      console.log('[Debug] Starting prefetch - Products & Analytics');
 
       try {
         const [productsData, analyticsData] = await Promise.all([
@@ -600,21 +590,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           // Use the full revenue amount for payout
           calculatedPayout = totalRevenue;
 
-          console.log('Revenue calculation:', {
-            fromOrders: ordersData ? ordersData.filter((o: any) => o.status === 'COMPLETED').map((o: any) => ({
-              orderNumber: o.orderNumber,
-              totalAmount: o.totalAmount,
-              items: o.items?.map((i: any) => ({
-                price: i.price,
-                quantity: i.quantity,
-                subtotal: (i.price || 0) * (i.quantity || 1)
-              }))
-            })) : [],
-            calculatedRevenue: totalRevenue,
-            apiRevenue: analyticsData.totalRevenue,
-            finalRevenue: totalRevenue
-          });
-
           const updatedAnalytics: AnalyticsData = {
             ...analyticsData,
             totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
@@ -626,12 +601,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           };
 
           setAnalytics(updatedAnalytics);
-
-          console.log('Updated analytics data:', {
-            salesTotal,
-            totalRevenue: updatedAnalytics.totalRevenue,
-            totalPayout: updatedAnalytics.totalPayout
-          });
         } else {
           // Transform SellerAnalytics to AnalyticsData by adding missing required properties
           const transformedData: AnalyticsData = {
@@ -650,23 +619,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       }
     };
 
-    console.log('[Debug] Initiating prefetch useEffect');
     prefetch();
     // fetchProfile() removed - profile is already fetched by SellerAuthContext
     return () => { isMounted = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Debug: Log state changes
-  useEffect(() => {
-    console.log('[Debug] State update:', {
-      isLoading,
-      isAuthLoading,
-      hasAnalytics: !!analytics,
-      hasProducts: products.length,
-      hasError: !!error,
-      sellerProfileExists: !!sellerProfile
-    });
-  }, [isLoading, isAuthLoading, analytics, products, error, sellerProfile]);
+  // Removed debug state logging
 
   // Check for new orders
   useEffect(() => {

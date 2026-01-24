@@ -75,9 +75,7 @@ export default function TicketsListPage() {
           ? `/organizers/tickets/events/${eventId}`
           : '/organizers/tickets';
         const response = await api.get<TicketsResponse>(endpoint);
-        console.log('Tickets API Response:', response.data);
         const ticketsData = response.data.data.tickets || [];
-        console.log('Processed Tickets:', ticketsData);
         setTickets(ticketsData);
       } catch (error) {
         console.error('Error fetching tickets:', error);
