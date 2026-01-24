@@ -1,5 +1,6 @@
 import express from 'express';
 import * as adminController from '../controllers/admin.controller.js';
+import { protect, restrictTo } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -7,7 +8,8 @@ const router = express.Router();
 router.post('/login', adminController.adminLogin);
 
 // Middleware to protect subsequent admin routes
-router.use(adminController.protect);
+router.use(protect);
+router.use(restrictTo('admin'));
 
 // Protected admin routes
 router.get('/stats', adminController.getDashboardStats);

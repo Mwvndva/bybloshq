@@ -22,7 +22,14 @@ class BuyerService {
     }
 
     static signToken(buyer) {
-        return signToken(buyer.id, 'buyer');
+        // CRITICAL: Use user_id (from users table) not id (from buyers table)
+        const userId = buyer.user_id || buyer.userId;
+
+        if (!userId) {
+            throw new Error('Cannot generate token: buyer.user_id is missing. Ensure buyer data includes user_id from the users table.');
+        }
+
+        return signToken(userId, 'buyer');
     }
 }
 

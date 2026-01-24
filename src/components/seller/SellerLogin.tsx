@@ -42,10 +42,13 @@ export function SellerLogin() {
         title: 'Success',
         description: 'Successfully logged in',
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Extract the actual error message from the API response
+      const errorMessage = error?.response?.data?.message || error?.message || 'Invalid email or password';
+
       toast({
-        title: 'Error',
-        description: 'Invalid email or password',
+        title: 'Login Failed',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {

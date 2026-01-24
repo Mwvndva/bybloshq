@@ -57,6 +57,7 @@
     "express-xss-sanitizer": "^2.0.0",
     "helmet": "^8.1.0",
     "hpp": "^0.2.3",
+    "ioredis": "^5.9.2",
     "joi": "^17.13.3",
     "jsdom": "^26.1.0",
     "jsonwebtoken": "^9.0.2",
@@ -72,6 +73,7 @@
     "pino": "^9.0.0",
     "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
+    "rate-limit-redis": "^4.3.1",
     "uuid": "^9.0.1",
     "winston": "^3.11.0",
     "zod": "^3.25.67"

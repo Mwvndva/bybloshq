@@ -4,20 +4,20 @@ import { Event, TicketType } from '@/types/event';
 import QRCode from 'qrcode';
 
 // Configure axios retry
-axiosRetry(axios, { 
+axiosRetry(axios, {
   retries: 3,
   retryDelay: axiosRetry.exponentialDelay,
   retryCondition: (error) => {
     // Retry on network errors or 5xx responses
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) || 
-           (error.response && error.response.status >= 500);
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) ||
+      (error.response && error.response.status >= 500);
   }
 });
 
 // Ensure API_URL ends with /api but doesn't have a trailing slash
 const getApiBaseUrl = () => {
-  const baseUrl = import.meta.env.VITE_API_URL || 
-    (import.meta.env.DEV ? 'http://localhost:3002' : 'https://bybloshq-f1rz.onrender.com');
+  const baseUrl = import.meta.env.VITE_API_URL ||
+    (import.meta.env.DEV ? 'http://localhost:3002' : '');
   // Remove trailing slash if exists
   const cleanUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   // Ensure /api is included
@@ -74,12 +74,12 @@ export const getUpcomingEvents = async (limit: number = 10): Promise<Event[]> =>
         'Content-Type': 'application/json'
       }
     });
-    
+
     console.log('API Response:', response.data);
-    
+
     // Handle both wrapped and direct array responses
     let events: Event[];
-    
+
     if (Array.isArray(response.data)) {
       // Direct array response
       events = response.data as Event[];
@@ -90,7 +90,7 @@ export const getUpcomingEvents = async (limit: number = 10): Promise<Event[]> =>
       console.error('Unexpected API response format:', response.data);
       throw new Error('Invalid response format from server');
     }
-    
+
     return events;
   } catch (error) {
     console.error('Error in getUpcomingEvents:', {
@@ -127,7 +127,7 @@ export const getEventById = async (id: string | number): Promise<Event> => {
 export const getPublicEvent = async (id: string | number): Promise<Event> => {
   const url = `${API_URL}/events/public/${id}`;
   console.log('Making request to:', url);
-  
+
   try {
     const response = await axios.get(url, {
       headers: {
@@ -138,24 +138,24 @@ export const getPublicEvent = async (id: string | number): Promise<Event> => {
         return status >= 200 && status < 500; // Resolve only if the status code is less than 500
       }
     });
-    
+
     console.log('Response status:', response.status);
     console.log('Response data:', response.data);
-    
+
     if (response.status === 200 && response.data && typeof response.data === 'object' && 'status' in response.data && (response.data as any).status === 'success') {
       return (response.data as any).data as Event; // The event data is directly in response.data.data
     }
-    
+
     // If we get here, there was an error
-    const errorMessage = response.data && typeof response.data === 'object' && 'message' in response.data 
-      ? (response.data as any).message 
+    const errorMessage = response.data && typeof response.data === 'object' && 'message' in response.data
+      ? (response.data as any).message
       : 'Failed to fetch event';
     console.error('Error response:', {
       status: response.status,
       message: errorMessage,
       data: response.data
     });
-    
+
     throw new Error(errorMessage);
   } catch (error) {
     console.error(`Error fetching public event with ID ${id}:`, error);
@@ -186,17 +186,17 @@ export const getPublicEvent = async (id: string | number): Promise<Event> => {
 export const getEventTicketTypes = async (eventId: number | string): Promise<TicketType[]> => {
   try {
     const response = await axios.get(`${API_URL}/events/public/${eventId}/ticket-types`);
-    if (response.data && typeof response.data === 'object' && 
-        'status' in response.data && (response.data as any).status === 'success' &&
-        'data' in response.data && (response.data as any).data &&
-        'event' in (response.data as any).data && (response.data as any).data.event &&
-        'ticket_types' in (response.data as any).data.event) {
+    if (response.data && typeof response.data === 'object' &&
+      'status' in response.data && (response.data as any).status === 'success' &&
+      'data' in response.data && (response.data as any).data &&
+      'event' in (response.data as any).data && (response.data as any).data.event &&
+      'ticket_types' in (response.data as any).data.event) {
       return (response.data as any).data.event.ticket_types.map((tt: any) => {
         const sold = parseInt(tt.sold || '0', 10);
         const quantity = parseInt(tt.quantity || '0', 10);
         const available = parseInt(tt.available || (quantity - sold).toString(), 10);
         const isSoldOut = tt.is_sold_out || available <= 0;
-        
+
         return {
           id: tt.id,
           event_id: eventId,
@@ -215,18 +215,18 @@ export const getEventTicketTypes = async (eventId: number | string): Promise<Tic
         };
       });
     }
-    
+
     // If no ticket types in the expected format, try to get from the event
     console.log('No ticket types found in response, trying to get from event');
     const event = await getEventById(eventId);
-    
+
     if (event.ticket_types && event.ticket_types.length > 0) {
       return event.ticket_types.map(tt => {
         const sold = parseInt(tt.sold || '0', 10);
         const quantity = parseInt(tt.quantity || '0', 10);
         const available = tt.available || Math.max(0, quantity - sold);
         const isSoldOut = tt.is_sold_out || available <= 0;
-        
+
         return {
           id: tt.id,
           event_id: eventId,
@@ -245,13 +245,13 @@ export const getEventTicketTypes = async (eventId: number | string): Promise<Tic
         };
       });
     }
-    
+
     // If still no ticket types, return a default one
     console.log('No ticket types found, creating default ticket type');
     const defaultQuantity = event.ticket_quantity || 0;
     const defaultAvailable = event.available_tickets || defaultQuantity;
     const defaultSold = Math.max(0, defaultQuantity - defaultAvailable);
-    
+
     return [{
       id: 0,
       event_id: Number(eventId),
@@ -317,11 +317,11 @@ export const sendTicketEmail = async (ticketData: {
 }): Promise<SendTicketEmailResponse> => {
   try {
     console.log('Generating QR code for ticket:', ticketData.ticketNumber);
-    
+
     // Use provided validation URL or generate a default one
-    const validationUrl = ticketData.validationUrl || 
+    const validationUrl = ticketData.validationUrl ||
       `${window.location.origin}/tickets/validate/${ticketData.ticketNumber}?qr=true`;
-    
+
     // Use provided QR code or generate a new one
     let qrCode = ticketData.qrCode;
     if (!qrCode) {
@@ -350,17 +350,17 @@ export const sendTicketEmail = async (ticketData: {
     }
 
     // Ensure price and totalPrice are numbers
-    const numericPrice = typeof ticketData.price === 'string' ? 
-      parseFloat(ticketData.price.replace(/[^0-9.-]+/g,"")) : 
+    const numericPrice = typeof ticketData.price === 'string' ?
+      parseFloat(ticketData.price.replace(/[^0-9.-]+/g, "")) :
       Number(ticketData.price) || 0;
-      
+
     // Safely convert totalPrice to number
     let numericTotalPrice = 0;
     if (ticketData.totalPrice !== null && ticketData.totalPrice !== undefined) {
       if (typeof ticketData.totalPrice === 'number') {
         numericTotalPrice = ticketData.totalPrice;
       } else if (typeof ticketData.totalPrice === 'string') {
-        numericTotalPrice = parseFloat(ticketData.totalPrice.replace(/[^0-9.-]+/g,""));
+        numericTotalPrice = parseFloat(ticketData.totalPrice.replace(/[^0-9.-]+/g, ""));
       } else if (typeof ticketData.totalPrice === 'object' && ticketData.totalPrice !== null) {
         // Handle price objects (e.g., { value: 100, currency: 'KES' })
         const priceObj = ticketData.totalPrice as any;
@@ -368,23 +368,23 @@ export const sendTicketEmail = async (ticketData: {
         numericTotalPrice = typeof numericValue === 'number' ? numericValue : 0;
       }
     }
-    
+
     // If totalPrice is 0 or invalid, calculate from price and quantity
     if (numericTotalPrice === 0 || isNaN(numericTotalPrice)) {
       numericTotalPrice = numericPrice * (Number(ticketData.quantity) || 1);
     }
-    
+
     const quantity = Number(ticketData.quantity) || 1;
-    
+
     // Format prices for display
-    const formatPrice = (price: number) => 
+    const formatPrice = (price: number) =>
       new Intl.NumberFormat('en-KE', {
         style: 'currency',
         currency: 'KES',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
       }).format(price || 0);
-    
+
     // Format purchase date
     let formattedPurchaseDate;
     try {
@@ -405,7 +405,7 @@ export const sendTicketEmail = async (ticketData: {
         minute: '2-digit',
       });
     }
-    
+
     // Log the ticket data that would be sent in production
     console.log('Ticket details (email not sent in development):', {
       to: ticketData.customerEmail,
@@ -423,7 +423,7 @@ export const sendTicketEmail = async (ticketData: {
         purchaseDate: formattedPurchaseDate
       }
     });
-    
+
     // Always try to send the email, even in development
     // Format price with KES currency (using a different name to avoid duplicate)
     const formatCurrency = (price: number) => {
@@ -450,22 +450,22 @@ export const sendTicketEmail = async (ticketData: {
         totalPrice: numericTotalPrice,
         quantity: quantity,
         purchaseDate: ticketData.purchaseDate || new Date().toISOString(),
-        
+
         // QR Code and validation
         qrCode: qrCode,
         validationUrl: validationUrl,
-        
+
         // Additional metadata for the email template
         formattedPrice: formatCurrency(numericPrice),
         formattedTotalPrice: formatCurrency(numericTotalPrice),
         currency: 'KES',
         eventDateTime: formattedPurchaseDate,
         eventDate: formattedPurchaseDate.split(',')[0], // Just the date part
-        eventTime: formattedPurchaseDate.includes(', ') ? 
+        eventTime: formattedPurchaseDate.includes(', ') ?
           formattedPurchaseDate.split(', ')[1] : // Just the time part if available
           '',
         venue: 'Event Venue', // Default value, should be passed from the event data
-        
+
         // Additional fields for better email template rendering
         hasQRCode: !!qrCode,
         ticketId: ticketData.ticketNumber.replace(/[^a-zA-Z0-9]/g, '').toUpperCase(),
@@ -474,7 +474,7 @@ export const sendTicketEmail = async (ticketData: {
         supportPhone: '+254 700 000000'
       }
     };
-    
+
     // Log the prepared payload without sensitive data
     if (process.env.NODE_ENV !== 'production') {
       console.log('Prepared email payload:', {
@@ -514,9 +514,9 @@ export const sendTicketEmail = async (ticketData: {
           timeout: 10000 // 10 second timeout
         }
       );
-      
+
       console.log('Email sent successfully:', response.data);
-      
+
       return {
         success: true,
         message: 'Ticket and confirmation email sent successfully!',
@@ -524,14 +524,14 @@ export const sendTicketEmail = async (ticketData: {
       };
     } catch (error: any) {
       console.error('Error sending email:', error);
-      
+
       // Extract error message from different possible locations
-      const errorMessage = error.response?.data?.message || 
-                         error.message || 
-                         'Failed to send email. Please check the ticket in your email or contact support.';
-      
+      const errorMessage = error.response?.data?.message ||
+        error.message ||
+        'Failed to send email. Please check the ticket in your email or contact support.';
+
       console.error('Email sending failed with error:', errorMessage);
-      
+
       // Log additional debug info in development
       if (process.env.NODE_ENV !== 'production') {
         console.error('Error details:', {
@@ -542,7 +542,7 @@ export const sendTicketEmail = async (ticketData: {
           method: error.config?.method
         });
       }
-      
+
       // Still return success to not block the user flow
       return {
         success: true,
@@ -553,8 +553,8 @@ export const sendTicketEmail = async (ticketData: {
     console.error('Error sending ticket email:', error);
     // Don't throw the error to avoid affecting the purchase flow
     const errorMessage = error.response?.data?.message || error.message || 'Failed to send ticket email';
-    return { 
-      success: false, 
+    return {
+      success: false,
       message: errorMessage
     };
   }
@@ -573,8 +573,8 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
 
     const missingFields = requiredFields.filter(({ field }) => {
       const value = data[field];
-      return value === undefined || value === null || value === '' || 
-             (typeof value === 'string' && value.trim() === '');
+      return value === undefined || value === null || value === '' ||
+        (typeof value === 'string' && value.trim() === '');
     });
 
     if (missingFields.length > 0) {
@@ -606,10 +606,10 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
 
     // Add ticketTypeId if provided and valid
     if (data.ticketTypeId !== undefined && data.ticketTypeId !== null && data.ticketTypeId !== '') {
-      const ticketTypeId = typeof data.ticketTypeId === 'number' 
-        ? data.ticketTypeId 
+      const ticketTypeId = typeof data.ticketTypeId === 'number'
+        ? data.ticketTypeId
         : parseInt(String(data.ticketTypeId), 10);
-      
+
       if (!isNaN(ticketTypeId) && ticketTypeId > 0) {
         payload.ticketTypeId = ticketTypeId;
       } else {
@@ -618,20 +618,20 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
     }
 
     console.log('Sending purchase request with payload:', JSON.stringify(payload, null, 2));
-    
+
     // Calculate backoff time (exponential backoff)
     const backoffTime = Math.min(1000 * Math.pow(2, retryCount), 30000); // Max 30s backoff
-    
+
     // Add a small random delay to avoid thundering herd problem
     const jitter = Math.random() * 1000;
-    
+
     if (retryCount > 0) {
       console.log(`Retry ${retryCount}/${MAX_RETRIES} after ${backoffTime}ms`);
       await new Promise(resolve => setTimeout(resolve, backoffTime + jitter));
     }
-    
+
     console.log('Processing public ticket purchase request');
-    
+
     // Make the request without authentication
     const response = await axios({
       method: 'post',
@@ -644,9 +644,9 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
       timeout: INITIAL_TIMEOUT
       // Note: axios-retry configuration removed as it's not supported in this axios version
     });
-    
+
     console.log('Purchase successful:', response.data);
-    
+
     // If we get here, the purchase was successful
     const responseData = response.data;
 
@@ -654,15 +654,15 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
     if (responseData?.data?.tickets?.[0]) {
       const ticket = responseData.data.tickets[0];
       const event = responseData.data.event || {};
-      
+
       // Debug: Log the full response data
       console.log('Purchase response data:', JSON.stringify(responseData, null, 2));
-      
+
       // Get price information from the response or fall back to request data
       const unitPrice = ticket.unitPrice || ticket.price || 0;
       const quantity = Number(ticket.quantity || data.quantity || 1);
       const totalPrice = ticket.totalPrice || responseData.data.summary?.totalPrice || (unitPrice * quantity);
-      
+
       // Format prices for display
       const formatPrice = (price: number) => {
         // Ensure price is a number
@@ -674,7 +674,7 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
           maximumFractionDigits: 0
         }).format(numPrice);
       };
-      
+
       // Log price details for debugging
       console.log('Processing ticket purchase with prices:', {
         ticketPrice: ticket.price,
@@ -686,7 +686,7 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
         finalTotalPrice: totalPrice,
         quantity: quantity
       });
-      
+
       // Generate secure validation URL with ticket number
       const getValidationUrl = (ticketNumber: string) => {
         // In production, always use the production domain
@@ -697,12 +697,12 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
           // In development, use environment variable or current origin
           baseUrl = import.meta.env.VITE_BASE_URL || window.location.origin;
         }
-        
+
         // Ensure the base URL doesn't end with a slash
         const cleanBaseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
         console.log('Using frontend base URL for validation:', cleanBaseUrl);
         const encodedTicketNumber = encodeURIComponent(ticketNumber);
-        
+
         // The validation URL should match our frontend route: /tickets/validate/:ticketNumber
         return `${cleanBaseUrl}/tickets/validate/${encodedTicketNumber}?v=${Date.now()}`;
       };
@@ -768,10 +768,10 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
         // Log email sending result
         if (emailResult.success) {
           console.log('Ticket email sent successfully to', data.customerEmail);
-          
+
           // Dispatch event to notify UI about successful email
           const emailEvent = new CustomEvent('ticket-email-sent', {
-            detail: { 
+            detail: {
               success: true,
               message: 'Ticket confirmation email has been sent to ' + data.customerEmail,
               ticketNumber: ticketNumber,
@@ -782,10 +782,10 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
           window.dispatchEvent(emailEvent);
         } else {
           console.warn('Email sending completed with issues:', emailResult.message);
-          
+
           // Dispatch event with warning
           const emailEvent = new CustomEvent('ticket-email-sent', {
-            detail: { 
+            detail: {
               success: false,
               message: 'Ticket purchased but there was an issue sending the confirmation email: ' + (emailResult.message || 'Unknown error'),
               ticketNumber: ticketNumber,
@@ -797,10 +797,10 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
         }
       } catch (emailError) {
         console.error('Failed to send ticket email:', emailError);
-        
+
         // Dispatch error event
         const emailEvent = new CustomEvent('ticket-email-sent', {
-          detail: { 
+          detail: {
             success: false,
             message: 'Ticket purchased but failed to send confirmation email. Please contact support.',
             ticketNumber: ticketNumber,
@@ -831,7 +831,7 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
         }
       }
     });
-    
+
     // Handle specific error cases
     if (error.response) {
       if (error.response.status === 400) {
@@ -855,7 +855,7 @@ export const purchaseTickets = async (data: PurchaseTicketData, retryCount = 0):
     } else if (error.code === 'ECONNABORTED') {
       throw new Error('Request timed out. Please try again.');
     }
-    
+
     // Default error
     throw new Error(error.message || 'Failed to process ticket purchase. Please try again later.');
   }

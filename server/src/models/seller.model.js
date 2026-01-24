@@ -22,6 +22,7 @@ export const findSellerByEmail = async (email) => {
   const result = await query(
     `SELECT 
       id, 
+      user_id AS "userId",
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 
@@ -88,6 +89,7 @@ export const findSellerById = async (id) => {
   const result = await query(
     `SELECT 
       id, 
+      user_id AS "userId",
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 

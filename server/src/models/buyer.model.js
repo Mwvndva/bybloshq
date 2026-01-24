@@ -56,7 +56,7 @@ class Buyer {
 
   // Find buyer by email
   static async findByEmail(email) {
-    const query = 'SELECT * FROM buyers WHERE email = $1';
+    const query = 'SELECT *, user_id AS "userId" FROM buyers WHERE email = $1';
     const result = await pool.query(query, [email]);
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
@@ -102,7 +102,7 @@ class Buyer {
     console.log('Searching for phone variations:', uniqueVariations);
 
     // Search for any of these variations
-    const query = `SELECT * FROM buyers WHERE phone = ANY($1)`;
+    const query = `SELECT *, user_id AS "userId" FROM buyers WHERE phone = ANY($1)`;
     const result = await pool.query(query, [uniqueVariations]);
 
     if (result.rows.length > 0) {
@@ -114,7 +114,7 @@ class Buyer {
 
   // Find buyer by ID
   static async findById(id) {
-    const query = 'SELECT * FROM buyers WHERE id = $1';
+    const query = 'SELECT *, user_id AS "userId" FROM buyers WHERE id = $1';
     const result = await pool.query(query, [id]);
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }

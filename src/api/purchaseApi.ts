@@ -1,7 +1,14 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api');
+// Helper to get base URL
+const getBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL.replace(/\/$/, '');
+  }
+  return import.meta.env.DEV ? 'http://localhost:3002/api' : '/api';
+};
+
+const API_URL = getBaseUrl();
 
 // Create axios instance with base config
 const api = axios.create({
@@ -82,12 +89,12 @@ export const purchaseApi: {
 
   async validateTicket(ticketNumber: string): Promise<TicketValidationResponse> {
     const cacheKey = `validate_${ticketNumber}`;
-    
+
     // Return existing promise if there's already a request for this ticket
     if (requestCache.has(cacheKey)) {
       return requestCache.get(cacheKey)!;
     }
-    
+
     const requestPromise = (async () => {
       try {
         // Use POST for validation since it modifies state (marks ticket as scanned)
@@ -101,12 +108,12 @@ export const purchaseApi: {
             },
           }
         );
-        
+
         // Ensure the response has the required fields
         if (response.data.valid === undefined || !response.data.status || !response.data.message) {
           throw new Error('Invalid validation response format');
         }
-        
+
         return {
           valid: response.data.valid,
           status: response.data.status,
@@ -127,22 +134,22 @@ export const purchaseApi: {
         requestCache.delete(cacheKey);
       }
     })();
-    
+
     // Cache the request promise
     requestCache.set(cacheKey, requestPromise);
-    
+
     return requestPromise;
   },
 
   async getPurchaseStatus(orderId: string): Promise<PurchaseResponse> {
     try {
       const response = await api.get<PurchaseResponse>(`/purchases/${orderId}`);
-      
+
       // Ensure the response has the required fields
       if (!response.data.id || !response.data.orderNumber || !response.data.status) {
         throw new Error('Invalid purchase status response format');
       }
-      
+
       return {
         id: response.data.id,
         orderNumber: response.data.orderNumber,

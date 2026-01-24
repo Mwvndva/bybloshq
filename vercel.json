@@ -13,7 +13,9 @@
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist",
   "framework": "vite",
-  "regions": ["iad1"],
+  "regions": [
+    "iad1"
+  ],
   "headers": [
     {
       "source": "/sitemap.xml",
@@ -169,14 +171,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/api/sellers/(.*)",
-      "destination": "https://bybloshq-f1rz.onrender.com/api/sellers/$1"
-    },
-    {
-      "source": "/api/(.*)",
-      "destination": "https://bybloshq-f1rz.onrender.com/api/$1"
-    },
     {
       "source": "/(.*)",
       "destination": "/index.html"

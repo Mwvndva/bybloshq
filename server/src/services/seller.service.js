@@ -31,8 +31,16 @@ class SellerService {
     }
 
     static generateToken(seller) {
+        // CRITICAL: Use user_id (from users table) not id (from sellers table)
+        // The auth middleware expects the JWT to contain the user ID from the unified users table
+        const userId = seller.user_id || seller.userId;
+
+        if (!userId) {
+            throw new Error('Cannot generate token: seller.user_id is missing. Ensure seller data includes user_id from the users table.');
+        }
+
         return jwt.sign(
-            { id: seller.id, email: seller.email, role: 'seller' },
+            { id: userId, email: seller.email, role: 'seller' },
             process.env.JWT_SECRET,
             { expiresIn: '24h' }
         );
