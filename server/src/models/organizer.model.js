@@ -3,24 +3,24 @@ import { pool } from '../config/database.js';
 const Organizer = {
   // Find by Email
   async findByEmail(email) {
-    const result = await pool.query('SELECT * FROM organizers WHERE email = $1', [email]);
+    const result = await pool.query('SELECT *, user_id AS "userId" FROM organizers WHERE email = $1', [email]);
     return result.rows[0];
   },
 
   // Find by ID
   async findById(id) {
-    const result = await pool.query('SELECT * FROM organizers WHERE id = $1', [id]);
+    const result = await pool.query('SELECT *, user_id AS "userId" FROM organizers WHERE id = $1', [id]);
     return result.rows[0];
   },
 
   // Create Organizer
-  async create({ full_name, email, phone, password }) {
+  async create({ full_name, email, phone, password, userId = null }) {
     const result = await pool.query(
       `INSERT INTO organizers 
-       (full_name, email, phone, password, is_verified)
-       VALUES ($1, $2, $3, $4, false)
+       (full_name, email, phone, password, user_id, is_verified)
+       VALUES ($1, $2, $3, $4, $5, false)
        RETURNING id, full_name, email, phone, created_at`,
-      [full_name, email, phone, password] // Password assumed hashed by service
+      [full_name, email, phone, userId ? null : password, userId]
     );
     return result.rows[0];
   },

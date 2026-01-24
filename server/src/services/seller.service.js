@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { signToken } from '../utils/jwt.js';
 import { query, pool } from '../config/database.js'; // Assuming query is exported
 import * as SellerModel from '../models/seller.model.js';
 import logger from '../utils/logger.js';
@@ -54,12 +54,16 @@ class SellerService {
     }
 
     static async login(email, password) {
+        // 1. Find user in unified users table
+        const userFound = await User.findByEmail(email);
+        if (!userFound) return null;
+
+        // 2. Verify password against unified user record
+        const isValid = await User.verifyPassword(password, userFound.password_hash);
+        if (!isValid) return null;
+
+        // 3. Fetch seller profile linked to this email
         const seller = await SellerModel.findSellerByEmail(email);
-        if (!seller) return null;
-
-        const idx = await bcrypt.compare(password, seller.password);
-        if (!idx) return null;
-
         return seller;
     }
 
@@ -72,11 +76,7 @@ class SellerService {
             throw new Error('Cannot generate token: seller.user_id is missing. Ensure seller data includes user_id from the users table.');
         }
 
-        return jwt.sign(
-            { id: userId, email: seller.email, role: 'seller' },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+        return signToken(userId, 'seller');
     }
 
     // --- Profile ---
