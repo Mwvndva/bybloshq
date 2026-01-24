@@ -16,15 +16,20 @@ const toCamelCase = (obj) => {
 
 class Buyer {
   // Create a new buyer
-  // Create a new buyer
-  static async create({ fullName, email, phone, password, city, location }) {
-    const hashedPassword = await bcrypt.hash(password, 10);
+  static async create({ fullName, email, phone, password, city, location, userId = null }) {
+    // If we have a userId, we expect the user record already exists (with hashed password)
+    // and we just create the profile.
+    let hashedPassword = null;
+    if (!userId) {
+      hashedPassword = await bcrypt.hash(password, 10);
+    }
+
     const query = `
-      INSERT INTO buyers (full_name, email, phone, password, city, location, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      INSERT INTO buyers (full_name, email, phone, password, city, location, user_id, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING *
     `;
-    const values = [fullName, email, phone, hashedPassword, city, location];
+    const values = [fullName, email, phone, hashedPassword, city, location, userId];
     const result = await pool.query(query, values);
     return toCamelCase(result.rows[0]);
   }
