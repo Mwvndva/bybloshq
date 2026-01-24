@@ -2,6 +2,8 @@ import BuyerService from '../services/buyer.service.js';
 import Buyer from '../models/buyer.model.js';
 import AppError from '../utils/appError.js';
 import { sanitizeBuyer } from '../utils/sanitize.js';
+import { pool } from '../config/database.js';
+import { sendPasswordResetEmail } from '../utils/email.js';
 
 // Helper to send token via cookie
 const createSendToken = (user, statusCode, req, res) => {
