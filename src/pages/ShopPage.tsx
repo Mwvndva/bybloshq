@@ -77,12 +77,12 @@ const ShopPage = () => {
     switch (theme) {
       case 'black':
         return {
-          bgGradient: 'from-black to-black',
+          bgGradient: 'from-black to-[#050505]',
           textColor: 'text-white',
-          buttonGradient: 'from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800',
-          cardBg: 'bg-gray-800/90',
+          buttonGradient: 'from-gray-900 to-black hover:from-gray-800 hover:to-gray-900',
+          cardBg: 'bg-[#0a0a0a]/95',
           accentColor: 'text-yellow-400',
-          borderColor: 'border-gray-700'
+          borderColor: 'border-white/10'
         };
       case 'pink':
         return {
@@ -163,11 +163,11 @@ const ShopPage = () => {
     const setThemeVariables = () => {
       switch (theme) {
         case 'black':
-          root.style.setProperty('--theme-bg-color', '#0a0e17');
-          root.style.setProperty('--theme-text', '#f3f4f6');
-          root.style.setProperty('--theme-card-bg', 'rgba(17, 24, 39, 0.95)');
+          root.style.setProperty('--theme-bg-color', '#000000');
+          root.style.setProperty('--theme-text', '#ffffff');
+          root.style.setProperty('--theme-card-bg', 'rgba(10, 10, 10, 0.98)');
           root.style.setProperty('--theme-accent', '#f59e0b');
-          root.style.setProperty('--theme-border', 'rgba(31, 41, 55, 0.7)');
+          root.style.setProperty('--theme-border', 'rgba(255, 255, 255, 0.1)');
           break;
         case 'pink':
           root.style.setProperty('--theme-bg-color', '#fce7f3');
