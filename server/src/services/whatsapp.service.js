@@ -181,7 +181,7 @@ class WhatsAppService {
     }
 
     async notifySellerNewOrder(orderData) {
-        const { seller, order, items } = orderData;
+        const { seller, buyer, order, items } = orderData;
         logger.info(`[WHATSAPP-SERVICE] notifySellerNewOrder called for seller: ${seller?.phone || 'NO_PHONE'}`);
 
         if (!seller?.phone) {
@@ -223,7 +223,10 @@ class WhatsAppService {
 
         if (isService) {
             const serviceType = this.getServiceProviderType(order);
-            instructionText = `⏰ *ACTION REQUIRED:*\nPlease review the booking details above and contact ${buyer?.full_name?.split(' ')[0] || 'the client'} to confirm the appointment.\n\n🔒 Payment (KSh ${total.toLocaleString()}) is secured and will be released 24 hours after the booking date ends.`;
+            const buyerName = buyer?.name || buyer?.full_name || 'the client';
+            const buyerPhone = buyer?.phone || 'N/A';
+
+            instructionText = `⏰ *ACTION REQUIRED:*\nPlease contact *${buyerName}* at ${buyerPhone} to confirm the appointment. Review the booking details above to prepare for the service.\n\n🔒 Payment (KSh ${total.toLocaleString()}) is secured and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
             instructionText = `✅ *INFO:* Customer has received download link. No action required.\n\n💰 Revenue (KSh ${total.toLocaleString()}) will be added to your balance automatically.`;
         } else {
@@ -260,7 +263,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 
         try {
             const result = await this.sendMessage(seller.phone, msg);
-            logger.info(`[WHATSAPP-SERVICE] ✅ Message sent successfully to ${seller.phone}`);
+            logger.info(`[WHATSAPP-SERVICE] ✅ New order notification sent to seller ${seller.phone}`);
             return result;
         } catch (error) {
             logger.error(`[WHATSAPP-SERVICE] ❌ Failed to send message to ${seller.phone}:`, error.message);
@@ -285,15 +288,33 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         const isDigital = productType === 'digital';
 
         let bookingInfo = '';
-        if (isService && order.metadata?.booking_date) {
+        if (isService && order.metadata?.booking_date && order.status === 'SERVICE_PENDING') {
             const locationType = order.metadata.location_type;
             const locationLabel = locationType === 'seller_visits_buyer' ? 'Client Location' : 'Service Location';
+            const locationVal = order.metadata.service_location || seller?.physicalAddress || seller?.location || seller?.city || 'Not specified';
+
+            let mapsLink = '';
+            if (seller?.latitude && seller?.longitude) {
+                mapsLink = `https://www.google.com/maps?q=${seller.latitude},${seller.longitude}`;
+            } else {
+                mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationVal)}`;
+            }
 
             bookingInfo = `
-📅 * YOUR BOOKING IS CONFIRMED *
+📅 *YOUR BOOKING IS CONFIRMED*
 • Date: ${order.metadata.booking_date}
 • Time: ${order.metadata.booking_time}
-• ${locationLabel}: ${order.metadata.service_location || seller?.physicalAddress || seller?.location || seller?.city || 'Not specified'}
+• ${locationLabel}: ${locationVal}
+
+🗺️ *Location:* ${mapsLink}
+`.trim();
+        } else if (isService && order.metadata?.booking_date) {
+            // Service confirmed but not PENDING status? (e.g. manual confirmation)
+            // Still show details but maybe no map link if we want strictly only for PENDING
+            bookingInfo = `
+📅 *YOUR BOOKING IS CONFIRMED*
+• Date: ${order.metadata.booking_date}
+• Time: ${order.metadata.booking_time}
 `.trim();
         }
 
@@ -308,28 +329,34 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
             nextSteps = `✅ *YOUR DOWNLOAD IS READY!*\n🔗 Access it here: ${dashboardUrl}`;
         } else {
             // Physical Product Logic
-            // Physical Product Logic
             if (seller?.physicalAddress) {
                 // Shop Collection Logic
                 let mapsLink = '';
-                // Since we don't always have lat/long in the notification object (unless added), 
-                // we'll rely on address query.
-                if (seller.latitude && seller.longitude) {
-                    mapsLink = `https://www.google.com/maps?q=${seller.latitude},${seller.longitude}`;
-                } else {
-                    mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(seller.shop_name || seller.physicalAddress)}`;
-                }
+                let pickupInstructions = '';
 
-                // Updated to avoid "Ready immediately" per user request
-                nextSteps = `📍 *PICKUP INSTRUCTIONS:*
-Please pick up your order at:
-*${seller.shop_name || 'The Shop'}*
-${pickupLocation}
+                if (order.status === 'COLLECTION_PENDING') {
+                    if (seller.latitude && seller.longitude) {
+                        mapsLink = `https://www.google.com/maps?q=${seller.latitude},${seller.longitude}`;
+                    } else {
+                        mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(seller.shop_name || seller.physicalAddress)}`;
+                    }
 
+                    pickupInstructions = `
 🗺️ *Location:* ${mapsLink}
 
 ✅ *STATUS:* Order Confirmed.
 Please proceed to the shop for collection.`;
+                } else {
+                    pickupInstructions = `
+✅ *STATUS:* Order Confirmed.
+We will notify you when it's ready for collection.`;
+                }
+
+                nextSteps = `📍 *PICKUP INSTRUCTIONS:*
+Please pick up your order at:
+*${seller.shop_name || 'The Shop'}*
+${pickupLocation}
+${pickupInstructions}`;
             } else {
                 // Logistics/Drop-off Logic
                 nextSteps = `📍 *NEXT STEPS:*
@@ -369,14 +396,16 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
 
         let msg = '';
         if (newStatus === 'COLLECTION_PENDING') {
-            // This logic is mostly covered by the initial Order Confirmation now.
-            // But if triggered manually later, it serves as a reminder.
             const amount = parseFloat(order.totalAmount || 0);
             const sellerAddr = updateData.seller?.physicalAddress || 'the shop';
             const shopName = updateData.seller?.shop_name || 'The Shop';
 
             let mapsLink = '';
-            // handle map link... logic similar to above
+            if (updateData.seller?.latitude && updateData.seller?.longitude) {
+                mapsLink = `https://www.google.com/maps?q=${updateData.seller.latitude},${updateData.seller.longitude}`;
+            } else {
+                mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopName + ' ' + sellerAddr)}`;
+            }
 
             msg = `✅ *READY FOR COLLECTION*
 
@@ -386,6 +415,8 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
 📍 *PICKUP LOCATION:*
 *${shopName}*
 ${sellerAddr}
+
+🗺️ *Map:* ${mapsLink}
 
 ⏰ *INSTRUCTIONS:*
 Please proceed to the shop to collect your items.`;
@@ -516,8 +547,29 @@ Funds will be held for 24 hours after job completion to ensure customer satisfac
 📦 *ACTION REQUIRED:*
 Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.`;
             }
+        } else if (newStatus === 'COLLECTION_PENDING') {
+            const amount = parseFloat(order.totalAmount || 0);
+            msg = `💰 *PAYMENT RECEIVED*
+
+✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+
+📍 *ACTION REQUIRED:*
+The buyer has been notified to pick up the item from your shop. 
+Please ensure the order is ready for collection.`;
+        } else if (newStatus === 'SERVICE_PENDING') {
+            const amount = parseFloat(order.totalAmount || 0);
+            msg = `💰 *PAYMENT RECEIVED*
+
+✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+
+⏰ *SERVICE BOOKING:*
+Buyer has paid and is waiting for service. 
+Please contact the buyer if necessary and prepare for the appointment.`;
         } else if (newStatus === 'CONFIRMED' && productType === 'service') {
-            msg = `✅ *BOOKING CONFIRMED*\n\nYou have confirmed the booking for Order #${order.orderNumber}.`;
+            msg = `✅ *BOOKING CONFIRMED*
+
+You have confirmed the booking for Order #${order.orderNumber}.
+The buyer has been notified.`;
         } else if (newStatus === 'COMPLETED') {
             const amount = parseFloat(order.totalAmount || 0);
             msg = `🎉 *ORDER COMPLETED*
@@ -526,6 +578,10 @@ Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.`;
 💰 Revenue (KSh ${amount.toLocaleString()}) added to your balance.
 
 You can withdraw your earnings from your seller dashboard.`;
+        } else {
+            msg = `📋 *STATUS UPDATE*
+
+Order #${order.orderNumber} status changed to: *${newStatus}*`;
         }
 
         logger.info(`[PURCHASE-FLOW] 9d. Sending Status Update (${newStatus}) to Seller ${seller.phone}`);

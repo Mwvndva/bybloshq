@@ -46,7 +46,23 @@ class OrderService {
       const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
       logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
-      // 4. Determine initial status
+      // 4. Enrich items with product type for status determination
+      const productIds = items.map(item => parseInt(item.productId, 10));
+      const productsResult = await client.query(
+        'SELECT id, product_type::text as product_type, is_digital FROM products WHERE id = ANY($1)',
+        [productIds]
+      );
+      const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
+
+      items.forEach(item => {
+        const prod = productsMap.get(parseInt(item.productId, 10));
+        if (prod) {
+          item.productType = prod.product_type;
+          item.isDigital = prod.is_digital;
+        }
+      });
+
+      // 5. Determine initial status
       const initialStatus = this._determineInitialStatus(items);
 
       // 5. Prepare Order Record
@@ -73,6 +89,7 @@ class OrderService {
 
       // 7. Insert Order Items (Using Model as DAO)
       if (items.length > 0) {
+        // Pass the enriched items (with productType/isDigital) to avoid redundant queries in Model
         await Order.insertItems(client, order.id, items);
       }
 
@@ -517,6 +534,7 @@ class OrderService {
 
           whatsappService.notifySellerNewOrder({
             seller: sellerData,
+            buyer: buyerData,
             order: notificationPayload.order,
             items: items
           })

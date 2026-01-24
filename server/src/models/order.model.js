@@ -43,15 +43,20 @@ class Order {
    * Pure DAO method to insert order items
    */
   static async insertItems(client, orderId, items) {
-    // Fetch product details for type info
-    const productIds = items.map(item => parseInt(item.productId, 10));
-    const productsQuery = `
-      SELECT id, product_type::text as product_type, is_digital
-      FROM products
-      WHERE id = ANY($1)
-    `;
-    const productsResult = await client.query(productsQuery, [productIds]);
-    const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
+    // Fetch product details for type info - only for items that don't already have them
+    const itemsMissingDetails = items.filter(item => !item.productType && item.isDigital === undefined);
+    const productIds = itemsMissingDetails.map(item => parseInt(item.productId, 10));
+
+    let productsMap = new Map();
+    if (productIds.length > 0) {
+      const productsQuery = `
+        SELECT id, product_type::text as product_type, is_digital
+        FROM products
+        WHERE id = ANY($1)
+      `;
+      const productsResult = await client.query(productsQuery, [productIds]);
+      productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
+    }
 
     const itemValues = items.map(item => {
       const subtotal = item.subtotal || (item.price * item.quantity);
