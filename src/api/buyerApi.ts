@@ -628,6 +628,7 @@ const buyerApi = {
     phone: string;
     city?: string;
     location?: string;
+    password?: string;
   }): Promise<{ buyer?: Buyer; token?: string; message?: string; requiresLogin?: boolean; exists?: boolean }> => {
     try {
 
