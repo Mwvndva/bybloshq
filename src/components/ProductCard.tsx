@@ -7,7 +7,7 @@ import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loade
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, getImageUrl } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { BuyerInfoModal } from '@/components/BuyerInfoModal';
@@ -500,7 +500,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
         <img
-          src={product.image_url}
+          src={getImageUrl(product.image_url)}
           alt={product.name}
           className={cn(
             'w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover transition-transform duration-500 group-hover:scale-110',
@@ -696,7 +696,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                 product.images.map((img, idx) => (
                   <div key={idx} className="relative w-full max-w-2xl bg-gray-100 rounded-lg overflow-hidden shadow-sm">
                     <img
-                      src={img}
+                      src={getImageUrl(img)}
                       alt={`${product.name} - Page ${idx + 1}`}
                       className="w-full h-auto object-contain"
                       loading="lazy"
@@ -709,7 +709,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
               ) : (
                 /* Default single image view */
                 <img
-                  src={product.image_url}
+                  src={getImageUrl(product.image_url)}
                   alt={product.name}
                   className="max-w-full max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] object-contain rounded-lg"
                   onError={(e) => {

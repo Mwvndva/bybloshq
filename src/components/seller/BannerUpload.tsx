@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2, UploadCloud, X, Image as ImageIcon } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
+import { getImageUrl } from '@/lib/utils';
 
 interface BannerUploadProps {
   currentBannerUrl?: string;
@@ -16,9 +17,9 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
 
   // Update preview URL when currentBannerUrl changes (e.g., after refresh)
   useEffect(() => {
-            if (currentBannerUrl) {
+    if (currentBannerUrl) {
       setPreviewUrl(currentBannerUrl);
-          }
+    }
   }, [currentBannerUrl]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,18 +64,18 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
 
     try {
       setIsUploading(true);
-      
+
       // Convert file to base64
       const base64Image = await fileToBase64(file);
-      
+
       // Upload the banner image using the sellerApi
       const { bannerUrl } = await sellerApi.uploadBanner(base64Image);
-      
+
       // Update the preview and call the callback
       onBannerUploaded(bannerUrl);
       setPreviewUrl(bannerUrl);
       setFile(null);
-      
+
       toast({
         title: 'Banner updated',
         description: 'Your store banner has been updated successfully.',
@@ -94,14 +95,14 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
   const handleRemoveBanner = useCallback(async () => {
     try {
       setIsUploading(true);
-      
+
       // Update the seller's banner to empty using sellerApi
       await sellerApi.uploadBanner('');
-      
+
       setFile(null);
       setPreviewUrl(null);
       onBannerUploaded('');
-      
+
       toast({
         title: 'Banner removed',
         description: 'Your store banner has been removed.',
@@ -135,7 +136,7 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
       {(previewUrl || currentBannerUrl) ? (
         <div className="relative rounded-xl overflow-hidden border-2 border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 shadow-md group">
           <img
-            src={previewUrl || currentBannerUrl}
+            src={previewUrl || getImageUrl(currentBannerUrl)}
             alt="Store banner preview"
             className="w-full h-40 sm:h-48 lg:h-56 object-cover"
           />
