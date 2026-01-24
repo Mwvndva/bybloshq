@@ -62,8 +62,13 @@ class OrderService {
         }
       });
 
+      logger.info('OrderService: items enriched', {
+        items: items.map(i => ({ id: i.productId, type: i.productType, digital: i.isDigital }))
+      });
+
       // 5. Determine initial status
       const initialStatus = this._determineInitialStatus(items);
+      logger.info(`OrderService: initial status determined: ${initialStatus}`);
 
       // 5. Prepare Order Record
       const orderRecord = {
@@ -449,6 +454,8 @@ class OrderService {
         if (metadata.product_type === ProductType.SERVICE) hasService = true;
       }
 
+      logger.info(`[PURCHASE-FLOW] CompleteOrder Check: hasPhysical=${hasPhysical}, hasService=${hasService}, ItemsCount=${items.length}`);
+
       let newStatus = OrderStatus.COMPLETED;
       if (hasPhysical) {
         if (sellerHasShop) {
@@ -458,6 +465,7 @@ class OrderService {
         }
       } else if (hasService) {
         newStatus = OrderStatus.SERVICE_PENDING;
+        logger.info(`[PURCHASE-FLOW] Service Order Detected -> Setting Status to SERVICE_PENDING`);
       }
 
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
