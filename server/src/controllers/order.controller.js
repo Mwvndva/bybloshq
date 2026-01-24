@@ -610,10 +610,10 @@ const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
-    const userId = req.user.id;
+    const user = req.user;
 
     // Delegate to OrderService
-    const updatedOrder = await OrderService.updateOrderStatus(id, userId, status);
+    const updatedOrder = await OrderService.updateOrderStatus(id, user, status);
 
     // Add status history (Service could handle this too, but leaving here for now or moving to Service TODO)
     // Ideally Service should handle history tracking. For now, we'll leave it as a side-effect here 
