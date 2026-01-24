@@ -25,7 +25,7 @@ export const protect = async (req, res, next) => {
 
     // Parse cookies if not already parsed
     if (!req.cookies) {
-      cookieParser()(req, res, () => {});
+      cookieParser()(req, res, () => { });
     }
 
     // 1) Get token and check if it exists
@@ -47,7 +47,7 @@ export const protect = async (req, res, next) => {
     const decoded = verifyToken(token);
     console.log('Auth middleware - Token verified. User ID:', decoded.id, 'Role:', decoded.role);
 
-    // 3) Find user based on token role/type
+    // 3) Find user in unified users table
     let user = null;
     const userType = decoded.role || decoded.type; // backward compatibility
 
@@ -68,42 +68,49 @@ export const protect = async (req, res, next) => {
         return next(new AppError('Invalid admin credentials', 401));
       }
     } else {
-      // Regular users → query database
-      let queryText;
-      let queryParams = [decoded.id];
+      // Regular users → query unified users table first
+      const userQuery = 'SELECT * FROM users WHERE id = $1 AND role = $2';
+      const userResult = await query(userQuery, [decoded.id, userType]);
+
+      if (!userResult.rows[0]) {
+        return next(new AppError(`The ${userType} belonging to this token no longer exists.`, 401));
+      }
+
+      const baseUser = userResult.rows[0];
+
+      // Now fetch profile data based on role
+      let profileQuery;
+      let profileResult;
 
       switch (userType) {
         case 'buyer':
-          queryText = 'SELECT id, email, full_name as name FROM buyers WHERE id = $1 AND status = $2';
-          queryParams.push('active');
+          profileQuery = 'SELECT * FROM buyers WHERE user_id = $1 AND status = $2';
+          profileResult = await query(profileQuery, [baseUser.id, 'active']);
           break;
         case 'seller':
-          queryText = 'SELECT id, email FROM sellers WHERE id = $1';
+          profileQuery = 'SELECT * FROM sellers WHERE user_id = $1';
+          profileResult = await query(profileQuery, [baseUser.id]);
           break;
         case 'organizer':
-          queryText = 'SELECT id, email, full_name as name FROM organizers WHERE id = $1';
+          profileQuery = 'SELECT * FROM organizers WHERE user_id = $1';
+          profileResult = await query(profileQuery, [baseUser.id]);
           break;
         default:
           return next(new AppError('Invalid user role', 401));
       }
 
-      // Execute query
-      const result = await query(queryText, queryParams);
-
-      if (!result.rows[0]) {
-        return next(new AppError(`The ${userType} belonging to this token no longer exists.`, 401));
+      if (!profileResult.rows[0]) {
+        return next(new AppError(`Profile for ${userType} not found.`, 401));
       }
 
+      // Merge user and profile data
       user = {
-        id: result.rows[0].id,
-        userType: userType
+        id: profileResult.rows[0].id, // Use profile ID for backward compatibility
+        userId: baseUser.id, // Store the users table ID
+        email: baseUser.email,
+        userType: baseUser.role,
+        ...profileResult.rows[0] // Spread profile data
       };
-
-      // Add name for buyer/organizer
-      if (userType === 'buyer' || userType === 'organizer') {
-        user.name = result.rows[0].name;
-      }
-      // Seller gets only id + userType (no email, as requested)
     }
 
     // If we get here, user is authenticated
@@ -112,7 +119,15 @@ export const protect = async (req, res, next) => {
     }
 
     // 4) Attach user to request and proceed
+    // Ensure compatibility with code expecting generic 'role' or specific 'userType'
+    user.role = user.userType;
+
     req.user = user;
+    res.locals.user = user; // For view rendering
+
+    // Add specific alias for legacy controllers if needed
+    if (user.userType === 'organizer') req.organizer = user;
+
     next();
 
   } catch (error) {

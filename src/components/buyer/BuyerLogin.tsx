@@ -55,8 +55,17 @@ export function BuyerLogin() {
         formData.password
       );
     } catch (error: any) {
-      // The context re-throws the error so we catch it here to update local UI state if needed
-      // Most of the error handling/toasting is done in the context
+      // Extract the actual error message from the API response
+      const errorMessage = error?.response?.data?.message || error?.message || 'Invalid email or password. Please check your credentials and try again.';
+
+      setError(errorMessage);
+
+      // Also show a toast for better visibility
+      toast({
+        title: 'Login Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }

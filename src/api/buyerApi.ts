@@ -66,7 +66,7 @@ interface RegisterData {
 
 // Get the base URL from environment variables
 const API_URL = (import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api')
+  (import.meta.env.DEV ? 'http://localhost:3002/api' : '/api')
 ).replace(/\/$/, '');
 const isDevelopment = import.meta.env.DEV;
 

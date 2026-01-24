@@ -23,23 +23,7 @@ const adminLogin = async (req, res, next) => {
   }
 };
 
-const protect = async (req, res, next) => {
-  try {
-    let token;
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-      token = req.headers.authorization.split(' ')[1];
-    }
-    if (!token) return next(new AppError('Not logged in', 401));
 
-    const decoded = await promisify(jwt.verify)(token, process.env.JWT_SECRET);
-    if (decoded.id !== 'admin') return next(new AppError('Not authorized', 403));
-
-    req.user = { id: 'admin', role: 'admin' };
-    next();
-  } catch (error) {
-    next(new AppError('Auth failed', 401));
-  }
-};
 
 const getDashboardStats = async (req, res, next) => {
   try {
@@ -1006,7 +990,7 @@ const getMonthlyFinancialData = async (req, res, next) => {
 
 export {
   adminLogin,
-  protect,
+
   processPendingPayments,
   getDashboardStats,
   getAllSellers,

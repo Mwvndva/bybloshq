@@ -1,6 +1,6 @@
 import express from 'express';
 import * as buyerController from '../controllers/buyer.controller.js';
-import { protect } from '../middleware/auth.middleware.js';
+import { protect, restrictTo } from '../middleware/auth.js';
 import AppError from '../utils/appError.js';
 import wishlistRoutes from './wishlist.routes.js';
 import { validateRegistration, validateLogin } from '../middleware/authValidation.js';
@@ -19,7 +19,8 @@ router.post('/check-phone', buyerController.checkBuyerByPhone);
 router.post('/save-info', buyerController.saveBuyerInfo);
 
 // Protected routes - require buyer authentication
-router.use(protect(['buyer']));
+router.use(protect);
+router.use(restrictTo('buyer'));
 
 // Get current buyer's profile
 router.get('/profile', buyerController.getProfile);

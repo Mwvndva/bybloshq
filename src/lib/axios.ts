@@ -1,8 +1,8 @@
 import axios from 'axios';
 
 // Get the API URL from environment variables
-const API_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://localhost:3002/api' : 'https://bybloshq-f1rz.onrender.com/api');
+const API_URL = import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3002/api' : '/api');
 
 // Create a basic axios instance with default config
 const apiClient = axios.create({
@@ -19,18 +19,18 @@ apiClient.interceptors.request.use((config) => {
   if (config.url?.startsWith('http')) {
     return config;
   }
-  
+
   // Remove any leading slashes to prevent double slashes
   if (config.url) {
     config.url = config.url.replace(/^\/+/, '');
-    
+
     // Remove 'api/' from the beginning of the URL if it exists
     // since we're already including it in the baseURL
     if (config.url.startsWith('api/')) {
       config.url = config.url.replace(/^api\//, '');
     }
   }
-  
+
   return config;
 });
 
@@ -55,7 +55,7 @@ apiClient.interceptors.response.use(
   (error: any) => {
     if (error.response) {
       const { status, data } = error.response;
-      
+
       if (status === 401) {
         console.error('Unauthorized access - please login again');
       } else if (status === 403) {
@@ -65,7 +65,7 @@ apiClient.interceptors.response.use(
       } else if (status >= 500) {
         console.error('Server error - please try again later');
       }
-      
+
       return Promise.reject(data?.message || 'An error occurred');
     } else if (error.request) {
       console.error('No response received from server. Please check your connection.');

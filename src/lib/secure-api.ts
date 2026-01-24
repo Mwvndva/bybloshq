@@ -14,8 +14,8 @@ const normalizeApiUrl = (url: string): string => {
 
 // Get the base URL from environment variables
 const API_BASE_URL = normalizeApiUrl(
-  import.meta.env.VITE_API_URL || 
-  (import.meta.env.DEV ? 'http://localhost:3002' : 'https://bybloshq-f1rz.onrender.com')
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:3002' : '')
 );
 
 // Create secure axios instance that prioritizes HTTP-only cookies
@@ -42,7 +42,7 @@ secureApi.interceptors.response.use(
         window.location.href = '/organizer/login';
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -54,12 +54,12 @@ const handleSecureApiError = (error) => {
     // that falls out of the range of 2xx
     const { status, data } = error.response;
     const message = data?.message || 'An error occurred';
-    
+
     // Show error toast for client-side errors (4xx) and server errors (5xx)
     if (status >= 400) {
       toast.error(message);
     }
-    
+
     return Promise.reject({ message, status, data });
   } else if (error.request) {
     // The request was made but no response was received

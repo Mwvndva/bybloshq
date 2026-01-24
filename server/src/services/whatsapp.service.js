@@ -302,7 +302,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 
         if (isService) {
             const serviceType = this.getServiceProviderType(order);
-            nextSteps = `⏰ * WHAT'S NEXT:*\nYour ${serviceType} has been notified and will contact you to confirm the appointment details.\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
+            nextSteps = `⏰ * WHAT'S NEXT:*\n\n📍 *PROVIDER ADDRESS:*\n${seller?.shop_name || 'Service Provider'}\n${seller?.physicalAddress || 'Contact for location'}\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
             nextSteps = `✅ *YOUR DOWNLOAD IS READY!*\n🔗 Access it here: ${dashboardUrl}`;
@@ -401,9 +401,16 @@ Thank you for shopping with Byblos!`;
             if (isService) {
                 const serviceType = this.getServiceProviderType(order);
                 const amount = parseFloat(order.totalAmount || 0);
+                const sellerAddr = updateData.seller?.physicalAddress || 'Contact provider for details';
+                const shopName = updateData.seller?.shop_name || 'Service Provider';
+
                 msg = `✅ *BOOKING CONFIRMED*
 
 🎉 Payment received! Your ${serviceType} booking is confirmed.
+
+📍 *PROVIDER ADDRESS:*
+*${shopName}*
+${sellerAddr}
 
 💰 Amount Held: KSh ${amount.toLocaleString()}
 🔒 Your payment is secure and will be released to the service provider 24 hours after job completion.
@@ -462,12 +469,18 @@ ${locationText}
             }
         } else if (newStatus === 'CONFIRMED' && isService) { // Custom status for Service
             const serviceType = this.getServiceProviderType(order);
+            const sellerAddr = updateData.seller?.physicalAddress || 'Contact provider for details';
+            const shopName = updateData.seller?.shop_name || 'Service Provider';
+
             msg = `✅ *BOOKING ACCEPTED*
 
 Great news! Your ${serviceType} has accepted your booking.
 
-📦 Order #${order.orderNumber}
-⏰ They will contact you shortly to confirm the appointment details.`;
+📍 *PROVIDER ADDRESS:*
+*${shopName}*
+${sellerAddr}
+
+📦 Order #${order.orderNumber}`;
         } else {
             msg = `📋 *STATUS UPDATE*\n\nOrder #${order.orderNumber}: ${newStatus}`;
         }
