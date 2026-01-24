@@ -638,163 +638,36 @@ export const getSellerById = async (req, res) => {
 // @route   POST /api/sellers/withdrawal-request
 // @access  Private
 export const createWithdrawalRequest = async (req, res) => {
-  const client = await pool.connect();
   const sellerId = req.user?.id;
-  const { amount, mpesaName } = req.body;
-  let { mpesaNumber } = req.body;
+  const { amount, mpesaNumber, mpesaName } = req.body;
 
   try {
     if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
     if (!amount || !mpesaNumber || !mpesaName) return res.status(400).json({ status: 'error', message: 'Missing required fields' });
 
-    // Ensure mpesaNumber starts with 254
-    mpesaNumber = mpesaNumber.toString();
-    if (mpesaNumber.startsWith('0')) {
-      mpesaNumber = `254${mpesaNumber.substring(1)}`;
-    } else if (mpesaNumber.startsWith('+254')) {
-      mpesaNumber = mpesaNumber.substring(1);
-    } else if (!mpesaNumber.startsWith('254')) {
-      // Assume it needs prefix if strictly 9 digits, otherwise might be invalid but let it pass to API or strict check
-      if (mpesaNumber.length === 9) mpesaNumber = `254${mpesaNumber}`;
-    }
+    // Delegate to SellerService which now uses the centralized WithdrawalService
+    const request = await SellerService.createWithdrawalRequest(sellerId, amount, mpesaNumber, mpesaName);
 
-    const withdrawalAmount = parseFloat(amount);
-    if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) return res.status(400).json({ status: 'error', message: 'Invalid amount' });
+    res.status(201).json({
+      status: 'success',
+      data: sanitizeWithdrawalRequest({
+        ...request,
+        status: 'processing',
+        message: 'Withdrawal request submitted successfully. You will be notified once it is processed.'
+      })
+    });
+  } catch (serviceError) {
+    logger.error(`Withdrawal: SellerService failed for seller ${sellerId}: ${serviceError.message}`);
 
-    await client.query('BEGIN');
+    // Map service errors to appropriate responses
+    const status = serviceError.message.includes('Insufficient') ? 400 :
+      serviceError.message.includes('not found') ? 404 :
+        serviceError.message.includes('Minimum') || serviceError.message.includes('Maximum') ? 400 : 500;
 
-    // 1. Lock & Check Balance
-    logger.info(`Withdrawal: Checking balance for seller ${sellerId}, amount: ${withdrawalAmount}`);
-
-    const { rows: [seller] } = await client.query(
-      'SELECT balance, full_name, email FROM sellers WHERE id = $1 FOR UPDATE',
-      [sellerId]
-    );
-
-    if (!seller) {
-      await client.query('ROLLBACK');
-      logger.warn(`Withdrawal: Seller not found ${sellerId}`);
-      return res.status(404).json({ status: 'error', message: 'Seller not found' });
-    }
-
-    const currentBalance = parseFloat(seller.balance || 0);
-    if (withdrawalAmount > currentBalance) {
-      await client.query('ROLLBACK');
-      logger.warn(`Withdrawal: Insufficient funds. Seller ${sellerId} has ${currentBalance}, requested ${withdrawalAmount}`);
-      return res.status(400).json({ status: 'error', message: 'Insufficient balance' });
-    }
-
-    // 2. Deduct Balance & Create Request
-    await client.query('UPDATE sellers SET balance = balance - $1 WHERE id = $2', [withdrawalAmount, sellerId]);
-
-    const { rows: [request] } = await client.query(
-      `INSERT INTO withdrawal_requests (seller_id, amount, mpesa_number, mpesa_name, status, created_at)
-       VALUES ($1, $2, $3, $4, 'processing', NOW())
-       RETURNING id, amount, mpesa_number, status, created_at`,
-      [sellerId, withdrawalAmount, mpesaNumber, mpesaName]
-    );
-
-    // 3. Generate Reference & Update
-    const reference = `WR-${request.id}-${Date.now()}`;
-    await client.query('UPDATE withdrawal_requests SET provider_reference = $1 WHERE id = $2', [reference, request.id]);
-
-    await client.query('COMMIT'); // Commit early so DB state is consistent
-    logger.info(`Withdrawal: DB transaction committed. Created request ID ${request.id} with ref ${reference}`);
-
-    // 4. Initiate Payout (External API)
-    try {
-      logger.info(`Withdrawal: Initiating Payd API call for ReqID ${request.id} to ${mpesaNumber}`);
-
-      const payoutResponse = await payoutService.initiateMobilePayout({
-        amount: withdrawalAmount,
-        phone_number: mpesaNumber,
-        narration: `Withdrawal for ${seller.full_name}`,
-        account_name: mpesaName
-        // Removed: reference field (not in PayD v3 spec)
-      });
-
-      logger.info(`Withdrawal: Payd API accepted request for ReqID ${request.id}. HTTP Status: 202, Response Status: ${payoutResponse.status}`);
-
-      // Update request with raw response and provider reference
-      // CRITICAL: Keep status as 'processing' - only the callback should mark as completed/failed
-      const paydId = payoutResponse.correlator_id || payoutResponse.transaction_id;
-
-      if (paydId) {
-        await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2 WHERE id = $3',
-          [JSON.stringify(payoutResponse), paydId, request.id]
-        );
-        logger.info(`Withdrawal: Updated ReqID ${request.id} with ProviderRef ${paydId}. Status remains 'processing' until callback.`);
-      } else {
-        await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
-          [JSON.stringify(payoutResponse), request.id]
-        );
-        logger.warn(`Withdrawal: No provider ref returned for ReqID ${request.id}. Status remains 'processing'.`);
-      }
-
-      // WhatsApp Notification - inform seller withdrawal is being processed
-      if (seller.phone) {
-        whatsappService.notifySellerWithdrawalUpdate(seller.phone, {
-          amount: withdrawalAmount,
-          status: 'processing',
-          reference: paydId || reference || 'N/A',
-          reason: null,
-          newBalance: null
-        }).catch(err => logger.error('Failed to send withdrawal WA notification:', err));
-      }
-
-      res.status(201).json({
-        status: 'success',
-        data: sanitizeWithdrawalRequest({
-          ...request,
-          status: 'processing',
-          message: 'Withdrawal request submitted successfully. You will be notified once it is processed.'
-        })
-      });
-
-    } catch (apiError) {
-      // 5. Compensating Transaction on Failure
-      logger.error(`Withdrawal: Payd API Failed for ReqID ${request.id}. Error: ${apiError.message}`);
-
-      const refundClient = await pool.connect();
-      try {
-        await refundClient.query('BEGIN');
-        const { rows: [updatedSeller] } = await refundClient.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2 RETURNING balance', [withdrawalAmount, sellerId]);
-        await refundClient.query('UPDATE withdrawal_requests SET status = $1 WHERE id = $2', ['failed', request.id]);
-        await refundClient.query('COMMIT');
-
-        logger.info(`Withdrawal: Refunded ReqID ${request.id} due to API failure. New Balance: ${updatedSeller?.balance}`);
-
-        // WhatsApp Notification for Failure
-        if (seller.phone) {
-          whatsappService.notifySellerWithdrawalUpdate(seller.phone, {
-            amount: withdrawalAmount,
-            status: 'failed',
-            reference: reference || 'N/A',
-            reason: apiError.message,
-            newBalance: updatedSeller?.balance
-          }).catch(err => logger.error('Failed to send withdrawal failure WA notification:', err));
-        }
-
-        return res.status(502).json({
-          status: 'error',
-          message: 'Payout provider unavailable. Funds refunded.',
-          detail: apiError.message
-        });
-      } catch (refundErr) {
-        await refundClient.query('ROLLBACK');
-        console.error('CRITICAL: Refund failed', refundErr);
-        throw refundErr;
-      } finally {
-        refundClient.release();
-      }
-    }
-
-  } catch (error) {
-    if (client) await client.query('ROLLBACK');
-    console.error('Withdrawal Error:', error);
-    res.status(500).json({ status: 'error', message: 'Internal server error' });
-  } finally {
-    client.release();
+    res.status(status).json({
+      status: 'error',
+      message: serviceError.message
+    });
   }
 };
 

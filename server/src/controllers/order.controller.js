@@ -7,6 +7,7 @@ import path from 'path';
 import fs from 'fs';
 import Fees from '../config/fees.js';
 import { OrderStatus, PaymentStatus, ProductType } from '../constants/enums.js';
+import escrowManager from '../services/EscrowManager.js';
 
 /**
  * Create a new order
@@ -726,93 +727,15 @@ const confirmReceipt = async (req, res) => {
 
     const updatedOrder = updateResult.rows[0];
 
-    // Update seller's total_sales, net_revenue and balance
-    await client.query(`
-      UPDATE sellers 
-      SET 
-        total_sales = COALESCE(total_sales, 0) + $1,
-        net_revenue = COALESCE(net_revenue, 0) + $2,
-        balance = COALESCE(balance, 0) + $2,
-        updated_at = NOW()
-      WHERE id = $3
-    `, [order.total_amount, sellerPayout, order.seller_id]);
-
-    // Create payout record in a simple, reliable way
-    let payoutCreated = false;
-
+    // Use EscrowManager to handle the payment release logic cleanly and atomically
     try {
-      // First check if payouts table exists
-      console.log('Checking if payouts table exists...');
-      const tableCheck = await client.query(`
-        SELECT EXISTS (
-          SELECT FROM information_schema.tables 
-          WHERE table_name = 'payouts'
-        )
-      `);
-
-      if (tableCheck.rows[0].exists) {
-        console.log('Payouts table exists, creating payout record...');
-        // First, check which columns exist in the payouts table
-        const columnsCheck = await client.query(`
-          SELECT column_name 
-          FROM information_schema.columns 
-          WHERE table_name = 'payouts'
-        `);
-
-        const existingColumns = columnsCheck.rows.map(row => row.column_name);
-        console.log('Existing columns in payouts table:', existingColumns);
-
-        // Prepare the payout data
-        const payoutData = {
-          seller_id: order.seller_id,
-          order_id: order.id,
-          amount: sellerPayout,
-          platform_fee: platformFee,
-          status: 'completed',
-          payment_method: 'bank_transfer',
-          reference_number: `order_${order.id}_${Date.now()}`,
-          notes: 'Payout for completed order'
-        };
-
-        // Filter out columns that don't exist in the database
-        const validColumns = Object.keys(payoutData).filter(col => existingColumns.includes(col));
-        const values = validColumns.map(col => payoutData[col]);
-        const placeholders = values.map((_, i) => `$${i + 1}`);
-
-        // Add timestamps if columns exist
-        if (existingColumns.includes('created_at')) {
-          validColumns.push('created_at');
-          placeholders.push('NOW()');
-        }
-        if (existingColumns.includes('updated_at')) {
-          validColumns.push('updated_at');
-          placeholders.push('NOW()');
-        }
-
-        // Build the final query
-        const queryText = `
-          INSERT INTO payouts (
-            ${validColumns.join(', ')}
-          ) VALUES (
-            ${placeholders.join(', ')}
-          )
-          RETURNING id
-        `;
-
-        console.log('Executing payout query:', queryText.replace(/\s+/g, ' ').trim());
-        console.log('With parameters:', values);
-
-        // Execute the query
-        const result = await client.query(queryText, values);
-        console.log('Payout created successfully:', result.rows[0]);
-        payoutCreated = true;
-      } else {
-        console.log('Payouts table does not exist, skipping payout creation');
-      }
-    } catch (payoutError) {
-      console.error('Error creating payout record:', payoutError);
-      // Don't fail the whole operation if payout creation fails
-      // The main order confirmation is more important
+      await escrowManager.releaseFunds(client, updatedOrder, 'OrderController:confirmReceipt');
+    } catch (escrowError) {
+      console.error('Error in EscrowManager.releaseFunds:', escrowError);
+      // We don't necessarily want to fail the whole confirmReceipt if escrow fails? 
+      // Actually, if balance doesn't update, the buyer might think it's done but seller doesn't get paid.
+      // So we SHOULD throw here if we are inside the transaction.
+      throw escrowError;
     }
 
     // Commit the transaction

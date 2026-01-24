@@ -1,5 +1,6 @@
 import axios from 'axios';
 import logger from '../utils/logger.js';
+import Fees from '../config/fees.js';
 
 import https from 'https';
 
@@ -60,9 +61,51 @@ class PayoutService {
         return `${baseUrl}/api/callbacks/payd`;
     }
 
+    /**
+     * Normalize phone number to 254 format
+     * @param {string|number} phone 
+     * @returns {string}
+     */
+    normalizePhoneNumber(phone) {
+        let normalized = phone.toString().replace(/\D/g, '');
+        if (normalized.startsWith('0')) {
+            normalized = `254${normalized.substring(1)}`;
+        } else if (normalized.startsWith('+254')) {
+            normalized = normalized.substring(1);
+        } else if (normalized.length === 9) {
+            normalized = `254${normalized}`;
+        }
+        return normalized;
+    }
+
+    /**
+     * Validate withdrawal amount against platform limits
+     * @param {number} amount 
+     */
+    validateWithdrawal(amount) {
+        const withdrawalAmount = parseFloat(amount);
+        if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
+            throw new Error('Invalid withdrawal amount');
+        }
+
+        if (withdrawalAmount < Fees.MIN_WITHDRAWAL_AMOUNT) {
+            throw new Error(`Minimum withdrawal amount is KES ${Fees.MIN_WITHDRAWAL_AMOUNT}`);
+        }
+
+        if (withdrawalAmount > Fees.MAX_WITHDRAWAL_AMOUNT) {
+            throw new Error(`Maximum withdrawal amount is KES ${Fees.MAX_WITHDRAWAL_AMOUNT}`);
+        }
+
+        return withdrawalAmount;
+    }
+
     async initiateMobilePayout(payoutData) {
         try {
-            const { amount, phone_number, narration, account_name } = payoutData;
+            let { amount, phone_number, narration, account_name, reference } = payoutData;
+
+            // 1. Validate and Normalize
+            amount = this.validateWithdrawal(amount);
+            phone_number = this.normalizePhoneNumber(phone_number);
 
             if (!this.networkCode || !this.channelId) {
                 throw new Error('Payd network code or channel ID not configured');
@@ -75,10 +118,10 @@ class PayoutService {
             const payload = {
                 username: this.username,
                 network_code: this.networkCode,
-                account_name: account_name || "Seller Withdrawal", // e.g. "momo" or name
-                account_number: phone_number, // User spec shows 0712345678, but typically wallets accept 254. using 254 for safety or original input if separated? userController sends the 254 refactored one. 
+                account_name: account_name || "Seller Withdrawal",
+                account_number: phone_number,
                 amount: parseFloat(amount),
-                phone_number: phone_number, // Spec: 254712345678
+                phone_number: phone_number,
                 channel_id: this.channelId,
                 narration: narration || "Payment for goods",
                 currency: "KES",
@@ -86,10 +129,9 @@ class PayoutService {
                 transaction_channel: "mobile",
                 channel: "mobile",
                 provider_name: "Mobile Wallet (M-PESA)",
-                provider_code: "MPESA"
-                // 'reference' removed as it is not in the strict body received example, 
-                // typically 'correlator_id' is returned. If Payd v3 supports 'reference' it usually ignores extra fields, 
-                // but user said "ensure implementation follows this system" so we stick to it.
+                provider_code: "MPESA",
+                // Pass internal reference for outbound idempotency if supported by Payd V3 backend
+                reference: reference || `REF-${Date.now()}`
             };
 
             const response = await this.client.post('/withdrawal', payload, {
@@ -103,6 +145,76 @@ class PayoutService {
             logger.error('Payd Payout Error:', errorMsg);
             throw new Error(errorMsg);
         }
+    }
+
+    /**
+     * Check the status of a payout with Payd
+     * @param {string} providerRef 
+     */
+    async checkPayoutStatus(providerRef) {
+        try {
+            if (!providerRef) throw new Error('Provider reference is required');
+
+            const response = await this.client.get(`/withdrawal/${providerRef}`, {
+                headers: { Authorization: this.getAuthHeader() }
+            });
+
+            logger.info(`Payd Status Check for ${providerRef}: ${response.status}`);
+            return response.data;
+        } catch (error) {
+            const errorMsg = error.response?.data?.message || error.message || 'Payout status check failed';
+            logger.error(`Payd Status Check Error (${providerRef}):`, errorMsg);
+            throw new Error(errorMsg);
+        }
+    }
+
+    /**
+     * Process a refund for a failed withdrawal request
+     * @param {Object} client - DB client for transaction support
+     * @param {Object} request - The withdrawal request record
+     * @returns {Promise<number>} New balance
+     */
+    async processRefund(client, request) {
+        let newBalance = null;
+        let table = '';
+        let entityId = null;
+        const amount = parseFloat(request.amount);
+
+        if (request.event_id) {
+            const feePercentage = 0.06;
+            const grossRefund = amount / (1 - feePercentage);
+            const { rows } = await client.query(
+                'UPDATE events SET balance = balance + $1 WHERE id = $2 RETURNING balance',
+                [grossRefund, request.event_id]
+            );
+            newBalance = rows[0]?.balance;
+            table = 'events';
+            entityId = request.event_id;
+        } else if (request.seller_id) {
+            const { rows } = await client.query(
+                'UPDATE sellers SET balance = balance + $1 WHERE id = $2 RETURNING balance',
+                [amount, request.seller_id]
+            );
+            newBalance = rows[0]?.balance;
+            table = 'sellers';
+            entityId = request.seller_id;
+        } else if (request.organizer_id) {
+            const { rows } = await client.query(
+                'UPDATE organizers SET balance = balance + $1 WHERE id = $2 RETURNING balance',
+                [amount, request.organizer_id]
+            );
+            newBalance = rows[0]?.balance;
+            table = 'organizers';
+            entityId = request.organizer_id;
+        }
+
+        if (newBalance !== null) {
+            logger.info(`[PayoutService] Refund Successful. Entity: ${table}(${entityId}), Amount: ${amount}, New Balance: ${newBalance}`);
+        } else {
+            logger.warn(`[PayoutService] Refund failed or entity not recognized for request ${request.id}`);
+        }
+
+        return newBalance;
     }
 }
 

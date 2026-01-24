@@ -2,6 +2,7 @@ import express from 'express';
 import { body, param } from 'express-validator';
 import paymentController from '../controllers/payment.controller.js';
 import { protect } from '../middleware/auth.js';
+import { verifyPaydWebhook } from '../middleware/paydWebhookSecurity.js';
 import validate from '../middleware/validation.middleware.js';
 import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
 
@@ -50,6 +51,7 @@ publicRouter.post(
 publicRouter.post(
   '/webhook/payd',
   express.json(),
+  verifyPaydWebhook,
   paymentController.handlePaydWebhook // Updated method name
 );
 

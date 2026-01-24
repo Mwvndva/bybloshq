@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import whatsappService from '../services/whatsapp.service.js';
+import payoutService from '../services/payout.service.js';
 
 export const handlePaydCallback = async (req, res) => {
     const client = await pool.connect();
@@ -76,7 +77,7 @@ export const handlePaydCallback = async (req, res) => {
         // 6. Handle failure (Refunds)
         let refundNewBalance = null;
         if (newStatus === 'failed') {
-            refundNewBalance = await refundBalance(client, request);
+            refundNewBalance = await payoutService.processRefund(client, request);
             logger.info(`Refunded ${request.amount} for ref: ${providerRef}`);
         }
 
@@ -105,31 +106,3 @@ export const handlePaydCallback = async (req, res) => {
     }
 };
 
-/**
- * Refund helper to keep main logic clean
- */
-async function refundBalance(client, request) {
-    let newBalance = null;
-    let table = '';
-
-    if (request.event_id) {
-        const feePercentage = 0.06;
-        const grossRefund = request.amount / (1 - feePercentage);
-        const { rows } = await client.query('UPDATE events SET balance = balance + $1 WHERE id = $2 RETURNING balance', [grossRefund, request.event_id]);
-        newBalance = rows[0]?.balance;
-        table = 'events';
-    } else if (request.seller_id) {
-        const { rows } = await client.query('UPDATE sellers SET balance = balance + $1 WHERE id = $2 RETURNING balance', [request.amount, request.seller_id]);
-        newBalance = rows[0]?.balance;
-        table = 'sellers';
-    } else if (request.organizer_id) {
-        const { rows } = await client.query('UPDATE organizers SET balance = balance + $1 WHERE id = $2 RETURNING balance', [request.amount, request.organizer_id]);
-        newBalance = rows[0]?.balance;
-        table = 'organizers';
-    }
-
-    if (newBalance !== null) {
-        logger.info(`Refund Successful. Entity: ${table}, Amount: ${request.amount}, New Balance: ${newBalance}`);
-    }
-    return newBalance;
-}
