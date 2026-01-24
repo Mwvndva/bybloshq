@@ -8,7 +8,7 @@ import { ProductCard } from '@/components/ProductCard';
 import type { Product as ProductType, Seller, Aesthetic } from '@/types';
 import type { Product as SellerApiProduct } from '@/api/sellerApi';
 
-type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
+type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 // Type guard to check if a string is a valid Aesthetic
 function isAesthetic(value: string): value is Aesthetic {
@@ -77,7 +77,7 @@ const ShopPage = () => {
     switch (theme) {
       case 'black':
         return {
-          bgGradient: 'from-gray-900 to-black',
+          bgGradient: 'from-black to-black',
           textColor: 'text-white',
           buttonGradient: 'from-gray-800 to-gray-900 hover:from-gray-700 hover:to-gray-800',
           cardBg: 'bg-gray-800/90',
@@ -128,6 +128,15 @@ const ShopPage = () => {
           cardBg: 'bg-white/90',
           accentColor: 'text-yellow-600',
           borderColor: 'border-yellow-200'
+        };
+      case 'brown':
+        return {
+          bgGradient: 'from-[#fdf8f6] to-white',
+          textColor: 'text-[#451a03]',
+          buttonGradient: 'from-[#78350f] to-[#92400e] hover:from-[#92400e] hover:to-[#b45309]',
+          cardBg: 'bg-white/90',
+          accentColor: 'text-[#92400e]',
+          borderColor: 'border-[#f3e3d3]'
         };
       default: // default theme
         return {
@@ -194,6 +203,13 @@ const ShopPage = () => {
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
           root.style.setProperty('--theme-accent', '#ca8a04');
           root.style.setProperty('--theme-border', 'rgba(254, 240, 138, 0.5)');
+          break;
+        case 'brown':
+          root.style.setProperty('--theme-bg-color', '#fffbeb');
+          root.style.setProperty('--theme-text', '#451a03');
+          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
+          root.style.setProperty('--theme-accent', '#92400e');
+          root.style.setProperty('--theme-border', 'rgba(251, 235, 198, 0.5)');
           break;
         default: // default theme
           root.style.setProperty('--theme-bg-color', '#f9fafb');

@@ -42,7 +42,7 @@ import { ThemeSelector } from './ThemeSelector';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 
-type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
+type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 // Local helpers for consistent formatting within this component
 const formatNumber = (value: number | null | undefined) => {

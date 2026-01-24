@@ -7,7 +7,8 @@ import { useToast } from '@/components/ui/use-toast';
 const themeColors = [
   { name: 'Default', value: 'default', bg: 'bg-gradient-to-br from-yellow-400 to-yellow-500' },
   { name: 'Black', value: 'black', bg: 'bg-gradient-to-br from-gray-800 to-gray-900' },
-  { name: 'GILBERT', value: 'pink', bg: 'bg-gradient-to-br from-pink-400 to-pink-500' },
+  { name: 'Pink', value: 'pink', bg: 'bg-gradient-to-br from-pink-400 to-pink-500' },
+  { name: 'Brown', value: 'brown', bg: 'bg-gradient-to-br from-amber-700 to-amber-800' },
   { name: 'Orange', value: 'orange', bg: 'bg-gradient-to-br from-orange-400 to-orange-500' },
   { name: 'Green', value: 'green', bg: 'bg-gradient-to-br from-green-400 to-green-500' },
   { name: 'Red', value: 'red', bg: 'bg-gradient-to-br from-red-400 to-red-500' },
