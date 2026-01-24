@@ -3,9 +3,12 @@
 
 -- 1. Add ticket_type_id to payments table if missing
 -- This is used to link payments directly to ticket types for downstream ticket generation
-IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payments' AND column_name='ticket_type_id') THEN
-    ALTER TABLE payments ADD COLUMN ticket_type_id INTEGER REFERENCES event_ticket_types(id) ON DELETE SET NULL;
-END IF;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='payments' AND column_name='ticket_type_id') THEN
+        ALTER TABLE payments ADD COLUMN ticket_type_id INTEGER REFERENCES event_ticket_types(id) ON DELETE SET NULL;
+    END IF;
+END $$;
 
 -- 2. Fix the owner check constraint on withdrawal_requests
 -- The original constraint was too restrictive for event-based withdrawals
