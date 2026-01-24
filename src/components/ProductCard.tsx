@@ -338,9 +338,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             duration: 5000
           });
 
-          // **NAVIGATION**: Redirect to Orders Tab
+          // **NAVIGATION**: Redirect to Orders Tab using full page reload to refresh session state
           setTimeout(() => {
-            navigate('/buyer/dashboard', { state: { activeSection: 'orders' } });
+            window.location.href = '/buyer/dashboard?section=orders';
           }, 1500);
 
         } else if (status === 'failed') {

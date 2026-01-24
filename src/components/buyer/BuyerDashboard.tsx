@@ -67,9 +67,20 @@ function BuyerDashboard() {
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
-  const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>(
-    (location.state as any)?.activeSection || 'shop'
-  );
+  const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>(() => {
+    // Priority 1: Navigation state
+    const stateSection = (location.state as any)?.activeSection;
+    if (stateSection) return stateSection;
+
+    // Priority 2: Query parameters (useful for full page reloads)
+    const queryParams = new URLSearchParams(location.search);
+    const querySection = queryParams.get('section');
+    if (querySection && ['shop', 'wishlist', 'orders', 'profile'].includes(querySection)) {
+      return querySection as any;
+    }
+
+    return 'shop';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
