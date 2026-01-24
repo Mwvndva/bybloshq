@@ -68,12 +68,13 @@ export const protect = async (req, res, next) => {
         return next(new AppError('Invalid admin credentials', 401));
       }
     } else {
-      // Regular users → query unified users table first
-      const userQuery = 'SELECT * FROM users WHERE id = $1 AND role = $2';
-      const userResult = await query(userQuery, [decoded.id, userType]);
+      // Regular users → query unified users table first by ID only
+      // (Role verification happens during profile lookup below)
+      const userQuery = 'SELECT * FROM users WHERE id = $1';
+      const userResult = await query(userQuery, [decoded.id]);
 
       if (!userResult.rows[0]) {
-        return next(new AppError(`The ${userType} belonging to this token no longer exists.`, 401));
+        return next(new AppError('The user belonging to this token no longer exists.', 401));
       }
 
       const baseUser = userResult.rows[0];

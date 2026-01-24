@@ -8,12 +8,19 @@ const SALT_ROUNDS = 10;
 const query = (text, params) => pool.query(text, params);
 
 export const createSeller = async (sellerData) => {
-  const { fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude } = sellerData;
+  const { fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude, userId = null } = sellerData;
+
+  // Only hash password if we are creating a new user (no userId provided)
+  let hashedPassword = password;
+  if (!userId && password) {
+    hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+  }
+
   const result = await query(
-    `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location, physical_address, latitude, longitude)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+    `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location, physical_address, latitude, longitude, user_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING *`,
-    [fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude]
+    [fullName, shopName, email, phone, hashedPassword, city, location, physicalAddress, latitude, longitude, userId]
   );
   return result.rows[0];
 };

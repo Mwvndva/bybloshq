@@ -8,16 +8,49 @@ import whatsappService from './whatsapp.service.js';
 
 const SALT_ROUNDS = 10;
 
+import User from '../models/user.model.js';
+
 class SellerService {
 
     // --- Auth ---
     static async register(data) {
         const { fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude } = data;
-        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-        const seller = await SellerModel.createSeller({
-            fullName, shopName, email, phone, password: hashedPassword, city, location, physicalAddress, latitude, longitude
+
+        // 1. Check if user already exists in unified users table
+        const existingUser = await User.findByEmail(email);
+
+        if (existingUser) {
+            // 2. User exists - verify password matches
+            const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
+            if (!isPasswordCorrect) {
+                throw new Error('An account with this email already exists. Please login or use the correct password to link this profile.');
+            }
+
+            // 3. Password correct - check if they already have a seller profile
+            const existingSeller = await SellerModel.findSellerByEmail(email);
+            if (existingSeller) {
+                throw new Error('A seller account with this email already exists.');
+            }
+
+            // 4. Link new seller profile to existing user identity
+            return await SellerModel.createSeller({
+                fullName, shopName, email, phone, city, location, physicalAddress, latitude, longitude, userId: existingUser.id
+            });
+        }
+
+        // 5. No user exists - create BOTH user and profile
+        // Create user first
+        const newUser = await User.create({
+            email,
+            password,
+            role: 'seller',
+            is_verified: true
         });
-        return seller;
+
+        // Create seller profile linked to new user
+        return await SellerModel.createSeller({
+            fullName, shopName, email, phone, city, location, physicalAddress, latitude, longitude, userId: newUser.id
+        });
     }
 
     static async login(email, password) {
