@@ -437,56 +437,27 @@ export const saveBuyerInfo = async (req, res, next) => {
   try {
     const { fullName, email, phone, city, location, password } = req.body;
 
-
-
     // Validate required fields
     if (!fullName || !email || !phone || !password) {
       return next(new AppError('Full name, email, phone, and password are required', 400));
     }
 
-    // Check if buyer already exists (let model handle variations)
-    const existingBuyer = await Buyer.findByPhone(phone);
-    const existingUser = await User.findByEmail(email);
-
-    let buyer;
-    let token;
-
-    if (existingBuyer || existingUser) {
-      // Buyer/User exists - DO NOT ALLOW GUEST CHECKOUT FOR EXISTING USERS
-      // They must log in to secure their account
-      const displayEmail = existingBuyer?.email || email;
-
-      return res.status(200).json({
-        status: 'success',
-        message: 'Account already exists. Please log in.',
-        data: {
-          requiresLogin: true,
-          exists: true,
-          buyer: {
-            email: displayEmail
-          }
-        }
-      });
-    } else {
-      // Buyer does not exist - create new buyer with the collected details
+    try {
+      // Delegate to service (now handles both registration and auto-link for existing users)
       const result = await BuyerService.registerGuest({
         fullName,
         email,
-        phone: normalizePhoneNumber(phone), // Save normalized phone format (07...)
+        phone: normalizePhoneNumber(phone),
         city,
         location,
         password
       });
 
-      buyer = result.buyer;
-
-      // Handle token and cookie set
+      const buyer = result.buyer;
       const token = BuyerService.signToken(buyer);
 
       const cookieOptions = {
-        expires: new Date(
-          Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
-        ),
+        expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -502,7 +473,23 @@ export const saveBuyerInfo = async (req, res, next) => {
           token
         }
       });
+
+    } catch (err) {
+      // If the service flagged that we definitely need login (e.g. password mismatch)
+      if (err.requiresLogin) {
+        return res.status(200).json({
+          status: 'success',
+          message: err.message,
+          data: {
+            requiresLogin: true,
+            exists: true,
+            buyer: { email }
+          }
+        });
+      }
+      throw err; // Pass to outer catch
     }
+
   } catch (error) {
     console.error('Error in saveBuyerInfo:', error);
     next(error);
