@@ -370,7 +370,7 @@ const ShopPage = () => {
   return (
     <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
       {/* Modern Hero Section */}
-      <div className="relative h-[40vh] min-h-[320px] lg:h-[50vh] w-full overflow-hidden">
+      <div className="relative h-[30vh] min-h-[260px] sm:h-[40vh] lg:h-[50vh] w-full overflow-hidden">
         {sellerInfo?.bannerImage ? (
           <img
             src={getImageUrl(sellerInfo.bannerImage)}
@@ -394,26 +394,26 @@ const ShopPage = () => {
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-opacity duration-300" />
 
         {/* Back to Home Button - Top Left */}
-        <div className="absolute top-6 left-6 z-20">
+        <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20">
           <Button
             asChild
-            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-4 py-2 rounded-full font-medium transition-all duration-300 flex items-center group"
+            className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center group"
           >
-            <Link to="/" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+            <Link to="/" className="flex items-center gap-1.5 sm:gap-2">
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
               <span>Back to Home</span>
             </Link>
           </Button>
         </div>
 
         {/* Hero Content */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-8 pb-12 sm:pb-16">
-          <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-4 animate-fade-in-up">
-            <h1 className="text-4xl sm:text-5xl md:text-7xl font-black text-white tracking-tight uppercase leading-none drop-shadow-2xl">
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-8 sm:p-8 sm:pb-16">
+          <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 animate-fade-in-up">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white tracking-tight uppercase leading-none drop-shadow-2xl px-2">
               {sellerInfo?.shopName || 'SHOP'}
             </h1>
 
-            <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-white/90 font-medium text-sm sm:text-base backdrop-blur-sm bg-black/20 p-2 sm:p-3 rounded-full border border-white/10 shadow-xl">
+            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-6 text-white/90 font-medium text-[10px] sm:text-base backdrop-blur-sm bg-black/20 p-2 sm:p-3 rounded-full border border-white/10 shadow-xl">
               {sellerInfo?.fullName && (
                 <span className="flex items-center gap-2 px-2">
                   <span className="opacity-70">By</span>
@@ -463,7 +463,7 @@ const ShopPage = () => {
       </div>
 
       {/* Products */}
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 py-6 sm:py-8 lg:px-8">
         <div className="mb-8">
           <div className="relative max-w-md mx-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -494,21 +494,21 @@ const ShopPage = () => {
         </div>
 
         {filteredProducts.length > 0 ? (
-          <div className={`${themeClasses.cardBg} backdrop-blur-sm rounded-3xl p-8 shadow-lg border ${themeClasses.borderColor}/50`}>
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className={`text-xl sm:text-2xl font-black ${themeClasses.textColor}`}>
+          <div className={`${themeClasses.cardBg} backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-lg border ${themeClasses.borderColor}/50`}>
+            <div className="flex justify-between items-center mb-6 sm:mb-8">
+              <div className="min-w-0 flex-1">
+                <h2 className={`text-lg sm:text-2xl font-black ${themeClasses.textColor} truncate`}>
                   Available Products
                 </h2>
-                <p className={`${themeClasses.textColor === 'text-white' ? 'text-white/80' : 'text-gray-600'} text-xs sm:text-sm font-medium mt-1`}>
-                  Browse through {products.length} {products.length === 1 ? 'item' : 'items'} from this shop
+                <p className={`${themeClasses.textColor === 'text-white' ? 'text-white/80' : 'text-gray-600'} text-[10px] sm:text-sm font-medium mt-1 truncate`}>
+                  {products.length} {products.length === 1 ? 'item' : 'items'} available
                 </p>
               </div>
-              <div className={`${themeClasses.buttonGradient} text-white px-3 py-1.5 rounded-lg font-bold text-xs`}>
+              <div className={`${themeClasses.buttonGradient} text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg font-bold text-[10px] sm:text-xs shrink-0 ml-2`}>
                 {products.length} Items
               </div>
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
               {filteredProducts.map((product) => {
                 // Ensure the product has the seller info from the shop
                 const productWithSeller: ProductType & { seller?: Seller; isSold?: boolean; } = {
