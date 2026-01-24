@@ -62,7 +62,8 @@ export const sanitizeSeller = (seller) => {
         theme: sellerObj.theme,
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
         latitude: sellerObj.latitude,
-        longitude: sellerObj.longitude
+        longitude: sellerObj.longitude,
+        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link
         // Removed: createdAt, updatedAt, userId, totalSales, netRevenue, balance
         // Balance and revenue should come from analytics endpoint, not profile
     };
@@ -82,7 +83,8 @@ export const sanitizePublicSeller = (seller) => {
         theme: sellerObj.theme,
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
         latitude: sellerObj.latitude,
-        longitude: sellerObj.longitude
+        longitude: sellerObj.longitude,
+        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link
         // Removed: createdAt - no need to expose when shop was created
         // NO email, phone, balance, revenue, internal IDs
     };
