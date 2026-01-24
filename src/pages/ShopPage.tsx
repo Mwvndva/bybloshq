@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getImageUrl } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
 import type { Product as ProductType, Seller, Aesthetic } from '@/types';
 import type { Product as SellerApiProduct } from '@/api/sellerApi';
@@ -373,12 +373,7 @@ const ShopPage = () => {
       <div className="relative h-[40vh] min-h-[320px] lg:h-[50vh] w-full overflow-hidden">
         {sellerInfo?.bannerImage ? (
           <img
-            src={(() => {
-              const img = sellerInfo.bannerImage;
-              if (img.startsWith('data:') || img.startsWith('http')) return img;
-              if (img.startsWith('/')) return `http://localhost:3002${img}`;
-              return `data:image/jpeg;base64,${img}`;
-            })()}
+            src={getImageUrl(sellerInfo.bannerImage)}
             alt={`${sellerInfo.shopName || 'Shop'} Banner`}
             className="w-full h-full object-cover transform scale-105 animate-slow-zoom"
             style={{ animation: 'scale 20s linear infinite alternate' }}

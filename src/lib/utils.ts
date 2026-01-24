@@ -133,3 +133,37 @@ export function isTokenExpired(token: string): boolean {
   const currentTime = Date.now() / 1000;
   return decoded.exp < currentTime;
 }
+
+/**
+ * Normalizes an image path or URL to a full URL
+ * Handles base64, absolute URLs, and relative paths from the backend
+ */
+export function getImageUrl(path: string | undefined | null): string {
+  if (!path) return '';
+
+  // 1. If it's already a full URL (http/https) or a data URL (base64), return it as is
+  if (path.startsWith('http') || path.startsWith('data:')) {
+    return path;
+  }
+
+  // 2. Identify the backend base URL
+  // We strip the /api suffix if present to get the root serving static files
+  const VITE_API_URL = import.meta.env.VITE_API_URL;
+  let baseUrl = '';
+
+  if (VITE_API_URL) {
+    baseUrl = VITE_API_URL.replace(/\/api$/, '').replace(/\/$/, '');
+  } else if (import.meta.env.DEV) {
+    // In development, if VITE_API_URL is missing, assume the standard dev port
+    baseUrl = 'http://localhost:3002';
+  } else {
+    // In production, use the current origin if no API URL is provided
+    baseUrl = window.location.origin;
+  }
+
+  // 3. Normalize the path (ensure it starts with /)
+  const cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+  // 4. Combine and return
+  return `${baseUrl}${cleanPath}`;
+}

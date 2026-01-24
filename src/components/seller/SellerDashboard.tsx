@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { PLATFORM_FEE_RATE } from '@/lib/constants';
-import { formatCurrency, decodeJwt, isTokenExpired } from '@/lib/utils';
+import { formatCurrency, decodeJwt, isTokenExpired, getImageUrl } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -1165,7 +1165,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
                       <div className="relative overflow-hidden rounded-t-2xl">
                         <img
-                          src={product.image_url || product.imageUrl || '/placeholder-image.jpg'}
+                          src={getImageUrl(product.image_url || product.imageUrl) || '/placeholder-image.jpg'}
                           alt={product.name}
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
@@ -1307,7 +1307,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
                       <div className="relative overflow-hidden rounded-t-2xl">
                         <img
-                          src={product.image_url || product.imageUrl || '/placeholder-image.jpg'}
+                          src={getImageUrl(product.image_url || product.imageUrl) || '/placeholder-image.jpg'}
                           alt={product.name}
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
