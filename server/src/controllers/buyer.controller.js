@@ -500,56 +500,49 @@ export const saveBuyerInfo = async (req, res, next) => {
           token
         }
       });
-
-      res.status(200).json({
-        status: 'success',
-        data: {
-          buyer: sanitizeBuyer(buyer),
-          token
-        }
-      });
-    } catch (error) {
-      console.error('Error in saveBuyerInfo:', error);
-      next(error);
     }
-  };
+  } catch (error) {
+    console.error('Error in saveBuyerInfo:', error);
+    next(error);
+  }
+};
 
-  export const markOrderAsCollected = async (req, res, next) => {
-    try {
-      const { orderId } = req.params;
-      const userId = req.user.id; // Buyer ID
+export const markOrderAsCollected = async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id; // Buyer ID
 
-      // Import required services and models dynamically to avoid circular dependencies
-      const { default: OrderService } = await import('../services/order.service.js');
-      const { default: OrderModel } = await import('../models/order.model.js');
-      const { OrderStatus } = await import('../constants/enums.js');
+    // Import required services and models dynamically to avoid circular dependencies
+    const { default: OrderService } = await import('../services/order.service.js');
+    const { default: OrderModel } = await import('../models/order.model.js');
+    const { OrderStatus } = await import('../constants/enums.js');
 
-      const orderData = await OrderModel.findById(orderId);
+    const orderData = await OrderModel.findById(orderId);
 
-      if (!orderData) {
-        return next(new AppError('Order not found', 404));
-      }
-
-      if (orderData.buyer_id !== userId) {
-        return next(new AppError('Unauthorized access to this order', 403));
-      }
-
-
-      // Call OrderService to mark order as collected (handles status update, payout, notifications)
-      const updatedOrder = await OrderService.markAsCollected(orderId, userId);
-
-
-      res.status(200).json({
-        status: 'success',
-        data: {
-          order: updatedOrder
-        }
-      });
-
-    } catch (error) {
-      next(error);
+    if (!orderData) {
+      return next(new AppError('Order not found', 404));
     }
-  };
+
+    if (orderData.buyer_id !== userId) {
+      return next(new AppError('Unauthorized access to this order', 403));
+    }
+
+
+    // Call OrderService to mark order as collected (handles status update, payout, notifications)
+    const updatedOrder = await OrderService.markAsCollected(orderId, userId);
+
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        order: updatedOrder
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
 
 
 
