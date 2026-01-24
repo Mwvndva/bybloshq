@@ -234,6 +234,7 @@ export const updateSeller = async (id, updates) => {
     WHERE id = $1
     RETURNING 
       id, 
+      user_id AS "userId",
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 

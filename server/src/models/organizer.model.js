@@ -19,7 +19,7 @@ const Organizer = {
       `INSERT INTO organizers 
        (full_name, email, phone, password, user_id, is_verified)
        VALUES ($1, $2, $3, $4, $5, false)
-       RETURNING id, full_name, email, phone, created_at`,
+       RETURNING id, user_id, full_name, email, phone, created_at`,
       [full_name, email, phone, userId ? null : password, userId]
     );
     return result.rows[0];
@@ -55,7 +55,7 @@ const Organizer = {
       UPDATE organizers 
       SET ${fields.join(', ')}, updated_at = NOW()
       WHERE id = $${paramIndex}
-      RETURNING id, full_name, email, phone, created_at
+      RETURNING id, user_id, full_name, email, phone, created_at
     `;
 
     const result = await pool.query(query, values);
@@ -98,7 +98,7 @@ const Organizer = {
            password_reset_token = NULL, 
            password_reset_expires = NULL 
        WHERE email = $2
-       RETURNING id, full_name, email, phone`,
+       RETURNING id, user_id, full_name, email, phone`,
       [hashedPassword, email]
     );
     return result.rows[0];
