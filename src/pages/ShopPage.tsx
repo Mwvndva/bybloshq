@@ -373,9 +373,12 @@ const ShopPage = () => {
       <div className="relative h-[40vh] min-h-[320px] lg:h-[50vh] w-full overflow-hidden">
         {sellerInfo?.bannerImage ? (
           <img
-            src={sellerInfo.bannerImage.startsWith('data:image')
-              ? sellerInfo.bannerImage
-              : `data:image/jpeg;base64,${sellerInfo.bannerImage}`}
+            src={(() => {
+              const img = sellerInfo.bannerImage;
+              if (img.startsWith('data:') || img.startsWith('http')) return img;
+              if (img.startsWith('/')) return `http://localhost:3002${img}`;
+              return `data:image/jpeg;base64,${img}`;
+            })()}
             alt={`${sellerInfo.shopName || 'Shop'} Banner`}
             className="w-full h-full object-cover transform scale-105 animate-slow-zoom"
             style={{ animation: 'scale 20s linear infinite alternate' }}
