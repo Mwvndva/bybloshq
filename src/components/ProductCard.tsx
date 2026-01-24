@@ -19,7 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '@/lib/apiClient';
 import { clearAllAuthData } from '@/lib/authCleanup';
 
-type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
+type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 
 interface ProductCardProps {

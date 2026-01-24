@@ -14,7 +14,7 @@ const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
   : API_URL; // Otherwise use the provided API_URL or default
 
 // Interfaces
-export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow';
+export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 export interface Seller {
   id: number;
