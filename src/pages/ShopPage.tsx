@@ -42,6 +42,7 @@ interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
   bannerImage?: string;  // New field
   theme?: Theme;         // New field
   city?: string;         // New field
+  instagramLink?: string; // New field
   // createdAt is required from Seller
   // updatedAt is optional from Seller
   // All required fields from Seller remain required:
@@ -247,6 +248,7 @@ const ShopPage = () => {
           city: seller.city,
           location: seller.location,
           theme: seller.theme as Theme || 'default', // Add theme with default value
+          instagramLink: seller.instagram_link || seller.instagramLink, // Map from API
           // Physical shop fields
           hasPhysicalShop: !!seller.physicalAddress,
           physicalAddress: seller.physicalAddress,
@@ -428,6 +430,32 @@ const ShopPage = () => {
                   >
                     {sellerInfo?.shopName ? sellerInfo.shopName.toUpperCase() : 'SHOP'}
                   </Link>
+                  {sellerInfo?.instagramLink && (
+                    <a
+                      href={sellerInfo.instagramLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`ml-2 inline-flex items-center justify-center p-1 rounded-full hover:bg-black/5 transition-colors ${themeClasses.textColor === 'text-white' ? 'text-white hover:bg-white/20' : 'text-pink-600'
+                        }`}
+                      title="Visit Instagram Profile"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
+                      </svg>
+                    </a>
+                  )}
                 </div>
                 {sellerInfo?.fullName && (
                   <p className={`text-[9px] sm:text-[10px] font-medium ${themeClasses.textColor === 'text-white'

@@ -41,6 +41,7 @@ export interface Seller {
   created_at?: string;
   updatedAt?: string;
   updated_at?: string;
+  instagramLink?: string;
 }
 
 export interface Product {
@@ -176,6 +177,7 @@ const transformSeller = (data: any): Seller => {
     longitude: seller.longitude,
     bannerImage: seller.bannerImage || seller.banner_image || null,
     theme: seller.theme || 'default',
+    instagramLink: seller.instagramLink || seller.instagram_link || '',
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
   };
