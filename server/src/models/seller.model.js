@@ -38,6 +38,7 @@ export const findSellerByEmail = async (email) => {
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
+      instagram_link AS "instagramLink",
       created_at AS "createdAt"
      FROM sellers 
      WHERE email = $1`,
@@ -56,13 +57,14 @@ export const findSellerByShopName = async (shopName) => {
       shop_name AS "shopName", 
       email, 
       phone, 
-      city,
-      location,
+      city, 
+      location, 
       physical_address AS "physicalAddress",
       latitude,
       longitude,
       banner_image AS "bannerImage",
       theme,
+      instagram_link AS "instagramLink",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
@@ -108,6 +110,7 @@ export const findSellerById = async (id) => {
       longitude,
       banner_image AS "bannerImage",
       theme, 
+      instagram_link AS "instagramLink",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
@@ -135,7 +138,7 @@ export const updateSeller = async (id, updates) => {
     throw new Error('Seller ID is required for update');
   }
 
-  const { fullName, shopName, email, phone, password, city, location, bannerImage, banner_image, theme } = updates || {};
+  const { fullName, shopName, email, phone, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -199,6 +202,15 @@ export const updateSeller = async (id, updates) => {
     values.push(theme);
   }
 
+  // Handle instagram link update (accept both camelCase and snake_case)
+  const instagramLinkToUpdate = instagramLink || instagram_link;
+  // Allow empty string to clear the link
+  if (instagramLinkToUpdate !== undefined) {
+    paramCount++;
+    updatesList.push(`instagram_link = $${paramCount}`);
+    values.push(instagramLinkToUpdate);
+  }
+
   // Handle physical address update
   if (updates.physicalAddress) {
     paramCount++;
@@ -220,10 +232,6 @@ export const updateSeller = async (id, updates) => {
   }
 
   if (updatesList.length === 0) {
-    throw new Error('No valid fields to update');
-  }
-
-  if (updatesList.length === 0) {
     console.log('No valid fields to update');
     throw new Error('No valid fields to update');
   }
@@ -242,6 +250,7 @@ export const updateSeller = async (id, updates) => {
       city, 
       location, 
       theme, 
+      instagram_link AS "instagramLink",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
