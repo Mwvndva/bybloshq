@@ -311,8 +311,12 @@ export const checkBuyerByPhone = async (req, res, next) => {
       const sanitizedBuyer = sanitizeBuyer(existingBuyer);
 
       // Explicitly include email for checkout validation if present
+      // SECURITY FIX: Don't return the email itself, just a flag
       if (existingBuyer.email) {
-        sanitizedBuyer.email = existingBuyer.email;
+        // sanitizedBuyer.email = existingBuyer.email; // REMOVED
+        sanitizedBuyer.hasEmail = true;
+      } else {
+        sanitizedBuyer.hasEmail = false;
       }
 
       res.status(200).json({

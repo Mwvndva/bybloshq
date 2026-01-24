@@ -200,13 +200,10 @@ const DashboardPage = () => {
 
       // Fetch the dashboard data with proper typing
       const dashboardRes = await api.get<DashboardApiResponse>('/organizers/dashboard');
-      console.log('Dashboard Response:', dashboardRes.data);
 
       // Extract events from the dashboard response if available
       const events = Array.isArray(dashboardRes.data.data?.recentEvents) ?
         dashboardRes.data.data.recentEvents : [];
-
-      console.log('Setting recent events:', events);
 
       // Set the stats from the dashboard response with proper fallback
       const statsData = dashboardRes.data.data?.stats || {
@@ -284,7 +281,6 @@ const DashboardPage = () => {
 
       // Get all events for the organizer with proper typing
       const response = await api.get<EventsApiResponse>('/organizers/events');
-      console.log('Events API Response:', response.data);
       const eventsData = response.data?.data || [];
       setEvents(eventsData);
     } catch (error) {

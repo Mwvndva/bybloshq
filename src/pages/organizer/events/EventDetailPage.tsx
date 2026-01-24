@@ -97,7 +97,6 @@ interface EventData {
 // Fetch event data from API
 const fetchEvent = async (id: string): Promise<EventData> => {
   try {
-    console.log(`Fetching event with ID: ${id}`);
     interface RawEventData {
       id: string;
       title?: string;
@@ -130,12 +129,6 @@ const fetchEvent = async (id: string): Promise<EventData> => {
     }
 
     const event = response.data.data.event;
-    console.log('Raw event data from API:', JSON.stringify(event, null, 2));
-
-    // Debug: Log ticket types data
-    if (event.ticket_types) {
-      console.log('Ticket types data:', JSON.stringify(event.ticket_types, null, 2));
-    }
 
     // Transform the API response to match our component's expected format
     const transformedEvent: EventData = {
@@ -186,7 +179,6 @@ const fetchEvent = async (id: string): Promise<EventData> => {
             );
 
             if (existingTicket) {
-              console.log(`Skipping duplicate default ticket: ${ticket.name} (${ticket.price})`);
               continue;
             }
           }
@@ -206,7 +198,6 @@ const fetchEvent = async (id: string): Promise<EventData> => {
       totalRevenue: event.total_revenue || event.totalRevenue,
     };
 
-    console.log('Transformed event data:', transformedEvent);
     return transformedEvent;
   } catch (error) {
     console.error('Error fetching event:', error);
@@ -364,7 +355,6 @@ export default function EventDetailPage() {
       const scannedTickets = tickets.filter(ticket => ticket.scanned).length;
       calculated.totalScannedTickets = scannedTickets;
     }
-    console.log('Calculating analytics:', calculated);
     return calculated;
   }, [event, tickets]);
 
@@ -380,7 +370,6 @@ export default function EventDetailPage() {
       }
 
       const response = await api.get<ApiResponse<TicketsResponse>>(`/organizers/tickets/events/${id}`);
-      console.log('Tickets API Response:', response.data);
       const ticketsData = response.data.data?.tickets || [];
       setTickets(ticketsData);
     } catch (error) {
@@ -482,9 +471,7 @@ export default function EventDetailPage() {
         try {
           const eventData = await fetchEvent(id!);
           if (eventData && isMounted) {
-            console.log('Refreshed event data:', eventData);
             // Analytics will be automatically updated via the useMemo hook
-            console.log('Refreshed event data, analytics will update automatically');
 
             // Force update the UI with the latest data
             setEvent(prev => ({

@@ -40,10 +40,10 @@ export default function SellerProductsPage() {
 
     // Add event listener for when the window regains focus
     window.addEventListener('focus', handleFocus);
-    
+
     // Initial fetch
     fetchProducts();
-    
+
     // Cleanup
     return () => {
       window.removeEventListener('focus', handleFocus);
@@ -51,32 +51,27 @@ export default function SellerProductsPage() {
   }, []);
 
   const handleDelete = async (id: string) => {
-    console.log('Starting delete for product:', id);
-    
     // Store product to delete for potential revert
     const productToDelete = products.find(p => p.id === id);
-    
+
     try {
       // Optimistic update - remove from UI immediately
       setProducts(prevProducts => prevProducts.filter(p => p.id !== id));
-      console.log('Optimistic update completed');
-      
+
       await sellerApi.deleteProduct(id);
-      console.log('API delete completed successfully');
       toast.success('Product deleted successfully');
     } catch (error: any) {
       console.error('Failed to delete product:', error);
-      
+
       // Revert optimistic update on error
       if (productToDelete) {
-        console.log('Reverting optimistic update');
         setProducts(prevProducts => [...prevProducts, productToDelete]);
       }
-      
+
       // Show specific error message
-      const errorMessage = error?.response?.data?.message || 
-                          error?.message || 
-                          'Failed to delete product. Please try again.';
+      const errorMessage = error?.response?.data?.message ||
+        error?.message ||
+        'Failed to delete product. Please try again.';
       toast.error(errorMessage);
     }
   };
@@ -92,11 +87,11 @@ export default function SellerProductsPage() {
       console.error('Product not found:', productId);
       return;
     }
-    
+
     const productName = product.name || 'Product';
     const isSold = status === 'sold';
     const newSoldAt = isSold ? (soldAt || new Date().toISOString()) : null;
-    
+
     // Create a completely new products array to ensure React detects the change
     setProducts(prevProducts => {
       return prevProducts.map(p => {
@@ -112,28 +107,28 @@ export default function SellerProductsPage() {
         return p;
       });
     });
-    
+
     try {
       // Update the backend
       await sellerApi.updateProduct(productId, {
         status,
         soldAt: newSoldAt
       });
-      
+
       // Show success message
       toast.success(`${productName} has been marked as ${status}`);
-      
+
       // Force a refresh of the products list to ensure consistency
       fetchProducts();
-      
+
     } catch (error) {
       console.error('Failed to update product status:', error);
-      
+
       // Revert the optimistic update on error
-      setProducts(prevProducts => 
+      setProducts(prevProducts =>
         prevProducts.map(p => p.id === productId ? product : p)
       );
-      
+
       toast.error(`Failed to update ${productName}. Please try again.`);
     }
   };
@@ -170,7 +165,7 @@ export default function SellerProductsPage() {
                     Refresh
                   </Button>
                 </div>
-                <ProductsList 
+                <ProductsList
                   products={products}
                   onDelete={handleDelete}
                   onEdit={handleEdit}

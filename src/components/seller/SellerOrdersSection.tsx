@@ -40,11 +40,6 @@ export default function SellerOrdersSection() {
       setIsLoading(true);
       const ordersData = await sellerApi.getOrders();
       setOrders(ordersData);
-      console.log('Fetched Orders:', ordersData);
-      ordersData.forEach(order => {
-        console.log(`Order ${order.orderNumber} status:`, order.status);
-        console.log(`Order ${order.orderNumber} metadata:`, order.metadata);
-      });
     } catch (err) {
       console.error('Failed to fetch orders:', err);
       toast({

@@ -148,7 +148,7 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
         <div className="space-y-4">
             <div>
                 <Label htmlFor="address-search" className="text-sm font-semibold text-gray-700 block mb-2">
-                    Search Shop Location
+                    Search Location
                 </Label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -160,7 +160,7 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
                         value={searchQuery}
                         onChange={handleSearchChange}
                         className="pl-10 h-11"
-                        placeholder="Search for your shop, street, or area..."
+                        placeholder="Search for your shop's area or street..."
                         autoComplete="off"
                     />
                     {isSearching && (
