@@ -34,6 +34,7 @@ export interface Seller {
     twitter?: string;
     facebook?: string;
   };
+  instagramLink?: string;
 }
 
 export interface Product {

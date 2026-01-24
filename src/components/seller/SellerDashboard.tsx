@@ -62,6 +62,7 @@ interface SellerProfile {
   longitude?: number;
   bannerImage?: string;
   theme?: Theme;
+  instagramLink?: string;
 }
 
 interface WithdrawalRequest {
@@ -184,12 +185,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     physicalAddress: string;
     latitude: number | null;
     longitude: number | null;
+    instagramLink: string;
   }>({
     city: '',
     location: '',
     physicalAddress: '',
     latitude: null,
-    longitude: null
+    longitude: null,
+    instagramLink: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -363,7 +366,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           location: sellerProfile?.location || '',
           physicalAddress: sellerProfile?.physicalAddress || '',
           latitude: sellerProfile?.latitude || null,
-          longitude: sellerProfile?.longitude || null
+          longitude: sellerProfile?.longitude || null,
+          instagramLink: sellerProfile?.instagramLink || ''
         });
       }
       return !prev;
@@ -386,7 +390,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       const payload: any = {
         city: formData.city,
         location: formData.location,
-        physicalAddress: formData.physicalAddress
+        physicalAddress: formData.physicalAddress,
+        instagramLink: formData.instagramLink
       };
 
       if (formData.latitude && formData.longitude) {
@@ -1424,7 +1429,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
 
                 {/* Profile Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
                   <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
                     <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</p>
                     <p className="text-sm sm:text-base lg:text-lg font-semibold text-black truncate" title={sellerProfile?.fullName || 'Not set'}>
@@ -1437,11 +1442,43 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       {sellerProfile?.email || 'Not set'}
                     </p>
                   </div>
-                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2 xl:col-span-1">
+                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
                     <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone Number</p>
                     <p className="text-sm sm:text-base lg:text-lg font-semibold text-black">
                       {sellerProfile?.phone || 'Not set'}
                     </p>
+                  </div>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Instagram Link</p>
+                    {isEditing ? (
+                      <Input
+                        name="instagramLink"
+                        value={formData.instagramLink}
+                        onChange={(e) => setFormData(prev => ({ ...prev, instagramLink: e.target.value }))}
+                        placeholder="https://instagram.com/yourshop"
+                        className="h-8 sm:h-9 text-xs sm:text-sm"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {sellerProfile?.instagramLink ? (
+                          <a
+                            href={sellerProfile.instagramLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm sm:text-base lg:text-lg font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                              <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                              <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                            </svg>
+                            View
+                          </a>
+                        ) : (
+                          <p className="text-sm sm:text-base font-semibold text-gray-400 italic">Not set</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -1554,6 +1591,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         )}
       </div>
 
-    </div>
+    </div >
   );
 };
