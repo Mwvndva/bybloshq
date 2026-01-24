@@ -1,5 +1,6 @@
 import BuyerService from '../services/buyer.service.js';
 import Buyer from '../models/buyer.model.js';
+import User from '../models/user.model.js';
 import AppError from '../utils/appError.js';
 import { sanitizeBuyer } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
@@ -445,14 +446,15 @@ export const saveBuyerInfo = async (req, res, next) => {
 
     // Check if buyer already exists (let model handle variations)
     const existingBuyer = await Buyer.findByPhone(phone);
+    const existingUser = await User.findByEmail(email);
 
     let buyer;
     let token;
 
-    if (existingBuyer) {
-      // Buyer exists - DO NOT ALLOW GUEST CHECKOUT FOR EXISTING USERS
+    if (existingBuyer || existingUser) {
+      // Buyer/User exists - DO NOT ALLOW GUEST CHECKOUT FOR EXISTING USERS
       // They must log in to secure their account
-      // console.log('Buyer already exists with phone:', '[REDACTED]', '- Requiring login');
+      const displayEmail = existingBuyer?.email || email;
 
       return res.status(200).json({
         status: 'success',
@@ -461,7 +463,7 @@ export const saveBuyerInfo = async (req, res, next) => {
           requiresLogin: true,
           exists: true,
           buyer: {
-            email: existingBuyer.email
+            email: displayEmail
           }
         }
       });
