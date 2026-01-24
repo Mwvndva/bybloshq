@@ -3,7 +3,7 @@ import { sanitizeOrganizer } from '../utils/sanitize.js';
 import jwt from 'jsonwebtoken';
 
 const sendTokenResponse = (organizer, statusCode, res, message) => {
-  const token = OrganizerService.generateToken(organizer.id);
+  const token = OrganizerService.generateToken(organizer);
 
   const cookieOptions = {
     httpOnly: true,

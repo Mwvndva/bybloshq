@@ -45,12 +45,16 @@ class BuyerService {
     }
 
     static async login(email, password) {
+        // 1. Find user in unified users table
+        const userFound = await User.findByEmail(email);
+        if (!userFound) return null;
+
+        // 2. Verify password against unified user record
+        const isValid = await User.verifyPassword(password, userFound.password_hash);
+        if (!isValid) return null;
+
+        // 3. Fetch buyer profile linked to this email
         const buyer = await Buyer.findByEmail(email);
-        if (!buyer) return null;
-
-        const valid = await bcrypt.compare(password, buyer.password);
-        if (!valid) return null;
-
         return buyer;
     }
 

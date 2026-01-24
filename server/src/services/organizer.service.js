@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { signToken } from '../utils/jwt.js';
 import Organizer from '../models/organizer.model.js';
+import User from '../models/user.model.js';
 import { sanitizeOrganizer } from '../utils/sanitize.js';
 
 const SALT_ROUNDS = 10;
@@ -8,24 +9,56 @@ const SALT_ROUNDS = 10;
 class OrganizerService {
     static async register(data) {
         const { full_name, email, phone, password } = data;
-        const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+        // 1. Check if user already exists
+        const existingUser = await User.findByEmail(email);
+
+        if (existingUser) {
+            // 2. Verify password matches
+            const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
+            if (!isPasswordCorrect) {
+                throw new Error('An account with this email already exists. Please login or use the correct password to link this profile.');
+            }
+
+            // 3. Check if they already have an organizer profile
+            const existingOrganizer = await Organizer.findByEmail(email);
+            if (existingOrganizer) {
+                throw new Error('An organizer account with this email already exists.');
+            }
+
+            // 4. Link profile to existing user identity
+            return await Organizer.create({
+                full_name, email, phone, userId: existingUser.id
+            });
+        }
+
+        // 5. Create BOTH user and profile
+        const newUser = await User.create({
+            email,
+            password,
+            role: 'organizer',
+            is_verified: true
+        });
 
         return await Organizer.create({
-            full_name,
-            email,
-            phone,
-            password: hashedPassword
+            full_name, email, phone, userId: newUser.id
         });
     }
 
     static async login(email, password) {
+        // 1. Find user in unified users table
+        const userFound = await User.findByEmail(email);
+        if (!userFound) return null;
+
+        // 2. Verify password against unified user record
+        const isValid = await User.verifyPassword(password, userFound.password_hash);
+        if (!isValid) return null;
+
+        // 3. Fetch organizer profile
         const organizer = await Organizer.findByEmail(email);
-        if (!organizer) return null;
-
-        const isMatch = await bcrypt.compare(password, organizer.password);
-        if (!isMatch) return null;
-
-        await Organizer.updateLastLogin(organizer.id);
+        if (organizer) {
+            await Organizer.updateLastLogin(organizer.id);
+        }
         return organizer;
     }
 
@@ -54,10 +87,15 @@ class OrganizerService {
     }
 
     // Token Helpers
-    static generateToken(id) {
-        return jwt.sign({ id, role: 'organizer' }, process.env.JWT_SECRET, {
-            expiresIn: '24h'
-        });
+    static generateToken(organizer) {
+        // CRITICAL: Use user_id (from users table) not id (from organizers table)
+        const userId = organizer.user_id || organizer.userId;
+
+        if (!userId) {
+            throw new Error('Cannot generate token: organizer.user_id is missing. Ensure organizer data includes user_id from the users table.');
+        }
+
+        return signToken(userId, 'organizer');
     }
 
     static async createPasswordResetToken(email) {
