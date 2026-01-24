@@ -109,7 +109,7 @@ export const protect = async (req, res, next) => {
         id: profileResult.rows[0].id, // Use profile ID for backward compatibility
         userId: baseUser.id, // Store the users table ID
         email: baseUser.email,
-        userType: baseUser.role,
+        userType: userType, // Use the role from the token, not the users table
         ...profileResult.rows[0] // Spread profile data
       };
     }
