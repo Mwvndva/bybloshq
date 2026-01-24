@@ -1,3 +1,6 @@
+import bcrypt from 'bcryptjs';
+import Buyer from '../models/buyer.model.js';
+import { signToken } from '../utils/jwt.js';
 import User from '../models/user.model.js';
 
 class BuyerService {
