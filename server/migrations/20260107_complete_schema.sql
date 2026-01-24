@@ -435,6 +435,7 @@ CREATE TABLE IF NOT EXISTS payouts (
     order_id INTEGER REFERENCES product_orders(id) ON DELETE SET NULL,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
     amount DECIMAL(12, 2) NOT NULL,
+    platform_fee DECIMAL(12, 2) DEFAULT 0,
     status payout_status DEFAULT 'pending' NOT NULL,
     reference_number VARCHAR(100) UNIQUE,
     payment_method VARCHAR(50) NOT NULL,
