@@ -50,16 +50,28 @@ class BuyerService {
 
         // 1. Check if user already exists
         const existingUser = await User.findByEmail(email);
+
         if (existingUser) {
-            throw new Error('Account already exists. Please log in.');
+            // 2. verify password matches so we can auto-link/login
+            const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
+            if (!isPasswordCorrect) {
+                const error = new Error('An account with this email already exists. Please login or use the correct password.');
+                error.requiresLogin = true;
+                throw error;
+            }
+
+            // 3. Password correct - check/create buyer profile
+            let buyer = await Buyer.findByEmail(email);
+            if (!buyer) {
+                buyer = await Buyer.create({
+                    fullName, email, phone, city, location, userId: existingUser.id
+                });
+            }
+
+            return { buyer };
         }
 
-        // 2. No more random password - use provided one
-        if (!password) {
-            throw new Error('Password is required to create an account.');
-        }
-
-        // 3. Create User record
+        // 4. Create User record (New user)
         const newUser = await User.create({
             email,
             password: password,
@@ -67,7 +79,7 @@ class BuyerService {
             is_verified: true
         });
 
-        // 4. Create Buyer record
+        // 5. Create Buyer record
         const buyer = await Buyer.create({
             fullName,
             email,

@@ -605,6 +605,7 @@ const buyerApi = {
           headers: {
             'Content-Type': 'application/json',
           },
+          withCredentials: true
         }
       );
 
@@ -641,6 +642,7 @@ const buyerApi = {
           headers: {
             'Content-Type': 'application/json',
           },
+          withCredentials: true
         }
       );
 
