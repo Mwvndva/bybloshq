@@ -112,7 +112,7 @@ class OrderService {
   /**
    * Update order status with transition validation
    */
-  static async updateOrderStatus(orderId, userId, status) {
+  static async updateOrderStatus(orderId, user, status) {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -131,16 +131,29 @@ class OrderService {
       const order = orderResult.rows[0];
 
       // 2. Permission Check
-      if (order.seller_id !== userId) {
+      // Strategy 1: User is acting as Seller and matches the order's seller_id
+      const isProfileMatch = (user.userType === 'seller' || user.role === 'seller') && order.seller_id === user.id;
+
+      // Strategy 2: User owns the Seller Account (Unified ID check)
+      // This handles cases where user is logged in as 'buyer' but owns the seller account
+      let isUnifiedMatch = false;
+      if (!isProfileMatch) {
+        const sellerCheck = await client.query('SELECT user_id FROM sellers WHERE id = $1', [order.seller_id]);
+        if (sellerCheck.rows.length > 0 && sellerCheck.rows[0].user_id === user.userId) {
+          isUnifiedMatch = true;
+        }
+      }
+
+      if (!isProfileMatch && !isUnifiedMatch) {
         throw new Error('Unauthorized: You can only update your own orders');
       }
 
       // 3. Validate Status Transition
       const validTransitions = {
         [OrderStatus.PENDING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.CANCELLED],
+        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED], // Added Service flow
         [OrderStatus.DELIVERY_PENDING]: [OrderStatus.DELIVERY_COMPLETE, OrderStatus.CANCELLED],
         [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
         [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.COMPLETED]: [],
         [OrderStatus.CANCELLED]: [],
