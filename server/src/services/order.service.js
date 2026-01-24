@@ -4,6 +4,7 @@ import Fees from '../config/fees.js';
 import { OrderStatus, ProductType } from '../constants/enums.js';
 import Order from '../models/order.model.js';
 import whatsappService from './whatsapp.service.js';
+import escrowManager from './EscrowManager.js';
 
 class OrderService {
   /**
@@ -539,56 +540,7 @@ class OrderService {
     }
   }
   static async _processSellerPayout(client, order) {
-    // Ensure we haven't paid out for this order yet to be idempotent
-    // Check if payout_processed flag exists in metadata? Or trust the status transition?
-    // Status transition check (in caller) + Transaction lock is reasonably safe.
-    // But let's add a metadata flag for extra safety.
-
-    const orderCheck = await client.query("SELECT metadata FROM product_orders WHERE id = $1", [order.id]);
-    const currentMeta = orderCheck.rows[0]?.metadata || {};
-
-    if (currentMeta.payout_processed) {
-      logger.info(`Payout for Order ${order.id} already processed. Skipping.`);
-      return;
-    }
-
-    const payoutAmount = parseFloat(order.seller_payout_amount);
-    const totalAmount = parseFloat(order.total_amount || 0);
-
-    if (payoutAmount > 0) {
-      await client.query(
-        `UPDATE sellers 
-         SET 
-           balance = balance + $1,
-           net_revenue = net_revenue + $1,
-           total_sales = total_sales + $2
-         WHERE id = $3`,
-        [payoutAmount, totalAmount, order.seller_id]
-      );
-
-      // Harmonize with DB Trigger:
-      // The trigger 'handle_order_completion' creates a payout record with status 'pending' on order completion.
-      // Since we just updated the balance, we should mark that payout as 'completed'.
-      await client.query(
-        `UPDATE payouts 
-         SET status = 'completed', 
-             processed_at = NOW(),
-             completed_at = NOW(), 
-             metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{processed_by_service}', '"OrderService"'::jsonb)
-         WHERE order_id = $1`,
-        [order.id]
-      );
-
-      // Mark as processed in Order Metadata (Legacy/Extra Safety)
-      await client.query(
-        `UPDATE product_orders 
-             SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{payout_processed}', 'true'::jsonb)
-             WHERE id = $1`,
-        [order.id]
-      );
-
-      logger.info(`[PURCHASE-FLOW] 8c. Processed payout of KES ${payoutAmount} to Seller ${order.seller_id} for Order ${order.id}`);
-    }
+    return await escrowManager.releaseFunds(client, order, 'OrderService');
   }
 
   /**

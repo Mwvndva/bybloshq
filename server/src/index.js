@@ -33,6 +33,7 @@ import { protect } from './middleware/auth.js';
 import requestId from './middleware/requestId.js';
 import fixApiPrefix from './middleware/fixApiPrefix.js';
 import { schedulePaymentProcessing } from './cron/paymentCron.js';
+import { schedulePayoutReconciliation } from './cron/payoutCleanup.js';
 
 // Get the current directory
 const __filename = fileURLToPath(import.meta.url);
@@ -433,6 +434,22 @@ startServer().then(async () => {
     }
   } else {
     console.log('ℹ️  Order deadline cron job is disabled (ENABLE_ORDER_DEADLINE_CRON=false)');
+  }
+
+  // Start the payout reconciliation cron job
+  if (process.env.ENABLE_PAYOUT_RECONCILIATION_CRON !== 'false') {
+    console.log('🚀 Starting payout reconciliation cron job...');
+    try {
+      schedulePayoutReconciliation({
+        schedule: '0 * * * *', // Every hour
+        hoursAgo: 1
+      });
+      console.log('✅ Payout reconciliation cron job started successfully');
+    } catch (error) {
+      console.error('❌ Failed to start payout reconciliation cron job:', error.message);
+    }
+  } else {
+    console.log('ℹ️  Payout reconciliation cron job is disabled (ENABLE_PAYMENT_CRON=false)');
   }
 }).catch(error => {
   console.error('❌ Failed to start server:', error);

@@ -1,6 +1,8 @@
 const Fees = {
     PLATFORM_COMMISSION_RATE: 0.01, // 1%
-    DEFAULT_CURRENCY: 'KES'
+    DEFAULT_CURRENCY: 'KES',
+    MIN_WITHDRAWAL_AMOUNT: 10,
+    MAX_WITHDRAWAL_AMOUNT: 150000
 };
 
 export default Fees;
