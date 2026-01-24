@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { updateBuyerProfile } from '@/api/buyerApi';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
 import AestheticCategories from '@/components/AestheticCategories';
@@ -63,10 +63,13 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
 // Main dashboard component
 function BuyerDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
-  const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>('shop');
+  const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>(
+    (location.state as any)?.activeSection || 'shop'
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');

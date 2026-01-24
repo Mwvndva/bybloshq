@@ -228,7 +228,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   };
 
   const handleBuyerInfoSubmit = async (
-    buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string },
+    buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string, password?: string },
     explicitBookingData?: any,
     isExistingUserUpdate: boolean = false
   ) => {
@@ -242,8 +242,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           return;
         }
 
-        // **CRITICAL**: The server sets a HttpOnly cookie. We don't need to manually save to localStorage.
-        // Registration automatically logs the user in via cookie.
 
         // Proceed with new ID (or let backend infer from cookie)
         await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
@@ -332,17 +330,18 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         if (status === 'success' || status === 'completed') {
           clearInterval(interval);
           setIsProcessingPurchase(false);
+
           toast({
             title: 'Payment Successful',
-            description: 'Your purchase has been confirmed!',
-            className: 'bg-green-600 text-white'
+            description: 'Your purchase has been confirmed! Redirecting to your orders...',
+            className: 'bg-green-600 text-white',
+            duration: 5000
           });
 
           // **NAVIGATION**: Redirect to Orders Tab
-          // Delay slightly to let toast be seen
           setTimeout(() => {
-            navigate('/buyer/dashboard?tab=orders');
-          }, 1000);
+            navigate('/buyer/dashboard', { state: { activeSection: 'orders' } });
+          }, 1500);
 
         } else if (status === 'failed') {
           clearInterval(interval);

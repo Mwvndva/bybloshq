@@ -11,6 +11,8 @@ interface BuyerInfo {
   email: string;
   city: string;
   location: string;
+  password?: string;
+  confirmPassword?: string;
 }
 
 interface BuyerInfoModalProps {
@@ -33,11 +35,14 @@ export function BuyerInfoModal({
   initialData
 }: BuyerInfoModalProps) {
   const { toast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
   const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>({
     fullName: initialData?.fullName || '',
     email: initialData?.email || '',
     city: initialData?.city || '',
-    location: initialData?.location || ''
+    location: initialData?.location || '',
+    password: '',
+    confirmPassword: ''
   });
 
   const [errors, setErrors] = useState<Partial<BuyerInfo>>({});
@@ -52,6 +57,17 @@ export function BuyerInfoModal({
     }
   }, [initialData]);
 
+  // Password strength checker function
+  const checkPasswordStrength = (password: string) => {
+    return {
+      minLength: password.length >= 8,
+      hasNumber: /\d/.test(password),
+      hasSpecial: /[!@#$%^&*(),.?":{}|<>]/.test(password),
+      hasUpper: /[A-Z]/.test(password),
+      hasLower: /[a-z]/.test(password),
+    };
+  };
+
   const validateForm = (): boolean => {
     const newErrors: Partial<BuyerInfo> = {};
 
@@ -63,6 +79,24 @@ export function BuyerInfoModal({
       newErrors.email = 'Email is required';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(buyerInfo.email)) {
       newErrors.email = 'Please enter a valid email address';
+    }
+
+    // Strict Password validation matching BuyerRegister
+    const strength = checkPasswordStrength(buyerInfo.password || '');
+    const unmetRequirements: string[] = [];
+
+    if (!strength.minLength) unmetRequirements.push("at least 8 characters");
+    if (!strength.hasNumber) unmetRequirements.push("a number");
+    if (!strength.hasSpecial) unmetRequirements.push("a special character");
+    if (!strength.hasUpper) unmetRequirements.push("an uppercase letter");
+    if (!strength.hasLower) unmetRequirements.push("a lowercase letter");
+
+    if (unmetRequirements.length > 0) {
+      newErrors.password = `Password needs ${unmetRequirements.join(', ')}`;
+    }
+
+    if (buyerInfo.password !== buyerInfo.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
     }
 
     setErrors(newErrors);
@@ -83,7 +117,9 @@ export function BuyerInfoModal({
         fullName: '',
         email: '',
         city: '',
-        location: ''
+        location: '',
+        password: '',
+        confirmPassword: ''
       });
       setErrors({});
       onClose();
@@ -103,7 +139,9 @@ export function BuyerInfoModal({
         fullName: '',
         email: '',
         city: '',
-        location: ''
+        location: '',
+        password: '',
+        confirmPassword: ''
       });
       setErrors({});
       onClose();
@@ -292,6 +330,94 @@ export function BuyerInfoModal({
                   disabled={isLoading}
                 />
               </div>
+            </div>
+
+            {/* Password Setup Notice */}
+            <div className="rounded-xl bg-blue-50/50 p-3 border border-blue-100/50">
+              <p className="text-[11px] leading-relaxed text-blue-700 font-medium">
+                <span className="font-black">Step {initialData?.email ? '1' : '3'}:</span> Setup your password to secure your account. This is only done once - you'll use it for future logins.
+              </p>
+            </div>
+
+            {/* Password */}
+            <div className="space-y-2">
+              <Label htmlFor="password" className={`text-xs font-semibold ${themeClasses.label}`}>
+                Setup Password *
+              </Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Create a password (min 8 characters)"
+                  value={buyerInfo.password}
+                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, password: e.target.value }))}
+                  className={`h-10 rounded-xl text-base ${themeClasses.input} ${errors.password ? 'border-red-500' : ''}`}
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.882 9.882L5.146 5.147m13.71 13.71L14.12 14.121M21 12c-1.274 4.057-5.064 7-9.542 7-1.274 0-2.434-.216-3.492-.597m11.104-13.483c1.259 1.287 2.181 3.033 2.766 5.08" /></svg>
+                  )}
+                </button>
+              </div>
+
+              {/* Password Strength Checklist */}
+              {buyerInfo.password && (
+                <div className="mt-1 p-2 bg-gray-50/50 rounded-lg border border-gray-100">
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+                    {[
+                      { label: "8+ chars", met: checkPasswordStrength(buyerInfo.password).minLength },
+                      { label: "Number", met: checkPasswordStrength(buyerInfo.password).hasNumber },
+                      { label: "Special", met: checkPasswordStrength(buyerInfo.password).hasSpecial },
+                      { label: "Upper & Lower", met: checkPasswordStrength(buyerInfo.password).hasUpper && checkPasswordStrength(buyerInfo.password).hasLower },
+                    ].map((req, index) => (
+                      <div key={index} className="flex items-center space-x-1.5">
+                        <div className={`p-0.5 rounded-full ${req.met ? 'bg-green-100' : 'bg-gray-200'}`}>
+                          {req.met ? (
+                            <svg className="h-2 w-2 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                          ) : (
+                            <svg className="h-2 w-2 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>
+                          )}
+                        </div>
+                        <span className={`text-[10px] ${req.met ? 'text-green-700 font-medium' : 'text-gray-500'}`}>
+                          {req.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {errors.password && (
+                <p className={`text-xs ${themeClasses.error}`}>{errors.password}</p>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className={`text-xs font-semibold ${themeClasses.label}`}>
+                Confirm Password *
+              </Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Repeat your password"
+                  value={buyerInfo.confirmPassword}
+                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  className={`h-10 rounded-xl text-base ${themeClasses.input} ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  disabled={isLoading}
+                />
+              </div>
+              {errors.confirmPassword && (
+                <p className={`text-xs ${themeClasses.error}`}>{errors.confirmPassword}</p>
+              )}
             </div>
 
             <p className={`text-xs ${themeClasses.text} opacity-70 text-center mt-2`}>

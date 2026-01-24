@@ -434,13 +434,13 @@ export const requestRefund = async (req, res, next) => {
 
 export const saveBuyerInfo = async (req, res, next) => {
   try {
-    const { fullName, email, phone, city, location } = req.body;
+    const { fullName, email, phone, city, location, password } = req.body;
 
 
 
     // Validate required fields
-    if (!fullName || !email || !phone) {
-      return next(new AppError('Full name, email, and phone are required', 400));
+    if (!fullName || !email || !phone || !password) {
+      return next(new AppError('Full name, email, phone, and password are required', 400));
     }
 
     // Check if buyer already exists (let model handle variations)
@@ -467,71 +467,89 @@ export const saveBuyerInfo = async (req, res, next) => {
       });
     } else {
       // Buyer does not exist - create new buyer with the collected details
-      // console.log('Buyer phone not found in database - Creating new buyer for guest checkout'); // Silenced
-
-      buyer = await Buyer.createGuest({
+      const result = await BuyerService.registerGuest({
         fullName,
         email,
         phone: normalizePhoneNumber(phone), // Save normalized phone format (07...)
         city,
-        location
+        location,
+        password
       });
 
-      // Generate token for the new buyer
-      token = BuyerService.signToken(buyer);
+      buyer = result.buyer;
 
+      // Handle token and cookie set
+      const token = BuyerService.signToken(buyer);
 
+      const cookieOptions = {
+        expires: new Date(
+          Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
+        ),
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/'
+      };
+
+      res.cookie('jwt', token, cookieOptions);
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          buyer: sanitizeBuyer(buyer),
+          token
+        }
+      });
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          buyer: sanitizeBuyer(buyer),
+          token
+        }
+      });
+    } catch (error) {
+      console.error('Error in saveBuyerInfo:', error);
+      next(error);
     }
+  };
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        buyer: sanitizeBuyer(buyer),
-        token
+  export const markOrderAsCollected = async (req, res, next) => {
+    try {
+      const { orderId } = req.params;
+      const userId = req.user.id; // Buyer ID
+
+      // Import required services and models dynamically to avoid circular dependencies
+      const { default: OrderService } = await import('../services/order.service.js');
+      const { default: OrderModel } = await import('../models/order.model.js');
+      const { OrderStatus } = await import('../constants/enums.js');
+
+      const orderData = await OrderModel.findById(orderId);
+
+      if (!orderData) {
+        return next(new AppError('Order not found', 404));
       }
-    });
-  } catch (error) {
-    console.error('Error in saveBuyerInfo:', error);
-    next(error);
-  }
-};
 
-export const markOrderAsCollected = async (req, res, next) => {
-  try {
-    const { orderId } = req.params;
-    const userId = req.user.id; // Buyer ID
-
-    // Import required services and models dynamically to avoid circular dependencies
-    const { default: OrderService } = await import('../services/order.service.js');
-    const { default: OrderModel } = await import('../models/order.model.js');
-    const { OrderStatus } = await import('../constants/enums.js');
-
-    const orderData = await OrderModel.findById(orderId);
-
-    if (!orderData) {
-      return next(new AppError('Order not found', 404));
-    }
-
-    if (orderData.buyer_id !== userId) {
-      return next(new AppError('Unauthorized access to this order', 403));
-    }
-
-
-    // Call OrderService to mark order as collected (handles status update, payout, notifications)
-    const updatedOrder = await OrderService.markAsCollected(orderId, userId);
-
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        order: updatedOrder
+      if (orderData.buyer_id !== userId) {
+        return next(new AppError('Unauthorized access to this order', 403));
       }
-    });
 
-  } catch (error) {
-    next(error);
-  }
-};
+
+      // Call OrderService to mark order as collected (handles status update, payout, notifications)
+      const updatedOrder = await OrderService.markAsCollected(orderId, userId);
+
+
+      res.status(200).json({
+        status: 'success',
+        data: {
+          order: updatedOrder
+        }
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  };
 
 
 
