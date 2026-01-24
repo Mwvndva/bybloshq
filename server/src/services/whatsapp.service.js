@@ -222,11 +222,7 @@ class WhatsAppService {
         let instructionText = `⚠️ *ACTION REQUIRED:*\nPlease drop off items at Dynamic Mall, Shop SL 32 within 48 hours.\n\n⏰ *DEADLINE:* Order will be auto-cancelled if not delivered by deadline.\n💰 Payment will be released 24 hours after buyer pickup.`;
 
         if (isService) {
-            const serviceType = this.getServiceProviderType(order);
-            const buyerName = buyer?.name || buyer?.full_name || 'the client';
-            const buyerPhone = buyer?.phone || 'N/A';
-
-            instructionText = `⏰ *ACTION REQUIRED:*\nPlease contact *${buyerName}* at ${buyerPhone} to confirm the appointment. Review the booking details above to prepare for the service.\n\n🔒 Payment (KSh ${total.toLocaleString()}) is secured and will be released 24 hours after the booking date ends.`;
+            instructionText = `⏰ *ACTION REQUIRED:*\nPlease visit the *Orders* tab in your seller dashboard to *Confirm* or *Cancel* this booking.\n\n🔒 Payment (KSh ${total.toLocaleString()}) is secured and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
             instructionText = `✅ *INFO:* Customer has received download link. No action required.\n\n💰 Revenue (KSh ${total.toLocaleString()}) will be added to your balance automatically.`;
         } else {
