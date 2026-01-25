@@ -30,6 +30,8 @@ import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
 import RefundCard from './RefundCard';
+import { useBybx } from '@/contexts/BybxContext';
+import BybxImporter from '@/components/BybxImporter';
 
 // Local helper for localized integers
 const formatNumber = (value: number | null | undefined) => {
@@ -66,6 +68,7 @@ function BuyerDashboard() {
   const location = useLocation();
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
+  const { onFileLoaded } = useBybx();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
   const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>(() => {
     // Priority 1: Navigation state
@@ -217,6 +220,11 @@ function BuyerDashboard() {
                     Please add your city and location
                   </span>
                 )}
+              </div>
+
+              {/* Shield Tool */}
+              <div className="ml-2">
+                <BybxImporter onFileLoaded={onFileLoaded} />
               </div>
             </div>
 
@@ -622,7 +630,7 @@ function BuyerDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 }
 
