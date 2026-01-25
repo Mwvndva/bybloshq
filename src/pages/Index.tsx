@@ -12,13 +12,15 @@ const IndexPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="min-h-screen bg-black flex flex-col selection:bg-yellow-300 selection:text-black">
       <Header />
-      <HeroSection 
-        onExploreClick={handleExploreClick}
-        onEventsClick={handleEventsClick}
-      />
-      
+      <main className="flex-grow">
+        <HeroSection
+          onExploreClick={handleExploreClick}
+          onEventsClick={handleEventsClick}
+        />
+      </main>
+
       <Footer />
     </div>
   );

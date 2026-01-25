@@ -101,15 +101,15 @@ const AestheticCategories = ({ onAestheticChange, selectedAesthetic }: Aesthetic
           </button>
         )}
       </div>
-      
+
       <div className="flex flex-wrap gap-2">
         {aestheticCategories.map((category) => (
           <button
             key={category.id}
             className={`
               px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
-              ${selectedAesthetic === category.id 
-                ? 'bg-yellow-500 text-white shadow-sm' 
+              ${selectedAesthetic === category.id
+                ? 'bg-yellow-500 text-white shadow-sm'
                 : 'bg-white text-gray-700 border border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
               }
             `}

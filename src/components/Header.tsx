@@ -1,48 +1,45 @@
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
-import { Instagram, Calendar, ShoppingBag } from 'lucide-react';
+import { Instagram, Calendar, ShoppingBag, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useBybx } from '@/contexts/BybxContext';
+import BybxImporter from './BybxImporter';
 
 const Header = () => {
+  const { onFileLoaded } = useBybx();
   const location = useLocation();
 
   return (
     <header className={cn(
-      'border-b border-yellow-300 sticky top-0 z-50',
-      location.pathname === '/' ? 'bg-yellow-300' : 'bg-white/80 backdrop-blur-sm'
+      'sticky top-0 z-50 transition-all duration-300',
+      'bg-white/5 backdrop-blur-xl border-b border-white/10'
     )}>
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-14 sm:h-16 md:h-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-1.5 sm:gap-2">
-            <h1 className="font-serif text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-black">
+          <Link to="/" className="flex items-center gap-2 group">
+            <h1 className="font-serif text-xl sm:text-2xl font-bold text-white tracking-tight group-hover:text-yellow-400 transition-colors">
               Byblos
             </h1>
           </Link>
 
           {/* Navigation - Always visible, responsive sizing */}
-          <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-            {/* Instagram */}
-            <a
-              href="https://www.instagram.com/bybloshq"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full hover:bg-pink-50 transition-colors"
-              aria-label="Visit our Instagram"
-            >
-              <Instagram className="h-5 w-5 sm:h-5 sm:w-5 md:h-6 md:w-6 text-pink-600" />
-            </a>
+          <div className="flex items-center gap-3 md:gap-6">
+            {/* BYBX Importer */}
+            {onFileLoaded && (
+              <BybxImporter onFileLoaded={onFileLoaded} />
+            )}
 
             {/* Event Organizer */}
             <Link to="/organizer/events/new">
               <Button
-                variant="outline"
-                className="h-9 sm:h-10 md:h-11 px-2.5 sm:px-3 md:px-4 border-2 border-black text-black hover:bg-black hover:text-yellow-300 transition-all duration-200"
+                variant="ghost"
+                className="text-white hover:text-yellow-400 hover:bg-white/5 transition-all duration-300 flex items-center gap-2"
                 aria-label="Event Organizer"
               >
-                <Calendar className="h-4 w-4 md:h-4 md:w-4" />
-                <span className="hidden sm:inline ml-1.5 md:ml-2 text-xs sm:text-sm md:text-base font-semibold">
-                  Organizer
+                <Calendar className="h-4 w-4" />
+                <span className="hidden sm:inline text-sm font-medium">
+                  Events
                 </span>
               </Button>
             </Link>
@@ -50,13 +47,12 @@ const Header = () => {
             {/* Sell */}
             <Link to="/seller">
               <Button
-                variant="outline"
-                className="h-9 sm:h-10 md:h-11 px-2.5 sm:px-3 md:px-4 border-2 border-black text-black hover:bg-black hover:text-yellow-300 transition-all duration-200"
+                className="bg-white/10 hover:bg-white/20 text-white rounded-full px-6 transition-all duration-300 border border-white/10 hover:border-white/20 shadow-lg backdrop-blur-md"
                 aria-label="Sell Products"
               >
-                <ShoppingBag className="h-4 w-4 md:h-4 md:w-4" />
-                <span className="hidden sm:inline ml-1.5 md:ml-2 text-xs sm:text-sm md:text-base font-semibold">
-                  Sell
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline text-sm font-semibold tracking-wide uppercase">
+                  Start Selling
                 </span>
               </Button>
             </Link>
