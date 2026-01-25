@@ -258,6 +258,7 @@ import eventRoutes from './routes/event.routes.js';
 import protectedOrganizerRoutes from './routes/protectedOrganizer.routes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import whatsappRoutes from './routes/whatsapp.routes.js';
+import activationRoutes from './routes/activation.routes.js';
 import refreshTokenRoutes from './routes/refreshToken.routes.js';
 import whatsappService from './services/whatsapp.service.js';
 import models from './models/index.js';
@@ -289,6 +290,9 @@ app.use('/api/orders', orderRoutes);
 
 // Mount WhatsApp routes
 app.use('/api/whatsapp', whatsappRoutes);
+
+// Mount Activation routes
+app.use('/api/activation', activationRoutes);
 
 // Organizer protected routes
 const protectedRouter = express.Router();

@@ -8,6 +8,8 @@ import fs from 'fs';
 import Fees from '../config/fees.js';
 import { OrderStatus, PaymentStatus, ProductType } from '../constants/enums.js';
 import escrowManager from '../services/EscrowManager.js';
+import { wrapFile } from '../utils/encryptor.js';
+import crypto from 'crypto';
 
 /**
  * Create a new order
@@ -1298,9 +1300,10 @@ const downloadDigitalProduct = async (req, res) => {
   try {
     const { orderId, productId } = req.params;
     const userId = req.user.id;
+
     // Verify order ownership, payment status, and product validity
     const query = `
-      SELECT p.digital_file_path, p.digital_file_name, o.payment_status
+      SELECT p.id as product_id, p.digital_file_path, p.digital_file_name, o.payment_status, o.order_number
       FROM product_orders o
       JOIN order_items oi ON o.id = oi.order_id
       JOIN products p ON oi.product_id = p.id
@@ -1318,7 +1321,7 @@ const downloadDigitalProduct = async (req, res) => {
       });
     }
 
-    const { digital_file_path, digital_file_name, payment_status } = result.rows[0];
+    const { product_id, digital_file_path, digital_file_name, payment_status, order_number } = result.rows[0];
 
     // Check payment status
     if (payment_status !== 'success' && payment_status !== 'completed') {
@@ -1328,7 +1331,6 @@ const downloadDigitalProduct = async (req, res) => {
       });
     }
 
-    // Check if file path exists
     if (!digital_file_path) {
       return res.status(404).json({
         success: false,
@@ -1336,106 +1338,57 @@ const downloadDigitalProduct = async (req, res) => {
       });
     }
 
-    // Construct absolute path
-    // Assuming digital_file_path is stored as 'uploads/digital_products/filename'
-    // and server root is process.cwd()/server or process.cwd() depending on where it started.
-    // The middleware stored it. Middleware used: path.join(process.cwd(), 'server', 'uploads', 'digital_products');
-    // And digital_file_path stored 'uploads/digital_products/filename' ?
-    // Let's check middleware: `const filePath = uploads/digital_products/${req.file.filename};`
-    // So it's relative to server root IF server is run from server folder?
-    // User runs `node src/index.js` inside `server` dir.
-    // middleware used: `path.join(process.cwd(), 'server', 'uploads'...)`.
-    // Wait, if user runs from `bybloshq` (root), `process.cwd()` is `bybloshq`.
-    // If user runs from `server` dir, `process.cwd()` is `bybloshq/server`.
-
-    // In middleware: `path.join(process.cwd(), 'server', 'uploads'..)` means it assumes cwd is root `bybloshq`.
-    // AND `filePath` was returned as `uploads/digital_products/...`.
-
-    // So if process.cwd() is `bybloshq`, then absolute path is `bybloshq/server/uploads/...`.
-    // If I join `process.cwd(), 'server', digital_file_path` (where path starts with uploads/), it might duplicate 'server' if not careful?
-    // Middleware returned `uploads/digital_products/...`.
-    // So `path.join(process.cwd(), 'server', digital_file_path)` should work if cwd is `bybloshq`.
-
-    // However, if the app is running in `server` directory (node src/index.js), `process.cwd()` is `server`.
-    // Middleware: `path.join(process.cwd(), 'server', 'uploads')`. If cwd is `server`, this becomes `server/server/uploads`. This seems wrong if running from server dir.
-    // Let's assume standard running: `npm run dev` in `bybloshq` runs frontend. `node src/index.js` in `server` runs backend.
-
-    // If running in `server`, `process.cwd()` is `.../server`.
-    // Middleware: `path.join(process.cwd(), 'server', 'uploads')` -> `.../server/server/uploads`. This might be a bug in my middleware if running from `server` dir.
-
-    // Let's check middleware code I wrote:
-    // `const digitalUploadsDir = path.join(process.cwd(), 'server', 'uploads', 'digital_products');`
-    // If I run `node src/index.js` FROM `server` directory, `process.cwd()` is `.../bybloshq/server`.
-    // Then path is `.../bybloshq/server/server/uploads/...`. This creates a double server folder.
-
-    // I should fix the middleware to be robust or safer.
-    // BUT, for now, let's assume I need to look for where the file actually IS.
-    // I'll try to resolve it relative to `__dirname` or check if file exists.
-
-    // I need to be careful. I'll construct path: `path.resolve(process.cwd(), 'server', digital_file_path)`?
-    // or just `path.resolve(digital_file_path)` if I knew the base.
-
-    // Let's look at `upload.js` provided by user:
-    // `const uploadsDir = path.join(process.cwd(), 'server', 'uploads');`
-    // This existing middleware implies the intended structure is `process.cwd()` is the project root (bybloshq), OR they have a double server folder structure?
-    // OR they run `node server/src/index.js` from root?
-    // User info says: `node src/index.js (in c:\Users\Administrator\Downloads\bybloshq\server`.
-    // So CWD is `.../server`.
-    // So `process.cwd()` is `.../server`.
-    // `path.join(process.cwd(), 'server', 'uploads')` -> `.../server/server/uploads`.
-    // This looks like my new middleware creates `server/server/uploads`.
-    // AND the existing middleware `upload.js` ALSO does `path.join(process.cwd(), 'server', 'uploads')`.
-    // So it seems the existing code EXPECTS `server/server/uploads` or expects CWD to be root?
-
-    // Wait, let's re-read `upload.js` (Step 87).
-    // `const uploadsDir = path.join(process.cwd(), 'server', 'uploads');`
-    // If user runs in `server` directory, this IS `server/server/uploads`.
-    // Maybe I should assume that's "correct" for this project or I should use `..` if in server.
-
-    // Better download logic:
-    // Try both paths? Or just use the one that works?
-    // Or just path.join(process.cwd(), 'server', digital_file_path) (which is uploads/...).
-
-    // I will use `path.resolve` and check if exists.
-
+    // Resolve file path
     let absolutePath = path.join(process.cwd(), 'server', digital_file_path);
 
-    // Fallback: if running from server dir, maybe we don't need 'server' in path?
+    // Check if file exists, if not try without /server prefix
     if (!fs.existsSync(absolutePath)) {
-      // Try without 'server' prefix if it was duplicated
-      // digital_file_path is 'uploads/...'
-      // if cwd is '.../server', then join(cwd, digital_file_path) -> '.../server/uploads/...'
       const altPath = path.join(process.cwd(), digital_file_path);
       if (fs.existsSync(altPath)) {
         absolutePath = altPath;
-      } else {
-        // Maybe 'server' was NOT needed in join?
-        console.error('File not found at:', absolutePath, 'or', altPath);
       }
     }
 
     if (!fs.existsSync(absolutePath)) {
+      console.error(`File not found at: ${absolutePath}`);
       return res.status(404).json({
         success: false,
-        message: 'File file not found on server.'
+        message: 'Original file not found on server.'
       });
     }
 
-    res.download(absolutePath, digital_file_name || 'download.zip', (err) => {
-      if (err) {
-        console.error('Error downloading file:', err);
-        // Response already sent if download started?
-        if (!res.headersSent) {
-          res.status(500).json({ status: 'error', message: 'Download failed' });
-        }
-      }
-    });
+    // Get or Create Master Key for this purchase
+    let activationResult = await pool.query(
+      'SELECT master_key FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+      [orderId, product_id]
+    );
+
+    let masterKey;
+    if (activationResult.rows.length === 0) {
+      masterKey = crypto.randomBytes(32).toString('hex');
+      await pool.query(
+        'INSERT INTO digital_activations (order_id, product_id, master_key) VALUES ($1, $2, $3)',
+        [orderId, product_id, masterKey]
+      );
+    } else {
+      masterKey = activationResult.rows[0].master_key;
+    }
+
+    // Wrap the file into .bybx
+    const armoredBuffer = await wrapFile(absolutePath, order_number, product_id, masterKey);
+
+    // Serve the .bybx file
+    const outputFileName = `${digital_file_name || 'product'}.bybx`;
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${outputFileName}"`);
+    res.send(armoredBuffer);
 
   } catch (error) {
     console.error('Error in downloadDigitalProduct:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to process download',
+      message: 'Failed to process digital download',
       error: error.message
     });
   }

@@ -41,7 +41,7 @@ const Seller = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-ivory via-ivory-cream to-floral-rose/5">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <div className="text-center mb-12">

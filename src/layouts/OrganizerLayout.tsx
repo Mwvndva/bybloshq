@@ -26,9 +26,9 @@ export function OrganizerLayout() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-4 sm:py-0 sm:h-20 space-y-4 sm:space-y-0">
               {/* Mobile: Stack vertically, Desktop: Horizontal */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-6 w-full sm:w-auto">
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => navigate('/')}
                   className="text-gray-600 hover:text-black hover:bg-gray-100/80 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
                 >
@@ -46,7 +46,7 @@ export function OrganizerLayout() {
                   </p>
                 </div>
               </div>
-              
+
               {/* Logout button */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center w-full sm:w-auto">
                 <div className="flex items-center justify-end">
@@ -59,7 +59,7 @@ export function OrganizerLayout() {
                     <span className="hidden sm:inline">Log out</span>
                   </Button>
                 </div>
-      </div>
+              </div>
             </div>
           </div>
         </header>
@@ -67,8 +67,8 @@ export function OrganizerLayout() {
 
       {/* Content */}
       <main className="flex-1 relative overflow-y-auto focus:outline-none">
-              <Outlet />
-        </main>
+        <Outlet />
+      </main>
     </div>
   );
 }
