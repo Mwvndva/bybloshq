@@ -12,6 +12,17 @@ export const BybxProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const onFileLoaded = (data: ArrayBuffer, name: string) => {
         setDecryptedFile({ data, name });
+
+        const lowerName = name.toLowerCase();
+
+        if (lowerName.endsWith('.pdf')) {
+            const blob = new Blob([data], { type: 'application/pdf' });
+            const url = URL.createObjectURL(blob);
+            window.open(url, '_blank');
+            return;
+        }
+
+        // Default to audio for now (or check extension)
         // PoC: play audio
         const blob = new Blob([data], { type: 'audio/mpeg' });
         const url = URL.createObjectURL(blob);
