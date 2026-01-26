@@ -55,6 +55,7 @@ import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Han
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 import buyerApi from '@/api/buyerApi';
 import { toast } from 'sonner';
+import DirectBybxViewer from '@/components/DirectBybxViewer';
 
 const getStatusBadge = (status: string) => {
   // Convert to uppercase for comparison, default to 'PENDING' if status is falsy
@@ -218,6 +219,13 @@ export default function OrdersSection() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+
+  // Direct View State
+  const [viewingFile, setViewingFile] = useState<{
+    orderId: string;
+    productId: string;
+    fileName: string;
+  } | null>(null);
 
 
   const getConfirmationContent = () => {
@@ -533,6 +541,19 @@ export default function OrdersSection() {
                               size="sm"
                               className="mt-2 sm:mt-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
                               onClick={async () => {
+                                // Check if running in browser (not standalone PWA/App)
+                                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+                                const isBrowser = !isStandalone;
+
+                                if (isBrowser) {
+                                  setViewingFile({
+                                    orderId: order.id,
+                                    productId: item.productId,
+                                    fileName: item.name
+                                  });
+                                  return;
+                                }
+
                                 try {
                                   toast.loading('Starting download...', { id: 'download-toast' });
                                   await buyerApi.downloadDigitalProduct(order.id, item.productId);
@@ -624,6 +645,17 @@ export default function OrdersSection() {
           </CardContent>
         </Card>
       ))}
+
+      {/* Direct Viewer */}
+      {viewingFile && (
+        <DirectBybxViewer
+          orderId={viewingFile.orderId}
+          productId={viewingFile.productId}
+          fileName={viewingFile.fileName}
+          isOpen={true}
+          onClose={() => setViewingFile(null)}
+        />
+      )}
 
       {/* Cancel Order Confirmation Dialog */}
       <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
