@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Shield, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getDeviceFingerprint } from '@/lib/fingerprint';
-import axios from 'axios';
+import api from '@/lib/api';
 
 interface BybxImporterProps {
     onFileLoaded: (decryptedData: ArrayBuffer, fileName: string) => void;
@@ -41,7 +42,7 @@ const BybxImporter: React.FC<BybxImporterProps> = ({ onFileLoaded }) => {
 
             if (!isActivated) {
                 setStatus('Activating device...');
-                const response = await axios.post('/api/activation/bond', {
+                const response = await api.post('/activation/bond', {
                     orderNumber,
                     productId,
                     fingerprint,
@@ -49,7 +50,7 @@ const BybxImporter: React.FC<BybxImporterProps> = ({ onFileLoaded }) => {
                 decryptionKey = (response.data as any).decryptionKey;
             } else {
                 setStatus('Verifying hardware lock...');
-                const response = await axios.post('/api/activation/verify', {
+                const response = await api.post('/activation/verify', {
                     orderNumber,
                     productId,
                     fingerprint,
@@ -116,8 +117,8 @@ const BybxImporter: React.FC<BybxImporterProps> = ({ onFileLoaded }) => {
                 <Shield className="h-5 w-5" />
             </Button>
 
-            {isOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            {isOpen && createPortal(
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-yellow-300">
                         <div className="bg-yellow-300 p-4 flex justify-between items-center">
                             <div className="flex items-center gap-2">
@@ -179,7 +180,8 @@ const BybxImporter: React.FC<BybxImporterProps> = ({ onFileLoaded }) => {
                             )}
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );
