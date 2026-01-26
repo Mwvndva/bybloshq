@@ -32,7 +32,8 @@ import {
   Truck,
   Wallet,
   XCircle,
-  Loader2
+  Loader2,
+  Info
 } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
@@ -964,6 +965,19 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <p className="text-2xl sm:text-3xl md:text-4xl font-black text-green-800">
                     {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                   </p>
+                </div>
+
+                {/* Minimum Withdrawal Notification */}
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                  <div className="bg-blue-100 rounded-full p-1 mt-0.5">
+                    <Info className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-blue-900 text-sm">Minimum Withdrawal Amount</h4>
+                    <p className="text-blue-700 text-sm mt-1">
+                      The minimum balance required to request a withdrawal is KSh 50. Please ensure you have sufficient funds before proceeding.
+                    </p>
+                  </div>
                 </div>
               </div>
 

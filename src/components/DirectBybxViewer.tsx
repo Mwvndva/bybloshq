@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import { Shield, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getDeviceFingerprint } from '@/lib/fingerprint';
 import api from '@/lib/api';
 import { useBybx } from '@/contexts/BybxContext';
+import { createPortal } from 'react-dom';
 
 interface DirectBybxViewerProps {
     orderId: string;
@@ -46,7 +46,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
                 throw new Error('Invalid file format received from server.');
             }
 
-            const headerOrderNumber = header.substring(6, 42).trim();
+            const headerOrderNumber = header.substring(6, 42).replace(/\0/g, '').trim();
             // productId in header might be 0 or incorrect if my previous assumption was wrong, 
             // but we have productId from props.
 
@@ -131,39 +131,57 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
 
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden border border-yellow-300">
-                <div className="bg-yellow-300 p-4 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                        <Shield className="h-5 w-5 text-black" />
-                        <h2 className="font-serif font-bold text-lg">Secure View</h2>
-                    </div>
-                    <button onClick={onClose} className="text-black hover:opacity-70">
-                        <X className="h-6 w-6" />
-                    </button>
-                </div>
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden relative border border-gray-100">
 
-                <div className="p-8 text-center">
-                    {status && !error && (
-                        <div className="py-4">
-                            <div className="relative w-16 h-16 mx-auto mb-6">
-                                <div className="absolute inset-0 border-4 border-yellow-200 rounded-full"></div>
-                                <div className="absolute inset-0 border-4 border-black rounded-full border-t-transparent animate-spin"></div>
+                {/* Close Button */}
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors z-10"
+                >
+                    <X className="h-4 w-4 text-gray-500" />
+                </button>
+
+                <div className="p-8 pt-10 text-center">
+
+                    {/* Header Icon */}
+                    <div className="mx-auto w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                        {decryptedData ? (
+                            <Shield className="h-8 w-8 text-green-500" />
+                        ) : error ? (
+                            <X className="h-8 w-8 text-red-500" />
+                        ) : (
+                            <Download className="h-8 w-8 text-black animate-pulse" />
+                        )}
+                    </div>
+
+                    {/* Title */}
+                    <h2 className="font-bold text-2xl mb-2 text-black">
+                        {decryptedData ? 'Ready to View' : error ? 'Download Failed' : 'Downloading'}
+                    </h2>
+
+                    {/* Status / Error Message */}
+                    {!decryptedData && !error && (
+                        <div className="space-y-6">
+                            <p className="text-gray-500 font-medium text-sm">{status || 'Starting...'}</p>
+                            {/* Simple Progress Bar */}
+                            <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                                <div className="h-full bg-black rounded-full w-1/3 animate-[shimmer_1.5s_infinite] relative">
+                                    <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+                                </div>
                             </div>
-                            <p className="text-lg font-bold text-black animate-pulse">{status}</p>
                         </div>
                     )}
 
                     {error && (
-                        <div className="py-4">
-                            <div className="bg-red-50 text-red-600 p-4 rounded-xl border border-red-200 mb-6 text-sm">
+                        <div className="mt-4 space-y-6">
+                            <p className="text-red-500 text-sm bg-red-50 p-4 rounded-xl border border-red-100">
                                 {error}
-                            </div>
+                            </p>
                             <Button
                                 onClick={() => loadFile()}
-                                variant="outline"
-                                className="border-black text-black hover:bg-gray-100 rounded-full px-8"
+                                className="w-full bg-black text-white hover:bg-gray-900 rounded-xl py-6 font-bold shadow-lg shadow-gray-200"
                             >
                                 Try Again
                             </Button>
@@ -171,35 +189,29 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
                     )}
 
                     {decryptedData && (
-                        <div className="py-4 space-y-4">
-                            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                                <Shield className="h-8 w-8 text-green-600" />
-                            </div>
-                            <h3 className="text-xl font-bold">Successfully Unlocked</h3>
-                            <p className="text-gray-600 text-sm">
-                                Your secure file is ready.
+                        <div className="mt-2 space-y-4">
+                            <p className="text-gray-500 text-sm mb-8">
+                                Your file has been unlocked and is ready.
                             </p>
 
                             <div className="flex flex-col gap-3">
                                 <Button
                                     onClick={() => {
-                                        // This click is a trusted event, so window.open works
                                         onFileLoaded(decryptedData.buffer, decryptedData.name);
                                         onClose();
                                     }}
-                                    className="bg-black text-yellow-300 hover:bg-zinc-800 w-full rounded-full py-4 font-bold"
+                                    className="bg-black text-white hover:bg-gray-900 w-full rounded-xl py-6 font-bold shadow-lg shadow-gray-200"
                                 >
                                     Open Now
                                 </Button>
 
                                 <Button
                                     onClick={() => {
-                                        // Create a download link for saving
-                                        const blob = new Blob([decryptedData.buffer], { type: 'application/pdf' }); // Assuming PDF for now or check ext
+                                        const blob = new Blob([decryptedData.buffer], { type: 'application/pdf' });
                                         const url = URL.createObjectURL(blob);
                                         const a = document.createElement('a');
                                         a.href = url;
-                                        a.download = decryptedData.name; // Save with original name
+                                        a.download = decryptedData.name;
                                         document.body.appendChild(a);
                                         a.click();
                                         document.body.removeChild(a);
@@ -207,7 +219,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
                                         onClose();
                                     }}
                                     variant="outline"
-                                    className="border-black text-black w-full rounded-full"
+                                    className="border-gray-200 text-gray-700 hover:text-black hover:bg-gray-50 w-full rounded-xl py-6 font-semibold"
                                 >
                                     Save to Device
                                 </Button>
@@ -216,7 +228,8 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 

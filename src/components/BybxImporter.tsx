@@ -30,7 +30,7 @@ const BybxImporter: React.FC<BybxImporterProps> = ({ onFileLoaded }) => {
                 throw new Error('Not a valid Byblos Armored file.');
             }
 
-            const orderNumber = header.substring(6, 42).trim();
+            const orderNumber = header.substring(6, 42).replace(/\0/g, '').trim();
             const productId = new DataView(buffer.slice(42, 46)).getInt32(0);
             const hardwareId = new Uint8Array(buffer.slice(46, 110));
             const isActivated = hardwareId.some(b => b !== 0);
