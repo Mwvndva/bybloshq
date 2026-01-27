@@ -395,87 +395,71 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const handleImageLoad = () => setIsImageLoading(false);
 
-  // Get theme classes based on the theme prop
-  const themeClasses = (() => {
+  // Get theme styles dynamically from CSS variables (set by ShopPage)
+  const themedCardStyle: React.CSSProperties = {
+    background: 'var(--theme-card-bg, rgba(17, 17, 17, 0.7))',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+    border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.1))',
+    color: 'var(--theme-text, white)',
+    boxShadow: '0 4px 24px -1px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--theme-border, rgba(255, 255, 255, 0.1))'
+  };
+
+  const getThemeClasses = () => {
+    // When inside a themed shop, we prefer CSS variables
+    const isThemedShop = theme !== 'default';
+
     switch (theme) {
       case 'black':
         return {
-          card: 'bg-gray-900/80 text-white border-gray-800 hover:shadow-2xl hover:shadow-gray-900/20',
-          price: 'text-yellow-400',
-          button: 'bg-yellow-500 hover:bg-yellow-600 text-white',
+          card: 'bg-[#0a0a0a]/95 text-white border-white/10 hover:border-[var(--theme-accent, #f59e0b)]/50 hover:shadow-[0_0_30px_rgba(var(--theme-accent-rgb, 245,158,11),0.15)]',
+          price: 'text-[var(--theme-accent, #f59e0b)]',
+          button: 'bg-[var(--theme-button-bg, #f59e0b)] hover:opacity-90 text-[var(--theme-button-text, black)] font-bold shadow-[0_0_15px_rgba(var(--theme-accent-rgb, 245,158,11),0.3)]',
           seller: 'text-gray-300',
-          description: 'text-gray-300/80',
-          icon: 'text-yellow-400',
+          description: 'text-gray-400',
+          icon: 'text-[var(--theme-accent, #f59e0b)]',
         };
       case 'pink':
-        return {
-          card: 'bg-pink-50/90 border-pink-100 hover:shadow-2xl hover:shadow-pink-100',
-          price: 'text-pink-600',
-          button: 'bg-pink-600 hover:bg-pink-700 text-white',
-          seller: 'text-pink-900',
-          description: 'text-pink-900/80',
-          icon: 'text-pink-600',
-        };
       case 'orange':
-        return {
-          card: 'bg-orange-50/90 border-orange-100 hover:shadow-2xl hover:shadow-orange-100',
-          price: 'text-orange-600',
-          button: 'bg-orange-600 hover:bg-orange-700 text-white',
-          seller: 'text-orange-900',
-          description: 'text-orange-900/80',
-          icon: 'text-orange-600',
-        };
       case 'green':
-        return {
-          card: 'bg-green-50/90 border-green-100 hover:shadow-2xl hover:shadow-green-100',
-          price: 'text-green-600',
-          button: 'bg-green-600 hover:bg-green-700 text-white',
-          seller: 'text-green-900',
-          description: 'text-green-900/80',
-          icon: 'text-green-600',
-        };
       case 'red':
-        return {
-          card: 'bg-red-50/90 border-red-100 hover:shadow-2xl hover:shadow-red-100',
-          price: 'text-red-600',
-          button: 'bg-red-600 hover:bg-red-700 text-white',
-          seller: 'text-red-900',
-          description: 'text-red-900/80',
-          icon: 'text-red-600',
-        };
       case 'yellow':
+      case 'brown':
         return {
-          card: 'bg-yellow-50/90 border-yellow-100 hover:shadow-2xl hover:shadow-yellow-100',
-          price: 'text-yellow-600',
-          button: 'bg-yellow-600 hover:bg-yellow-700 text-white',
-          seller: 'text-yellow-900',
-          description: 'text-yellow-900/80',
-          icon: 'text-yellow-600',
+          card: 'bg-[var(--theme-card-bg, white)] text-[var(--theme-text)] border-[var(--theme-border)] hover:shadow-xl hover:shadow-[var(--theme-accent)]/10',
+          price: 'text-[var(--theme-accent)]',
+          button: 'bg-[var(--theme-button-bg)] hover:opacity-90 text-[var(--theme-button-text)] shadow-md',
+          seller: 'text-[var(--theme-text)]/80',
+          description: 'text-[var(--theme-text)]/70',
+          icon: 'text-[var(--theme-accent)]',
         };
-      default: // default theme
+      default: // default/glass theme
         return {
           card: 'border-0',
           price: 'text-yellow-400',
-          button: 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white',
+          button: 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg shadow-yellow-500/20',
           seller: 'text-gray-200',
           description: 'text-gray-400',
           icon: 'text-gray-400',
         };
     }
-  })();
+  };
+
+  const themeClasses = getThemeClasses();
 
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all duration-500 backdrop-blur-sm border-0',
-        isSold ? 'opacity-60' : 'hover:-translate-y-2',
+        'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-[2rem]',
+        isSold ? 'opacity-60' : 'hover:-translate-y-3 hover:scale-[1.03]',
         'cursor-pointer',
         themeClasses.card
       )}
-      style={theme === 'default' ? glassCardStyle : undefined}
+      style={themedCardStyle}
       aria-label={`Product: ${product.name}`}
       onClick={handleCardClick}
     >
+
       {/* Wishlist Button */}
       {!hideWishlist && (
         <button
@@ -532,7 +516,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           src={getImageUrl(product.image_url)}
           alt={product.name}
           className={cn(
-            'w-full h-32 sm:h-40 md:h-44 lg:h-48 object-cover transition-transform duration-500 group-hover:scale-110',
+            'w-full h-48 sm:h-56 md:h-64 lg:h-72 object-cover transition-transform duration-700 group-hover:scale-105',
             isImageLoading ? 'opacity-0' : 'opacity-100'
           )}
           onLoad={handleImageLoad}
@@ -541,8 +525,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       </div>
 
       <CardContent className="mobile-compact">
-        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg",
-          theme === 'black' || theme === 'default' ? 'text-white' : 'text-gray-900'
+        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg antialiased",
+          "text-[var(--theme-text)]"
         )}>
           {product.name}
         </h3>
@@ -592,7 +576,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           theme === 'black' ? 'border-gray-800' : 'border-gray-100'
         )}>
           <Store className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
-          <span className={cn("mobile-text font-medium truncate flex-1", themeClasses.seller)}>{displaySellerName}</span>
+          <span className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90", themeClasses.seller)}>{displaySellerName}</span>
           {displaySeller?.hasPhysicalShop && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>
@@ -600,10 +584,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                   <Button
                     variant="ghost"
                     size="sm"
-                    className={`h-6 px-2 text-[10px] font-medium gap-1 ${theme === 'black'
-                      ? 'bg-green-900/30 text-green-400 border-green-800/50 hover:bg-green-900/50'
-                      : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                      } border transition-colors`}
+                    className={cn(
+                      "h-6 px-2 text-[10px] font-bold gap-1 transition-all duration-300",
+                      "bg-[var(--theme-accent)]/10 text-[var(--theme-accent)] border-[var(--theme-accent)]/20 hover:bg-[var(--theme-accent)]/20 shadow-sm"
+                    )}
                   >
                     <Store className="w-3 h-3" />
                     Visit Shop
