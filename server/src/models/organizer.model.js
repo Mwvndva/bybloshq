@@ -14,13 +14,13 @@ const Organizer = {
   },
 
   // Create Organizer
-  async create({ full_name, email, whatsapp_number, password, userId = null }) {
+  async create({ full_name, email, whatsapp_number, userId = null }) {
     const result = await pool.query(
       `INSERT INTO organizers 
-       (full_name, email, whatsapp_number, password, user_id, is_verified)
-       VALUES ($1, $2, $3, $4, $5, false)
+       (full_name, email, whatsapp_number, user_id, is_verified)
+       VALUES ($1, $2, $3, $4, false)
        RETURNING id, user_id, full_name, email, whatsapp_number, created_at`,
-      [full_name, email, whatsapp_number, userId ? null : password, userId]
+      [full_name, email, whatsapp_number, userId]
     );
     return result.rows[0];
   },
