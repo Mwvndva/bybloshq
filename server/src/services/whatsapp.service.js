@@ -78,17 +78,32 @@ class WhatsAppService {
             throw error;
         }
 
-        try {
-            const jid = this.formatToJid(phone);
-            if (!jid) throw new Error(`Invalid phone number format: ${phone}`);
+        const jid = this.formatToJid(phone);
+        if (!jid) throw new Error(`Invalid phone number format: ${phone}`);
 
-            await this.sock.sendMessage(jid, { text: message });
-            logger.info(`✅ WhatsApp message sent successfully to ${phone}`);
-            return true;
-        } catch (error) {
-            logger.error(`❌ Failed to send WhatsApp message to ${phone}:`, error.message);
-            throw error; // Re-throw to allow calling code to handle
+        // Simple Mutex/Queue for same JID to prevent race conditions
+        if (!this.messageQueues) this.messageQueues = new Map();
+        if (!this.messageQueues.has(jid)) {
+            this.messageQueues.set(jid, Promise.resolve());
         }
+
+        const previousTask = this.messageQueues.get(jid);
+        const currentTask = previousTask.then(async () => {
+            try {
+                // Add tiny delay to ensure order and avoid rate limits
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                await this.sock.sendMessage(jid, { text: message });
+                logger.info(`✅ WhatsApp message sent successfully to ${phone}`);
+                return true;
+            } catch (error) {
+                logger.error(`❌ Failed to send WhatsApp message to ${phone}:`, error.message);
+                throw error;
+            }
+        });
+
+        this.messageQueues.set(jid, currentTask);
+        return currentTask;
     }
 
     /**

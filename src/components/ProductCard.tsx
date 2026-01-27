@@ -362,9 +362,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           clearInterval(interval);
           setIsProcessingPurchase(false);
 
-          // Purge all old identification artifacts (Seller tokens, etc.)
-          // before the new buyer session is taken into account by the dashboard.
-          clearAllAuthData();
+          // Do NOT clear auth data here. We want the user to remain authenticated (if they are)
+          // or at least keep their session cookies for the dashboard to pick up.
+          // clearAllAuthData();
 
           toast({
             title: 'Payment Successful',
