@@ -123,13 +123,19 @@ export const protect = async (req, res, next) => {
     }
 
     // 4) Fetch permissions and attach to user
-    user.permissions = await AuthorizationService.getUserPermissions(user.userId || user.id);
+    const lookupId = user.userId || user.id;
+    user.permissions = await AuthorizationService.getUserPermissions(lookupId);
+
+    // DEBUG: Log permissions and IDs
+    console.log(`[AUTH] User ${user.email} (type: ${userType}) IDs: userId=${user.userId}, id=${user.id}, lookupId=${lookupId}`);
+    console.log(`[AUTH] Permissions for ${user.email}:`, Array.from(user.permissions));
 
     // 5) Attach helper method for easier checks in controllers
-    // Usage: if (await req.user.can('manage-products', product, 'product', 'manage'))
     user.can = async (permission, resource = null, policyKey = null, action = null) => {
       const policy = policyKey ? policies[policyKey] : null;
-      return await AuthorizationService.can(user, permission, policy, action, resource);
+      const result = await AuthorizationService.can(user, permission, policy, action, resource);
+      console.log(`[AUTH] Permission check: ${user.email} can '${permission}'? ${result}`);
+      return result;
     };
 
     req.user = user;
