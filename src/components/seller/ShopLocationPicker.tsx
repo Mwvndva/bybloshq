@@ -117,12 +117,12 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
         const newPos: [number, number] = [lat, lon];
         setMarkerPosition(newPos);
         setCenter(newPos);
-        setAddress(result.display_name);
+        // setAddress(result.display_name); // Stop copying to detailed address
         setSearchQuery(result.display_name);
         setShowResults(false);
 
-        // Directly notify parent of user action
-        onLocationChange(result.display_name, { lat, lng: lon });
+        // Directly notify parent of user action - use current detailed address
+        onLocationChange(address, { lat, lng: lon });
     };
 
     const handleManualAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -147,7 +147,7 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
     return (
         <div className="space-y-4">
             <div>
-                <Label htmlFor="address-search" className="text-sm font-semibold text-gray-700 block mb-2">
+                <Label htmlFor="address-search" className="text-sm font-semibold text-gray-200 block mb-2">
                     Search Location
                 </Label>
                 <div className="relative">
@@ -171,12 +171,12 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
 
                     {/* Search Results Dropdown */}
                     {showResults && searchResults.length > 0 && (
-                        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <div className="absolute z-50 w-full mt-1 bg-[#1a1a1a] border border-white/10 rounded-md shadow-lg max-h-60 overflow-auto">
                             {searchResults.map((result, index) => (
                                 <button
                                     key={index}
                                     type="button"
-                                    className="w-full text-left px-4 py-2 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-0 text-sm text-gray-700"
+                                    className="w-full text-left px-4 py-2 hover:bg-white/5 focus:bg-white/5 focus:outline-none border-b border-white/5 last:border-0 text-sm text-gray-200"
                                     onClick={() => selectLocation(result)}
                                 >
                                     {result.display_name}
@@ -189,7 +189,7 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
 
             {/* Manual Address Input Backup */}
             <div>
-                <Label htmlFor="address-manual" className="text-sm font-semibold text-gray-700 block mb-2">
+                <Label htmlFor="address-manual" className="text-sm font-semibold text-gray-200 block mb-2">
                     Detailed Address (Building, Floor, Shop No)
                 </Label>
                 <Input
