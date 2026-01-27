@@ -221,7 +221,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             location: result.buyer.location,
             email: ''
           });
-          setShouldSkipSave(true); // Don't try to register again, just valid email
+          setShouldSkipSave(false); // Enable save/login to identify the user session
           setIsBuyerModalOpen(true);
         }
       } else {
@@ -368,15 +368,25 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
           toast({
             title: 'Payment Successful',
-            description: 'Your purchase has been confirmed! Redirecting to your orders...',
+            description: 'Your purchase has been confirmed! Redirecting...',
             className: 'bg-green-600 text-white',
             duration: 5000
           });
 
-          // **NAVIGATION**: Redirect to Orders Tab using full page reload to refresh session state
-          setTimeout(() => {
-            window.location.href = '/buyer/dashboard?section=orders';
-          }, 1500);
+          // **NAVIGATION**: Check Auth Before Redirecting
+          try {
+            // Only redirect to dashboard if we are actually logged in
+            await buyerApi.getProfile();
+
+            setTimeout(() => {
+              window.location.href = '/buyer/dashboard?section=orders';
+            }, 1500);
+          } catch (e) {
+            // Guest User (or session expired) -> Redirect to Login to view order
+            setTimeout(() => {
+              window.location.href = '/buyer/login?redirect=/buyer/dashboard';
+            }, 1500);
+          }
 
         } else if (status === 'failed') {
           clearInterval(interval);
