@@ -8,7 +8,7 @@ const SALT_ROUNDS = 10;
 const query = (text, params) => pool.query(text, params);
 
 export const createSeller = async (sellerData) => {
-  const { fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude, userId = null } = sellerData;
+  const { fullName, shopName, email, whatsappNumber, password, city, location, physicalAddress, latitude, longitude, userId = null } = sellerData;
 
   // Only hash password if we are creating a new user (no userId provided)
   let hashedPassword = password;
@@ -17,10 +17,10 @@ export const createSeller = async (sellerData) => {
   }
 
   const result = await query(
-    `INSERT INTO sellers (full_name, shop_name, email, phone, password, city, location, physical_address, latitude, longitude, user_id)
+    `INSERT INTO sellers (full_name, shop_name, email, whatsapp_number, password, city, location, physical_address, latitude, longitude, user_id)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING *`,
-    [fullName, shopName, email, phone, hashedPassword, city, location, physicalAddress, latitude, longitude, userId]
+    [fullName, shopName, email, whatsappNumber, hashedPassword, city, location, physicalAddress, latitude, longitude, userId]
   );
   return result.rows[0];
 };
@@ -33,7 +33,7 @@ export const findSellerByEmail = async (email) => {
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 
-      phone, 
+      whatsapp_number AS "whatsappNumber", 
       password, 
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
@@ -56,7 +56,7 @@ export const findSellerByShopName = async (shopName) => {
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 
-      phone, 
+      whatsapp_number AS "whatsappNumber", 
       city, 
       location, 
       physical_address AS "physicalAddress",
@@ -102,7 +102,7 @@ export const findSellerById = async (id) => {
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 
-      phone, 
+      whatsapp_number AS "whatsappNumber", 
       location, 
       city, 
       physical_address AS "physicalAddress",
@@ -129,7 +129,7 @@ export const updateSeller = async (id, updates) => {
     updates: {
       ...updates,
       email: updates.email ? '[REDACTED]' : 'missing',
-      phone: updates.phone ? '[REDACTED]' : 'missing'
+      whatsappNumber: updates.whatsappNumber ? '[REDACTED]' : 'missing'
     }
   });
 
@@ -138,7 +138,7 @@ export const updateSeller = async (id, updates) => {
     throw new Error('Seller ID is required for update');
   }
 
-  const { fullName, shopName, email, phone, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link } = updates || {};
+  const { fullName, shopName, email, whatsappNumber, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -161,10 +161,10 @@ export const updateSeller = async (id, updates) => {
     values.push(email);
   }
 
-  if (phone) {
+  if (whatsappNumber) {
     paramCount++;
-    updatesList.push(`phone = $${paramCount}`);
-    values.push(phone);
+    updatesList.push(`whatsapp_number = $${paramCount}`);
+    values.push(whatsappNumber);
   }
 
   if (password) {
@@ -246,7 +246,7 @@ export const updateSeller = async (id, updates) => {
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 
-      phone, 
+      whatsapp_number AS "whatsappNumber", 
       city, 
       location, 
       theme, 
@@ -271,7 +271,7 @@ export const updateSeller = async (id, updates) => {
       id: result.rows[0].id,
       shopName: result.rows[0].shop_name,
       email: result.rows[0].email ? '[REDACTED]' : 'missing',
-      phone: result.rows[0].phone ? '[REDACTED]' : 'missing'
+      whatsappNumber: result.rows[0].whatsapp_number ? '[REDACTED]' : 'missing'
     });
     return result.rows[0];
   } catch (error) {

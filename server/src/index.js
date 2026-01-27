@@ -68,14 +68,12 @@ app.use(morgan('combined', { stream: logger.stream }));
 
 // Limit requests from same API
 const limiter = rateLimit({
-  max: 100,
+  max: 1000,
   windowMs: 60 * 60 * 1000,
   message: 'Too many requests from this IP, please try again in an hour!',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
-
-app.use('/api', limiter);
 
 // Serve static files from uploads directory
 const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -206,6 +204,9 @@ const corsOptions = {
 
 // Apply CORS middleware with options
 app.use(cors(corsOptions));
+
+// Apply rate limiter after CORS to ensure CORS headers are sent on 429 errors
+app.use('/api', limiter);
 
 // Handle preflight requests
 app.options('*', cors(corsOptions), (req, res) => {

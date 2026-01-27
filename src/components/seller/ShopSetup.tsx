@@ -63,29 +63,29 @@ export default function ShopSetup() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-3xl">
                 <div className="flex justify-center">
-                    <div className="h-12 w-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                        <Store className="h-6 w-6 text-yellow-600" />
+                    <div className="h-12 w-12 bg-yellow-500/10 border border-yellow-400/20 rounded-xl flex items-center justify-center shadow-[0_0_18px_rgba(250,204,21,0.18)]">
+                        <Store className="h-6 w-6 text-yellow-300" />
                     </div>
                 </div>
-                <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
                     Complete your shop setup
                 </h2>
-                <p className="mt-2 text-center text-sm text-gray-600">
+                <p className="mt-2 text-center text-sm text-gray-400">
                     Tell us about your physical presence
                 </p>
             </div>
 
             <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-3xl">
-                <Card className="border-0 shadow-lg bg-white/80 backdrop-blur-sm">
+                <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-lg">
                     <CardContent className="p-8">
                         {hasShop === null ? (
                             <div className="space-y-6">
                                 <div className="text-center">
-                                    <h3 className="text-lg font-medium text-gray-900 mb-2">Do you have a physical shop?</h3>
-                                    <p className="text-sm text-gray-500 mb-6">
+                                    <h3 className="text-lg font-medium text-white mb-2">Do you have a physical shop?</h3>
+                                    <p className="text-sm text-gray-400 mb-6">
                                         Adding your shop location helps local customers find you easily.
                                     </p>
                                 </div>
@@ -93,14 +93,14 @@ export default function ShopSetup() {
                                     <Button
                                         onClick={() => handleSkip()}
                                         variant="outline"
-                                        className="h-24 flex flex-col gap-2 hover:bg-gray-50 hover:border-gray-300 border-2 border-transparent bg-gray-50"
+                                        className="h-24 flex flex-col gap-2 border-2 border-white/10 bg-white/5 text-gray-200 hover:bg-white/10 hover:border-white/20"
                                     >
                                         <span className="text-2xl">🏠</span>
-                                        <span className="font-semibold text-gray-700">No, online only</span>
+                                        <span className="font-semibold text-gray-200">No, online only</span>
                                     </Button>
                                     <Button
                                         onClick={() => setHasShop(true)}
-                                        className="h-24 flex flex-col gap-2 bg-yellow-50 border-2 border-yellow-200 hover:bg-yellow-100 hover:border-yellow-300 text-yellow-900"
+                                        className="h-24 flex flex-col gap-2 bg-yellow-500/10 border-2 border-yellow-400/20 hover:bg-yellow-500/15 hover:border-yellow-400/30 text-yellow-100 shadow-[0_0_18px_rgba(250,204,21,0.12)]"
                                     >
                                         <span className="text-2xl">🏪</span>
                                         <span className="font-semibold">Yes, I have a shop</span>
@@ -118,7 +118,7 @@ export default function ShopSetup() {
                                         type="button"
                                         variant="ghost"
                                         onClick={() => setHasShop(null)}
-                                        className="flex-1"
+                                        className="flex-1 text-gray-200 hover:bg-white/5 hover:text-white"
                                     >
                                         Back
                                     </Button>

@@ -5,7 +5,7 @@ import { sellerApi, Theme } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 
 const themeColors = [
-  { name: 'Default', value: 'default', bg: 'bg-gradient-to-br from-yellow-400 to-yellow-500' },
+  { name: 'White', value: 'default', bg: 'bg-white' },
   { name: 'Black', value: 'black', bg: 'bg-gradient-to-br from-gray-800 to-gray-900' },
   { name: 'Pink', value: 'pink', bg: 'bg-gradient-to-br from-pink-400 to-pink-500' },
   { name: 'Brown', value: 'brown', bg: 'bg-gradient-to-br from-amber-700 to-amber-800' },
@@ -20,7 +20,7 @@ interface ThemeSelectorProps {
   onThemeChange?: (theme: Theme) => void;
 }
 
-export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: ThemeSelectorProps) => {
+export const ThemeSelector = ({ currentTheme = 'black', onThemeChange }: ThemeSelectorProps) => {
   const [selectedTheme, setSelectedTheme] = useState<Theme>(currentTheme);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -88,7 +88,11 @@ export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: Theme
                   <Check className="h-4 w-4 text-green-600" />
                 </div>
               )}
-              <span className="text-white font-bold text-xs sm:text-sm drop-shadow-md">{theme.name}</span>
+              <span
+                className={`${theme.value === 'default' ? 'text-gray-900' : 'text-white'} font-bold text-xs sm:text-sm ${theme.value === 'default' ? '' : 'drop-shadow-md'}`}
+              >
+                {theme.name}
+              </span>
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
             </div>
           </button>

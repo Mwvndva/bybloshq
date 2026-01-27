@@ -1,12 +1,12 @@
 import express from 'express';
 import * as refundController from '../controllers/refund.controller.js';
-import { protect, restrictTo } from '../middleware/auth.js';
+import { protect, hasPermission } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // All refund management routes require admin authentication
 router.use(protect);
-router.use(restrictTo('admin'));
+router.use(hasPermission('manage-all'));
 
 // Get all refund requests
 router.get('/', refundController.getAllRefundRequests);

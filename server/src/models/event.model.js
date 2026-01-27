@@ -369,7 +369,7 @@ const Event = {
           e.*,
           o.full_name as organizer_name,
           o.email as organizer_email,
-          o.phone as organizer_phone
+          o.whatsapp_number as organizer_phone
         FROM events e
         LEFT JOIN organizers o ON e.organizer_id = o.id
         WHERE e.id = $1

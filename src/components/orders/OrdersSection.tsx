@@ -57,76 +57,86 @@ import buyerApi from '@/api/buyerApi';
 import { toast } from 'sonner';
 import DirectBybxViewer from '@/components/DirectBybxViewer';
 
+const glassCardStyle: React.CSSProperties = {
+  background: 'rgba(20, 20, 20, 0.7)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+};
+
+const badgeGlow = 'shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_10px_20px_rgba(0,0,0,0.35)]';
+
 const getStatusBadge = (status: string) => {
   // Convert to uppercase for comparison, default to 'PENDING' if status is falsy
   const statusValue = status?.toUpperCase() || 'PENDING';
   switch (statusValue) {
     case 'PENDING':
       return (
-        <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-yellow-500/90 to-yellow-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <Clock className="h-3 w-3 mr-1" />
           Pending
         </Badge>
       );
     case 'DELIVERY_PENDING':
       return (
-        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-blue-500/90 to-blue-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <Truck className="h-3 w-3 mr-1" />
           Delivery Pending
         </Badge>
       );
     case 'DELIVERY_COMPLETE':
       return (
-        <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-purple-500/90 to-purple-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <Package className="h-3 w-3 mr-1" />
           Delivery Complete
         </Badge>
       );
     case 'COMPLETED':
       return (
-        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-green-500/90 to-emerald-500/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <CheckCircle className="h-3 w-3 mr-1" />
           Completed
         </Badge>
       );
     case 'CANCELLED':
       return (
-        <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-red-500/90 to-red-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <XCircle className="h-3 w-3 mr-1" />
           Cancelled
         </Badge>
       );
     case 'FAILED':
       return (
-        <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-red-500/90 to-red-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <XCircle className="h-3 w-3 mr-1" />
           Failed
         </Badge>
       );
     case 'SERVICE_PENDING':
       return (
-        <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-purple-500/90 to-purple-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <CheckCircle className="h-3 w-3 mr-1" />
           Service Pending
         </Badge>
       );
     case 'COLLECTION_PENDING':
       return (
-        <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-indigo-500/90 to-blue-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <Package className="h-3 w-3 mr-1" />
           Ready for Collection
         </Badge>
       );
     case 'CONFIRMED':
       return (
-        <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-blue-500/90 to-blue-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <CheckCircle className="h-3 w-3 mr-1" />
           Confirmed
         </Badge>
       );
     default:
       return (
-        <Badge className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-gray-500/90 to-gray-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <Package className="h-3 w-3 mr-1" />
           {status}
         </Badge>
@@ -140,7 +150,7 @@ const getPaymentStatusBadge = (status?: string) => {
   switch (statusValue) {
     case 'pending':
       return (
-        <Badge className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-amber-500/90 to-amber-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <Clock className="h-3 w-3 mr-1" />
           Pending
         </Badge>
@@ -149,28 +159,28 @@ const getPaymentStatusBadge = (status?: string) => {
     case 'completed':
     case 'paid':
       return (
-        <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-green-500/90 to-emerald-500/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <CheckCircle className="h-3 w-3 mr-1" />
           Paid
         </Badge>
       );
     case 'failed':
       return (
-        <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-red-500/90 to-red-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <XCircle className="h-3 w-3 mr-1" />
           Failed
         </Badge>
       );
     case 'reversed':
       return (
-        <Badge className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-gray-500/90 to-gray-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           <XCircle className="h-3 w-3 mr-1" />
           Reversed
         </Badge>
       );
     default:
       return (
-        <Badge className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+        <Badge className={`bg-gradient-to-r from-gray-500/90 to-gray-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
           {status}
         </Badge>
       );
@@ -406,7 +416,7 @@ export default function OrdersSection() {
     return (
       <div className="space-y-4 sm:space-y-6">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md transition-all duration-300">
+          <Card key={i} className="border-0" style={glassCardStyle}>
             <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
                 <div className="space-y-3 sm:space-y-4 flex-1">
@@ -446,7 +456,7 @@ export default function OrdersSection() {
   if (error) {
     return (
       <div className="text-center p-8">
-        <p className="text-red-500 mb-4">{error}</p>
+        <p className="text-red-200 mb-4">{error}</p>
         <Button onClick={fetchOrders} variant="outline">
           <RefreshCw className="mr-2 h-4 w-4" />
           Try Again
@@ -461,8 +471,8 @@ export default function OrdersSection() {
         <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-4">
           <Package className="h-8 w-8 text-yellow-500" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No orders yet</h3>
-        <p className="text-gray-500 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
+        <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
+        <p className="text-gray-400 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
         <Button
           onClick={() => (window.location.href = '/shop')}
           className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
@@ -477,7 +487,7 @@ export default function OrdersSection() {
   return (
     <div className="space-y-4 sm:space-y-6">
       {displayOrders.map((order) => (
-        <Card key={order.id} className="bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md transition-all duration-300 transform hover:-translate-y-1">
+        <Card key={order.id} className="border-0 transition-all duration-300 transform hover:-translate-y-1" style={glassCardStyle}>
           <CardContent className="p-4 sm:p-6">
             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
               {/* Order Information Section */}
@@ -485,8 +495,8 @@ export default function OrdersSection() {
                 {/* Order Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
-                    <h3 className="font-semibold text-base sm:text-lg text-gray-900">Order #{order.orderNumber || order.id}</h3>
-                    <p className="text-xs sm:text-sm text-gray-500">{formatDate(order)}</p>
+                    <h3 className="font-semibold text-base sm:text-lg text-white">Order #{order.orderNumber || order.id}</h3>
+                    <p className="text-xs sm:text-sm text-gray-400">{formatDate(order)}</p>
                   </div>
                   {/* Status Badges */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start sm:self-auto">
@@ -497,21 +507,21 @@ export default function OrdersSection() {
 
                 {/* Products Section */}
                 <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-900 mb-3">Products:</h4>
+                  <h4 className="text-sm sm:text-base font-semibold text-white mb-3">Products:</h4>
                   <ul className="space-y-2">
                     {order.items.map((item) => (
-                      <li key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-gray-700 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg px-3 py-2 border border-gray-200/50">
+                      <li key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-gray-200 bg-gray-900/50 rounded-lg px-3 py-2 border border-gray-800">
                         <div className="flex items-center">
                           <span className="font-semibold">{item.name}</span>
-                          <span className="text-gray-500 ml-2">× {item.quantity}</span>
+                          <span className="text-gray-400 ml-2">× {item.quantity}</span>
                           {(item.isDigital || item.productType === 'digital' || (item as any).is_digital) && (
-                            <Badge variant="outline" className="ml-2 text-xs border-gray-400 text-gray-900 bg-gray-100">
+                            <Badge variant="outline" className="ml-2 text-xs border-gray-600 text-gray-200 bg-gray-800">
                               <FileText className="h-3 w-3 mr-1" />
                               Digital
                             </Badge>
                           )}
                           {(item.productType === 'service' || (item as any).isService) && (
-                            <Badge variant="outline" className="ml-2 text-xs border-purple-200 text-purple-600 bg-purple-50">
+                            <Badge variant="outline" className="ml-2 text-xs border-purple-500/40 text-purple-200 bg-purple-900/30">
                               <Handshake className="h-3 w-3 mr-1" />
                               Service
                             </Badge>
@@ -539,7 +549,7 @@ export default function OrdersSection() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="mt-2 sm:mt-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 h-8"
+                              className="mt-2 sm:mt-0 text-blue-300 hover:text-blue-200 hover:bg-blue-900/30 h-8"
                               onClick={async () => {
                                 // Check if running in browser (not standalone PWA/App)
                                 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
@@ -581,7 +591,7 @@ export default function OrdersSection() {
               <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
                 {/* Total Amount */}
                 <div className="flex-1 sm:flex-none">
-                  <p className="font-bold text-lg sm:text-xl text-gray-900">
+                  <p className="font-bold text-lg sm:text-xl text-white">
                     {formatCurrency(
                       // Handle both snake_case and camelCase
                       (order as any).total_amount !== undefined
@@ -590,7 +600,7 @@ export default function OrdersSection() {
                       order.currency || 'KSH'
                     )}
                   </p>
-                  <p className="text-xs text-gray-500">Total Amount</p>
+                  <p className="text-xs text-gray-400">Total Amount</p>
                 </div>
 
                 {/* Action Buttons */}
@@ -599,7 +609,7 @@ export default function OrdersSection() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300 text-xs sm:text-sm font-semibold transition-all duration-200"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-900/30 border-red-500/40 hover:border-red-500/60 text-xs sm:text-sm font-semibold transition-all duration-200"
                       onClick={() => handleCancelOrderClick(order.id)}
                     >
                       <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />

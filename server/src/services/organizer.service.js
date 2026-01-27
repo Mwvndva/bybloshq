@@ -8,7 +8,8 @@ const SALT_ROUNDS = 10;
 
 class OrganizerService {
     static async register(data) {
-        const { full_name, email, phone, password } = data;
+        const { full_name, email, phone, whatsappNumber, password } = data;
+        const whatsapp_number = whatsappNumber || phone;
 
         // 1. Check if user already exists
         const existingUser = await User.findByEmail(email);
@@ -28,7 +29,7 @@ class OrganizerService {
 
             // 4. Link profile to existing user identity
             return await Organizer.create({
-                full_name, email, phone, userId: existingUser.id
+                full_name, email, whatsapp_number, userId: existingUser.id
             });
         }
 
@@ -41,7 +42,7 @@ class OrganizerService {
         });
 
         return await Organizer.create({
-            full_name, email, phone, userId: newUser.id
+            full_name, email, whatsapp_number, userId: newUser.id
         });
     }
 

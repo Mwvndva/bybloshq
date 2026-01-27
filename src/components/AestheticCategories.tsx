@@ -91,11 +91,11 @@ const AestheticCategories = ({ onAestheticChange, selectedAesthetic }: Aesthetic
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-black">Shop by Style</h3>
+        <h3 className="text-lg font-semibold text-white">Shop by Style</h3>
         {selectedAesthetic && (
           <button
             onClick={() => onAestheticChange('' as Aesthetic)}
-            className="text-sm text-gray-500 hover:text-black transition-colors"
+            className="text-sm text-gray-400 hover:text-white transition-colors"
           >
             Clear filter
           </button>
@@ -109,8 +109,8 @@ const AestheticCategories = ({ onAestheticChange, selectedAesthetic }: Aesthetic
             className={`
               px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
               ${selectedAesthetic === category.id
-                ? 'bg-yellow-500 text-white shadow-sm'
-                : 'bg-white text-gray-700 border border-gray-200 hover:border-yellow-300 hover:bg-yellow-50'
+                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg'
+                : 'bg-gray-900/50 text-gray-200 border border-gray-700 hover:border-yellow-400/60 hover:bg-gray-800/70'
               }
             `}
             onClick={() => onAestheticChange(category.id)}

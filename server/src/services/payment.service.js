@@ -313,7 +313,7 @@ class PaymentService {
                     `SELECT * FROM payments 
                      WHERE status = '${PaymentStatus.PENDING}' 
                      AND amount = $1 
-                     AND phone_number LIKE '%' || $2 
+                     AND mobile_payment LIKE '%' || $2 
                      AND created_at > NOW() - INTERVAL '30 minute'
                      ORDER BY created_at DESC LIMIT 1`,
                     [webhookAmount, phoneTail]
@@ -615,9 +615,9 @@ class PaymentService {
         // Insert Payment
         // Use direct insert keys
         const insertRes = await pool.query(
-            `INSERT INTO payments (invoice_id, email, phone_number, amount, status, payment_method, event_id, organizer_id, ticket_type_id, metadata)
-              VALUES ($1, $2, $3, $4, 'pending', 'payd', $5, $6, $7, $8) RETURNING *`,
-            [paymentData.invoice_id, email, phone, amount, eventId, event.organizer_id, ticketId, JSON.stringify(paymentData.metadata)]
+            `INSERT INTO payments (invoice_id, email, mobile_payment, amount, status, payment_method, event_id, organizer_id, ticket_type_id, metadata, whatsapp_number)
+              VALUES ($1, $2, $3, $4, 'pending', 'payd', $5, $6, $7, $8, $9) RETURNING *`,
+            [paymentData.invoice_id, email, phone, amount, eventId, event.organizer_id, ticketId, JSON.stringify(paymentData.metadata), phone]
         );
         const payment = insertRes.rows[0];
 
@@ -637,7 +637,8 @@ class PaymentService {
         let buyerId = user?.id || null;
         // Fallback to user email/phone if not in payload
         let buyerEmail = email || user?.email;
-        let buyerPhone = phone || user?.phone;
+        let buyerMobilePayment = phone || user?.mobile_payment || user?.mobilePayment || user?.phone;
+        let buyerWhatsApp = payload.whatsappNumber || user?.whatsapp_number || user?.whatsappNumber || buyerMobilePayment;
 
         // Define fallback location info from User if authenticated and not provided
         let shippingAddress = null;
@@ -650,18 +651,19 @@ class PaymentService {
         // Basic buyer cleanup if user is not authenticated
         if (!buyerId) {
             // Logic from controller: try to find buyer by phone if not auth
-            if (buyerPhone) {
-                const { rows: buyers } = await pool.query('SELECT * FROM buyers WHERE phone = $1', [buyerPhone]);
+            if (buyerMobilePayment) {
+                const { rows: buyers } = await pool.query('SELECT * FROM buyers WHERE mobile_payment = $1 OR whatsapp_number = $1', [buyerMobilePayment]);
                 if (buyers.length > 0) {
                     buyerId = buyers[0].id;
                     // If we found them in DB, we could prefer DB email if payload email is missing
                     if (!buyerEmail) buyerEmail = buyers[0].email;
+                    if (!buyerWhatsApp) buyerWhatsApp = buyers[0].whatsapp_number;
                 }
             }
         }
 
-        if (!buyerPhone) {
-            throw new Error('Phone number is required for payment');
+        if (!buyerMobilePayment) {
+            throw new Error('Mobile payment number is required for payment');
         }
 
         // 2. Validate Product (Replicating Controller Logic)
@@ -707,7 +709,8 @@ class PaymentService {
             paymentMethod: 'payd',
             buyerName: customerName,
             buyerEmail,
-            buyerPhone,
+            buyerMobilePayment,
+            buyerWhatsApp,
             shippingAddress, // Pass the resolved address
             metadata: {
                 ...(payload.metadata || {}),
@@ -755,17 +758,17 @@ class PaymentService {
         // Or create a generic insert DAO method?
         // Just raw SQL here for now to be explicit.
         const insertRes = await pool.query(
-            `INSERT INTO payments (invoice_id, email, phone_number, amount, status, payment_method, metadata)
-              VALUES ($1, $2, $3, $4, 'pending', 'payd', $5) RETURNING *`,
-            [paymentData.invoice_id, buyerEmail, buyerPhone, amount, JSON.stringify(paymentData.metadata)]
+            `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
+              VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6) RETURNING *`,
+            [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, amount, JSON.stringify(paymentData.metadata)]
         );
         const payment = insertRes.rows[0];
 
         // 5. Initiate Gateway
         const gwPayload = {
             ...paymentData,
-            // initiatePayment expects 'phone' key for the number
-            phone: paymentData.phone_number,
+            // initiatePayment expects 'phone' key for the number to charge
+            phone: buyerMobilePayment,
             firstName: customerName?.split(' ')[0],
             narrative: paymentData.metadata.narrative
         };

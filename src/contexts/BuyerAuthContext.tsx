@@ -8,6 +8,8 @@ interface User {
   fullName: string;
   email: string;
   phone: string;
+  mobilePayment: string;
+  whatsappNumber: string;
   city?: string;
   location?: string;
   refunds?: number;
@@ -23,7 +25,8 @@ interface BuyerAuthContextType {
   register: (userData: {
     fullName: string;
     email: string;
-    phone: string;
+    mobilePayment: string;
+    whatsappNumber: string;
     password: string;
     confirmPassword: string;
     city: string;
@@ -184,7 +187,8 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
   const register = useCallback(async (userData: {
     fullName: string;
     email: string;
-    phone: string;
+    mobilePayment: string;
+    whatsappNumber: string;
     password: string;
     confirmPassword: string;
     city: string;
@@ -193,7 +197,7 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       // Ensure required fields are present
-      if (!userData.fullName || !userData.email || !userData.phone || !userData.password || !userData.city || !userData.location) {
+      if (!userData.fullName || !userData.email || !userData.mobilePayment || !userData.whatsappNumber || !userData.password || !userData.city || !userData.location) {
         throw new Error('Please fill in all required fields');
       }
 
@@ -205,7 +209,8 @@ export function BuyerAuthProvider({ children }: { children: ReactNode }) {
       const registrationData = {
         fullName: userData.fullName,
         email: userData.email,
-        phone: userData.phone,
+        mobilePayment: userData.mobilePayment,
+        whatsappNumber: userData.whatsappNumber,
         password: userData.password,
         confirmPassword: userData.confirmPassword,
         city: userData.city,

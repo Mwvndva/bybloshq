@@ -549,7 +549,8 @@ const getAllBuyers = async (req, res, next) => {
         id,
         full_name as name,
         email,
-        phone,
+        mobile_payment as phone,
+        whatsapp_number,
         status,
         city,
         location,
@@ -589,7 +590,8 @@ const getBuyerById = async (req, res, next) => {
         id,
         full_name as name,
         email,
-        phone,
+        mobile_payment as phone,
+        whatsapp_number,
         status,
         created_at
       FROM buyers 
@@ -630,7 +632,7 @@ const getAllWithdrawalRequests = async (req, res, next) => {
         s.id as seller_id,
         s.full_name as seller_name,
         s.email as seller_email,
-        s.phone as seller_phone
+        s.whatsapp_number as seller_phone
       FROM withdrawal_requests wr
       JOIN sellers s ON wr.seller_id = s.id
       ORDER BY wr.created_at DESC

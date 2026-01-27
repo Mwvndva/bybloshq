@@ -13,9 +13,10 @@ const dbConfig = {
   database: process.env.DB_NAME || 'byblos7',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'nurubot',
-  connectionTimeoutMillis: 5000,  // 5 seconds timeout for connection
-  idleTimeoutMillis: 30000,      // 30 seconds idle timeout
-  max: 20,                       // max number of clients in the pool
+  connectionTimeoutMillis: 30000,  // 30 seconds timeout waiting for a client
+  idleTimeoutMillis: 10000,       // 10 seconds idle timeout (faster release)
+  max: 10,                        // reduced max number of clients for better headroom in dev
+  query_timeout: 60000,           // 60 seconds query timeout
 };
 
 // Log database connection details (without password)
@@ -36,7 +37,7 @@ pool.on('connect', () => {
 
 pool.on('error', (err) => {
   logger.error('Unexpected error on idle client', err);
-  process.exit(-1);
+  // Removed process.exit(-1) to prevent aggressive crashes on minor network blips
 });
 
 export const query = async (text, params) => {

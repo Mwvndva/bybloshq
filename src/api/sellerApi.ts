@@ -24,6 +24,7 @@ export interface Seller {
   shop_name?: string;
   email: string;
   phone: string;
+  whatsappNumber: string;
   city?: string;
   location?: string;
   hasPhysicalShop?: boolean;
@@ -168,7 +169,8 @@ const transformSeller = (data: any): Seller => {
     fullName: seller.fullName || seller.full_name || '',
     shopName: seller.shopName || seller.shop_name || '',
     email: seller.email || '',
-    phone: seller.phone || '',
+    phone: seller.phone || seller.whatsapp_number || '',
+    whatsappNumber: seller.whatsapp_number || seller.whatsappNumber || seller.phone || '',
     city: seller.city || '',
     location: seller.location || '',
     physicalAddress: seller.physicalAddress || seller.physical_address || '',
@@ -176,7 +178,7 @@ const transformSeller = (data: any): Seller => {
     latitude: seller.latitude,
     longitude: seller.longitude,
     bannerImage: seller.bannerImage || seller.banner_image || null,
-    theme: seller.theme || 'default',
+    theme: seller.theme || 'black',
     instagramLink: seller.instagramLink || seller.instagram_link || '',
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
@@ -273,7 +275,7 @@ export const sellerApi = {
     fullName: string;
     shopName: string;
     email: string;
-    phone: string;
+    whatsappNumber: string;
     password: string;
     confirmPassword: string;
     city?: string;
@@ -284,7 +286,7 @@ export const sellerApi = {
         fullName: data.fullName,
         shopName: data.shopName,
         email: data.email,
-        phone: data.phone,
+        whatsappNumber: data.whatsappNumber,
         password: data.password,
         confirmPassword: data.confirmPassword,
         city: data.city,

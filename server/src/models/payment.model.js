@@ -24,7 +24,7 @@ class Payment {
     const { rows } = await pool.query(`
       SELECT 
         id, invoice_id, amount, currency, status, 
-        payment_method, phone_number, email,
+        payment_method, mobile_payment, whatsapp_number, email,
         event_id, organizer_id, ticket_type_id, ticket_id,
         metadata, created_at, updated_at
       FROM payments 
@@ -37,7 +37,7 @@ class Payment {
     const { rows } = await pool.query(`
       SELECT 
         id, invoice_id, amount, currency, status, 
-        payment_method, phone_number, email,
+        payment_method, mobile_payment, whatsapp_number, email,
         event_id, organizer_id, ticket_type_id, ticket_id,
         metadata, created_at, updated_at,
         provider_reference, api_ref

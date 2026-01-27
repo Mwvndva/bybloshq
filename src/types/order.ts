@@ -19,6 +19,8 @@ export interface OrderCustomer {
   name: string;
   email: string;
   phone?: string;
+  mobilePayment?: string;
+  whatsappNumber?: string;
 }
 
 export interface OrderSeller {

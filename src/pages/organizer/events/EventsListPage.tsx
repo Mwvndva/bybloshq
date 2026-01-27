@@ -315,30 +315,30 @@ export default function EventsListPage() {
     const getStatusColor = (status: EventStatus) => {
         switch (status) {
             case 'published':
-                return 'bg-gradient-to-r from-green-100 to-green-200 text-green-800';
+                return 'bg-green-500/10 text-green-400 border border-green-400/30';
             case 'draft':
-                return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800';
+                return 'bg-[#111111] text-[#a1a1a1] border border-[#222222]';
             case 'cancelled':
-                return 'bg-gradient-to-r from-red-100 to-red-200 text-red-800';
+                return 'bg-red-500/10 text-red-400 border border-red-400/30';
             case 'completed':
-                return 'bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800';
+                return 'bg-blue-500/10 text-blue-400 border border-blue-400/30';
             case 'upcoming':
-                return 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800';
+                return 'bg-yellow-500/10 text-yellow-400 border border-yellow-400/30';
             default:
-                return 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800';
+                return 'bg-[#111111] text-[#a1a1a1] border border-[#222222]';
         }
     };
 
     if (isLoading && !isRefreshing) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+            <div className="min-h-screen bg-black flex items-center justify-center">
                 <div className="text-center space-y-6 p-8">
-                    <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
-                        <Loader2 className="h-12 w-12 text-yellow-600 animate-spin" />
+                    <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-3xl flex items-center justify-center shadow-lg">
+                        <Loader2 className="h-12 w-12 text-white animate-spin" />
                     </div>
                     <div>
-                        <h3 className="text-2xl font-black text-black mb-3">Loading Events</h3>
-                        <p className="text-gray-600 text-lg font-medium">Please wait while we fetch your events...</p>
+                        <h3 className="text-2xl font-semibold text-white mb-3">Loading Events</h3>
+                        <p className="text-[#a1a1a1] text-lg font-normal">Please wait while we fetch your events...</p>
                     </div>
                 </div>
             </div>
@@ -346,50 +346,72 @@ export default function EventsListPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Back Button */}
-                <div className="mb-8">
-                    <Button
-                        variant="outline"
-                        onClick={() => navigate('/organizer/dashboard')}
-                        className="inline-flex items-center gap-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
-                    >
-                        <ArrowLeft className="h-4 w-4" />
-                        Back to Dashboard
-                    </Button>
-                </div>
+        <div className="min-h-screen bg-black">
+            {/* Desktop Header - Full Width */}
+            <div className="hidden md:block bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-10 shadow-sm px-4 sm:px-6 lg:px-8 py-3 sm:py-4 mb-8 md:mb-10">
+                <div className="relative flex items-center justify-between h-14 lg:h-16">
+                    <div className="flex-1 flex items-center justify-start">
+                        <Button
+                            variant="secondary-byblos"
+                            onClick={() => navigate('/organizer/dashboard')}
+                            className="rounded-xl px-2 sm:px-3 py-1.5 text-xs sm:text-sm h-8"
+                        >
+                            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                            <span className="hidden sm:inline">Back to Dashboard</span>
+                            <span className="sm:hidden">Back</span>
+                        </Button>
+                    </div>
 
-                {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-2xl md:text-4xl font-black text-black mb-4">Event Management</h1>
-                    <p className="text-gray-600 text-lg font-medium">Manage all your events in one place</p>
+                    <div className="absolute left-1/2 -translate-x-1/2 min-w-0 max-w-[50%] text-center px-1 sm:px-2">
+                        <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
+                            Event Management
+                        </h1>
+                        <p className="hidden sm:block text-xs text-gray-400 font-medium truncate">
+                            Manage all your events in one place
+                        </p>
+                    </div>
+
+                    <div className="flex-1 flex items-center justify-end">
+                        <Button
+                            variant="secondary-byblos"
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className="flex items-center gap-1 sm:gap-2 rounded-xl h-8 px-2 sm:px-3 py-1.5"
+                        >
+                            {isRefreshing ? (
+                                <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                            )}
+                            <span className="hidden md:inline text-sm">Refresh</span>
+                        </Button>
+                    </div>
                 </div>
+            </div>
+
+            <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
                 {/* Quick Actions */}
-                <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50 mb-12">
+                <div
+                    className="rounded-2xl sm:rounded-3xl border shadow-2xl p-4 sm:p-5 md:p-6 mb-12"
+                    style={{
+                        background: '#111111',
+                        backdropFilter: 'blur(12px)',
+                        WebkitBackdropFilter: 'blur(12px)',
+                        border: '1px solid #222222',
+                        boxShadow: 'none'
+                    }}
+                >
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 space-y-4 sm:space-y-0">
                         <div>
-                            <h3 className="text-xl md:text-3xl font-black text-black">Quick Actions</h3>
-                            <p className="text-gray-600 font-medium mt-2">Common tasks for your events</p>
+                            <h3 className="text-xl md:text-3xl font-semibold text-white">Quick Actions</h3>
+                            <p className="text-[#a1a1a1] font-normal mt-2">Common tasks for your events</p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3">
                             <Button
-                                variant="outline"
-                                onClick={handleRefresh}
-                                disabled={isRefreshing}
-                                className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
-                            >
-                                {isRefreshing ? (
-                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                ) : (
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                )}
-                                Refresh
-                            </Button>
-                            <Button
+                                variant="secondary-byblos"
                                 onClick={() => navigate('/organizer/events/new')}
-                                className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-2 rounded-xl font-semibold"
+                                className="px-6 py-2 rounded-xl border-yellow-400/40"
                             >
                                 <Plus className="h-4 w-4 mr-2" />
                                 Create Event
@@ -399,53 +421,53 @@ export default function EventsListPage() {
 
                     <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                         <Button
-                            variant="outline"
-                            className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
+                            variant="secondary-byblos"
+                            className="h-14 sm:h-16 gap-3 sm:gap-4 rounded-xl"
                             onClick={() => navigate('/organizer/events/new')}
                         >
                             <Plus className="h-5 w-5 sm:h-6 sm:w-6" />
                             <div>
-                                <p className="font-semibold">Create New Event</p>
-                                <p className="text-sm text-gray-500">Start a new event</p>
+                                <p className="font-medium text-yellow-400">Create New Event</p>
+                                <p className="text-sm text-yellow-400/70">Start a new event</p>
                             </div>
                         </Button>
 
                         <Button
-                            variant="outline"
-                            className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
+                            variant="secondary-byblos"
+                            className="h-14 sm:h-16 gap-3 sm:gap-4 rounded-xl"
                             onClick={handleRefresh}
                         >
                             <RefreshCw className="h-5 w-5 sm:h-6 sm:w-6" />
                             <div>
-                                <p className="font-semibold">Refresh Events</p>
-                                <p className="text-sm text-gray-500">Reload all events</p>
+                                <p className="font-medium text-yellow-400">Refresh Events</p>
+                                <p className="text-sm text-yellow-400/70">Reload all events</p>
                             </div>
                         </Button>
 
                         <Button
-                            variant="outline"
-                            className="h-14 sm:h-16 justify-start gap-3 sm:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
+                            variant="secondary-byblos"
+                            className="h-14 sm:h-16 gap-3 sm:gap-4 rounded-xl"
                             onClick={() => navigate('/organizer/dashboard')}
                         >
                             <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                             <div>
-                                <p className="font-semibold">Back to Dashboard</p>
-                                <p className="text-sm text-gray-500">Return to overview</p>
+                                <p className="font-medium text-yellow-400">Back to Dashboard</p>
+                                <p className="text-sm text-yellow-400/70">Return to overview</p>
                             </div>
                         </Button>
                     </div>
                 </div>
 
                 {/* Events Grid */}
-                <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
+                <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222]">
                     <div className="flex justify-between items-center mb-8">
                         <div>
-                            <h3 className="text-xl md:text-3xl font-black text-black">Your Events</h3>
-                            <p className="text-gray-600 font-medium mt-2">
+                            <h3 className="text-xl md:text-3xl font-semibold text-white">Your Events</h3>
+                            <p className="text-[#a1a1a1] font-normal mt-2">
                                 {filteredEvents.length} {filteredEvents.length === 1 ? 'event' : 'events'} total
                             </p>
                         </div>
-                        <Badge variant="secondary" className="bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-4 py-2 text-sm font-bold rounded-xl">
+                        <Badge variant="secondary" className="bg-gradient-to-r from-yellow-400/20 to-yellow-500/20 text-yellow-400 px-4 py-2 text-sm font-semibold rounded-xl border border-yellow-400/30">
                             {filteredEvents.filter(e => getEventStatus(e) === 'upcoming' || getEventStatus(e) === 'published').length} Active
                         </Badge>
                     </div>
@@ -459,7 +481,7 @@ export default function EventsListPage() {
                                 const isTodayEvent = isToday(startDate);
 
                                 return (
-                                    <Card key={event.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
+                                    <Card key={event.id} className="group transition-all duration-500 border border-white/10 bg-black backdrop-blur-md transform hover:-translate-y-2">
                                         <div className="relative overflow-hidden rounded-t-2xl">
                                             {event.image_url ? (
                                                 <img
@@ -468,8 +490,8 @@ export default function EventsListPage() {
                                                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
                                                 />
                                             ) : (
-                                                <div className="w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                                                    <CalendarIcon className="h-16 w-16 text-gray-400" />
+                                                <div className="w-full h-48 bg-[#111111] flex items-center justify-center">
+                                                    <CalendarIcon className="h-16 w-16 text-gray-500" />
                                                 </div>
                                             )}
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -482,38 +504,38 @@ export default function EventsListPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-8 w-8 bg-white/90 hover:bg-white rounded-xl shadow-lg backdrop-blur-sm"
+                                                    className="h-8 w-8 bg-transparent hover:bg-white/5 rounded-xl border border-[#222222] text-[#a1a1a1] hover:text-white"
                                                     onClick={(e) => handleDeleteEvent(event.id, e)}
                                                 >
-                                                    <Trash2 className="h-4 w-4 text-red-600" />
+                                                    <Trash2 className="h-4 w-4 text-red-400" />
                                                 </Button>
                                             </div>
                                         </div>
                                         <CardContent className="p-6">
-                                            <h3 className="font-bold text-black mb-2 line-clamp-1 text-lg">{event.name}</h3>
+                                            <h3 className="font-semibold text-white mb-2 line-clamp-1 text-lg">{event.name}</h3>
                                             <p className="text-yellow-600 font-black text-xl mb-3">
                                                 {event.ticket_price > 0 ? `KSh ${Number(event.ticket_price).toLocaleString('en-KE')}` : 'Free'}
                                             </p>
-                                            <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed mb-4">
+                                            <p className="text-sm text-[#a1a1a1] line-clamp-2 leading-relaxed mb-4">
                                                 {event.description || 'No description available'}
                                             </p>
 
                                             <div className="space-y-3">
-                                                <div className="flex items-center text-sm text-gray-500">
+                                                <div className="flex items-center text-sm text-[#a1a1a1]">
                                                     <CalendarIcon className="h-4 w-4 mr-2" />
                                                     <span>
                                                         {isTodayEvent ? 'Today' : format(startDate, 'EEEE')}, {format(startDate, 'h:mm a')}
                                                     </span>
                                                 </div>
-                                                <div className="flex items-center text-sm text-gray-500">
+                                                <div className="flex items-center text-sm text-[#a1a1a1]">
                                                     <MapPin className="h-4 w-4 mr-2" />
                                                     <span className="truncate">{event.location}</span>
                                                 </div>
                                                 <div className="flex items-center justify-between text-sm">
-                                                    <span className="text-gray-500">Tickets sold</span>
-                                                    <span className="font-semibold">{event.tickets_sold} / {event.ticket_quantity}</span>
+                                                    <span className="text-[#a1a1a1]">Tickets sold</span>
+                                                    <span className="font-medium text-white">{event.tickets_sold} / {event.ticket_quantity}</span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-2">
+                                                <div className="w-full bg-gray-800 rounded-full h-2">
                                                     <div
                                                         className="bg-gradient-to-r from-yellow-400 to-yellow-500 h-2 rounded-full transition-all duration-300"
                                                         style={{
@@ -523,27 +545,27 @@ export default function EventsListPage() {
                                                 </div>
                                             </div>
 
-                                            <div className="mt-4 space-y-2">
+                                            <div className="mt-4 flex flex-col sm:flex-row gap-2">
                                                 <Button
-                                                    variant="outline"
+                                                    variant="secondary-byblos"
                                                     size="sm"
-                                                    className="w-full border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl"
+                                                    className="flex-1 rounded-xl"
                                                     onClick={() => navigate(`/organizer/events/${event.id}`)}
                                                 >
                                                     View Details
                                                 </Button>
                                                 {event.withdrawal_status === 'paid' ? (
-                                                    <div className="w-full flex items-center justify-center py-2 px-3 bg-green-50 border border-green-200 rounded-xl">
-                                                        <div className="flex items-center text-green-700">
+                                                    <div className="flex-1 flex items-center justify-center py-2 px-3 bg-green-500/20 border border-green-400/30 rounded-xl">
+                                                        <div className="flex items-center text-green-400">
                                                             <DollarSign className="h-4 w-4 mr-2" />
                                                             <span className="font-medium">Withdrawn</span>
                                                         </div>
                                                     </div>
                                                 ) : (
                                                     <Button
-                                                        variant="outline"
+                                                        variant="secondary-byblos"
                                                         size="sm"
-                                                        className="w-full border-yellow-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl text-yellow-700 hover:text-yellow-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                        className="flex-1 rounded-xl border-yellow-400/40"
                                                         onClick={(e) => handleWithdrawClick(event, e)}
                                                         disabled={!calculateRevenueBreakdown(event).netPayout || calculateRevenueBreakdown(event).netPayout <= 0}
                                                     >
@@ -559,11 +581,11 @@ export default function EventsListPage() {
                         </div>
                     ) : (
                         <div className="text-center py-20">
-                            <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
-                                <CalendarIcon className="h-12 w-12 text-yellow-600" />
+                            <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-3xl flex items-center justify-center shadow-lg">
+                                <CalendarIcon className="h-12 w-12 text-white" />
                             </div>
-                            <h3 className="text-2xl font-black text-black mb-3">No events found</h3>
-                            <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Create your first event to get started</p>
+                            <h3 className="text-2xl font-semibold text-white mb-3">No events found</h3>
+                            <p className="text-[#a1a1a1] text-lg font-normal max-w-md mx-auto mb-6">Create your first event to get started</p>
                             <Button
                                 onClick={() => navigate('/organizer/events/new')}
                                 className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
@@ -577,7 +599,7 @@ export default function EventsListPage() {
 
                 {pagination.totalPages > 1 && (
                     <div className="flex items-center justify-between mt-8">
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-[#a1a1a1]">
                             Showing <span className="font-medium">{filteredEvents.length}</span> of{' '}
                             <span className="font-medium">{pagination.total}</span> events
                         </div>
@@ -587,7 +609,7 @@ export default function EventsListPage() {
                                 size="sm"
                                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                                 disabled={pagination.page === 1}
-                                className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl"
+                                className="rounded-xl"
                             >
                                 Previous
                             </Button>
@@ -596,7 +618,7 @@ export default function EventsListPage() {
                                 size="sm"
                                 onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                                 disabled={pagination.page >= pagination.totalPages}
-                                className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl"
+                                className="rounded-xl"
                             >
                                 Next
                             </Button>
@@ -606,18 +628,27 @@ export default function EventsListPage() {
 
                 {/* Withdraw Dialog */}
                 <Dialog open={showWithdrawDialog} onOpenChange={setShowWithdrawDialog}>
-                    <DialogContent className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl max-w-md">
+                    <DialogContent
+                        className="rounded-2xl border shadow-2xl max-w-md"
+                        style={{
+                            background: 'rgba(20, 20, 20, 0.7)',
+                            backdropFilter: 'blur(12px)',
+                            WebkitBackdropFilter: 'blur(12px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+                        }}
+                    >
                         <DialogHeader className="text-center pb-6">
-                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-yellow-100 to-yellow-200 shadow-lg">
-                                <DollarSign className="h-8 w-8 text-yellow-600" />
+                            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-yellow-400 to-yellow-500 shadow-lg">
+                                <DollarSign className="h-8 w-8 text-white" />
                             </div>
-                            <DialogTitle className="text-2xl font-black text-black mt-4">
+                            <DialogTitle className="text-2xl font-semibold text-white mt-4">
                                 Withdraw Revenue
                             </DialogTitle>
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="mt-2 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                                className="mt-2 text-yellow-400 hover:text-yellow-300 hover:bg-white/5"
                                 onClick={() => setShowHistoryModal(true)}
                             >
                                 <RefreshCw className="h-3 w-3 mr-1" />
@@ -627,9 +658,9 @@ export default function EventsListPage() {
 
                         {selectedEventForWithdraw && (
                             <div className="space-y-6">
-                                <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
-                                    <h3 className="text-lg font-bold text-black mb-2">{selectedEventForWithdraw.name}</h3>
-                                    <p className="text-gray-600 text-sm">
+                                <div className="bg-[#111111] rounded-2xl p-6 border border-[#222222]">
+                                    <h3 className="text-lg font-semibold text-white mb-2">{selectedEventForWithdraw.name}</h3>
+                                    <p className="text-gray-400 text-sm">
                                         {selectedEventForWithdraw.tickets_sold} tickets sold at KSh {Number(selectedEventForWithdraw.ticket_price).toLocaleString('en-KE')} each
                                     </p>
                                 </div>
@@ -638,42 +669,42 @@ export default function EventsListPage() {
                                     const breakdown = calculateRevenueBreakdown(selectedEventForWithdraw);
                                     return (
                                         <div className="space-y-4">
-                                            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 border border-green-200">
+                                            <div className="bg-green-500/20 rounded-2xl p-6 border border-green-400/30">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <span className="font-bold text-green-800">
+                                                    <span className="font-semibold text-green-400">
                                                         {selectedEventForWithdraw.balance !== undefined && selectedEventForWithdraw.balance !== null ? 'Available Balance' : 'Total Revenue'}
                                                     </span>
-                                                    <span className="text-2xl font-black text-green-600">
+                                                    <span className="text-2xl font-semibold text-green-400">
                                                         KSh {breakdown.totalRevenue.toLocaleString('en-KE')}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-green-700">
+                                                <p className="text-sm text-green-500">
                                                     {selectedEventForWithdraw.balance !== undefined && selectedEventForWithdraw.balance !== null
                                                         ? 'Funds currently available for withdrawal'
                                                         : `${selectedEventForWithdraw.tickets_sold} tickets × KSh ${Number(selectedEventForWithdraw.ticket_price).toLocaleString('en-KE')}`}
                                                 </p>
                                             </div>
 
-                                            <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-6 border border-red-200">
+                                            <div className="bg-red-500/20 rounded-2xl p-6 border border-red-400/30">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <span className="font-bold text-red-800">Platform Fee (6%)</span>
-                                                    <span className="text-xl font-black text-red-600">
+                                                    <span className="font-semibold text-red-400">Platform Fee (6%)</span>
+                                                    <span className="text-xl font-semibold text-red-400">
                                                         KSh {breakdown.platformFee.toLocaleString('en-KE')}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-red-700">
+                                                <p className="text-sm text-red-500">
                                                     6% of total revenue
                                                 </p>
                                             </div>
 
-                                            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 border border-yellow-200">
+                                            <div className="bg-yellow-500/20 rounded-2xl p-6 border border-yellow-400/30">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <span className="font-bold text-yellow-800">Net Payout (94%)</span>
-                                                    <span className="text-2xl font-black text-yellow-600">
+                                                    <span className="font-semibold text-yellow-400">Net Payout (94%)</span>
+                                                    <span className="text-2xl font-semibold text-yellow-400">
                                                         KSh {breakdown.netPayout.toLocaleString('en-KE')}
                                                     </span>
                                                 </div>
-                                                <p className="text-sm text-yellow-700">
+                                                <p className="text-sm text-yellow-500">
                                                     Amount you will receive
                                                 </p>
                                             </div>
@@ -684,32 +715,41 @@ export default function EventsListPage() {
                                 {/* M-Pesa Fields */}
                                 <div className="space-y-4">
                                     <div>
-                                        <Label className="text-sm font-bold text-gray-700">M-Pesa Number</Label>
+                                        <Label className="text-sm font-medium text-white">M-Pesa Number</Label>
                                         <Input
                                             type="tel"
                                             placeholder="2547XXXXXXXX"
                                             value={withdrawDetails.mpesaNumber}
                                             onChange={(e) => setWithdrawDetails(prev => ({ ...prev, mpesaNumber: e.target.value }))}
-                                            className="border-gray-200 rounded-xl"
+                                            className="input-mobile rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                                         />
                                     </div>
                                     <div>
-                                        <Label className="text-sm font-bold text-gray-700">Registered Name</Label>
+                                        <Label className="text-sm font-medium text-white">Registered Name</Label>
                                         <Input
                                             type="text"
                                             placeholder="Name as registered with M-Pesa"
                                             value={withdrawDetails.registeredName}
                                             onChange={(e) => setWithdrawDetails(prev => ({ ...prev, registeredName: e.target.value }))}
-                                            className="border-gray-200 rounded-xl"
+                                            className="input-mobile rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex flex-col sm:flex-row gap-3 pt-4">
+                                <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
                                     <Button
+                                        variant="outline"
+                                        onClick={() => setShowWithdrawDialog(false)}
+                                        disabled={isProcessingWithdraw}
+                                        className="h-12 border-2 border-white/10 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl px-6 py-3 text-gray-300 hover:text-white order-2 sm:order-1"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        variant="byblos"
                                         onClick={processWithdrawal}
                                         disabled={isProcessingWithdraw}
-                                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold disabled:opacity-50"
+                                        className="h-12 shadow-lg px-6 py-3 rounded-xl order-1 sm:order-2 flex-1"
                                     >
                                         {isProcessingWithdraw ? (
                                             <>
@@ -722,14 +762,6 @@ export default function EventsListPage() {
                                                 Process Withdrawal
                                             </>
                                         )}
-                                    </Button>
-                                    <Button
-                                        variant="outline"
-                                        onClick={() => setShowWithdrawDialog(false)}
-                                        disabled={isProcessingWithdraw}
-                                        className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
-                                    >
-                                        Cancel
                                     </Button>
                                 </div>
                             </div>

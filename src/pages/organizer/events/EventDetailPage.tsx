@@ -500,14 +500,14 @@ export default function EventDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
-            <Loader2 className="h-12 w-12 text-yellow-600 animate-spin" />
+          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-3xl flex items-center justify-center shadow-lg">
+            <Loader2 className="h-12 w-12 text-white animate-spin" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-black mb-3">Loading Event</h3>
-            <p className="text-gray-600 text-lg font-medium">Please wait while we fetch your event details...</p>
+            <h3 className="text-2xl font-black text-white mb-3">Loading Event</h3>
+            <p className="text-[#a1a1a1] text-lg font-medium">Please wait while we fetch your event details...</p>
           </div>
         </div>
       </div>
@@ -544,93 +544,101 @@ export default function EventDetailPage() {
   const safeEvent = event || defaultEvent;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
-        <div className="mb-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/organizer/events')}
-            className="inline-flex items-center gap-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Events
-          </Button>
-        </div>
+    <div className="min-h-screen bg-black text-white">
+      {/* Search Header - Sticky */}
+      <div className="sticky top-0 z-50 w-full bg-black/80 backdrop-blur-md border-b border-white/10">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="relative flex items-center justify-between h-14 lg:h-16">
+            <div className="flex-1 flex items-center justify-start">
+              <Button
+                variant="secondary-byblos"
+                onClick={() => navigate('/organizer/events')}
+                className="rounded-xl px-2 sm:px-3 py-1.5 text-xs sm:text-sm h-8"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
+              </Button>
+            </div>
 
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center space-x-4 mb-4">
-            <h1 className="text-2xl md:text-4xl font-black text-black">{safeEvent.title}</h1>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleRefresh}
-              disabled={isRefreshing}
-              className="h-10 w-10 rounded-xl hover:bg-gray-100"
-            >
-              {isRefreshing ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <RefreshCw className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
-          <div className="flex items-center justify-center space-x-4 text-gray-600">
-            <Badge
-              variant={safeEvent.status === 'published' ? 'default' : 'secondary'}
-              className={`px-3 py-1 text-sm font-bold rounded-xl ${safeEvent.status === 'published'
-                ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800'
-                : 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800'
-                }`}
-            >
-              {safeEvent.status === 'published' ? 'Published' : 'Draft'}
-            </Badge>
-            <span className="text-sm">Created {formatDistanceToNow(new Date(safeEvent.createdAt), { addSuffix: true })}</span>
+            <div className="flex-shrink-0 flex items-center flex-col">
+              <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate max-w-[150px] sm:max-w-[300px]">
+                {safeEvent.title}
+              </h1>
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant={safeEvent.status === 'published' ? 'default' : 'secondary'}
+                  className={`px-1.5 py-0 text-[10px] sm:text-xs font-bold rounded-lg ${safeEvent.status === 'published'
+                    ? 'bg-green-500/10 text-green-400 border border-green-400/30'
+                    : 'bg-yellow-500/10 text-yellow-400 border border-yellow-400/30'
+                    }`}
+                >
+                  {safeEvent.status === 'published' ? 'Published' : 'Draft'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="flex-1 flex items-center justify-end">
+              <Button
+                variant="secondary-byblos"
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="flex items-center gap-1 sm:gap-2 rounded-xl h-8 px-2 sm:px-3 py-1.5"
+              >
+                {isRefreshing ? (
+                  <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
+                )}
+                <span className="hidden sm:inline">Refresh</span>
+              </Button>
+            </div>
           </div>
         </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Navigation Tabs */}
-        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-center gap-2 mb-8 sm:mb-12 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-gray-200/50 w-full sm:w-fit mx-auto">
+        <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:justify-center gap-2 mb-8 sm:mb-12 bg-white/5 backdrop-blur-xl p-2 rounded-2xl shadow-2xl border border-white/10 w-full sm:w-fit mx-auto">
           <Button
-            variant={activeTab === 'overview' ? 'default' : 'ghost'}
+            variant={activeTab === 'overview' ? 'byblos' : 'ghost'}
             onClick={() => setActiveTab('overview')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeTab === 'overview'
-              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? ' shadow-lg transform scale-105'
+              : 'text-[#a1a1a1] hover:text-white hover:bg-white/5 hover:scale-105 transition-all'
               }`}
           >
             <Calendar className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Overview</span>
           </Button>
           <Button
-            variant={activeTab === 'analytics' ? 'default' : 'ghost'}
+            variant={activeTab === 'analytics' ? 'byblos' : 'ghost'}
             onClick={() => setActiveTab('analytics')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeTab === 'analytics'
-              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? ' shadow-lg transform scale-105'
+              : 'text-[#a1a1a1] hover:text-white hover:bg-white/5 hover:scale-105 transition-all'
               }`}
           >
             <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Analytics</span>
           </Button>
           <Button
-            variant={activeTab === 'tickets' ? 'default' : 'ghost'}
+            variant={activeTab === 'tickets' ? 'byblos' : 'ghost'}
             onClick={() => setActiveTab('tickets')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeTab === 'tickets'
-              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? ' shadow-lg transform scale-105'
+              : 'text-[#a1a1a1] hover:text-white hover:bg-white/5 hover:scale-105 transition-all'
               }`}
           >
             <Ticket className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
             <span className="truncate">Tickets</span>
           </Button>
           <Button
-            variant={activeTab === 'settings' ? 'default' : 'ghost'}
+            variant={activeTab === 'settings' ? 'byblos' : 'ghost'}
             onClick={() => setActiveTab('settings')}
             className={`px-3 sm:px-6 py-2 sm:py-3 rounded-xl transition-all duration-300 font-semibold text-sm sm:text-base flex-1 sm:flex-none min-w-0 ${activeTab === 'settings'
-              ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-              : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+              ? ' shadow-lg transform scale-105'
+              : 'text-[#a1a1a1] hover:text-white hover:bg-white/5 hover:scale-105 transition-all'
               }`}
           >
             <Settings className="h-4 w-4 sm:h-5 sm:w-5 mr-1 sm:mr-2 flex-shrink-0" />
@@ -642,12 +650,12 @@ export default function EventDetailPage() {
         {activeTab === 'overview' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Event Overview</h2>
-              <p className="text-gray-600 text-lg font-medium">Complete details about your event</p>
+              <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Event Overview</h2>
+              <p className="text-[#a1a1a1] text-lg font-medium">Complete details about your event</p>
             </div>
 
             {/* Event Details Card */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
+            <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222]">
               <div className="space-y-8">
                 {safeEvent.image_url && (
                   <div className="relative overflow-hidden rounded-2xl">
@@ -662,23 +670,23 @@ export default function EventDetailPage() {
 
                 <div className="space-y-6">
                   <div>
-                    <h3 className="text-2xl font-black text-black mb-3">Description</h3>
-                    <p className="text-gray-600 leading-relaxed">
+                    <h3 className="text-2xl font-black text-white mb-3">Description</h3>
+                    <p className="text-[#a1a1a1] leading-relaxed">
                       {safeEvent.description || 'No description provided.'}
                     </p>
                   </div>
 
                   <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-3">
-                      <h3 className="text-xl font-black text-black">Date & Time</h3>
-                      <div className="flex items-center space-x-3 text-gray-600">
+                      <h3 className="text-xl font-black text-white">Date & Time</h3>
+                      <div className="flex items-center space-x-3 text-[#a1a1a1]">
                         <Calendar className="h-5 w-5" />
                         <span>{formatDate(safeEvent.startDate, 'full')}</span>
                       </div>
                     </div>
                     <div className="space-y-3">
-                      <h3 className="text-xl font-black text-black">Location</h3>
-                      <div className="flex items-center space-x-3 text-gray-600">
+                      <h3 className="text-xl font-black text-white">Location</h3>
+                      <div className="flex items-center space-x-3 text-[#a1a1a1]">
                         <MapPin className="h-5 w-5" />
                         <span>{safeEvent.venue}{safeEvent.location && `, ${safeEvent.location}`}</span>
                       </div>
@@ -693,33 +701,33 @@ export default function EventDetailPage() {
         {activeTab === 'analytics' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Event Analytics</h2>
-              <p className="text-gray-600 text-lg font-medium">Track your event performance</p>
+              <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Event Analytics</h2>
+              <p className="text-[#a1a1a1] text-lg font-medium">Track your event performance</p>
             </div>
 
             {/* Analytics Cards */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <Card className="bg-[#111111] border-[#222222] hover:border-yellow-400/30 transition-all duration-300 transform hover:-translate-y-1">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600 mb-1">Tickets Sold</p>
-                      <p className="text-xl md:text-3xl font-black text-black mb-2">{analytics.totalTicketsSold.toLocaleString()}</p>
+                      <p className="text-sm font-medium text-[#a1a1a1] mb-1">Tickets Sold</p>
+                      <p className="text-xl md:text-3xl font-black text-white mb-2">{analytics.totalTicketsSold.toLocaleString()}</p>
                       <p className="text-xs text-gray-500">Total tickets sold</p>
                     </div>
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-green-100 to-green-200">
-                      <Ticket className="h-8 w-8" />
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-green-500/10 border border-green-500/20">
+                      <Ticket className="h-8 w-8 text-green-400" />
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <Card className="bg-[#111111] border-[#222222] hover:border-yellow-400/30 transition-all duration-300 transform hover:-translate-y-1">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600 mb-1">Scanned Tickets</p>
-                      <p className="text-xl md:text-3xl font-black text-black mb-2">{analytics.totalScannedTickets.toLocaleString()}</p>
+                      <p className="text-sm font-medium text-[#a1a1a1] mb-1">Scanned Tickets</p>
+                      <p className="text-xl md:text-3xl font-black text-white mb-2">{analytics.totalScannedTickets.toLocaleString()}</p>
                       <p className="text-xs text-gray-500">Scanned tickets</p>
                       {analytics.totalTicketsSold > 0 && (
                         <p className="text-xs text-gray-500">
@@ -727,7 +735,7 @@ export default function EventDetailPage() {
                         </p>
                       )}
                     </div>
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-100 to-blue-200">
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-blue-500/10 border border-blue-500/20">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24"
@@ -736,7 +744,7 @@ export default function EventDetailPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth="2"
-                        className="h-8 w-8"
+                        className="h-8 w-8 text-blue-400"
                       >
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                         <path d="m9 11 3 3L22 4" />
@@ -746,18 +754,18 @@ export default function EventDetailPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <Card className="bg-[#111111] border-[#222222] hover:border-yellow-400/30 transition-all duration-300 transform hover:-translate-y-1">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600 mb-1">Total Revenue</p>
-                      <p className="text-xl md:text-3xl font-black text-black mb-2">
+                      <p className="text-sm font-medium text-[#a1a1a1] mb-1">Total Revenue</p>
+                      <p className="text-xl md:text-3xl font-black text-white mb-2">
                         {formatCurrency(analytics.totalRevenue)}
                       </p>
                       <p className="text-xs text-gray-500">Total revenue generated</p>
                     </div>
-                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-gradient-to-br from-yellow-100 to-yellow-200">
-                      <DollarSign className="h-8 w-8" />
+                    <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-yellow-500/20 border border-yellow-400/30">
+                      <DollarSign className="h-8 w-8 text-yellow-400" />
                     </div>
                   </div>
                 </CardContent>
@@ -769,15 +777,15 @@ export default function EventDetailPage() {
         {activeTab === 'tickets' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Ticket Management</h2>
-              <p className="text-gray-600 text-lg font-medium">Manage your event tickets</p>
+              <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Ticket Management</h2>
+              <p className="text-[#a1a1a1] text-lg font-medium">Manage your event tickets</p>
             </div>
 
             {/* Ticket Management Tabs */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
+            <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222]">
               <Tabs defaultValue="types" className="w-full">
-                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto mb-8 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-1 gap-1 sm:gap-0">
-                  <TabsTrigger value="types" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg">
+                <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto mb-8 bg-black/40 border border-white/10 rounded-2xl p-1 gap-1 sm:gap-0">
+                  <TabsTrigger value="types" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-400">
                     <List className="h-4 w-4 mr-2" />
                     Ticket Types
                   </TabsTrigger>
@@ -792,19 +800,19 @@ export default function EventDetailPage() {
                 </TabsList>
 
                 <TabsContent value="types" className="space-y-6">
-                  <h3 className="text-2xl font-black text-black">Ticket Types</h3>
+                  <h3 className="text-2xl font-black text-white">Ticket Types</h3>
                   {safeEvent.ticketTypes.length > 0 ? (
                     <div className="space-y-4">
                       {safeEvent.ticketTypes.map((ticket) => (
-                        <Card key={ticket.id} className="border border-gray-200 rounded-2xl p-6 bg-white/50 backdrop-blur-sm shadow-lg">
+                        <Card key={ticket.id} className="bg-black/40 border border-white/10 rounded-2xl p-6 shadow-2xl">
                           <CardContent className="p-0">
                             <div className="flex justify-between items-start mb-4">
                               <div>
-                                <h4 className="font-bold text-black text-lg">{ticket.name}</h4>
+                                <h4 className="font-bold text-white text-lg">{ticket.name}</h4>
                                 {ticket.description && (
-                                  <p className="text-sm text-gray-600 mt-1">{ticket.description}</p>
+                                  <p className="text-sm text-[#a1a1a1] mt-1">{ticket.description}</p>
                                 )}
-                                <p className="text-yellow-600 font-black text-xl mt-2">
+                                <p className="text-yellow-400 font-black text-xl mt-2">
                                   KSh {ticket.price.toLocaleString('en-KE', { minimumFractionDigits: 2 })} each
                                 </p>
                               </div>
@@ -812,12 +820,12 @@ export default function EventDetailPage() {
 
                             <div className="grid gap-4 md:grid-cols-3">
                               <div>
-                                <p className="text-sm text-gray-600">Total Tickets</p>
-                                <p className="text-2xl font-black text-black">{ticket.quantity || 0}</p>
+                                <p className="text-sm text-[#a1a1a1]">Total Tickets</p>
+                                <p className="text-2xl font-black text-white">{ticket.quantity || 0}</p>
                               </div>
                               <div>
-                                <p className="text-sm text-gray-600">Tickets Sold</p>
-                                <p className="text-2xl font-black text-black">{ticket.sold || 0}</p>
+                                <p className="text-sm text-[#a1a1a1]">Tickets Sold</p>
+                                <p className="text-2xl font-black text-white">{ticket.sold || 0}</p>
                                 {ticket.quantity > 0 && (
                                   <p className="text-xs text-gray-500">
                                     ({(ticket.sold / ticket.quantity * 100).toFixed(1)}% sold)
@@ -825,8 +833,8 @@ export default function EventDetailPage() {
                                 )}
                               </div>
                               <div>
-                                <p className="text-sm text-gray-600">Amount Generated</p>
-                                <p className="text-2xl font-black text-black">
+                                <p className="text-sm text-[#a1a1a1]">Amount Generated</p>
+                                <p className="text-2xl font-black text-white">
                                   KSh {((ticket.sold || 0) * (ticket.price || 0)).toLocaleString('en-KE', { minimumFractionDigits: 2 })}
                                 </p>
                               </div>
@@ -837,79 +845,79 @@ export default function EventDetailPage() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <Ticket className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                      <h3 className="text-xl font-black text-black mb-2">No ticket types available</h3>
-                      <p className="text-gray-600">This event doesn't have any ticket types configured.</p>
+                      <Ticket className="h-16 w-16 mx-auto mb-4 text-[#222222]" />
+                      <h3 className="text-xl font-black text-white mb-2">No ticket types available</h3>
+                      <p className="text-[#a1a1a1]">This event doesn't have any ticket types configured.</p>
                     </div>
                   )}
                 </TabsContent>
 
                 <TabsContent value="list" className="space-y-6">
-                  <h3 className="text-2xl font-black text-black">Individual Tickets</h3>
+                  <h3 className="text-2xl font-black text-white">Individual Tickets</h3>
                   {ticketsLoading ? (
                     <div className="flex justify-center py-12">
                       <div className="text-center space-y-4">
-                        <Loader2 className="h-12 w-12 animate-spin mx-auto text-yellow-600" />
-                        <p className="text-gray-600 font-medium">Loading tickets...</p>
+                        <Loader2 className="h-12 w-12 animate-spin mx-auto text-yellow-400" />
+                        <p className="text-[#a1a1a1] font-medium">Loading tickets...</p>
                       </div>
                     </div>
                   ) : ticketsError ? (
                     <div className="text-center py-12">
                       <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-400" />
-                      <h3 className="text-xl font-black text-black mb-2">Error Loading Tickets</h3>
-                      <p className="text-gray-600 mb-4">{ticketsError}</p>
+                      <h3 className="text-xl font-black text-white mb-2">Error Loading Tickets</h3>
+                      <p className="text-[#a1a1a1] mb-4">{ticketsError}</p>
                       <Button
-                        variant="outline"
+                        variant="secondary-byblos"
                         onClick={fetchTickets}
-                        className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
+                        className="rounded-xl px-6 py-3"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Retry
                       </Button>
                     </div>
                   ) : tickets.length > 0 ? (
-                    <div className="bg-white/50 backdrop-blur-sm rounded-2xl border border-gray-200 overflow-hidden">
+                    <div className="bg-black/40 backdrop-blur-sm rounded-2xl border border-white/10 overflow-hidden shadow-2xl">
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
-                            <TableRow className="border-gray-200">
-                              <TableHead className="font-bold text-black min-w-[100px]">Ticket #</TableHead>
-                              <TableHead className="font-bold text-black min-w-[120px]">Type</TableHead>
-                              <TableHead className="font-bold text-black min-w-[150px]">Customer</TableHead>
-                              <TableHead className="font-bold text-black min-w-[100px]">Price</TableHead>
-                              <TableHead className="font-bold text-black min-w-[100px]">Status</TableHead>
-                              <TableHead className="font-bold text-black min-w-[120px]">Scanned</TableHead>
-                              <TableHead className="font-bold text-black min-w-[120px]">Purchased</TableHead>
+                            <TableRow className="border-white/10 hover:bg-white/5">
+                              <TableHead className="font-bold text-[#a1a1a1] min-w-[100px]">Ticket #</TableHead>
+                              <TableHead className="font-bold text-[#a1a1a1] min-w-[120px]">Type</TableHead>
+                              <TableHead className="font-bold text-[#a1a1a1] min-w-[150px]">Customer</TableHead>
+                              <TableHead className="font-bold text-[#a1a1a1] min-w-[100px]">Price</TableHead>
+                              <TableHead className="font-bold text-[#a1a1a1] min-w-[100px]">Status</TableHead>
+                              <TableHead className="font-bold text-[#a1a1a1] min-w-[120px]">Scanned</TableHead>
+                              <TableHead className="font-bold text-[#a1a1a1] min-w-[120px]">Purchased</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
                             {tickets.map((ticket) => (
-                              <TableRow key={ticket.id} className="border-gray-200 hover:bg-gray-50/50">
-                                <TableCell className="font-medium whitespace-nowrap">
+                              <TableRow key={ticket.id} className="border-white/5 hover:bg-white/5 transition-colors">
+                                <TableCell className="font-medium whitespace-nowrap text-white">
                                   {ticket.ticket_number || `TKT-${ticket.id?.toString().padStart(6, '0')}`}
                                 </TableCell>
-                                <TableCell className="whitespace-nowrap">
+                                <TableCell className="whitespace-nowrap text-[#a1a1a1]">
                                   {ticket.ticket_type_name || ticket.ticket_type || 'General'}
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex flex-col">
-                                    <span className="font-medium whitespace-nowrap">{ticket.customer_name || 'Guest'}</span>
+                                    <span className="font-medium whitespace-nowrap text-white">{ticket.customer_name || 'Guest'}</span>
                                     {ticket.customer_email && (
-                                      <span className="text-xs text-gray-500 truncate max-w-[150px]">
+                                      <span className="text-xs text-[#a1a1a1] truncate max-w-[150px]">
                                         {ticket.customer_email}
                                       </span>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell className="font-medium whitespace-nowrap">
+                                <TableCell className="font-medium whitespace-nowrap text-yellow-400">
                                   KSh {ticket.price?.toLocaleString('en-KE', { minimumFractionDigits: 2 }) || '0.00'}
                                 </TableCell>
                                 <TableCell className="whitespace-nowrap">
                                   <Badge
-                                    className={`px-3 py-1 text-xs font-bold rounded-xl ${ticket.status === 'paid' ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800' :
-                                      ticket.status === 'pending' ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800' :
-                                        ticket.status === 'cancelled' ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800' :
-                                          'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800'
+                                    className={`px-3 py-1 text-xs font-bold rounded-xl ${ticket.status === 'paid' ? 'bg-green-500/10 text-green-400 border border-green-400/20' :
+                                      ticket.status === 'pending' ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-400/20' :
+                                        ticket.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border border-red-400/20' :
+                                          'bg-white/5 text-[#a1a1a1] border border-white/10'
                                       }`}
                                   >
                                     {ticket.status ? ticket.status.charAt(0).toUpperCase() + ticket.status.slice(1) : 'Unknown'}
@@ -918,10 +926,10 @@ export default function EventDetailPage() {
                                 <TableCell className="whitespace-nowrap">
                                   <div className="flex items-center">
                                     <div
-                                      className={`h-3 w-3 rounded-full mr-3 ${ticket.scanned ? 'bg-green-500' : 'bg-gray-300'
+                                      className={`h-2.5 w-2.5 rounded-full mr-2 ${ticket.scanned ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-[#333333]'
                                         }`}
                                     />
-                                    <span className={`font-medium ${ticket.scanned ? 'text-green-600' : 'text-gray-600'}`}>
+                                    <span className={`font-medium ${ticket.scanned ? 'text-green-400' : 'text-[#a1a1a1]'}`}>
                                       {ticket.scanned ? 'Scanned' : 'Not Scanned'}
                                     </span>
                                   </div>
@@ -941,13 +949,13 @@ export default function EventDetailPage() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <Ticket className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-                      <h3 className="text-xl font-black text-black mb-2">No tickets found</h3>
-                      <p className="text-gray-600 mb-4">No individual tickets have been purchased for this event yet.</p>
+                      <Ticket className="h-16 w-16 mx-auto mb-4 text-[#222222]" />
+                      <h3 className="text-xl font-black text-white mb-2">No tickets found</h3>
+                      <p className="text-[#a1a1a1] mb-4">No individual tickets have been purchased for this event yet.</p>
                       <Button
-                        variant="outline"
+                        variant="secondary-byblos"
                         onClick={fetchTickets}
-                        className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
+                        className="rounded-xl px-6 py-3"
                       >
                         <RefreshCw className="h-4 w-4 mr-2" />
                         Refresh
@@ -967,31 +975,31 @@ export default function EventDetailPage() {
         {activeTab === 'settings' && (
           <div className="space-y-12">
             <div className="text-center">
-              <h2 className="text-2xl md:text-4xl font-black text-black mb-4">Event Settings</h2>
-              <p className="text-gray-600 text-lg font-medium">Quick actions for your event</p>
+              <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Event Settings</h2>
+              <p className="text-[#a1a1a1] text-lg font-medium">Quick actions for your event</p>
             </div>
 
             {/* Settings Sections */}
             <div className="space-y-8">
               {/* Quick Actions */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-                <h3 className="text-2xl font-black text-black mb-6">Quick Actions</h3>
+              <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222] shadow-2xl">
+                <h3 className="text-2xl font-black text-white mb-6">Quick Actions</h3>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   <Button
-                    variant="outline"
-                    className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
+                    variant="secondary-byblos"
+                    className="h-16 justify-start gap-4 text-left rounded-xl"
                     onClick={() => navigate(`/organizer/events/${id}/edit`)}
                   >
                     <Edit className="h-6 w-6" />
                     <div>
                       <p className="font-semibold">Edit Event</p>
-                      <p className="text-sm text-gray-500">Modify event details</p>
+                      <p className="text-sm text-yellow-400/70">Modify event details</p>
                     </div>
                   </Button>
 
                   <Button
-                    variant="outline"
-                    className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
+                    variant="secondary-byblos"
+                    className="h-16 justify-start gap-4 text-left rounded-xl"
                     onClick={() => {
                       const viewUrl = getEventUrl(safeEvent, 'view');
                       if (viewUrl) {
@@ -1002,13 +1010,13 @@ export default function EventDetailPage() {
                     <LinkIcon className="h-6 w-6" />
                     <div>
                       <p className="font-semibold">View Event</p>
-                      <p className="text-sm text-gray-500">Preview public page</p>
+                      <p className="text-sm text-yellow-400/70">Preview public page</p>
                     </div>
                   </Button>
 
                   <Button
-                    variant="outline"
-                    className="h-16 justify-start gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-xl"
+                    variant="secondary-byblos"
+                    className="h-16 justify-start gap-4 text-left rounded-xl"
                     onClick={() => {
                       const purchaseUrl = getEventUrl(safeEvent, 'purchase');
                       if (purchaseUrl) {
@@ -1019,33 +1027,33 @@ export default function EventDetailPage() {
                     <ShoppingCart className="h-6 w-6" />
                     <div>
                       <p className="font-semibold">Purchase Page</p>
-                      <p className="text-sm text-gray-500">View ticket purchase</p>
+                      <p className="text-sm text-yellow-400/70">View ticket purchase</p>
                     </div>
                   </Button>
                 </div>
               </div>
 
               {/* Share Links */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-                <h3 className="text-2xl font-black text-black mb-6">Share Links</h3>
+              <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222] shadow-2xl">
+                <h3 className="text-2xl font-black text-white mb-6">Share Links</h3>
                 <div className="space-y-6">
                   {/* Event View Link */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700">Event View Link</Label>
+                    <Label className="text-sm font-bold text-[#a1a1a1]">Event View Link</Label>
                     <div className="flex items-center space-x-3">
-                      <div className="flex-1 flex items-center px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
-                        <LinkIcon className="h-5 w-5 mr-3 text-gray-500 flex-shrink-0" />
+                      <div className="flex-1 flex items-center px-4 py-3 border border-white/10 rounded-xl bg-black/40">
+                        <LinkIcon className="h-5 w-5 mr-3 text-[#a1a1a1] flex-shrink-0" />
                         <a
                           href={getEventUrl(safeEvent, 'view')}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline truncate"
+                          className="text-sm text-blue-400 hover:underline truncate"
                         >
                           {getEventUrl(safeEvent, 'view')}
                         </a>
                       </div>
                       <Button
-                        variant="outline"
+                        variant="secondary-byblos"
                         size="sm"
                         onClick={() => {
                           const viewUrl = getEventUrl(safeEvent, 'view');
@@ -1057,33 +1065,33 @@ export default function EventDetailPage() {
                             });
                           }
                         }}
-                        className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-3"
+                        className="rounded-xl px-4 py-3"
                       >
                         Copy
                       </Button>
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-[#a1a1a1]">
                       Share this link to let people view your event details
                     </p>
                   </div>
 
                   {/* Direct Purchase Link */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700">Direct Purchase Link</Label>
+                    <Label className="text-sm font-bold text-[#a1a1a1]">Direct Purchase Link</Label>
                     <div className="flex items-center space-x-3">
-                      <div className="flex-1 flex items-center px-4 py-3 border-2 border-gray-200 rounded-xl bg-white">
-                        <ShoppingCart className="h-5 w-5 mr-3 text-gray-500 flex-shrink-0" />
+                      <div className="flex-1 flex items-center px-4 py-3 border border-white/10 rounded-xl bg-black/40">
+                        <ShoppingCart className="h-5 w-5 mr-3 text-[#a1a1a1] flex-shrink-0" />
                         <a
                           href={getEventUrl(safeEvent, 'purchase')}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline truncate"
+                          className="text-sm text-blue-400 hover:underline truncate"
                         >
                           {getEventUrl(safeEvent, 'purchase')}
                         </a>
                       </div>
                       <Button
-                        variant="outline"
+                        variant="secondary-byblos"
                         size="sm"
                         onClick={() => {
                           const purchaseUrl = getEventUrl(safeEvent, 'purchase');
@@ -1095,12 +1103,12 @@ export default function EventDetailPage() {
                             });
                           }
                         }}
-                        className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-3"
+                        className="rounded-xl px-4 py-3"
                       >
                         Copy
                       </Button>
                     </div>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-[#a1a1a1]">
                       Share this link to take people directly to ticket purchase
                     </p>
                   </div>
@@ -1108,19 +1116,19 @@ export default function EventDetailPage() {
               </div>
 
               {/* Event Statistics */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-                <h3 className="text-2xl font-black text-black mb-6">Event Statistics</h3>
+              <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222] shadow-2xl">
+                <h3 className="text-2xl font-black text-white mb-6">Event Statistics</h3>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                  <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center">
-                      <Ticket className="h-6 w-6 text-green-600" />
+                  <div className="text-center p-6 bg-black/40 rounded-2xl border border-white/10">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-green-500/10 border border-green-500/20 rounded-xl flex items-center justify-center">
+                      <Ticket className="h-6 w-6 text-green-400" />
                     </div>
-                    <p className="text-2xl font-black text-black">{analytics.totalTicketsSold}</p>
-                    <p className="text-sm text-gray-600 font-medium">Tickets Sold</p>
+                    <p className="text-2xl font-black text-white">{analytics.totalTicketsSold}</p>
+                    <p className="text-sm text-[#a1a1a1] font-medium">Tickets Sold</p>
                   </div>
 
-                  <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
+                  <div className="text-center p-6 bg-black/40 rounded-2xl border border-white/10">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-center">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24"
@@ -1129,42 +1137,42 @@ export default function EventDetailPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth="2"
-                        className="h-6 w-6 text-blue-600"
+                        className="h-6 w-6 text-blue-400"
                       >
                         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                         <path d="m9 11 3 3L22 4" />
                       </svg>
                     </div>
-                    <p className="text-2xl font-black text-black">{analytics.totalScannedTickets}</p>
-                    <p className="text-sm text-gray-600 font-medium">Scanned</p>
+                    <p className="text-2xl font-black text-white">{analytics.totalScannedTickets}</p>
+                    <p className="text-sm text-[#a1a1a1] font-medium">Scanned</p>
                   </div>
 
-                  <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center">
-                      <DollarSign className="h-6 w-6 text-yellow-600" />
+                  <div className="text-center p-6 bg-black/40 rounded-2xl border border-white/10">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-center justify-center">
+                      <DollarSign className="h-6 w-6 text-yellow-400" />
                     </div>
-                    <p className="text-2xl font-black text-black">{formatCurrency(analytics.totalRevenue)}</p>
-                    <p className="text-sm text-gray-600 font-medium">Revenue</p>
+                    <p className="text-2xl font-black text-white">{formatCurrency(analytics.totalRevenue)}</p>
+                    <p className="text-sm text-[#a1a1a1] font-medium">Revenue</p>
                   </div>
 
-                  <div className="text-center p-6 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
-                    <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center">
-                      <Calendar className="h-6 w-6 text-purple-600" />
+                  <div className="text-center p-6 bg-black/40 rounded-2xl border border-white/10">
+                    <div className="w-12 h-12 mx-auto mb-3 bg-purple-500/10 border border-purple-500/20 rounded-xl flex items-center justify-center">
+                      <Calendar className="h-6 w-6 text-purple-400" />
                     </div>
-                    <p className="text-2xl font-black text-black">{safeEvent.ticketTypes.length}</p>
-                    <p className="text-sm text-gray-600 font-medium">Ticket Types</p>
+                    <p className="text-2xl font-black text-white">{safeEvent.ticketTypes.length}</p>
+                    <p className="text-sm text-[#a1a1a1] font-medium">Ticket Types</p>
                   </div>
                 </div>
               </div>
 
               {/* Danger Zone */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-                <h3 className="text-2xl font-black text-red-600 mb-6">Danger Zone</h3>
-                <div className="p-6 border-2 border-red-200 rounded-2xl bg-red-50/50">
+              <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222] shadow-2xl">
+                <h3 className="text-2xl font-black text-red-500 mb-6">Danger Zone</h3>
+                <div className="p-6 border-2 border-red-500/20 rounded-2xl bg-red-500/5">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
-                      <h4 className="font-bold text-red-600 text-lg">Delete this event</h4>
-                      <p className="text-sm text-gray-600 mt-1">
+                      <h4 className="font-bold text-red-500 text-lg">Delete this event</h4>
+                      <p className="text-sm text-[#a1a1a1] mt-1">
                         Once you delete an event, there is no going back. Please be certain.
                       </p>
                     </div>

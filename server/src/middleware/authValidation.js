@@ -39,10 +39,15 @@ export const validateRegistration = [
         .matches(/[!@#$%^&*(),.?":{}|<>]/)
         .withMessage('Password must contain at least one special character'),
 
-    body('phone')
+    body('mobile_payment')
         .trim()
         .notEmpty()
-        .withMessage('Phone number is required'),
+        .withMessage('Mobile payment number is required'),
+
+    body('whatsapp_number')
+        .trim()
+        .notEmpty()
+        .withMessage('WhatsApp number is required'),
 
     body('city')
         .trim()

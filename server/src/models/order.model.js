@@ -12,9 +12,9 @@ class Order {
     const query = `
       INSERT INTO product_orders (
         buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
-        payment_method, buyer_name, buyer_email, buyer_phone, shipping_address,
+        payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
         notes, metadata, status, payment_status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
       RETURNING *
     `;
 
@@ -27,7 +27,8 @@ class Order {
       data.payment_method,
       data.buyer_name,
       data.buyer_email,
-      data.buyer_phone,
+      data.buyer_mobile_payment,
+      data.buyer_whatsapp_number,
       data.shipping_address,
       data.notes,
       data.metadata,

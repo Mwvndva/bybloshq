@@ -65,22 +65,22 @@ export function WithdrawalHistoryModal({
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'completed': return 'bg-green-100 text-green-800 border-green-200';
-            case 'processing': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'failed': return 'bg-red-100 text-red-800 border-red-200';
-            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+            case 'completed': return 'bg-green-900/30 text-green-400 border-green-500/20';
+            case 'processing': return 'bg-yellow-900/30 text-yellow-400 border-yellow-500/20';
+            case 'failed': return 'bg-red-900/30 text-red-400 border-red-500/20';
+            default: return 'bg-gray-800/60 text-gray-300 border-white/10';
         }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl bg-white/95 backdrop-blur-sm shadow-2xl rounded-3xl">
+            <DialogContent className="max-w-2xl bg-black/95 backdrop-blur-sm shadow-2xl rounded-3xl border border-white/10">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-black text-center flex items-center justify-center gap-2">
-                        <DollarSign className="h-6 w-6 text-yellow-600" />
+                    <DialogTitle className="text-2xl font-black text-center flex items-center justify-center gap-2 text-white">
+                        <DollarSign className="h-6 w-6 text-yellow-400" />
                         Payout History
                     </DialogTitle>
-                    <p className="text-center text-gray-500 font-medium">{eventName}</p>
+                    <p className="text-center text-gray-400 font-medium">{eventName}</p>
                 </DialogHeader>
 
                 <div className="mt-6">
@@ -89,22 +89,22 @@ export function WithdrawalHistoryModal({
                             <Loader2 className="h-8 w-8 animate-spin text-yellow-600" />
                         </div>
                     ) : withdrawals.length === 0 ? (
-                        <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                            <p className="text-gray-500">No withdrawal history found for this event.</p>
+                        <div className="text-center py-12 bg-white/5 rounded-2xl border border-dashed border-white/10">
+                            <p className="text-gray-400">No withdrawal history found for this event.</p>
                         </div>
                     ) : (
                         <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
                             {withdrawals.map((withdrawal) => (
                                 <div
                                     key={withdrawal.id}
-                                    className="bg-white border boundary-gray-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300"
+                                    className="bg-white/5 border border-white/10 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all duration-300"
                                 >
                                     <div className="flex justify-between items-start mb-3">
                                         <div>
-                                            <h4 className="font-bold text-lg text-gray-900">
+                                            <h4 className="font-bold text-lg text-white">
                                                 KSh {Number(withdrawal.amount).toLocaleString('en-KE')}
                                             </h4>
-                                            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                                            <p className="text-sm text-gray-400 flex items-center gap-1 mt-1">
                                                 <Calendar className="h-3 w-3" />
                                                 {format(new Date(withdrawal.created_at), "MMM d, yyyy 'at' h:mm a")}
                                             </p>
@@ -114,15 +114,15 @@ export function WithdrawalHistoryModal({
                                         </Badge>
                                     </div>
 
-                                    <div className="bg-gray-50 rounded-xl p-3 text-sm space-y-2">
+                                    <div className="bg-white/5 rounded-xl p-3 text-sm space-y-2 border border-white/5">
                                         <div className="flex justify-between">
-                                            <span className="text-gray-500">Recipient</span>
-                                            <span className="font-medium text-gray-900">{withdrawal.mpesa_name} ({withdrawal.mpesa_number})</span>
+                                            <span className="text-gray-400">Recipient</span>
+                                            <span className="font-medium text-white">{withdrawal.mpesa_name} ({withdrawal.mpesa_number})</span>
                                         </div>
                                         {withdrawal.provider_reference && (
                                             <div className="flex justify-between">
-                                                <span className="text-gray-500">Ref ID</span>
-                                                <span className="font-mono text-xs bg-gray-200 px-2 py-0.5 rounded text-gray-700">
+                                                <span className="text-gray-400">Ref ID</span>
+                                                <span className="font-mono text-xs bg-white/10 px-2 py-0.5 rounded text-gray-300">
                                                     {withdrawal.provider_reference}
                                                 </span>
                                             </div>

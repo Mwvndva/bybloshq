@@ -63,17 +63,18 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
   if (!eventId) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="text-center space-y-6 p-8">
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
-            <XCircle className="h-12 w-12 text-red-600" />
+          <div className="w-24 h-24 mx-auto bg-red-500/10 border border-red-500/20 rounded-3xl flex items-center justify-center shadow-2xl">
+            <XCircle className="h-12 w-12 text-red-500" />
           </div>
           <div>
-            <h1 className="text-2xl font-black text-black mb-3">Event Not Found</h1>
-            <p className="text-gray-600 text-lg font-medium mb-6">The event you're looking for doesn't exist or has been removed.</p>
+            <h1 className="text-2xl font-black text-white mb-3 tracking-tight">Event Not Found</h1>
+            <p className="text-[#a1a1a1] text-lg font-medium mb-8">The event you're looking for doesn't exist or has been removed.</p>
             <Button
+              variant="secondary-byblos"
               onClick={() => navigate('/events')}
-              className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
+              className="px-8 py-3 rounded-xl font-bold shadow-xl"
             >
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Events
             </Button>
@@ -193,14 +194,14 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
-            <Loader2 className="h-12 w-12 text-yellow-600 animate-spin" />
+          <div className="w-24 h-24 mx-auto bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center shadow-2xl">
+            <Loader2 className="h-12 w-12 text-yellow-400 animate-spin" />
           </div>
           <div>
-            <h3 className="text-2xl font-black text-black mb-3">Loading Event</h3>
-            <p className="text-gray-600 text-lg font-medium">Please wait while we fetch the event details...</p>
+            <h3 className="text-2xl font-black text-white mb-3 tracking-tight">Loading Event</h3>
+            <p className="text-[#a1a1a1] text-lg font-medium">Please wait while we fetch the event details...</p>
           </div>
         </div>
       </div>
@@ -209,25 +210,26 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
   if (!event) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
         <div className="text-center space-y-6 p-8">
-          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
-            <XCircle className="h-12 w-12 text-red-600" />
+          <div className="w-24 h-24 mx-auto bg-red-500/10 border border-red-500/20 rounded-3xl flex items-center justify-center shadow-2xl">
+            <XCircle className="h-12 w-12 text-red-500" />
           </div>
           <div>
-            <h2 className="text-2xl font-black text-black mb-3">Event Not Found</h2>
-            <p className="text-gray-600 text-lg font-medium mb-6">The event you're looking for doesn't exist or has been removed.</p>
+            <h2 className="text-2xl font-black text-white mb-3 tracking-tight">Event Not Found</h2>
+            <p className="text-[#a1a1a1] text-lg font-medium mb-8">The event you're looking for doesn't exist or has been removed.</p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
-                variant="outline"
+                variant="secondary-byblos"
                 onClick={() => window.location.reload()}
-                className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
+                className="rounded-xl px-6 py-3 font-bold"
               >
                 <RefreshCw className="mr-2 h-4 w-4" /> Try Again
               </Button>
               <Button
+                variant="secondary-byblos"
                 onClick={() => navigate('/')}
-                className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
+                className="rounded-xl px-6 py-3 font-bold shadow-xl"
               >
                 <ArrowLeft className="mr-2 h-4 w-4" /> Back to Home
               </Button>
@@ -399,27 +401,41 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 overflow-x-hidden w-full">
-      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/')}
-            className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2 mb-6"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Home
-          </Button>
+    <div className="min-h-screen bg-black text-white overflow-x-hidden w-full">
+      {/* Header - Sticky Full Width */}
+      <div className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <Button
+                variant="secondary-byblos"
+                onClick={() => navigate(-1)}
+                className="rounded-xl px-2 sm:px-3 py-1.5 text-xs sm:text-sm h-8"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
+              </Button>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
+                  <Calendar className="h-5 w-5 text-black" />
+                </div>
+                <span className="text-lg font-black text-white">Event Details</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
 
         {error && (
-          <div className="bg-white/60 backdrop-blur-sm border border-red-200 rounded-2xl p-6 mb-8 shadow-lg">
+          <div className="bg-red-500/5 backdrop-blur-sm border border-red-500/20 rounded-2xl p-6 mb-8 shadow-2xl">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <XCircle className="h-6 w-6 text-red-500" />
               </div>
               <div className="ml-4">
-                <p className="text-red-700 font-medium">{error}</p>
+                <p className="text-red-400 font-medium">{error}</p>
               </div>
             </div>
           </div>
@@ -429,13 +445,12 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
           {/* Event Details */}
           <div className="lg:col-span-2">
             {event.image_url && (
-              <div className="mb-8 overflow-hidden rounded-3xl bg-gray-100 shadow-lg">
+              <div className="mb-8 overflow-hidden rounded-3xl bg-[#111111] shadow-2xl border border-white/5 aspect-video">
                 <img
                   src={event.image_url}
                   alt={event.name}
-                  className="w-full h-80 object-cover"
+                  className="w-full h-full object-cover"
                   onError={(e) => {
-                    // If image fails to load, hide the image container
                     const target = e.target as HTMLImageElement;
                     target.style.display = 'none';
                     const container = target.parentElement;
@@ -446,20 +461,20 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                 />
               </div>
             )}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-              <div className="space-y-6">
+            <div className="bg-[#111111]/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/10">
+              <div className="space-y-8">
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-black text-black mb-3">{event.name}</h1>
-                  <p className="text-gray-600 text-sm sm:text-base leading-relaxed">{event.description}</p>
+                  <h1 className="text-2xl sm:text-4xl font-black text-white mb-4 tracking-tight">{event.name}</h1>
+                  <p className="text-[#a1a1a1] text-base sm:text-lg font-medium leading-relaxed">{event.description}</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6">
-                    <div className="flex items-center text-gray-700 mb-1.5">
-                      <Calendar className="mr-2 h-4 w-4 text-yellow-600" />
-                      <span className="font-semibold text-sm">Date</span>
+                  <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                    <div className="flex items-center text-white mb-2">
+                      <Calendar className="mr-2 h-4 w-4 text-yellow-500" />
+                      <span className="font-bold text-sm">Date</span>
                     </div>
-                    <p className="text-gray-600 text-sm ml-6">
+                    <p className="text-[#a1a1a1] text-sm ml-6">
                       {formatEventDate(event.start_date)}
                       {event.end_date && event.end_date !== event.start_date && (
                         <span> - {formatEventDate(event.end_date)}</span>
@@ -467,12 +482,12 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                     </p>
                   </div>
 
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6">
-                    <div className="flex items-center text-gray-700 mb-1.5">
-                      <Clock className="mr-2 h-4 w-4 text-yellow-600" />
-                      <span className="font-semibold text-sm">Time</span>
+                  <div className="bg-white/5 border border-white/5 rounded-2xl p-6">
+                    <div className="flex items-center text-white mb-2">
+                      <Clock className="mr-2 h-4 w-4 text-yellow-500" />
+                      <span className="font-bold text-sm">Time</span>
                     </div>
-                    <p className="text-gray-600 text-sm ml-6">
+                    <p className="text-[#a1a1a1] text-sm ml-6">
                       {formatEventTime(event.start_date)}
                       {event.end_date && event.end_date !== event.start_date && (
                         <span> - {formatEventTime(event.end_date)}</span>
@@ -480,12 +495,12 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                     </p>
                   </div>
 
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-4 sm:p-6 md:col-span-2">
-                    <div className="flex items-center text-gray-700 mb-1.5">
-                      <MapPin className="mr-2 h-4 w-4 text-yellow-600" />
-                      <span className="font-semibold text-sm">Location</span>
+                  <div className="bg-white/5 border border-white/5 rounded-2xl p-6 md:col-span-2">
+                    <div className="flex items-center text-white mb-2">
+                      <MapPin className="mr-2 h-4 w-4 text-yellow-500" />
+                      <span className="font-bold text-sm">Location</span>
                     </div>
-                    <p className="text-gray-600 text-sm ml-6">{event.location}</p>
+                    <p className="text-[#a1a1a1] text-sm ml-6">{event.location}</p>
                   </div>
                 </div>
               </div>
@@ -494,18 +509,16 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
           {/* Ticket Purchase Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50 sticky top-8">
+            <div className="bg-[#111111]/80 backdrop-blur-sm rounded-3xl p-8 shadow-2xl border border-white/10 sticky top-12">
               <div className="space-y-6">
                 <div className="text-center">
-                  <h3 className="text-xl font-black text-black mb-4">Get Your Tickets</h3>
+                  <h3 className="text-xl font-black text-white mb-4 tracking-tight">Reserve Your Spot</h3>
                 </div>
 
                 <Button
                   onClick={handleBuyTicket}
-                  className={`w-full h-12 text-base font-bold rounded-xl transition-all duration-200 ${availableTickets <= 0
-                    ? 'bg-gray-300 hover:bg-gray-300 cursor-not-allowed text-gray-500'
-                    : 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg hover:shadow-xl transform hover:-translate-y-1'
-                    }`}
+                  variant="secondary-byblos"
+                  className={`w-full h-12 text-base font-black rounded-xl transition-all duration-300 transform active:scale-95 shadow-xl hover:shadow-yellow-400/20 ${availableTickets <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                   disabled={availableTickets <= 0 || loadingTicketTypes}
                 >
                   {loadingTicketTypes ? (
@@ -516,20 +529,20 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                   ) : (
                     <>
                       <Ticket className="mr-2 h-5 w-5" />
-                      {availableTickets <= 0 ? 'Sold Out' : 'Buy Tickets Now'}
+                      {availableTickets <= 0 ? 'Sold Out' : 'Book Tickets Now'}
                     </>
                   )}
                 </Button>
 
                 {availableTickets <= 0 && (
-                  <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6 border border-gray-200">
+                  <div className="bg-red-500/5 rounded-2xl p-6 border border-red-500/20">
                     <div className="flex items-start">
                       <div className="flex-shrink-0">
-                        <XCircle className="h-6 w-6 text-gray-400" />
+                        <XCircle className="h-6 w-6 text-red-500" />
                       </div>
                       <div className="ml-4">
-                        <h3 className="text-lg font-bold text-gray-800 mb-2">This event is sold out</h3>
-                        <p className="text-gray-600 leading-relaxed">
+                        <h3 className="text-lg font-bold text-red-400 mb-2">Sold Out</h3>
+                        <p className="text-[#a1a1a1] leading-relaxed text-sm">
                           All tickets for this event have been sold. Check back later for any last-minute availability.
                         </p>
                       </div>
@@ -538,13 +551,13 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
                 )}
 
                 {availableTickets > 0 && (
-                  <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 border border-yellow-200">
+                  <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
                     <div className="flex items-center mb-3">
-                      <Star className="h-5 w-5 text-yellow-600 mr-2" />
-                      <span className="font-bold text-yellow-800">Secure Booking</span>
+                      <Star className="h-5 w-5 text-yellow-500 mr-2" />
+                      <span className="font-bold text-white text-sm">Direct Checkout</span>
                     </div>
-                    <p className="text-yellow-700 text-sm leading-relaxed">
-                      Your tickets are secured instantly. You'll receive a confirmation email with all the details.
+                    <p className="text-[#a1a1a1] text-xs leading-relaxed">
+                      Your tickets are secured instantly upon payment. A confirmation email will be sent immediately.
                     </p>
                   </div>
                 )}
@@ -573,43 +586,43 @@ export default function EventBookingPage({ eventId: propEventId }: EventBookingP
 
       {/* Success Dialog */}
       <Dialog open={showSuccess} onOpenChange={setShowSuccess}>
-        <DialogContent className="bg-white/95 backdrop-blur-sm border-0 shadow-2xl rounded-3xl max-w-md max-h-[85vh] overflow-y-auto">
-          <DialogHeader className="text-center pb-6">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-100 to-green-200 shadow-lg">
-              <CheckCircle2 className="h-8 w-8 text-green-600" />
+        <DialogContent className="bg-[#111111]/95 backdrop-blur-md border border-white/10 shadow-2xl rounded-3xl max-w-md max-h-[85vh] overflow-y-auto p-0 overflow-hidden text-white">
+          <div className="p-8 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-green-500/10 border border-green-500/20 shadow-2xl mb-6">
+              <CheckCircle2 className="h-10 w-10 text-green-400" />
             </div>
-            <DialogTitle className="text-2xl font-black text-black mt-4">
-              Booking Confirmed!
-            </DialogTitle>
-          </DialogHeader>
-          <div className="text-center space-y-4">
-            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl p-6">
-              <p className="text-gray-700 leading-relaxed">
-                Thank you for booking <span className="font-bold text-black">{bookingDetails?.eventName}</span>.
-                A confirmation has been sent to <span className="font-bold text-black">{bookingDetails?.customerEmail}</span>.
-              </p>
-            </div>
-            <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-4 border border-yellow-200">
-              <p className="text-sm text-yellow-800">
-                <span className="font-bold">Booking reference:</span>
-                <br />
-                <span className="font-mono text-lg">{bookingDetails?.bookingReference}</span>
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-              <Button
-                onClick={() => navigate('/events')}
-                className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
-              >
-                Back to Events
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowSuccess(false)}
-                className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
-              >
-                Close
-              </Button>
+            <h2 className="text-3xl font-black text-white mb-4 tracking-tight">
+              Confirmed!
+            </h2>
+            <div className="space-y-6">
+              <div className="bg-white/5 rounded-2xl p-6 border border-white/5">
+                <p className="text-[#a1a1a1] leading-relaxed">
+                  Thank you for booking <span className="font-bold text-white">{bookingDetails?.eventName}</span>.
+                  Check <span className="font-bold text-white">{bookingDetails?.customerEmail}</span> for your tickets.
+                </p>
+              </div>
+              <div className="bg-yellow-400/5 rounded-2xl p-4 border border-yellow-400/10">
+                <p className="text-xs text-yellow-500 uppercase tracking-widest font-black mb-1">
+                  Reference
+                </p>
+                <p className="font-mono text-xl text-yellow-400 font-bold">{bookingDetails?.bookingReference}</p>
+              </div>
+              <div className="flex flex-col gap-3 pt-4">
+                <Button
+                  variant="secondary-byblos"
+                  onClick={() => navigate('/events')}
+                  className="rounded-xl px-6 py-4 font-black text-base shadow-xl"
+                >
+                  Back to Events
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowSuccess(false)}
+                  className="text-[#a1a1a1] hover:text-white hover:bg-white/5 rounded-xl font-bold"
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         </DialogContent>

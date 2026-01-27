@@ -7,7 +7,7 @@ interface SellerLayoutProps {
 
 export const SellerLayout: React.FC<SellerLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-black">
       {/* Main Content - Full width */}
       <main className="w-full p-4 md:p-8">
         {children || <Outlet />}

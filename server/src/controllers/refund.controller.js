@@ -17,7 +17,7 @@ export const getAllRefundRequests = async (req, res, next) => {
         b.id as buyer_id,
         b.full_name as buyer_name,
         b.email as buyer_email,
-        b.phone as buyer_phone,
+        b.whatsapp_number as buyer_phone,
         b.refunds as buyer_current_refunds
       FROM refund_requests rr
       JOIN buyers b ON rr.buyer_id = b.id
@@ -74,7 +74,7 @@ export const getRefundRequestById = async (req, res, next) => {
         b.id as buyer_id,
         b.full_name as buyer_name,
         b.email as buyer_email,
-        b.phone as buyer_phone,
+        b.whatsapp_number as buyer_phone,
         b.refunds as buyer_current_refunds
       FROM refund_requests rr
       JOIN buyers b ON rr.buyer_id = b.id

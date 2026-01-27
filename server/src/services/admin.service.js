@@ -40,7 +40,7 @@ class AdminService {
 
     async getAllSellers() {
         const query = `
-            SELECT id, full_name as name, email, phone, status, city, location, created_at, shop_name, is_active, balance
+            SELECT id, full_name as name, email, whatsapp_number as phone, status, city, location, created_at, shop_name, is_active, balance
             FROM sellers ORDER BY created_at DESC
         `;
         const { rows } = await pool.query(query);
@@ -104,7 +104,7 @@ class AdminService {
     // Organizers
     async getAllOrganizers() {
         const query = `
-            SELECT o.id, o.full_name as name, o.email, o.phone, o.status, o.created_at, COUNT(e.id) as events_count
+            SELECT o.id, o.full_name as name, o.email, o.whatsapp_number as phone, o.status, o.created_at, COUNT(e.id) as events_count
             FROM organizers o
             LEFT JOIN events e ON o.id = e.organizer_id
             GROUP BY o.id

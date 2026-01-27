@@ -66,6 +66,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const isSold = product.status === 'sold' || product.isSold;
   const isWishlisted = isInWishlist(product.id);
 
+  const glassCardStyle: React.CSSProperties = {
+    background: 'rgba(17, 17, 17, 0.7)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+  };
+
 
   useEffect(() => {
 
@@ -147,7 +155,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       await executePayment({
         fullName: userData.fullName,
         email: userData.email,
-        phone: userData.phone,
+        mobilePayment: userData.mobilePayment,
+        whatsappNumber: userData.whatsappNumber,
         city: userData.city,
         location: userData.location
       });
@@ -165,7 +174,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       await executePayment({
         fullName: userData.fullName,
         email: userData.email,
-        phone: userData.phone,
+        mobilePayment: userData.mobilePayment,
+        whatsappNumber: userData.whatsappNumber,
         city: userData.city,
         location: userData.location
       }, data);
@@ -193,7 +203,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           await executePayment({
             fullName: result.buyer.fullName || '',
             email: result.buyer.email || '', // Can be empty if we have hasEmail=true
-            phone: result.buyer.phone || phone,
+            mobilePayment: result.buyer.mobilePayment || phone,
+            whatsappNumber: result.buyer.whatsappNumber || phone,
             city: result.buyer.city,
             location: result.buyer.location
           }, null, result.buyer.id);
@@ -231,7 +242,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   };
 
   const handleBuyerInfoSubmit = async (
-    buyerInfo: { fullName: string; email: string; phone: string; city?: string; location?: string, password?: string },
+    buyerInfo: {
+      fullName: string;
+      email: string;
+      mobilePayment: string;
+      whatsappNumber: string;
+      city?: string;
+      location?: string;
+      password?: string
+    },
     explicitBookingData?: any,
     isExistingUserUpdate: boolean = false
   ) => {
@@ -260,7 +279,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   };
 
   const executePayment = async (
-    buyerDetails: { fullName: string; email: string; phone: string; city?: string; location?: string },
+    buyerDetails: {
+      fullName: string;
+      email: string;
+      mobilePayment: string;
+      whatsappNumber: string;
+      city?: string;
+      location?: string
+    },
     bookingDetails: any = null,
     buyerId?: string | number
   ) => {
@@ -268,7 +294,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     try {
       const activeBooking = bookingDetails || bookingData;
       const payload = {
-        phone: buyerDetails.phone,
+        phone: buyerDetails.mobilePayment, // For STK Push
+        mobilePayment: buyerDetails.mobilePayment,
+        whatsappNumber: buyerDetails.whatsappNumber,
         email: buyerDetails.email,
         amount: product.price,
         productId: product.id,
@@ -426,12 +454,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         };
       default: // default theme
         return {
-          card: 'bg-white/80 border-gray-100 hover:shadow-2xl hover:shadow-gray-100',
-          price: 'text-yellow-600',
-          button: 'bg-yellow-600 hover:bg-yellow-700 text-white',
-          seller: 'text-gray-900',
-          description: 'text-gray-700/80',
-          icon: 'text-gray-600',
+          card: 'border-0',
+          price: 'text-yellow-400',
+          button: 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white',
+          seller: 'text-gray-200',
+          description: 'text-gray-400',
+          icon: 'text-gray-400',
         };
     }
   })();
@@ -444,6 +472,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         'cursor-pointer',
         themeClasses.card
       )}
+      style={theme === 'default' ? glassCardStyle : undefined}
       aria-label={`Product: ${product.name}`}
       onClick={handleCardClick}
     >
@@ -452,7 +481,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <button
           onClick={toggleWishlist}
           className={cn(
-            'absolute top-2 right-2 z-10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white/90 hover:bg-white shadow-md backdrop-blur-sm transition-all duration-300',
+            'absolute top-2 right-2 z-10 p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-black/40 hover:bg-black/55 border border-white/10 shadow-md backdrop-blur-sm transition-all duration-300',
             'h-7 w-7 sm:h-9 sm:w-9 md:h-10 md:w-10 flex items-center justify-center',
             wishlistActionLoading || isWishlistLoading ? 'opacity-70 cursor-not-allowed' : 'hover:scale-110',
             isWishlisted ? 'text-red-500' : 'text-gray-600'
@@ -494,7 +523,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           </div>
         )}
         {isImageLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
             <ImageIcon className="h-8 w-8 text-gray-300 animate-pulse" />
           </div>
         )}
@@ -513,7 +542,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       <CardContent className="mobile-compact">
         <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg",
-          theme === 'black' ? 'text-white' : 'text-gray-900'
+          theme === 'black' || theme === 'default' ? 'text-white' : 'text-gray-900'
         )}>
           {product.name}
         </h3>
@@ -530,7 +559,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             formatCurrency(product.price)
           )}
           {(product.product_type === 'service' || (product as any).productType === 'service') && (product.service_options?.price_type === 'hourly' || (product as any).serviceOptions?.price_type === 'hourly') && (
-            <span className="text-sm font-medium text-gray-500 ml-1">/hr</span>
+            <span className="text-sm font-medium text-gray-400 ml-1">/hr</span>
           )}
         </p>
 
@@ -735,10 +764,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         isOpen={isBuyerModalOpen}
         onClose={() => setIsBuyerModalOpen(false)}
         onSubmit={async (buyerInfo) => {
-          await handleBuyerInfoSubmit({
-            ...buyerInfo,
-            phone: currentPhone
-          }, null, shouldSkipSave);
+          await handleBuyerInfoSubmit(buyerInfo, null, shouldSkipSave);
         }}
         isLoading={isProcessingPurchase}
         theme={theme}

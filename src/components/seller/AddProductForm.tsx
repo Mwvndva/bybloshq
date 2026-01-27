@@ -371,14 +371,14 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-black">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <div className="mb-8">
           <Button
             variant="outline"
             onClick={() => navigate('/seller/dashboard')}
-            className="inline-flex items-center gap-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
+            className="inline-flex items-center gap-2 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl px-4 py-2"
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
@@ -386,21 +386,21 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         </div>
 
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-black mb-4">Add New Product</h1>
-          <p className="text-gray-600 text-lg font-medium">Create a new product listing for your store</p>
+          <h1 className="text-4xl font-black text-white mb-4">Add New Product</h1>
+          <p className="text-gray-400 text-lg font-medium">Create a new product listing for your store</p>
         </div>
 
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-xl">
+        <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl">
           <CardHeader className="pb-6">
-            <CardTitle className="text-2xl font-black text-black flex items-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+            <CardTitle className="text-2xl font-black text-white flex items-center">
+              <div className="w-12 h-12 bg-yellow-500/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-2xl flex items-center justify-center mr-4">
                 <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                 </svg>
               </div>
               Product Information
             </CardTitle>
-            <CardDescription className="text-gray-600 font-medium">
+            <CardDescription className="text-gray-400 font-medium">
               Fill in the details below to create your product listing
             </CardDescription>
           </CardHeader>
@@ -409,7 +409,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <Label htmlFor="name" className="text-sm font-bold text-gray-700 uppercase tracking-wide">Product Name</Label>
+                    <Label htmlFor="name" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Name</Label>
                     <Input
                       id="name"
                       name="name"
@@ -417,12 +417,12 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       onChange={handleChange}
                       placeholder="Enter product name"
                       required
-                      className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <Label htmlFor="price" className="text-sm font-bold text-gray-700 uppercase tracking-wide">Price (KES)</Label>
+                    <Label htmlFor="price" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Price (KES)</Label>
                     <Input
                       id="price"
                       name="price"
@@ -438,18 +438,18 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       }}
                       placeholder="Enter price"
                       required
-                      className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Product Type</Label>
+                    <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Type</Label>
                     <div className="flex space-x-2 relative">
                       <Button
                         type="button"
                         variant={formData.product_type === 'physical' ? "default" : "outline"}
                         onClick={() => setFormData(prev => ({ ...prev, product_type: 'physical', is_digital: false }))}
-                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'physical' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
+                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'physical' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white'}`}
                       >
                         Physical
                       </Button>
@@ -457,7 +457,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                         type="button"
                         variant={formData.product_type === 'digital' ? "default" : "outline"}
                         onClick={() => setFormData(prev => ({ ...prev, product_type: 'digital', is_digital: true }))}
-                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'digital' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
+                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'digital' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white'}`}
                       >
                         Digital
                       </Button>
@@ -480,7 +480,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                               }));
                             }
                           }}
-                          className={`w-full h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-black text-white' : 'border-gray-200 text-gray-600'}`}
+                          className={`w-full h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white'} ${!sellerProfile?.hasPhysicalShop ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                           Service
                         </Button>
@@ -495,7 +495,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
                   {formData.product_type === 'digital' && (
                     <div className="space-y-3 animate-in fade-in zoom-in duration-300">
-                      <Label htmlFor="digital_file" className="text-sm font-bold text-gray-700 uppercase tracking-wide">Digital File</Label>
+                      <Label htmlFor="digital_file" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Digital File</Label>
                       <Input
                         id="digital_file"
                         type="file"
@@ -506,20 +506,20 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                           }
                         }}
                         accept=".pdf,.zip,.rar,.epub,.mobi"
-                        className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl pt-2.5"
+                        className="h-12 bg-gray-800 border-gray-700 text-white file:text-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl pt-2.5"
                       />
-                      <p className="text-xs text-gray-500">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
+                      <p className="text-xs text-gray-400">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
                       {formData.digital_file && (
-                        <p className="text-sm text-green-600 font-medium">Selected: {formData.digital_file.name}</p>
+                        <p className="text-sm text-green-200 font-medium">Selected: {formData.digital_file.name}</p>
                       )}
                     </div>
                   )}
 
                   {formData.product_type === 'service' && (
-                    <div className="space-y-6 animate-in fade-in zoom-in duration-300 bg-gray-50/50 p-4 rounded-xl border border-dashed border-gray-200">
+                    <div className="space-y-6 animate-in fade-in zoom-in duration-300 bg-white/5 p-4 rounded-xl border border-dashed border-white/10">
                       {/* Pricing Model */}
                       <div className="space-y-3">
-                        <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Pricing Model</Label>
+                        <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Pricing Model</Label>
                         <div className="flex space-x-2">
                           <Button
                             type="button"
@@ -528,7 +528,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                               ...prev,
                               service_options: { ...prev.service_options, price_type: 'hourly' }
                             }))}
-                            className={`flex-1 ${formData.service_options.price_type === 'hourly' ? 'bg-yellow-400 text-white border-yellow-400' : 'hover:bg-gray-100'}`}
+                            className={`flex-1 ${formData.service_options.price_type === 'hourly' ? 'bg-yellow-400/10 text-yellow-200 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.12)]' : 'bg-transparent border border-white/10 text-gray-200 hover:bg-white/5'}`}
                           >
                             Hourly Rate
                           </Button>
@@ -539,7 +539,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                               ...prev,
                               service_options: { ...prev.service_options, price_type: 'fixed' }
                             }))}
-                            className={`flex-1 ${formData.service_options.price_type === 'fixed' ? 'bg-yellow-400 text-white border-yellow-400' : 'hover:bg-gray-100'}`}
+                            className={`flex-1 ${formData.service_options.price_type === 'fixed' ? 'bg-yellow-400/10 text-yellow-200 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.12)]' : 'bg-transparent border border-white/10 text-gray-200 hover:bg-white/5'}`}
                           >
                             Fixed Price
                           </Button>
@@ -548,7 +548,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
                       {/* Availability Days */}
                       <div className="space-y-3">
-                        <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Available Days</Label>
+                        <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Available Days</Label>
                         <div className="grid grid-cols-4 gap-2">
                           {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
                             <Button
@@ -567,8 +567,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                                 }));
                               }}
                               className={`rounded-lg transition-all ${(formData.service_options.availability_days || []).includes(day)
-                                ? 'bg-yellow-400 text-white border-yellow-400 hover:bg-yellow-500'
-                                : 'hover:bg-gray-100'
+                                ? 'bg-yellow-400/10 text-yellow-200 border border-yellow-400/20 shadow-[0_0_14px_rgba(250,204,21,0.12)]'
+                                : 'bg-transparent border border-white/10 text-gray-200 hover:bg-white/5'
                                 }`}
                             >
                               {day}
@@ -580,7 +580,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       {/* Time Availability */}
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-3">
-                          <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Start Time</Label>
+                          <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Start Time</Label>
                           <Input
                             type="time"
                             value={formData.service_options.start_time || '09:00'}
@@ -588,11 +588,11 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                               ...prev,
                               service_options: { ...prev.service_options, start_time: e.target.value }
                             }))}
-                            className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                            className="h-12 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                           />
                         </div>
                         <div className="space-y-3">
-                          <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">End Time</Label>
+                          <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">End Time</Label>
                           <Input
                             type="time"
                             value={formData.service_options.end_time || '17:00'}
@@ -600,27 +600,27 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                               ...prev,
                               service_options: { ...prev.service_options, end_time: e.target.value }
                             }))}
-                            className="h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                            className="h-12 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                           />
                         </div>
                       </div>
 
                       {/* Location Type */}
                       {/* Location Type - Hidden/Fixed for Services now */}
-                      <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200">
+                      <div className="bg-yellow-500/10 p-4 rounded-xl border border-yellow-400/20">
                         <div className="flex items-start gap-3">
-                          <div className="mt-1 bg-yellow-100 p-2 rounded-lg">
-                            <svg className="h-5 w-5 text-yellow-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <div className="mt-1 bg-yellow-500/10 border border-yellow-400/20 p-2 rounded-lg">
+                            <svg className="h-5 w-5 text-yellow-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                             </svg>
                           </div>
                           <div>
-                            <h4 className="font-semibold text-yellow-900 text-sm">Service Location</h4>
-                            <p className="text-yellow-700 text-sm mt-1">
+                            <h4 className="font-semibold text-yellow-100 text-sm">Service Location</h4>
+                            <p className="text-yellow-200/80 text-sm mt-1">
                               All services will be performed at your shop address:
                               <br />
-                              <span className="font-medium text-black">{sellerProfile?.physicalAddress || 'Loading address...'}</span>
+                              <span className="font-medium text-white">{sellerProfile?.physicalAddress || 'Loading address...'}</span>
                             </p>
                           </div>
                         </div>
@@ -629,7 +629,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                   )}
 
                   <div className="space-y-3">
-                    <Label htmlFor="description" className="text-sm font-bold text-gray-700 uppercase tracking-wide">Description</Label>
+                    <Label htmlFor="description" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Description</Label>
                     <Textarea
                       id="description"
                       name="description"
@@ -638,18 +638,18 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       placeholder="Enter product description"
                       rows={4}
                       required
-                      className="border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                     />
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Category</Label>
+                    <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Category</Label>
                     <Select
                       value={formData.aesthetic}
                       onValueChange={(value) => setFormData(prev => ({ ...prev, aesthetic: value }))}
                       required
                     >
-                      <SelectTrigger className="w-full h-12 border-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl">
+                      <SelectTrigger className="w-full h-12 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 rounded-xl">
                         <SelectValue placeholder="Select an aesthetic" />
                       </SelectTrigger>
                       <SelectContent>
@@ -665,8 +665,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
                 <div className="space-y-6">
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700 uppercase tracking-wide">Product Image</Label>
-                    <div className="flex justify-center px-8 pt-8 pb-8 border-2 border-dashed border-gray-300 rounded-2xl hover:border-yellow-400 transition-colors duration-200 bg-gray-50/50">
+                    <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Image</Label>
+                    <div className="flex justify-center px-8 pt-8 pb-8 border-2 border-dashed border-white/10 rounded-2xl hover:border-yellow-400/30 transition-colors duration-200 bg-white/5">
                       <div className="space-y-4 text-center">
                         {imagePreview ? (
                           <div className="relative">
@@ -695,16 +695,16 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                           </div>
                         ) : (
                           <>
-                            <div className="w-16 h-16 mx-auto bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-lg">
-                              <svg className="h-8 w-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-16 h-16 mx-auto bg-yellow-500/10 border border-yellow-400/20 rounded-2xl flex items-center justify-center shadow-[0_0_18px_rgba(250,204,21,0.12)]">
+                              <svg className="h-8 w-8 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                               </svg>
                             </div>
                             <div className="space-y-2">
-                              <div className="flex text-sm text-gray-600 justify-center">
+                              <div className="flex text-sm text-gray-300 justify-center">
                                 <label
                                   htmlFor="image-upload"
-                                  className="relative cursor-pointer rounded-xl font-semibold text-yellow-600 hover:text-yellow-700 focus-within:outline-none"
+                                  className="relative cursor-pointer rounded-xl font-semibold text-yellow-300 hover:text-yellow-200 focus-within:outline-none"
                                 >
                                   <span>Upload a file</span>
                                   <input
@@ -716,9 +716,9 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                                     onChange={handleImageChange}
                                   />
                                 </label>
-                                <p className="pl-1">or drag and drop</p>
+                                <p className="pl-1 text-gray-400">or drag and drop</p>
                               </div>
-                              <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                              <p className="text-xs text-gray-400">PNG, JPG, GIF up to 10MB</p>
                             </div>
                           </>
                         )}
@@ -728,7 +728,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-4 pt-8 border-t border-gray-200">
+              <div className="flex justify-end space-x-4 pt-8 border-t border-white/10">
                 <Button
                   type="button"
                   variant="outline"
@@ -757,7 +757,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                     setImagePreview('');
                   }}
                   disabled={isLoading}
-                  className="h-12 px-8 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 rounded-xl font-semibold"
+                  className="h-12 px-8 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-200 rounded-xl font-semibold"
                 >
                   Reset
                 </Button>

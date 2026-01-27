@@ -126,14 +126,14 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
-      <div className="flex flex-wrap justify-center gap-2 mb-8 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-gray-200/50 w-full sm:w-fit mx-auto">
+      <div className="flex flex-wrap justify-center gap-2 mb-8 bg-[#111111] p-2 rounded-2xl border border-[#222222] w-full sm:w-fit mx-auto">
         <Button
           type="button"
-          variant={activeTab === 'overview' ? 'default' : 'ghost'}
+          variant={activeTab === 'overview' ? 'byblos' : 'ghost'}
           onClick={() => setActiveTab('overview')}
           className={`px-6 py-3 rounded-xl transition-all duration-300 font-semibold ${activeTab === 'overview'
-            ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-            : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+            ? 'shadow-lg transform scale-105'
+            : 'text-gray-400 hover:text-white hover:bg-white/5 hover:scale-105'
             }`}
         >
           <CalendarIcon className="h-5 w-5 mr-2" />
@@ -141,11 +141,11 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
         </Button>
         <Button
           type="button"
-          variant={activeTab === 'tickets' ? 'default' : 'ghost'}
+          variant={activeTab === 'tickets' ? 'byblos' : 'ghost'}
           onClick={() => setActiveTab('tickets')}
           className={`px-6 py-3 rounded-xl transition-all duration-300 font-semibold ${activeTab === 'tickets'
-            ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-            : 'text-gray-600 hover:text-black hover:bg-gray-100/80 hover:scale-105'
+            ? 'shadow-lg transform scale-105'
+            : 'text-gray-400 hover:text-white hover:bg-white/5 hover:scale-105'
             }`}
         >
           <Ticket className="h-5 w-5 mr-2" />
@@ -155,10 +155,10 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
 
       <div className={cn("space-y-8", activeTab !== 'overview' && "hidden")}>
         {/* Event Image */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-          <Label className="text-xl font-black text-black mb-6 block">Event Image</Label>
+        <div className="bg-[#111111] rounded-3xl p-6 sm:p-8 border border-[#222222]">
+          <Label className="text-xl font-semibold text-white mb-6 block">Event Image</Label>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            <div className="relative h-48 w-48 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-inner">
+            <div className="relative h-48 w-48 rounded-2xl overflow-hidden bg-white/5 border border-white/10 shadow-inner">
               {imagePreview ? (
                 <>
                   <img
@@ -195,12 +195,12 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                 <div className="flex flex-col gap-2">
                   <Label
                     htmlFor="image"
-                    className="inline-flex items-center justify-center px-6 py-3 border-2 border-dashed border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 hover:border-yellow-400 focus:outline-none cursor-pointer transition-all duration-200"
+                    className="inline-flex items-center justify-center px-6 py-3 border border-yellow-400/40 rounded-xl shadow-sm text-sm font-medium text-yellow-100 bg-yellow-400/10 hover:bg-yellow-400/20 hover:border-yellow-400 focus:outline-none cursor-pointer transition-all duration-200"
                   >
                     <UploadCloud className="h-5 w-5 mr-2" />
                     {imagePreview ? 'Change Image' : 'Upload Image'}
                   </Label>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-gray-400">
                     Recommended size: 1200x630px (2:1 aspect ratio)
                   </p>
                 </div>
@@ -214,27 +214,27 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
             )}
             {readOnlyOverview && (
               <div className="flex-1">
-                <p className="text-gray-500 italic">Image editing is disabled for existing events.</p>
+                <p className="text-gray-400 italic">Image editing is disabled for existing events.</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Event Details */}
-        <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50 space-y-6">
+        <div className="bg-[#111111] rounded-3xl p-6 sm:p-8 border border-[#222222] space-y-6">
           <div className="flex justify-between items-center">
-            <h3 className="text-2xl font-black text-black mb-2">Event Details</h3>
-            {readOnlyOverview && <Badge variant="secondary">Read Only</Badge>}
+            <h3 className="text-2xl font-semibold text-white mb-2">Event Details</h3>
+            {readOnlyOverview && <Badge variant="secondary" className="bg-white/10 text-gray-300 border border-white/10">Read Only</Badge>}
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="title" className="text-base font-semibold text-gray-800 mb-2 block">Event Title</Label>
+              <Label htmlFor="title" className="text-base font-semibold text-white mb-2 block">Event Title</Label>
               <Input
                 id="title"
                 disabled={readOnlyOverview}
                 {...register('title')}
-                className={`h-12 rounded-xl border-gray-200 bg-white/80 focus:border-yellow-400 focus:ring-yellow-400 text-black text-lg ${errors.title ? 'border-red-500' : ''}`}
+                className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white text-lg placeholder:text-gray-500 ${errors.title ? 'border-red-500' : ''}`}
                 placeholder="Enter a catchy title for your event"
               />
               {errors.title && (
@@ -243,13 +243,13 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
             </div>
 
             <div>
-              <Label htmlFor="description" className="text-base font-semibold text-gray-800 mb-2 block">Description</Label>
+              <Label htmlFor="description" className="text-base font-semibold text-white mb-2 block">Description</Label>
               <Textarea
                 id="description"
                 disabled={readOnlyOverview}
                 rows={5}
                 {...register('description')}
-                className={`rounded-xl border-gray-200 bg-white/80 focus:border-yellow-400 focus:ring-yellow-400 text-black resize-none ${errors.description ? 'border-red-500' : ''}`}
+                className={`rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-[#a1a1a1] placeholder:text-gray-500 resize-none ${errors.description ? 'border-red-500' : ''}`}
                 placeholder="Describe what makes your event special..."
               />
               {errors.description && (
@@ -259,14 +259,14 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <Label className="text-base font-semibold text-gray-800 mb-2 block">Start Date & Time</Label>
+                <Label className="text-base font-semibold text-white mb-2 block">Start Date & Time</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       disabled={readOnlyOverview}
                       className={cn(
-                        'w-full h-12 justify-start text-left font-normal text-black rounded-xl border-gray-200 bg-white/80 hover:border-yellow-400 focus:border-yellow-400',
+                        'w-full h-12 justify-start text-left font-normal text-white rounded-xl border border-[#222222] bg-black hover:border-yellow-400 focus:border-yellow-400',
                         errors.startDate && 'border-red-500'
                       )}
                     >
@@ -279,15 +279,15 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                     </Button>
                   </PopoverTrigger>
                   {/* ... Only render content if strictly needed, but Popover handles disabled trigger ... */}
-                  <PopoverContent className="w-auto p-0 rounded-xl shadow-xl">
+                  <PopoverContent className="w-auto p-0 rounded-xl shadow-xl border border-white/10 bg-[rgba(20,20,20,0.9)]">
                     <Calendar
                       mode="single"
                       selected={watch('startDate')}
                       onSelect={(date) => setValue('startDate', date as Date)}
                       initialFocus
-                      className="rounded-xl border border-gray-100"
+                      className="rounded-xl border border-white/10 bg-[rgba(20,20,20,0.9)]"
                     />
-                    <div className="p-3 border-t border-gray-100 bg-gray-50/50">
+                    <div className="p-3 border-t border-white/10 bg-black/40">
                       <Input
                         type="time"
                         value={formatTime(watch('startDate'))}
@@ -301,7 +301,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                             setValue('startDate', date);
                           }
                         }}
-                        className="w-full text-black bg-white rounded-lg border-gray-200"
+                        className="w-full text-white bg-black rounded-lg border border-[#222222] focus:border-yellow-400 focus:ring-yellow-400"
                       />
                     </div>
                   </PopoverContent>
@@ -312,14 +312,14 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
               </div>
 
               <div>
-                <Label className="text-base font-semibold text-gray-800 mb-2 block">End Date & Time</Label>
+                <Label className="text-base font-semibold text-white mb-2 block">End Date & Time</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       disabled={readOnlyOverview}
                       className={cn(
-                        'w-full h-12 justify-start text-left font-normal text-black rounded-xl border-gray-200 bg-white/80 hover:border-yellow-400 focus:border-yellow-400',
+                        'w-full h-12 justify-start text-left font-normal text-white rounded-xl border border-[#222222] bg-black hover:border-yellow-400 focus:border-yellow-400',
                         errors.endDate && 'border-red-500'
                       )}
                     >
@@ -331,15 +331,15 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                       )}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 rounded-xl shadow-xl">
+                  <PopoverContent className="w-auto p-0 rounded-xl shadow-xl border border-white/10 bg-[rgba(20,20,20,0.9)]">
                     <Calendar
                       mode="single"
                       selected={watch('endDate')}
                       onSelect={(date) => setValue('endDate', date as Date)}
                       initialFocus
-                      className="rounded-xl border border-gray-100"
+                      className="rounded-xl border border-white/10 bg-[rgba(20,20,20,0.9)]"
                     />
-                    <div className="p-3 border-t border-gray-100 bg-gray-50/50">
+                    <div className="p-3 border-t border-white/10 bg-black/40">
                       <Input
                         type="time"
                         value={formatTime(watch('endDate'))}
@@ -353,7 +353,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                             setValue('endDate', date);
                           }
                         }}
-                        className="w-full text-black bg-white rounded-lg border-gray-200"
+                        className="w-full text-white bg-black rounded-lg border border-[#222222] focus:border-yellow-400 focus:ring-yellow-400"
                       />
                     </div>
                   </PopoverContent>
@@ -366,12 +366,12 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
 
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
               <div>
-                <Label htmlFor="venue" className="text-base font-semibold text-gray-800 mb-2 block">Venue Name</Label>
+                <Label htmlFor="venue" className="text-base font-semibold text-white mb-2 block">Venue Name</Label>
                 <Input
                   id="venue"
                   disabled={readOnlyOverview}
                   {...register('venue')}
-                  className={`h-12 rounded-xl border-gray-200 bg-white/80 focus:border-yellow-400 focus:ring-yellow-400 text-black ${errors.venue ? 'border-red-500' : ''}`}
+                  className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white placeholder:text-gray-500 ${errors.venue ? 'border-red-500' : ''}`}
                   placeholder="e.g. KICC, Nairobi"
                 />
                 {errors.venue && (
@@ -379,13 +379,13 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                 )}
               </div>
               <div>
-                <Label htmlFor="location" className="text-base font-semibold text-gray-800 mb-2 block">Location Address</Label>
+                <Label htmlFor="location" className="text-base font-semibold text-white mb-2 block">Location Address</Label>
                 <Input
                   id="location"
                   disabled={readOnlyOverview}
                   placeholder="Street address, City"
                   {...register('location')}
-                  className={`h-12 rounded-xl border-gray-200 bg-white/80 focus:border-yellow-400 focus:ring-yellow-400 text-black ${errors.location ? 'border-red-500' : ''}`}
+                  className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white placeholder:text-gray-500 ${errors.location ? 'border-red-500' : ''}`}
                 />
                 {errors.location && (
                   <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>
@@ -398,17 +398,17 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
 
       {/* Ticket Types Tab */}
       <div className={cn("space-y-6", activeTab !== 'tickets' && "hidden")}>
-        <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
+        <div className="bg-[#111111] rounded-3xl p-6 sm:p-8 border border-[#222222]">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h3 className="text-2xl font-black text-black">Ticket Types</h3>
-              <p className="text-gray-600">Configure your ticket options and pricing</p>
+              <h3 className="text-2xl font-semibold text-white">Ticket Types</h3>
+              <p className="text-gray-400">Configure your ticket options and pricing</p>
             </div>
             <Button
               type="button"
               variant="outline"
               onClick={addTicketType}
-              className="bg-white border-gray-200 hover:bg-yellow-50 hover:border-yellow-200 hover:text-yellow-700 rounded-xl px-4 py-2 font-semibold shadow-sm transition-all"
+              className="bg-transparent border-2 border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl px-4 py-2 font-semibold shadow-sm transition-all"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Ticket Type
@@ -417,9 +417,9 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
 
           <div className="space-y-4">
             {ticketTypes.map((ticket, index) => (
-              <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-200">
+              <div key={index} className="bg-[rgba(20,20,20,0.6)] rounded-2xl p-6 shadow-sm border border-white/10 hover:shadow-md transition-shadow duration-200">
                 <div className="flex justify-between items-start mb-4">
-                  <Badge variant="outline" className="bg-gray-50 text-gray-600 border-gray-200">
+                  <Badge variant="outline" className="bg-white/10 text-gray-300 border border-white/10">
                     Ticket Type {index + 1}
                   </Badge>
                   {ticketTypes.length > 1 && (
@@ -428,7 +428,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                       variant="ghost"
                       size="sm"
                       onClick={() => removeTicketType(index)}
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg -mr-2"
+                      className="text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg -mr-2"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -437,13 +437,13 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
 
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-12">
                   <div className="sm:col-span-5">
-                    <Label htmlFor={`ticketTypes.${index}.name`} className="mb-2 block font-medium">Ticket Name</Label>
+                    <Label htmlFor={`ticketTypes.${index}.name`} className="mb-2 block font-medium text-white">Ticket Name</Label>
                     <Input
                       id={`ticketTypes.${index}.name`}
                       {...register(`ticketTypes.${index}.name` as const)}
                       defaultValue={ticket.name}
                       placeholder="e.g. Early Bird, VIP"
-                      className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white"
+                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                     />
                     {errors.ticketTypes?.[index]?.name && (
                       <p className="mt-1 text-xs text-red-600 font-medium">
@@ -453,7 +453,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                   </div>
 
                   <div className="sm:col-span-3">
-                    <Label htmlFor={`ticketTypes.${index}.price`} className="mb-2 block font-medium">Price (KES)</Label>
+                    <Label htmlFor={`ticketTypes.${index}.price`} className="mb-2 block font-medium text-white">Price (KES)</Label>
                     <div className="relative">
                       <Input
                         type="number"
@@ -465,7 +465,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                         defaultValue={ticket.price || ''}
                         placeholder="0"
                         min="0"
-                        className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white pl-3"
+                        className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 pl-3"
                         onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       />
                     </div>
@@ -477,7 +477,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                   </div>
 
                   <div className="sm:col-span-4">
-                    <Label htmlFor={`ticketTypes.${index}.quantity`} className="mb-2 block font-medium">Quantity Available</Label>
+                    <Label htmlFor={`ticketTypes.${index}.quantity`} className="mb-2 block font-medium text-white">Quantity Available</Label>
                     <Input
                       type="number"
                       id={`ticketTypes.${index}.quantity`}
@@ -487,7 +487,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                       })}
                       defaultValue={ticket.quantity || 100}
                       min={1}
-                      className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white"
+                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                       onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     />
                     {errors.ticketTypes?.[index]?.quantity && (
@@ -498,29 +498,29 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                   </div>
 
                   <div className="sm:col-span-12">
-                    <Label htmlFor={`ticketTypes.${index}.description`} className="mb-2 block font-medium">Description (Optional)</Label>
+                    <Label htmlFor={`ticketTypes.${index}.description`} className="mb-2 block font-medium text-white">Description (Optional)</Label>
                     <Input
                       id={`ticketTypes.${index}.description`}
                       {...register(`ticketTypes.${index}.description` as const)}
                       defaultValue={ticket.description}
                       placeholder="What does this ticket include?"
-                      className="h-11 rounded-xl border-gray-200 bg-gray-50/50 focus:bg-white"
+                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                     />
                   </div>
                 </div>
               </div>
             ))}
             {errors.ticketTypes?.root && (
-              <p className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{errors.ticketTypes.root.message}</p>
+              <p className="text-sm text-red-300 bg-red-500/10 p-3 rounded-lg border border-red-500/20">{errors.ticketTypes.root.message}</p>
             )}
 
-            <div className="pt-4 flex justify-between items-center text-sm text-gray-500 bg-gray-50 p-4 rounded-xl border border-gray-100">
+            <div className="pt-4 flex justify-between items-center text-sm text-gray-400 bg-white/5 p-4 rounded-xl border border-white/10">
               <span className="flex items-center">
                 <Ticket className="h-4 w-4 mr-2" />
                 Total Types: {ticketTypes.length}
               </span>
               <span className="flex items-center">
-                <span className="font-semibold text-gray-900 mr-1">
+                <span className="font-semibold text-white mr-1">
                   {ticketTypes.reduce((acc, curr) => acc + (parseInt(curr.quantity as any) || 0), 0)}
                 </span>
                 Total Tickets
@@ -530,12 +530,13 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-md border-t border-gray-200 p-4 z-40 sm:sticky sm:bottom-0 sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:p-0">
+      <div className="fixed bottom-0 left-0 right-0 bg-black/80 backdrop-blur-md border-t border-white/10 p-4 z-40 sm:sticky sm:bottom-0 sm:bg-transparent sm:backdrop-blur-none sm:border-0 sm:p-0">
         <div className="max-w-4xl mx-auto sm:max-w-none flex justify-center">
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-xl px-12 py-6 rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transform transition-transform active:scale-95"
+            variant="byblos"
+            className="w-full sm:w-auto shadow-xl px-12 py-6 rounded-2xl font-bold text-lg disabled:opacity-50 disabled:cursor-not-allowed transform transition-transform active:scale-95"
           >
             {isSubmitting ? (submitLabel ? 'Saving Changes...' : 'Creating Event...') : (submitLabel || 'Create Event')}
           </Button>

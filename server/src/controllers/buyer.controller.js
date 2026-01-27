@@ -187,7 +187,9 @@ export const getProfile = async (req, res, next) => {
     // Ensure the user gets their OWN private data
     const userData = sanitizeBuyer(buyer);
     if (buyer.email) userData.email = buyer.email;
-    if (buyer.phone) userData.phone = buyer.phone;
+    if (buyer.mobile_payment) userData.mobilePayment = buyer.mobile_payment;
+    if (buyer.whatsapp_number) userData.whatsappNumber = buyer.whatsapp_number;
+
     // Also restore fullName which might be sanitized out but is needed for frontend checks
     if (buyer.full_name) userData.fullName = buyer.full_name;
     else if (buyer.fullName) userData.fullName = buyer.fullName;
@@ -402,8 +404,8 @@ export const requestRefund = async (req, res, next) => {
     // Use buyer's existing details for refund
     const paymentMethod = 'M-Pesa'; // Default to M-Pesa for Kenya
     const paymentDetailsJson = JSON.stringify({
-      phone: buyer.phone,
-      name: buyer.fullName,
+      phone: buyer.mobile_payment || buyer.whatsapp_number,
+      name: buyer.full_name || buyer.fullName,
       email: buyer.email
     });
 
@@ -516,7 +518,7 @@ export const markOrderAsCollected = async (req, res, next) => {
       return next(new AppError('Order not found', 404));
     }
 
-    if (orderData.buyer_id !== userId) {
+    if (!(await req.user.can('view-orders', orderData, 'order', 'view'))) {
       return next(new AppError('Unauthorized access to this order', 403));
     }
 

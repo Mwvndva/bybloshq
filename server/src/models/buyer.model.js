@@ -16,7 +16,7 @@ const toCamelCase = (obj) => {
 
 class Buyer {
   // Create a new buyer
-  static async create({ fullName, email, phone, password, city, location, userId = null }) {
+  static async create({ fullName, email, mobilePayment, whatsappNumber, password, city, location, userId = null }) {
     // If we have a userId, we expect the user record already exists (with hashed password)
     // and we just create the profile.
     let hashedPassword = null;
@@ -25,28 +25,28 @@ class Buyer {
     }
 
     const query = `
-      INSERT INTO buyers (full_name, email, phone, password, city, location, user_id, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      INSERT INTO buyers (full_name, email, mobile_payment, whatsapp_number, password, city, location, user_id, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       RETURNING *
     `;
-    const values = [fullName, email, phone, hashedPassword, city, location, userId];
+    const values = [fullName, email, mobilePayment, whatsappNumber, hashedPassword, city, location, userId];
     const result = await pool.query(query, values);
     return toCamelCase(result.rows[0]);
   }
 
   // Create a new buyer for guest checkout (generates secure random password)
-  static async createGuest({ fullName, email, phone, city, location }) {
+  static async createGuest({ fullName, email, mobilePayment, whatsappNumber, city, location }) {
     // Generate a secure random password for guest accounts
     const randomPassword = crypto.randomBytes(32).toString('hex');
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
     const query = `
-      INSERT INTO buyers (full_name, email, phone, password, city, location, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+      INSERT INTO buyers (full_name, email, mobile_payment, whatsapp_number, password, city, location, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
       RETURNING *
     `;
 
-    const values = [fullName, email, phone, hashedPassword, city, location];
+    const values = [fullName, email, mobilePayment, whatsappNumber, hashedPassword, city, location];
     const result = await pool.query(query, values);
     return toCamelCase(result.rows[0]);
   }
@@ -66,7 +66,7 @@ class Buyer {
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
-  // Find buyer by phone number (checks multiple formats)
+  // Find buyer by phone number (checks multiple formats in both columns)
   static async findByPhone(phone) {
     if (!phone) return null;
 
@@ -104,14 +104,18 @@ class Buyer {
     // Remove duplicates
     const uniqueVariations = [...new Set(phoneVariations)];
 
-    console.log('Searching for phone variations:', uniqueVariations);
+    console.log('Searching for phone variations in mobile_payment and whatsapp_number:', uniqueVariations);
 
-    // Search for any of these variations
-    const query = `SELECT *, user_id AS "userId" FROM buyers WHERE phone = ANY($1)`;
+    // Search for any of these variations in both columns
+    const query = `
+      SELECT *, user_id AS "userId" 
+      FROM buyers 
+      WHERE mobile_payment = ANY($1) OR whatsapp_number = ANY($1)
+    `;
     const result = await pool.query(query, [uniqueVariations]);
 
     if (result.rows.length > 0) {
-      console.log('Found buyer with phone:', result.rows[0].phone);
+      console.log('Found buyer with matched phone variation');
     }
 
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
@@ -133,7 +137,8 @@ class Buyer {
     // Field name mapping from camelCase to snake_case
     const fieldMap = {
       fullName: 'full_name',
-      phone: 'phone',
+      mobilePayment: 'mobile_payment',
+      whatsappNumber: 'whatsapp_number',
       city: 'city',
       location: 'location',
       isVerified: 'is_verified',

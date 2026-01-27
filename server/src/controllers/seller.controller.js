@@ -186,9 +186,9 @@ export const updateProfile = async (req, res) => {
       delete req.body.password;
     }
 
-    // Verify the user is a seller
-    if (!req.user || req.user.userType !== 'seller') {
-      console.error('Unauthorized: User is not a seller');
+    // Verify the user has permission to manage shop
+    if (!(await req.user.can('manage-shop'))) {
+      console.error('Unauthorized: User does not have manage-shop permission');
       return res.status(403).json({
         status: 'error',
         message: 'Only sellers can update seller profiles'
@@ -396,7 +396,7 @@ async function searchSellersInDB(city, location = null) {
       full_name AS "fullName", 
       shop_name AS "shopName", 
       email, 
-      phone, 
+      whatsapp_number AS "whatsappNumber", 
       city, 
       location,
       created_at AS "createdAt"
@@ -610,10 +610,7 @@ export const getSellerById = async (req, res) => {
     }); */
 
     // Check if the requesting user is the owner of this profile
-    const isOwner = req.user && (
-      String(req.user.id) === String(seller.id) ||
-      (req.user.userId && String(req.user.userId) === String(seller.user_id))
-    );
+    const isOwner = await req.user.can('manage-shop', seller, 'product', 'manage');
 
     // If owner, return full (but sanitized) details. If not, return public details only.
     const responseData = isOwner ? sanitizeSeller(seller) : sanitizePublicSeller(seller);
