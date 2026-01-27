@@ -26,12 +26,10 @@ class PaymentService {
                 'User-Agent': 'Byblos/1.1 (Axios)', // Standardized UA
             },
             timeout: 60000,
-            // Enable keepAlive to reduce handshake overhead and prevent socket hang-ups
+            // Disable keepAlive to prevent socket hang-ups (stale sockets)
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
-                keepAlive: true,
-                maxSockets: 50,
-                freeSocketTimeout: 30000 // Avoid holding dead sockets too long
+                keepAlive: false, // Changed to false for stability
             })
         });
     }
@@ -120,8 +118,9 @@ class PaymentService {
 
             const callbackUrl = process.env.PAYD_CALLBACK_URL || (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` : "https://bybloshq.space/api/payments/webhook/payd");
 
-            logger.info(`[PURCHASE-FLOW] 1. Initiating Payd V2 Payment (STK Push) for Invoice: ${invoice_id}`, {
-                amount: paydAmount, phone: cleanPhone
+            logger.info(`[PURCHASE-FLOW] 1. Initiating Payd Payment (STK Push) for Invoice: ${invoice_id}`, {
+                amount: paydAmount, phone: cleanPhone,
+                targetUrl: `${this.baseUrl}/payments`
             });
 
             const payload = {
