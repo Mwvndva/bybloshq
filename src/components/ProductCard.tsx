@@ -428,11 +428,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       case 'yellow':
       case 'brown':
         return {
-          card: 'bg-[var(--theme-card-bg, white)] text-[var(--theme-text)] border-[var(--theme-border)] hover:shadow-xl hover:shadow-[var(--theme-accent)]/10',
+          card: 'bg-[var(--theme-card-bg, white)] text-black border-[var(--theme-border)] hover:shadow-xl hover:shadow-[var(--theme-accent)]/10',
           price: 'text-[var(--theme-accent)]',
           button: 'bg-[var(--theme-button-bg)] hover:opacity-90 text-[var(--theme-button-text)] shadow-md',
-          seller: 'text-[var(--theme-text)]/80',
-          description: 'text-[var(--theme-text)]/70',
+          seller: 'text-gray-800',
+          description: 'text-gray-700',
           icon: 'text-[var(--theme-accent)]',
         };
       default: // default/glass theme
@@ -526,9 +526,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         />
       </div>
 
-      <CardContent className="mobile-compact">
+      <CardContent className="p-2.5 sm:p-4 md:p-5 lg:p-6">
         <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg antialiased",
-          "text-[var(--theme-text)]"
+          theme === 'black' ? 'text-white' : 'text-black'
         )}>
           {product.name}
         </h3>
