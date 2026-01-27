@@ -39,7 +39,7 @@ const Header = () => {
               >
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline text-sm font-medium">
-                  Events
+                    Create Event
                 </span>
               </Button>
             </Link>
@@ -52,7 +52,7 @@ const Header = () => {
               >
                 <ShoppingBag className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline text-sm font-semibold tracking-wide uppercase">
-                  Start Selling
+                  Create Shop
                 </span>
               </Button>
             </Link>
