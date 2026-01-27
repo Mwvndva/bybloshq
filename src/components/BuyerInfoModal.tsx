@@ -167,16 +167,21 @@ export function BuyerInfoModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={`w-[95vw] max-w-[480px] max-h-[90dvh] p-0 overflow-hidden ${themeClasses.bg} ${themeClasses.text} border-white/10 shadow-2xl rounded-3xl`}>
-        <form onSubmit={handleSubmit} className="flex flex-col h-full w-full">
-          <DialogHeader className="p-6 sm:p-8 pb-3 shrink-0 space-y-4">
+      <DialogContent className={`w-[95vw] max-w-[480px] max-h-[85vh] sm:max-h-[90vh] p-0 overflow-hidden ${themeClasses.bg} ${themeClasses.text} border-white/10 shadow-2xl rounded-3xl`}>
+        <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[85vh] sm:max-h-[90vh] w-full">
+          <DialogHeader className="p-4 sm:p-6 lg:p-8 pb-3 shrink-0 space-y-4">
             <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
               <User className="h-7 w-7 text-yellow-400" />
             </div>
             <DialogTitle className="text-2xl font-black text-center text-white">Create Account</DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-2 space-y-4">
+          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 lg:px-8 py-2 space-y-4 overscroll-contain"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent'
+            }}>
             {/* Full Name */}
             <div className="space-y-1.5">
               <Label htmlFor="fullName" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
@@ -363,7 +368,7 @@ export function BuyerInfoModal({
             </div>
           </div>
 
-          <div className="p-6 sm:p-8 pt-4 space-y-3 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
+          <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
             <Button
               type="submit"
               disabled={isLoading}
