@@ -502,7 +502,7 @@ const ShopPage = () => {
       </div>
 
       {/* Products */}
-      <main className="max-w-[1600px] mx-auto px-3 sm:px-6 py-6 sm:py-8 lg:px-8">
+      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 py-6 sm:py-8 lg:px-8">
         <div className="mb-8">
           <div className="relative max-w-md mx-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
