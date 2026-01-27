@@ -14,7 +14,7 @@ const Header = () => {
       'sticky top-0 z-50 transition-all duration-300',
       'bg-white/5 backdrop-blur-xl border-b border-white/10'
     )}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="w-full px-6 md:px-10 lg:px-12">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
@@ -39,7 +39,7 @@ const Header = () => {
               >
                 <Calendar className="h-4 w-4" />
                 <span className="hidden sm:inline text-sm font-medium">
-                    Create Event
+                  Create Event
                 </span>
               </Button>
             </Link>
