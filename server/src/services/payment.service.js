@@ -122,6 +122,7 @@ class PaymentService {
                     method: 'POST',
                     hostname: url.hostname,
                     path: url.pathname,
+                    rejectUnauthorized: false, // Bypass SSL verification (Fix for self-signed cert error)
                     headers: {
                         'Authorization': this.getAuthHeader(),
                         'Content-Type': 'application/json',

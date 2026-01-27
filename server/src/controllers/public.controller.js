@@ -1,9 +1,21 @@
 import { pool } from '../config/database.js';
 
+import cacheService from '../services/cache.service.js';
+
 // Get all products (public)
 export const getProducts = async (req, res) => {
   try {
     const { aesthetic, city, location } = req.query;
+
+    // 1. Generate Cache Key based on filters
+    const cacheKey = `products:list:${aesthetic || 'all'}:${city || 'all'}:${location || 'all'}`;
+
+    // 2. Try to get from Cache
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) {
+      // Return cached response
+      return res.status(200).json(cachedData);
+    }
 
     // TODO: move filtering logic to ProductModel later when it expands
     // For now we use the raw query builder style if filters exist, or the model for simple fetch
@@ -107,13 +119,18 @@ export const getProducts = async (req, res) => {
       return product;
     });
 
-    res.status(200).json({
+    const responseData = {
       status: 'success',
       results: transformedResults.length,
       data: {
         products: transformedResults
       }
-    });
+    };
+
+    // 3. Store in Cache (60 seconds)
+    await cacheService.set(cacheKey, responseData, 60);
+
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching products:', error);
     res.status(500).json({
