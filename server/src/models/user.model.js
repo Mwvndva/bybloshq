@@ -32,20 +32,45 @@ class User {
     static async create({ email, password, role, is_verified = false }) {
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        const query = `
-      INSERT INTO users (email, password_hash, role, is_verified, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, NOW(), NOW())
-      RETURNING id, email, role, is_verified, created_at, updated_at
-    `;
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        const result = await pool.query(query, [
-            email.toLowerCase(),
-            hashedPassword,
-            role,
-            is_verified
-        ]);
+            const userQuery = `
+                INSERT INTO users (email, password_hash, role, is_verified, created_at, updated_at)
+                VALUES ($1, $2, $3, $4, NOW(), NOW())
+                RETURNING id, email, role, is_verified, created_at, updated_at
+            `;
 
-        return result.rows[0];
+            const userResult = await client.query(userQuery, [
+                email.toLowerCase(),
+                hashedPassword,
+                role,
+                is_verified
+            ]);
+
+            const newUser = userResult.rows[0];
+
+            // Assign role in user_roles table
+            if (role) {
+                const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', [role]);
+                if (roleResult.rows[0]) {
+                    const roleId = roleResult.rows[0].id;
+                    await client.query(
+                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [newUser.id, roleId]
+                    );
+                }
+            }
+
+            await client.query('COMMIT');
+            return newUser;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 
     /**

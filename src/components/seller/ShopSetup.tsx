@@ -63,7 +63,7 @@ export default function ShopSetup() {
     };
 
     return (
-        <div className="min-h-screen bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+        <div className="dark min-h-screen bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
             <div className="sm:mx-auto sm:w-full sm:max-w-3xl">
                 <div className="flex justify-center">
                     <div className="h-12 w-12 bg-yellow-500/10 border border-yellow-400/20 rounded-xl flex items-center justify-center shadow-[0_0_18px_rgba(250,204,21,0.18)]">
