@@ -549,7 +549,7 @@ const ShopPage = () => {
                 {products.length} Items
               </div>
             </div>
-            <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            <div className="grid gap-3 sm:gap-6 grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {filteredProducts.map((product) => {
                 // Ensure the product has the seller info from the shop
                 const productWithSeller: ProductType & { seller?: Seller; isSold?: boolean; } = {
