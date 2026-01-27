@@ -51,7 +51,7 @@ class OrderService {
       // 4. Enrich items with product type for status determination
       const productIds = items.map(item => parseInt(item.productId, 10));
       const productsResult = await client.query(
-        'SELECT id, product_type::text as product_type, is_digital FROM products WHERE id = ANY($1)',
+        'SELECT id, product_type::text as product_type, is_digital, service_options FROM products WHERE id = ANY($1)',
         [productIds]
       );
       const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
@@ -61,6 +61,11 @@ class OrderService {
         if (prod) {
           item.productType = prod.product_type;
           item.isDigital = prod.is_digital;
+
+          // Robustness: Infer 'service' type if missing but has service options
+          if (!item.productType && prod.service_options) {
+            item.productType = ProductType.SERVICE;
+          }
         }
       });
 
@@ -125,7 +130,7 @@ class OrderService {
     try {
       await client.query('BEGIN');
 
-      // 1. Lock and Fetch Order
+      // 1. Fetch Order and Lock
       const lockResult = await client.query(
         `SELECT id FROM product_orders WHERE id = $1 FOR UPDATE`,
         [orderId]
@@ -438,7 +443,7 @@ class OrderService {
       // The original code checked items. Let's replicate that logic smarty.
 
       const itemsQuery = `
-        SELECT oi.*, p.product_type::text as product_type, p.is_digital
+        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = $1
@@ -450,11 +455,19 @@ class OrderService {
       const { rows: sellers } = await client.query('SELECT physical_address FROM sellers WHERE id = $1', [order.seller_id]);
       const sellerHasShop = sellers.length > 0 && !!sellers[0].physical_address;
 
+      // Enrich product type if missing but service_options exist
+      items.forEach(i => {
+        if (!i.product_type && i.service_options) {
+          i.product_type = ProductType.SERVICE;
+          logger.info(`[OrderService] Inferred SERVICE type for item ${i.product_id}`);
+        }
+      });
+
       let hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL);
       let hasService = items.some(i => i.product_type === ProductType.SERVICE);
 
-      // Fallback logic for metadata if product/type missing
-      if (!items.length && metadata.product_type) {
+      // Fallback logic for metadata if product/type missing (e.g. deleted product)
+      if (!hasPhysical && !hasService && metadata.product_type) {
         if (metadata.product_type === ProductType.PHYSICAL) hasPhysical = true;
         if (metadata.product_type === ProductType.SERVICE) hasService = true;
       }
