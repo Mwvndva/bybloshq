@@ -19,7 +19,7 @@ publicRouter.post(
   '/initiate',
   [
     body('phone').trim().notEmpty().withMessage('Phone number is required'),
-    body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+    body('email').optional().isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('amount').isNumeric().withMessage('Valid amount is required'),
     body('ticketId').isInt().withMessage('Valid ticket ID is required'),
     body('eventId').isInt().withMessage('Valid event ID is required'),
@@ -33,7 +33,9 @@ publicRouter.post(
   '/initiate-product',
   [
     body('phone').trim().notEmpty().withMessage('Phone number is required'),
-    body('email').isEmail().normalizeEmail().withMessage('Valid email is required'),
+    // Email is optional here because authenticated users might not send it (we fallback to DB)
+    // However, if provided, it must be valid.
+    body('email').optional().isEmail().normalizeEmail().withMessage('Valid email is required'),
     body('amount').isNumeric().withMessage('Valid amount is required'),
     body('productId').notEmpty().withMessage('Product ID is required'),
     // Optional metadata
