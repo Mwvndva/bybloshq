@@ -373,20 +373,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             duration: 5000
           });
 
-          // **NAVIGATION**: Check Auth Before Redirecting
-          try {
-            // Only redirect to dashboard if we are actually logged in
-            await buyerApi.getProfile();
-
-            setTimeout(() => {
-              window.location.href = '/buyer/dashboard?section=orders';
-            }, 1500);
-          } catch (e) {
-            // Guest User (or session expired) -> Redirect to Login to view order
-            setTimeout(() => {
-              window.location.href = '/buyer/login?redirect=/buyer/dashboard';
-            }, 1500);
-          }
+          // **NAVIGATION**: Redirect directly to dashboard
+          // We assume the Dashboard page has its own auth guard to redirect to login if session is missing.
+          // This avoids race conditions where getProfile() might fail immediately after signup.
+          setTimeout(() => {
+            window.location.href = '/buyer/dashboard?section=orders';
+          }, 1500);
 
         } else if (status === 'failed') {
           clearInterval(interval);
@@ -447,10 +439,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         return {
           card: 'border-0',
           price: 'text-yellow-400',
-          button: 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg shadow-yellow-500/20',
-          seller: 'text-gray-200',
-          description: 'text-gray-400',
-          icon: 'text-gray-400',
+          button: 'bg-yellow-400 hover:bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/10',
+          seller: 'text-gray-100',
+          description: 'text-gray-300',
+          icon: 'text-gray-300',
         };
     }
   };
@@ -553,7 +545,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             formatCurrency(product.price)
           )}
           {(product.product_type === 'service' || (product as any).productType === 'service') && (product.service_options?.price_type === 'hourly' || (product as any).serviceOptions?.price_type === 'hourly') && (
-            <span className="text-sm font-medium text-gray-400 ml-1">/hr</span>
+            <span className="text-sm font-medium text-gray-300 ml-1">/hr</span>
           )}
         </p>
 
@@ -566,7 +558,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         {/* Service Location Info */}
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
           <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
-            theme === 'black' ? 'text-gray-400' : 'text-gray-500'
+            theme === 'black' ? 'text-gray-300' : 'text-gray-300'
           )}>
             <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
             <span className="line-clamp-2">

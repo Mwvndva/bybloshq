@@ -60,9 +60,9 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
     <CardContent className="relative p-3 sm:p-4 md:p-5">
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] sm:text-xs font-semibold text-gray-400 uppercase tracking-wide truncate">{title}</p>
+          <p className="text-[10px] sm:text-xs font-semibold text-gray-300 uppercase tracking-wide truncate">{title}</p>
           <p className="text-lg sm:text-xl md:text-2xl font-black text-white leading-tight">{value}</p>
-          <p className="text-[10px] sm:text-xs text-gray-500 font-medium truncate">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">{subtitle}</p>
         </div>
         <div className="shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-500 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 grid place-items-center shadow">
           <Icon className="text-white h-4 w-4 sm:h-5 sm:w-5" />
@@ -339,7 +339,7 @@ function BuyerDashboard() {
           <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
             <div className="mb-4 sm:mb-6">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">Discover Amazing Products</h2>
-              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-normal mb-4 sm:mb-6">
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal mb-4 sm:mb-6">
                 Browse through our curated collection of unique items
               </p>
 
@@ -391,21 +391,19 @@ function BuyerDashboard() {
                     </Select>
                   </div>
                   <div>
-                    <input
+                    <Input
                       type="number"
                       min={0}
                       placeholder="Min Price"
-                      className="w-full px-3 py-2 bg-gray-800 text-white placeholder:text-gray-500 border border-gray-700 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
                       value={priceMin}
                       onChange={(e) => setPriceMin(e.target.value)}
                     />
                   </div>
                   <div>
-                    <input
+                    <Input
                       type="number"
                       min={0}
                       placeholder="Max Price"
-                      className="w-full px-3 py-2 bg-gray-800 text-white placeholder:text-gray-500 border border-gray-700 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none"
                       value={priceMax}
                       onChange={(e) => setPriceMax(e.target.value)}
                     />
@@ -420,23 +418,23 @@ function BuyerDashboard() {
                 {/* Search Bar */}
                 <div className="relative mt-6">
                   <div className="relative">
-                    <input
+                    <Input
                       type="text"
                       placeholder="Search products by keyword..."
-                      className="w-full px-4 py-3 pr-10 bg-gray-800 text-white placeholder:text-gray-500 border border-gray-700 rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition-all duration-200"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-4 pr-10"
                     />
                     {searchQuery ? (
                       <button
                         onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200 focus:outline-none"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-white focus:outline-none"
                       >
                         <X className="h-5 w-5" />
                       </button>
                     ) : (
                       <svg
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -607,12 +605,11 @@ function BuyerDashboard() {
                             <Info className="h-3 w-3 mr-1" />
                             Used for STK Push and refunds
                           </div>
-                          <input
+                          <Input
                             type="text"
                             value={mobilePayment}
                             onChange={(e) => setMobilePayment(e.target.value)}
                             placeholder="e.g. 0712345678"
-                            className="w-full px-3 py-2 bg-gray-800 text-white placeholder:text-gray-500 border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
                           />
                         </div>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
@@ -621,12 +618,11 @@ function BuyerDashboard() {
                             <Info className="h-3 w-3 mr-1" />
                             Used for order notifications
                           </div>
-                          <input
+                          <Input
                             type="text"
                             value={whatsappNumber}
                             onChange={(e) => setWhatsappNumber(e.target.value)}
                             placeholder="e.g. 0712345678"
-                            className="w-full px-3 py-2 bg-gray-800 text-white placeholder:text-gray-500 border border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
                           />
                         </div>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">

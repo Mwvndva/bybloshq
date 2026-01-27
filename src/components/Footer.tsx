@@ -16,21 +16,21 @@ const Footer = () => {
           <div className="space-y-6">
             <h2 className="font-serif text-2xl font-bold text-white tracking-tight">Byblos</h2>
             <div className="space-y-2">
-              <p className="text-white/40 text-sm font-light flex items-center gap-2">
-                <MapPin className="h-4 w-4 opacity-50" />
+              <p className="text-white/70 text-sm font-light flex items-center gap-2">
+                <MapPin className="h-4 w-4 opacity-70" />
                 Nairobi, Kenya
               </p>
-              <p className="text-white/30 text-xs font-light tracking-wide">© 2025 BYBLOS EXPERIENCE. ALL RIGHTS RESERVED.</p>
+              <p className="text-white/50 text-xs font-light tracking-wide">© 2025 BYBLOS EXPERIENCE. ALL RIGHTS RESERVED.</p>
             </div>
           </div>
 
           {/* Contact */}
           <div className="space-y-6">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/50">Contact</h3>
+            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">Contact</h3>
             <div className="space-y-3">
-              <a href="mailto:official@bybloshq.com" className="block text-white/60 hover:text-white transition-colors text-sm font-light underline-offset-4 hover:underline">official@bybloshq.com</a>
-              <a href="tel:+254111548797" className="block text-white/60 hover:text-white transition-colors text-sm font-light">+254 111 548 797</a>
-              <a href="https://www.instagram.com/bybloshq" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-white/60 hover:text-pink-400 transition-all">
+              <a href="mailto:official@bybloshq.com" className="block text-white/80 hover:text-white transition-colors text-sm font-light underline-offset-4 hover:underline">official@bybloshq.com</a>
+              <a href="tel:+254111548797" className="block text-white/80 hover:text-white transition-colors text-sm font-light">+254 111 548 797</a>
+              <a href="https://www.instagram.com/bybloshq" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-white/80 hover:text-pink-400 transition-all">
                 <Instagram className="h-4 w-4" />
                 <span className="text-sm">@bybloshq</span>
               </a>
@@ -39,29 +39,29 @@ const Footer = () => {
 
           {/* Navigation */}
           <div className="space-y-6">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/50">Explore</h3>
+            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">Explore</h3>
             <div className="space-y-3">
               <button
                 onClick={() => setIsTermsModalOpen(true)}
-                className="block text-white/60 hover:text-white transition-colors text-sm font-light"
+                className="block text-white/80 hover:text-white transition-colors text-sm font-light"
               >
                 Terms & Conditions
               </button>
-              <Link to="/seller" className="block text-white/60 hover:text-white transition-colors text-sm font-light">Sell on Byblos</Link>
-              <Link to="/organizer/events/new" className="block text-white/60 hover:text-white transition-colors text-sm font-light">Create an Event</Link>
+              <Link to="/seller" className="block text-white/80 hover:text-white transition-colors text-sm font-light">Sell on Byblos</Link>
+              <Link to="/organizer/events/new" className="block text-white/80 hover:text-white transition-colors text-sm font-light">Create an Event</Link>
             </div>
           </div>
 
           {/* Powered & Partners */}
           <div className="space-y-6">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/50">Partners</h3>
+            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">Partners</h3>
             <div className="flex flex-wrap gap-4 items-center">
-              <span className="text-white/40 text-sm font-serif italic">Mzigoego</span>
+              <span className="text-white/70 text-sm font-serif italic">Mzigoego</span>
               <div className="w-1 h-1 bg-white/10 rounded-full" />
-              <span className="text-white/40 text-sm font-serif italic tracking-widest uppercase">Payd</span>
+              <span className="text-white/70 text-sm font-serif italic tracking-widest uppercase">Payd</span>
             </div>
             <div className="pt-4 border-t border-white/5">
-              <p className="text-[10px] text-white/20 tracking-tighter uppercase font-bold">Powered by EVOLVE System</p>
+              <p className="text-[10px] text-white/40 tracking-tighter uppercase font-bold">Powered by EVOLVE System</p>
             </div>
           </div>
         </div>
