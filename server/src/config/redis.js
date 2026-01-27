@@ -24,7 +24,7 @@ const createRedisClient = () => {
         // Don't crash the app if Redis is unreachable immediately
         lazyConnect: true,
         maxRetriesPerRequest: null, // Don't limit retries per request (let retryStrategy handle it)
-        enableOfflineQueue: false, // Don't queue commands when offline
+        enableOfflineQueue: true, // Queue commands when offline (prevents startup crash)
     });
 
     client.on('error', (err) => {
