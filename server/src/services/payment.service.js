@@ -8,28 +8,30 @@ import OrderService from './order.service.js';
 
 class PaymentService {
     constructor() {
-        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v2';
+        // Upgrade to V3 as default for better performance and stability
+        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
         this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
         this.channelId = process.env.PAYD_CHANNEL_ID;
-        // Use separate variable for payload username to avoid system USERNAME conflict
-        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx'; // Fallback for immediate test consistency if user hasn't renamed yet
+        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx';
 
         logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl}`);
 
-        // Create axios instance with default config
+        // Create axios instance with optimized config
         this.client = axios.create({
             baseURL: this.baseUrl,
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'Byblos/1.0',
+                'User-Agent': 'Byblos/1.1 (Axios)', // Standardized UA
             },
             timeout: 60000,
-            // Allow self-signed certs and enable keepAlive to prevent socket hang up
+            // Enable keepAlive to reduce handshake overhead and prevent socket hang-ups
             httpsAgent: new https.Agent({
                 rejectUnauthorized: false,
-                keepAlive: false
+                keepAlive: true,
+                maxSockets: 50,
+                freeSocketTimeout: 30000 // Avoid holding dead sockets too long
             })
         });
     }
@@ -43,12 +45,16 @@ class PaymentService {
         } catch (error) {
             if (retries === 0) throw error;
 
-            // Retro only on network errors or 5xx
-            const isNetworkError = error.message === 'socket hang up' || error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT';
+            // Retry on network errors, socket hang ups, or 5xx Server Errors
+            const isNetworkError = error.message === 'socket hang up' ||
+                error.code === 'ECONNRESET' ||
+                error.code === 'ETIMEDOUT' ||
+                error.code === 'ECONNABORTED';
+
             const isServerError = error.response && error.response.status >= 500;
 
             if (isNetworkError || isServerError) {
-                logger.warn(`[PURCHASE-FLOW] Request failed (${error.message}). Retrying in ${delay}ms... (${retries} attempts left)`);
+                logger.warn(`[PURCHASE-FLOW] Request failed (${error.code || error.message}). Retrying in ${delay}ms... (${retries} attempts left)`);
                 await new Promise(resolve => setTimeout(resolve, delay));
                 return this._retryRequest(fn, retries - 1, delay * 2);
             }
