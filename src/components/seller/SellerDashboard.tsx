@@ -151,7 +151,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
     <CardContent className="p-2 sm:p-2.5">
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className={`space-y-0.5 flex-1 min-w-0 ${className}`}>
-          <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-400 uppercase tracking-wide truncate">{title}</p>
+          <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-300 uppercase tracking-wide truncate">{title}</p>
           <p className={`text-base sm:text-lg font-bold ${textColor} break-words leading-tight`}>
             {value}
           </p>
@@ -739,7 +739,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <RefreshCw className="h-12 w-12 text-red-600" />
           </div>
           <h3 className="text-2xl font-black text-white mb-3">Unable to load dashboard</h3>
-          <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">
+          <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">
             {error || 'Something went wrong while loading your dashboard data. Please try again.'}
           </p>
           <Button
@@ -886,7 +886,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <h1 className="text-sm font-black text-white tracking-tight truncate">
                   {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
                 </h1>
-                <p className="text-xs text-gray-400 font-medium truncate">
+                <p className="text-xs text-gray-300 font-medium truncate">
                   Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
                 </p>
               </div>
@@ -911,7 +911,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
                   {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
                 </h1>
-                <p className="hidden sm:block text-xs text-gray-400 font-medium">
+                <p className="hidden sm:block text-xs text-gray-300 font-medium">
                   Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
                 </p>
               </div>
@@ -974,39 +974,39 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {/* Navigation Tabs - Mobile Responsive */}
         <div className="mb-6 sm:mb-8 bg-[rgba(20,20,20,0.55)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-white/10 w-full overflow-x-auto">
           <div className="flex items-center justify-start sm:justify-center gap-2 min-w-max">
-          {[
-            { id: 'overview', label: 'Overview', icon: BarChart3 },
-            { id: 'products', label: 'Products', icon: Package },
-            { id: 'orders', label: 'Orders', icon: ShoppingBag },
-            { id: 'withdrawals', label: 'Withdrawals', icon: Wallet },
-            { id: 'settings', label: 'Settings', icon: Settings },
-          ].map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => {
-                setActiveTab(id);
-                // Mark orders as viewed when Orders tab is clicked
-                if (id === 'orders') {
-                  const now = new Date().toISOString();
-                  setLastViewedOrdersTime(now);
-                  localStorage.setItem('seller_last_viewed_orders', now);
-                  setHasUnreadOrders(false);
-                }
-              }}
-              className={`relative flex items-center justify-center flex-shrink-0 space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 border ${activeTab === id
-                ? 'text-yellow-300 border-yellow-400/30 bg-yellow-400/10 shadow-[0_0_22px_rgba(250,204,21,0.25)] transform scale-[1.03]'
-                : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'
-                }`}
-            >
-              <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
-              <span>{label}</span>
+            {[
+              { id: 'overview', label: 'Overview', icon: BarChart3 },
+              { id: 'products', label: 'Products', icon: Package },
+              { id: 'orders', label: 'Orders', icon: ShoppingBag },
+              { id: 'withdrawals', label: 'Withdrawals', icon: Wallet },
+              { id: 'settings', label: 'Settings', icon: Settings },
+            ].map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => {
+                  setActiveTab(id);
+                  // Mark orders as viewed when Orders tab is clicked
+                  if (id === 'orders') {
+                    const now = new Date().toISOString();
+                    setLastViewedOrdersTime(now);
+                    localStorage.setItem('seller_last_viewed_orders', now);
+                    setHasUnreadOrders(false);
+                  }
+                }}
+                className={`relative flex items-center justify-center flex-shrink-0 space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 border ${activeTab === id
+                  ? 'text-yellow-300 border-yellow-400/30 bg-yellow-400/10 shadow-[0_0_22px_rgba(250,204,21,0.25)] transform scale-[1.03]'
+                  : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'
+                  }`}
+              >
+                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span>{label}</span>
 
-              {/* Notification Badge - Red Dot */}
-              {id === 'orders' && hasUnreadOrders && (
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
-              )}
-            </button>
-          ))}
+                {/* Notification Badge - Red Dot */}
+                {id === 'orders' && hasUnreadOrders && (
+                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -1015,7 +1015,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Order Management</h2>
-              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium">View and manage customer orders</p>
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">View and manage customer orders</p>
             </div>
             <SellerOrdersSection />
           </div>
@@ -1058,7 +1058,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               {!showWithdrawalForm ? (
                 <Button
                   onClick={() => setShowWithdrawalForm(true)}
-                  className="gap-1.5 sm:gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-medium sm:font-semibold text-xs sm:text-sm w-full sm:w-auto"
+                  className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto"
                   disabled={(analytics?.balance || 0) <= 0}
                 >
                   <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -1116,7 +1116,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         value={withdrawalForm.mpesaName}
                         onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaName: e.target.value }))}
                         placeholder="Enter name as registered on M-Pesa"
-                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-900 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                         required
                       />
                     </div>
@@ -1219,7 +1219,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     <Wallet className="h-12 w-12 text-gray-300" />
                   </div>
                   <h3 className="text-xl font-black text-white mb-3">No withdrawal requests</h3>
-                  <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
+                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
                 </div>
               )}
             </div>

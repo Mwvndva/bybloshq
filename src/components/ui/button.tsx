@@ -9,16 +9,16 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-black text-yellow-300 border-2 border-white/10 hover:bg-gray-900 hover:text-yellow-200",
+        default: "bg-yellow-400 text-black border-2 border-yellow-500/50 hover:bg-yellow-500 shadow-md font-bold",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
         outline:
-          "border-2 border-white/10 bg-background hover:bg-white/5 hover:border-yellow-400/30 text-gray-300 hover:text-white",
+          "border-2 border-white/20 bg-black/40 hover:bg-white/10 text-white hover:text-yellow-400",
         secondary:
-          "bg-gray-900 text-yellow-300 border-2 border-white/10 hover:bg-gray-800 hover:text-yellow-200",
-        ghost: "text-yellow-300 hover:bg-gray-800 hover:text-yellow-200",
-        link: "text-yellow-300 underline-offset-4 hover:underline hover:text-yellow-200",
-        byblos: "bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg font-bold",
+          "bg-gray-800 text-white border-2 border-white/10 hover:bg-gray-700 hover:text-yellow-400",
+        ghost: "text-gray-300 hover:bg-white/10 hover:text-white",
+        link: "text-yellow-400 underline-offset-4 hover:underline hover:text-yellow-300",
+        byblos: "bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg font-bold",
         "secondary-byblos": "border-2 border-yellow-400/20 bg-transparent text-yellow-400 font-medium",
       },
       size: {

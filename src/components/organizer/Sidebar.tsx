@@ -34,14 +34,14 @@ export function Sidebar() {
                 to={item.href}
                 className={cn(
                   isActive
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-                  'group flex items-center px-2 py-2 text-sm font-medium rounded-md'
+                    ? 'bg-yellow-400 text-black font-bold shadow-md'
+                    : 'text-gray-400 hover:bg-white/10 hover:text-white',
+                  'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-all duration-200'
                 )}
               >
                 <item.icon
                   className={cn(
-                    isActive ? 'text-gray-500' : 'text-gray-400 group-hover:text-gray-500',
+                    isActive ? 'text-black' : 'text-gray-400 group-hover:text-yellow-400',
                     'mr-3 flex-shrink-0 h-6 w-6'
                   )}
                   aria-hidden="true"
@@ -51,12 +51,12 @@ export function Sidebar() {
             );
           })}
         </nav>
-        <div className="flex flex-shrink-0 border-t border-gray-200 p-4">
+        <div className="flex flex-shrink-0 border-t border-white/10 p-4">
           <div className="group block w-full flex-shrink-0">
             <div className="flex items-center">
               <div>
-                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-500">
-                  <span className="font-medium leading-none text-white">
+                <div className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-gray-800 border border-white/10">
+                  <span className="font-medium leading-none text-yellow-400">
                     {organizer?.full_name
                       .split(' ')
                       .map((n) => n[0])
@@ -65,12 +65,12 @@ export function Sidebar() {
                 </div>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-gray-700 group-hover:text-gray-900">
+                <p className="text-sm font-medium text-white group-hover:text-yellow-400 transition-colors">
                   {organizer?.full_name}
                 </p>
                 <button
                   onClick={logout}
-                  className="text-xs font-medium text-gray-500 group-hover:text-gray-700 flex items-center"
+                  className="text-xs font-medium text-gray-400 group-hover:text-white flex items-center transition-colors"
                 >
                   <LogOut className="mr-1 h-3 w-3" />
                   Sign out
