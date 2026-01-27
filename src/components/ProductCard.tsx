@@ -518,7 +518,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           src={getImageUrl(product.image_url)}
           alt={product.name}
           className={cn(
-            'w-full h-48 sm:h-56 md:h-64 lg:h-72 object-cover transition-transform duration-700 group-hover:scale-105',
+            'w-full h-40 sm:h-56 md:h-64 lg:h-72 object-cover transition-transform duration-700 group-hover:scale-105',
             isImageLoading ? 'opacity-0' : 'opacity-100'
           )}
           onLoad={handleImageLoad}
