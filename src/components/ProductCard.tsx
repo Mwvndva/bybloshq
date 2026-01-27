@@ -526,7 +526,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         />
       </div>
 
-      <CardContent className="p-2.5 sm:p-4 md:p-5 lg:p-6">
+      <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
         <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg antialiased",
           theme === 'black' ? 'text-white' : 'text-black'
         )}>
@@ -550,7 +550,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </p>
 
         {product.description && (
-          <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2", themeClasses.description)}>
+          <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2",
+            theme === 'black' ? 'text-gray-400' : 'text-gray-700'
+          )}>
             {product.description}
           </p>
         )}
@@ -558,7 +560,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         {/* Service Location Info */}
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
           <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
-            theme === 'black' ? 'text-gray-300' : 'text-gray-300'
+            theme === 'black' ? 'text-gray-300' : 'text-gray-700'
           )}>
             <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
             <span className="line-clamp-2">
@@ -578,7 +580,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           theme === 'black' ? 'border-gray-800' : 'border-gray-100'
         )}>
           <Store className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
-          <span className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90", themeClasses.seller)}>{displaySellerName}</span>
+          <span className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90",
+            theme === 'black' ? 'text-gray-300' : 'text-gray-800'
+          )}>{displaySellerName}</span>
           {displaySeller?.hasPhysicalShop && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>
