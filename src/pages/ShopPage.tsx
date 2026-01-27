@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
-import { formatCurrency, getImageUrl } from '@/lib/utils';
+import { formatCurrency, getImageUrl, cn } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
 import type { Product as ProductType, Seller, Aesthetic } from '@/types';
 import type { Product as SellerApiProduct } from '@/api/sellerApi';
@@ -77,10 +77,10 @@ const ShopPage = () => {
     switch (theme) {
       case 'black':
         return {
-          bgGradient: 'from-black to-[#050505]',
+          bgGradient: 'from-black to-[#0a0a0a]',
           textColor: 'text-white',
-          buttonGradient: 'from-gray-900 to-black hover:from-gray-800 hover:to-gray-900',
-          cardBg: 'bg-[#0a0a0a]/95',
+          buttonGradient: 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600',
+          cardBg: 'bg-[#0a0a0a]/80',
           accentColor: 'text-yellow-400',
           borderColor: 'border-white/10'
         };
@@ -88,8 +88,8 @@ const ShopPage = () => {
         return {
           bgGradient: 'from-pink-50 to-white',
           textColor: 'text-pink-900',
-          buttonGradient: 'from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700',
-          cardBg: 'bg-white/90',
+          buttonGradient: 'from-pink-500 to-pink-600',
+          cardBg: 'bg-white/60',
           accentColor: 'text-pink-600',
           borderColor: 'border-pink-200'
         };
@@ -97,8 +97,8 @@ const ShopPage = () => {
         return {
           bgGradient: 'from-orange-50 to-white',
           textColor: 'text-orange-900',
-          buttonGradient: 'from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700',
-          cardBg: 'bg-white/90',
+          buttonGradient: 'from-orange-500 to-orange-600',
+          cardBg: 'bg-white/60',
           accentColor: 'text-orange-600',
           borderColor: 'border-orange-200'
         };
@@ -106,8 +106,8 @@ const ShopPage = () => {
         return {
           bgGradient: 'from-green-50 to-white',
           textColor: 'text-green-900',
-          buttonGradient: 'from-green-500 to-green-600 hover:from-green-600 hover:to-green-700',
-          cardBg: 'bg-white/90',
+          buttonGradient: 'from-green-500 to-green-600',
+          cardBg: 'bg-white/60',
           accentColor: 'text-green-600',
           borderColor: 'border-green-200'
         };
@@ -115,8 +115,8 @@ const ShopPage = () => {
         return {
           bgGradient: 'from-red-50 to-white',
           textColor: 'text-red-900',
-          buttonGradient: 'from-red-500 to-red-600 hover:from-red-600 hover:to-red-700',
-          cardBg: 'bg-white/90',
+          buttonGradient: 'from-red-500 to-red-600',
+          cardBg: 'bg-white/60',
           accentColor: 'text-red-600',
           borderColor: 'border-red-200'
         };
@@ -124,8 +124,8 @@ const ShopPage = () => {
         return {
           bgGradient: 'from-yellow-50 to-white',
           textColor: 'text-yellow-900',
-          buttonGradient: 'from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600',
-          cardBg: 'bg-white/90',
+          buttonGradient: 'from-yellow-400 to-yellow-500',
+          cardBg: 'bg-white/60',
           accentColor: 'text-yellow-600',
           borderColor: 'border-yellow-200'
         };
@@ -133,8 +133,8 @@ const ShopPage = () => {
         return {
           bgGradient: 'from-[#fdf8f6] to-white',
           textColor: 'text-[#451a03]',
-          buttonGradient: 'from-[#78350f] to-[#92400e] hover:from-[#92400e] hover:to-[#b45309]',
-          cardBg: 'bg-white/90',
+          buttonGradient: 'from-[#78350f] to-[#92400e]',
+          cardBg: 'bg-white/60',
           accentColor: 'text-[#92400e]',
           borderColor: 'border-[#f3e3d3]'
         };
@@ -142,8 +142,8 @@ const ShopPage = () => {
         return {
           bgGradient: 'from-gray-50 to-white',
           textColor: 'text-gray-900',
-          buttonGradient: 'from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600',
-          cardBg: 'bg-white/90',
+          buttonGradient: 'from-yellow-400 to-yellow-500',
+          cardBg: 'bg-white/60',
           accentColor: 'text-yellow-600',
           borderColor: 'border-gray-200'
         };
@@ -165,56 +165,80 @@ const ShopPage = () => {
           root.style.setProperty('--theme-text', '#ffffff');
           root.style.setProperty('--theme-card-bg', 'rgba(10, 10, 10, 0.98)');
           root.style.setProperty('--theme-accent', '#f59e0b');
+          root.style.setProperty('--theme-accent-rgb', '245, 158, 11');
           root.style.setProperty('--theme-border', 'rgba(255, 255, 255, 0.1)');
+          root.style.setProperty('--theme-button-bg', '#f59e0b');
+          root.style.setProperty('--theme-button-text', '#000000');
           break;
         case 'pink':
-          root.style.setProperty('--theme-bg-color', '#fce7f3');
+          root.style.setProperty('--theme-bg-color', '#fdf2f8');
           root.style.setProperty('--theme-text', '#831843');
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
           root.style.setProperty('--theme-accent', '#db2777');
+          root.style.setProperty('--theme-accent-rgb', '219, 39, 119');
           root.style.setProperty('--theme-border', 'rgba(251, 207, 232, 0.5)');
+          root.style.setProperty('--theme-button-bg', '#db2777');
+          root.style.setProperty('--theme-button-text', '#ffffff');
           break;
         case 'orange':
-          root.style.setProperty('--theme-bg-color', '#ffedd5');
+          root.style.setProperty('--theme-bg-color', '#fff7ed');
           root.style.setProperty('--theme-text', '#7c2d12');
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
           root.style.setProperty('--theme-accent', '#ea580c');
+          root.style.setProperty('--theme-accent-rgb', '234, 88, 12');
           root.style.setProperty('--theme-border', 'rgba(254, 215, 170, 0.5)');
+          root.style.setProperty('--theme-button-bg', '#ea580c');
+          root.style.setProperty('--theme-button-text', '#ffffff');
           break;
         case 'green':
           root.style.setProperty('--theme-bg-color', '#f0fdf4');
           root.style.setProperty('--theme-text', '#166534');
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
           root.style.setProperty('--theme-accent', '#16a34a');
+          root.style.setProperty('--theme-accent-rgb', '22, 163, 74');
           root.style.setProperty('--theme-border', 'rgba(187, 247, 208, 0.5)');
+          root.style.setProperty('--theme-button-bg', '#16a34a');
+          root.style.setProperty('--theme-button-text', '#ffffff');
           break;
         case 'red':
           root.style.setProperty('--theme-bg-color', '#fef2f2');
           root.style.setProperty('--theme-text', '#991b1b');
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
           root.style.setProperty('--theme-accent', '#dc2626');
+          root.style.setProperty('--theme-accent-rgb', '220, 38, 38');
           root.style.setProperty('--theme-border', 'rgba(254, 202, 202, 0.5)');
+          root.style.setProperty('--theme-button-bg', '#dc2626');
+          root.style.setProperty('--theme-button-text', '#ffffff');
           break;
         case 'yellow':
-          root.style.setProperty('--theme-bg-color', '#fef9c3');
+          root.style.setProperty('--theme-bg-color', '#fefce8');
           root.style.setProperty('--theme-text', '#713f12');
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
           root.style.setProperty('--theme-accent', '#ca8a04');
+          root.style.setProperty('--theme-accent-rgb', '202, 138, 4');
           root.style.setProperty('--theme-border', 'rgba(254, 240, 138, 0.5)');
+          root.style.setProperty('--theme-button-bg', '#ca8a04');
+          root.style.setProperty('--theme-button-text', '#ffffff');
           break;
         case 'brown':
           root.style.setProperty('--theme-bg-color', '#fffbeb');
           root.style.setProperty('--theme-text', '#451a03');
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
           root.style.setProperty('--theme-accent', '#92400e');
+          root.style.setProperty('--theme-accent-rgb', '146, 64, 14');
           root.style.setProperty('--theme-border', 'rgba(251, 235, 198, 0.5)');
+          root.style.setProperty('--theme-button-bg', '#92400e');
+          root.style.setProperty('--theme-button-text', '#ffffff');
           break;
         default: // default theme
           root.style.setProperty('--theme-bg-color', '#f9fafb');
           root.style.setProperty('--theme-text', '#111827');
           root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#d97706');
+          root.style.setProperty('--theme-accent', '#f59e0b');
+          root.style.setProperty('--theme-accent-rgb', '245, 158, 11');
           root.style.setProperty('--theme-border', 'rgba(229, 231, 235, 0.5)');
+          root.style.setProperty('--theme-button-bg', '#f59e0b');
+          root.style.setProperty('--theme-button-text', '#ffffff');
       }
     };
 
@@ -493,23 +517,25 @@ const ShopPage = () => {
             </div>
             <input
               type="text"
-              className={`block w-full pl-10 pr-3 py-2 border ${themeClasses.borderColor} rounded-lg ${themeClasses.cardBg} shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-transparent ${themeClasses.accentColor.replace('text-', 'focus:ring-')
-                }`}
+              className={cn(
+                "block w-full pl-10 pr-3 py-3 border border-[var(--theme-border)] rounded-2xl transition-all duration-300",
+                "bg-[var(--theme-card-bg)] text-[var(--theme-text)] placeholder:text-[var(--theme-text)]/50",
+                "focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]/50 focus:border-[var(--theme-accent)] shadow-xl"
+              )}
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              style={{
-                color: themeClasses.textColor === 'text-white' ? 'white' : 'inherit',
-                backgroundColor: themeClasses.cardBg.includes('bg-white')
-                  ? 'rgba(255, 255, 255, 0.9)'
-                  : 'rgba(0, 0, 0, 0.1)'
-              }}
             />
           </div>
         </div>
 
         {filteredProducts.length > 0 ? (
-          <div className={`${themeClasses.cardBg} backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-8 shadow-lg border ${themeClasses.borderColor}/50`}>
+          <div className={cn(
+            "backdrop-blur-md rounded-[2.5rem] p-5 sm:p-10 shadow-2xl border transition-all duration-500",
+            themeClasses.cardBg,
+            themeClasses.borderColor,
+            "shadow-[var(--theme-accent)]/5"
+          )}>
             <div className="flex justify-between items-center mb-6 sm:mb-8">
               <div className="min-w-0 flex-1">
                 <h2 className={`text-lg sm:text-2xl font-black ${themeClasses.textColor} truncate`}>
