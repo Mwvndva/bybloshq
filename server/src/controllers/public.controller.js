@@ -15,7 +15,7 @@ export const getProducts = async (req, res) => {
              p.digital_file_name as "digitalFileName",
              s.id as seller_id,
              s.full_name as seller_name,
-             s.phone as seller_phone,
+             s.whatsapp_number as seller_phone,
              s.email as seller_email,
              s.city as seller_city,
              s.location as seller_location,
@@ -132,7 +132,7 @@ export const getProduct = async (req, res) => {
     const result = await pool.query(
       `SELECT p.*, 
               s.full_name as seller_name,
-              s.phone as seller_phone,
+              s.whatsapp_number as seller_phone,
               s.email as seller_email
        FROM products p
        JOIN sellers s ON p.seller_id = s.id
@@ -192,7 +192,7 @@ export const getSellerPublicInfo = async (req, res) => {
 
     // Only select columns that exist in the sellers table
     const result = await pool.query(
-      `SELECT id, full_name, email, phone, created_at, updated_at
+      `SELECT id, full_name, email, whatsapp_number as phone, created_at, updated_at
        FROM sellers 
        WHERE id = $1`,
       [id]

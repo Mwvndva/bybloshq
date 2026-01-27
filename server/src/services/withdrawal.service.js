@@ -37,10 +37,10 @@ class WithdrawalService {
 
             if (entityType === 'seller') {
                 table = 'sellers';
-                checkQuery = 'SELECT id, balance, full_name as owner_name FROM sellers WHERE id = $1 FOR UPDATE';
+                checkQuery = 'SELECT id, balance, full_name as owner_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE';
             } else if (entityType === 'organizer') {
                 table = 'organizers';
-                checkQuery = 'SELECT id, balance, full_name as owner_name FROM organizers WHERE id = $1 FOR UPDATE';
+                checkQuery = 'SELECT id, balance, full_name as owner_name, whatsapp_number FROM organizers WHERE id = $1 FOR UPDATE';
             } else if (entityType === 'event') {
                 table = 'events';
                 checkQuery = 'SELECT id, balance, name as owner_name FROM events WHERE id = $1 AND organizer_id = $2 FOR UPDATE';
@@ -131,8 +131,8 @@ class WithdrawalService {
             }
 
             // Notify User
-            if (entity.phone) {
-                whatsappService.notifySellerWithdrawalUpdate(entity.phone, {
+            if (entity.whatsapp_number) {
+                whatsappService.notifySellerWithdrawalUpdate(entity.whatsapp_number, {
                     amount,
                     status: 'processing',
                     reference: providerId || reference,
@@ -152,8 +152,8 @@ class WithdrawalService {
                     ['failed', JSON.stringify(apiError.message), request.id]);
                 await client.query('COMMIT');
 
-                if (entity.phone) {
-                    whatsappService.notifySellerWithdrawalUpdate(entity.phone, {
+                if (entity.whatsapp_number) {
+                    whatsappService.notifySellerWithdrawalUpdate(entity.whatsapp_number, {
                         amount,
                         status: 'failed',
                         reference,
