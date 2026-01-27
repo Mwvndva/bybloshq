@@ -8,19 +8,13 @@ const SALT_ROUNDS = 10;
 const query = (text, params) => pool.query(text, params);
 
 export const createSeller = async (sellerData) => {
-  const { fullName, shopName, email, whatsappNumber, password, city, location, physicalAddress, latitude, longitude, userId = null } = sellerData;
-
-  // Only hash password if we are creating a new user (no userId provided)
-  let hashedPassword = password;
-  if (!userId && password) {
-    hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
-  }
+  const { fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId = null } = sellerData;
 
   const result = await query(
-    `INSERT INTO sellers (full_name, shop_name, email, whatsapp_number, password, city, location, physical_address, latitude, longitude, user_id)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+    `INSERT INTO sellers (full_name, shop_name, email, whatsapp_number, city, location, physical_address, latitude, longitude, user_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      RETURNING *`,
-    [fullName, shopName, email, whatsappNumber, hashedPassword, city, location, physicalAddress, latitude, longitude, userId]
+    [fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId]
   );
   return result.rows[0];
 };
@@ -34,7 +28,6 @@ export const findSellerByEmail = async (email) => {
       shop_name AS "shopName", 
       email, 
       whatsapp_number AS "whatsappNumber", 
-      password, 
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
