@@ -88,32 +88,14 @@ class PaymentService {
                 throw new Error('Payd network code or channel ID not configured');
             }
 
-            logger.info(`[PURCHASE-FLOW] 1. Initiating Payment for Invoice: ${invoice_id}`, {
-                amount, phone
-            });
+            // ... (keep existing validation/prep logic) ...
 
             const paydAmount = parseFloat(amount);
-            const fullName = firstName && lastName ? `${firstName} ${lastName}` : "Customer";
-            const customerEmail = email || "customer@example.com";
-
-            // Normalize phone: remove non-digits
             let cleanPhone = phone.replace(/\D/g, '');
-
-            // Standardize to 07... / 01... format
             if (cleanPhone.startsWith('254')) {
                 cleanPhone = '0' + cleanPhone.substring(3);
             } else if (cleanPhone.length === 9) {
-                // assume 7xx...
                 cleanPhone = '0' + cleanPhone;
-            }
-            // If it's already 07... or 01... leave it. 
-
-            // Account Number: Payd often uses the MSISDN as the account identifier.
-            // Let's use the full international format for account_number just to be distinct and robust.
-            // e.g. 254712345678
-            let accountNumber = cleanPhone;
-            if (accountNumber.startsWith('0')) {
-                accountNumber = '254' + accountNumber.substring(1);
             }
 
             const callbackUrl = process.env.PAYD_CALLBACK_URL || (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` : "https://bybloshq.space/api/payments/webhook/payd");
@@ -123,7 +105,7 @@ class PaymentService {
                 targetUrl: `${this.baseUrl}/payments`
             });
 
-            const payload = {
+            const payloadData = JSON.stringify({
                 username: this.payloadUsername,
                 channel: "MPESA",
                 amount: paydAmount,
@@ -131,54 +113,88 @@ class PaymentService {
                 narration: narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
                 callback_url: callbackUrl
-            };
-
-            logger.info('Sending Payd Request:', {
-                url: `${this.baseUrl}/payments`,
-                method: 'POST',
-                // Mask sensitive info
-                headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ***' },
-                payload: { ...payload, username: '***' }
             });
 
-            // WRAP IN RETRY LOGIC
-            const response = await this._retryRequest(async () => {
-                return await this.client.post('/payments', payload, {
+            // Use native HTTPS to avoid Axios "socket hang up" issues
+            const makeRequest = () => new Promise((resolve, reject) => {
+                const url = new URL(`${this.baseUrl}/payments`);
+                const options = {
+                    method: 'POST',
+                    hostname: url.hostname,
+                    path: url.pathname,
                     headers: {
                         'Authorization': this.getAuthHeader(),
-                        'Content-Type': 'application/json'
-                    }
+                        'Content-Type': 'application/json',
+                        'Content-Length': payloadData.length,
+                        'User-Agent': 'Byblos/1.0 (NodeJS HTTPS)'
+                    },
+                    timeout: 60000
+                };
+
+                const req = https.request(options, (res) => {
+                    let data = '';
+                    res.on('data', (chunk) => data += chunk);
+                    res.on('end', () => {
+                        if (res.statusCode >= 200 && res.statusCode < 300) {
+                            try {
+                                resolve({ data: JSON.parse(data), status: res.statusCode });
+                            } catch (e) {
+                                reject(new Error(`Failed to parse response: ${data}`));
+                            }
+                        } else {
+                            // Try to parse error response
+                            try {
+                                const errData = JSON.parse(data);
+                                reject({ response: { status: res.statusCode, data: errData } });
+                            } catch (e) {
+                                reject({ response: { status: res.statusCode, data: { message: data } } });
+                            }
+                        }
+                    });
                 });
+
+                req.on('error', (e) => reject(e));
+                req.on('timeout', () => {
+                    req.destroy();
+                    reject(new Error('ETIMEDOUT'));
+                });
+
+                req.write(payloadData);
+                req.end();
             });
 
+            // Log Request (Masked)
+            logger.info('Sending Payd Request (Native HTTPS):', {
+                url: `${this.baseUrl}/payments`,
+                payloadLength: payloadData.length
+            });
+
+            // Execute with Retry
+            const response = await this._retryRequest(() => makeRequest());
+
             logger.info(`[PURCHASE-FLOW] 2. Payd API Response Recieved`, {
-                status: response.data.status,
+                status: response.status,
                 reference: response.data.transaction_id || response.data.reference
             });
 
-            // Return standardized response
             return {
                 authorization_url: null,
                 access_code: null,
                 reference: response.data.transaction_id || response.data.reference || response.data.tracking_id || `REF-${Date.now()}`,
-                status: response.data.status,
+                status: response.status,
                 original_response: response.data
             };
 
         } catch (error) {
-            // Enhanced Error Logging
             const errorDetails = error.response ? {
                 status: error.response.status,
-                statusText: error.response.statusText,
-                data: error.response.data,
-                headers: error.response.headers
-            } : { message: error.message };
+                data: error.response.data
+            } : { message: error.message, code: error.code };
 
             console.error('PAYD ERROR DETAILS:', JSON.stringify(errorDetails, null, 2));
             logger.error('Payd initialization error:', errorDetails);
 
-            // Extract meaningful message
-            const errorMessage = error.response?.data?.message || error.response?.data?.error || error.message || 'Payment initialization failed';
+            const errorMessage = error.response?.data?.message || error.message || 'Payment initialization failed';
             throw new Error(errorMessage);
         }
     }
