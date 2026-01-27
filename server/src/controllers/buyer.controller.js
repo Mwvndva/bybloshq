@@ -441,10 +441,13 @@ export const requestRefund = async (req, res, next) => {
 
 export const saveBuyerInfo = async (req, res, next) => {
   try {
-    const { fullName, email, phone, city, location, password } = req.body;
+    const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password } = req.body;
+
+    // Use mobilePayment or whatsappNumber as fallback for phone if not explicitly provided
+    const effectivePhone = phone || mobilePayment || whatsappNumber;
 
     // Validate required fields
-    if (!fullName || !email || !phone || !password) {
+    if (!fullName || !email || !effectivePhone || !password) {
       return next(new AppError('Full name, email, phone, and password are required', 400));
     }
 
@@ -453,7 +456,9 @@ export const saveBuyerInfo = async (req, res, next) => {
       const result = await BuyerService.registerGuest({
         fullName,
         email,
-        phone: normalizePhoneNumber(phone),
+        phone: normalizePhoneNumber(effectivePhone),
+        mobilePayment: mobilePayment || effectivePhone,
+        whatsappNumber: whatsappNumber || effectivePhone,
         city,
         location,
         password
