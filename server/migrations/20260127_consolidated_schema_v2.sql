@@ -458,3 +458,19 @@ BEGIN
     SELECT role_admin_id, id FROM permissions WHERE slug = 'manage-all'
     ON CONFLICT DO NOTHING;
 END $$;
+
+-- ============================================================================
+-- 8. DATA REPAIR & CONSTRAINTS (For Existing Data)
+-- ============================================================================
+
+-- Fix product types (Run this unconditionally to ensure old data is fixed)
+UPDATE products SET product_type = 'service' WHERE product_type IS NULL AND service_options IS NOT NULL;
+UPDATE products SET product_type = 'physical' WHERE product_type IS NULL;
+
+-- Enforce NOT NULL on products.product_type if not already set
+DO $$
+BEGIN
+    ALTER TABLE products ALTER COLUMN product_type SET NOT NULL;
+EXCEPTION
+    WHEN others THEN NULL; -- Ignore if already set or other issues, though usually safe
+END $$;
