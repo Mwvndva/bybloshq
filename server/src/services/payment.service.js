@@ -485,7 +485,9 @@ class PaymentService {
         const results = {
             processedCount: 0,
             successCount: 0,
-            errorCount: 0
+            errorCount: 0,
+            failedCount: 0,
+            orphanedCount: 0
         };
 
         try {
@@ -509,25 +511,40 @@ class PaymentService {
             // 2. Process each
             for (const payment of pendingPayments) {
                 try {
-                    // Check status with Provider
-                    // Assuming Payd has a status endpoint GET /payments/{reference}
-                    // Since I don't have explicit docs here, and previous code is gone,
-                    // I will implement a TRY mechanism or skip if reference is missing.
+                    // Calculate payment age in minutes
+                    const ageMinutes = Math.floor((new Date() - new Date(payment.created_at)) / 60000);
 
+                    // Skip payments without provider reference
                     if (!payment.provider_reference) {
-                        // Can't check without reference
+                        // If payment is older than 30 minutes and has no provider reference,
+                        // it's likely orphaned (initiation failed but wasn't marked as failed)
+                        if (ageMinutes > 30) {
+                            logger.warn(`Marking orphaned payment ${payment.id} as failed (age: ${ageMinutes}m, no provider_reference)`);
+                            await pool.query(
+                                "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2",
+                                [JSON.stringify({
+                                    failure_reason: 'Orphaned payment - no provider reference after 30 minutes',
+                                    failed_by: 'cron_job',
+                                    failed_at: new Date().toISOString()
+                                }), payment.id]
+                            );
+                            results.orphanedCount++;
+                            results.failedCount++;
+                        }
                         continue;
                     }
 
                     // Attempt retrieval from Provider
                     let providerStatus = null;
                     let providerData = null;
+                    let is404Error = false;
 
                     try {
                         const response = await this.client.get(`/payments/${payment.provider_reference}`, {
                             headers: { Authorization: this.getAuthHeader() }
                         });
                         providerData = response.data;
+
                         // Map provider status
                         // Payd v3 usually returns { status: 'SUCCESS' | 'FAILED' | ... }
                         if (providerData.status === 'SUCCESS' || providerData.result_code == 200) {
@@ -536,13 +553,26 @@ class PaymentService {
                             providerStatus = 'failed';
                         }
                     } catch (netErr) {
-                        logger.warn(`Failed to check status for ${payment.id}: ${netErr.message}`);
-                        // If 404, maybe failed?
+                        // Check if it's a 404 error
                         if (netErr.response?.status === 404) {
-                            // providerStatus = 'failed'; // Risky if just network glip
+                            is404Error = true;
+
+                            // If payment is older than 30 minutes and returns 404,
+                            // it's likely the payment doesn't exist in Payd's system
+                            if (ageMinutes > 30) {
+                                logger.warn(`Payment ${payment.id} not found in Payd (404) after ${ageMinutes} minutes - marking as failed`);
+                                providerStatus = 'failed';
+                            } else {
+                                // For newer payments, just log and skip (might still be processing)
+                                logger.info(`Payment ${payment.id} returned 404 but is only ${ageMinutes}m old - will retry later`);
+                            }
+                        } else {
+                            // For other errors (network issues, timeouts, etc.), just log
+                            logger.warn(`Failed to check status for ${payment.id}: ${netErr.message}`);
                         }
                     }
 
+                    // Process based on determined status
                     if (providerStatus === 'success') {
                         logger.info(`Payment ${payment.id} verified as SUCCESS via Cron`);
                         await this.handleSuccessfulPayment({
@@ -552,15 +582,38 @@ class PaymentService {
                         });
                         results.successCount++;
                     } else if (providerStatus === 'failed') {
-                        logger.info(`Payment ${payment.id} verified as FAILED via Cron`);
-                        await pool.query("UPDATE payments SET status = 'failed' WHERE id = $1", [payment.id]);
-                        results.errorCount++; // Count as error or just processed?
+                        const failureReason = is404Error
+                            ? 'Payment not found in provider system (404)'
+                            : (providerData?.remarks || providerData?.status_description || 'Payment failed');
+
+                        logger.info(`Payment ${payment.id} verified as FAILED via Cron - Reason: ${failureReason}`);
+                        await pool.query(
+                            "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2",
+                            [JSON.stringify({
+                                failure_reason: failureReason,
+                                failed_by: 'cron_job',
+                                failed_at: new Date().toISOString(),
+                                provider_data: providerData || { error_code: 404 }
+                            }), payment.id]
+                        );
+                        results.failedCount++;
                     }
 
                 } catch (innerErr) {
                     logger.error(`Error processing pending payment ${payment.id}:`, innerErr);
                     results.errorCount++;
                 }
+            }
+
+            // Log summary if any payments were processed
+            if (results.processedCount > 0) {
+                logger.info(`Payment processing summary:`, {
+                    processed: results.processedCount,
+                    successful: results.successCount,
+                    failed: results.failedCount,
+                    orphaned: results.orphanedCount,
+                    errors: results.errorCount
+                });
             }
 
         } catch (error) {
