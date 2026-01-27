@@ -81,9 +81,9 @@ class SellerService {
 
     // --- Profile ---
     static async updateProfile(id, updates) {
-        // handle password update logic here instead of Model
+        // Password updates should be handled via dedicated change-password flow
         if (updates.password) {
-            updates.password = await bcrypt.hash(updates.password, SALT_ROUNDS);
+            delete updates.password;
         }
         return await SellerModel.updateSeller(id, updates);
     }

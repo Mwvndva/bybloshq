@@ -1,5 +1,4 @@
-import Organizer from '../models/organizer.model.js';
-import { sendPasswordResetEmail } from '../utils/email.js';
+import AuthService from '../services/auth.service.js';
 
 /**
  * @desc    Forgot password
@@ -17,38 +16,14 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // Find organizer by email
-    const organizer = await Organizer.findByEmail(email);
-    
-    if (!organizer) {
-      // For security, don't reveal if the email exists or not
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    }
+    await AuthService.forgotPassword(email, 'organizer');
 
-    try {
-      // 1. Create a password reset token
-      const resetToken = await Organizer.createPasswordResetToken(email);
-      
-      // 2. Send the password reset email
-      await sendPasswordResetEmail(email, resetToken, 'organizer');
-      
-      console.log(`Password reset email sent to [REDACTED]`);
-      
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    } catch (emailError) {
-      console.error('Error sending password reset email:', emailError);
-      // Still return success to the client for security
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    }
+    // Always return success for security
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email, you will receive a password reset link.'
+    });
+
   } catch (error) {
     console.error('Forgot password error:', error);
     return res.status(500).json({
@@ -68,31 +43,27 @@ export const resetPassword = async (req, res) => {
     const { email, token, newPassword } = req.body;
 
     // Validate input
-    if (!email || !token || !newPassword) {
+    if (!token || !newPassword || !email) { // Email is required for User model verification
       return res.status(400).json({
         status: 'error',
         message: 'Please provide email, token, and new password'
       });
     }
 
-    // Verify the token
-    const isTokenValid = await Organizer.verifyPasswordResetToken(email, token);
-    
-    if (!isTokenValid) {
+    try {
+      await AuthService.resetPassword(email, token, newPassword);
+    } catch (err) {
       return res.status(400).json({
         status: 'error',
-        message: 'Invalid or expired token. Please request a new password reset.'
+        message: err.message || 'Invalid or expired token'
       });
     }
 
-    // Update the password
-    await Organizer.updatePassword(email, newPassword);
-    
     return res.status(200).json({
       status: 'success',
       message: 'Password has been reset successfully. You can now log in with your new password.'
     });
-    
+
   } catch (error) {
     console.error('Reset password error:', error);
     return res.status(500).json({
@@ -101,3 +72,4 @@ export const resetPassword = async (req, res) => {
     });
   }
 };
+

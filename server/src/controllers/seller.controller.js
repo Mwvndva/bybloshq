@@ -4,6 +4,8 @@ import payoutService from '../services/payout.service.js';
 import whatsappService from '../services/whatsapp.service.js';
 import logger from '../utils/logger.js';
 import ImageService from '../services/image.service.js';
+import AuthService from '../services/auth.service.js';
+import { setAuthCookie } from '../utils/cookie.utils.js';
 
 import SellerService from '../services/seller.service.js';
 import * as SellerModel from '../models/seller.model.js';
@@ -14,20 +16,6 @@ import {
   findSellerByEmail,
   updateSeller
 } from '../models/seller.model.js';
-// Wait, I removed isShopNameAvailable from Model default exports, so I need to check how it was exported.
-// It was `export const isShopNameAvailable`. I replaced it with `static async isShopNameAvailable`. 
-// So it is likely NOT exported as const anymore if I made it class? 
-// No, I edited `seller.model.js` via string replace. 
-// I replaced `export const isShopNameAvailable` with `static async ...`. 
-// That implies I broke the module export structure if it wasn't a class file.
-// `seller.model.js` was a functional module. 
-// "Static async" only makes sense inside a `class`. 
-// ERROR: I injected `static async` into a functional module.
-// I must fix `seller.model.js` structure first or adjust my import.
-// I will assume I need to fix `seller.model.js` to be valid js first. 
-// Actually, let's fix the Controller to use what I *intended* the Service to use.
-// The Service uses `SellerModel.createSeller`.
-// Refactor: the Controller should mostly use `SellerService`.
 
 import {
   sanitizeSeller,
@@ -36,28 +24,17 @@ import {
 } from '../utils/sanitize.js';
 
 // Helper to send token via cookie
-const sendTokenResponse = (seller, statusCode, res, message) => {
-  const token = SellerService.generateToken(seller);
+const sendTokenResponse = (data, statusCode, res, message) => {
+  const { user, profile, token } = data;
 
-  const cookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours default
-    path: '/'
-  };
-
-  if (process.env.NODE_ENV === 'development') {
-    delete cookieOptions.domain;
-  }
-
-  res.cookie('jwt', token, cookieOptions);
+  setAuthCookie(res, token);
 
   res.status(statusCode).json({
     status: 'success',
-    // token, // SILENCED
+    message,
     data: {
-      seller: sanitizeSeller(seller)
+      seller: sanitizeSeller(profile),
+      user: { email: user.email, role: user.role }
     }
   });
 };
@@ -92,14 +69,17 @@ export const checkShopNameAvailability = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    const seller = await SellerService.register(req.body);
-    const token = SellerService.generateToken(seller);
-    // sendTokenResponse helper uses token... 
-    // I should update sendTokenResponse to take token or generate it using Service.
-    // Let's refactor sendTokenResponse to use Service.generateToken.
-    sendTokenResponse(seller, 201, res, 'Registration successful');
+    // Register logic delegated to AuthService (which calls SellerService)
+    await AuthService.register(req.body, 'seller');
+
+    // Auto-login to get token and full profile structure
+    const loginData = await AuthService.login(req.body.email, req.body.password, 'seller');
+
+    sendTokenResponse(loginData, 201, res, 'Registration successful');
   } catch (error) {
-    // ... error handling
+    if (error.message.includes('exists')) {
+      return res.status(400).json({ status: 'error', message: error.message });
+    }
     console.error('Registration error:', error);
     res.status(500).json({ status: 'error', message: error.message });
   }
@@ -108,10 +88,11 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    const seller = await SellerService.login(email, password);
-    if (!seller) return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
+    const data = await AuthService.login(email, password, 'seller');
 
-    sendTokenResponse(seller, 200, res, 'Login successful');
+    if (!data) return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
+
+    sendTokenResponse(data, 200, res, 'Login successful');
   } catch (e) {
     console.error(e);
     res.status(500).json({ status: 'error', message: 'Login failed' });
@@ -235,8 +216,8 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-import { sendPasswordResetEmail } from '../utils/email.js';
-import { createPasswordResetToken } from '../models/seller.model.js';
+import { sendPasswordResetEmail } from '../utils/email.js'; // Might generally be handled by AuthService now
+import { createPasswordResetToken } from '../models/seller.model.js'; // Deprecated in favor of User model by AuthService
 
 /**
  * @desc    Reset password
@@ -245,38 +226,23 @@ import { createPasswordResetToken } from '../models/seller.model.js';
  */
 export const resetPassword = async (req, res) => {
   try {
-    const { token, newPassword } = req.body;
+    const { email, token, newPassword } = req.body; // Added email requirement
 
-    if (!token || !newPassword) {
+    if (!token || !newPassword || !email) {
       return res.status(400).json({
         status: 'error',
-        message: 'Token and new password are required'
+        message: 'Token, email, and new password are required'
       });
     }
 
-    // Verify the token and get the email
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const email = decoded.email;
-
-    if (!email) {
+    try {
+      await AuthService.resetPassword(email, token, newPassword);
+    } catch (err) {
       return res.status(400).json({
         status: 'error',
-        message: 'Invalid token'
+        message: err.message || 'Invalid or expired token'
       });
     }
-
-    // Verify the token against the database
-    const isValidToken = await verifyPasswordResetToken(email, token);
-
-    if (!isValidToken) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Invalid or expired token. Please request a new password reset.'
-      });
-    }
-
-    // Update the password
-    await updatePassword(email, newPassword);
 
     res.status(200).json({
       status: 'success',
@@ -284,14 +250,6 @@ export const resetPassword = async (req, res) => {
     });
   } catch (error) {
     console.error('Reset password error:', error);
-
-    if (error.name === 'TokenExpiredError') {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Token has expired. Please request a new password reset.'
-      });
-    }
-
     res.status(500).json({
       status: 'error',
       message: 'An error occurred while resetting your password.'
@@ -315,38 +273,12 @@ export const forgotPassword = async (req, res) => {
       });
     }
 
-    // Find seller by email
-    const seller = await findSellerByEmail(email);
+    await AuthService.forgotPassword(email, 'seller');
 
-    if (!seller) {
-      // For security, don't reveal if the email exists or not
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    }
-
-    try {
-      // 1. Create a password reset token
-      const resetToken = await createPasswordResetToken(email);
-
-      // 2. Send the password reset email
-      await sendPasswordResetEmail(email, resetToken);
-
-      console.log(`Password reset email sent to ${email}`);
-
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    } catch (emailError) {
-      console.error('Error sending password reset email:', emailError);
-      // Still return success to the client for security
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    }
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email, you will receive a password reset link.'
+    });
   } catch (error) {
     console.error('Forgot password error:', error);
     return res.status(500).json({
