@@ -127,6 +127,26 @@ class User {
     }
 
     /**
+     * Update password for a logged in user
+     * @param {number} userId 
+     * @param {string} newPassword 
+     */
+    static async updatePassword(userId, newPassword) {
+        const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+        const query = `
+      UPDATE users 
+      SET password_hash = $1, 
+          updated_at = NOW()
+      WHERE id = $2
+      RETURNING id, email, role
+    `;
+
+        const result = await pool.query(query, [hashedPassword, userId]);
+        return result.rows[0] || null;
+    }
+
+    /**
      * Reset password
      * @param {string} email 
      * @param {string} newPassword 

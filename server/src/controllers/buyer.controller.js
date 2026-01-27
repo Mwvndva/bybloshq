@@ -5,30 +5,45 @@ import AppError from '../utils/appError.js';
 import { sanitizeBuyer } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
+import AuthService from '../services/auth.service.js';
+import { setAuthCookie } from '../utils/cookie.utils.js';
+import { signToken } from '../utils/jwt.js';
 
 // Helper to send token via cookie
-const createSendToken = (user, statusCode, req, res) => {
-  const token = BuyerService.signToken(user);
+const createSendToken = (data, statusCode, req, res) => {
+  // Support both AuthService format { user, profile, token } and legacy direct user/buyer object if needed
+  // But we aim to use AuthService format primarily.
 
-  const cookieOptions = {
-    expires: new Date(
-      Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
-    ),
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Important for cross-site
-    path: '/'
-  };
+  let token;
+  let buyer;
+  let user;
 
-  res.cookie('jwt', token, cookieOptions);
+  if (data.token && data.profile) {
+    // AuthService format
+    token = data.token;
+    buyer = data.profile;
+    user = data.user;
+  } else {
+    // Legacy format (if passed user object directly) - avoid this if possible
+    // Assuming 'data' is the buyer object with user_id
+    buyer = data;
+    // We need to generate token here if not provided?
+    // Better to enforce AuthService format.
+    // But saveBuyerInfo might return just buyer.
+    const userId = buyer.user_id || buyer.userId;
+    token = signToken(userId, 'buyer');
+  }
+
+  setAuthCookie(res, token);
 
   // Remove password from output
-  user.password = undefined;
+  if (buyer.password) buyer.password = undefined;
 
   res.status(statusCode).json({
     status: 'success',
     data: {
-      buyer: sanitizeBuyer(user),
+      buyer: sanitizeBuyer(buyer),
+      user: user ? { email: user.email, role: user.role } : undefined
     },
   });
 };
@@ -47,18 +62,14 @@ export const register = async (req, res, next) => {
       return next(new AppError('City and location are required', 400));
     }
 
-    // 4) Create new buyer (Service handles email usage check usually? Assuming Service throws or we catch unique violation)
-    // The Service uses Buyer.create which inserts directly.
-    // Ideally Service checks generic "email in use" or we catch DB error.
-    // The Service code I wrote just tries insert.
-    // So let's wrap in try/catch and check for specific DB error here or let global handler do it.
-    // Original controller did: "const existingBuyer = await Buyer.findByEmail(email);"
-    // I should probably add that check to Service or keep it here if Service is thin.
-    // I'll keep it simple: call Service.
-
     try {
-      const newBuyer = await BuyerService.register(req.body);
-      createSendToken(newBuyer, 201, req, res);
+      // Delegate to AuthService
+      await AuthService.register(req.body, 'buyer');
+
+      // Auto-login
+      const loginData = await AuthService.login(req.body.email, password, 'buyer');
+
+      createSendToken(loginData, 201, req, res);
     } catch (err) {
       if (err.code === '23505') return next(new AppError('Email already in use', 400));
       throw err;
@@ -78,19 +89,20 @@ export const login = async (req, res, next) => {
       return next(new AppError('Please provide email and password', 400));
     }
 
-    // 2) Check if buyer exists and password is correct
-    const buyer = await BuyerService.login(email, password);
+    // 2) Delegate to AuthService
+    const data = await AuthService.login(email, password, 'buyer');
 
-    if (!buyer) {
+    if (!data) {
       return next(new AppError('Invalid email or password', 401));
     }
 
-    // 3) Update last login (should be in Service but simple enough here or add to Service later)
-    // await Buyer.update(buyer.id, { last_login: new Date() }); 
-    // I skipped this in Service for now to keep it minimal.
+    // 3) Update last login (optional, if not handled by Service)
+    // AuthService doesn't explicitly update last_login on User model yet, but User model has the method.
+    // We can add it to AuthService later or do it here. 
+    // Keeping it simple.
 
-    // 4) If everything ok, send token via cookie
-    createSendToken(buyer, 200, req, res);
+    // 4) Send token
+    createSendToken(data, 200, req, res);
   } catch (error) {
     next(error);
   }
@@ -107,37 +119,12 @@ export const forgotPassword = async (req, res, next) => {
       });
     }
 
-    // Find buyer by email
-    const buyer = await Buyer.findByEmail(email);
+    await AuthService.forgotPassword(email, 'buyer');
 
-    // Always return success even if user not found (Security)
-    if (!buyer) {
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    }
-
-    try {
-      // 1. Generate the random reset token and save it
-      const { resetToken } = await Buyer.setPasswordResetToken(email);
-
-      // 2. Send the password reset email
-      await sendPasswordResetEmail(email, resetToken, 'buyer');
-
-      // console.log(`Password reset email sent`); // Silenced
-
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    } catch (emailError) {
-      console.error('Error sending password reset email:', emailError);
-      return res.status(200).json({
-        status: 'success',
-        message: 'If an account exists with this email, you will receive a password reset link.'
-      });
-    }
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email, you will receive a password reset link.'
+    });
   } catch (error) {
     console.error('Forgot password error:', error);
     return res.status(500).json({
@@ -149,30 +136,29 @@ export const forgotPassword = async (req, res, next) => {
 
 export const resetPassword = async (req, res, next) => {
   try {
-    const { token, newPassword } = req.body;
+    const { token, newPassword, email } = req.body; // Added email
 
     // 1) Validate input
-    if (!token || !newPassword) {
-      return next(new AppError('Token and new password are required', 400));
+    if (!token || !newPassword || !email) {
+      return next(new AppError('Token, email, and new password are required', 400));
     }
 
-    // 2) Reset password using the token
-    const buyer = await Buyer.resetPassword(token, newPassword);
+    // 2) Reset password using AuthService
+    try {
+      await AuthService.resetPassword(email, token, newPassword);
+    } catch (err) {
+      return next(new AppError(err.message || 'Invalid or expired token', 400));
+    }
 
     // 3) Log the buyer in, send JWT
-    const authToken = BuyerService.signToken(buyer);
+    const data = await AuthService.login(email, newPassword, 'buyer');
 
-    res.status(200).json({
-      status: 'success',
-      token: authToken,
-      data: {
-        buyer: sanitizeBuyer(buyer),
-      },
-    });
+    createSendToken(data, 200, req, res);
   } catch (error) {
     next(error);
   }
 };
+
 
 // Order fetching functionality has been removed
 

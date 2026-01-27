@@ -74,17 +74,24 @@ class OrganizerService {
     }
 
     static async updatePassword(id, currentPassword, newPassword) {
-        const organizer = await Organizer.findById(id); // Needed for password hash
+        const organizer = await Organizer.findById(id);
         if (!organizer) throw new Error('Organizer not found');
 
-        // Manual query since we removed findById returning * (maybe?)
-        // The DAO findById returns * ("SELECT *").
+        // Fix: Use User model for password verification and update
+        // Organizer model findById returns user_id as userId
+        const userId = organizer.userId || organizer.user_id;
 
-        const isMatch = await bcrypt.compare(currentPassword, organizer.password);
+        if (!userId) {
+            throw new Error('Organizer is not linked to a User account. Please contact support.');
+        }
+
+        const user = await User.findById(userId);
+        if (!user) throw new Error('User account not found');
+
+        const isMatch = await User.verifyPassword(currentPassword, user.password_hash);
         if (!isMatch) throw new Error('Current password is incorrect');
 
-        const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-        return await Organizer.findByIdAndUpdate(id, { password: hashedPassword });
+        return await User.updatePassword(userId, newPassword);
     }
 
     // Token Helpers
