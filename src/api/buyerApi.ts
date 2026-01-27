@@ -644,7 +644,10 @@ const buyerApi = {
       // Use the public API endpoint that doesn't require authentication
       const response = await axios.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
         `${baseURL}/buyers/save-info`,
-        buyerInfo,
+        {
+          ...buyerInfo,
+          phone: buyerInfo.mobilePayment || buyerInfo.whatsappNumber
+        },
         {
           headers: {
             'Content-Type': 'application/json',
