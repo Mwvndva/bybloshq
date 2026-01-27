@@ -82,11 +82,11 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
   if (!products || products.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="mx-auto w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-          <Plus className="h-8 w-8 text-gray-400" />
+        <div className="mx-auto w-16 h-16 bg-white/5 border border-white/10 rounded-full flex items-center justify-center mb-4">
+          <Plus className="h-8 w-8 text-gray-300" />
         </div>
-        <h3 className="text-lg font-medium text-gray-900 mb-1">No products yet</h3>
-        <p className="text-gray-500">Get started by adding your first product from the button above</p>
+        <h3 className="text-lg font-medium text-white mb-1">No products yet</h3>
+        <p className="text-gray-400">Get started by adding your first product from the button above</p>
       </div>
     );
   }
@@ -97,7 +97,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+          className="h-8 w-8 p-0 text-gray-300 hover:bg-red-500/10 hover:text-red-200"
           onClick={(e) => {
             e.stopPropagation();
             handleDeleteClick(product.id);
@@ -114,7 +114,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
           variant="ghost"
           size="icon"
           onClick={() => onEdit(product.id)}
-          className="h-8 w-8"
+          className="h-8 w-8 text-gray-300 hover:bg-white/5 hover:text-white"
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -126,10 +126,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
     <div className="space-y-4">
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
           <DialogHeader>
-            <DialogTitle>Delete Product</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-white">Delete Product</DialogTitle>
+            <DialogDescription className="text-gray-400">
               Are you sure you want to delete this product? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -141,6 +141,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 setProductToDelete(null);
               }}
               disabled={!!deletingId}
+              className="bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
             >
               Cancel
             </Button>
@@ -164,11 +165,11 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       {/* Grid View - Hidden on larger screens */}
       <div className="md:hidden grid gap-6 grid-cols-1 sm:grid-cols-2">
         {products.map((product) => (
-          <Card key={product.id} className="relative group">
+          <Card key={product.id} className="relative group bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10">
             <div className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-300 hover:bg-white/5 hover:text-white">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -191,7 +192,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               </DropdownMenu>
             </div>
             <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-sm font-medium truncate">{product.name}</CardTitle>
+              <CardTitle className="text-sm font-medium truncate text-white">{product.name}</CardTitle>
               <Badge
                 variant={product.status === 'sold' ? 'destructive' : 'default'}
                 className="mt-2 w-fit"
@@ -200,7 +201,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               </Badge>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="aspect-square bg-gray-100 rounded-md overflow-hidden mb-3">
+              <div className="aspect-square bg-white/5 border border-white/10 rounded-md overflow-hidden mb-3">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -209,12 +210,12 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <EyeOff className="h-8 w-8 text-gray-400" />
+                    <EyeOff className="h-8 w-8 text-gray-300" />
                   </div>
                 )}
               </div>
               <div className="flex justify-between items-center">
-                <span className="font-medium">{formatCurrency(product.price)}</span>
+                <span className="font-medium text-white">{formatCurrency(product.price)}</span>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"

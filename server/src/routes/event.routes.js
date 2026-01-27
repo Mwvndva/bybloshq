@@ -9,7 +9,7 @@ import {
   getEventTicketTypes,
   getPublicEvent
 } from '../controllers/event.controller.js';
-import { protect } from '../middleware/organizerAuth.js';
+import { protect, hasPermission } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -42,7 +42,7 @@ publicRouter.get('/upcoming', (req, res, next) => {
 publicRouter.get('/:eventId(\\d+|\\w{8}-\\w{4}-\\w{4}-\\w{4}-\\w{12})/ticket-types$', (req, res, next) => {
   const { eventId } = req.params;
   const requestId = req.id || 'no-request-id';
-  
+
   console.log(`[${requestId}] GET /public/${eventId}/ticket-types`);
   next();
 }, getEventTicketTypes);
@@ -51,7 +51,7 @@ publicRouter.get('/:eventId(\\d+|\\w{8}-\\w{4}-\\w{4}-\\w{4}-\\w{12})/ticket-typ
 publicRouter.get('/:eventId(\\d+|\\w{8}-\\w{4}-\\w{4}-\\w{4}-\\w{12})$', (req, res, next) => {
   const { eventId } = req.params;
   const requestId = req.id || 'no-request-id';
-  
+
   console.log(`[${requestId}] GET /public/${eventId}`);
   next();
 }, getPublicEvent);
@@ -60,9 +60,9 @@ publicRouter.get('/:eventId(\\d+|\\w{8}-\\w{4}-\\w{4}-\\w{4}-\\w{12})$', (req, r
 publicRouter.get('*', (req, res) => {
   const requestId = req.id || 'no-request-id';
   const path = req.path;
-  
+
   console.log(`[${requestId}] Invalid public endpoint: /public${path}`);
-  
+
   // Special case for /public/upcoming with incorrect method
   if (path === '/upcoming' || path === '/upcoming/') {
     return res.status(405).json({
@@ -71,7 +71,7 @@ publicRouter.get('*', (req, res) => {
       requestId
     });
   }
-  
+
   // Check if it's an invalid event ID format
   const pathWithoutSlash = path.replace(/^\//, '');
   if (!/^\d+$/.test(pathWithoutSlash) && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pathWithoutSlash)) {
@@ -82,7 +82,7 @@ publicRouter.get('*', (req, res) => {
       receivedPath: path
     });
   }
-  
+
   // For all other cases
   res.status(404).json({
     status: 'error',
@@ -99,6 +99,7 @@ router.use('/public', publicRouter);
 // PROTECTED ROUTES - Require authentication
 // ==============================================
 router.use(protect);
+router.use(hasPermission('create-events', 'verify-tickets'));
 
 // Create a new event
 router.post('/', createEvent);
@@ -125,7 +126,7 @@ router.delete('/:id(\\d+)', deleteEvent);
 router.use('*', (req, res) => {
   const requestId = req.id || 'no-request-id';
   console.log(`[${requestId}] 404: Route not found: ${req.method} ${req.originalUrl}`);
-  
+
   res.status(404).json({
     status: 'error',
     message: `Cannot ${req.method} ${req.originalUrl}`,
@@ -142,7 +143,7 @@ router.use((err, req, res, next) => {
     url: req.originalUrl,
     method: req.method
   });
-  
+
   res.status(500).json({
     status: 'error',
     message: 'Internal server error',

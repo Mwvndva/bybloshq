@@ -1,27 +1,46 @@
 import { query } from '../config/database.js';
 import { AppError } from '../utils/errorHandler.js';
 import { verifyToken, getTokenFromRequest } from '../utils/jwt.js';
+import AuthorizationService from '../services/authorization.service.js';
+import ProductPolicy from '../policies/ProductPolicy.js';
+import OrderPolicy from '../policies/OrderPolicy.js';
+import EventPolicy from '../policies/EventPolicy.js';
 
 // Import cookie-parser if not already imported
 import cookieParser from 'cookie-parser';
 
-// Role-based access control
-export const restrictTo = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.userType)) {
+// Maps for easy lookup in req.user.can
+const policies = {
+  product: ProductPolicy,
+  order: OrderPolicy,
+  event: EventPolicy
+};
+
+/**
+ * Middleware to restrict access based on permissions
+ * @param  {...string} permissions 
+ */
+export const hasPermission = (...permissions) => {
+  return async (req, res, next) => {
+    try {
+      for (const permission of permissions) {
+        const hasPerm = await AuthorizationService.hasPermission(req.user, permission);
+        if (hasPerm) return next();
+      }
+
       return next(
         new AppError('You do not have permission to perform this action', 403)
       );
+    } catch (error) {
+      next(error);
     }
-    next();
   };
 };
 
 export const protect = async (req, res, next) => {
   try {
-    console.log('\n=== Auth Middleware ===');
-    console.log('Request URL:', req.originalUrl);
-    console.log('Request Method:', req.method);
+    // console.log('\n=== Auth Middleware ===');
+    // console.log('Request URL:', req.originalUrl);
 
     // Parse cookies if not already parsed
     if (!req.cookies) {
@@ -32,27 +51,17 @@ export const protect = async (req, res, next) => {
     const token = getTokenFromRequest(req);
 
     if (!token) {
-      console.log('No authentication token found in any location');
-      console.log('Available headers:', Object.keys(req.headers));
-      if (req.cookies) {
-        console.log('Available cookies:', Object.keys(req.cookies));
-      }
       return next(new AppError('You are not logged in! Please log in to get access.', 401));
     }
 
-    console.log('Token found, length:', token ? `${token.length} chars` : 'invalid');
-
     // 2) Verify token
-    console.log('Auth middleware - Verifying token:', '[REDACTED_TOKEN]');
     const decoded = verifyToken(token);
-    console.log('Auth middleware - Token verified. User ID:', decoded.id, 'Role:', decoded.role);
 
     // 3) Find user in unified users table
     let user = null;
     const userType = decoded.role || decoded.type; // backward compatibility
 
     if (!userType) {
-      console.error('No user type/role found in token:', decoded);
       return next(new AppError('Invalid token: missing user type/role', 401));
     }
 
@@ -68,8 +77,7 @@ export const protect = async (req, res, next) => {
         return next(new AppError('Invalid admin credentials', 401));
       }
     } else {
-      // Regular users → query unified users table first by ID only
-      // (Role verification happens during profile lookup below)
+      // Regular users → query unified users table 
       const userQuery = 'SELECT * FROM users WHERE id = $1';
       const userResult = await query(userQuery, [decoded.id]);
 
@@ -106,33 +114,30 @@ export const protect = async (req, res, next) => {
 
       // Merge user and profile data
       user = {
-        id: profileResult.rows[0].id, // Use profile ID for backward compatibility
-        userId: baseUser.id, // Store the users table ID
+        id: profileResult.rows[0].id,
+        userId: baseUser.id,
         email: baseUser.email,
-        userType: userType, // Use the role from the token, not the users table
-        ...profileResult.rows[0] // Spread profile data
+        userType: userType,
+        ...profileResult.rows[0]
       };
     }
 
-    // If we get here, user is authenticated
-    if (!user) {
-      return next(new AppError('The user belonging to this token no longer exists.', 401));
-    }
+    // 4) Fetch permissions and attach to user
+    user.permissions = await AuthorizationService.getUserPermissions(user.userId || user.id);
 
-    // 4) Attach user to request and proceed
-    // Ensure compatibility with code expecting generic 'role' or specific 'userType'
-    user.role = user.userType;
+    // 5) Attach helper method for easier checks in controllers
+    // Usage: if (await req.user.can('manage-products', product, 'product', 'manage'))
+    user.can = async (permission, resource = null, policyKey = null, action = null) => {
+      const policy = policyKey ? policies[policyKey] : null;
+      return await AuthorizationService.can(user, permission, policy, action, resource);
+    };
 
     req.user = user;
-    res.locals.user = user; // For view rendering
-
-    // Add specific alias for legacy controllers if needed
-    if (user.userType === 'organizer') req.organizer = user;
+    res.locals.user = user;
 
     next();
 
   } catch (error) {
-    // Central error handling for JWT and unexpected errors
     if (error.name === 'JsonWebTokenError') {
       return next(new AppError('Invalid token. Please log in again!', 401));
     }

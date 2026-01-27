@@ -182,15 +182,16 @@ class WhatsAppService {
 
     async notifySellerNewOrder(orderData) {
         const { seller, buyer, order, items } = orderData;
-        logger.info(`[WHATSAPP-SERVICE] notifySellerNewOrder called for seller: ${seller?.phone || 'NO_PHONE'}`);
+        const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
+        logger.info(`[WHATSAPP-SERVICE] notifySellerNewOrder called for seller: ${sellerWhatsApp || 'NO_PHONE'}`);
 
-        if (!seller?.phone) {
+        if (!sellerWhatsApp) {
             logger.error('[WHATSAPP-SERVICE] ❌ Seller phone is missing!');
             return false;
         }
 
         logger.info(`[WHATSAPP-SERVICE] Processing ${items?.length || 0} items for order ${order?.orderNumber}`);
-        logger.info(`[WHATSAPP-SERVICE] Seller data:`, JSON.stringify({ phone: seller.phone, name: seller.name, physicalAddress: seller.physicalAddress }, null, 2));
+        logger.info(`[WHATSAPP-SERVICE] Seller data:`, JSON.stringify({ phone: sellerWhatsApp, name: seller.name, physicalAddress: seller.physicalAddress }, null, 2));
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
@@ -255,14 +256,14 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         `.trim();
 
         logger.info(`[WHATSAPP-SERVICE] Message prepared, length: ${msg.length} chars`);
-        logger.info(`[WHATSAPP-SERVICE] Attempting to send to: ${seller.phone}`);
+        logger.info(`[WHATSAPP-SERVICE] Attempting to send to: ${sellerWhatsApp}`);
 
         try {
-            const result = await this.sendMessage(seller.phone, msg);
-            logger.info(`[WHATSAPP-SERVICE] ✅ New order notification sent to seller ${seller.phone}`);
+            const result = await this.sendMessage(sellerWhatsApp, msg);
+            logger.info(`[WHATSAPP-SERVICE] ✅ New order notification sent to seller ${sellerWhatsApp}`);
             return result;
         } catch (error) {
-            logger.error(`[WHATSAPP-SERVICE] ❌ Failed to send message to ${seller.phone}:`, error.message);
+            logger.error(`[WHATSAPP-SERVICE] ❌ Failed to send message to ${sellerWhatsApp}:`, error.message);
             logger.error(`[WHATSAPP-SERVICE] Error stack:`, error.stack);
             throw error;
         }
@@ -270,7 +271,8 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 
     async notifyBuyerOrderConfirmation(orderData) {
         const { buyer, seller, order, items } = orderData;
-        if (!buyer?.phone) return false;
+        const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
+        if (!buyerWhatsApp) return false;
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
@@ -378,13 +380,14 @@ ${itemsList}
 ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
         `.trim();
 
-        logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyer.phone}`);
-        return this.sendMessage(buyer.phone, msg);
+        logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyerWhatsApp}`);
+        return this.sendMessage(buyerWhatsApp, msg);
     }
 
     async notifyBuyerStatusUpdate(updateData) {
         const { buyer, order, newStatus, notes } = updateData;
-        if (!buyer?.phone) return false;
+        const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
+        if (!buyerWhatsApp) return false;
 
         const productType = order.metadata?.product_type;
         const isService = productType === 'service';
@@ -513,12 +516,13 @@ ${sellerAddr}
         }
 
         if (notes) msg += `\nNote: ${notes}`;
-        return this.sendMessage(buyer.phone, msg);
+        return this.sendMessage(buyerWhatsApp, msg);
     }
 
     async notifySellerStatusUpdate(updateData) {
         const { seller, order, newStatus } = updateData;
-        if (!seller?.phone) return false;
+        const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
+        if (!sellerWhatsApp) return false;
 
         const productType = order.metadata?.product_type;
 
@@ -580,12 +584,13 @@ You can withdraw your earnings from your seller dashboard.`;
 Order #${order.orderNumber} status changed to: *${newStatus}*`;
         }
 
-        logger.info(`[PURCHASE-FLOW] 9d. Sending Status Update (${newStatus}) to Seller ${seller.phone}`);
-        return this.sendMessage(seller.phone, msg);
+        logger.info(`[PURCHASE-FLOW] 9d. Sending Status Update (${newStatus}) to Seller ${sellerWhatsApp}`);
+        return this.sendMessage(sellerWhatsApp, msg);
     }
 
     async sendRefundApprovedNotification(buyer, refundAmount) {
-        if (!buyer?.phone) return false;
+        const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone;
+        if (!buyerWhatsApp) return false;
 
         const message = `
 🎉 *REFUND APPROVED*
@@ -602,11 +607,12 @@ Thank you for your patience!
 *Byblos Marketplace*
         `.trim();
 
-        return this.sendMessage(buyer.phone, message);
+        return this.sendMessage(buyerWhatsApp, message);
     }
 
     async sendRefundRejectedNotification(buyer, refundAmount, reason) {
-        if (!buyer?.phone) return false;
+        const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone;
+        if (!buyerWhatsApp) return false;
 
         const message = `
 ❌ *REFUND REQUEST DECLINED*
@@ -623,7 +629,7 @@ Your refund balance remains available for future withdrawal requests.
 *Byblos Marketplace*
         `.trim();
 
-        return this.sendMessage(buyer.phone, message);
+        return this.sendMessage(buyerWhatsApp, message);
     }
 
     async sendLogisticsNotification(order, buyer, seller) {
@@ -663,13 +669,13 @@ Your refund balance remains available for future withdrawal requests.
 ---
 👤 *BUYER DETAILS*
 Name: ${buyer.fullName || buyer.full_name || 'N/A'}
-Phone: ${buyer.phone || 'N/A'}
+Phone: ${buyer.whatsapp_number || buyer.whatsappNumber || buyer.phone || 'N/A'}
 Location: ${buyer.city ? `${buyer.city}, ${buyer.location || ''}` : 'N/A'}
 
 ---
 🏪 *SELLER DETAILS*
 Name: ${seller.shop_name || seller.businessName || seller.full_name || 'N/A'}
-Phone: ${seller.phone || 'N/A'}
+Phone: ${seller.whatsapp_number || seller.whatsappNumber || seller.phone || 'N/A'}
 
 ---
 📦 *ORDER ITEMS*
@@ -686,8 +692,8 @@ Please coordinate pickup/delivery within 48 hours.
     }
 
     async sendBuyerOrderCancellationNotification(order, cancelledBy) {
-        const buyerPhone = order.buyer_phone || order.phone;
-        if (!buyerPhone) return false;
+        const buyerWhatsApp = order.buyer_whatsapp_number || order.whatsapp_number || order.phone;
+        if (!buyerWhatsApp) return false;
 
         const message = `
 ❌ *ORDER CANCELLED*
@@ -704,11 +710,12 @@ A full refund has been added to your account balance. You can withdraw it from y
 *Byblos Marketplace*
         `.trim();
 
-        return this.sendMessage(buyerPhone, message);
+        return this.sendMessage(buyerWhatsApp, message);
     }
 
     async sendSellerOrderCancellationNotification(order, seller, cancelledBy) {
-        if (!seller?.phone) return false;
+        const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
+        if (!sellerWhatsApp) return false;
 
         let message = '';
         if (cancelledBy === 'Seller') {
@@ -729,7 +736,7 @@ The buyer has cancelled Order #${order.id || order.orderNumber}.
             `.trim();
         }
 
-        return this.sendMessage(seller.phone, message);
+        return this.sendMessage(sellerWhatsApp, message);
     }
 
     async sendLogisticsCancellationNotification(order, buyer, seller, cancelledBy) {

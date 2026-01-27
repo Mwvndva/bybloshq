@@ -12,7 +12,7 @@ interface SellerAuthContextType {
         fullName: string;
         shopName: string;
         email: string;
-        phone: string;
+        whatsappNumber: string;
         password: string;
         confirmPassword: string;
         city?: string;
@@ -73,7 +73,7 @@ export function SellerAuthProvider({ children }: { children: ReactNode }) {
         fullName: string;
         shopName: string;
         email: string;
-        phone: string;
+        whatsappNumber: string;
         password: string;
         confirmPassword: string;
         city?: string;

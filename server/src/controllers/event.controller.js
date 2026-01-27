@@ -4,6 +4,10 @@ import ImageService from '../services/image.service.js';
 
 export const createEvent = async (req, res, next) => {
   try {
+    if (!(await req.user.can('create-events'))) {
+      return next(new AppError('You do not have permission to create events', 403));
+    }
+
     // Convert base64 image to file if present
     if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
       req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'event');
@@ -19,16 +23,24 @@ export const createEvent = async (req, res, next) => {
 
 export const updateEvent = async (req, res, next) => {
   try {
+    const { id } = req.params;
+
+    // Fetch event first for policy check
+    const event = await EventService.getEvent(id);
+    if (!event) return next(new AppError('Event not found', 404));
+
+    if (!(await req.user.can('create-events', event, 'event', 'manage'))) {
+      return next(new AppError('You do not have permission to manage this event', 403));
+    }
+
     // Convert base64 image to file if present
     if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
       req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'event');
     }
 
-    const event = await EventService.updateEvent(req.params.id, req.user.id, req.body);
-    res.status(200).json({ status: 'success', data: { event } });
+    const updatedEvent = await EventService.updateEvent(id, req.user.id, req.body);
+    res.status(200).json({ status: 'success', data: { event: updatedEvent } });
   } catch (error) {
-    if (error.message === 'Unauthorized') return next(new AppError('Unauthorized', 403));
-    if (error.message === 'Event not found') return next(new AppError('Event not found', 404));
     next(error);
   }
 };
@@ -83,8 +95,16 @@ export const getDashboardEvents = async (req, res, next) => {
 
 export const deleteEvent = async (req, res, next) => {
   try {
-    const result = await EventService.deleteEvent(req.params.id, req.user.id);
-    if (!result) return next(new AppError('Event not found or unauthorized', 404));
+    const { id } = req.params;
+
+    const event = await EventService.getEvent(id);
+    if (!event) return next(new AppError('Event not found', 404));
+
+    if (!(await req.user.can('create-events', event, 'event', 'manage'))) {
+      return next(new AppError('You do not have permission to delete this event', 403));
+    }
+
+    await EventService.deleteEvent(id, req.user.id);
     res.status(204).json({ status: 'success', data: null });
   } catch (error) {
     next(error);

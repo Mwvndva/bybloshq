@@ -63,8 +63,8 @@ class OrderDeadlineService {
         try {
             const result = await pool.query(
                 `SELECT po.*, 
-                        b.phone as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.phone as seller_phone, s.full_name as seller_name
+                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
+                        s.whatsapp_number as seller_phone, s.full_name as seller_name
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -100,8 +100,8 @@ class OrderDeadlineService {
         try {
             const result = await pool.query(
                 `SELECT po.*, 
-                        b.phone as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.phone as seller_phone, s.full_name as seller_name
+                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
+                        s.whatsapp_number as seller_phone, s.full_name as seller_name
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -137,8 +137,8 @@ class OrderDeadlineService {
         try {
             const result = await pool.query(
                 `SELECT po.*, 
-                        b.phone as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.phone as seller_phone, s.full_name as seller_name, s.balance as seller_balance
+                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
+                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.balance as seller_balance
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id

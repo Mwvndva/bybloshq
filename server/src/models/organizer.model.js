@@ -14,13 +14,13 @@ const Organizer = {
   },
 
   // Create Organizer
-  async create({ full_name, email, phone, password, userId = null }) {
+  async create({ full_name, email, whatsapp_number, password, userId = null }) {
     const result = await pool.query(
       `INSERT INTO organizers 
-       (full_name, email, phone, password, user_id, is_verified)
+       (full_name, email, whatsapp_number, password, user_id, is_verified)
        VALUES ($1, $2, $3, $4, $5, false)
-       RETURNING id, user_id, full_name, email, phone, created_at`,
-      [full_name, email, phone, userId ? null : password, userId]
+       RETURNING id, user_id, full_name, email, whatsapp_number, created_at`,
+      [full_name, email, whatsapp_number, userId ? null : password, userId]
     );
     return result.rows[0];
   },
@@ -41,7 +41,9 @@ const Organizer = {
 
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
-        fields.push(`${key} = $${paramIndex}`);
+        // Special mapping for camelCase if needed, but here it seems they use direct names or snake_case
+        const dbKey = key === 'whatsappNumber' ? 'whatsapp_number' : key;
+        fields.push(`${dbKey} = $${paramIndex}`);
         values.push(value);
         paramIndex++;
       }
@@ -55,7 +57,7 @@ const Organizer = {
       UPDATE organizers 
       SET ${fields.join(', ')}, updated_at = NOW()
       WHERE id = $${paramIndex}
-      RETURNING id, user_id, full_name, email, phone, created_at
+      RETURNING id, user_id, full_name, email, whatsapp_number, created_at
     `;
 
     const result = await pool.query(query, values);
@@ -98,7 +100,7 @@ const Organizer = {
            password_reset_token = NULL, 
            password_reset_expires = NULL 
        WHERE email = $2
-       RETURNING id, user_id, full_name, email, phone`,
+       RETURNING id, user_id, full_name, email, whatsapp_number`,
       [hashedPassword, email]
     );
     return result.rows[0];

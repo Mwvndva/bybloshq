@@ -17,12 +17,12 @@ export const validateOrganizerRegistration = [
         .withMessage('Please provide a valid email address')
         .normalizeEmail(),
 
-    body('phone')
+    body('whatsapp_number')
         .trim()
         .notEmpty()
-        .withMessage('Phone number is required')
+        .withMessage('WhatsApp number is required')
         .matches(/^(?:254|\+254|0)?(7|1)\d{8}$/)
-        .withMessage('Please provide a valid Kenyan phone number'),
+        .withMessage('Please provide a valid Kenyan WhatsApp number'),
 
     body('password')
         .trim()

@@ -25,8 +25,14 @@ export const uploadDigitalFile = async (req, res) => {
 
 export const createProduct = async (req, res) => {
   try {
-    const sellerId = req.user?.id;
-    if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
+    if (!(await req.user.can('manage-products'))) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You do not have permission to create products'
+      });
+    }
+
+    const sellerId = req.user.id;
 
     // Convert base64 image to file if present
     if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
@@ -111,14 +117,23 @@ export const getProduct = async (req, res) => {
 export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const sellerId = req.user.id;
+
+    // Fetch product first to check ownership
+    const product = await ProductService.getProduct(id, null);
+
+    if (!(await req.user.can('manage-products', product, 'product', 'manage'))) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You do not have permission to update this product'
+      });
+    }
 
     // Convert base64 image to file if present
     if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
       req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'product');
     }
 
-    const updatedProduct = await ProductService.updateProduct(sellerId, id, req.body);
+    const updatedProduct = await ProductService.updateProduct(req.user.id, id, req.body);
 
     res.status(200).json({
       status: 'success',
@@ -128,7 +143,6 @@ export const updateProduct = async (req, res) => {
     logger.error('Error updating product:', error);
     let status = 500;
     if (error.message.includes('not found')) status = 404;
-    if (error.message.includes('Unauthorized')) status = 404; // Security: hide existence
     res.status(status).json({ status: 'error', message: error.message });
   }
 };
@@ -136,9 +150,18 @@ export const updateProduct = async (req, res) => {
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const sellerId = req.user.id;
 
-    await ProductService.deleteProduct(sellerId, id);
+    // Fetch product first for policy check
+    const product = await ProductService.getProduct(id, null);
+
+    if (!(await req.user.can('manage-products', product, 'product', 'manage'))) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You do not have permission to delete this product'
+      });
+    }
+
+    await ProductService.deleteProduct(req.user.id, id);
 
     res.status(204).json({ status: 'success', data: null });
   } catch (error) {

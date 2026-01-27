@@ -20,10 +20,10 @@ export const sanitizeOrganizer = (organizer) => {
 
     return pick(orgObj, [
         'id',
-        'full_name', // or fullName depending on usage, db field is full_name
-        'email',     // needed for UI identity
-        'phone'
-        // Removed: is_verified, created_at - not needed for profile display
+        'full_name',
+        'email',
+        'whatsapp_number',
+        'whatsappNumber'
     ]);
 };
 
@@ -40,9 +40,9 @@ export const sanitizeBuyer = (buyer) => {
         id: buyerObj.id,
         firstName: firstName, // Only first name, not full name
         city: buyerObj.city,
-        location: buyerObj.location
-        // Removed: fullName, email, phone, createdAt, balance, refunds, userId
-        // Minimal data exposure for privacy
+        location: buyerObj.location,
+        mobilePayment: buyerObj.mobilePayment || buyerObj.mobile_payment,
+        whatsappNumber: buyerObj.whatsappNumber || buyerObj.whatsapp_number
     };
 };
 
@@ -55,7 +55,7 @@ export const sanitizeSeller = (seller) => {
         fullName: sellerObj.fullName || sellerObj.full_name,
         shopName: sellerObj.shopName || sellerObj.shop_name,
         email: sellerObj.email, // Needed for owner
-        phone: sellerObj.phone,
+        whatsappNumber: sellerObj.whatsappNumber || sellerObj.whatsapp_number || sellerObj.phone,
         city: sellerObj.city,
         location: sellerObj.location,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
@@ -140,7 +140,8 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
             sellerPayoutAmount: parseFloat(orderObj.sellerPayoutAmount || orderObj.seller_payout_amount || 0),
             buyerName: orderObj.buyerName || orderObj.buyer_name,
             buyerEmail: orderObj.buyerEmail || orderObj.buyer_email,
-            buyerPhone: orderObj.buyerPhone || orderObj.buyer_phone,
+            buyerMobilePayment: orderObj.buyerMobilePayment || orderObj.buyer_mobile_payment,
+            buyerWhatsAppNumber: orderObj.buyerWhatsAppNumber || orderObj.buyer_whatsapp_number || orderObj.buyerPhone || orderObj.buyer_phone,
             customer: orderObj.customer // Full customer details if available
         };
     } else {

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useOrganizerAuth } from '@/hooks/use-organizer-auth';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, User, Mail, Phone, Trash2, Save, Edit, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, User, Mail, Phone, Trash2, Save, Edit, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
@@ -18,7 +18,7 @@ import api from '@/lib/api';
 const profileFormSchema = z.object({
   full_name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Please enter a valid email address'),
-  phone: z.string().optional(),
+  whatsapp_number: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -36,7 +36,7 @@ export default function SettingsPage() {
     defaultValues: {
       full_name: organizer?.full_name || '',
       email: organizer?.email || '',
-      phone: organizer?.phone || '',
+      whatsapp_number: organizer?.whatsapp_number || '',
     },
   });
 
@@ -46,7 +46,7 @@ export default function SettingsPage() {
       profileForm.reset({
         full_name: organizer.full_name || '',
         email: organizer.email || '',
-        phone: organizer.phone || '',
+        whatsapp_number: organizer.whatsapp_number || '',
       });
     }
   }, [organizer]);
@@ -79,37 +79,57 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
-        <div className="mb-8">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/organizer/dashboard')}
-            className="inline-flex items-center gap-2 border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
-          </Button>
-        </div>
+    <div className="min-h-screen bg-black">
+      {/* Desktop Header - Full Width */}
+      <div className="hidden md:block bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-10 shadow-sm px-4 sm:px-6 lg:px-8 py-3 sm:py-4 mb-8 md:mb-10">
+        <div className="relative flex items-center justify-between h-14 lg:h-16">
+          <div className="flex-1 flex items-center justify-start">
+            <Button
+              variant="secondary-byblos"
+              onClick={() => navigate('/organizer/dashboard')}
+              className="rounded-xl px-2 sm:px-3 py-1.5 text-xs sm:text-sm h-8"
+            >
+              <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Back to Dashboard</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+          </div>
 
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-2xl md:text-4xl font-black text-black mb-4">Account Settings</h1>
-          <p className="text-gray-600 text-lg font-medium">Manage your account information and preferences</p>
+          <div className="absolute left-1/2 -translate-x-1/2 min-w-0 max-w-[50%] text-center px-1 sm:px-2">
+            <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
+              Account Settings
+            </h1>
+            <p className="hidden sm:block text-xs text-gray-400 font-medium truncate">
+              Manage your account information and preferences
+            </p>
+          </div>
+
+          <div className="flex-1 flex items-center justify-end">
+            <Button
+              variant="secondary-byblos"
+              onClick={() => window.location.reload()}
+              className="flex items-center gap-1 sm:gap-2 rounded-xl h-8 px-2 sm:px-3 py-1.5"
+            >
+              <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden md:inline text-sm">Refresh</span>
+            </Button>
+          </div>
         </div>
+      </div>
+
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Settings Sections */}
         <div className="space-y-8">
           {/* Profile Information */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
+          <div className="bg-[#111111] border border-[#222222] rounded-3xl p-8 shadow-lg">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-black text-black">Profile Information</h3>
+              <h3 className="text-2xl font-black text-white">Profile Information</h3>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsEditing(!isEditing)}
-                className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-4 py-2"
+                className="rounded-xl px-4 py-2"
               >
                 {isEditing ? (
                   <>
@@ -154,14 +174,14 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700">Phone Number</Label>
+                    <Label className="text-sm font-bold text-gray-700">WhatsApp Number</Label>
                     <Input
-                      {...profileForm.register('phone')}
+                      {...profileForm.register('whatsapp_number')}
                       className="h-12 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
                       placeholder="Enter your phone number"
                     />
-                    {profileForm.formState.errors.phone && (
-                      <p className="text-sm text-red-600">{profileForm.formState.errors.phone.message}</p>
+                    {profileForm.formState.errors.whatsapp_number && (
+                      <p className="text-sm text-red-600">{profileForm.formState.errors.whatsapp_number.message}</p>
                     )}
                   </div>
                 </div>
@@ -171,14 +191,15 @@ export default function SettingsPage() {
                     type="button"
                     variant="outline"
                     onClick={() => setIsEditing(false)}
-                    className="border-gray-200 hover:bg-gray-50 hover:border-gray-300 rounded-xl px-6 py-3"
+                    className="rounded-xl px-6 py-3"
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-3 rounded-xl font-semibold"
+                    variant="byblos"
+                    className="shadow-lg px-6 py-3 rounded-xl"
                   >
                     {isLoading ? (
                       <>
@@ -198,31 +219,31 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700">Full Name</Label>
-                    <div className="flex items-center space-x-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
+                    <Label className="text-sm font-bold text-gray-400">Full Name</Label>
+                    <div className="flex items-center space-x-3 p-4 bg-gray-900 border border-white/10 rounded-2xl">
                       <User className="h-5 w-5 text-gray-500" />
-                      <span className="font-medium text-black">
+                      <span className="font-medium text-white">
                         {profileForm.getValues('full_name') || 'Not provided'}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700">Email Address</Label>
-                    <div className="flex items-center space-x-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
+                    <Label className="text-sm font-bold text-gray-400">Email Address</Label>
+                    <div className="flex items-center space-x-3 p-4 bg-gray-900 border border-white/10 rounded-2xl">
                       <Mail className="h-5 w-5 text-gray-500" />
-                      <span className="font-medium text-black">
+                      <span className="font-medium text-white">
                         {profileForm.getValues('email') || 'Not provided'}
                       </span>
                     </div>
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-700">Phone Number</Label>
-                    <div className="flex items-center space-x-3 p-4 bg-gradient-to-br from-white to-gray-50 rounded-2xl border border-gray-200">
+                    <Label className="text-sm font-bold text-gray-400">WhatsApp Number</Label>
+                    <div className="flex items-center space-x-3 p-4 bg-gray-900 border border-white/10 rounded-2xl">
                       <Phone className="h-5 w-5 text-gray-500" />
-                      <span className="font-medium text-black">
-                        {profileForm.getValues('phone') || 'Not provided'}
+                      <span className="font-medium text-white">
+                        {profileForm.getValues('whatsapp_number') || 'Not provided'}
                       </span>
                     </div>
                   </div>
@@ -233,9 +254,9 @@ export default function SettingsPage() {
 
 
           {/* Danger Zone */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-            <h3 className="text-2xl font-black text-red-600 mb-6">Danger Zone</h3>
-            <div className="p-6 border-2 border-red-200 rounded-2xl bg-red-50/50">
+          <div className="bg-[#111111] border border-red-500/20 rounded-3xl p-8 shadow-lg">
+            <h3 className="text-2xl font-black text-red-500 mb-6">Danger Zone</h3>
+            <div className="p-6 border border-red-500/30 rounded-2xl bg-red-500/5">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                   <h4 className="font-bold text-red-600 text-lg">Delete Account</h4>

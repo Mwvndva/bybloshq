@@ -55,7 +55,8 @@ interface SellerProfile {
   fullName?: string;
   shopName?: string;
   email?: string;
-  phone?: string;
+  whatsappNumber?: string;
+  phone?: string; // fallback
   city?: string;
   location?: string;
   physicalAddress?: string;
@@ -142,22 +143,22 @@ const StatsCard: React.FC<StatsCardProps> = ({
   value,
   subtitle,
   iconColor = 'text-white',
-  bgColor = 'bg-gradient-to-br from-yellow-400 to-yellow-500',
-  textColor = 'text-black',
+  bgColor = 'bg-yellow-400/10 border border-yellow-400/30 shadow-[0_0_18px_rgba(250,204,21,0.25)]',
+  textColor = 'text-white',
   className = ''
 }) => (
-  <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow hover:shadow-md transition-all duration-300 h-full">
-    <CardContent className="p-2 sm:p-3 md:p-4">
+  <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow hover:shadow-md transition-all duration-300 h-full">
+    <CardContent className="p-2 sm:p-2.5">
       <div className="flex items-center justify-between gap-2 sm:gap-3">
         <div className={`space-y-0.5 flex-1 min-w-0 ${className}`}>
-          <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wide truncate">{title}</p>
-          <p className={`text-base sm:text-xl md:text-2xl font-bold ${textColor} break-words leading-tight`}>
+          <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-400 uppercase tracking-wide truncate">{title}</p>
+          <p className={`text-base sm:text-lg font-bold ${textColor} break-words leading-tight`}>
             {value}
           </p>
-          <p className="text-[10px] sm:text-xs md:text-base text-gray-500 font-medium truncate">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">{subtitle}</p>
         </div>
-        <div className={`w-9 h-9 sm:w-12 sm:h-12 md:w-16 md:h-16 ${bgColor} rounded-xl flex-shrink-0 flex items-center justify-center shadow`}>
-          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 md:h-7 md:w-7 ${iconColor}`} />
+        <div className={`w-9 h-9 sm:w-10 sm:h-10 ${bgColor} rounded-xl flex-shrink-0 flex items-center justify-center`}>
+          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
         </div>
       </div>
     </CardContent>
@@ -187,13 +188,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     latitude: number | null;
     longitude: number | null;
     instagramLink: string;
+    whatsappNumber: string;
   }>({
     city: '',
     location: '',
     physicalAddress: '',
     latitude: null,
     longitude: null,
-    instagramLink: ''
+    instagramLink: '',
+    whatsappNumber: ''
   });
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -368,7 +371,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           physicalAddress: sellerProfile?.physicalAddress || '',
           latitude: sellerProfile?.latitude || null,
           longitude: sellerProfile?.longitude || null,
-          instagramLink: sellerProfile?.instagramLink || ''
+          instagramLink: sellerProfile?.instagramLink || '',
+          whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || ''
         });
       }
       return !prev;
@@ -392,7 +396,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         city: formData.city,
         location: formData.location,
         physicalAddress: formData.physicalAddress,
-        instagramLink: formData.instagramLink
+        instagramLink: formData.instagramLink,
+        whatsappNumber: formData.whatsappNumber
       };
 
       if (formData.latitude && formData.longitude) {
@@ -606,6 +611,18 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             recentOrders: (analyticsData as any).recentOrders || [] // Handle recentOrders if it exists
           };
 
+
+          // Return the analytics data with the correct type
+          const result: AnalyticsData = {
+            totalProducts: updatedAnalytics.totalProducts,
+            totalSales: updatedAnalytics.totalSales,
+            totalRevenue: updatedAnalytics.totalRevenue,
+            totalPayout: updatedAnalytics.totalPayout,
+            balance: updatedAnalytics.balance,
+            monthlySales: updatedAnalytics.monthlySales,
+            recentOrders: updatedAnalytics.recentOrders
+          };
+
           setAnalytics(updatedAnalytics);
         } else {
           // Transform SellerAnalytics to AnalyticsData by adding missing required properties
@@ -629,8 +646,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     // fetchProfile() removed - profile is already fetched by SellerAuthContext
     return () => { isMounted = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Removed debug state logging
 
   // Check for new orders
   useEffect(() => {
@@ -680,11 +695,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // Loading state - show skeleton while auth is loading OR data is being fetched
   if (isAuthLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-        <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
+      <div className="min-h-screen bg-black">
+        <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
           <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
             <div className="flex items-center justify-between space-y-2">
-              <h2 className="text-3xl font-bold tracking-tight">
+              <h2 className="text-3xl font-bold tracking-tight text-white">
                 {activeTab === 'dashboard' ? 'Dashboard' :
                   activeTab === 'products' ? 'Products' :
                     'Seller Dashboard'}
@@ -699,7 +714,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <Skeleton className="h-32 w-96" />
           </div>
 
-          <div className="flex space-x-2 mb-12 bg-white/60 backdrop-blur-sm p-2 rounded-2xl shadow-lg border border-gray-200/50 w-fit mx-auto">
+          <div className="flex space-x-2 mb-12 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] p-2 rounded-2xl shadow-lg border border-white/10 w-fit mx-auto">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-12 w-24 rounded-xl" />
             ))}
@@ -718,24 +733,22 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // Error state
   if (!analytics || error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
             <RefreshCw className="h-12 w-12 text-red-600" />
           </div>
-          <div>
-            <h3 className="text-2xl font-black text-black mb-3">Unable to load dashboard</h3>
-            <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">
-              {error || 'Something went wrong while loading your dashboard data. Please try again.'}
-            </p>
-            <Button
-              onClick={fetchData}
-              className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
-            >
-              <RefreshCw className="h-5 w-5 mr-2" />
-              Try Again
-            </Button>
-          </div>
+          <h3 className="text-2xl font-black text-white mb-3">Unable to load dashboard</h3>
+          <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">
+            {error || 'Something went wrong while loading your dashboard data. Please try again.'}
+          </p>
+          <Button
+            onClick={fetchData}
+            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
+          >
+            <RefreshCw className="h-5 w-5 mr-2" />
+            Try Again
+          </Button>
         </div>
       </div>
     );
@@ -746,16 +759,19 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       icon: Package,
       title: 'Products',
       value: formatNumber(analytics.totalProducts),
-      subtitle: 'Products'
+      subtitle: 'Products',
+      iconColor: 'text-yellow-300',
+      bgColor: 'bg-yellow-400/10 border border-yellow-400/30 shadow-[0_0_18px_rgba(250,204,21,0.25)]',
+      textColor: 'text-white'
     },
     {
       icon: DollarSign,
       title: 'Sales',
       value: formatCurrency(analytics.totalRevenue ?? 0),
       subtitle: 'Gross',
-      iconColor: 'text-white',
-      bgColor: 'bg-gradient-to-br from-blue-500 to-blue-600',
-      textColor: 'text-black'
+      iconColor: 'text-blue-300',
+      bgColor: 'bg-blue-500/10 border border-blue-400/30 shadow-[0_0_18px_rgba(59,130,246,0.22)]',
+      textColor: 'text-white'
     },
     {
       icon: Wallet,
@@ -763,9 +779,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       // Format balance as a simple string with fixed decimal places
       value: new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((analytics.balance ?? 0)),
       subtitle: 'Available',
-      iconColor: 'text-white',
-      bgColor: 'bg-gradient-to-br from-purple-500 to-purple-600',
-      textColor: 'text-black',
+      iconColor: 'text-purple-300',
+      bgColor: 'bg-purple-500/10 border border-purple-400/30 shadow-[0_0_18px_rgba(168,85,247,0.22)]',
+      textColor: 'text-white',
       className: 'whitespace-nowrap' // Prevent line breaks
     },
     {
@@ -800,88 +816,143 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         }).format(netSales);
       })(),
       subtitle: 'After 1%',
-      iconColor: 'text-white',
-      bgColor: 'bg-gradient-to-br from-green-500 to-green-600',
-      textColor: 'text-black'
+      iconColor: 'text-green-300',
+      bgColor: 'bg-green-500/10 border border-green-400/30 shadow-[0_0_18px_rgba(34,197,94,0.20)]',
+      textColor: 'text-white'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div className="min-h-screen bg-black">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-3 sm:py-0 sm:h-16 md:h-20 space-y-3 sm:space-y-0">
-            {/* Mobile: Stack vertically, Desktop: Horizontal */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4 md:space-x-6 w-full sm:w-auto">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/')}
-                className="text-gray-600 hover:text-black hover:bg-gray-100/80 transition-all duration-200 rounded-xl px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm h-8 sm:h-9"
-              >
-                <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                <span className="hidden sm:inline">Back to Home</span>
-                <span className="sm:hidden">Back</span>
-              </Button>
-              <div className="hidden sm:block h-6 sm:h-8 w-px bg-gradient-to-b from-transparent via-gray-300 to-transparent" />
-              <div className="flex-1 sm:flex-none">
-                <h1 className="text-lg sm:text-xl md:text-2xl font-black text-black tracking-tight">
-                  {sellerProfile?.shopName ? (
-                    <span className="block sm:inline">
-                      <span className="hidden sm:inline">{sellerProfile.shopName}'s Dashboard</span>
-                      <span className="sm:hidden text-base">{sellerProfile.shopName}</span>
-                    </span>
-                  ) : 'Seller Dashboard'}
-                </h1>
-                <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                  <p className="text-xs text-gray-500 font-medium">
-                    Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
-                  </p>
+      <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="py-2 md:py-0">
+            {/* Mobile: 2-row layout to prevent overlap */}
+            <div className="md:hidden">
+              <div className="flex items-center justify-between h-12">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/')}
+                  className="text-gray-300 hover:text-white hover:bg-gray-800 transition-all duration-200 rounded-xl px-2 py-1.5 text-xs h-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Back to Home</span>
+                </Button>
+
+                <div className="flex items-center gap-2">
+                  {sellerProfile?.shopName && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl"
+                      onClick={async () => {
+                        const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
+                        try {
+                          await navigator.clipboard.writeText(shopUrl);
+
+                          toast({
+                            title: 'Link copied!',
+                            description: 'Your shop link has been copied to clipboard.',
+                          });
+                        } catch (err) {
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to copy link. Please try again.',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      <span className="sr-only">Copy Shop Link</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    onClick={fetchData}
+                    className="h-8 w-8 p-0 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl"
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <span className="sr-only">Refresh</span>
+                  </Button>
                 </div>
+              </div>
+
+              <div className="min-w-0 text-center pb-1">
+                <h1 className="text-sm font-black text-white tracking-tight truncate">
+                  {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
+                </h1>
+                <p className="text-xs text-gray-400 font-medium truncate">
+                  Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
+                </p>
               </div>
             </div>
 
-            {/* Mobile: Stack buttons vertically, Desktop: Horizontal */}
-            <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-              {sellerProfile?.shopName && (
+            {/* Desktop/tablet: single-row pinned layout */}
+            <div className="hidden md:grid grid-cols-[auto,1fr,auto] items-center h-14 lg:h-16 gap-2">
+              <div className="flex items-center justify-start">
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   size="sm"
-                  className="text-xs h-8 sm:h-9 md:h-10 bg-white border-gray-300 text-black hover:bg-yellow-50 hover:border-yellow-300 flex items-center justify-center gap-1 sm:gap-2 rounded-xl px-2 sm:px-3"
-                  onClick={async () => {
-                    const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
-                    try {
-                      await navigator.clipboard.writeText(shopUrl);
-                      toast({
-                        title: 'Link copied!',
-                        description: 'Your shop link has been copied to clipboard.',
-                      });
-                    } catch (err) {
-                      toast({
-                        title: 'Error',
-                        description: 'Failed to copy link. Please try again.',
-                        variant: 'destructive',
-                      });
-                    }
-                  }}
+                  onClick={() => navigate('/')}
+                  className="text-gray-300 hover:text-white hover:bg-gray-800 transition-all duration-200 rounded-xl px-2 sm:px-3 py-1.5 text-xs sm:text-sm h-8"
                 >
-                  <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  <span className="hidden sm:inline">Copy Shop Link</span>
-                  <span className="sm:hidden text-xs">Copy Link</span>
+                  <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Back to Home</span>
+                  <span className="sm:hidden">Back</span>
                 </Button>
-              )}
-              <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3">
+              </div>
+
+              <div className="min-w-0 text-center px-1 sm:px-2">
+                <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
+                  {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
+                </h1>
+                <p className="hidden sm:block text-xs text-gray-400 font-medium">
+                  Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 sm:gap-3">
+                {sellerProfile?.shopName && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 flex items-center justify-center gap-1 sm:gap-2 rounded-xl px-2 sm:px-3"
+                    onClick={async () => {
+                      const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
+                      try {
+                        await navigator.clipboard.writeText(shopUrl);
+
+                        toast({
+                          title: 'Link copied!',
+                          description: 'Your shop link has been copied to clipboard.',
+                        });
+                      } catch (err) {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to copy link. Please try again.',
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                  >
+                    <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="hidden md:inline">Copy Shop Link</span>
+                  </Button>
+                )}
 
                 <Button
                   variant="outline"
                   onClick={fetchData}
-                  className="flex items-center gap-1 sm:gap-2 bg-white border-gray-300 text-black hover:bg-yellow-50 hover:border-yellow-300 rounded-xl h-8 sm:h-9 md:h-10 px-2 sm:px-3 py-1.5 sm:py-2"
+                  className="flex items-center gap-1 sm:gap-2 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl h-8 px-2 sm:px-3 py-1.5"
                   disabled={isLoading}
                 >
                   <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  <span className="hidden sm:inline text-sm">Refresh</span>
-                  <span className="sm:hidden text-xs">Refresh</span>
+                  <span className="hidden md:inline text-sm">Refresh</span>
                 </Button>
               </div>
             </div>
@@ -889,18 +960,20 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 md:py-8">
+      <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 2xl:px-12 py-4 sm:py-5 md:py-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-10 md:mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-7 md:mb-8">
           {stats.map((stat, index) => (
             <div key={index} className="col-span-1">
               <StatsCard {...stat} />
+
             </div>
           ))}
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
-        <div className="flex flex-col sm:flex-row justify-center space-y-2 sm:space-y-0 sm:space-x-2 mb-6 sm:mb-8 bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-gray-200/50 max-w-4xl mx-auto w-full">
+        <div className="mb-6 sm:mb-8 bg-[rgba(20,20,20,0.55)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-white/10 w-full overflow-x-auto">
+          <div className="flex items-center justify-start sm:justify-center gap-2 min-w-max">
           {[
             { id: 'overview', label: 'Overview', icon: BarChart3 },
             { id: 'products', label: 'Products', icon: Package },
@@ -920,9 +993,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   setHasUnreadOrders(false);
                 }
               }}
-              className={`relative flex items-center justify-center space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 ${activeTab === id
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                : 'text-gray-600 hover:text-black hover:bg-white/80'
+              className={`relative flex items-center justify-center flex-shrink-0 space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 border ${activeTab === id
+                ? 'text-yellow-300 border-yellow-400/30 bg-yellow-400/10 shadow-[0_0_22px_rgba(250,204,21,0.25)] transform scale-[1.03]'
+                : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'
                 }`}
             >
               <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -934,47 +1007,48 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               )}
             </button>
           ))}
+          </div>
         </div>
 
         {/* Content Sections */}
         {activeTab === 'orders' && (
-          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Order Management</h2>
-              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">View and manage customer orders</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Order Management</h2>
+              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium">View and manage customer orders</p>
             </div>
             <SellerOrdersSection />
           </div>
         )}
 
         {activeTab === 'withdrawals' && (
-          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Withdrawal Management</h2>
-              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">Request and track your withdrawal requests</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Withdrawal Management</h2>
+              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
             </div>
 
             {/* Available Balance Card */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-white/10">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Available Balance</h3>
-                  <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Your current balance available for withdrawal</p>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Available Balance</h3>
+                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Your current balance available for withdrawal</p>
                 </div>
-                <div className="bg-gradient-to-r from-green-100 to-green-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-lg">
-                  <p className="text-2xl sm:text-3xl md:text-4xl font-black text-green-800">
+                <div className="bg-green-500/10 border border-green-400/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
+                  <p className="text-lg sm:text-xl md:text-2xl font-black text-green-200">
                     {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                   </p>
                 </div>
 
                 {/* Minimum Withdrawal Notification */}
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-                  <div className="bg-blue-100 rounded-full p-1 mt-0.5">
-                    <Info className="h-4 w-4 text-blue-600" />
+                <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-4 mb-4 flex items-start gap-3">
+                  <div className="bg-blue-500/10 border border-blue-400/20 rounded-full p-1 mt-0.5">
+                    <Info className="h-4 w-4 text-blue-300" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-blue-900 text-sm">Minimum Withdrawal Amount</h4>
-                    <p className="text-blue-700 text-sm mt-1">
+                    <h4 className="font-semibold text-blue-100 text-xs">Minimum Withdrawal Amount</h4>
+                    <p className="text-blue-200/80 text-xs mt-1">
                       The minimum balance required to request a withdrawal is KSh 50. Please ensure you have sufficient funds before proceeding.
                     </p>
                   </div>
@@ -991,14 +1065,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   Request Withdrawal
                 </Button>
               ) : (
-                <div className="bg-gray-50 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
-                  <h4 className="text-lg sm:text-xl font-bold text-black mb-4">Request Withdrawal</h4>
+                <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
+                  <h4 className="text-lg sm:text-xl font-bold text-white mb-4">Request Withdrawal</h4>
                   <form onSubmit={handleWithdrawalRequest} className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="amount" className="text-sm font-semibold text-gray-700 mb-2 block">
+                        <Label htmlFor="amount" className="text-xs font-semibold text-gray-300 mb-2 block">
                           Amount (KSh)
                         </Label>
+
                         <Input
                           id="amount"
                           type="number"
@@ -1007,39 +1082,41 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           placeholder="Enter amount"
                           min="1"
                           max={analytics?.balance || 0}
-                          className="w-full h-10 sm:h-11"
+                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-gray-400 mt-1">
                           Max: {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                         </p>
                       </div>
                       <div>
-                        <Label htmlFor="mpesaNumber" className="text-sm font-semibold text-gray-700 mb-2 block">
+                        <Label htmlFor="mpesaNumber" className="text-xs font-semibold text-gray-300 mb-2 block">
                           M-Pesa Number
                         </Label>
+
                         <Input
                           id="mpesaNumber"
                           type="tel"
                           value={withdrawalForm.mpesaNumber}
                           onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaNumber: e.target.value }))}
                           placeholder="0712345678"
-                          className="w-full h-10 sm:h-11"
+                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="mpesaName" className="text-sm font-semibold text-gray-700 mb-2 block">
+                      <Label htmlFor="mpesaName" className="text-xs font-semibold text-gray-300 mb-2 block">
                         Name on M-Pesa Number
                       </Label>
+
                       <Input
                         id="mpesaName"
                         type="text"
                         value={withdrawalForm.mpesaName}
                         onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaName: e.target.value }))}
                         placeholder="Enter name as registered on M-Pesa"
-                        className="w-full h-10 sm:h-11"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                         required
                       />
                     </div>
@@ -1072,7 +1149,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             mpesaName: ''
                           });
                         }}
-                        className="px-6 py-2 rounded-xl"
+                        className="px-6 py-2 rounded-xl bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
                       >
                         Cancel
                       </Button>
@@ -1083,48 +1160,48 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
 
             {/* Withdrawal Requests History */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
-              <div className="flex justify-between items-center mb-6 sm:mb-8">
+            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-white/10">
+              <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-black">Withdrawal Requests</h3>
-                  <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Track your withdrawal request history</p>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Withdrawal Requests</h3>
+                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Track your withdrawal request history</p>
                 </div>
               </div>
 
               {withdrawalRequests.length > 0 ? (
                 <div className="space-y-4">
                   {withdrawalRequests.map((request) => (
-                    <Card key={request.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm">
+                    <Card key={request.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
-                              <p className="text-lg sm:text-xl font-black text-black">
+                              <p className="text-lg sm:text-xl font-black text-white">
                                 {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(request.amount)}
                               </p>
                               <Badge
                                 variant="outline"
                                 className={`${request.status === 'pending'
-                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-200'
+                                  ? 'bg-yellow-500/10 text-yellow-200 border-yellow-400/20'
                                   : request.status === 'approved'
-                                    ? 'bg-green-100 text-green-800 border-green-200'
+                                    ? 'bg-green-500/10 text-green-200 border-green-400/20'
                                     : request.status === 'rejected' || request.status === 'failed'
-                                      ? 'bg-red-100 text-red-800 border-red-200'
-                                      : 'bg-blue-100 text-blue-800 border-blue-200'
+                                      ? 'bg-red-500/10 text-red-200 border-red-400/20'
+                                      : 'bg-blue-500/10 text-blue-200 border-blue-400/20'
                                   } rounded-full px-3 py-1 font-semibold`}
                               >
                                 {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                               </Badge>
                             </div>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-xs text-gray-300">
                               M-Pesa: {request.mpesaNumber} ({request.mpesaName})
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-400">
                               Requested on {new Date(request.createdAt).toLocaleDateString()}
                             </p>
                             {request.status === 'failed' && request.failureReason && (
-                              <div className="mt-2 p-2 bg-red-50 border border-red-100 rounded-lg">
-                                <p className="text-xs text-red-700 font-medium flex items-center gap-1">
+                              <div className="mt-2 p-2 bg-red-500/10 border border-red-400/20 rounded-lg">
+                                <p className="text-xs text-red-200 font-medium flex items-center gap-1">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                                   Reason: {request.failureReason}
                                 </p>
@@ -1138,11 +1215,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 </div>
               ) : (
                 <div className="text-center py-20">
-                  <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center shadow-lg">
-                    <Wallet className="h-12 w-12 text-gray-400" />
+                  <div className="w-24 h-24 mx-auto mb-8 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center shadow-lg">
+                    <Wallet className="h-12 w-12 text-gray-300" />
                   </div>
-                  <h3 className="text-xl font-black text-black mb-3">No withdrawal requests</h3>
-                  <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
+                  <h3 className="text-xl font-black text-white mb-3">No withdrawal requests</h3>
+                  <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
                 </div>
               )}
             </div>
@@ -1150,103 +1227,106 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         )}
 
         {activeTab === 'overview' && (
-          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-xl sm:text-2xl md:text-3xl font-black text-black mb-2 sm:mb-3 md:mb-4">Store Overview</h2>
-              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium max-w-2xl mx-auto">Manage your products and track your store performance</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Store Overview</h2>
+              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Manage your products and track your store performance</p>
             </div>
 
-            {/* Recent Products */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
-                <div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-black">Recent Products</h3>
-                  <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Your most recently added products</p>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/seller/add-product')}
-                  className="gap-1.5 sm:gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-medium sm:font-semibold text-xs sm:text-sm w-full sm:w-auto"
-                >
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  Add Product
-                </Button>
-              </div>
-
-              {products.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                  {products.slice(0, 6).map((product) => (
-                    <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
-                      <div className="relative overflow-hidden rounded-t-2xl">
-                        <img
-                          src={getImageUrl(product.image_url || product.imageUrl) || '/placeholder-image.jpg'}
-                          alt={product.name}
-                          className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <Badge
-                          variant="secondary"
-                          className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
-                        >
-                          Available
-                        </Badge>
-                      </div>
-                      <CardContent className="p-6">
-                        <h3 className="font-bold text-black mb-2 line-clamp-1 text-lg">{product.name}</h3>
-                        <p className="text-yellow-600 font-black text-xl mb-3">
-                          {formatCurrency(product.price)}
-                        </p>
-                        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
-                          {product.description}
-                        </p>
-                        <div className="flex items-center justify-between mt-4">
-                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">
-                            {product.aesthetic}
-                          </Badge>
-                          <span className="text-xs text-gray-500">
-                            {new Date(product.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20">
-                  <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
-                    <Package className="h-12 w-12 text-yellow-600" />
+            <div className="grid gap-4 lg:grid-cols-3 items-start">
+              {/* Recent Products */}
+              <div className="lg:col-span-2 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+                  <div>
+                    <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
+                    <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
                   </div>
-                  <h3 className="text-2xl font-black text-black mb-3">No products found</h3>
-                  <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
+
                   <Button
+                    size="sm"
                     onClick={() => navigate('/seller/add-product')}
-                    className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
+                    className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-xl font-semibold text-xs w-full sm:w-auto"
                   >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Add Your First Product
+                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    Add Product
                   </Button>
                 </div>
-              )}
-            </div>
 
-            {/* Store Performance */}
-            <div className="flex justify-center">
-              <Card className="bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl w-full max-w-xs sm:max-w-sm md:max-w-md">
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="text-xl sm:text-2xl font-black text-black flex items-center">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center mr-3 sm:mr-4 shadow-lg">
-                      <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
+                {products.length > 0 ? (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                    {products.slice(0, 6).map((product) => (
+                      <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 transform hover:-translate-y-2">
+                        <div className="relative overflow-hidden rounded-t-2xl">
+                          <img
+                            src={getImageUrl(product.image_url || product.imageUrl) || '/placeholder-image.jpg'}
+                            alt={product.name}
+
+                            className="w-full h-36 object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                          <Badge
+                            variant="secondary"
+                            className="absolute top-4 left-4 bg-yellow-500/10 text-yellow-200 border border-yellow-400/20 px-3 py-1 text-xs font-bold rounded-xl"
+                          >
+                            Available
+                          </Badge>
+                        </div>
+                        <CardContent className="p-4">
+                          <h3 className="font-bold text-white mb-1 line-clamp-1 text-sm sm:text-base">{product.name}</h3>
+                          <p className="text-yellow-300 font-black text-base sm:text-lg mb-2">
+                            {formatCurrency(product.price)}
+                          </p>
+                          <p className="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed">
+                            {product.description}
+                          </p>
+                          <div className="flex items-center justify-between mt-3">
+                            <Badge variant="outline" className="text-xs bg-white/5 text-gray-200 border-white/10">
+                              {product.aesthetic}
+                            </Badge>
+                            <span className="text-xs text-gray-400">
+                              {new Date(product.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <div className="w-24 h-24 mx-auto mb-8 bg-yellow-500/10 border border-yellow-400/20 rounded-3xl flex items-center justify-center shadow-lg">
+                      <Package className="h-12 w-12 text-yellow-300" />
+
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-3">No products found</h3>
+                    <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
+                    <Button
+                      onClick={() => navigate('/seller/add-product')}
+                      className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
+                    >
+                      <Plus className="h-5 w-5 mr-2" />
+                      Add Your First Product
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Store Performance */}
+              <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl w-full rounded-2xl">
+                <CardHeader className="p-4">
+                  <CardTitle className="text-base sm:text-lg font-black text-white flex items-center">
+                    <div className="w-9 h-9 bg-yellow-500/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-xl flex items-center justify-center mr-3">
+                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
                     Store Performance
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6 pb-4 sm:pb-6">
-                  <div className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 rounded-lg sm:rounded-xl">
+                <CardContent className="space-y-3 px-4 pb-4">
+                  <div className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
                     <div>
-                      <p className="text-xs sm:text-sm font-medium sm:font-semibold text-gray-700">Active Products</p>
-                      <p className="text-xl sm:text-2xl font-black text-black">{formatNumber(analytics.totalProducts)}</p>
+                      <p className="text-xs font-semibold text-gray-300">Active Products</p>
+                      <p className="text-lg sm:text-xl font-black text-white">{formatNumber(analytics.totalProducts)}</p>
                     </div>
-                    <Package className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
+                    <Package className="h-6 w-6 text-blue-300" />
                   </div>
                 </CardContent>
               </Card>
@@ -1255,23 +1335,24 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         )}
 
         {activeTab === 'products' && (
-          <div className="space-y-6 sm:space-y-8 md:space-y-12">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-black mb-2 sm:mb-3 md:mb-4">Product Management</h2>
-              <p className="text-gray-600 text-sm sm:text-base md:text-lg font-medium">Manage all your products in one place</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Product Management</h2>
+              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium">Manage all your products in one place</p>
             </div>
 
             {/* Quick Actions */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-gray-200/50">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                 <div>
-                  <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-black">Quick Actions</h3>
-                  <p className="text-gray-600 text-sm sm:text-base font-medium mt-1 sm:mt-2">Common tasks for your products</p>
+                  <h3 className="text-base sm:text-lg font-black text-white">Quick Actions</h3>
+                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Common tasks for your products</p>
                 </div>
+
                 <Button
                   size="sm"
                   onClick={() => navigate('/seller/add-product')}
-                  className="gap-1.5 sm:gap-2 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-medium sm:font-semibold text-xs sm:text-sm w-full sm:w-auto"
+                  className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-xl font-semibold text-xs w-full sm:w-auto"
                 >
                   <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   Add Product
@@ -1281,25 +1362,25 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 <Button
                   variant="outline"
-                  className="h-12 sm:h-14 md:h-16 justify-start gap-2 sm:gap-3 md:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-lg sm:rounded-xl px-3 sm:px-4"
+                  className="h-12 justify-start gap-2 text-left border-white/10 bg-transparent text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-lg sm:rounded-xl px-3"
                   onClick={() => navigate('/seller/products')}
                 >
                   <Package className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="font-medium sm:font-semibold text-sm sm:text-base truncate">View All Products</p>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">See all your products</p>
+                    <p className="font-semibold text-sm truncate">View All Products</p>
+                    <p className="text-xs text-gray-400 truncate">See all your products</p>
                   </div>
                 </Button>
 
                 <Button
                   variant="outline"
-                  className="h-12 sm:h-14 md:h-16 justify-start gap-2 sm:gap-3 md:gap-4 text-left border-gray-200 hover:bg-yellow-50 hover:border-yellow-300 rounded-lg sm:rounded-xl px-3 sm:px-4"
+                  className="h-12 justify-start gap-2 text-left border-white/10 bg-transparent text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-lg sm:rounded-xl px-3"
                   onClick={() => navigate('/seller/add-product')}
                 >
                   <Plus className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
                   <div className="min-w-0">
-                    <p className="font-medium sm:font-semibold text-sm sm:text-base truncate">Add New Product</p>
-                    <p className="text-xs sm:text-sm text-gray-500 truncate">Create a new listing</p>
+                    <p className="font-semibold text-sm truncate">Add New Product</p>
+                    <p className="text-xs text-gray-400 truncate">Create a new listing</p>
                   </div>
                 </Button>
 
@@ -1307,45 +1388,47 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
 
             {/* Recent Products */}
-            <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-              <div className="flex justify-between items-center mb-8">
+            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
+              <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h3 className="text-3xl font-black text-black">Recent Products</h3>
-                  <p className="text-gray-600 font-medium mt-2">Your most recently added products</p>
+                  <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
+                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
                 </div>
               </div>
 
               {products.length > 0 ? (
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {products.slice(0, 6).map((product) => (
-                    <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 border-0 bg-white/80 backdrop-blur-sm transform hover:-translate-y-2">
+                    <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 transform hover:-translate-y-2">
                       <div className="relative overflow-hidden rounded-t-2xl">
                         <img
                           src={getImageUrl(product.image_url || product.imageUrl) || '/placeholder-image.jpg'}
                           alt={product.name}
-                          className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-500"
+                          className="w-full h-36 object-cover group-hover:scale-110 transition-transform duration-500"
                         />
+
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                         <Badge
                           variant="secondary"
-                          className="absolute top-4 left-4 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 px-3 py-1 text-xs font-bold rounded-xl"
+                          className="absolute top-4 left-4 bg-yellow-500/10 text-yellow-200 border border-yellow-400/20 px-3 py-1 text-xs font-bold rounded-xl"
                         >
                           Available
                         </Badge>
                       </div>
-                      <CardContent className="p-6">
-                        <h3 className="font-bold text-black mb-2 line-clamp-1 text-lg">{product.name}</h3>
-                        <p className="text-yellow-600 font-black text-xl mb-3">
+                      <CardContent className="p-4">
+                        <h3 className="font-bold text-white mb-1 line-clamp-1 text-sm sm:text-base">{product.name}</h3>
+                        <p className="text-yellow-300 font-black text-base sm:text-lg mb-2">
                           {formatCurrency(product.price)}
                         </p>
-                        <p className="text-sm text-gray-600 line-clamp-2 leading-relaxed">
+                        <p className="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed">
                           {product.description}
                         </p>
-                        <div className="flex items-center justify-between mt-4">
-                          <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">
+                        <div className="flex items-center justify-between mt-3">
+                          <Badge variant="outline" className="text-xs bg-white/5 text-gray-200 border-white/10">
                             {product.aesthetic}
                           </Badge>
-                          <span className="text-xs text-gray-500">
+
+                          <span className="text-xs text-gray-400">
                             {new Date(product.createdAt).toLocaleDateString()}
                           </span>
                         </div>
@@ -1355,11 +1438,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 </div>
               ) : (
                 <div className="text-center py-20">
-                  <div className="w-24 h-24 mx-auto mb-8 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
-                    <Package className="h-12 w-12 text-yellow-600" />
+                  <div className="w-24 h-24 mx-auto mb-8 bg-yellow-500/10 border border-yellow-400/20 rounded-3xl flex items-center justify-center shadow-lg">
+                    <Package className="h-12 w-12 text-yellow-300" />
                   </div>
-                  <h3 className="text-2xl font-black text-black mb-3">No products found</h3>
-                  <p className="text-gray-600 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
+                  <h3 className="text-2xl font-black text-white mb-3">No products found</h3>
+                  <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
                   <Button
                     onClick={() => navigate('/seller/add-product')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
@@ -1376,15 +1459,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'settings' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-black text-black mb-2 sm:mb-3">Store Settings</h2>
-              <p className="text-gray-600 text-xs sm:text-sm lg:text-base xl:text-lg font-medium max-w-3xl mx-auto px-4 sm:px-0">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-black text-white mb-2 sm:mb-3">Store Settings</h2>
+              <p className="text-gray-400 text-xs sm:text-sm lg:text-base xl:text-lg font-medium max-w-3xl mx-auto px-4 sm:px-0">
                 Manage your store configuration and preferences. Update your store details, location, and appearance.
               </p>
             </div>
 
             <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
               {/* Banner Upload Section */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
+              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
                 <BannerUpload
                   currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
@@ -1394,11 +1477,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               {/* Store Information */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
+              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
                   <div className="mb-2 sm:mb-0 flex-1 min-w-0">
-                    <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-black text-black truncate">Store Information</h3>
-                    <p className="text-gray-600 text-xs sm:text-sm lg:text-base font-medium mt-1">
+                    <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-black text-white truncate">Store Information</h3>
+                    <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium mt-1">
                       Your store details and contact information
                     </p>
                   </div>
@@ -1409,14 +1492,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           variant="outline"
                           onClick={toggleEdit}
                           disabled={isSaving}
-                          className="text-xs sm:text-sm border-gray-300 hover:bg-gray-50 flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
+                          className="text-xs sm:text-sm bg-transparent border-white/10 text-gray-200 hover:bg-white/5 flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                         >
                           Cancel
                         </Button>
                         <Button
                           onClick={handleSaveProfile}
                           disabled={isSaving}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
+                          className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                         >
                           {isSaving ? 'Saving...' : 'Save Changes'}
                         </Button>
@@ -1424,7 +1507,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     ) : (
                       <Button
                         onClick={toggleEdit}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                       >
                         <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
                         Edit Profile
@@ -1433,7 +1516,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     <Button
                       variant="destructive"
                       onClick={handleLogout}
-                      className="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
+                      className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                     >
                       <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
                       Logout
@@ -1441,36 +1524,45 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   </div>
                 </div>
 
-
                 {/* Profile Information */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
-                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Full Name</p>
-                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-black truncate" title={sellerProfile?.fullName || 'Not set'}>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Full Name</p>
+                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.fullName || 'Not set'}>
                       {sellerProfile?.fullName || 'Not set'}
                     </p>
                   </div>
-                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Email</p>
-                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-black truncate" title={sellerProfile?.email || 'Not set'}>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Email</p>
+                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.email || 'Not set'}>
                       {sellerProfile?.email || 'Not set'}
                     </p>
                   </div>
-                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Phone Number</p>
-                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-black">
-                      {sellerProfile?.phone || 'Not set'}
-                    </p>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">WhatsApp Number</p>
+                    {isEditing ? (
+                      <Input
+                        name="whatsappNumber"
+                        value={formData.whatsappNumber}
+                        onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
+                        placeholder="e.g. 0712345678"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                      />
+                    ) : (
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
+                        {sellerProfile?.whatsappNumber || sellerProfile?.phone || 'Not set'}
+                      </p>
+                    )}
                   </div>
-                  <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-lg sm:rounded-xl lg:rounded-2xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-1">Instagram Link</p>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Instagram Link</p>
                     {isEditing ? (
                       <Input
                         name="instagramLink"
                         value={formData.instagramLink}
                         onChange={(e) => setFormData(prev => ({ ...prev, instagramLink: e.target.value }))}
                         placeholder="https://instagram.com/yourshop"
-                        className="h-8 sm:h-9 text-xs sm:text-sm"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                       />
                     ) : (
                       <div className="flex items-center gap-2">
@@ -1479,7 +1571,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             href={sellerProfile.instagramLink}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm sm:text-base lg:text-lg font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                            className="text-sm sm:text-base lg:text-lg font-semibold text-blue-300 hover:underline flex items-center gap-1"
                           >
                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -1499,11 +1591,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 {/* Location Settings */}
                 <div className="space-y-3 sm:space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-0">
-                    <h4 className="text-base sm:text-lg lg:text-xl font-bold text-black">Location Settings</h4>
+                    <h4 className="text-base sm:text-lg lg:text-xl font-bold text-white">Location Settings</h4>
                     {!isEditing && (
                       <button
                         onClick={toggleEdit}
-                        className="text-xs sm:text-sm text-yellow-600 hover:text-yellow-700 font-medium flex items-center gap-1 self-start sm:self-auto"
+                        className="text-xs sm:text-sm text-yellow-300 hover:text-yellow-200 font-medium flex items-center gap-1 self-start sm:self-auto"
                       >
                         <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         Edit Location
@@ -1512,14 +1604,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                    <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl lg:rounded-2xl border border-gray-200">
-                      <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">City</p>
+                    <div className="p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                      <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">City</p>
                       {isEditing ? (
                         <select
                           name="city"
                           value={formData.city}
                           onChange={handleCityChange}
-                          className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                          className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-gray-700 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 bg-gray-800 text-white"
                         >
                           <option value="">Select a city</option>
                           {Object.keys(cities).map(city => (
@@ -1527,20 +1619,20 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           ))}
                         </select>
                       ) : (
-                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-black">
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
                           {sellerProfile?.city || 'Not set'}
                         </p>
                       )}
                     </div>
 
-                    <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl lg:rounded-2xl border border-gray-200">
-                      <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Location/Area</p>
+                    <div className="p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                      <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">Location/Area</p>
                       {isEditing ? (
                         <select
                           name="location"
                           value={formData.location}
                           onChange={handleLocationChange}
-                          className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-transparent bg-white"
+                          className="w-full p-2 sm:p-3 text-xs sm:text-sm lg:text-base border border-gray-700 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 bg-gray-800 text-white"
                           disabled={!formData.city}
                         >
                           <option value="">Select a location</option>
@@ -1549,7 +1641,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           ))}
                         </select>
                       ) : (
-                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-black">
+                        <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
                           {sellerProfile?.location || 'Not set'}
                         </p>
                       )}
@@ -1557,8 +1649,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   </div>
 
                   {/* Physical Shop Address */}
-                  <div className="p-3 sm:p-4 bg-white rounded-lg sm:rounded-xl lg:rounded-2xl border border-gray-200">
-                    <p className="text-xs sm:text-sm font-medium text-gray-700 mb-2">Physical Shop Address</p>
+                  <div className="p-3 sm:p-4 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">Physical Shop Address</p>
                     {isEditing ? (
                       <div className="mt-2">
                         <ShopLocationPicker
@@ -1571,10 +1663,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       <div className="space-y-2">
                         {sellerProfile?.physicalAddress ? (
                           <>
-                            <p className="text-xs sm:text-sm lg:text-base font-semibold text-black">
+                            <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
                               {sellerProfile.physicalAddress}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-400">
                               {sellerProfile.latitude && sellerProfile.longitude ?
                                 `Coordinates: ${sellerProfile.latitude.toFixed(6)}, ${sellerProfile.longitude.toFixed(6)}` :
                                 'No map location pinned'}
@@ -1592,7 +1684,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               {/* Theme Settings */}
-              <div className="bg-white/60 backdrop-blur-sm rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-gray-200/50">
+              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
                 <ThemeSelector
                   currentTheme={sellerProfile?.theme}
                   onThemeChange={(theme) => {

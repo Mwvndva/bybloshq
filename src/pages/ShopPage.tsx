@@ -72,7 +72,7 @@ const ShopPage = () => {
 
   // Get theme classes based on seller's theme
   const getThemeClasses = useCallback(() => {
-    const theme = (sellerInfo?.theme as Theme) || 'default';
+    const theme = (sellerInfo?.theme as Theme) || 'black';
 
     switch (theme) {
       case 'black':
@@ -154,9 +154,7 @@ const ShopPage = () => {
 
   // Apply theme to the page
   useEffect(() => {
-    if (!sellerInfo?.theme) return;
-
-    const theme = sellerInfo.theme as Theme;
+    const theme = ((sellerInfo?.theme as Theme) || 'black');
     const root = document.documentElement;
 
     // Set CSS custom properties based on theme
@@ -259,11 +257,12 @@ const ShopPage = () => {
           fullName: seller.fullName || seller.full_name || '',
           shopName: seller.shopName || seller.shop_name || '',
           phone: seller.phone || '',
+          whatsappNumber: seller.whatsappNumber || seller.phone || '',
           email: seller.email || '',
           bannerImage: seller.bannerImage || seller.banner_image, // Handle both cases
           city: seller.city,
           location: seller.location,
-          theme: seller.theme as Theme || 'default', // Add theme with default value
+          theme: (seller.theme as Theme) || 'black', // Default to black when unset
           instagramLink: seller.instagramLink || '', // Map from API
           // Physical shop fields
           hasPhysicalShop: !!seller.physicalAddress,
@@ -535,6 +534,7 @@ const ShopPage = () => {
                     fullName: sellerInfo.fullName || '',
                     email: sellerInfo.email || '',
                     phone: sellerInfo.phone || '',
+                    whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
                     shopName: sellerInfo.shopName || '',
                     bannerUrl: sellerInfo.bannerImage || '',
                     location: sellerInfo.location || '',
@@ -555,6 +555,7 @@ const ShopPage = () => {
                   fullName: sellerInfo.fullName || '',
                   email: sellerInfo.email || '',
                   phone: sellerInfo.phone || '',
+                  whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
                   shopName: sellerInfo.shopName || '',
                   bannerUrl: sellerInfo.bannerImage || '',
                   location: sellerInfo.location || '',

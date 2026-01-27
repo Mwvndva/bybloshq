@@ -193,25 +193,34 @@ export default function EditEventPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 p-4 sm:p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
-        <div className="flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(`/organizer/events/${id}`)} // Navigate back to specific event details
-            className="mr-4 text-gray-500 hover:text-black hover:bg-white/50"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            <span className="text-base font-medium">Back to Event</span>
-          </Button>
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-gray-900">Edit Event</h1>
-            <p className="text-lg text-gray-500 font-medium">
-              Update the details of your event
-            </p>
+    <div className="min-h-screen bg-black text-white">
+      {/* Search Header - Sticky */}
+      <div className="sticky top-0 z-50 w-full bg-black/80 backdrop-blur-md border-b border-white/10 mb-8">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="relative flex items-center justify-between h-14 lg:h-16">
+            <div className="flex-1 flex items-center justify-start">
+              <Button
+                variant="secondary-byblos"
+                onClick={() => navigate(`/organizer/events/${id}`)}
+                className="rounded-xl px-2 sm:px-3 py-1.5 text-xs sm:text-sm h-8"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Back</span>
+              </Button>
+            </div>
+
+            <div className="absolute left-1/2 -translate-x-1/2 text-center w-full max-w-[50%] pointer-events-none">
+              <h1 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+                Edit Event
+              </h1>
+            </div>
+
+            <div className="flex-1" />
           </div>
         </div>
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4 sm:px-8">
 
         <EventForm
           defaultValues={{

@@ -5,6 +5,8 @@ interface Buyer {
   fullName: string;
   email: string;
   phone: string;
+  mobilePayment: string;
+  whatsappNumber: string;
   city?: string;
   location?: string;
   refunds?: number;
@@ -58,7 +60,8 @@ interface LoginResponse {
 interface RegisterData {
   fullName: string;
   email: string;
-  phone: string;
+  mobilePayment: string;
+  whatsappNumber: string;
   password: string;
   confirmPassword: string;
   city: string;
@@ -143,7 +146,9 @@ const transformBuyer = (data: any): Buyer => {
     id: buyer.id,
     fullName: buyer.fullName || buyer.full_name || '',
     email: buyer.email || '',
-    phone: buyer.phone || '',
+    phone: buyer.phone || buyer.mobile_payment || buyer.whatsapp_number || '',
+    mobilePayment: buyer.mobile_payment || buyer.mobilePayment || buyer.phone || '',
+    whatsappNumber: buyer.whatsapp_number || buyer.whatsappNumber || buyer.phone || '',
     city: buyer.city || '',
     location: buyer.location || '',
     refunds: buyer.refunds != null ? parseFloat(buyer.refunds) : 0,
@@ -627,7 +632,8 @@ const buyerApi = {
   saveBuyerInfo: async (buyerInfo: {
     fullName: string;
     email: string;
-    phone: string;
+    mobilePayment: string;
+    whatsappNumber: string;
     city?: string;
     location?: string;
     password?: string;

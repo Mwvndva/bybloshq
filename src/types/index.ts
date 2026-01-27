@@ -18,6 +18,7 @@ export interface Seller {
   fullName: string;
   email: string;
   phone: string;
+  whatsappNumber: string;
   createdAt: string;
   updatedAt?: string;
   bio?: string;
@@ -145,6 +146,8 @@ export interface User {
   fullName: string;
   avatarUrl?: string;
   phone?: string;
+  mobilePayment?: string;
+  whatsappNumber?: string;
   role: 'customer' | 'seller' | 'admin';
   emailVerified: boolean;
   createdAt: string;

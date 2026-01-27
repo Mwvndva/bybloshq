@@ -6,7 +6,9 @@ import User from '../models/user.model.js';
 
 class BuyerService {
     static async register(data) {
-        const { fullName, email, phone, password, city, location } = data;
+        const { fullName, email, phone, mobilePayment, whatsappNumber, password, city, location } = data;
+        const mobile_payment = mobilePayment || phone;
+        const whatsapp_number = whatsappNumber || phone;
 
         // 1. Check if user already exists in unified users table
         const existingUser = await User.findByEmail(email);
@@ -26,7 +28,7 @@ class BuyerService {
 
             // 4. Link new buyer profile to existing user identity
             return await Buyer.create({
-                fullName, email, phone, city, location, userId: existingUser.id
+                fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
             });
         }
 
@@ -41,12 +43,14 @@ class BuyerService {
 
         // Create buyer profile linked to new user
         return await Buyer.create({
-            fullName, email, phone, city, location, userId: newUser.id
+            fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id
         });
     }
 
     static async registerGuest(data) {
-        const { fullName, email, phone, city, location, password } = data;
+        const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password } = data;
+        const mobile_payment = mobilePayment || phone;
+        const whatsapp_number = whatsappNumber || phone;
 
         // 1. Check if user already exists
         const existingUser = await User.findByEmail(email);
@@ -64,7 +68,7 @@ class BuyerService {
             let buyer = await Buyer.findByEmail(email);
             if (!buyer) {
                 buyer = await Buyer.create({
-                    fullName, email, phone, city, location, userId: existingUser.id
+                    fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
                 });
             }
 
@@ -83,7 +87,8 @@ class BuyerService {
         const buyer = await Buyer.create({
             fullName,
             email,
-            phone,
+            mobilePayment: mobile_payment,
+            whatsappNumber: whatsapp_number,
             city,
             location,
             userId: newUser.id

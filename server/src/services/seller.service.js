@@ -13,7 +13,8 @@ class SellerService {
 
     // --- Auth ---
     static async register(data) {
-        const { fullName, shopName, email, phone, password, city, location, physicalAddress, latitude, longitude } = data;
+        const { fullName, shopName, email, phone, whatsappNumber, password, city, location, physicalAddress, latitude, longitude } = data;
+        const whatsapp_number = whatsappNumber || phone;
 
         // 1. Check if user already exists in unified users table
         const existingUser = await User.findByEmail(email);
@@ -33,7 +34,7 @@ class SellerService {
 
             // 4. Link new seller profile to existing user identity
             return await SellerModel.createSeller({
-                fullName, shopName, email, phone, city, location, physicalAddress, latitude, longitude, userId: existingUser.id
+                fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: existingUser.id
             });
         }
 
@@ -48,7 +49,7 @@ class SellerService {
 
         // Create seller profile linked to new user
         return await SellerModel.createSeller({
-            fullName, shopName, email, phone, city, location, physicalAddress, latitude, longitude, userId: newUser.id
+            fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: newUser.id
         });
     }
 

@@ -19,7 +19,9 @@ class OrderService {
         paymentMethod,
         buyerName,
         buyerEmail,
-        buyerPhone,
+        buyerPhone, // older code might still pass this
+        buyerMobilePayment,
+        buyerWhatsApp,
         shippingAddress,
         notes,
         metadata = {}
@@ -80,7 +82,8 @@ class OrderService {
         payment_method: paymentMethod,
         buyer_name: buyerName,
         buyer_email: buyerEmail,
-        buyer_phone: buyerPhone,
+        buyer_mobile_payment: buyerMobilePayment || buyerPhone,
+        buyer_whatsapp_number: buyerWhatsApp || buyerPhone,
         shipping_address: shippingAddress ? JSON.stringify(shippingAddress) : null,
         notes: notes,
         metadata: JSON.stringify(metadata),
@@ -194,8 +197,8 @@ class OrderService {
       try {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, 
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, 
                   s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
@@ -208,7 +211,8 @@ class OrderService {
           const fullOrder = fullOrderResult.rows[0];
           const buyerData = {
             name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
+            whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
             email: fullOrder.buyer_email || fullOrder.buyer_email_actual
           };
           const sellerData = {
@@ -291,8 +295,8 @@ class OrderService {
       try {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, s.physical_address as seller_address
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
@@ -309,8 +313,9 @@ class OrderService {
             order_id: fullOrder.order_number || fullOrder.id, // match helper expectation
             total_amount: fullOrder.total_amount,
             amount: fullOrder.total_amount,
-            buyer_phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
-            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            buyer_mobile_payment: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
+            buyer_whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+            phone: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
             // We might need items for detailed notification?
             // Helper likely expects items. But we don't have them in 'fullOrder' unless we join.
             // Let's rely on basic info for now or fetch items.
@@ -500,8 +505,8 @@ class OrderService {
         // Fetch full order details with buyer and seller for notification
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, 
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, 
                   s.physical_address as seller_address, s.shop_name, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
@@ -514,7 +519,8 @@ class OrderService {
           const fullOrder = fullOrderResult.rows[0];
           const buyerData = {
             name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
+            whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
             email: fullOrder.buyer_email || fullOrder.buyer_email_actual
           };
           const sellerData = {
@@ -619,8 +625,8 @@ class OrderService {
         // Re-fetch order details or reuse
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.phone as buyer_phone_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.phone as seller_phone, s.email as seller_email, s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id

@@ -521,80 +521,81 @@ export function TicketPurchaseForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-[95vw] sm:max-w-[500px] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl border-0 shadow-2xl bg-white/95 backdrop-blur-md p-0 gap-0">
+      <DialogContent className="w-full max-w-[95vw] sm:max-w-[500px] max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-3xl border border-white/10 shadow-2xl bg-[#0a0a0a] p-0 gap-0 text-white">
         <div className="p-4 sm:p-8">
           {purchaseComplete ? (
             <div className="text-center py-6">
-              <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-300">
-                <CheckCircle2 className="h-10 w-10 text-green-600" />
+              <div className="mx-auto w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mb-6 animate-in zoom-in duration-300 border border-green-500/20">
+                <CheckCircle2 className="h-10 w-10 text-green-400" />
               </div>
-              <h3 className="text-2xl font-black text-gray-900 mb-2">Payment Successful!</h3>
-              <p className="text-gray-600 mb-6 font-medium">
+              <h3 className="text-2xl font-black text-white mb-2">Success!</h3>
+              <p className="text-[#a1a1a1] mb-6 font-medium">
                 Your ticket has been booked successfully.
                 <br />A confirmation email has been sent.
               </p>
               {purchaseDetails.reference && (
-                <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-                  <p className="text-sm text-gray-500 mb-1 uppercase tracking-wider font-bold">Transaction Reference</p>
-                  <p className="font-mono text-gray-900 font-medium">{purchaseDetails.reference}</p>
+                <div className="bg-white/5 rounded-xl p-4 mb-6 border border-white/5">
+                  <p className="text-[10px] text-[#a1a1a1] mb-1 uppercase tracking-widest font-black">Reference</p>
+                  <p className="font-mono text-white font-bold">{purchaseDetails.reference}</p>
                 </div>
               )}
               <Button
+                variant="secondary-byblos"
                 onClick={() => onOpenChange(false)}
-                className="w-full bg-gray-900 text-white hover:bg-gray-800 rounded-xl h-11 font-semibold"
+                className="w-full rounded-xl h-11 font-black text-base"
               >
-                Close & View Ticket
+                Close
               </Button>
             </div>
           ) : waitingForStk ? (
             <div className="text-center py-10">
-              <div className="relative mx-auto w-20 h-20 mb-6">
-                <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-75"></div>
-                <div className="relative w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-                  <Smartphone className="h-10 w-10 text-blue-600" />
+              <div className="relative mx-auto w-20 h-20 mb-8">
+                <div className="absolute inset-0 bg-yellow-400/20 rounded-full animate-ping opacity-75"></div>
+                <div className="relative w-20 h-20 bg-yellow-400/10 rounded-full flex items-center justify-center border border-yellow-400/20">
+                  <Smartphone className="h-10 w-10 text-yellow-400" />
                 </div>
               </div>
-              <h3 className="text-2xl font-black text-gray-900 mb-3">Check Your Phone</h3>
-              <p className="text-gray-600 mb-8 max-w-xs mx-auto text-lg leading-relaxed">
-                We've sent an M-PESA prompt to <span className="font-bold text-black block mt-1">{formData.phoneNumber}</span>
+              <h3 className="text-2xl font-black text-white mb-3">Check Your Phone</h3>
+              <p className="text-[#a1a1a1] mb-8 max-w-xs mx-auto text-lg leading-relaxed">
+                We've sent an M-PESA prompt to <span className="font-bold text-white block mt-1">{formData.phoneNumber}</span>
               </p>
-              <div className="inline-flex items-center justify-center space-x-3 bg-blue-50 text-blue-700 px-6 py-3 rounded-full font-medium animate-pulse">
+              <div className="inline-flex items-center justify-center space-x-3 bg-yellow-400/5 text-yellow-400 px-8 py-3 rounded-full font-black animate-pulse border border-yellow-400/10">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 <span>Waiting for PIN...</span>
               </div>
             </div>
           ) : (
             <>
-              <DialogHeader className="mb-4 space-y-3">
-                <div className="mx-auto w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center shadow-inner">
-                  <Ticket className="h-6 w-6 text-yellow-600" />
+              <DialogHeader className="mb-8 space-y-4">
+                <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
+                  <Ticket className="h-7 w-7 text-yellow-400" />
                 </div>
-                <div className="space-y-0.5">
-                  <DialogTitle className="text-xl font-black text-center text-gray-900">Purchase Tickets</DialogTitle>
-                  <DialogDescription className="text-center text-sm font-medium text-gray-600">
+                <div className="space-y-1">
+                  <DialogTitle className="text-2xl font-black text-center text-white">Purchase Tickets</DialogTitle>
+                  <DialogDescription className="text-center text-base font-medium text-[#a1a1a1]">
                     {event.name}
                   </DialogDescription>
                 </div>
               </DialogHeader>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="customerName" className="text-xs font-semibold text-gray-700">Full Name</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="customerName" className="text-xs font-black uppercase tracking-wider text-[#a1a1a1]">Full Name</Label>
                   <Input
                     id="customerName"
                     name="customerName"
                     value={formData.customerName}
                     onChange={handleInputChange}
-                    placeholder="John Doe"
+                    placeholder="Enter your name"
                     required
                     minLength={2}
                     maxLength={100}
-                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-10 bg-gray-50/50"
+                    className="text-base rounded-xl border-white/10 focus-visible:ring-yellow-400 h-12 bg-white/5 text-white placeholder:text-[#555555]"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="customerEmail" className="text-xs font-semibold text-gray-700">Email</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="customerEmail" className="text-xs font-black uppercase tracking-wider text-[#a1a1a1]">Email Address</Label>
                   <Input
                     id="customerEmail"
                     name="customerEmail"
@@ -603,21 +604,21 @@ export function TicketPurchaseForm({
                     onChange={handleInputChange}
                     placeholder="you@example.com"
                     required
-                    className="text-base rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-10 bg-gray-50/50"
+                    className="text-base rounded-xl border-white/10 focus-visible:ring-yellow-400 h-12 bg-white/5 text-white placeholder:text-[#555555]"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="phoneNumber" className="text-xs font-semibold text-gray-700">Phone Number</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber" className="text-xs font-black uppercase tracking-wider text-[#a1a1a1]">Phone Number</Label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <span className="text-gray-500 text-sm">+254</span>
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                      <span className="text-[#a1a1a1] text-sm font-bold">+254</span>
                     </div>
                     <Input
                       id="phoneNumber"
                       type="tel"
                       placeholder="712 345 678"
-                      className={`text-base pl-14 rounded-xl border-gray-200 focus-visible:ring-yellow-400 h-10 bg-gray-50/50 ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
+                      className={`text-base pl-14 rounded-xl border-white/10 focus-visible:ring-yellow-400 h-12 bg-white/5 text-white placeholder:text-[#555555] ${phoneError ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                       value={formData.phoneNumber}
                       onChange={handlePhoneNumberChange}
                       onBlur={(e) => setPhoneError(validatePhoneNumber(e.target.value))}
@@ -628,14 +629,14 @@ export function TicketPurchaseForm({
                   {phoneError && (
                     <p className="text-sm text-red-500 mt-1">{phoneError}</p>
                   )}
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter 9-digit number starting with 7 or 1 (e.g., 712345678)
+                  <p className="text-[10px] text-[#555555] mt-1 font-medium">
+                    Please use your M-PESA registered number
                   </p>
                 </div>
 
                 {ticketTypes.length > 0 && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-700">Ticket Type</Label>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1]">Ticket Type</Label>
                     <Select
                       value={formData.ticketTypeId}
                       onValueChange={(value) => setFormData(prev => ({
@@ -645,26 +646,27 @@ export function TicketPurchaseForm({
                       }))}
                       required
                     >
-                      <SelectTrigger className="text-base rounded-xl border-gray-200 focus:ring-yellow-400 h-10 bg-gray-50/50">
+                      <SelectTrigger className="text-base rounded-xl border-white/10 focus:ring-yellow-400 h-12 bg-white/5 text-white">
                         <SelectValue placeholder="Select a ticket type" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="bg-[#111111] border-white/10 text-white">
                         {ticketTypes.map((ticket) => (
                           <SelectItem
                             key={ticket.id}
                             value={String(ticket.id)}
                             disabled={ticket.is_sold_out}
+                            className="hover:bg-white/5 focus:bg-white/5"
                           >
                             <div className="flex flex-col w-full text-left gap-1">
                               <div className="flex justify-between items-center w-full">
-                                <span className="font-medium">{ticket.name}</span>
-                                <span className="text-sm font-semibold text-gray-700 ml-2">
+                                <span className="font-bold">{ticket.name}</span>
+                                <span className="text-sm font-black text-yellow-400 ml-2">
                                   {formatPrice(ticket.price)}
                                   {ticket.is_sold_out && ' (Sold Out)'}
                                 </span>
                               </div>
                               {ticket.description && (
-                                <span className="text-xs text-gray-500 line-clamp-2 leading-tight pr-4">
+                                <span className="text-xs text-[#a1a1a1] line-clamp-2 leading-tight pr-4">
                                   {ticket.description}
                                 </span>
                               )}
@@ -674,7 +676,7 @@ export function TicketPurchaseForm({
                       </SelectContent>
                     </Select>
                     {selectedTicket?.description && (
-                      <p className="text-sm text-gray-500 mt-1 bg-gray-50 p-2 rounded-md border border-gray-100 italic">
+                      <p className="text-xs text-[#a1a1a1] mt-1 bg-white/5 p-3 rounded-xl border border-white/5 italic">
                         {selectedTicket.description}
                       </p>
                     )}
@@ -682,19 +684,20 @@ export function TicketPurchaseForm({
                 )}
 
                 {selectedTicket && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-gray-700">Quantity</Label>
-                    <div className="flex items-center space-x-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1]">Quantity</Label>
+                    <div className="flex items-center space-x-4">
                       <Button
                         type="button"
+                        variant="outline"
                         size="icon"
                         onClick={() => handleQuantityChange(formData.quantity - 1)}
                         disabled={formData.quantity <= (selectedTicket.min_per_order || 1)}
-                        className="rounded-xl border-gray-200 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200"
+                        className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white"
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
-                      <div className="flex-1 text-center font-bold text-lg">
+                      <div className="flex-1 text-center font-black text-2xl text-white">
                         {formData.quantity}
                       </div>
                       <Button
@@ -703,15 +706,15 @@ export function TicketPurchaseForm({
                         size="icon"
                         onClick={() => handleQuantityChange(formData.quantity + 1)}
                         disabled={formData.quantity >= maxQuantity}
-                        className="rounded-xl border-gray-200 hover:bg-yellow-50 hover:text-yellow-600 hover:border-yellow-200"
+                        className="rounded-xl border-white/10 bg-white/5 hover:bg-white/10 text-white"
                       >
                         <Plus className="h-4 w-4" />
                       </Button>
                     </div>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-[10px] text-[#555555] text-center font-bold">
                       {maxQuantity > 0
-                        ? `${maxQuantity} ${maxQuantity === 1 ? 'ticket' : 'tickets'} available`
-                        : 'No tickets available'}
+                        ? `${maxQuantity} ${maxQuantity === 1 ? 'TICKET' : 'TICKETS'} REMAINING`
+                        : 'NO TICKETS REMAINING'}
                     </p>
                   </div>
                 )}
@@ -727,20 +730,20 @@ export function TicketPurchaseForm({
                   </div>
                 )}
 
-                <div className="pt-2">
-                  <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                <div className="pt-4">
+                  <div className="flex items-center justify-between border-t border-white/10 pt-6">
                     <div>
-                      <span className="font-medium">Subtotal</span>
+                      <span className="font-bold text-white text-lg">Subtotal</span>
                       {discountAmount > 0 && (
-                        <div className="text-sm text-green-600">
-                          Discount: -{formatPrice(discountAmount)}
+                        <div className="text-sm text-green-400 font-bold">
+                          Saved: {formatPrice(discountAmount)}
                         </div>
                       )}
                     </div>
                     <div className="text-right">
-                      <span className="text-lg font-bold">{formatPrice(finalPrice)}</span>
+                      <span className="text-2xl font-black text-yellow-400">{formatPrice(finalPrice)}</span>
                       {discountAmount > 0 && (
-                        <div className="text-sm text-gray-500 line-through">
+                        <div className="text-xs text-[#a1a1a1] line-through">
                           {formatPrice(basePrice)}
                         </div>
                       )}
@@ -748,27 +751,28 @@ export function TicketPurchaseForm({
                   </div>
                 </div>
 
-                <div className="pt-2">
+                <div className="pt-6">
                   <Button
                     type="submit"
-                    className="w-full h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-white shadow-lg shadow-yellow-200 rounded-xl font-bold text-sm transition-all duration-200 transform hover:scale-[1.02]"
+                    variant="secondary-byblos"
+                    className="w-full h-14 rounded-2xl font-black text-base transition-all duration-300 transform active:scale-95 shadow-2xl hover:shadow-yellow-400/20"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
                       <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Processing...
+                        <Loader2 className="mr-3 h-6 w-6 animate-spin" />
+                        Processing Payment...
                       </>
                     ) : (
                       <>
-                        <CreditCard className="mr-2 h-5 w-5" />
-                        Pay {formatPrice(finalPrice)} with M-PESA
+                        <CreditCard className="mr-3 h-5 w-5" />
+                        Complete Booking • {formatPrice(finalPrice)}
                       </>
                     )}
                   </Button>
 
-                  <p className="text-xs text-gray-500 text-center mt-2">
-                    Check your phone for the M-PESA prompt after clicking
+                  <p className="text-[10px] text-[#555555] text-center mt-4 font-bold uppercase tracking-widest">
+                    Secured by PayD Payments
                   </p>
                 </div>
               </form>

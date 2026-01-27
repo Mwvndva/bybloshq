@@ -64,7 +64,8 @@ const createOrder = async (req, res) => {
       paymentMethod: paymentMethod,
       buyerName: shippingAddress?.fullName || 'Unknown',
       buyerEmail: shippingAddress?.email || '',
-      buyerPhone: shippingAddress?.phone || '',
+      buyerMobilePayment: shippingAddress?.phone || '',
+      buyerWhatsApp: shippingAddress?.whatsappNumber || shippingAddress?.phone || '',
       shippingAddress: shippingAddress,
       metadata: {
         items: items.map(item => ({
@@ -315,7 +316,7 @@ const getSellerOrders = async (req, res) => {
           o.payment_reference as "paymentReference",
           o.buyer_name as "buyerName",
           o.buyer_email as "buyerEmail",
-          o.buyer_phone as "buyerPhone",
+          o.buyer_whatsapp_number as "buyerPhone",
           o.notes,
           o.metadata,
           o.created_at as "createdAt",
@@ -345,7 +346,8 @@ const getSellerOrders = async (req, res) => {
               'id', b.id,
               'name', b.full_name,
               'email', b.email,
-              'phone', b.phone,
+              'mobile_payment', b.mobile_payment,
+              'whatsapp_number', b.whatsapp_number,
               'city', b.city,
               'location', b.location
             )
@@ -378,7 +380,7 @@ const getSellerOrders = async (req, res) => {
           o.payment_reference as "paymentReference",
           o.buyer_name as "buyerName",
           o.buyer_email as "buyerEmail",
-          o.buyer_phone as "buyerPhone",
+          o.buyer_whatsapp_number as "buyerPhone",
           o.notes,
           o.metadata,
           o.created_at as "createdAt",
@@ -409,7 +411,8 @@ const getSellerOrders = async (req, res) => {
               'id', b.id::text,
               'name', b.full_name,
               'email', b.email,
-              'phone', b.phone,
+              'mobile_payment', b.mobile_payment,
+              'whatsapp_number', b.whatsapp_number,
               'city', b.city,
               'location', b.location
             )
@@ -578,7 +581,7 @@ const getOrderById = async (req, res) => {
     const order = orderResult.rows[0];
 
     // Check if user has permission to view this order
-    if (order.buyer_id !== userId && order.seller_id !== userId) {
+    if (!(await req.user.can('view-orders', order, 'order', 'view'))) {
       return res.status(403).json({
         success: false,
         message: 'You do not have permission to view this order'
@@ -586,7 +589,7 @@ const getOrderById = async (req, res) => {
     }
 
     // Determine user type for sanitization
-    const userType = order.seller_id === userId ? 'seller' : 'buyer';
+    const userType = order.seller_id === req.user.id ? 'seller' : 'buyer';
 
     res.json({
       success: true,
@@ -675,14 +678,15 @@ const confirmReceipt = async (req, res) => {
       [id, userId]
     );
 
-    if (orderResult.rows.length === 0) {
-      return res.status(404).json({
+    const order = orderResult.rows[0];
+
+    // Check if user has permission to confirm receipt (Buyer action)
+    if (!(await req.user.can('view-orders', order, 'order', 'updateStatus', 'COMPLETED'))) {
+      return res.status(403).json({
         success: false,
-        message: 'Order not found or you do not have permission to update this order'
+        message: 'You are not authorized to confirm receipt for this order.'
       });
     }
-
-    const order = orderResult.rows[0];
 
     // Only allow confirming receipt for orders that are DELIVERY_COMPLETE or CONFIRMED (for services)
     if (order.status !== 'DELIVERY_COMPLETE' && order.status !== 'CONFIRMED') {
@@ -791,7 +795,7 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
   try {
     // Fetch seller details
     const sellerQuery = await pool.query(
-      'SELECT id, full_name, phone, email, location, city, physical_address FROM sellers WHERE id = $1',
+      'SELECT id, full_name, whatsapp_number, email, location, city, physical_address FROM sellers WHERE id = $1',
       [order.seller_id]
     );
 
@@ -806,12 +810,13 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
     const buyerNotificationData = {
       buyer: {
         name: order.buyer?.name || order.buyer_name,
-        phone: order.buyer?.phone || order.buyer_phone,
+        phone: order.buyer?.mobile_payment || order.buyer_mobile_payment,
+        whatsapp_number: order.buyer?.whatsapp_number || order.buyer_whatsapp_number,
         email: order.buyer?.email || order.buyer_email
       },
       seller: {
         name: seller.full_name,
-        phone: seller.phone,
+        phone: seller.whatsapp_number,
         email: seller.email,
         location: seller.location || seller.city || 'Contact seller for location',
         physicalAddress: seller.physical_address
@@ -831,12 +836,13 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
     const sellerNotificationData = {
       seller: {
         name: seller.full_name,
-        phone: seller.phone,
+        phone: seller.whatsapp_number,
         email: seller.email
       },
       buyer: {
         name: order.buyer?.name || order.buyer_name,
-        phone: order.buyer?.phone || order.buyer_phone,
+        phone: order.buyer?.mobile_payment || order.buyer_mobile_payment,
+        whatsapp_number: order.buyer?.whatsapp_number || order.buyer_whatsapp_number,
         email: order.buyer?.email || order.buyer_email
       },
       order: {
@@ -864,7 +870,8 @@ async function sendOrderStatusNotifications(order, updatedOrder, newStatus) {
       buyer: {
         fullName: order.buyer?.name || order.buyer_name,
         full_name: order.buyer?.name || order.buyer_name,
-        phone: order.buyer?.phone || order.buyer_phone,
+        phone: order.buyer?.mobile_payment || order.buyer_mobile_payment,
+        whatsapp_number: order.buyer?.whatsapp_number || order.buyer_whatsapp_number,
         email: order.buyer?.email || order.buyer_email,
         city: 'Nairobi', // Default city for logistics
         location: 'Dynamic Mall, Tom Mboya St'
@@ -909,7 +916,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
 
     // Fetch seller details
     const sellerQuery = await pool.query(
-      'SELECT id, full_name, phone, email, location, city, physical_address FROM sellers WHERE id = $1',
+      'SELECT id, full_name, whatsapp_number, email, location, city, physical_address FROM sellers WHERE id = $1',
       [order.seller_id]
     );
 
@@ -922,28 +929,30 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
 
     // Fetch buyer details if not in order
     let buyerName = order.buyer_name;
-    let buyerPhone = order.buyer_phone;
+    let buyerMobilePayment = order.buyer_mobile_payment;
+    let buyerWhatsApp = order.buyer_whatsapp_number;
     let buyerEmail = order.buyer_email;
 
-    if (!buyerName || !buyerPhone) {
+    if (!buyerName || !buyerWhatsApp) {
       const buyerQuery = await pool.query(
-        'SELECT full_name, phone, email FROM buyers WHERE id = $1',
+        'SELECT full_name, mobile_payment, whatsapp_number, email FROM buyers WHERE id = $1',
         [order.buyer_id]
       );
 
       if (buyerQuery.rows.length > 0) {
         const buyer = buyerQuery.rows[0];
         buyerName = buyer.full_name;
-        buyerPhone = buyer.phone;
+        buyerMobilePayment = buyer.mobile_payment;
+        buyerWhatsApp = buyer.whatsapp_number;
         buyerEmail = buyer.email;
       }
     }
 
     console.log('Notification details:', {
       buyerName,
-      buyerPhone,
+      buyerWhatsApp,
       sellerName: seller.full_name,
-      sellerPhone: seller.phone,
+      sellerWhatsApp: seller.whatsapp_number,
       orderNumber: order.order_number
     });
 
@@ -951,7 +960,8 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
     const buyerNotificationData = {
       buyer: {
         name: buyerName,
-        phone: buyerPhone,
+        phone: buyerMobilePayment,
+        whatsapp_number: buyerWhatsApp,
         email: buyerEmail
       },
       seller: {
@@ -976,12 +986,13 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
     const sellerNotificationData = {
       seller: {
         name: seller.full_name,
-        phone: seller.phone,
+        phone: seller.whatsapp_number,
         email: seller.email
       },
       buyer: {
         name: buyerName,
-        phone: buyerPhone,
+        phone: buyerMobilePayment,
+        whatsapp_number: buyerWhatsApp,
         email: buyerEmail
       },
       order: {
@@ -1009,7 +1020,8 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
       buyer: {
         fullName: buyerName,
         full_name: buyerName,
-        phone: buyerPhone,
+        phone: buyerMobilePayment,
+        whatsapp_number: buyerWhatsApp,
         email: buyerEmail,
         city: 'Nairobi', // Default city for logistics
         location: 'Dynamic Mall, Tom Mboya St'
@@ -1018,7 +1030,7 @@ async function sendOrderCompletionNotifications(order, updatedOrder) {
         shop_name: seller.full_name,
         businessName: seller.full_name,
         full_name: seller.full_name,
-        phone: seller.phone,
+        phone: seller.whatsapp_number,
         email: seller.email,
         physicalAddress: seller.physical_address
       }
@@ -1218,13 +1230,13 @@ const sellerCancelOrder = async (req, res) => {
 
         // Fetch buyer details
         const buyerResult = await pool.query(
-          'SELECT id, full_name, phone, email, city, location FROM buyers WHERE id = $1',
+          'SELECT id, full_name, mobile_payment, whatsapp_number, email, city, location FROM buyers WHERE id = $1',
           [order.buyer_id]
         );
 
         // Fetch seller details
         const sellerResult = await pool.query(
-          'SELECT id, full_name, phone, email, shop_name FROM sellers WHERE id = $1',
+          'SELECT id, full_name, whatsapp_number, email, shop_name FROM sellers WHERE id = $1',
           [sellerId]
         );
 
@@ -1237,8 +1249,9 @@ const sellerCancelOrder = async (req, res) => {
             order_id: fullOrder.order_number || fullOrder.id,
             total_amount: fullOrder.total_amount,
             amount: fullOrder.total_amount,
-            buyer_phone: buyer.phone,
-            phone: buyer.phone,
+            buyer_mobile_payment: buyer.mobile_payment,
+            buyer_whatsapp_number: buyer.whatsapp_number,
+            phone: buyer.whatsapp_number,
             items: fullOrder.items
           };
 
@@ -1251,7 +1264,8 @@ const sellerCancelOrder = async (req, res) => {
               {
                 fullName: buyer.full_name,
                 full_name: buyer.full_name,
-                phone: buyer.phone,
+                phone: buyer.mobile_payment,
+                whatsapp_number: buyer.whatsapp_number,
                 email: buyer.email,
                 city: buyer.city,
                 location: buyer.location
@@ -1259,7 +1273,8 @@ const sellerCancelOrder = async (req, res) => {
               {
                 ...seller,
                 shop_name: seller.shop_name || seller.full_name,
-                businessName: seller.shop_name || seller.full_name
+                businessName: seller.shop_name || seller.full_name,
+                phone: seller.whatsapp_number
               },
               'Seller'
             )

@@ -193,12 +193,20 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
     target.className = 'w-full h-64 object-contain bg-gray-50 p-4';
   };
 
+  const glassStyle: React.CSSProperties = {
+    background: 'rgba(17, 17, 17, 0.7)',
+    backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-200 border-t-yellow-500"></div>
-          <p className="text-gray-600 font-medium">Loading products...</p>
+          <p className="text-gray-400 font-medium">Loading products...</p>
         </div>
       </div>
     );
@@ -207,14 +215,14 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
   if (error) {
     return (
       <div className="text-center py-16">
-        <div className="bg-red-50 border border-red-200 rounded-2xl p-8 max-w-md mx-auto">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <div className="rounded-2xl p-8 max-w-md mx-auto" style={glassStyle}>
+          <div className="w-16 h-16 bg-red-500/20 border border-red-500/30 rounded-full flex items-center justify-center mx-auto mb-4">
             <svg className="h-8 w-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
             </svg>
           </div>
-          <h3 className="text-lg font-bold text-red-800 mb-2">Error Loading Products</h3>
-          <p className="text-red-600">{error}</p>
+          <h3 className="text-lg font-semibold text-red-200 mb-2">Error Loading Products</h3>
+          <p className="text-red-200/80">{error}</p>
         </div>
       </div>
     );
@@ -224,16 +232,16 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
   if (!selectedAesthetic) {
     return (
       <div className="text-center py-20">
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-12 max-w-2xl mx-auto shadow-lg border border-gray-200/50">
-          <div className="w-20 h-20 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+        <div className="rounded-3xl p-10 sm:p-12 max-w-2xl mx-auto" style={glassStyle}>
+          <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
             <svg className="h-10 w-10 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
           </div>
-          <h3 className="text-3xl font-black text-black mb-4">
+          <h3 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
             Browse Our Collections
           </h3>
-          <p className="text-gray-600 text-lg font-medium">
+          <p className="text-gray-400 text-base sm:text-lg font-normal">
             Please select an aesthetic from above to view the available products.
           </p>
         </div>
@@ -245,16 +253,16 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
   if (filteredProducts.length === 0) {
     return (
       <div className="text-center py-20">
-        <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-12 max-w-2xl mx-auto shadow-lg border border-gray-200/50">
-          <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+        <div className="rounded-3xl p-10 sm:p-12 max-w-2xl mx-auto" style={glassStyle}>
+          <div className="w-20 h-20 bg-gray-800 border border-gray-700 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
             <svg className="h-10 w-10 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 12h6m-6-4h6m2 5.291A7.962 7.962 0 0112 15c-2.34 0-4.29-1.009-5.824-2.709M15 6.291A7.962 7.962 0 0012 5c-2.34 0-4.29 1.009-5.824 2.709" />
             </svg>
           </div>
-          <h3 className="text-3xl font-black text-black mb-4">
+          <h3 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
             No Products Found
           </h3>
-          <p className="text-gray-600 text-lg font-medium">
+          <p className="text-gray-400 text-base sm:text-lg font-normal">
             {searchQuery
               ? `No products found matching "${searchQuery}"${selectedAesthetic ? ` in ${selectedAesthetic}` : ''}.`
               : `We couldn't find any products matching the selected filters. Please try a different search or aesthetic.`

@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useOrganizerAuth } from '@/contexts/OrganizerAuthContext';
 import { Loader2, Eye, EyeOff, ArrowLeft, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +26,20 @@ export default function LoginPage() {
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, from, navigate]);
+
+  // Ensure body and html have black background and no margins/padding
+  useEffect(() => {
+    const originalBodyStyle = document.body.style.cssText;
+    const originalHtmlStyle = document.documentElement.style.cssText;
+
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+
+    return () => {
+      document.body.style.cssText = originalBodyStyle;
+      document.documentElement.style.cssText = originalHtmlStyle;
+    };
+  }, []);
 
   // Show loading state while checking auth status
   if (isAuthLoading) {
@@ -85,48 +98,69 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+    <div
+      className="fixed top-0 left-0 right-0 bottom-0 w-full h-full bg-black overflow-y-auto"
+      style={{
+        fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        margin: 0,
+        padding: 0,
+        backgroundColor: '#000000',
+        width: '100vw',
+        minHeight: '100vh'
+      }}
+    >
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-md border-b border-gray-200/50 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate('/')}
-                className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl px-3 py-2"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Home
-              </Button>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
-                  <Calendar className="h-5 w-5 text-white" />
-                </div>
-                <span className="text-xl font-black text-black">Organizer Portal</span>
+      <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
+        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-[auto,1fr,auto] items-center gap-3 sm:gap-0 h-auto sm:h-16 py-3 sm:py-0">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl px-3 py-2 font-normal w-fit justify-self-start"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Back to Home</span>
+              <span className="sm:hidden">Back</span>
+            </Button>
+
+            <div className="hidden sm:block" />
+
+            <div className="flex items-center space-x-2 justify-self-start sm:justify-self-end">
+              <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-white" />
               </div>
+              <span className="text-lg sm:text-xl font-semibold text-white tracking-tight">Organizer Portal</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-12 px-4 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-6 sm:py-8 md:py-12 px-3 sm:px-4 md:px-6 lg:px-8">
+        <div className="w-[90%] sm:w-[95%] md:w-full md:max-w-md">
           {/* Login Card */}
-          <div className="bg-white/60 backdrop-blur-sm rounded-3xl p-8 shadow-lg border border-gray-200/50">
-            <div className="text-center mb-8">
-              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-2xl flex items-center justify-center shadow-lg">
-                <Calendar className="h-8 w-8 text-yellow-600" />
+          <div
+            className="rounded-2xl sm:rounded-3xl border shadow-2xl p-4 sm:p-5 md:p-6"
+            style={{
+              background: 'rgba(18, 18, 18, 0.7)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)'
+            }}
+          >
+            <div className="text-center mb-5 sm:mb-6 md:mb-8">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
+                <Calendar className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
               </div>
-              <h1 className="text-xl md:text-2xl font-black text-black mb-2">Welcome Back</h1>
-              <p className="text-gray-600 font-medium">Sign in to your organizer account</p>
+              <h1 className="mobile-heading mb-1.5 sm:mb-2 font-semibold tracking-tight text-white">Welcome Back</h1>
+              <p className="mobile-text text-gray-400 font-normal">Sign in to your organizer account</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-bold text-black">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-200">
                   Email Address
                 </Label>
                 <div className="relative">
@@ -143,19 +177,19 @@ export default function LoginPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="!pl-14 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="!pl-14 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label htmlFor="password" className="text-sm font-bold text-black">
+                  <Label htmlFor="password" className="text-sm font-medium text-gray-200">
                     Password
                   </Label>
                   <Link
                     to="/organizer/forgot-password"
-                    className="text-sm text-yellow-600 hover:text-yellow-500 font-medium"
+                    className="text-sm text-yellow-400 hover:text-yellow-300 font-medium"
                   >
                     Forgot password?
                   </Link>
@@ -174,11 +208,11 @@ export default function LoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="!pl-14 !pr-10 h-10 rounded-xl border-gray-200 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="!pl-14 !pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-500 hover:text-gray-700"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-300"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -192,7 +226,8 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full h-10 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-bold text-sm transition-all duration-200"
+                variant="byblos"
+                className="w-full h-12 shadow-lg rounded-xl text-sm transition-all duration-200"
                 disabled={isLoading}
               >
                 {isLoading ? (
@@ -205,11 +240,11 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-gray-600 font-medium">
+              <p className="text-gray-400 font-normal text-sm sm:text-base">
                 Don't have an account?{' '}
                 <Link
                   to="/organizer/register"
-                  className="font-bold text-yellow-600 hover:text-yellow-500 hover:underline"
+                  className="font-medium text-yellow-400 hover:text-yellow-300 hover:underline"
                 >
                   Create Account
                 </Link>

@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Product } from '@/types';
 import { format, addDays, isBefore, startOfDay, parse } from 'date-fns';
+import { cn } from '@/lib/utils';
 import { Calendar as CalendarIcon, Clock, MapPin } from 'lucide-react';
 
 interface ServiceBookingModalProps {
@@ -134,139 +135,156 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="flex flex-col w-[95vw] max-w-[425px] max-h-[85dvh] gap-0 p-0 overflow-hidden rounded-2xl border-0 shadow-xl bg-white/95 backdrop-blur-md">
-                <DialogHeader className="p-4 sm:p-6 pb-2 shrink-0">
-                    <DialogTitle className="flex items-center justify-center gap-2 text-xl font-black text-gray-900">
-                        Book Service
-                        {isHybrid && <Badge variant="secondary" className="bg-purple-100 text-purple-800 hover:bg-purple-100 rounded-lg">Hybrid</Badge>}
-                    </DialogTitle>
-                    <DialogDescription className="text-center text-gray-600 font-medium text-xs">
-                        Select your preferred date, time, and location for <span className="font-bold text-gray-900">{product.name}</span>
-                    </DialogDescription>
+            <DialogContent className="flex flex-col w-[95vw] max-w-[425px] max-h-[85dvh] gap-0 p-0 overflow-hidden rounded-3xl border border-white/10 shadow-2xl bg-[#0a0a0a] text-white">
+                <DialogHeader className="p-6 sm:p-8 pb-3 shrink-0 space-y-4">
+                    <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
+                        <CalendarIcon className="h-7 w-7 text-yellow-400" />
+                    </div>
+                    <div className="space-y-1">
+                        <DialogTitle className="text-2xl font-black text-center text-white">Book Service</DialogTitle>
+                        <DialogDescription className="text-center text-[#a1a1a1] font-medium text-sm">
+                            {product.name}
+                        </DialogDescription>
+                    </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto p-4 sm:p-6 py-2">
-                    <div className="grid gap-4">
+                <div className="flex-1 overflow-y-auto p-6 sm:p-8 py-2">
+                    <div className="grid gap-6">
                         {/* Date Selection */}
-                        <div className="flex flex-col gap-2">
-                            <Label className="flex items-center gap-2 font-semibold text-gray-700">
-                                <CalendarIcon className="h-4 w-4 text-purple-600" />
-                                Select Date
+                        <div className="space-y-2">
+                            <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
+                                1. Select Date
                             </Label>
-                            <div className="border border-gray-100 rounded-xl p-2 flex justify-center bg-white shadow-sm">
+                            <div className="border border-white/10 rounded-2xl p-2 flex justify-center bg-white/5 shadow-inner backdrop-blur-sm">
                                 <Calendar
                                     mode="single"
                                     selected={date}
                                     onSelect={setDate}
                                     disabled={isDateDisabled}
                                     initialFocus
-                                    className="rounded-md border shadow-sm"
+                                    className="bg-transparent text-white"
                                 />
                             </div>
-                            {date && <p className="text-sm text-muted-foreground text-center">Selected: {format(date, 'PPP')}</p>}
+                            {date && <p className="text-xs font-bold text-yellow-400 text-center uppercase tracking-tighter">Selected: {format(date, 'PPP')}</p>}
                         </div>
 
-                        {/* Time Selection */}
-                        <div className="flex flex-col gap-2">
-                            <Label className="flex items-center gap-2 font-semibold text-gray-700">
-                                <Clock className="h-4 w-4 text-purple-600" />
-                                Select Time Slot
-                            </Label>
-                            <Select value={time} onValueChange={setTime}>
-                                <SelectTrigger className="items-start [&_[data-description]]:hidden rounded-xl border-gray-200 h-10 focus:ring-purple-400 bg-gray-50/50">
-                                    <SelectValue placeholder="Choose a time slot" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {availableTimeSlots.map(slot => (
-                                        <SelectItem key={slot} value={slot}>{slot}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                            {/* Time Selection */}
+                            <div className="space-y-2">
+                                <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
+                                    2. Select Time
+                                </Label>
+                                <Select value={time} onValueChange={setTime}>
+                                    <SelectTrigger className="rounded-xl border-white/10 h-12 focus:ring-yellow-400 bg-white/5 text-white">
+                                        <SelectValue placeholder="Choose a time slot" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#111111] border-white/10 text-white">
+                                        {availableTimeSlots.map(slot => (
+                                            <SelectItem key={slot} value={slot} className="focus:bg-white/5">{slot}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                        {/* Location Selection Logic */}
-                        <div className="flex flex-col gap-2">
-                            <Label className="flex items-center gap-2 font-semibold text-gray-700">
-                                <MapPin className="h-4 w-4 text-purple-600" />
-                                Select Location
-                            </Label>
+                            {/* Location Selection Logic */}
+                            <div className="space-y-2">
+                                <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
+                                    3. Select Location
+                                </Label>
 
-                            {/* Hybrid Toggle */}
-                            {isHybrid && (
-                                <div className="flex space-x-2 mb-2">
-                                    <Button
-                                        variant={selectedLocationType === 'seller' ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setSelectedLocationType('seller')}
-                                        className="flex-1"
-                                    >
-                                        Visit Shop
-                                    </Button>
-                                    <Button
-                                        variant={selectedLocationType === 'buyer' ? 'default' : 'outline'}
-                                        size="sm"
-                                        onClick={() => setSelectedLocationType('buyer')}
-                                        className="flex-1"
-                                    >
-                                        Come to Me
-                                    </Button>
-                                </div>
-                            )}
+                                {/* Hybrid Toggle */}
+                                {isHybrid && (
+                                    <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 mb-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedLocationType('seller')}
+                                            className={cn(
+                                                "flex-1 py-2 rounded-lg text-xs font-black transition-all",
+                                                selectedLocationType === 'seller' ? "bg-white/10 text-white shadow-sm" : "text-[#555555] hover:text-[#a1a1a1]"
+                                            )}
+                                        >
+                                            Visit Shop
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedLocationType('buyer')}
+                                            className={cn(
+                                                "flex-1 py-2 rounded-lg text-xs font-black transition-all",
+                                                selectedLocationType === 'buyer' ? "bg-white/10 text-white shadow-sm" : "text-[#555555] hover:text-[#a1a1a1]"
+                                            )}
+                                        >
+                                            Come to Me
+                                        </button>
+                                    </div>
+                                )}
 
-                            {/* Content based on selection */}
-                            {(selectedLocationType === 'seller' && !isSellerVisits) && (
-                                <>
-                                    {locations.length > 0 ? (
-                                        <RadioGroup value={location} onValueChange={setLocation} className="gap-2">
-                                            {locations.map(loc => (
-                                                <div key={loc} className="flex items-center space-x-2 border rounded-md p-2 hover:bg-accent cursor-pointer" onClick={() => setLocation(loc)}>
-                                                    <RadioGroupItem value={loc} id={loc} />
-                                                    <Label htmlFor={loc} className="cursor-pointer flex-1">{loc}</Label>
-                                                </div>
-                                            ))}
-                                        </RadioGroup>
-                                    ) : (
-                                        <div className="text-sm text-muted-foreground p-2 border rounded-md bg-gray-50">
-                                            Location: {product.seller?.location || product.seller?.city || 'Seller Shop Address'}
+                                {/* Content based on selection */}
+                                {(selectedLocationType === 'seller' && !isSellerVisits) && (
+                                    <div className="space-y-2">
+                                        {locations.length > 0 ? (
+                                            <RadioGroup value={location} onValueChange={setLocation} className="gap-2">
+                                                {locations.map(loc => (
+                                                    <div
+                                                        key={loc}
+                                                        className={cn(
+                                                            "flex items-center space-x-3 border rounded-xl p-3 cursor-pointer transition-all",
+                                                            location === loc ? "border-yellow-400/50 bg-yellow-400/5" : "border-white/5 bg-white/2 hover:border-white/10"
+                                                        )}
+                                                        onClick={() => setLocation(loc)}
+                                                    >
+                                                        <RadioGroupItem value={loc} id={loc} className="border-white/20 text-yellow-400" />
+                                                        <Label htmlFor={loc} className="cursor-pointer flex-1 text-sm font-bold text-white pr-2">{loc}</Label>
+                                                    </div>
+                                                ))}
+                                            </RadioGroup>
+                                        ) : (
+                                            <div className="text-xs font-medium text-[#a1a1a1] p-4 border border-white/5 rounded-xl bg-white/2 backdrop-blur-sm">
+                                                <span className="text-[#555555] block mb-1 font-black uppercase tracking-widest text-[9px]">Shop Address</span>
+                                                {product.seller?.location || product.seller?.city || 'Seller Shop Address'}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {(selectedLocationType === 'buyer' || isSellerVisits) && (
+                                    <div className="space-y-3">
+                                        <div className="relative">
+                                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#555555]" />
+                                            <input
+                                                type="text"
+                                                placeholder="Enter your address/location"
+                                                className="flex h-12 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white placeholder:text-[#555555] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 transition-all"
+                                                value={customLocation}
+                                                onChange={(e) => setCustomLocation(e.target.value)}
+                                            />
                                         </div>
-                                    )}
-                                </>
-                            )}
-
-                            {(selectedLocationType === 'buyer' || isSellerVisits) && (
-                                <div className="space-y-2">
-                                    <input
-                                        type="text"
-                                        placeholder="Enter your address/location"
-                                        className="flex h-10 w-full rounded-xl border border-gray-200 bg-gray-50/50 px-3 py-2 text-sm placeholder:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-400 disabled:cursor-not-allowed disabled:opacity-50"
-                                        value={customLocation}
-                                        onChange={(e) => setCustomLocation(e.target.value)}
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        Please provide the full address where you want the service to be performed.
-                                    </p>
-                                </div>
-                            )}
+                                        <p className="text-[10px] font-bold text-[#555555] uppercase tracking-wide leading-relaxed px-1">
+                                            Provide the address where you'd like the service.
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <DialogFooter className="flex-col gap-2 sm:flex-col p-4 sm:p-6 pt-2 mt-auto border-t border-gray-100 shrink-0 bg-white/50 backdrop-blur-sm">
+                <div className="flex flex-col gap-3 p-6 sm:p-8 pt-4 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
                     <Button
                         onClick={handleConfirm}
                         disabled={!isValid}
-                        className="w-full h-10 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-md shadow-purple-200"
+                        variant="secondary-byblos"
+                        className="w-full h-12 rounded-xl font-black text-base shadow-lg transition-all active:scale-[0.98]"
                     >
                         Confirm Booking
                     </Button>
                     <Button
                         variant="ghost"
                         onClick={onClose}
-                        className="w-full rounded-xl text-gray-500 hover:text-gray-900"
+                        className="w-full text-sm font-bold text-[#a1a1a1] hover:text-white"
                     >
                         Cancel
                     </Button>
-                </DialogFooter>
+                </div>
             </DialogContent>
         </Dialog>
     );
