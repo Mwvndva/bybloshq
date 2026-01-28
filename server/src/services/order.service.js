@@ -688,7 +688,51 @@ class OrderService {
       }
 
       return updatedOrder;
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 
+  /**
+   * Buyer confirms receipt of shipped/delivery order
+   */
+  static async confirmOrderReceipt(orderId, buyerId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const orderQuery = 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE';
+      const orderResult = await client.query(orderQuery, [orderId]);
+
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
+
+      if (order.buyer_id !== buyerId) {
+        throw new Error('Unauthorized: You can only update your own orders');
+      }
+
+      // Allow if shipped, delivered, or pending (if stuck)
+      const allowedStatuses = [OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.PENDING, OrderStatus.DELIVERY_PENDING, 'delivery_pending']; // Add loose check
+      if (!allowedStatuses.includes(order.status)) {
+        throw new Error(`Cannot confirm receipt for order in ${order.status} status`);
+      }
+
+      const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, OrderStatus.COMPLETED, 'completed');
+      await this._processSellerPayout(client, updatedOrder);
+
+      await client.query('COMMIT');
+
+      // Notification logic (simplified)
+      try {
+        // notify seller
+      } catch (e) {
+        logger.error('Error sending confirmation notification:', e);
+      }
+
+      return updatedOrder;
     } catch (error) {
       await client.query('ROLLBACK');
       throw error;
