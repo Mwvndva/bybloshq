@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { EventForm } from '@/components/events/EventForm';
 import { useToast } from '@/components/ui/use-toast';
 
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 import { useOrganizerAuth } from '@/contexts/GlobalAuthContext';
 import { ApiResponse } from '@/types';
 
@@ -49,7 +49,7 @@ const fetchEvent = async (id: string): Promise<EventData> => {
     interface EventResponse {
       event: any; // Using any for raw event data as it comes from API
     }
-    const response = await api.get<ApiResponse<EventResponse>>(`/organizers/events/${id}`);
+    const response = await apiClient.get<ApiResponse<EventResponse>>(`/organizers/events/${id}`);
     const event = response.data.data.event;
 
     // Transform the API response to match our form's expected format
@@ -164,7 +164,7 @@ export default function EditEventPage() {
         online_url: formData.onlineUrl
       };
 
-      await api.put(`/organizers/events/${id}`, eventData);
+      await apiClient.put(`/organizers/events/${id}`, eventData);
 
       toast({
         title: 'Event updated',

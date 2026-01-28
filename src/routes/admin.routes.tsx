@@ -1,5 +1,4 @@
 import { RouteObject, createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
-import { AdminAuthProvider } from '@/contexts/GlobalAuthContext';
 import { AdminProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import NewAdminDashboard from '@/pages/admin/NewDashboardPage';
 import { AdminLoginPage } from '@/pages/admin/AdminLoginPage';
@@ -30,14 +29,12 @@ export const adminRoutes: RouteObject[] = [
   },
 ];
 
-// Create admin layout with providers
+// Create admin layout (no auth provider needed - GlobalAuthProvider handles all roles)
 const AdminLayout = () => (
-  <AdminAuthProvider>
-    <TooltipProvider>
-      <Toaster />
-      <Outlet />
-    </TooltipProvider>
-  </AdminAuthProvider>
+  <TooltipProvider>
+    <Toaster />
+    <Outlet />
+  </TooltipProvider>
 );
 
 // Create admin routes with layout

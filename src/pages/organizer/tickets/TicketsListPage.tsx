@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 interface Ticket {
   id: number;
@@ -74,7 +74,7 @@ export default function TicketsListPage() {
         const endpoint = eventId
           ? `/organizers/tickets/events/${eventId}`
           : '/organizers/tickets';
-        const response = await api.get<TicketsResponse>(endpoint);
+        const response = await apiClient.get<TicketsResponse>(endpoint);
         const ticketsData = response.data.data.tickets || [];
         setTickets(ticketsData);
       } catch (error) {
@@ -94,7 +94,7 @@ export default function TicketsListPage() {
 
   const handleStatusUpdate = async (ticketId: number, newStatus: 'pending' | 'paid' | 'cancelled' | 'refunded') => {
     try {
-      const response = await api.patch<TicketStatusResponse>(`/organizers/tickets/${ticketId}/status`, { status: newStatus });
+      const response = await apiClient.patch<TicketStatusResponse>(`/organizers/tickets/${ticketId}/status`, { status: newStatus });
 
       if (response.data.status === 'success') {
         // Update the local state with the updated ticket

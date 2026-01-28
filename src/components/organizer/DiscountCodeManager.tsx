@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency, formatDate } from '@/lib/utils';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 interface DiscountCode {
   id: number;
@@ -71,7 +71,7 @@ export const DiscountCodeManager = ({ eventId, eventName }: DiscountCodeManagerP
 
   const fetchDiscountCodes = async () => {
     try {
-      const response = await api.get(`/discount-codes/event/${eventId}`);
+      const response = await apiClient.get(`/discount-codes/event/${eventId}`);
       setDiscountCodes((response.data as any)?.data || []);
     } catch (error) {
       console.error('Error fetching discount codes:', error);
@@ -116,9 +116,9 @@ export const DiscountCodeManager = ({ eventId, eventName }: DiscountCodeManagerP
       };
 
       if (editingCode) {
-        await api.put(`/discount-codes/${editingCode.id}`, payload);
+        await apiClient.put(`/discount-codes/${editingCode.id}`, payload);
       } else {
-        await api.post('/discount-codes', payload);
+        await apiClient.post('/discount-codes', payload);
       }
 
       toast({
@@ -164,7 +164,7 @@ export const DiscountCodeManager = ({ eventId, eventName }: DiscountCodeManagerP
     }
 
     try {
-      await api.delete(`/discount-codes/${code.id}`);
+      await apiClient.delete(`/discount-codes/${code.id}`);
       
       toast({
         title: 'Success',

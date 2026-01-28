@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Shield, X, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getDeviceFingerprint } from '@/lib/fingerprint';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 import { useBybx } from '@/contexts/BybxContext';
 import { createPortal } from 'react-dom';
 
@@ -32,7 +32,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
             setError(null);
 
             // Fetch file as blob/arraybuffer directly
-            const response = await api.get(`/orders/${orderId}/download/${productId}`, {
+            const response = await apiClient.get(`/orders/${orderId}/download/${productId}`, {
                 responseType: 'arraybuffer'
             });
 
@@ -60,7 +60,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
 
             if (!isActivated) {
                 setStatus('Activating independent license...');
-                const authResponse = await api.post('/activation/bond', {
+                const authResponse = await apiClient.post('/activation/bond', {
                     orderNumber: headerOrderNumber, // Use extracted order number to be safe
                     productId: parseInt(productId), // ensure number
                     fingerprint,
@@ -68,7 +68,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
                 decryptionKey = (authResponse.data as any).decryptionKey;
             } else {
                 setStatus('Verifying hardware lock...');
-                const authResponse = await api.post('/activation/verify', {
+                const authResponse = await apiClient.post('/activation/verify', {
                     orderNumber: headerOrderNumber,
                     productId: parseInt(productId),
                     fingerprint,

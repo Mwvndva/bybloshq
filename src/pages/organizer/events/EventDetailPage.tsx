@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 import { formatCurrency } from '@/lib/utils';
 import { ApiResponse } from '@/types';
 import {
@@ -122,7 +122,7 @@ const fetchEvent = async (id: string): Promise<EventData> => {
       event: RawEventData;
     }
 
-    const response = await api.get<ApiResponse<EventResponse>>(`/organizers/events/${id}`);
+    const response = await apiClient.get<ApiResponse<EventResponse>>(`/organizers/events/${id}`);
 
     if (!response.data?.data?.event) {
       throw new Error('Invalid response format from server');
@@ -369,7 +369,7 @@ export default function EventDetailPage() {
         tickets: any[]; // The tickets array is directly under the response data
       }
 
-      const response = await api.get<ApiResponse<TicketsResponse>>(`/organizers/tickets/events/${id}`);
+      const response = await apiClient.get<ApiResponse<TicketsResponse>>(`/organizers/tickets/events/${id}`);
       const ticketsData = response.data.data?.tickets || [];
       setTickets(ticketsData);
     } catch (error) {
@@ -1182,7 +1182,7 @@ export default function EventDetailPage() {
                       onClick={async () => {
                         if (window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) {
                           try {
-                            await api.delete(`/organizers/events/${id}`);
+                            await apiClient.delete(`/organizers/events/${id}`);
                             toast({
                               title: 'Event deleted',
                               description: 'The event has been deleted successfully.',

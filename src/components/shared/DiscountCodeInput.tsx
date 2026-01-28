@@ -7,7 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 interface DiscountCodeInputProps {
   eventId: string;
@@ -45,7 +45,7 @@ export const DiscountCodeInput = ({
     setIsValidating(true);
 
     try {
-      const response = await api.post('/discount-codes/validate', {
+      const response = await apiClient.post('/discount-codes/validate', {
         code: code.trim().toUpperCase(),
         order_amount: orderAmount
       });

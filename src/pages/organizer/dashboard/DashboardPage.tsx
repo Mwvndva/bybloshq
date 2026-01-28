@@ -18,7 +18,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { toast } from 'sonner';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 // Form schemas
 const profileFormSchema = z.object({
@@ -205,7 +205,7 @@ const DashboardPage = () => {
       setLoading(true);
 
       // Fetch the dashboard data with proper typing
-      const dashboardRes = await api.get<DashboardApiResponse>('/organizers/dashboard');
+      const dashboardRes = await apiClient.get<DashboardApiResponse>('/organizers/dashboard');
 
       // Extract events from the dashboard response if available
       const events = Array.isArray(dashboardRes.data.data?.recentEvents) ?
@@ -263,7 +263,7 @@ const DashboardPage = () => {
       setTicketsError(null);
 
       // Get all tickets for the organizer with proper typing
-      const response = await api.get<TicketsApiResponse>('/organizers/tickets');
+      const response = await apiClient.get<TicketsApiResponse>('/organizers/tickets');
       const ticketsData = response.data?.data?.tickets || [];
       setTickets(ticketsData);
     } catch (error) {
@@ -286,7 +286,7 @@ const DashboardPage = () => {
       setEventsError(null);
 
       // Get all events for the organizer with proper typing
-      const response = await api.get<EventsApiResponse>('/organizers/events');
+      const response = await apiClient.get<EventsApiResponse>('/organizers/events');
       const eventsData = response.data?.data || [];
       setEvents(eventsData);
     } catch (error) {
@@ -338,7 +338,7 @@ const DashboardPage = () => {
   const handleSaveProfile = async (data: ProfileFormValues) => {
     setIsLoading(true);
     try {
-      await api.patch('/organizers/profile', data);
+      await apiClient.patch('/organizers/profile', data);
       toast({
         title: 'Success',
         description: 'Profile updated successfully',
@@ -360,7 +360,7 @@ const DashboardPage = () => {
   const handleDeleteAccount = async () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       try {
-        await api.delete('/organizers/account');
+        await apiClient.delete('/organizers/account');
         toast({
           title: 'Success',
           description: 'Account deleted successfully',

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Shield, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getDeviceFingerprint } from '@/lib/fingerprint';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 interface BybxImporterProps {
     onFileLoaded: (decryptedData: ArrayBuffer, fileName: string) => void;
@@ -42,7 +42,7 @@ const BybxImporter: React.FC<BybxImporterProps> = ({ onFileLoaded }) => {
 
             if (!isActivated) {
                 setStatus('Activating device...');
-                const response = await api.post('/activation/bond', {
+                const response = await apiClient.post('/activation/bond', {
                     orderNumber,
                     productId,
                     fingerprint,
@@ -50,7 +50,7 @@ const BybxImporter: React.FC<BybxImporterProps> = ({ onFileLoaded }) => {
                 decryptionKey = (response.data as any).decryptionKey;
             } else {
                 setStatus('Verifying hardware lock...');
-                const response = await api.post('/activation/verify', {
+                const response = await apiClient.post('/activation/verify', {
                     orderNumber,
                     productId,
                     fingerprint,
