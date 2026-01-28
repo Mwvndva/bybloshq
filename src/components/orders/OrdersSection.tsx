@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

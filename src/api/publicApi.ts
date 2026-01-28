@@ -2,7 +2,7 @@ import axios from 'axios';
 
 type AxiosInstance = any;
 type AxiosRequestConfig = any;
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 
 // Extend the AxiosRequestConfig interface to include our custom options
 interface CustomAxiosRequestConfig extends AxiosRequestConfig {

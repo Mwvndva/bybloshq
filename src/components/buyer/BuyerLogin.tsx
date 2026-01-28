@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, ShoppingBag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 // import buyerApi from '@/api/buyerApi'; // Removed direct API usage
 
 interface LoginFormData {

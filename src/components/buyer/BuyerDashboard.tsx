@@ -25,7 +25,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { updateBuyerProfile } from '@/api/buyerApi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import AestheticCategories from '@/components/AestheticCategories';
 import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';

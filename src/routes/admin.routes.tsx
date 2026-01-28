@@ -1,5 +1,5 @@
 import { RouteObject, createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
-import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
+import { AdminAuthProvider } from '@/contexts/GlobalAuthContext';
 import { AdminProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import NewAdminDashboard from '@/pages/admin/NewDashboardPage';
 import { AdminLoginPage } from '@/pages/admin/AdminLoginPage';

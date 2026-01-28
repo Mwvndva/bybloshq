@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useBuyerAuth } from '@/contexts/BuyerAuthContext';
+import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

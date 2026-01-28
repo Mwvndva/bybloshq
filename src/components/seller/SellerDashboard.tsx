@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
-import { useSellerAuth } from '@/contexts/SellerAuthContext';
+import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
 import SellerOrdersSection from './SellerOrdersSection';

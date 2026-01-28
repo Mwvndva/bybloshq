@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAdminAuth } from '@/contexts/AdminAuthContext';
+import { useAdminAuth } from '@/contexts/GlobalAuthContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Search } from 'lucide-react';
