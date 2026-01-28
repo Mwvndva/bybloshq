@@ -16,8 +16,7 @@ axiosRetry(axios, {
 
 // Ensure API_URL ends with /api but doesn't have a trailing slash
 const getApiBaseUrl = () => {
-  const baseUrl = import.meta.env.VITE_API_URL ||
-    (import.meta.env.DEV ? 'http://localhost:3002' : '');
+  const baseUrl = import.meta.env.VITE_API_URL || '';
   // Remove trailing slash if exists
   const cleanUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
   // Ensure /api is included

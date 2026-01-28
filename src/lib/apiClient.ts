@@ -10,7 +10,7 @@ let baseURL = '';
 if (isDevelopment && !envApiUrl) {
     baseURL = '/api'; // Use Vite proxy
 } else {
-    baseURL = (envApiUrl || 'http://localhost:3002').replace(/\/$/, '');
+    baseURL = (envApiUrl || '/api').replace(/\/$/, '');
     if (!baseURL.endsWith('/api')) {
         baseURL += '/api';
     }

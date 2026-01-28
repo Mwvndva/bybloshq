@@ -10,7 +10,7 @@ import { CheckCircle, XCircle, Clock, DollarSign, Loader2, User, Phone, Mail } f
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3002/api';
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface RefundRequest {
   id: number;
@@ -47,7 +47,7 @@ export default function RefundRequestsPage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/refunds?status=${statusFilter}`, {
+      const response = await axios.get<{ data: { requests: RefundRequest[] } }>(`${API_URL}/refunds?status=${statusFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRequests(response.data.data.requests);
@@ -70,7 +70,7 @@ export default function RefundRequestsPage() {
         { adminNotes },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       toast.success('Refund confirmed and processed successfully!');
       setIsConfirmDialogOpen(false);
       setAdminNotes('');
@@ -95,7 +95,7 @@ export default function RefundRequestsPage() {
         { adminNotes },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      
+
       toast.success('Refund request rejected');
       setIsRejectDialogOpen(false);
       setAdminNotes('');
@@ -138,9 +138,9 @@ export default function RefundRequestsPage() {
   };
 
   const formatCurrency = (value: string) => {
-    return `KSh ${parseFloat(value).toLocaleString(undefined, { 
-      minimumFractionDigits: 2, 
-      maximumFractionDigits: 2 
+    return `KSh ${parseFloat(value).toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     })}`;
   };
 
@@ -156,7 +156,7 @@ export default function RefundRequestsPage() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Refund Requests</h1>
-        
+
         <div className="flex gap-2">
           {['pending', 'completed', 'rejected'].map((status) => (
             <Button
@@ -235,8 +235,8 @@ export default function RefundRequestsPage() {
                       <div className="text-sm text-gray-700 space-y-1">
                         {(() => {
                           try {
-                            const details = typeof request.payment_details === 'string' 
-                              ? JSON.parse(request.payment_details) 
+                            const details = typeof request.payment_details === 'string'
+                              ? JSON.parse(request.payment_details)
                               : request.payment_details;
                             return (
                               <>
@@ -252,7 +252,7 @@ export default function RefundRequestsPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {request.notes && (
                     <div className="mt-3">
                       <p className="text-sm font-medium mb-1">Buyer Notes</p>
@@ -305,7 +305,7 @@ export default function RefundRequestsPage() {
           <DialogHeader>
             <DialogTitle>Confirm Refund Request</DialogTitle>
           </DialogHeader>
-          
+
           {selectedRequest && (
             <div className="space-y-4 py-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -365,7 +365,7 @@ export default function RefundRequestsPage() {
           <DialogHeader>
             <DialogTitle>Reject Refund Request</DialogTitle>
           </DialogHeader>
-          
+
           {selectedRequest && (
             <div className="space-y-4 py-4">
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">

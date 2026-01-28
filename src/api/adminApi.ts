@@ -23,9 +23,7 @@ interface ApiError {
 // Include /api in the base URL since our routes are prefixed with /api
 // Default API configuration
 // Get the base URL from environment variables
-const API_URL = (import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:3002/api' : '/api')
-).replace(/\/$/, '');
+const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 const isDevelopment = import.meta.env.DEV;
 
 // For development, we'll use the proxy if VITE_API_URL is not set
