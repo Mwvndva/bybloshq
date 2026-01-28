@@ -6,7 +6,7 @@ import { EventForm } from '@/components/events/EventForm';
 import { useToast } from '@/components/ui/use-toast';
 
 import api from '@/lib/api';
-import { useOrganizerAuth } from '@/hooks/use-organizer-auth';
+import { useOrganizerAuth } from '@/contexts/GlobalAuthContext';
 import { ApiResponse } from '@/types';
 
 interface TicketType {

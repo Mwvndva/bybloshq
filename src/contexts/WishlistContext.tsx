@@ -1,6 +1,6 @@
 import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
 import { Product, Aesthetic, Seller } from '@/types';
-import { useBuyerAuth } from './BuyerAuthContext';
+import { useBuyerAuth } from './GlobalAuthContext';
 import buyerApi, { WishlistItem } from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
 import { useToast } from '@/components/ui/use-toast';

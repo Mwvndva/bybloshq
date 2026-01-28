@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, Calendar, Ticket, Users, Settings, LogOut, FileText } from 'lucide-react';
-import { useOrganizerAuth } from '@/contexts/OrganizerAuthContext';
+import { useOrganizerAuth } from '@/contexts/GlobalAuthContext';
 
 const navigation = [
   { name: 'Dashboard', href: '/organizer/dashboard', icon: LayoutDashboard },

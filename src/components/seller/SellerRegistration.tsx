@@ -38,7 +38,7 @@ const locationData: Record<string, string[]> = {
   'Busia': ['Busia Town', 'Bunyala', 'Samia', 'Teso North', 'Teso South', 'Nambale', 'Matayos']
 };
 
-import { useSellerAuth } from '@/contexts/SellerAuthContext';
+import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 
 const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const navigate = useNavigate();

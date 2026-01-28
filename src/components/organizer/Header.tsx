@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, LogOut, User } from 'lucide-react';
-import { useOrganizerAuth } from '@/contexts/OrganizerAuthContext';
+import { useOrganizerAuth } from '@/contexts/GlobalAuthContext';
 
 export function Header() {
   const { organizer, logout } = useOrganizerAuth();

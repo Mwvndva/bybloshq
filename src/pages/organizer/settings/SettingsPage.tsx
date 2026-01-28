@@ -5,7 +5,7 @@ import * as z from 'zod';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useOrganizerAuth } from '@/hooks/use-organizer-auth';
+import { useOrganizerAuth } from '@/contexts/GlobalAuthContext';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, User, Mail, Phone, Trash2, Save, Edit, Eye, EyeOff, RefreshCw } from 'lucide-react';

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { useSellerAuth } from '@/contexts/SellerAuthContext';
+import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { Eye, EyeOff, Loader2, Mail, ArrowLeft, Store, Lock } from 'lucide-react';
 
 export function SellerLogin() {

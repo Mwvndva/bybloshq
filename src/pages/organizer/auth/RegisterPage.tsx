@@ -3,7 +3,7 @@ import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useOrganizerAuth } from '@/contexts/OrganizerAuthContext';
+import { useOrganizerAuth } from '@/contexts/GlobalAuthContext';
 import { Loader2, Eye, EyeOff, User, Mail, Phone, Lock, ArrowLeft, Calendar, Check, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
