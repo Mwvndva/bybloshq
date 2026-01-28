@@ -1,5 +1,6 @@
 import { RouteObject, createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
+import { AdminProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import NewAdminDashboard from '@/pages/admin/NewDashboardPage';
 import { AdminLoginPage } from '@/pages/admin/AdminLoginPage';
 import { Toaster } from '@/components/ui/toaster';
@@ -13,11 +14,19 @@ export const adminRoutes: RouteObject[] = [
   },
   {
     path: 'dashboard',
-    element: <NewAdminDashboard />,
+    element: (
+      <AdminProtectedRoute>
+        <NewAdminDashboard />
+      </AdminProtectedRoute>
+    ),
   },
   {
     path: '',
-    element: <NewAdminDashboard />, // Default to new dashboard
+    element: (
+      <AdminProtectedRoute>
+        <NewAdminDashboard />
+      </AdminProtectedRoute>
+    ),
   },
 ];
 

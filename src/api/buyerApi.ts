@@ -1,4 +1,5 @@
 import axios from 'axios';
+import apiClient from '@/lib/apiClient';
 
 interface Buyer {
   id: number;
@@ -68,76 +69,8 @@ interface RegisterData {
   location: string;
 }
 
-// Get the base URL from environment variables
-const API_URL = (import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:3002/api' : '/api')
-).replace(/\/$/, '');
-const isDevelopment = import.meta.env.DEV;
-
-// For development, we'll use the proxy if VITE_API_URL is not set
-const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
-  ? '/api'  // Use proxy in development when VITE_API_URL is not set
-  : API_URL; // Otherwise use the provided API_URL or default
-
-// Create axios instance for buyer API
-const buyerApiInstance = axios.create({
-  baseURL,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'Cache-Control': 'no-cache, no-store, must-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  },
-  withCredentials: true, // Important for sending/receiving cookies
-  timeout: 30000, // Increase timeout to 30 seconds
-});
-
-// Add a response interceptor to handle 404s for wishlist deletions
-buyerApiInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // If this is a 404 from a DELETE request to the wishlist endpoint, resolve instead of reject
-    if (
-      error.config &&
-      error.response?.status === 404 &&
-      error.config.method?.toLowerCase() === 'delete' &&
-      error.config.url?.includes('/wishlist/')
-    ) {
-      // Return a resolved promise with a custom response
-      return Promise.resolve({
-        data: { success: true, message: 'Item not found in wishlist' },
-        status: 200,
-        statusText: 'OK',
-        config: error.config,
-        headers: {}
-      });
-    }
-
-    // For all other errors, reject the promise
-    return Promise.reject(error);
-  }
-);
-
-// Response interceptor for error handling
-buyerApiInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Don't redirect if we're just checking the profile/auth status
-      // This prevents redirect loops when the app initializes with an expired token
-      if (error.config?.url?.includes('/buyers/profile')) {
-        return Promise.reject(error);
-      }
-
-      if (!window.location.pathname.includes('login')) {
-        // Redirect to login if unauthorized for other requests
-        window.location.href = '/buyer/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+// Use the unified API client
+const buyerApiInstance = apiClient;
 
 // Helper function to transform buyer data
 const transformBuyer = (data: any): Buyer => {
@@ -170,19 +103,8 @@ const buyerApi = {
       const loginUrl = '/buyers/login';
       console.log(`Sending login request to ${loginUrl}`);
 
-      // Create a clean axios instance for login to avoid any interceptor issues
-      const loginInstance = axios.create({
-        baseURL,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        withCredentials: true,
-        timeout: 10000,
-      });
-
-      // Make the login request with proper typing
-      const response = await loginInstance.post<LoginApiResponse>(
+      // Use apiClient directly for login
+      const response = await apiClient.post<LoginApiResponse>(
         loginUrl,
         credentials
       );
@@ -253,11 +175,12 @@ const buyerApi = {
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<{ message: string }>(
-        `${baseURL}/buyers/forgot-password`,
+        `/buyers/forgot-password`,
         { email: email.trim().toLowerCase() },
         {
           headers: { 'Content-Type': 'application/json' },
-          withCredentials: true
+          withCredentials: true,
+          baseURL: apiClient.defaults.baseURL
         }
       );
 
@@ -279,14 +202,15 @@ const buyerApi = {
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<{ message: string }>(
-        `${baseURL}/buyers/reset-password`,
+        `/buyers/reset-password`,
         { token, newPassword },
         {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
-          withCredentials: true
+          withCredentials: true,
+          baseURL: apiClient.defaults.baseURL
         }
       );
 
@@ -605,13 +529,14 @@ const buyerApi = {
           token?: string;
         }
       }>(
-        `${baseURL}/buyers/check-phone`,
+        `/buyers/check-phone`,
         { phone },
         {
           headers: {
             'Content-Type': 'application/json',
           },
-          withCredentials: true
+          withCredentials: true,
+          baseURL: apiClient.defaults.baseURL
         }
       );
 
@@ -643,7 +568,7 @@ const buyerApi = {
 
       // Use the public API endpoint that doesn't require authentication
       const response = await axios.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
-        `${baseURL}/buyers/save-info`,
+        `/buyers/save-info`,
         {
           ...buyerInfo,
           phone: buyerInfo.mobilePayment || buyerInfo.whatsappNumber
@@ -652,7 +577,8 @@ const buyerApi = {
           headers: {
             'Content-Type': 'application/json',
           },
-          withCredentials: true
+          withCredentials: true,
+          baseURL: apiClient.defaults.baseURL
         }
       );
 

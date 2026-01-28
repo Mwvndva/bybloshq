@@ -2,6 +2,7 @@ import React from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GlobalAuthProvider } from "../contexts/GlobalAuthContext";
 import { OrganizerAuthProvider } from "../contexts/OrganizerAuthContext";
 import { SellerAuthProvider } from "../contexts/SellerAuthContext";
 import { AdminAuthProvider } from "../contexts/AdminAuthContext";
@@ -24,17 +25,20 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
         <BybxProvider>
             <TooltipProvider>
                 <Toaster />
-                <BuyerAuthProvider>
-                    <WishlistProvider>
-                        <OrganizerAuthProvider>
-                            <SellerAuthProvider>
-                                <AdminAuthProvider>
-                                    {children}
-                                </AdminAuthProvider>
-                            </SellerAuthProvider>
-                        </OrganizerAuthProvider>
-                    </WishlistProvider>
-                </BuyerAuthProvider>
+                {/* New unified auth provider - wraps all old providers for gradual migration */}
+                <GlobalAuthProvider>
+                    <BuyerAuthProvider>
+                        <WishlistProvider>
+                            <OrganizerAuthProvider>
+                                <SellerAuthProvider>
+                                    <AdminAuthProvider>
+                                        {children}
+                                    </AdminAuthProvider>
+                                </SellerAuthProvider>
+                            </OrganizerAuthProvider>
+                        </WishlistProvider>
+                    </BuyerAuthProvider>
+                </GlobalAuthProvider>
             </TooltipProvider>
         </BybxProvider>
     </QueryClientProvider>
