@@ -47,12 +47,12 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
           <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
             <Phone className="h-7 w-7 text-yellow-400" />
           </div>
-          <DialogTitle className="text-2xl font-black text-center text-white">Verification</DialogTitle>
+          <DialogTitle className="text-xl font-black text-center text-white">Verification</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
-          <div className="flex-1 overflow-y-auto p-6 sm:p-8 py-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone" className="text-xs font-black uppercase tracking-wider text-[#a1a1a1] ml-1">Phone Number</Label>
+          <div className="flex-1 overflow-y-auto p-5 sm:p-8 py-4 space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="phone" className="text-[10px] font-black uppercase tracking-wider text-[#a1a1a1] ml-1">Phone Number</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -61,20 +61,20 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
                 onChange={(e) => setPhone(e.target.value)}
                 required
                 disabled={isLoading}
-                className="rounded-xl border-white/10 focus-visible:ring-yellow-400 h-12 bg-white/5 text-base px-4 text-white placeholder:text-[#555555]"
+                className="rounded-xl border-white/10 focus-visible:ring-yellow-400 h-10 sm:h-12 bg-white/5 text-sm sm:text-base px-4 text-white placeholder:text-[#555555]"
               />
-              {error && <p className="text-sm text-red-500 font-medium ml-1">{error}</p>}
+              {error && <p className="text-xs text-red-500 font-medium ml-1">{error}</p>}
             </div>
-            <p className="text-sm text-[#a1a1a1] font-medium leading-relaxed px-1">
+            <p className="text-xs sm:text-sm text-[#a1a1a1] font-medium leading-relaxed px-1">
               Please enter your phone number to check if you have an existing account.
             </p>
           </div>
-          <div className="flex flex-col gap-3 p-6 sm:p-8 pt-4 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
+          <div className="flex flex-col gap-2 sm:gap-3 p-5 sm:p-8 pt-4 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
             <Button
               type="submit"
               disabled={isLoading}
               variant="secondary-byblos"
-              className="w-full h-12 rounded-xl font-black text-base shadow-lg transition-all active:scale-[0.98]"
+              className="w-full h-10 sm:h-12 rounded-xl font-black text-sm sm:text-base shadow-lg transition-all active:scale-[0.98]"
             >
               {isLoading ? (
                 <div className="flex items-center gap-2">

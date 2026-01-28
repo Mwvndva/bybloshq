@@ -253,7 +253,7 @@ export function BuyerRegister() {
                     value={formData.fullName}
                     onChange={handleInputChange}
                     required
-                    className={`input-mobile !pl-14 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 ${errors.fullName ? 'border-red-500' : ''}`}
+                    className={`input-mobile !pl-14 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-sm ${errors.fullName ? 'border-red-500' : ''}`}
                   />
                 </div>
                 {errors.fullName && <p className="text-sm text-red-500 mt-1 ml-1">{errors.fullName}</p>}
@@ -275,7 +275,7 @@ export function BuyerRegister() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className={`input-mobile !pl-14 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 ${errors.email ? 'border-red-500' : ''}`}
+                    className={`input-mobile !pl-14 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-sm ${errors.email ? 'border-red-500' : ''}`}
                   />
                 </div>
                 {errors.email && <p className="text-sm text-red-500 mt-1 ml-1">{errors.email}</p>}
@@ -298,7 +298,7 @@ export function BuyerRegister() {
                     value={formData.mobilePayment}
                     onChange={handleInputChange}
                     required
-                    className={`input-mobile !pl-14 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 ${errors.mobilePayment ? 'border-red-500' : ''}`}
+                    className={`input-mobile !pl-14 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-sm ${errors.mobilePayment ? 'border-red-500' : ''}`}
                   />
                 </div>
                 {errors.mobilePayment && <p className="text-sm text-red-500 mt-1 ml-1">{errors.mobilePayment}</p>}
@@ -321,7 +321,7 @@ export function BuyerRegister() {
                     value={formData.whatsappNumber}
                     onChange={handleInputChange}
                     required
-                    className={`input-mobile !pl-14 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 ${errors.whatsappNumber ? 'border-red-500' : ''}`}
+                    className={`input-mobile !pl-14 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-sm ${errors.whatsappNumber ? 'border-red-500' : ''}`}
                   />
                 </div>
                 {errors.whatsappNumber && <p className="text-sm text-red-500 mt-1 ml-1">{errors.whatsappNumber}</p>}
@@ -345,7 +345,7 @@ export function BuyerRegister() {
                       }));
                     }}
                   >
-                    <SelectTrigger className="input-mobile !pl-14 h-12 rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400">
+                    <SelectTrigger className="input-mobile !pl-14 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-sm">
                       <SelectValue placeholder="Select your city" />
                     </SelectTrigger>
                     <SelectContent>
@@ -377,7 +377,7 @@ export function BuyerRegister() {
                     }}
                     disabled={!formData.city}
                   >
-                    <SelectTrigger className="input-mobile !pl-14 h-12 rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400">
+                    <SelectTrigger className="input-mobile !pl-14 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-sm">
                       <SelectValue placeholder={formData.city ? "Select your area" : "Select city first"} />
                     </SelectTrigger>
                     <SelectContent>
@@ -407,7 +407,7 @@ export function BuyerRegister() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className={`input-mobile !pl-14 !pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 ${errors.password ? 'border-red-500' : ''}`}
+                    className={`input-mobile !pl-14 !pr-12 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-sm ${errors.password ? 'border-red-500' : ''}`}
                   />
                   <button
                     type="button"
@@ -469,7 +469,7 @@ export function BuyerRegister() {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     required
-                    className={`input-mobile !pl-14 !pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                    className={`input-mobile !pl-14 !pr-12 h-10 sm:h-11 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-sm ${errors.confirmPassword ? 'border-red-500' : ''}`}
                   />
                   <button
                     type="button"
