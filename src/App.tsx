@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
 import { AppProviders } from "./components/AppProviders";
 import { LoadingScreen } from "./components/LoadingScreen";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { adminRouter } from "./routes/admin.routes";
 import { routes } from "./routes";
 import FileLaunchHandler from "./components/FileLaunchHandler";
@@ -58,7 +59,9 @@ const router = createBrowserRouter([
 
 function App() {
   return (
-    <RouterProvider router={router} fallbackElement={<LoadingScreen />} />
+    <ErrorBoundary>
+      <RouterProvider router={router} fallbackElement={<LoadingScreen />} />
+    </ErrorBoundary>
   );
 }
 
