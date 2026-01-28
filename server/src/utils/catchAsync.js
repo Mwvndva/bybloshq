@@ -1,11 +1,12 @@
 /**
- * Wraps an async function to catch any errors and pass them to next()
+ * Wraps an async function to catch any errors and pass them to the next middleware.
+ * This removes the need for try-catch blocks in every controller.
  * @param {Function} fn - The async function to wrap
- * @returns {Function} A middleware function that handles errors
+ * @returns {Function} Express middleware function
  */
 export const catchAsync = (fn) => {
   return (req, res, next) => {
-    Promise.resolve(fn(req, res, next)).catch((err) => next(err));
+    fn(req, res, next).catch(next);
   };
 };
 
