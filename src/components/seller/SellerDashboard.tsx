@@ -824,48 +824,143 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   return (
     <div className="min-h-screen bg-black">
-      <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 2xl:px-12 py-6">
-        {/* Action Toolbar */}
-        <div className="flex justify-end items-center gap-3 mb-6">
-          {sellerProfile?.shopName && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:border-yellow-400/30 rounded-xl"
-              onClick={async () => {
-                const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName!)}`;
-                try {
-                  await navigator.clipboard.writeText(shopUrl);
-                  toast({
-                    title: 'Link copied!',
-                    description: 'Your shop link has been copied to clipboard.',
-                  });
-                } catch (err) {
-                  toast({
-                    title: 'Error',
-                    description: 'Failed to copy link. Please try again.',
-                    variant: 'destructive',
-                  });
-                }
-              }}
-            >
-              <LinkIcon className="h-4 w-4" />
-              <span className="hidden sm:inline">Copy Shop Link</span>
-            </Button>
-          )}
+      {/* Header */}
+      <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="py-2 md:py-0">
+            {/* Mobile: 2-row layout to prevent overlap */}
+            <div className="md:hidden">
+              <div className="flex items-center justify-between h-12">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/')}
+                  className="text-gray-300 hover:text-white hover:bg-gray-800 transition-all duration-200 rounded-xl px-2 py-1.5 text-xs h-8"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  <span className="sr-only">Back to Home</span>
+                </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchData}
-            className="gap-2 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:border-yellow-400/30 rounded-xl"
-            disabled={isLoading}
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Refresh</span>
-          </Button>
+                <div className="flex items-center gap-2">
+                  {sellerProfile?.shopName && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl"
+                      onClick={async () => {
+                        const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
+                        try {
+                          await navigator.clipboard.writeText(shopUrl);
+
+                          toast({
+                            title: 'Link copied!',
+                            description: 'Your shop link has been copied to clipboard.',
+                          });
+                        } catch (err) {
+                          toast({
+                            title: 'Error',
+                            description: 'Failed to copy link. Please try again.',
+                            variant: 'destructive',
+                          });
+                        }
+                      }}
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      <span className="sr-only">Copy Shop Link</span>
+                    </Button>
+                  )}
+
+                  <Button
+                    variant="outline"
+                    onClick={fetchData}
+                    className="h-8 w-8 p-0 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl"
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                    <span className="sr-only">Refresh</span>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="min-w-0 text-center pb-1">
+                <h1 className="text-sm font-black text-white tracking-tight truncate">
+                  {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
+                </h1>
+                <p className="text-xs text-gray-300 font-medium truncate">
+                  Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
+                </p>
+              </div>
+            </div>
+
+            {/* Desktop/tablet: single-row pinned layout */}
+            <div className="hidden md:grid grid-cols-[auto,1fr,auto] items-center h-14 lg:h-16 gap-2">
+              <div className="flex items-center justify-start">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate('/')}
+                  className="text-gray-300 hover:text-white hover:bg-gray-800 transition-all duration-200 rounded-xl px-2 sm:px-3 py-1.5 text-xs sm:text-sm h-8"
+                >
+                  <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Back to Home</span>
+                  <span className="sm:hidden">Back</span>
+                </Button>
+              </div>
+
+              <div className="min-w-0 text-center px-1 sm:px-2">
+                <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
+                  {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
+                </h1>
+                <p className="hidden sm:block text-xs text-gray-300 font-medium">
+                  Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 sm:gap-3">
+                {sellerProfile?.shopName && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 flex items-center justify-center gap-1 sm:gap-2 rounded-xl px-2 sm:px-3"
+                    onClick={async () => {
+                      const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName)}`;
+                      try {
+                        await navigator.clipboard.writeText(shopUrl);
+
+                        toast({
+                          title: 'Link copied!',
+                          description: 'Your shop link has been copied to clipboard.',
+                        });
+                      } catch (err) {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to copy link. Please try again.',
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                  >
+                    <LinkIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                    <span className="hidden md:inline">Copy Shop Link</span>
+                  </Button>
+                )}
+
+                <Button
+                  variant="outline"
+                  onClick={fetchData}
+                  className="flex items-center gap-1 sm:gap-2 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl h-8 px-2 sm:px-3 py-1.5"
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <span className="hidden md:inline text-sm">Refresh</span>
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
 
+      <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 2xl:px-12 py-4 sm:py-5 md:py-6">
         {/* Stats Overview */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-7 md:mb-8">
           {stats.map((stat, index) => (
@@ -1591,7 +1686,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               {/* Theme Settings */}
               <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
                 <ThemeSelector
-                  currentTheme={(sellerProfile?.theme as Theme) || 'default'}
+                  currentTheme={sellerProfile?.theme}
                   onThemeChange={(theme) => {
                     // Profile will be automatically updated by SellerAuthContext
                   }}

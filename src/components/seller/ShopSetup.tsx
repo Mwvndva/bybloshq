@@ -63,8 +63,8 @@ export default function ShopSetup() {
     };
 
     return (
-        <div className="dark min-h-screen bg-black flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-            <div className="sm:mx-auto sm:w-full sm:max-w-3xl">
+        <div className="dark min-h-screen bg-black flex flex-col justify-center py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
+            <div className="sm:mx-auto sm:w-full sm:max-w-3xl mb-6 sm:mb-0">
                 <div className="flex justify-center">
                     <div className="h-12 w-12 bg-yellow-500/10 border border-yellow-400/20 rounded-xl flex items-center justify-center shadow-[0_0_18px_rgba(250,204,21,0.18)]">
                         <Store className="h-6 w-6 text-yellow-300" />
@@ -78,9 +78,9 @@ export default function ShopSetup() {
                 </p>
             </div>
 
-            <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-3xl">
-                <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-lg">
-                    <CardContent className="p-8">
+            <div className="mt-4 sm:mt-8 sm:mx-auto sm:w-full sm:max-w-3xl">
+                <Card className="sm:bg-[rgba(20,20,20,0.7)] sm:backdrop-blur-[12px] sm:border sm:border-white/10 sm:shadow-lg bg-transparent border-0 shadow-none">
+                    <CardContent className="p-0 sm:p-8">
                         {hasShop === null ? (
                             <div className="space-y-6">
                                 <div className="text-center">
@@ -89,18 +89,18 @@ export default function ShopSetup() {
                                         Adding your shop location helps local customers find you easily.
                                     </p>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4 max-w-md mx-auto">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md mx-auto">
                                     <Button
                                         onClick={() => handleSkip()}
                                         variant="outline"
-                                        className="h-24 flex flex-col gap-2 border-2 border-white/10 bg-white/5 text-gray-200 hover:bg-white/10 hover:border-white/20"
+                                        className="h-20 sm:h-24 flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-4 sm:gap-2 px-6 border-2 border-white/10 bg-white/5 text-gray-200 hover:bg-white/10 hover:border-white/20 rounded-xl"
                                     >
                                         <span className="text-2xl">🏠</span>
                                         <span className="font-semibold text-gray-200">No, online only</span>
                                     </Button>
                                     <Button
                                         onClick={() => setHasShop(true)}
-                                        className="h-24 flex flex-col gap-2 bg-yellow-500/10 border-2 border-yellow-400/20 hover:bg-yellow-500/15 hover:border-yellow-400/30 text-yellow-100 shadow-[0_0_18px_rgba(250,204,21,0.12)]"
+                                        className="h-20 sm:h-24 flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-4 sm:gap-2 px-6 bg-yellow-500/10 border-2 border-yellow-400/20 hover:bg-yellow-500/15 hover:border-yellow-400/30 text-yellow-100 shadow-[0_0_18px_rgba(250,204,21,0.12)] rounded-xl"
                                     >
                                         <span className="text-2xl">🏪</span>
                                         <span className="font-semibold">Yes, I have a shop</span>
@@ -113,19 +113,19 @@ export default function ShopSetup() {
                                     onLocationChange={handleLocationChange}
                                 />
 
-                                <div className="flex gap-3">
+                                <div className="flex flex-col-reverse sm:flex-row gap-3">
                                     <Button
                                         type="button"
                                         variant="ghost"
                                         onClick={() => setHasShop(null)}
-                                        className="flex-1 text-gray-200 hover:bg-white/5 hover:text-white"
+                                        className="flex-1 text-gray-200 hover:bg-white/5 hover:text-white h-12"
                                     >
                                         Back
                                     </Button>
                                     <Button
                                         type="submit"
                                         disabled={isSubmitting || (!address.trim() && !coordinates)}
-                                        className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-md font-semibold"
+                                        className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-md font-semibold h-12 rounded-xl"
                                     >
                                         {isSubmitting ? 'Saving...' : 'Save & Continue'}
                                         <ArrowRight className="ml-2 h-4 w-4" />

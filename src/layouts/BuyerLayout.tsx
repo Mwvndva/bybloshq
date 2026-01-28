@@ -1,11 +1,29 @@
+import React from 'react';
 import { Outlet } from 'react-router-dom';
+import { BuyerDashboardLayout } from '@/layouts/BaseDashboardLayout';
+import { Home, Heart, ShoppingBag, User, Settings } from 'lucide-react';
 
-const BuyerLayout = () => {
+export function BuyerLayout() {
+    const navigationItems = [
+        { label: 'Dashboard', path: '/buyer/dashboard', icon: Home },
+        { label: 'Wishlist', path: '/buyer/wishlist', icon: Heart },
+        { label: 'Orders', path: '/buyer/orders', icon: ShoppingBag },
+        { label: 'Profile', path: '/buyer/profile', icon: User },
+        { label: 'Settings', path: '/buyer/settings', icon: Settings },
+    ];
+
     return (
-        <div className="min-h-screen bg-black">
+        <BuyerDashboardLayout
+            title="Buyer Dashboard"
+            subtitle="Manage your orders and wishlist"
+            navigationItems={navigationItems}
+            showBackButton={true}
+            backButtonPath="/"
+            backButtonLabel="Back to Home"
+        >
             <Outlet />
-        </div>
+        </BuyerDashboardLayout>
     );
-};
+}
 
 export default BuyerLayout;

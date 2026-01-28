@@ -376,4 +376,197 @@ export default class TicketController {
       next(new AppError(error.message || 'Error validating ticket', 500));
     }
   }
+
+  /**
+   * Send ticket confirmation email
+   * Consolidated from ticketController.js
+   */
+  static async sendTicketEmail(req, res) {
+    // Import dependencies at method level to avoid polluting class scope
+    const { sendEmail } = await import('../utils/email.js');
+    const path = await import('path');
+    const fs = await import('fs');
+    const ejs = await import('ejs');
+    const { qrCodeToBuffer } = await import('../utils/qrCodeUtils.js');
+
+    logger.info('Received email request:', {
+      to: req.body.to ? '[REDACTED]' : 'missing',
+      subject: req.body.subject,
+      hasData: !!req.body.ticketData
+    });
+
+    try {
+      const { to, subject, ticketData } = req.body;
+
+      // Validate required fields
+      if (!to || !subject || !ticketData) {
+        const error = new Error('Missing required fields');
+        error.statusCode = 400;
+        error.details = {
+          missing: [
+            !to && 'to',
+            !subject && 'subject',
+            !ticketData && 'ticketData'
+          ].filter(Boolean)
+        };
+        throw error;
+      }
+
+      // Process price
+      let price = 0;
+      if (ticketData.price !== undefined && ticketData.price !== null) {
+        price = typeof ticketData.price === 'number' ? ticketData.price : parseFloat(ticketData.price) || 0;
+      } else if (ticketData.totalPrice !== undefined && ticketData.totalPrice !== null) {
+        price = typeof ticketData.totalPrice === 'number' ? ticketData.totalPrice : parseFloat(ticketData.totalPrice) || 0;
+        if (ticketData.quantity && ticketData.quantity > 1) {
+          price = price / ticketData.quantity;
+        }
+      }
+      price = Math.max(0, price);
+
+      const formattedPrice = new Intl.NumberFormat('en-KE', {
+        style: 'currency',
+        currency: 'KES',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+      }).format(price);
+
+      // Format purchase date
+      let formattedDate = 'Date not available';
+      try {
+        const purchaseDate = ticketData.purchaseDate ? new Date(ticketData.purchaseDate) : new Date();
+        if (!isNaN(purchaseDate.getTime())) {
+          formattedDate = purchaseDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Africa/Nairobi'
+          });
+        }
+      } catch (error) {
+        logger.error('Error formatting purchase date:', error.message);
+      }
+
+      // Process QR code
+      let qrCodeBuffer = null;
+      if (ticketData.qrCode) {
+        try {
+          if (ticketData.qrCode.startsWith('data:image/')) {
+            qrCodeBuffer = await qrCodeToBuffer(ticketData.qrCode);
+          } else {
+            const QRCode = (await import('qrcode')).default;
+            const qrCodeDataUrl = await QRCode.toDataURL(ticketData.qrCode, {
+              errorCorrectionLevel: 'H',
+              type: 'image/png',
+              margin: 1,
+              scale: 4
+            });
+            qrCodeBuffer = await qrCodeToBuffer(qrCodeDataUrl);
+          }
+        } catch (error) {
+          logger.error('Error processing QR code:', error);
+        }
+      }
+
+      // Prepare template data
+      const templateData = {
+        appName: process.env.APP_NAME || 'Byblos',
+        subject: subject,
+        ...ticketData,
+        price: price,
+        formattedPrice: formattedPrice,
+        purchaseDate: ticketData.purchaseDate,
+        formattedDate: formattedDate,
+        title: subject,
+        eventName: ticketData.eventName,
+        event: ticketData.eventName,
+        ticket: {
+          number: ticketData.ticketNumber,
+          type: ticketData.ticketType,
+          price: price,
+          formattedPrice: formattedPrice,
+          purchaseDate: ticketData.purchaseDate,
+          formattedDate: formattedDate,
+          quantity: ticketData.quantity || 1
+        },
+        user: {
+          name: ticketData.customerName,
+          email: ticketData.customerEmail
+        },
+        customerName: ticketData.customerName,
+        quantity: ticketData.quantity || 1
+      };
+
+      // Render email template
+      const emailTemplatesDir = path.default.join(process.cwd(), 'email-templates');
+      const templatePath = path.default.join(emailTemplatesDir, 'ticket-confirmation.ejs');
+
+      if (!fs.default.existsSync(templatePath)) {
+        throw new Error(`Email template not found at: ${templatePath}`);
+      }
+
+      const template = fs.default.readFileSync(templatePath, 'utf-8');
+      const html = ejs.default.render(template, templateData);
+
+      if (!html || typeof html !== 'string' || html.trim() === '') {
+        throw new Error('Rendered template is empty');
+      }
+
+      // Prepare email options
+      const mailOptions = {
+        from: `"${process.env.EMAIL_FROM_NAME || 'Byblos Experience'}" <${process.env.EMAIL_FROM_EMAIL}>`,
+        to,
+        subject,
+        html,
+        text: `Thank you for your purchase! Here's your ticket information:
+
+Event: ${ticketData.eventName}
+Ticket Number: ${ticketData.ticketNumber}
+Ticket Type: ${ticketData.ticketType}
+Price: ${formattedPrice}
+
+Please present this email and the QR code at the event entrance.
+
+Thank you for choosing Byblos Experience!`,
+        attachments: []
+      };
+
+      // Add QR code as attachment
+      if (qrCodeBuffer) {
+        mailOptions.attachments.push({
+          filename: `ticket-${ticketData.ticketNumber}.png`,
+          content: qrCodeBuffer,
+          cid: 'qrcode'
+        });
+      }
+
+      // Send email
+      await sendEmail(mailOptions);
+      logger.info('Ticket email sent successfully');
+
+      res.status(200).json({
+        success: true,
+        message: 'Ticket email sent successfully',
+      });
+    } catch (error) {
+      logger.error('❌ Error sending ticket email:', {
+        message: error.message,
+        stack: error.stack,
+        statusCode: error.statusCode,
+        details: error.details
+      });
+
+      const statusCode = error.statusCode || 500;
+      const errorMessage = error.message || 'Failed to send ticket email';
+
+      res.status(statusCode).json({
+        success: false,
+        message: errorMessage,
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        details: process.env.NODE_ENV === 'development' ? error.details : undefined
+      });
+    }
+  }
 }

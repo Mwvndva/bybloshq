@@ -171,11 +171,6 @@
         @apply text-sm sm:text-base;
     }
 
-    /* Container adjustments for mobile */
-    .container {
-        @apply max-w-full px-4 sm:px-6 md:px-8;
-    }
-
     /* Touch-friendly buttons (min 44px height) */
     button {
         @apply min-h-[44px];
@@ -185,11 +180,6 @@
     a {
         @apply min-h-[44px] inline-flex items-center;
     }
-}
-
-/* Ensure backdrop covers full viewport including mobile address bar areas */
-.fixed.inset-0 {
-    height: 100dvh;
 }
 
 /* Mobile-optimized utility classes */

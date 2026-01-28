@@ -180,7 +180,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto flex min-h-screen items-center justify-center px-4 py-12">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md border-0 shadow-none sm:border sm:shadow-md bg-transparent sm:bg-card">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center">
             {statusData.icon}

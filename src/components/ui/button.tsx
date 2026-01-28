@@ -22,7 +22,7 @@ const buttonVariants = cva(
         "secondary-byblos": "border-2 border-yellow-400/20 bg-transparent text-yellow-400 font-medium",
       },
       size: {
-        default: "h-10 px-4 py-2",
+        default: "h-9 px-3 py-2 md:h-10 md:px-4",
         sm: "h-9 rounded-md px-3",
         lg: "h-11 rounded-md px-8",
         icon: "h-10 w-10",
