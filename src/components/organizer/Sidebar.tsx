@@ -35,13 +35,13 @@ export function Sidebar() {
                 className={cn(
                   isActive
                     ? 'bg-yellow-400 text-black font-bold shadow-md'
-                    : 'text-gray-400 hover:bg-white/10 hover:text-white',
+                    : 'text-gray-300 hover:bg-white/10 hover:text-white',
                   'group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-all duration-200'
                 )}
               >
                 <item.icon
                   className={cn(
-                    isActive ? 'text-black' : 'text-gray-400 group-hover:text-yellow-400',
+                    isActive ? 'text-black' : 'text-gray-300 group-hover:text-yellow-400',
                     'mr-3 flex-shrink-0 h-6 w-6'
                   )}
                   aria-hidden="true"
@@ -70,7 +70,7 @@ export function Sidebar() {
                 </p>
                 <button
                   onClick={logout}
-                  className="text-xs font-medium text-gray-400 group-hover:text-white flex items-center transition-colors"
+                  className="text-xs font-medium text-gray-300 group-hover:text-white flex items-center transition-colors"
                 >
                   <LogOut className="mr-1 h-3 w-3" />
                   Sign out

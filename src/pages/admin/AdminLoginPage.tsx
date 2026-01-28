@@ -94,7 +94,7 @@ export const AdminLoginPage = () => {
                   onChange={(e) => setPin(e.target.value)}
                   placeholder="Enter your 6-digit PIN"
                   required
-                  className="w-full h-14 bg-white/5 border-white/20 text-white placeholder:text-gray-400 rounded-2xl px-6 text-lg font-medium focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300"
+                  className="w-full h-14 bg-white/5 border-white/20 text-white placeholder:text-gray-300 rounded-2xl px-6 text-lg font-medium focus:border-yellow-400 focus:ring-2 focus:ring-yellow-400/20 transition-all duration-300"
                 />
               </div>
             </CardContent>
@@ -123,7 +123,7 @@ export const AdminLoginPage = () => {
 
         {/* Footer */}
         <div className="text-center mt-8">
-          <p className="text-gray-400 text-sm">
+          <p className="text-gray-300 text-sm">
             Secure admin access • Protected by encryption
           </p>
         </div>

@@ -152,7 +152,7 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
                 </Label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-400" />
+                        <Search className="h-5 w-5 text-gray-300" />
                     </div>
                     <Input
                         id="address-search"
@@ -165,7 +165,7 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
                     />
                     {isSearching && (
                         <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                            <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+                            <Loader2 className="h-4 w-4 text-gray-300 animate-spin" />
                         </div>
                     )}
 
@@ -217,7 +217,7 @@ export default function ShopLocationPicker({ initialAddress = '', initialCoordin
                     <MapFlyTo position={center} />
                 </MapContainer>
             </div>
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-gray-300 text-center">
                 Click on the map to pin your exact location
             </p>
         </div>

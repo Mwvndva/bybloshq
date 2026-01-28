@@ -67,7 +67,7 @@ export const ThemeSelector = ({ currentTheme = 'black', onThemeChange }: ThemeSe
         </div>
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-gray-900">Shop Theme</h3>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Choose a color theme for your shop page</p>
+          <p className="text-xs sm:text-sm text-gray-300 mt-0.5">Choose a color theme for your shop page</p>
         </div>
       </div>
 

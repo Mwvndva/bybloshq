@@ -118,7 +118,7 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
                   </span>
                 ) : (
                   <span className="flex items-center gap-1.5">
-                    <AlertCircle className="h-4 w-4 text-gray-400" />
+                    <AlertCircle className="h-4 w-4 text-gray-300" />
                     No refunds available
                   </span>
                 )}

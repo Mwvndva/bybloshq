@@ -25,7 +25,7 @@ export default function WishlistSection() {
           <h3 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white mb-3 sm:mb-4">
             Your wishlist is empty
           </h3>
-          <p className="text-gray-400 text-sm sm:text-base lg:text-lg font-normal max-w-md mx-auto px-4">
+          <p className="text-gray-300 text-sm sm:text-base lg:text-lg font-normal max-w-md mx-auto px-4">
             Start adding items you love to your wishlist and they'll appear here
           </p>
         </div>

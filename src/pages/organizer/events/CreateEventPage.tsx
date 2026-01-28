@@ -108,7 +108,7 @@ export default function CreateEventPage() {
               <h1 className="text-sm sm:text-lg md:text-xl font-semibold text-white tracking-tight truncate">
                 Create New Event
               </h1>
-              <p className="hidden sm:block text-xs text-gray-400 font-normal truncate">
+              <p className="hidden sm:block text-xs text-gray-300 font-normal truncate">
                 Fill in the details to launch your next big event
               </p>
             </div>

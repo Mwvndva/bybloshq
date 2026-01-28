@@ -21,7 +21,7 @@ export function SubtotalDisplay({ basePrice, finalPrice, discountAmount }: Subto
         <div className="text-right">
           <span className="text-lg font-bold">{formatCurrency(finalPrice)}</span>
           {discountAmount > 0 && (
-            <div className="text-sm text-gray-500 line-through">
+            <div className="text-sm text-gray-300 line-through">
               {formatCurrency(basePrice)}
             </div>
           )}

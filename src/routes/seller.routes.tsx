@@ -207,7 +207,7 @@ function ProductsListWrapper() {
               <RefreshCw className="h-6 w-6" />
               <div>
                 <p className="font-semibold">Refresh Products</p>
-                <p className="text-sm text-gray-500">Reload all products</p>
+                <p className="text-sm text-gray-300">Reload all products</p>
               </div>
             </Button>
 
@@ -219,7 +219,7 @@ function ProductsListWrapper() {
               <Plus className="h-6 w-6" />
               <div>
                 <p className="font-semibold">Add New Product</p>
-                <p className="text-sm text-gray-500">Create a new listing</p>
+                <p className="text-sm text-gray-300">Create a new listing</p>
               </div>
             </Button>
 
@@ -231,7 +231,7 @@ function ProductsListWrapper() {
               <CheckCircle className="h-6 w-6" />
               <div>
                 <p className="font-semibold">Back to Dashboard</p>
-                <p className="text-sm text-gray-500">Return to overview</p>
+                <p className="text-sm text-gray-300">Return to overview</p>
               </div>
             </Button>
           </div>
@@ -291,7 +291,7 @@ function ProductsListWrapper() {
                       <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">
                         {product.aesthetic}
                       </Badge>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-gray-300">
                         {new Date(product.createdAt).toLocaleDateString()}
                       </span>
                     </div>

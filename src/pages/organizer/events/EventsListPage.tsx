@@ -366,7 +366,7 @@ export default function EventsListPage() {
                         <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
                             Event Management
                         </h1>
-                        <p className="hidden sm:block text-xs text-gray-400 font-medium truncate">
+                        <p className="hidden sm:block text-xs text-gray-300 font-medium truncate">
                             Manage all your events in one place
                         </p>
                     </div>
@@ -491,7 +491,7 @@ export default function EventsListPage() {
                                                 />
                                             ) : (
                                                 <div className="w-full h-48 bg-[#111111] flex items-center justify-center">
-                                                    <CalendarIcon className="h-16 w-16 text-gray-500" />
+                                                    <CalendarIcon className="h-16 w-16 text-gray-300" />
                                                 </div>
                                             )}
                                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -660,7 +660,7 @@ export default function EventsListPage() {
                             <div className="space-y-6">
                                 <div className="bg-[#111111] rounded-2xl p-6 border border-[#222222]">
                                     <h3 className="text-lg font-semibold text-white mb-2">{selectedEventForWithdraw.name}</h3>
-                                    <p className="text-gray-400 text-sm">
+                                    <p className="text-gray-300 text-sm">
                                         {selectedEventForWithdraw.tickets_sold} tickets sold at KSh {Number(selectedEventForWithdraw.ticket_price).toLocaleString('en-KE')} each
                                     </p>
                                 </div>
@@ -721,7 +721,7 @@ export default function EventsListPage() {
                                             placeholder="2547XXXXXXXX"
                                             value={withdrawDetails.mpesaNumber}
                                             onChange={(e) => setWithdrawDetails(prev => ({ ...prev, mpesaNumber: e.target.value }))}
-                                            className="input-mobile rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                                            className="input-mobile rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                                         />
                                     </div>
                                     <div>
@@ -731,7 +731,7 @@ export default function EventsListPage() {
                                             placeholder="Name as registered with M-Pesa"
                                             value={withdrawDetails.registeredName}
                                             onChange={(e) => setWithdrawDetails(prev => ({ ...prev, registeredName: e.target.value }))}
-                                            className="input-mobile rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                                            className="input-mobile rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                                         />
                                     </div>
                                 </div>

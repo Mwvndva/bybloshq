@@ -133,7 +133,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
           onClick={() => setActiveTab('overview')}
           className={`px-6 py-3 rounded-xl transition-all duration-300 font-semibold ${activeTab === 'overview'
             ? 'shadow-lg transform scale-105'
-            : 'text-gray-400 hover:text-white hover:bg-white/5 hover:scale-105'
+            : 'text-gray-300 hover:text-white hover:bg-white/5 hover:scale-105'
             }`}
         >
           <CalendarIcon className="h-5 w-5 mr-2" />
@@ -145,7 +145,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
           onClick={() => setActiveTab('tickets')}
           className={`px-6 py-3 rounded-xl transition-all duration-300 font-semibold ${activeTab === 'tickets'
             ? 'shadow-lg transform scale-105'
-            : 'text-gray-400 hover:text-white hover:bg-white/5 hover:scale-105'
+            : 'text-gray-300 hover:text-white hover:bg-white/5 hover:scale-105'
             }`}
         >
           <Ticket className="h-5 w-5 mr-2" />
@@ -177,7 +177,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                   )}
                 </>
               ) : (
-                <div className="h-full w-full flex flex-col items-center justify-center text-gray-400 p-4 text-center">
+                <div className="h-full w-full flex flex-col items-center justify-center text-gray-300 p-4 text-center">
                   <ImageIcon className="h-12 w-12 mb-2" />
                   <span className="text-xs">No image uploaded</span>
                 </div>
@@ -200,7 +200,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                     <UploadCloud className="h-5 w-5 mr-2" />
                     {imagePreview ? 'Change Image' : 'Upload Image'}
                   </Label>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-300">
                     Recommended size: 1200x630px (2:1 aspect ratio)
                   </p>
                 </div>
@@ -214,7 +214,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
             )}
             {readOnlyOverview && (
               <div className="flex-1">
-                <p className="text-gray-400 italic">Image editing is disabled for existing events.</p>
+                <p className="text-gray-300 italic">Image editing is disabled for existing events.</p>
               </div>
             )}
           </div>
@@ -234,7 +234,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                 id="title"
                 disabled={readOnlyOverview}
                 {...register('title')}
-                className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white text-lg placeholder:text-gray-500 ${errors.title ? 'border-red-500' : ''}`}
+                className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white text-lg placeholder:text-gray-300 ${errors.title ? 'border-red-500' : ''}`}
                 placeholder="Enter a catchy title for your event"
               />
               {errors.title && (
@@ -249,7 +249,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                 disabled={readOnlyOverview}
                 rows={5}
                 {...register('description')}
-                className={`rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-[#a1a1a1] placeholder:text-gray-500 resize-none ${errors.description ? 'border-red-500' : ''}`}
+                className={`rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-[#a1a1a1] placeholder:text-gray-300 resize-none ${errors.description ? 'border-red-500' : ''}`}
                 placeholder="Describe what makes your event special..."
               />
               {errors.description && (
@@ -371,7 +371,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                   id="venue"
                   disabled={readOnlyOverview}
                   {...register('venue')}
-                  className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white placeholder:text-gray-500 ${errors.venue ? 'border-red-500' : ''}`}
+                  className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white placeholder:text-gray-300 ${errors.venue ? 'border-red-500' : ''}`}
                   placeholder="e.g. KICC, Nairobi"
                 />
                 {errors.venue && (
@@ -385,7 +385,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                   disabled={readOnlyOverview}
                   placeholder="Street address, City"
                   {...register('location')}
-                  className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white placeholder:text-gray-500 ${errors.location ? 'border-red-500' : ''}`}
+                  className={`h-12 rounded-xl border border-[#222222] bg-black focus:border-yellow-400 focus:ring-yellow-400 text-white placeholder:text-gray-300 ${errors.location ? 'border-red-500' : ''}`}
                 />
                 {errors.location && (
                   <p className="mt-1 text-sm text-red-600">{errors.location.message}</p>
@@ -402,7 +402,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
           <div className="flex items-center justify-between mb-8">
             <div>
               <h3 className="text-2xl font-semibold text-white">Ticket Types</h3>
-              <p className="text-gray-400">Configure your ticket options and pricing</p>
+              <p className="text-gray-300">Configure your ticket options and pricing</p>
             </div>
             <Button
               type="button"
@@ -443,7 +443,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                       {...register(`ticketTypes.${index}.name` as const)}
                       defaultValue={ticket.name}
                       placeholder="e.g. Early Bird, VIP"
-                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                     />
                     {errors.ticketTypes?.[index]?.name && (
                       <p className="mt-1 text-xs text-red-600 font-medium">
@@ -465,7 +465,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                         defaultValue={ticket.price || ''}
                         placeholder="0"
                         min="0"
-                        className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 pl-3"
+                        className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 pl-3"
                         onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       />
                     </div>
@@ -487,7 +487,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                       })}
                       defaultValue={ticket.quantity || 100}
                       min={1}
-                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                       onWheel={(e) => (e.target as HTMLInputElement).blur()}
                     />
                     {errors.ticketTypes?.[index]?.quantity && (
@@ -504,7 +504,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
                       {...register(`ticketTypes.${index}.description` as const)}
                       defaultValue={ticket.description}
                       placeholder="What does this ticket include?"
-                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                      className="h-11 rounded-xl border border-[#222222] bg-black text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                     />
                   </div>
                 </div>
@@ -514,7 +514,7 @@ export function EventForm({ defaultValues, onSubmit, isSubmitting, submitLabel, 
               <p className="text-sm text-red-300 bg-red-500/10 p-3 rounded-lg border border-red-500/20">{errors.ticketTypes.root.message}</p>
             )}
 
-            <div className="pt-4 flex justify-between items-center text-sm text-gray-400 bg-white/5 p-4 rounded-xl border border-white/10">
+            <div className="pt-4 flex justify-between items-center text-sm text-gray-300 bg-white/5 p-4 rounded-xl border border-white/10">
               <span className="flex items-center">
                 <Ticket className="h-4 w-4 mr-2" />
                 Total Types: {ticketTypes.length}

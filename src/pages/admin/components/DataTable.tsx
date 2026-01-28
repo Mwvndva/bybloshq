@@ -122,7 +122,7 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-gray-400"
+                  className="h-24 text-center text-gray-300"
                 >
                   No results found.
                 </TableCell>
@@ -133,7 +133,7 @@ export function DataTable<TData, TValue>({
       </div>
       {showPagination && (
         <div className="flex items-center justify-between py-4">
-          <div className="text-sm text-gray-400">
+          <div className="text-sm text-gray-300">
             {table.getFilteredRowModel().rows.length} items
           </div>
           <div className="flex items-center space-x-2">

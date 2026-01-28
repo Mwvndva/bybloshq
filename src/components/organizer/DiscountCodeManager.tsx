@@ -367,7 +367,7 @@ export const DiscountCodeManager = ({ eventId, eventName }: DiscountCodeManagerP
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center mb-4">
-              <Percent className="h-6 w-6 text-gray-400" />
+              <Percent className="h-6 w-6 text-gray-300" />
             </div>
             <h3 className="text-lg font-semibold mb-2">No discount codes</h3>
             <p className="text-gray-600 text-center mb-4">

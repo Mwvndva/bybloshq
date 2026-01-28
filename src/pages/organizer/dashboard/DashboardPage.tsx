@@ -164,7 +164,7 @@ const StatCard = ({ title, value, icon: Icon, iconColor, change, changeType, des
         )}
       </div>
       <h3 className="text-base sm:text-lg font-semibold text-white mb-0.5">{value}</h3>
-      <p className="text-[10px] sm:text-xs text-gray-400">{title} {description && <span className="text-gray-500">({description})</span>}</p>
+      <p className="text-[10px] sm:text-xs text-gray-300">{title} {description && <span className="text-gray-300">({description})</span>}</p>
     </div>
   </Card>
 );
@@ -489,7 +489,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <h3 className="text-2xl font-semibold text-white mb-3">Unable to load dashboard</h3>
-            <p className="text-gray-400 text-sm sm:text-base font-medium max-w-md mx-auto mb-6">
+            <p className="text-gray-300 text-sm sm:text-base font-medium max-w-md mx-auto mb-6">
               {error || 'Something went wrong while loading your dashboard data. Please try again.'}
             </p>
             <Button
@@ -608,7 +608,7 @@ const DashboardPage = () => {
             <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
               Event Management
             </h1>
-            <p className="hidden sm:block text-xs text-gray-400 font-medium truncate">
+            <p className="hidden sm:block text-xs text-gray-300 font-medium truncate">
               {activeSection === 'overview' && 'Manage your events and track your success'}
               {activeSection === 'events' && 'Create and manage your upcoming events'}
               {activeSection === 'tickets' && 'View and manage ticket sales and attendees'}
@@ -651,7 +651,7 @@ const DashboardPage = () => {
             {activeSection === 'tickets' && 'Ticket Sales'}
             {activeSection === 'settings' && 'Account Settings'}
           </h2>
-          <p className="text-sm text-gray-400 leading-relaxed">
+          <p className="text-sm text-gray-300 leading-relaxed">
             {activeSection === 'overview' && 'Quick stats and recent activity'}
             {activeSection === 'events' && 'Manage your upcoming and past events'}
             {activeSection === 'tickets' && 'Track sales and check-in attendees'}
@@ -729,7 +729,7 @@ const DashboardPage = () => {
           <div className="space-y-12">
             <div className="text-center">
               <h2 className="text-xl md:text-3xl font-semibold text-white mb-3">Dashboard Overview</h2>
-              <p className="text-gray-400 text-sm md:text-base font-normal">Your event management at a glance</p>
+              <p className="text-gray-300 text-sm md:text-base font-normal">Your event management at a glance</p>
             </div>
 
             {/* Quick Actions */}
@@ -743,7 +743,7 @@ const DashboardPage = () => {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-lg md:text-2xl font-semibold text-white">Quick Actions</h3>
-                  <p className="text-gray-400 font-normal text-xs sm:text-sm mt-1">Common tasks for your events</p>
+                  <p className="text-gray-300 font-normal text-xs sm:text-sm mt-1">Common tasks for your events</p>
                 </div>
                 <Button
                   variant="secondary-byblos"
@@ -800,7 +800,7 @@ const DashboardPage = () => {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-lg md:text-2xl font-semibold text-white">Recent Events</h3>
-                  <p className="text-gray-400 font-medium text-xs sm:text-sm mt-1">Your most recent event activities</p>
+                  <p className="text-gray-300 font-medium text-xs sm:text-sm mt-1">Your most recent event activities</p>
                 </div>
               </div>
 
@@ -818,7 +818,7 @@ const DashboardPage = () => {
                             >
                               {eventStatus.status}
                             </Badge>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-gray-300">
                               {new Date(event.created_at).toLocaleDateString()}
                             </span>
                           </div>
@@ -826,15 +826,15 @@ const DashboardPage = () => {
                           <p className="text-yellow-400 font-black text-xl mb-3">
                             {formatCurrency(event.ticket_price)}
                           </p>
-                          <p className="text-sm text-gray-400 line-clamp-2 leading-relaxed mb-4">
+                          <p className="text-sm text-gray-300 line-clamp-2 leading-relaxed mb-4">
                             {event.description}
                           </p>
                           <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center text-gray-400">
+                            <div className="flex items-center text-gray-300">
                               <MapPin className="h-4 w-4 mr-1" />
                               <span className="truncate">{event.location}</span>
                             </div>
-                            <div className="text-gray-400">
+                            <div className="text-gray-300">
                               {event.current_attendees}/{event.max_attendees}
                             </div>
                           </div>
@@ -849,7 +849,7 @@ const DashboardPage = () => {
                     <Calendar className="h-12 w-12 text-yellow-400" />
                   </div>
                   <h3 className="text-2xl font-black text-white mb-3">No events found</h3>
-                  <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">Create your first event to get started</p>
+                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">Create your first event to get started</p>
                   <Button
                     onClick={() => navigate('/organizer/events/new')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
@@ -867,7 +867,7 @@ const DashboardPage = () => {
           <div className="space-y-12">
             <div className="text-center">
               <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Event Management</h2>
-              <p className="text-gray-400 text-lg font-medium">Create and manage your events</p>
+              <p className="text-gray-300 text-lg font-medium">Create and manage your events</p>
             </div>
 
             {/* Event Management */}
@@ -875,7 +875,7 @@ const DashboardPage = () => {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-xl md:text-3xl font-black text-white">All Events</h3>
-                  <p className="text-gray-400 font-medium mt-2">Manage all your events in one place</p>
+                  <p className="text-gray-300 font-medium mt-2">Manage all your events in one place</p>
                 </div>
                 <div className="flex space-x-3">
                   <Button
@@ -906,14 +906,14 @@ const DashboardPage = () => {
                 <div className="flex justify-center py-12">
                   <div className="text-center space-y-4">
                     <Loader2 className="h-12 w-12 animate-spin mx-auto text-yellow-600" />
-                    <p className="text-gray-400 font-medium">Loading events...</p>
+                    <p className="text-gray-300 font-medium">Loading events...</p>
                   </div>
                 </div>
               ) : eventsError ? (
                 <div className="text-center py-12">
                   <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-400" />
                   <h3 className="text-xl font-black text-white mb-2">Error Loading Events</h3>
-                  <p className="text-gray-400 mb-4">{eventsError}</p>
+                  <p className="text-gray-300 mb-4">{eventsError}</p>
                   <Button
                     variant="secondary-byblos"
                     onClick={fetchEvents}
@@ -952,11 +952,11 @@ const DashboardPage = () => {
                         {/* Event Content */}
                         <div className="p-6">
                           <h4 className="text-xl font-black text-white mb-2 line-clamp-2">{event.title}</h4>
-                          <p className="text-gray-400 text-sm mb-4 line-clamp-2">{event.description}</p>
+                          <p className="text-gray-300 text-sm mb-4 line-clamp-2">{event.description}</p>
 
                           {/* Event Details */}
                           <div className="space-y-2 mb-4">
-                            <div className="flex items-center text-sm text-gray-400">
+                            <div className="flex items-center text-sm text-gray-300">
                               <Calendar className="h-4 w-4 mr-2" />
                               <span>{new Date(event.start_date).toLocaleDateString('en-US', {
                                 year: 'numeric',
@@ -964,14 +964,14 @@ const DashboardPage = () => {
                                 day: 'numeric',
                               })}</span>
                             </div>
-                            <div className="flex items-center text-sm text-gray-400">
+                            <div className="flex items-center text-sm text-gray-300">
                               <Clock className="h-4 w-4 mr-2" />
                               <span>{new Date(event.start_date).toLocaleTimeString('en-US', {
                                 hour: '2-digit',
                                 minute: '2-digit',
                               })}</span>
                             </div>
-                            <div className="flex items-center text-sm text-gray-400">
+                            <div className="flex items-center text-sm text-gray-300">
                               <MapPin className="h-4 w-4 mr-2" />
                               <span className="truncate">{event.location}</span>
                             </div>
@@ -983,7 +983,7 @@ const DashboardPage = () => {
                               <p className="text-lg font-black text-white">
                                 {event.tickets_sold || 0}
                               </p>
-                              <p className="text-xs text-gray-400">Tickets Sold</p>
+                              <p className="text-xs text-gray-300">Tickets Sold</p>
                             </div>
                             <div className="text-center">
                               <p className="text-lg font-black text-white">
@@ -991,7 +991,7 @@ const DashboardPage = () => {
                                   Number(event.total_revenue || 0)
                                 ).toLocaleString('en-KE')}
                               </p>
-                              <p className="text-xs text-gray-400">Revenue</p>
+                              <p className="text-xs text-gray-300">Revenue</p>
                             </div>
                             <div className="text-center">
                               <p className="text-lg font-black text-white">
@@ -1002,7 +1002,7 @@ const DashboardPage = () => {
                                   ))
                                   : 0}%
                               </p>
-                              <p className="text-xs text-gray-400">Capacity</p>
+                              <p className="text-xs text-gray-300">Capacity</p>
                             </div>
                           </div>
 
@@ -1046,7 +1046,7 @@ const DashboardPage = () => {
                     <Calendar className="h-12 w-12 text-yellow-400" />
                   </div>
                   <h3 className="text-2xl font-black text-white mb-3">No events found</h3>
-                  <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">
+                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">
                     You haven't created any events yet. Create your first event to start selling tickets.
                   </p>
                   <Button
@@ -1070,7 +1070,7 @@ const DashboardPage = () => {
                       <Calendar className="h-6 w-6 text-blue-600" />
                     </div>
                     <p className="text-2xl font-black text-white">{events.length}</p>
-                    <p className="text-sm text-gray-400 font-medium">Total Events</p>
+                    <p className="text-sm text-gray-300 font-medium">Total Events</p>
                   </div>
 
                   <div className="text-center p-6 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
@@ -1085,7 +1085,7 @@ const DashboardPage = () => {
                         return now >= start && now <= end;
                       }).length}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">Active Events</p>
+                    <p className="text-sm text-gray-300 font-medium">Active Events</p>
                   </div>
 
                   <div className="text-center p-6 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
@@ -1097,7 +1097,7 @@ const DashboardPage = () => {
                         .reduce((sum, event) => sum + ((event.current_attendees || 0) * event.ticket_price), 0)
                         .toLocaleString('en-KE')}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">Total Revenue</p>
+                    <p className="text-sm text-gray-300 font-medium">Total Revenue</p>
                   </div>
 
                   <div className="text-center p-6 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
@@ -1107,7 +1107,7 @@ const DashboardPage = () => {
                     <p className="text-2xl font-black text-white">
                       {events.reduce((sum, event) => sum + (event.current_attendees || 0), 0)}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">Total Tickets Sold</p>
+                    <p className="text-sm text-gray-300 font-medium">Total Tickets Sold</p>
                   </div>
                 </div>
               </div>
@@ -1119,7 +1119,7 @@ const DashboardPage = () => {
           <div className="space-y-12">
             <div className="text-center">
               <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Ticket Management</h2>
-              <p className="text-gray-400 text-lg font-medium">Track and manage your ticket sales</p>
+              <p className="text-gray-300 text-lg font-medium">Track and manage your ticket sales</p>
             </div>
 
             {/* Ticket Management */}
@@ -1127,7 +1127,7 @@ const DashboardPage = () => {
               <div className="flex justify-between items-center mb-8">
                 <div>
                   <h3 className="text-xl md:text-3xl font-black text-white">All Tickets</h3>
-                  <p className="text-gray-400 font-medium mt-2">Manage tickets across all your events</p>
+                  <p className="text-gray-300 font-medium mt-2">Manage tickets across all your events</p>
                 </div>
                 <Button
                   variant="secondary-byblos"
@@ -1148,14 +1148,14 @@ const DashboardPage = () => {
                 <div className="flex justify-center py-12">
                   <div className="text-center space-y-4">
                     <Loader2 className="h-12 w-12 animate-spin mx-auto text-yellow-600" />
-                    <p className="text-gray-400 font-medium">Loading tickets...</p>
+                    <p className="text-gray-300 font-medium">Loading tickets...</p>
                   </div>
                 </div>
               ) : ticketsError ? (
                 <div className="text-center py-12">
                   <AlertTriangle className="h-16 w-16 mx-auto mb-4 text-red-400" />
                   <h3 className="text-xl font-black text-white mb-2">Error Loading Tickets</h3>
-                  <p className="text-gray-400 mb-4">{ticketsError}</p>
+                  <p className="text-gray-300 mb-4">{ticketsError}</p>
                   <Button
                     variant="secondary-byblos"
                     onClick={fetchTickets}
@@ -1197,7 +1197,7 @@ const DashboardPage = () => {
                               <div className="flex flex-col">
                                 <span className="font-medium whitespace-nowrap text-gray-200">{ticket.customer_name || 'Guest'}</span>
                                 {ticket.customer_email && (
-                                  <span className="text-xs text-gray-400 truncate max-w-[150px]">
+                                  <span className="text-xs text-gray-300 truncate max-w-[150px]">
                                     {ticket.customer_email}
                                   </span>
                                 )}
@@ -1223,12 +1223,12 @@ const DashboardPage = () => {
                                   className={`h-3 w-3 rounded-full mr-3 ${ticket.scanned ? 'bg-green-400' : 'bg-gray-500'
                                     }`}
                                 />
-                                <span className={`font-medium ${ticket.scanned ? 'text-green-400' : 'text-gray-400'}`}>
+                                <span className={`font-medium ${ticket.scanned ? 'text-green-400' : 'text-gray-300'}`}>
                                   {ticket.scanned ? 'Scanned' : 'Not Scanned'}
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-gray-400 whitespace-nowrap">
+                            <TableCell className="text-gray-300 whitespace-nowrap">
                               {ticket.created_at ? new Date(ticket.created_at).toLocaleDateString('en-US', {
                                 year: 'numeric',
                                 month: 'short',
@@ -1247,7 +1247,7 @@ const DashboardPage = () => {
                     <Ticket className="h-12 w-12 text-yellow-400" />
                   </div>
                   <h3 className="text-2xl font-black text-white mb-3">No tickets found</h3>
-                  <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">
+                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">
                     No tickets have been sold for your events yet. Create an event to start selling tickets.
                   </p>
                   <Button
@@ -1271,7 +1271,7 @@ const DashboardPage = () => {
                       <Ticket className="h-6 w-6 text-green-600" />
                     </div>
                     <p className="text-2xl font-black text-white">{tickets.length}</p>
-                    <p className="text-sm text-gray-400 font-medium">Total Tickets</p>
+                    <p className="text-sm text-gray-300 font-medium">Total Tickets</p>
                   </div>
 
                   <div className="text-center p-6 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
@@ -1293,7 +1293,7 @@ const DashboardPage = () => {
                     <p className="text-2xl font-black text-white">
                       {tickets.filter(t => t.scanned).length}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">Scanned</p>
+                    <p className="text-sm text-gray-300 font-medium">Scanned</p>
                   </div>
 
                   <div className="text-center p-6 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
@@ -1303,7 +1303,7 @@ const DashboardPage = () => {
                     <p className="text-2xl font-black text-white">
                       KSh {tickets.reduce((sum, ticket) => sum + (ticket.price || 0), 0).toLocaleString('en-KE')}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">Total Revenue</p>
+                    <p className="text-sm text-gray-300 font-medium">Total Revenue</p>
                   </div>
 
                   <div className="text-center p-6 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
@@ -1313,7 +1313,7 @@ const DashboardPage = () => {
                     <p className="text-2xl font-black text-white">
                       {new Set(tickets.map(t => t.customer_email)).size}
                     </p>
-                    <p className="text-sm text-gray-400 font-medium">Unique Customers</p>
+                    <p className="text-sm text-gray-300 font-medium">Unique Customers</p>
                   </div>
                 </div>
               </div>
@@ -1325,7 +1325,7 @@ const DashboardPage = () => {
           <div className="space-y-12">
             <div className="text-center">
               <h2 className="text-2xl md:text-4xl font-black text-white mb-4">Account Settings</h2>
-              <p className="text-gray-400 text-lg font-medium">Manage your account information and preferences</p>
+              <p className="text-gray-300 text-lg font-medium">Manage your account information and preferences</p>
             </div>
 
             {/* Settings Sections */}
@@ -1361,7 +1361,7 @@ const DashboardPage = () => {
                         <Label className="text-sm font-bold text-gray-200">Full Name</Label>
                         <Input
                           {...profileForm.register('full_name')}
-                          className="h-12 rounded-xl bg-transparent border-white/10 text-gray-200 placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-12 rounded-xl bg-transparent border-white/10 text-gray-200 placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                           placeholder="Enter your full name"
                         />
 
@@ -1375,7 +1375,7 @@ const DashboardPage = () => {
                         <Input
                           {...profileForm.register('email')}
                           type="email"
-                          className="h-12 rounded-xl bg-transparent border-white/10 text-gray-200 placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-12 rounded-xl bg-transparent border-white/10 text-gray-200 placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                           placeholder="Enter your email"
                         />
 
@@ -1388,7 +1388,7 @@ const DashboardPage = () => {
                         <Label className="text-sm font-bold text-gray-200">WhatsApp Number</Label>
                         <Input
                           {...profileForm.register('whatsapp_number')}
-                          className="h-12 rounded-xl bg-transparent border-white/10 text-gray-200 placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-12 rounded-xl bg-transparent border-white/10 text-gray-200 placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                           placeholder="Enter your WhatsApp number"
                         />
 
@@ -1443,7 +1443,7 @@ const DashboardPage = () => {
                       <div className="space-y-3">
                         <Label className="text-sm font-bold text-gray-200">Email Address</Label>
                         <div className="flex items-center space-x-3 p-4 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
-                          <Mail className="h-5 w-5 text-gray-400" />
+                          <Mail className="h-5 w-5 text-gray-300" />
                           <span className="font-medium text-gray-200">
                             {profileForm.getValues('email') || 'Not provided'}
                           </span>
@@ -1453,7 +1453,7 @@ const DashboardPage = () => {
                       <div className="space-y-3">
                         <Label className="text-sm font-bold text-gray-200">WhatsApp Number</Label>
                         <div className="flex items-center space-x-3 p-4 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl border border-white/10">
-                          <Phone className="h-5 w-5 text-gray-400" />
+                          <Phone className="h-5 w-5 text-gray-300" />
                           <span className="font-medium text-gray-200">
                             {profileForm.getValues('whatsapp_number') || 'Not provided'}
                           </span>
@@ -1578,14 +1578,14 @@ const DashboardPage = () => {
 
                     <p>Byblos reserves the right to amend these Terms at any time. Updated versions will be posted on the platform and will apply immediately to future events.</p>
 
-                    <div className="text-sm text-gray-500 mt-8 pt-4 border-t border-white/10">
+                    <div className="text-sm text-gray-300 mt-8 pt-4 border-t border-white/10">
                       <p className="font-medium">Last updated: September 10, 2024</p>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2 mt-4">
                   <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                  <span className="text-sm text-gray-400">You agreed to these terms on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  <span className="text-sm text-gray-300">You agreed to these terms on {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
               </div>
 
@@ -1597,7 +1597,7 @@ const DashboardPage = () => {
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                       <div>
                         <h4 className="font-bold text-white text-lg">Logout</h4>
-                        <p className="text-sm text-gray-400 mt-1">
+                        <p className="text-sm text-gray-300 mt-1">
                           Sign out of your account and return to the login page.
                         </p>
                       </div>

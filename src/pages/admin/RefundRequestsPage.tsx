@@ -147,7 +147,7 @@ export default function RefundRequestsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-gray-300" />
       </div>
     );
   }
@@ -174,8 +174,8 @@ export default function RefundRequestsPage() {
       {requests.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <DollarSign className="h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-gray-500">No {statusFilter} refund requests found</p>
+            <DollarSign className="h-12 w-12 text-gray-300 mb-4" />
+            <p className="text-gray-300">No {statusFilter} refund requests found</p>
           </CardContent>
         </Card>
       ) : (
@@ -186,7 +186,7 @@ export default function RefundRequestsPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-xl">Request #{request.id}</CardTitle>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-300">
                       Requested: {format(new Date(request.requested_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
@@ -197,16 +197,16 @@ export default function RefundRequestsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center text-sm">
-                      <User className="h-4 w-4 mr-2 text-gray-500" />
+                      <User className="h-4 w-4 mr-2 text-gray-300" />
                       <span className="font-medium">Buyer:</span>
                       <span className="ml-2">{request.buyer_name}</span>
                     </div>
                     <div className="flex items-center text-sm">
-                      <Mail className="h-4 w-4 mr-2 text-gray-500" />
+                      <Mail className="h-4 w-4 mr-2 text-gray-300" />
                       <span>{request.buyer_email}</span>
                     </div>
                     <div className="flex items-center text-sm">
-                      <Phone className="h-4 w-4 mr-2 text-gray-500" />
+                      <Phone className="h-4 w-4 mr-2 text-gray-300" />
                       <span>{request.buyer_phone}</span>
                     </div>
                   </div>
@@ -318,7 +318,7 @@ export default function RefundRequestsPage() {
                 <p className="text-sm text-gray-600 mt-2">
                   To: {selectedRequest.buyer_name}
                 </p>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-300 mt-1">
                   This will deduct the amount from buyer's refund balance
                 </p>
               </div>

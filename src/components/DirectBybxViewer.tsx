@@ -140,7 +140,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
                     onClick={onClose}
                     className="absolute top-4 right-4 p-2 bg-gray-50 hover:bg-gray-100 rounded-full transition-colors z-10"
                 >
-                    <X className="h-4 w-4 text-gray-500" />
+                    <X className="h-4 w-4 text-gray-300" />
                 </button>
 
                 <div className="p-8 pt-10 text-center">
@@ -164,7 +164,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
                     {/* Status / Error Message */}
                     {!decryptedData && !error && (
                         <div className="space-y-6">
-                            <p className="text-gray-500 font-medium text-sm">{status || 'Starting...'}</p>
+                            <p className="text-gray-300 font-medium text-sm">{status || 'Starting...'}</p>
                             {/* Simple Progress Bar */}
                             <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
                                 <div className="h-full bg-black rounded-full w-1/3 animate-[shimmer_1.5s_infinite] relative">
@@ -190,7 +190,7 @@ const DirectBybxViewer: React.FC<DirectBybxViewerProps> = ({ orderId, productId,
 
                     {decryptedData && (
                         <div className="mt-2 space-y-4">
-                            <p className="text-gray-500 text-sm mb-8">
+                            <p className="text-gray-300 text-sm mb-8">
                                 Your file has been unlocked and is ready.
                             </p>
 

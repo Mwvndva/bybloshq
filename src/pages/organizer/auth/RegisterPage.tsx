@@ -250,7 +250,7 @@ export default function RegisterPage() {
                 <Calendar className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
               </div>
               <h1 className="mobile-heading mb-1.5 sm:mb-2 font-semibold tracking-tight text-white">Create Account</h1>
-              <p className="mobile-text text-gray-400 font-normal">Join our organizer community</p>
+              <p className="mobile-text text-gray-300 font-normal">Join our organizer community</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -260,7 +260,7 @@ export default function RegisterPage() {
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-gray-400" />
+                    <User className="h-5 w-5 text-gray-300" />
                   </div>
                   <Input
                     id="fullName"
@@ -270,7 +270,7 @@ export default function RegisterPage() {
                     value={formData.fullName}
                     onChange={handleInputChange}
                     required
-                    className="pl-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -281,7 +281,7 @@ export default function RegisterPage() {
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <Mail className="h-5 w-5 text-gray-300" />
                   </div>
                   <Input
                     id="email"
@@ -291,7 +291,7 @@ export default function RegisterPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     required
-                    className="pl-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -303,7 +303,7 @@ export default function RegisterPage() {
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Phone className="h-5 w-5 text-gray-400" />
+                    <Phone className="h-5 w-5 text-gray-300" />
                   </div>
                   <Input
                     id="whatsapp_number"
@@ -313,7 +313,7 @@ export default function RegisterPage() {
                     value={formData.whatsapp_number}
                     onChange={handleInputChange}
                     required
-                    className="pl-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                 </div>
               </div>
@@ -324,7 +324,7 @@ export default function RegisterPage() {
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <Lock className="h-5 w-5 text-gray-300" />
                   </div>
                   <Input
                     id="password"
@@ -334,11 +334,11 @@ export default function RegisterPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     required
-                    className="pl-12 pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-12 pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-300"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-300 hover:text-gray-300"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? (
@@ -353,7 +353,7 @@ export default function RegisterPage() {
               {/* Password Strength Checklist */}
               {formData.password && (
                 <div className="mt-2 p-3 bg-gray-900/50 rounded-xl border border-gray-800">
-                  <p className="text-xs font-semibold text-gray-400 mb-2">Password Requirements:</p>
+                  <p className="text-xs font-semibold text-gray-300 mb-2">Password Requirements:</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {[
                       { label: "At least 8 characters", met: checkPasswordStrength(formData.password).minLength },
@@ -368,10 +368,10 @@ export default function RegisterPage() {
                           </div>
                         ) : (
                           <div className="bg-gray-800 p-0.5 rounded-full">
-                            <X className="h-3 w-3 text-gray-400" />
+                            <X className="h-3 w-3 text-gray-300" />
                           </div>
                         )}
-                        <span className={`text-xs ${req.met ? 'text-green-400 font-medium' : 'text-gray-500'}`}>
+                        <span className={`text-xs ${req.met ? 'text-green-400 font-medium' : 'text-gray-300'}`}>
                           {req.label}
                         </span>
                       </div>
@@ -386,7 +386,7 @@ export default function RegisterPage() {
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <Lock className="h-5 w-5 text-gray-300" />
                   </div>
                   <Input
                     id="confirmPassword"
@@ -396,11 +396,11 @@ export default function RegisterPage() {
                     value={formData.confirmPassword}
                     onChange={handleInputChange}
                     required
-                    className="pl-12 pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="pl-12 pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-300"
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-300 hover:text-gray-300"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? (
@@ -431,7 +431,7 @@ export default function RegisterPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-gray-400 font-normal text-sm sm:text-base">
+              <p className="text-gray-300 font-normal text-sm sm:text-base">
                 Already have an account?{' '}
                 <Link
                   to="/organizer/login"

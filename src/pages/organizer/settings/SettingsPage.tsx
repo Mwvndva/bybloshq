@@ -99,7 +99,7 @@ export default function SettingsPage() {
             <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
               Account Settings
             </h1>
-            <p className="hidden sm:block text-xs text-gray-400 font-medium truncate">
+            <p className="hidden sm:block text-xs text-gray-300 font-medium truncate">
               Manage your account information and preferences
             </p>
           </div>
@@ -219,9 +219,9 @@ export default function SettingsPage() {
               <div className="space-y-6">
                 <div className="grid gap-6 md:grid-cols-2">
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-400">Full Name</Label>
+                    <Label className="text-sm font-bold text-gray-300">Full Name</Label>
                     <div className="flex items-center space-x-3 p-4 bg-gray-900 border border-white/10 rounded-2xl">
-                      <User className="h-5 w-5 text-gray-500" />
+                      <User className="h-5 w-5 text-gray-300" />
                       <span className="font-medium text-white">
                         {profileForm.getValues('full_name') || 'Not provided'}
                       </span>
@@ -229,9 +229,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-400">Email Address</Label>
+                    <Label className="text-sm font-bold text-gray-300">Email Address</Label>
                     <div className="flex items-center space-x-3 p-4 bg-gray-900 border border-white/10 rounded-2xl">
-                      <Mail className="h-5 w-5 text-gray-500" />
+                      <Mail className="h-5 w-5 text-gray-300" />
                       <span className="font-medium text-white">
                         {profileForm.getValues('email') || 'Not provided'}
                       </span>
@@ -239,9 +239,9 @@ export default function SettingsPage() {
                   </div>
 
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-400">WhatsApp Number</Label>
+                    <Label className="text-sm font-bold text-gray-300">WhatsApp Number</Label>
                     <div className="flex items-center space-x-3 p-4 bg-gray-900 border border-white/10 rounded-2xl">
-                      <Phone className="h-5 w-5 text-gray-500" />
+                      <Phone className="h-5 w-5 text-gray-300" />
                       <span className="font-medium text-white">
                         {profileForm.getValues('whatsapp_number') || 'Not provided'}
                       </span>

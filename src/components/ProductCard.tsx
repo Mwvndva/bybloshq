@@ -418,7 +418,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           price: 'text-[var(--theme-accent, #f59e0b)]',
           button: 'bg-[var(--theme-button-bg, #f59e0b)] hover:opacity-90 text-[var(--theme-button-text, black)] font-bold shadow-[0_0_15px_rgba(var(--theme-accent-rgb, 245,158,11),0.3)]',
           seller: 'text-gray-300',
-          description: 'text-gray-400',
+          description: 'text-gray-300',
           icon: 'text-[var(--theme-accent, #f59e0b)]',
         };
       case 'pink':
@@ -551,7 +551,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
         {product.description && (
           <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2",
-            theme === 'black' ? 'text-gray-400' : 'text-gray-700'
+            theme === 'black' ? 'text-gray-300' : 'text-gray-700'
           )}>
             {product.description}
           </p>
