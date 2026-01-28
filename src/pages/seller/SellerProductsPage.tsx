@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { ProductsList } from '@/components/seller/ProductsList';
 import { sellerApi } from '@/api/sellerApi';
 import { toast } from '@/components/ui/sonner';
-import { SellerLayout } from '@/components/layout/SellerLayout';
 
 export default function SellerProductsPage() {
   const [products, setProducts] = useState([]);
@@ -134,56 +133,54 @@ export default function SellerProductsPage() {
   };
 
   return (
-    <SellerLayout>
-      <div className="container mx-auto py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">My Products</h1>
-            <p className="text-muted-foreground">Manage your product listings</p>
-          </div>
-          <Button onClick={() => navigate('/seller/products/new')}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold">My Products</h1>
+          <p className="text-muted-foreground">Manage your product listings</p>
         </div>
+        <Button onClick={() => navigate('/seller/products/new')}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Product
+        </Button>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Product List</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : products.length > 0 ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-2xl font-bold">Your Products</h2>
-                  <Button onClick={fetchProducts} variant="outline" size="sm">
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Refresh
-                  </Button>
-                </div>
-                <ProductsList
-                  products={products}
-                  onDelete={handleDelete}
-                  onEdit={handleEdit}
-                  onStatusUpdate={handleStatusUpdate}
-                  onRefresh={fetchProducts}
-                />
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                <p>No products found. Add your first product to get started.</p>
-                <Button variant="link" onClick={() => navigate('/seller/products/new')}>
-                  Add Product
+      <Card>
+        <CardHeader>
+          <CardTitle>Product List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : products.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Your Products</h2>
+                <Button onClick={fetchProducts} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
                 </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-    </SellerLayout>
+              <ProductsList
+                products={products}
+                onDelete={handleDelete}
+                onEdit={handleEdit}
+                onStatusUpdate={handleStatusUpdate}
+                onRefresh={fetchProducts}
+              />
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No products found. Add your first product to get started.</p>
+              <Button variant="link" onClick={() => navigate('/seller/products/new')}>
+                Add Product
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

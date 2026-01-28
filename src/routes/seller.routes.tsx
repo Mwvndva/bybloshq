@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { RouteObject, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { SellerProtectedRoute } from '@/components/auth/AppProtectedRoute';
-import { SellerLayout } from '../components/layout/SellerLayout';
+import { SellerLayout } from '../layouts/SellerLayout';
 import SellerDashboard from '../components/seller/SellerDashboard';
 import SellerRegistration from '../components/seller/SellerRegistration';
 import ShopSetup from '../components/seller/ShopSetup';
