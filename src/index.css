@@ -187,6 +187,11 @@
     }
 }
 
+/* Ensure backdrop covers full viewport including mobile address bar areas */
+.fixed.inset-0 {
+    height: 100dvh;
+}
+
 /* Mobile-optimized utility classes */
 @layer utilities {
 
