@@ -153,11 +153,8 @@ export function getImageUrl(path: string | undefined | null): string {
 
   if (VITE_API_URL) {
     baseUrl = VITE_API_URL.replace(/\/api$/, '').replace(/\/$/, '');
-  } else if (import.meta.env.DEV) {
-    // In development, if VITE_API_URL is missing, assume the standard dev port
-    baseUrl = 'http://localhost:3002';
   } else {
-    // In production, use the current origin if no API URL is provided
+    // In production or development without VITE_API_URL, use the current origin
     baseUrl = window.location.origin;
   }
 
