@@ -23,15 +23,9 @@ interface ApiError {
 // Include /api in the base URL since our routes are prefixed with /api
 // Default API configuration
 // Get the base URL from environment variables
-const API_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
-const isDevelopment = import.meta.env.DEV;
+const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
 
-// For development, we'll use the proxy if VITE_API_URL is not set
-const API_BASE_URL = isDevelopment && !import.meta.env.VITE_API_URL
-  ? '/api'  // Use proxy in development when VITE_API_URL is not set
-  : API_URL; // Otherwise use the provided API_URL or default
-
-console.log('Using API base URL:', API_BASE_URL);
+console.log('Using VITE_API_URL:', API_BASE_URL);
 
 // Helper function to determine product status based on stock
 function getProductStatus(stock: number): 'In Stock' | 'Low Stock' | 'Out of Stock' {
