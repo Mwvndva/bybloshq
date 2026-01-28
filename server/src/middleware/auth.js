@@ -74,7 +74,7 @@ export const protect = async (req, res, next) => {
     switch (userType) {
       case 'buyer':
         queryText = `
-          SELECT u.id as user_id_main, u.email, u.password, u.first_name, u.last_name, u.is_active,
+          SELECT u.id as user_id_main, u.email, u.is_verified, u.role,
                  b.*
           FROM users u
           JOIN buyers b ON u.id = b.user_id
@@ -83,7 +83,7 @@ export const protect = async (req, res, next) => {
         break;
       case 'seller':
         queryText = `
-          SELECT u.id as user_id_main, u.email, u.password, u.first_name, u.last_name, u.is_active,
+          SELECT u.id as user_id_main, u.email, u.is_verified, u.role,
                  s.*
           FROM users u
           JOIN sellers s ON u.id = s.user_id
@@ -92,7 +92,7 @@ export const protect = async (req, res, next) => {
         break;
       case 'organizer':
         queryText = `
-          SELECT u.id as user_id_main, u.email, u.password, u.first_name, u.last_name, u.is_active,
+          SELECT u.id as user_id_main, u.email, u.is_verified, u.role,
                  o.*
           FROM users u
           JOIN organizers o ON u.id = o.user_id
