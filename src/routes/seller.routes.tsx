@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { RouteObject, Navigate, Outlet, useOutletContext, useNavigate } from 'react-router-dom';
-import { useSellerAuth } from '../contexts/SellerAuthContext';
+import { RouteObject, Navigate, Outlet, useNavigate } from 'react-router-dom';
+import { SellerProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { SellerLayout } from '../components/layout/SellerLayout';
 import SellerDashboard from '../components/seller/SellerDashboard';
 import SellerRegistration from '../components/seller/SellerRegistration';
@@ -341,7 +341,7 @@ function ProductsListWrapper() {
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={() => handleStatusUpdate(statusUpdate.productId, statusUpdate.isSold)}
+                  onClick={() => handleStatusUpdate(statusUpdate.productId!, statusUpdate.isSold)}
                 >
                   {statusUpdate.isSold ? 'Mark as Sold' : 'Mark as Available'}
                 </AlertDialogAction>
@@ -404,36 +404,6 @@ function ProductsListWrapper() {
   );
 }
 
-// Protected route component
-const ProtectedRoute = () => {
-  const { isAuthenticated, isLoading } = useSellerAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-yellow-600" />
-      </div>
-    );
-  }
-
-  return isAuthenticated ? <Outlet /> : <Navigate to="/seller/login" replace />;
-};
-
-// Routes accessible only to unauthenticated users
-const GuestRoute = () => {
-  const { isAuthenticated, isLoading } = useSellerAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-yellow-600" />
-      </div>
-    );
-  }
-
-  return !isAuthenticated ? <Outlet /> : <Navigate to="/seller/dashboard" replace />;
-};
-
 // Create the seller routes
 export const sellerRoutes: RouteObject[] = [
   // Public auth routes (no layout)
@@ -447,24 +417,23 @@ export const sellerRoutes: RouteObject[] = [
     path: '/seller',
     element: <SellerLayout><Outlet /></SellerLayout>,
     children: [
-      // Public routes
+      // Public routes (login, register) - no protection needed
       {
-        element: <GuestRoute />,
-        children: [
-          {
-            path: 'register',
-            element: <SellerRegistration />,
-          },
-          {
-            path: 'login',
-            element: <SellerLogin />,
-          },
-        ],
+        path: 'register',
+        element: <SellerRegistration />,
+      },
+      {
+        path: 'login',
+        element: <SellerLogin />,
       },
 
-      // Protected routes
+      // Protected routes - require authentication
       {
-        element: <ProtectedRoute />,
+        element: (
+          <SellerProtectedRoute>
+            <Outlet />
+          </SellerProtectedRoute>
+        ),
         children: [
           {
             path: 'dashboard',

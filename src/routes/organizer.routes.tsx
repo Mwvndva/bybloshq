@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { OrganizerLayout } from '@/layouts/OrganizerLayout';
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { OrganizerProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import DashboardPage from '@/pages/organizer/dashboard/DashboardPage';
 import EventsListPage from '@/pages/organizer/events/EventsListPage';
 import CreateEventPage from '@/pages/organizer/events/CreateEventPage';
@@ -19,9 +19,9 @@ export const organizerRoutes = [
   {
     path: '/organizer',
     element: (
-      <ProtectedRoute>
+      <OrganizerProtectedRoute>
         <OrganizerLayout />
-      </ProtectedRoute>
+      </OrganizerProtectedRoute>
     ),
     children: [
       {

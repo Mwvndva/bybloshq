@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
-import { Navigate } from 'react-router-dom';
-import { BuyerRoute } from './BuyerRoute';
+import { Navigate, Outlet } from 'react-router-dom';
+import { BuyerProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { Loader2 } from 'lucide-react';
 import { WishlistProvider } from '@/contexts/WishlistContext';
 
@@ -67,7 +67,11 @@ export const buyerRoutes = [
   // Protected routes - require authentication
   {
     path: '/buyer',
-    element: <BuyerRoute />,
+    element: (
+      <BuyerProtectedRoute>
+        <Outlet />
+      </BuyerProtectedRoute>
+    ),
     children: [
       {
         index: true,

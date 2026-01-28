@@ -1,17 +1,7 @@
 import axios from 'axios';
+import apiClient from '@/lib/apiClient';
 import { Order, OrderStatus } from '@/types/order';
 import { ProductType } from '@/types/index';
-
-// Get the base URL from environment variables
-const API_URL = (import.meta.env.VITE_API_URL ||
-  (import.meta.env.DEV ? 'http://localhost:3002/api' : '/api')
-).replace(/\/$/, '');
-const isDevelopment = import.meta.env.DEV;
-
-// For development, we'll use the proxy if VITE_API_URL is not set
-const baseURL = isDevelopment && !import.meta.env.VITE_API_URL
-  ? '/api'  // Use proxy in development when VITE_API_URL is not set
-  : API_URL; // Otherwise use the provided API_URL or default
 
 // Interfaces
 export type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
@@ -99,36 +89,8 @@ interface WithdrawalRequest {
   processedBy?: string;
 }
 
-// Create axios instance for seller API
-const sellerApiInstance = axios.create({
-  baseURL,
-  withCredentials: true, // Enable cookies
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-// Response interceptor for error handling
-sellerApiInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Clean up any client side state if needed
-      localStorage.removeItem('sellerToken');
-      localStorage.removeItem('seller');
-
-      // Check if the request was for the profile
-      // We don't want to redirect if checking auth status on load fails
-      const isProfileCheck = error.config?.url?.includes('/sellers/profile');
-
-      // Only redirect if we're not already on the login page and it's not a profile check
-      if (!window.location.pathname.includes('/seller/login') && !isProfileCheck) {
-        window.location.href = '/seller/login';
-      }
-    }
-    return Promise.reject(error);
-  }
-);
+// Use the unified API client
+const sellerApiInstance = apiClient;
 
 // Helper function to transform product data
 const transformProduct = (product: any): Product => {
@@ -346,7 +308,9 @@ export const sellerApi = {
   getSellerProducts: async (sellerId: string | number): Promise<Product[]> => {
     try {
       // Use axios directly to avoid auth interceptor
-      const response = await axios.get<ProductsResponse>(`${baseURL}/sellers/${sellerId}/products`);
+      const response = await axios.get<ProductsResponse>(`/sellers/${sellerId}/products`, {
+        baseURL: apiClient.defaults.baseURL
+      });
       // Handle both response structures: { data: { products: [] } } or { products: [] }
       let products: any[] = [];
       if (response.data?.data?.products) {
@@ -468,7 +432,7 @@ export const sellerApi = {
     try {
       // Use the public API endpoint directly
       const response = await axios.post<ForgotPasswordResponse>(
-        `${API_URL}/sellers/forgot-password`,
+        `/sellers/forgot-password`,
         {
           email: email.trim().toLowerCase()
         },
@@ -476,6 +440,7 @@ export const sellerApi = {
           headers: {
             'Content-Type': 'application/json',
           },
+          baseURL: apiClient.defaults.baseURL
         }
       );
 
@@ -497,13 +462,14 @@ export const sellerApi = {
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<ResetPasswordResponse>(
-        `${API_URL}/sellers/reset-password`,
+        `/sellers/reset-password`,
         { token, newPassword },
         {
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
-          }
+          },
+          baseURL: apiClient.defaults.baseURL
         }
       );
 
