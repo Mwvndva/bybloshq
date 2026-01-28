@@ -7,15 +7,27 @@ dotenv.config();
 const { Pool } = pg;
 
 // Database connection configuration
+// Validate required environment variables
+const requiredEnvVars = ['DB_HOST', 'DB_PORT', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+
+if (missingEnvVars.length > 0) {
+  logger.error(`Critical Error: Missing required database environment variables: ${missingEnvVars.join(', ')}`);
+  // Fail loudly in production, but maybe allow dev with defaults if absolutely necessary (but user requested strict)
+  // User requested: "Fail loudly if required environment variables are missing."
+  throw new Error(`Missing required database environment variables: ${missingEnvVars.join(', ')}`);
+}
+
+// Database connection configuration
 const dbConfig = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT, 10) || 5432,
-  database: process.env.DB_NAME || 'byblos7',
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'nurubot',
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT, 10),
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
   connectionTimeoutMillis: 30000,  // 30 seconds timeout waiting for a client
   idleTimeoutMillis: 10000,       // 10 seconds idle timeout (faster release)
-  max: 10,                        // reduced max number of clients for better headroom in dev
+  max: parseInt(process.env.DB_MAX_CLIENTS, 10) || 10, // Allow configurable max clients
   query_timeout: 60000,           // 60 seconds query timeout
 };
 

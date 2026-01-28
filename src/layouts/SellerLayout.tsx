@@ -16,7 +16,6 @@ export function SellerLayout() {
         <SellerDashboardLayout
             title="Seller Dashboard"
             subtitle="Manage your products and orders"
-            showSidebar={true}
             navigationItems={navigationItems}
             showBackButton={true}
             backButtonPath="/"
