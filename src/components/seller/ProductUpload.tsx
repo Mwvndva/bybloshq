@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { useNavigate } from 'react-router-dom';
 import { Aesthetic } from '@/types';
-import { aestheticCategories } from '../AestheticCategories';
+import { aestheticCategories } from '@/components/AestheticCategories';
 
 interface ProductUploadProps {
   onSuccess: () => void;
@@ -51,7 +51,7 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.image) {
       toast({
         title: 'Error',
@@ -67,15 +67,15 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
       // First upload the image to get a URL
       const formDataToSend = new FormData();
       formDataToSend.append('image', formData.image);
-      
+
       // In a real app, you would upload the image to a storage service first
       // For now, we'll just use a placeholder URL
       const imageUrl = URL.createObjectURL(formData.image);
-      
+
       // Get the seller's profile to get their ID
       const sellerProfile = await sellerApi.getProfile();
       const sellerId = sellerProfile.id;
-      
+
       // Create the product with the image URL and seller ID
       const productData = {
         name: formData.name,
@@ -87,12 +87,12 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
       };
 
       await sellerApi.createProduct(productData);
-      
+
       toast({
         title: 'Success',
         description: 'Product added successfully!',
       });
-      
+
       // Reset form with default aesthetic
       setFormData({
         name: '',
@@ -102,7 +102,7 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
         image: null,
       });
       setImagePreview(null);
-      
+
       // Navigate to dashboard on success
       onSuccess();
     } catch (error) {
@@ -146,8 +146,8 @@ const ProductUpload = ({ onSuccess }: ProductUploadProps) => {
 
           <div className="space-y-2">
             <Label htmlFor="aesthetic">Aesthetic</Label>
-            <Select 
-              onValueChange={handleAestheticChange} 
+            <Select
+              onValueChange={handleAestheticChange}
               value={formData.aesthetic}
               required
             >

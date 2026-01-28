@@ -1,22 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { RouteObject, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { SellerProtectedRoute } from '@/components/auth/AppProtectedRoute';
-import { SellerLayout } from '../layouts/SellerLayout';
-import SellerDashboard from '../components/seller/SellerDashboard';
-import SellerRegistration from '../components/seller/SellerRegistration';
-import ShopSetup from '../components/seller/ShopSetup';
-import { SellerLogin } from '../components/seller/SellerLogin';
-import { ProductsList } from '../components/seller/ProductsList';
-import AddProductForm from '../components/seller/AddProductForm';
-import { EditProductForm } from '../components/seller/EditProductForm';
-import { Button } from '../components/ui/button';
-import { useToast } from '../hooks/use-toast';
-import { sellerApi } from '../api/sellerApi';
+import { SellerLayout } from '@/layouts/SellerLayout';
+import SellerDashboard from '@/components/seller/SellerDashboard';
+import SellerRegistration from '@/components/seller/SellerRegistration';
+import ShopSetup from '@/components/seller/ShopSetup';
+import { SellerLogin } from '@/components/seller/SellerLogin';
+import { ProductsList } from '@/components/seller/ProductsList';
+import AddProductForm from '@/components/seller/AddProductForm';
+import { EditProductForm } from '@/components/seller/EditProductForm';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { sellerApi } from '@/api/sellerApi';
 import { Plus, Pencil, Trash2, EyeOff, RefreshCw, CheckCircle, Loader2 } from 'lucide-react';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
-import { formatCurrency } from '../lib/utils';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '../components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog';
 
 // Products route component that will be rendered within the dashboard
 function ProductsListWrapper() {
@@ -415,7 +415,7 @@ export const sellerRoutes: RouteObject[] = [
   // Main seller routes with layout
   {
     path: '/seller',
-    element: <SellerLayout><Outlet /></SellerLayout>,
+    element: <SellerLayout />,
     children: [
       // Public routes (login, register) - no protection needed
       {
