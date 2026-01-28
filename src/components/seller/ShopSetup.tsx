@@ -73,7 +73,7 @@ export default function ShopSetup() {
                 <h2 className="mt-6 text-center text-3xl font-extrabold text-white">
                     Complete your shop setup
                 </h2>
-                <p className="mt-2 text-center text-sm text-gray-400">
+                <p className="mt-2 text-center text-sm text-gray-300">
                     Tell us about your physical presence
                 </p>
             </div>
@@ -85,7 +85,7 @@ export default function ShopSetup() {
                             <div className="space-y-6">
                                 <div className="text-center">
                                     <h3 className="text-lg font-medium text-white mb-2">Do you have a physical shop?</h3>
-                                    <p className="text-sm text-gray-400 mb-6">
+                                    <p className="text-sm text-gray-300 mb-6">
                                         Adding your shop location helps local customers find you easily.
                                     </p>
                                 </div>

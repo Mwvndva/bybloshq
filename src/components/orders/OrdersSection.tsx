@@ -472,7 +472,7 @@ export default function OrdersSection() {
           <Package className="h-8 w-8 text-yellow-500" />
         </div>
         <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
-        <p className="text-gray-400 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
+        <p className="text-gray-300 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
         <Button
           onClick={() => (window.location.href = '/shop')}
           className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
@@ -496,7 +496,7 @@ export default function OrdersSection() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
                     <h3 className="font-semibold text-base sm:text-lg text-white">Order #{order.orderNumber || order.id}</h3>
-                    <p className="text-xs sm:text-sm text-gray-400">{formatDate(order)}</p>
+                    <p className="text-xs sm:text-sm text-gray-300">{formatDate(order)}</p>
                   </div>
                   {/* Status Badges */}
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start sm:self-auto">
@@ -513,7 +513,7 @@ export default function OrdersSection() {
                       <li key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-gray-200 bg-gray-900/50 rounded-lg px-3 py-2 border border-gray-800">
                         <div className="flex items-center">
                           <span className="font-semibold">{item.name}</span>
-                          <span className="text-gray-400 ml-2">× {item.quantity}</span>
+                          <span className="text-gray-300 ml-2">× {item.quantity}</span>
                           {(item.isDigital || item.productType === 'digital' || (item as any).is_digital) && (
                             <Badge variant="outline" className="ml-2 text-xs border-gray-600 text-gray-200 bg-gray-800">
                               <FileText className="h-3 w-3 mr-1" />
@@ -600,7 +600,7 @@ export default function OrdersSection() {
                       order.currency || 'KSH'
                     )}
                   </p>
-                  <p className="text-xs text-gray-400">Total Amount</p>
+                  <p className="text-xs text-gray-300">Total Amount</p>
                 </div>
 
                 {/* Action Buttons */}

@@ -180,10 +180,10 @@ const StatsCard = React.memo(({ title, value, icon, description, trend }: StatsC
             <span className={`${trendColor} font-semibold`}>
               {trendIcon} {Math.abs(trend)}%
             </span>{' '}
-            <span className="text-gray-500">vs last month</span>
+            <span className="text-gray-300">vs last month</span>
           </p>
         ) : (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-300">
             {description}
           </p>
         )}
@@ -921,7 +921,7 @@ const NewAdminDashboard = () => {
                   </div>
                   <div className="text-center">
                     <p className="text-gray-600 font-semibold">No ticket buyers found</p>
-                    <p className="text-gray-500 text-sm mt-1">This event doesn't have any ticket purchases yet.</p>
+                    <p className="text-gray-300 text-sm mt-1">This event doesn't have any ticket purchases yet.</p>
                   </div>
                 </div>
               ) : (
@@ -1060,7 +1060,7 @@ const NewAdminDashboard = () => {
                                 <p className="text-gray-700 text-sm">
                                   {format(new Date(buyer.purchaseDate), 'MMM d, yyyy')}
                                 </p>
-                                <p className="text-gray-500 text-xs">
+                                <p className="text-gray-300 text-xs">
                                   {format(new Date(buyer.purchaseDate), 'h:mm a')}
                                 </p>
                           </td>
@@ -1273,7 +1273,7 @@ const NewAdminDashboard = () => {
                               <div className="flex-1">
                                 <p className="font-semibold text-black">Order #{order.orderNumber || order.id}</p>
                                 <p className="text-sm text-gray-600">{order.buyerName}</p>
-                                <p className="text-xs text-gray-500">{format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')}</p>
+                                <p className="text-xs text-gray-300">{format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')}</p>
                               </div>
                               <div className="text-right">
                                 <p className="font-bold text-black">KSh {order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -1468,7 +1468,7 @@ const NewAdminDashboard = () => {
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
-                        <div className="flex items-center justify-center h-full text-gray-400">
+                        <div className="flex items-center justify-center h-full text-gray-300">
                           No event data available
                         </div>
                       )}
@@ -1573,7 +1573,7 @@ const NewAdminDashboard = () => {
                         </ResponsiveContainer>
                       ) : (
                         <div className="flex items-center justify-center h-full">
-                          <p className="text-gray-400">No metrics data available</p>
+                          <p className="text-gray-300">No metrics data available</p>
                         </div>
                       )}
                     </div>
@@ -1682,7 +1682,7 @@ const NewAdminDashboard = () => {
                         </ResponsiveContainer>
                       ) : (
                         <div className="flex items-center justify-center h-full">
-                          <p className="text-gray-400">No financial data available</p>
+                          <p className="text-gray-300">No financial data available</p>
                         </div>
                       )}
                     </div>
@@ -1769,7 +1769,7 @@ const NewAdminDashboard = () => {
                         </ResponsiveContainer>
                       ) : (
                         <div className="flex items-center justify-center h-full">
-                          <p className="text-gray-400">No refunds data available</p>
+                          <p className="text-gray-300">No refunds data available</p>
                         </div>
                       )}
                     </div>
@@ -1837,7 +1837,7 @@ const NewAdminDashboard = () => {
                     <CardDescription className="text-xs sm:text-sm text-gray-600">Manage all events in the system</CardDescription>
                   </div>
                   <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
                     <Input
                       type="text"
                       placeholder="Search events..."
@@ -1854,11 +1854,11 @@ const NewAdminDashboard = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr className="border-b border-gray-200">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Event</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Organizer</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Date</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Status</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Event</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Organizer</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Date</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -1929,13 +1929,13 @@ const NewAdminDashboard = () => {
                     Showing <span className="text-black font-bold">{dashboardState.recentEvents?.length || 0}</span> of {dashboardState.recentEvents?.length || 0} events
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm" disabled={true} className="text-gray-400 hover:bg-gray-100 h-8 w-8 p-0 rounded-xl">
+                    <Button variant="ghost" size="sm" disabled={true} className="text-gray-300 hover:bg-gray-100 h-8 w-8 p-0 rounded-xl">
                       &larr;
                     </Button>
                     <Button variant="ghost" size="sm" className="bg-yellow-100 text-yellow-800 h-8 w-8 p-0 rounded-xl font-semibold">
                       1
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-gray-400 hover:bg-gray-100 h-8 w-8 p-0 rounded-xl">
+                    <Button variant="ghost" size="sm" className="text-gray-300 hover:bg-gray-100 h-8 w-8 p-0 rounded-xl">
                       &rarr;
                     </Button>
                   </div>
@@ -1956,7 +1956,7 @@ const NewAdminDashboard = () => {
                     </CardDescription>
                   </div>
                   <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
                     <Input
                       type="text"
                       placeholder="Search organizers..."
@@ -1973,10 +1973,10 @@ const NewAdminDashboard = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr className="border-b border-gray-200">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Organizer</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Status</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Organizer</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Contact</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -1984,15 +1984,15 @@ const NewAdminDashboard = () => {
                           <tr key={organizer.id} className="hover:bg-yellow-50/50 transition-colors">
                             <td className="py-3 px-3 sm:px-4">
                               <div className="font-medium text-gray-900">{organizer.name}</div>
-                              <div className="sm:hidden text-xs text-gray-500 mt-1">
+                              <div className="sm:hidden text-xs text-gray-300 mt-1">
                                 <div>{organizer.email}</div>
                                 {organizer.phone && <div>{organizer.phone}</div>}
                               </div>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden sm:table-cell">
                               <div>{organizer.email}</div>
                               {organizer.phone && (
-                                <div className="text-xs text-gray-500">{organizer.phone}</div>
+                                <div className="text-xs text-gray-300">{organizer.phone}</div>
                               )}
                             </td>
                             <td className="py-3 px-2 sm:px-3 hidden md:table-cell">
@@ -2051,7 +2051,7 @@ const NewAdminDashboard = () => {
               </CardContent>
               <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
                 <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-300">
                     Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.organizers?.length || 0}</span> of{' '}
                     <span className="font-medium">{dashboardState.organizers?.length || 0}</span> organizers
                   </div>
@@ -2080,7 +2080,7 @@ const NewAdminDashboard = () => {
                     </CardDescription>
                   </div>
                   <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
                     <Input
                       type="text"
                       placeholder="Search sellers..."
@@ -2097,11 +2097,11 @@ const NewAdminDashboard = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr className="border-b border-gray-200">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Seller</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Location</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Seller</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Contact</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell">Location</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -2114,32 +2114,32 @@ const NewAdminDashboard = () => {
                                 </div>
                                 <div className="ml-3">
                                   <div className="text-sm font-medium text-gray-900">{seller.name}</div>
-                                  <div className="text-xs text-gray-500">ID: {seller.id}</div>
-                                  <div className="sm:hidden text-xs text-gray-500 mt-1">
+                                  <div className="text-xs text-gray-300">ID: {seller.id}</div>
+                                  <div className="sm:hidden text-xs text-gray-300 mt-1">
                                     <div>{seller.email}</div>
                                     {seller.phone && <div>{seller.phone}</div>}
                                     <div className="flex items-center mt-1">
-                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-400" />
+                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-300" />
                                       <span>{seller.city || 'N/A'}</span>
                                     </div>
                                     {seller.location && (
-                                      <div className="text-xs text-gray-500 truncate">{seller.location}</div>
+                                      <div className="text-xs text-gray-300 truncate">{seller.location}</div>
                                     )}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden sm:table-cell">
                               <div className="font-medium text-gray-900">{seller.email}</div>
-                              <div className="text-xs text-gray-500">{seller.phone || 'N/A'}</div>
+                              <div className="text-xs text-gray-300">{seller.phone || 'N/A'}</div>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden md:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden md:table-cell">
                               <div className="flex items-center">
-                                <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                                <MapPin className="h-4 w-4 mr-1 text-gray-300" />
                                 <span>{seller.city || 'N/A'}</span>
                               </div>
                               {seller.location && (
-                                <div className="text-xs text-gray-500 truncate max-w-[200px]" title={seller.location}>
+                                <div className="text-xs text-gray-300 truncate max-w-[200px]" title={seller.location}>
                                   {seller.location}
                                 </div>
                               )}
@@ -2200,7 +2200,7 @@ const NewAdminDashboard = () => {
               </CardContent>
               <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
                 <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-300">
                     Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.sellers?.length || 0}</span> of{' '}
                     <span className="font-medium">{dashboardState.sellers?.length || 0}</span> sellers
                   </div>
@@ -2229,7 +2229,7 @@ const NewAdminDashboard = () => {
                     </CardDescription>
                   </div>
                   <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
                     <Input
                       type="text"
                       placeholder="Search buyers..."
@@ -2246,11 +2246,11 @@ const NewAdminDashboard = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr className="border-b border-gray-200">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Buyer</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Contact</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">Location</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Buyer</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Contact</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell">Location</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -2263,32 +2263,32 @@ const NewAdminDashboard = () => {
                                 </div>
                                 <div className="ml-3">
                                   <div className="text-sm font-medium text-gray-900">{buyer.name}</div>
-                                  <div className="text-xs text-gray-500">ID: {buyer.id}</div>
-                                  <div className="sm:hidden text-xs text-gray-500 mt-1">
+                                  <div className="text-xs text-gray-300">ID: {buyer.id}</div>
+                                  <div className="sm:hidden text-xs text-gray-300 mt-1">
                                     <div>{buyer.email}</div>
                                     {buyer.phone && <div>{buyer.phone}</div>}
                                     <div className="flex items-center mt-1">
-                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-400" />
+                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-300" />
                                       <span>{buyer.city || 'N/A'}</span>
                                     </div>
                                     {buyer.location && (
-                                      <div className="text-xs text-gray-500 truncate">{buyer.location}</div>
+                                      <div className="text-xs text-gray-300 truncate">{buyer.location}</div>
                                     )}
                                   </div>
                                 </div>
                               </div>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden sm:table-cell">
                               <div className="font-medium text-gray-900">{buyer.email}</div>
-                              <div className="text-xs text-gray-500">{buyer.phone || 'N/A'}</div>
+                              <div className="text-xs text-gray-300">{buyer.phone || 'N/A'}</div>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden md:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden md:table-cell">
                               <div className="flex items-center">
-                                <MapPin className="h-4 w-4 mr-1 text-gray-400" />
+                                <MapPin className="h-4 w-4 mr-1 text-gray-300" />
                                 <span>{buyer.city || 'N/A'}</span>
                               </div>
                               {buyer.location && (
-                                <div className="text-xs text-gray-500 truncate max-w-[200px]" title={buyer.location}>
+                                <div className="text-xs text-gray-300 truncate max-w-[200px]" title={buyer.location}>
                                   {buyer.location}
                                 </div>
                               )}
@@ -2349,7 +2349,7 @@ const NewAdminDashboard = () => {
               </CardContent>
               <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
                 <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-300">
                     Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.buyers?.length || 0}</span> of{' '}
                     <span className="font-medium">{dashboardState.buyers?.length || 0}</span> buyers
                   </div>
@@ -2378,7 +2378,7 @@ const NewAdminDashboard = () => {
                     </CardDescription>
                   </div>
                   <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
                     <Input
                       type="text"
                       placeholder="Search requests..."
@@ -2395,12 +2395,12 @@ const NewAdminDashboard = () => {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead className="bg-gray-50">
                         <tr className="border-b border-gray-200">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">Seller</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">Amount</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">M-Pesa Details</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Date</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider whitespace-nowrap">Seller</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden sm:table-cell">Amount</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden md:table-cell">M-Pesa Details</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Status</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider hidden lg:table-cell">Date</th>
+                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-300 uppercase tracking-wider">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
@@ -2408,18 +2408,18 @@ const NewAdminDashboard = () => {
                           <tr key={request.id} className="hover:bg-yellow-50/50 transition-colors">
                             <td className="py-3 px-3 sm:px-4">
                               <div className="font-medium text-gray-900">{request.sellerName}</div>
-                              <div className="text-xs text-gray-500">{request.sellerEmail}</div>
-                              <div className="sm:hidden text-xs text-gray-500 mt-1">
+                              <div className="text-xs text-gray-300">{request.sellerEmail}</div>
+                              <div className="sm:hidden text-xs text-gray-300 mt-1">
                                 <div>KSh {request.amount.toLocaleString()}</div>
                                 <div>{request.mpesaNumber} ({request.mpesaName})</div>
                               </div>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden sm:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden sm:table-cell">
                               <span className="font-semibold text-black">KSh {request.amount.toLocaleString()}</span>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden md:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden md:table-cell">
                               <div className="font-medium text-gray-900">{request.mpesaNumber}</div>
-                              <div className="text-xs text-gray-500">{request.mpesaName}</div>
+                              <div className="text-xs text-gray-300">{request.mpesaName}</div>
                             </td>
                             <td className="py-3 px-2 sm:px-3">
                               <Badge
@@ -2437,9 +2437,9 @@ const NewAdminDashboard = () => {
                                 {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                               </Badge>
                             </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-500 hidden lg:table-cell">
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden lg:table-cell">
                               <div>{new Date(request.createdAt).toLocaleDateString()}</div>
-                              <div className="text-xs text-gray-500">{new Date(request.createdAt).toLocaleTimeString()}</div>
+                              <div className="text-xs text-gray-300">{new Date(request.createdAt).toLocaleTimeString()}</div>
                             </td>
                             <td className="py-3 pr-3 sm:pr-4 text-right">
                               <div className="flex items-center justify-end space-x-1 sm:space-x-2">
@@ -2466,7 +2466,7 @@ const NewAdminDashboard = () => {
                                   </>
                                 )}
                                 {request.status !== 'pending' && (
-                                  <span className="text-xs text-gray-500">
+                                  <span className="text-xs text-gray-300">
                                     Processed by {request.processedBy || 'Admin'}
                                   </span>
                                 )}
@@ -2481,7 +2481,7 @@ const NewAdminDashboard = () => {
               </CardContent>
               <CardFooter className="border-t border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
                 <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-gray-300">
                     Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.withdrawalRequests?.length || 0}</span> of{' '}
                     <span className="font-medium">{dashboardState.withdrawalRequests?.length || 0}</span> withdrawal requests
                   </div>

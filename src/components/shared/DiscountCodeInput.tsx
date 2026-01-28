@@ -183,7 +183,7 @@ export const DiscountCodeInput = ({
           </div>
 
           {orderAmount > 0 && (
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-300">
               Enter a discount code to save on your {formatCurrency(orderAmount)} order
             </p>
           )}

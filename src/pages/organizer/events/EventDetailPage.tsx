@@ -713,7 +713,7 @@ export default function EventDetailPage() {
                     <div className="flex-1">
                       <p className="text-sm font-medium text-[#a1a1a1] mb-1">Tickets Sold</p>
                       <p className="text-xl md:text-3xl font-black text-white mb-2">{analytics.totalTicketsSold.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">Total tickets sold</p>
+                      <p className="text-xs text-gray-300">Total tickets sold</p>
                     </div>
                     <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-green-500/10 border border-green-500/20">
                       <Ticket className="h-8 w-8 text-green-400" />
@@ -728,9 +728,9 @@ export default function EventDetailPage() {
                     <div className="flex-1">
                       <p className="text-sm font-medium text-[#a1a1a1] mb-1">Scanned Tickets</p>
                       <p className="text-xl md:text-3xl font-black text-white mb-2">{analytics.totalScannedTickets.toLocaleString()}</p>
-                      <p className="text-xs text-gray-500">Scanned tickets</p>
+                      <p className="text-xs text-gray-300">Scanned tickets</p>
                       {analytics.totalTicketsSold > 0 && (
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-300">
                           ({Math.round((analytics.totalScannedTickets / analytics.totalTicketsSold) * 100)}% of total)
                         </p>
                       )}
@@ -762,7 +762,7 @@ export default function EventDetailPage() {
                       <p className="text-xl md:text-3xl font-black text-white mb-2">
                         {formatCurrency(analytics.totalRevenue)}
                       </p>
-                      <p className="text-xs text-gray-500">Total revenue generated</p>
+                      <p className="text-xs text-gray-300">Total revenue generated</p>
                     </div>
                     <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg bg-yellow-500/20 border border-yellow-400/30">
                       <DollarSign className="h-8 w-8 text-yellow-400" />
@@ -785,7 +785,7 @@ export default function EventDetailPage() {
             <div className="bg-[#111111] rounded-3xl p-8 border border-[#222222]">
               <Tabs defaultValue="types" className="w-full">
                 <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto mb-8 bg-black/40 border border-white/10 rounded-2xl p-1 gap-1 sm:gap-0">
-                  <TabsTrigger value="types" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-400">
+                  <TabsTrigger value="types" className="rounded-xl data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-500 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-300">
                     <List className="h-4 w-4 mr-2" />
                     Ticket Types
                   </TabsTrigger>
@@ -827,7 +827,7 @@ export default function EventDetailPage() {
                                 <p className="text-sm text-[#a1a1a1]">Tickets Sold</p>
                                 <p className="text-2xl font-black text-white">{ticket.sold || 0}</p>
                                 {ticket.quantity > 0 && (
-                                  <p className="text-xs text-gray-500">
+                                  <p className="text-xs text-gray-300">
                                     ({(ticket.sold / ticket.quantity * 100).toFixed(1)}% sold)
                                   </p>
                                 )}

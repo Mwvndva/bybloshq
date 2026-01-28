@@ -86,7 +86,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
           <Plus className="h-8 w-8 text-gray-300" />
         </div>
         <h3 className="text-lg font-medium text-white mb-1">No products yet</h3>
-        <p className="text-gray-400">Get started by adding your first product from the button above</p>
+        <p className="text-gray-300">Get started by adding your first product from the button above</p>
       </div>
     );
   }
@@ -129,7 +129,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
           <DialogHeader>
             <DialogTitle className="text-white">Delete Product</DialogTitle>
-            <DialogDescription className="text-gray-400">
+            <DialogDescription className="text-gray-300">
               Are you sure you want to delete this product? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -258,7 +258,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       />
                     ) : (
                       <div className="h-10 w-10 rounded-md bg-gray-100 flex items-center justify-center">
-                        <EyeOff className="h-5 w-5 text-gray-400" />
+                        <EyeOff className="h-5 w-5 text-gray-300" />
                       </div>
                     )}
                     <div className="flex flex-col">

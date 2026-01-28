@@ -14,7 +14,7 @@ export function Header() {
           <div className="flex items-center">
             <button
               type="button"
-              className="text-gray-500 hover:text-gray-600 lg:hidden"
+              className="text-gray-300 hover:text-gray-600 lg:hidden"
               aria-controls="sidebar"
               aria-expanded="false"
               onClick={() => {
@@ -32,8 +32,8 @@ export function Header() {
               <Link to="/" className="text-gray-700 hover:text-gray-900">
                 <span className="font-bold text-xl">Byblos</span>
               </Link>
-              <span className="text-gray-400">/</span>
-              <span className="text-sm font-medium text-gray-500">Organizer Dashboard</span>
+              <span className="text-gray-300">/</span>
+              <span className="text-sm font-medium text-gray-300">Organizer Dashboard</span>
             </div>
           </div>
 

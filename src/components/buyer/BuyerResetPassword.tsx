@@ -170,7 +170,7 @@ export function BuyerResetPassword() {
                         <div className="space-y-2">
                             <Label htmlFor="password">New Password</Label>
                             <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
                                 <Input
                                     id="password"
                                     name="password"
@@ -183,7 +183,7 @@ export function BuyerResetPassword() {
                                 />
                                 <button
                                     type="button"
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600"
                                     onClick={() => setShowPassword(!showPassword)}
                                 >
                                     {showPassword ? (
@@ -198,7 +198,7 @@ export function BuyerResetPassword() {
                         <div className="space-y-2">
                             <Label htmlFor="confirmPassword">Confirm New Password</Label>
                             <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-300" />
                                 <Input
                                     id="confirmPassword"
                                     name="confirmPassword"
@@ -211,7 +211,7 @@ export function BuyerResetPassword() {
                                 />
                                 <button
                                     type="button"
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-600"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 >
                                     {showConfirmPassword ? (

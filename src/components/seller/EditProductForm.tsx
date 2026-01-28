@@ -316,7 +316,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
                             />
                           </label>
                         </div>
-                        <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB</p>
+                        <p className="text-xs text-gray-300">PNG, JPG, GIF up to 5MB</p>
                       </div>
                     )}
                   </div>

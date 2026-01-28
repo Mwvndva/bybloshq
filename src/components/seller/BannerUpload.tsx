@@ -128,7 +128,7 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
         </div>
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-gray-900">Store Banner</h3>
-          <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Upload a banner image for your store (recommended: 1200x300px)</p>
+          <p className="text-xs sm:text-sm text-gray-300 mt-0.5">Upload a banner image for your store (recommended: 1200x300px)</p>
         </div>
       </div>
 
@@ -150,10 +150,10 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
         <div className="relative rounded-xl overflow-hidden border-2 border-dashed border-gray-300 bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-6">
           <div className="flex flex-col items-center justify-center text-center">
             <div className="p-4 bg-white rounded-full shadow-md mb-4">
-              <UploadCloud className="h-8 w-8 text-gray-400" />
+              <UploadCloud className="h-8 w-8 text-gray-300" />
             </div>
             <p className="text-sm font-semibold text-gray-700 mb-1">No banner uploaded</p>
-            <p className="text-xs text-gray-500">Upload a banner to make your store stand out</p>
+            <p className="text-xs text-gray-300">Upload a banner to make your store stand out</p>
           </div>
         </div>
       )}

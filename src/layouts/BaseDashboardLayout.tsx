@@ -98,7 +98,7 @@ export function BaseDashboardLayout({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => setSidebarOpen(false)}
-                                className="lg:hidden text-gray-400 hover:text-white hover:bg-white/5"
+                                className="lg:hidden text-gray-300 hover:text-white hover:bg-white/5"
                             >
                                 <X className="h-5 w-5" />
                             </Button>
@@ -119,7 +119,7 @@ export function BaseDashboardLayout({
                                             'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                                             isActive
                                                 ? 'bg-white/10 text-white font-semibold'
-                                                : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                : 'text-gray-300 hover:text-white hover:bg-white/5'
                                         )}
                                     >
                                         {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
@@ -162,7 +162,7 @@ export function BaseDashboardLayout({
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => setSidebarOpen(true)}
-                                        className="lg:hidden text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 -ml-3"
+                                        className="lg:hidden text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 -ml-3"
                                     >
                                         <Menu className="h-5 w-5" />
                                     </Button>
@@ -172,7 +172,7 @@ export function BaseDashboardLayout({
                                         variant="ghost"
                                         size="sm"
                                         onClick={handleBack}
-                                        className="text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
+                                        className="text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
                                     >
                                         <ArrowLeft className="h-4 w-4 mr-2" />
                                         <span className="hidden sm:inline">{backButtonLabel}</span>
@@ -187,7 +187,7 @@ export function BaseDashboardLayout({
                                     {title}
                                 </h1>
                                 {subtitle && (
-                                    <p className="hidden sm:block text-xs sm:text-sm text-gray-400 font-medium truncate">
+                                    <p className="hidden sm:block text-xs sm:text-sm text-gray-300 font-medium truncate">
                                         {subtitle}
                                     </p>
                                 )}

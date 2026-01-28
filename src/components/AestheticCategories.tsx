@@ -95,7 +95,7 @@ const AestheticCategories = ({ onAestheticChange, selectedAesthetic }: Aesthetic
         {selectedAesthetic && (
           <button
             onClick={() => onAestheticChange('' as Aesthetic)}
-            className="text-sm text-gray-400 hover:text-white transition-colors"
+            className="text-sm text-gray-300 hover:text-white transition-colors"
           >
             Clear filter
           </button>

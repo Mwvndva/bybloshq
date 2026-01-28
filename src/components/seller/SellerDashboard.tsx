@@ -155,7 +155,7 @@ const StatsCard: React.FC<StatsCardProps> = ({
           <p className={`text-base sm:text-lg font-bold ${textColor} break-words leading-tight`}>
             {value}
           </p>
-          <p className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-gray-300 font-medium truncate">{subtitle}</p>
         </div>
         <div className={`w-9 h-9 sm:w-10 sm:h-10 ${bgColor} rounded-xl flex-shrink-0 flex items-center justify-center`}>
           <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
@@ -1025,7 +1025,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Withdrawal Management</h2>
-              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
             </div>
 
             {/* Available Balance Card */}
@@ -1033,7 +1033,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <div>
                   <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Available Balance</h3>
-                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Your current balance available for withdrawal</p>
+                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your current balance available for withdrawal</p>
                 </div>
                 <div className="bg-green-500/10 border border-green-400/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
                   <p className="text-lg sm:text-xl md:text-2xl font-black text-green-200">
@@ -1082,10 +1082,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           placeholder="Enter amount"
                           min="1"
                           max={analytics?.balance || 0}
-                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-gray-300 mt-1">
                           Max: {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                         </p>
                       </div>
@@ -1100,7 +1100,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           value={withdrawalForm.mpesaNumber}
                           onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaNumber: e.target.value }))}
                           placeholder="0712345678"
-                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
                       </div>
@@ -1116,7 +1116,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         value={withdrawalForm.mpesaName}
                         onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaName: e.target.value }))}
                         placeholder="Enter name as registered on M-Pesa"
-                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-900 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-900 border-white/10 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                         required
                       />
                     </div>
@@ -1164,7 +1164,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <div>
                   <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Withdrawal Requests</h3>
-                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Track your withdrawal request history</p>
+                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Track your withdrawal request history</p>
                 </div>
               </div>
 
@@ -1196,7 +1196,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             <p className="text-xs text-gray-300">
                               M-Pesa: {request.mpesaNumber} ({request.mpesaName})
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-gray-300">
                               Requested on {new Date(request.createdAt).toLocaleDateString()}
                             </p>
                             {request.status === 'failed' && request.failureReason && (
@@ -1230,7 +1230,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Store Overview</h2>
-              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Manage your products and track your store performance</p>
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Manage your products and track your store performance</p>
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3 items-start">
@@ -1239,7 +1239,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                   <div>
                     <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
-                    <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
+                    <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
                   </div>
 
                   <Button
@@ -1283,7 +1283,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             <Badge variant="outline" className="text-xs bg-white/5 text-gray-200 border-white/10">
                               {product.aesthetic}
                             </Badge>
-                            <span className="text-xs text-gray-400">
+                            <span className="text-xs text-gray-300">
                               {new Date(product.createdAt).toLocaleDateString()}
                             </span>
                           </div>
@@ -1298,7 +1298,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
                     </div>
                     <h3 className="text-2xl font-black text-white mb-3">No products found</h3>
-                    <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
+                    <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
                     <Button
                       onClick={() => navigate('/seller/add-product')}
                       className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
@@ -1338,7 +1338,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Product Management</h2>
-              <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium">Manage all your products in one place</p>
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">Manage all your products in one place</p>
             </div>
 
             {/* Quick Actions */}
@@ -1346,7 +1346,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                 <div>
                   <h3 className="text-base sm:text-lg font-black text-white">Quick Actions</h3>
-                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Common tasks for your products</p>
+                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Common tasks for your products</p>
                 </div>
 
                 <Button
@@ -1368,7 +1368,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <Package className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="font-semibold text-sm truncate">View All Products</p>
-                    <p className="text-xs text-gray-400 truncate">See all your products</p>
+                    <p className="text-xs text-gray-300 truncate">See all your products</p>
                   </div>
                 </Button>
 
@@ -1380,7 +1380,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <Plus className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
                   <div className="min-w-0">
                     <p className="font-semibold text-sm truncate">Add New Product</p>
-                    <p className="text-xs text-gray-400 truncate">Create a new listing</p>
+                    <p className="text-xs text-gray-300 truncate">Create a new listing</p>
                   </div>
                 </Button>
 
@@ -1392,7 +1392,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <div className="flex justify-between items-center mb-4">
                 <div>
                   <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
-                  <p className="text-gray-400 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
+                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
                 </div>
               </div>
 
@@ -1428,7 +1428,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             {product.aesthetic}
                           </Badge>
 
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-gray-300">
                             {new Date(product.createdAt).toLocaleDateString()}
                           </span>
                         </div>
@@ -1442,7 +1442,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     <Package className="h-12 w-12 text-yellow-300" />
                   </div>
                   <h3 className="text-2xl font-black text-white mb-3">No products found</h3>
-                  <p className="text-gray-400 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
+                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
                   <Button
                     onClick={() => navigate('/seller/add-product')}
                     className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
@@ -1460,7 +1460,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-black text-white mb-2 sm:mb-3">Store Settings</h2>
-              <p className="text-gray-400 text-xs sm:text-sm lg:text-base xl:text-lg font-medium max-w-3xl mx-auto px-4 sm:px-0">
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base xl:text-lg font-medium max-w-3xl mx-auto px-4 sm:px-0">
                 Manage your store configuration and preferences. Update your store details, location, and appearance.
               </p>
             </div>
@@ -1481,7 +1481,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
                   <div className="mb-2 sm:mb-0 flex-1 min-w-0">
                     <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-black text-white truncate">Store Information</h3>
-                    <p className="text-gray-400 text-xs sm:text-sm lg:text-base font-medium mt-1">
+                    <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium mt-1">
                       Your store details and contact information
                     </p>
                   </div>
@@ -1546,7 +1546,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         value={formData.whatsappNumber}
                         onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
                         placeholder="e.g. 0712345678"
-                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                       />
                     ) : (
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
@@ -1562,7 +1562,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         value={formData.instagramLink}
                         onChange={(e) => setFormData(prev => ({ ...prev, instagramLink: e.target.value }))}
                         placeholder="https://instagram.com/yourshop"
-                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                       />
                     ) : (
                       <div className="flex items-center gap-2">
@@ -1581,7 +1581,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             View
                           </a>
                         ) : (
-                          <p className="text-sm sm:text-base font-semibold text-gray-400 italic">Not set</p>
+                          <p className="text-sm sm:text-base font-semibold text-gray-300 italic">Not set</p>
                         )}
                       </div>
                     )}
@@ -1666,14 +1666,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             <p className="text-xs sm:text-sm lg:text-base font-semibold text-white">
                               {sellerProfile.physicalAddress}
                             </p>
-                            <p className="text-xs text-gray-400">
+                            <p className="text-xs text-gray-300">
                               {sellerProfile.latitude && sellerProfile.longitude ?
                                 `Coordinates: ${sellerProfile.latitude.toFixed(6)}, ${sellerProfile.longitude.toFixed(6)}` :
                                 'No map location pinned'}
                             </p>
                           </>
                         ) : (
-                          <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 italic">
+                          <p className="text-xs sm:text-sm lg:text-base font-semibold text-gray-300 italic">
                             No physical address set
                           </p>
                         )}

@@ -206,7 +206,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       <div className="flex justify-center items-center h-64">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-yellow-200 border-t-yellow-500"></div>
-          <p className="text-gray-400 font-medium">Loading products...</p>
+          <p className="text-gray-300 font-medium">Loading products...</p>
         </div>
       </div>
     );
@@ -241,7 +241,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
           <h3 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
             Browse Our Collections
           </h3>
-          <p className="text-gray-400 text-base sm:text-lg font-normal">
+          <p className="text-gray-300 text-base sm:text-lg font-normal">
             Please select an aesthetic from above to view the available products.
           </p>
         </div>
@@ -262,7 +262,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
           <h3 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
             No Products Found
           </h3>
-          <p className="text-gray-400 text-base sm:text-lg font-normal">
+          <p className="text-gray-300 text-base sm:text-lg font-normal">
             {searchQuery
               ? `No products found matching "${searchQuery}"${selectedAesthetic ? ` in ${selectedAesthetic}` : ''}.`
               : `We couldn't find any products matching the selected filters. Please try a different search or aesthetic.`

@@ -387,7 +387,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
         <div className="text-center mb-12">
           <h1 className="text-4xl font-black text-white mb-4">Add New Product</h1>
-          <p className="text-gray-400 text-lg font-medium">Create a new product listing for your store</p>
+          <p className="text-gray-300 text-lg font-medium">Create a new product listing for your store</p>
         </div>
 
         <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl">
@@ -400,7 +400,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
               </div>
               Product Information
             </CardTitle>
-            <CardDescription className="text-gray-400 font-medium">
+            <CardDescription className="text-gray-300 font-medium">
               Fill in the details below to create your product listing
             </CardDescription>
           </CardHeader>
@@ -417,7 +417,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       onChange={handleChange}
                       placeholder="Enter product name"
                       required
-                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                     />
                   </div>
 
@@ -438,7 +438,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       }}
                       placeholder="Enter price"
                       required
-                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                     />
                   </div>
 
@@ -508,7 +508,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                         accept=".pdf,.zip,.rar,.epub,.mobi"
                         className="h-12 bg-gray-800 border-gray-700 text-white file:text-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl pt-2.5"
                       />
-                      <p className="text-xs text-gray-400">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
+                      <p className="text-xs text-gray-300">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
                       {formData.digital_file && (
                         <p className="text-sm text-green-200 font-medium">Selected: {formData.digital_file.name}</p>
                       )}
@@ -638,7 +638,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       placeholder="Enter product description"
                       rows={4}
                       required
-                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
                     />
                   </div>
 
@@ -716,9 +716,9 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                                     onChange={handleImageChange}
                                   />
                                 </label>
-                                <p className="pl-1 text-gray-400">or drag and drop</p>
+                                <p className="pl-1 text-gray-300">or drag and drop</p>
                               </div>
-                              <p className="text-xs text-gray-400">PNG, JPG, GIF up to 10MB</p>
+                              <p className="text-xs text-gray-300">PNG, JPG, GIF up to 10MB</p>
                             </div>
                           </>
                         )}

@@ -62,7 +62,7 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
         <div className="min-w-0 flex-1">
           <p className="text-[10px] sm:text-xs font-semibold text-gray-300 uppercase tracking-wide truncate">{title}</p>
           <p className="text-lg sm:text-xl md:text-2xl font-black text-white leading-tight">{value}</p>
-          <p className="text-[10px] sm:text-xs text-gray-400 font-medium truncate">{subtitle}</p>
+          <p className="text-[10px] sm:text-xs text-gray-300 font-medium truncate">{subtitle}</p>
         </div>
         <div className="shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-500 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 grid place-items-center shadow">
           <Icon className="text-white h-4 w-4 sm:h-5 sm:w-5" />
@@ -262,7 +262,7 @@ function BuyerDashboard() {
                 </div>
                 <div className="min-w-0 max-w-[70vw] sm:max-w-none">
                   <h1 className="text-base sm:text-lg md:text-xl font-semibold text-white tracking-tight truncate">Buyer Dashboard</h1>
-                  <p className="text-xs sm:text-sm text-gray-400 font-normal truncate">{user?.fullName || 'Buyer'}</p>
+                  <p className="text-xs sm:text-sm text-gray-300 font-normal truncate">{user?.fullName || 'Buyer'}</p>
                 </div>
               </div>
 
@@ -434,7 +434,7 @@ function BuyerDashboard() {
                       </button>
                     ) : (
                       <svg
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500"
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-300"
                         xmlns="http://www.w3.org/2000/svg"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -530,7 +530,7 @@ function BuyerDashboard() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <CardTitle className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">Profile Information</CardTitle>
-                      <p className="text-gray-400 font-normal text-sm sm:text-base">Your account details</p>
+                      <p className="text-gray-300 font-normal text-sm sm:text-base">Your account details</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       {!isEditingProfile ? (
@@ -571,36 +571,36 @@ function BuyerDashboard() {
                 <CardContent className="space-y-4 sm:space-y-6">
                   <div className="grid grid-cols-1 gap-3 sm:gap-4">
                     <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">Full Name</label>
+                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Full Name</label>
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.fullName || 'Not available'}</p>
                     </div>
                     <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">Email</label>
+                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Email</label>
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.email || 'Not available'}</p>
                     </div>
                     <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">Mobile Payment (M-Pesa)</label>
+                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Mobile Payment (M-Pesa)</label>
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.mobilePayment || 'Not available'}</p>
                     </div>
                     <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">WhatsApp Number</label>
+                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">WhatsApp Number</label>
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.whatsappNumber || 'Not available'}</p>
                     </div>
                     {!isEditingProfile ? (
                       <>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">City</label>
+                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">City</label>
                           <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.city || 'Not available'}</p>
                         </div>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">Location</label>
+                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Location</label>
                           <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.location || 'Not available'}</p>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">Mobile Payment (M-Pesa)</label>
+                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Mobile Payment (M-Pesa)</label>
                           <div className="mt-2 text-yellow-400 font-medium text-xs flex items-center mb-1">
                             <Info className="h-3 w-3 mr-1" />
                             Used for STK Push and refunds
@@ -613,7 +613,7 @@ function BuyerDashboard() {
                           />
                         </div>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">WhatsApp Number</label>
+                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">WhatsApp Number</label>
                           <div className="mt-2 text-yellow-400 font-medium text-xs flex items-center mb-1">
                             <Info className="h-3 w-3 mr-1" />
                             Used for order notifications
@@ -626,7 +626,7 @@ function BuyerDashboard() {
                           />
                         </div>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">City</label>
+                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">City</label>
                           <div className="mt-2">
                             <Select
                               value={city}
@@ -647,7 +647,7 @@ function BuyerDashboard() {
                           </div>
                         </div>
                         <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">Location</label>
+                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Location</label>
                           <div className="mt-2">
                             <Select
                               value={locationArea}
@@ -668,7 +668,7 @@ function BuyerDashboard() {
                       </>
                     )}
                     <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-400 uppercase tracking-wide">Member Since</label>
+                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Member Since</label>
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1">
                         {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Not available'}
                       </p>
@@ -688,7 +688,7 @@ function BuyerDashboard() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <CardTitle className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">Account Actions</CardTitle>
-                      <p className="text-gray-400 font-normal text-sm sm:text-base">Manage your account</p>
+                      <p className="text-gray-300 font-normal text-sm sm:text-base">Manage your account</p>
                     </div>
                   </div>
                 </CardHeader>

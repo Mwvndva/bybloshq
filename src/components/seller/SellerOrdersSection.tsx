@@ -251,7 +251,7 @@ export default function SellerOrdersSection() {
                     <Package className="h-8 w-8 text-yellow-300" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
-                <p className="text-gray-400 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
+                <p className="text-gray-300 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
             </div>
         );
     }
@@ -288,7 +288,7 @@ export default function SellerOrdersSection() {
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                             <div>
                                                 <h3 className="font-semibold text-base sm:text-lg text-white">Order #{order.orderNumber}</h3>
-                                                <p className="text-xs sm:text-sm text-gray-400">{formatDate(order.createdAt)}</p>
+                                                <p className="text-xs sm:text-sm text-gray-300">{formatDate(order.createdAt)}</p>
                                             </div>
                                             {/* Status Badge - positioned for mobile */}
                                             <div className="self-start sm:self-auto">
@@ -336,11 +336,11 @@ export default function SellerOrdersSection() {
                                                     order.items.map((item) => (
                                                         <li key={item.id} className={itemClasses}>
                                                             <span className="font-semibold">{item.name}</span>
-                                                            <span className="text-gray-400 ml-2">× {item.quantity}</span>
+                                                            <span className="text-gray-300 ml-2">× {item.quantity}</span>
                                                         </li>
                                                     ))
                                                 ) : (
-                                                    <li className="text-xs sm:text-sm text-gray-400 bg-white/5 rounded-lg px-3 py-2 border border-white/10">No items in this order</li>
+                                                    <li className="text-xs sm:text-sm text-gray-300 bg-white/5 rounded-lg px-3 py-2 border border-white/10">No items in this order</li>
                                                 )}
                                             </ul>
                                         </div>
@@ -357,7 +357,7 @@ export default function SellerOrdersSection() {
                                                         <p className="text-purple-200 text-xs font-medium mb-1">Date & Time</p>
                                                         <p className="font-semibold text-white">
                                                             {order.metadata.booking_date ? formatDate(order.metadata.booking_date) : 'N/A'}
-                                                            {order.metadata.booking_time && <span className="text-gray-400 font-normal"> at {order.metadata.booking_time}</span>}
+                                                            {order.metadata.booking_time && <span className="text-gray-300 font-normal"> at {order.metadata.booking_time}</span>}
                                                         </p>
                                                     </div>
                                                     <div className="bg-white/5 p-2 rounded border border-white/10">
@@ -378,7 +378,7 @@ export default function SellerOrdersSection() {
                                             <p className="font-bold text-lg sm:text-xl text-white">
                                                 {formatCurrency(order.totalAmount, order.currency)}
                                             </p>
-                                            <p className="text-xs text-gray-400">Total Amount</p>
+                                            <p className="text-xs text-gray-300">Total Amount</p>
                                         </div>
 
                                         {/* Action Buttons */}
@@ -505,7 +505,7 @@ export default function SellerOrdersSection() {
                             </div>
                             Confirm Package Drop-off
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-gray-400 leading-relaxed">
+                        <DialogDescription className="text-sm text-gray-300 leading-relaxed">
                             Have you dropped off the package at the specified location?
                         </DialogDescription>
                     </DialogHeader>
@@ -572,7 +572,7 @@ export default function SellerOrdersSection() {
                             </div>
                             Cancel Order
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-gray-400 leading-relaxed">
+                        <DialogDescription className="text-sm text-gray-300 leading-relaxed">
                             Are you sure you want to cancel this order?
                             <br /><br />
                             The buyer will receive a full refund to their account balance.
