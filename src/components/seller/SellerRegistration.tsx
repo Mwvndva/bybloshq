@@ -65,10 +65,10 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   useEffect(() => {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
-    
+
     document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
     document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    
+
     return () => {
       document.body.style.cssText = originalBodyStyle;
       document.documentElement.style.cssText = originalHtmlStyle;
@@ -288,9 +288,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
 
   return (
-    <div 
-      className="fixed top-0 left-0 right-0 bottom-0 w-full h-full bg-black overflow-y-auto" 
-      style={{ 
+    <div
+      className="fixed top-0 left-0 right-0 bottom-0 w-full h-full bg-black overflow-y-auto"
+      style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
         margin: 0,
         padding: 0,
@@ -324,25 +324,21 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
       </div>
 
       {/* Main Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-6 sm:py-8 md:py-12 px-3 sm:px-4 md:px-6 lg:px-8">
-        <div className="w-[90%] sm:w-[95%] md:w-full md:max-w-md">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-4 sm:py-8 md:py-12 px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md">
           {/* Register Card */}
-          <div 
-            className="rounded-2xl sm:rounded-3xl border shadow-2xl p-4 sm:p-5 md:p-6"
+          <div
+            className="sm:rounded-3xl sm:border sm:shadow-2xl p-0 sm:p-6 bg-transparent sm:bg-[rgba(17,17,17,0.7)] sm:backdrop-blur-md"
             style={{
-              background: 'rgba(17, 17, 17, 0.7)',
-              backdropFilter: 'blur(10px)',
-              WebkitBackdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)'
+              // Inline styles apply primarily to desktop enhancement or are overridden by Tailwind classes
             }}
           >
-            <div className="text-center mb-5 sm:mb-6 md:mb-8">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-                <Store className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="w-12 h-12 mx-auto mb-4 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Store className="h-6 w-6 text-white" />
               </div>
-              <h1 className="mobile-heading mb-1.5 sm:mb-2 font-semibold tracking-tight text-white">Create Account</h1>
-              <p className="mobile-text text-gray-300 font-normal">Join our seller community</p>
+              <h1 className="text-2xl font-bold tracking-tight text-white mb-2">Create Account</h1>
+              <p className="text-gray-400">Join our seller community</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">

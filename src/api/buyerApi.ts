@@ -90,7 +90,6 @@ const transformBuyer = (data: any): Buyer => {
   };
 };
 
-import api from './api';
 import { Order, OrderStatus, OrderItem, PaymentStatus } from '@/types/order';
 
 export const getBuyerProfile = () => buyerApiInstance.get('/buyers/profile');

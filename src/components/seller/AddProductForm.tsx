@@ -390,8 +390,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
           <p className="text-gray-300 text-lg font-medium">Create a new product listing for your store</p>
         </div>
 
-        <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl">
-          <CardHeader className="pb-6">
+        <Card className="sm:bg-[rgba(20,20,20,0.7)] sm:backdrop-blur-[12px] sm:border sm:border-white/10 sm:shadow-xl bg-transparent border-0 shadow-none">
+          <CardHeader className="pb-6 px-0 sm:px-6">
             <CardTitle className="text-2xl font-black text-white flex items-center">
               <div className="w-12 h-12 bg-yellow-500/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-2xl flex items-center justify-center mr-4">
                 <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,10 +404,13 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
               Fill in the details below to create your product listing
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-0 sm:px-6">
             <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Form Fields... */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Columns content unchanged for now, will flow naturally */}
                 <div className="space-y-6">
+                  {/* ... Left Column ... */}
                   <div className="space-y-3">
                     <Label htmlFor="name" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Name</Label>
                     <Input
@@ -728,7 +731,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-4 pt-8 border-t border-white/10">
+              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 pt-8 border-t border-white/10">
                 <Button
                   type="button"
                   variant="outline"
@@ -757,14 +760,14 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                     setImagePreview('');
                   }}
                   disabled={isLoading}
-                  className="h-12 px-8 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-200 rounded-xl font-semibold"
+                  className="w-full sm:w-auto h-12 px-8 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-200 rounded-xl font-semibold sm:mr-4"
                 >
                   Reset
                 </Button>
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="h-12 px-8 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold"
+                  className="w-full sm:w-auto h-12 px-8 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold"
                 >
                   {isLoading ? 'Adding...' : 'Add Product'}
                 </Button>

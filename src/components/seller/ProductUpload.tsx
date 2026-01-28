@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { useNavigate } from 'react-router-dom';
 import { Aesthetic } from '@/types';
-import { aestheticCategories } from '@/components/AestheticCategories';
+import { aestheticCategories } from '../AestheticCategories';
 
 interface ProductUploadProps {
   onSuccess: () => void;

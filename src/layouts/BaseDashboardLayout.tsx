@@ -212,39 +212,9 @@ export function BaseDashboardLayout({
                 </header>
 
                 {/* Main Content */}
-                <main className="flex-1 relative overflow-y-auto focus:outline-none pb-20 lg:pb-0">
+                <main className="flex-1 relative overflow-y-auto focus:outline-none">
                     {children || <Outlet />}
                 </main>
-            </div>
-
-            {/* Mobile Bottom Navigation */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-black/90 backdrop-blur-lg border-t border-white/10 z-50 px-6 py-2 pb-safe-area-inset-bottom">
-                <div className="flex items-center justify-around">
-                    {navigationItems.slice(0, 4).map((item, index) => {
-                        const Icon = item.icon;
-                        const isActive = isActivePath(item.path);
-                        return (
-                            <Link
-                                key={index}
-                                to={item.path}
-                                className={cn(
-                                    "flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-200",
-                                    isActive ? "text-yellow-400" : "text-gray-400 hover:text-white"
-                                )}
-                            >
-                                {Icon && <Icon className={cn("h-6 w-6 mb-1", isActive && "fill-current")} />}
-                                <span className="text-[10px] font-medium">{item.label}</span>
-                            </Link>
-                        )
-                    })}
-                    <button
-                        onClick={() => setSidebarOpen(true)}
-                        className="flex flex-col items-center justify-center p-2 rounded-xl text-gray-400 hover:text-white transition-all duration-200"
-                    >
-                        <Menu className="h-6 w-6 mb-1" />
-                        <span className="text-[10px] font-medium">Menu</span>
-                    </button>
-                </div>
             </div>
         </div>
     );
