@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Label } from '@/components/ui/label';
 
 import { format, parseISO, isAfter, isBefore, isToday, differenceInMinutes, differenceInHours } from 'date-fns';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 import { WithdrawalHistoryModal } from '@/components/organizer/WithdrawalHistoryModal';
 
 type EventStatus = 'draft' | 'published' | 'cancelled' | 'completed' | 'upcoming' | 'past';
@@ -86,7 +86,7 @@ export default function EventsListPage() {
                 limit: limit.toString(),
             });
 
-            const response = await api.get(`/organizers/events?${params}`);
+            const response = await apiClient.get(`/organizers/events?${params}`);
 
             // Handle different possible response structures
             const responseData = response.data as any;
@@ -145,7 +145,7 @@ export default function EventsListPage() {
         }
 
         try {
-            await api.delete(`/organizers/events/${eventId}`);
+            await apiClient.delete(`/organizers/events/${eventId}`);
             toast({
                 title: "Success",
                 description: "Event deleted successfully",
@@ -224,7 +224,7 @@ export default function EventsListPage() {
                 mpesaName: withdrawDetails.registeredName
             };
 
-            const response = await api.post('/organizers/withdrawal-request', payload);
+            const response = await apiClient.post('/organizers/withdrawal-request', payload);
 
             const responseData = response.data as any;
 

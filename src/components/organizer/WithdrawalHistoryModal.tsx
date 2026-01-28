@@ -8,7 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Calendar, DollarSign, ExternalLink } from "lucide-react";
 import { format } from "date-fns";
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 interface Withdrawal {
     id: number;
@@ -52,7 +52,7 @@ export function WithdrawalHistoryModal({
     const fetchHistory = async () => {
         try {
             setIsLoading(true);
-            const response = await api.get<WithdrawalHistoryResponse>(`/organizers/events/${eventId}/withdrawals`);
+            const response = await apiClient.get<WithdrawalHistoryResponse>(`/organizers/events/${eventId}/withdrawals`);
             if (response.data.status === 'success') {
                 setWithdrawals(response.data.data.withdrawals);
             }

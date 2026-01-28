@@ -12,7 +12,7 @@ import { ArrowLeft, User, Mail, Phone, Trash2, Save, Edit, Eye, EyeOff, RefreshC
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 // Form schemas
 const profileFormSchema = z.object({
@@ -54,7 +54,7 @@ export default function SettingsPage() {
   const handleSaveProfile = async (data: ProfileFormValues) => {
     setIsLoading(true);
     try {
-      await api.patch('/organizers/profile', data);
+      await apiClient.patch('/organizers/profile', data);
       toast.success('Profile updated successfully');
       setIsEditing(false);
     } catch (error) {
@@ -68,7 +68,7 @@ export default function SettingsPage() {
   const handleDeleteAccount = async () => {
     if (window.confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
       try {
-        await api.delete('/organizers/account');
+        await apiClient.delete('/organizers/account');
         toast.success('Account deleted successfully');
         navigate('/');
       } catch (error) {

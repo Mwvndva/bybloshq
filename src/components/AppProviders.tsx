@@ -3,12 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GlobalAuthProvider } from "../contexts/GlobalAuthContext";
-import { OrganizerAuthProvider } from "../contexts/OrganizerAuthContext";
-import { SellerAuthProvider } from "../contexts/SellerAuthContext";
-import { AdminAuthProvider } from "../contexts/AdminAuthContext";
-import { BuyerAuthProvider } from "../contexts/BuyerAuthContext";
 import { WishlistProvider } from "../contexts/WishlistContext";
-
 import { BybxProvider } from "../contexts/BybxContext";
 
 const queryClient = new QueryClient({
@@ -25,19 +20,11 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
         <BybxProvider>
             <TooltipProvider>
                 <Toaster />
-                {/* New unified auth provider - wraps all old providers for gradual migration */}
+                {/* Unified auth provider - provides all role-specific hooks */}
                 <GlobalAuthProvider>
-                    <BuyerAuthProvider>
-                        <WishlistProvider>
-                            <OrganizerAuthProvider>
-                                <SellerAuthProvider>
-                                    <AdminAuthProvider>
-                                        {children}
-                                    </AdminAuthProvider>
-                                </SellerAuthProvider>
-                            </OrganizerAuthProvider>
-                        </WishlistProvider>
-                    </BuyerAuthProvider>
+                    <WishlistProvider>
+                        {children}
+                    </WishlistProvider>
                 </GlobalAuthProvider>
             </TooltipProvider>
         </BybxProvider>

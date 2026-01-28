@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 export default function ResetPasswordPage() {
     const [searchParams] = useSearchParams();
@@ -48,7 +48,7 @@ export default function ResetPasswordPage() {
         setIsLoading(true);
 
         try {
-            await api.post('/organizers/reset-password', {
+            await apiClient.post('/organizers/reset-password', {
                 token,
                 password
             });

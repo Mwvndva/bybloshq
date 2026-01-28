@@ -5,7 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EventForm } from '@/components/events/EventForm';
 import { useToast } from '@/components/ui/use-toast';
-import api from '@/lib/api';
+import apiClient from '@/lib/apiClient';
 
 export default function CreateEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +61,7 @@ export default function CreateEventPage() {
       };
 
       // Make the API request
-      const response = await api.post<ApiResponse<{ event: any }>>('/organizers/events', eventData);
+      const response = await apiClient.post<ApiResponse<{ event: any }>>('/organizers/events', eventData);
 
       if (response.data.status === 'success') {
         toast({
