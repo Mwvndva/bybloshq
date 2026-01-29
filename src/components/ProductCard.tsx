@@ -166,7 +166,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const handleBookingConfirm = async (data: { date: Date; time: string; location: string; locationType?: string }) => {
+  const handleBookingConfirm = async (data: { date: Date; time: string; location: string; locationType?: string; serviceRequirements?: string }) => {
     setBookingData(data);
     setIsBookingModalOpen(false);
 
@@ -312,6 +312,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           booking_time: activeBooking.time,
           service_location: activeBooking.location,
           location_type: activeBooking.locationType,
+          service_requirements: activeBooking.serviceRequirements,
           product_type: 'service'
         } : undefined
       };

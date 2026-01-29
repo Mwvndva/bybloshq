@@ -257,15 +257,20 @@ Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.
         }
 
         const header = isDigital ? '🎉 *NEW DIGITAL ORDER!*' : '🎉 *NEW ORDER RECEIVED!*';
+        const serviceReqs = order.service_requirements ? `\n\n📝 *REQUIREMENTS:*\n${order.service_requirements}` : '';
 
         const msg = `
 ${header}
+
+👤 *BUYER:* ${buyer.name}
+📞 *PHONE:* ${buyer.phone || 'N/A'}
 
 📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${total.toLocaleString()}
 
 📋 *Items:*
 ${itemsList}
+${serviceReqs}
 
 ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
         `.trim();

@@ -468,30 +468,22 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                         <Button
                           type="button"
                           variant={formData.product_type === 'service' ? "default" : "outline"}
-                          disabled={!sellerProfile?.hasPhysicalShop}
                           onClick={() => {
-                            if (sellerProfile?.hasPhysicalShop) {
-                              setFormData(prev => ({
-                                ...prev,
-                                product_type: 'service',
-                                is_digital: false,
-                                service_locations: sellerProfile.physicalAddress || '',
-                                service_options: {
-                                  ...prev.service_options,
-                                  location_type: 'buyer_visits_seller' // Force shop location
-                                }
-                              }));
-                            }
+                            setFormData(prev => ({
+                              ...prev,
+                              product_type: 'service',
+                              is_digital: false,
+                              service_locations: sellerProfile?.physicalAddress || '',
+                              service_options: {
+                                ...prev.service_options,
+                                location_type: sellerProfile?.hasPhysicalShop ? 'buyer_visits_seller' : 'seller_visits_buyer'
+                              }
+                            }));
                           }}
-                          className={`w-full h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white'} ${!sellerProfile?.hasPhysicalShop ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          className={`w-full h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:text-white'}`}
                         >
                           Service
                         </Button>
-                        {!sellerProfile?.hasPhysicalShop && (
-                          <div className="absolute top-full left-0 right-0 mt-2 p-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 text-center">
-                            Shop address required for services
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -609,7 +601,6 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                       </div>
 
                       {/* Location Type */}
-                      {/* Location Type - Hidden/Fixed for Services now */}
                       <div className="bg-yellow-500/10 p-4 rounded-xl border border-yellow-400/20">
                         <div className="flex items-start gap-3">
                           <div className="mt-1 bg-yellow-500/10 border border-yellow-400/20 p-2 rounded-lg">
@@ -620,11 +611,19 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                           </div>
                           <div>
                             <h4 className="font-semibold text-yellow-100 text-sm">Service Location</h4>
-                            <p className="text-yellow-200/80 text-sm mt-1">
-                              All services will be performed at your shop address:
-                              <br />
-                              <span className="font-medium text-white">{sellerProfile?.physicalAddress || 'Loading address...'}</span>
-                            </p>
+                            {sellerProfile?.hasPhysicalShop ? (
+                              <p className="text-yellow-200/80 text-sm mt-1">
+                                All services will be performed at your shop address:
+                                <br />
+                                <span className="font-medium text-white">{sellerProfile?.physicalAddress}</span>
+                              </p>
+                            ) : (
+                              <p className="text-yellow-200/80 text-sm mt-1">
+                                You do not have a shop address.
+                                <br />
+                                <span className="font-medium text-white">Defaulting to Home Service (You visit buyer).</span>
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>

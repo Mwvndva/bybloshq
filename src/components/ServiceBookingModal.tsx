@@ -15,7 +15,7 @@ interface ServiceBookingModalProps {
     product: Product;
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (bookingData: { date: Date; time: string; location: string; locationType?: string }) => void;
+    onConfirm: (bookingData: { date: Date; time: string; location: string; locationType?: string; serviceRequirements?: string }) => void;
 }
 
 export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: ServiceBookingModalProps) {
@@ -26,6 +26,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const [selectedLocationType, setSelectedLocationType] = useState<'seller' | 'buyer'>('seller');
     const [customLocation, setCustomLocation] = useState<string>('');
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
+    const [serviceRequirements, setServiceRequirements] = useState('');
 
     const serviceOptions = product.service_options || (product as any).serviceOptions || {};
 
@@ -34,12 +35,16 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     // Treat as single location, don't split by comma as users enter full addresses with commas
     const locations = rawLocations ? [rawLocations] : [];
 
+    const wordCount = serviceRequirements.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const maxWords = 50;
+
     // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
             setDate(undefined);
             setTime('');
             setCustomLocation('');
+            setServiceRequirements('');
 
             // Auto-select first location if available
             if (locations.length > 0) {
@@ -120,7 +125,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 date,
                 time,
                 location: finalLocation,
-                locationType: selectedLocationType === 'buyer' ? 'seller_visits_buyer' : 'buyer_visits_seller'
+                locationType: selectedLocationType === 'buyer' ? 'seller_visits_buyer' : 'buyer_visits_seller',
+                serviceRequirements: serviceRequirements.trim()
             });
         }
     };
@@ -138,7 +144,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
         return location.length > 0 || locations.length === 0;
     };
 
-    const isValid = date && time && isLocationValid();
+    const isValid = date && time && isLocationValid() && wordCount <= maxWords;
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -257,6 +263,19 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                         />
                                     </div>
                                 )}
+                            </div>
+
+                            {/* Service Requirements */}
+                            <div className="space-y-1.5">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">
+                                    Service Requirements <span className={`ml-1 ${wordCount > maxWords ? 'text-red-400' : 'text-[#444]'}`}>({wordCount}/{maxWords})</span>
+                                </Label>
+                                <textarea
+                                    placeholder="Describe the service you need..."
+                                    value={serviceRequirements}
+                                    onChange={(e) => setServiceRequirements(e.target.value)}
+                                    className="flex min-h-[80px] w-full rounded-xl bg-white/5 border-0 px-3 py-2 text-sm text-white placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 focus:outline-none resize-none font-medium"
+                                />
                             </div>
                         </div>
                     </div>
