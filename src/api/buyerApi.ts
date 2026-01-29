@@ -77,14 +77,16 @@ const transformBuyer = (data: any): Buyer => {
   const buyer = data.buyer || data;
   return {
     id: buyer.id,
-    fullName: buyer.fullName || buyer.full_name || '',
+    fullName: buyer.name || buyer.fullName || buyer.full_name || '',
     email: buyer.email || '',
-    phone: buyer.phone || buyer.mobile_payment || buyer.whatsapp_number || '',
-    mobilePayment: buyer.mobile_payment || buyer.mobilePayment || buyer.phone || '',
-    whatsappNumber: buyer.whatsapp_number || buyer.whatsappNumber || buyer.phone || '',
+    // Map strict backend fields to frontend interface
+    phone: buyer.payment_phone || buyer.whatsapp_number || buyer.phone || '',
+    mobilePayment: buyer.payment_phone || buyer.mobile_payment || buyer.mobilePayment || '',
+    whatsappNumber: buyer.whatsapp_number || buyer.whatsappNumber || '',
     city: buyer.city || '',
-    location: buyer.location || '',
+    location: buyer.physical_address || buyer.location || '',
     refunds: buyer.refunds != null ? parseFloat(buyer.refunds) : 0,
+    // Handle missing createdAt (security restrictions)
     createdAt: buyer.createdAt || buyer.created_at || new Date().toISOString(),
     updatedAt: buyer.updatedAt || buyer.updated_at
   };

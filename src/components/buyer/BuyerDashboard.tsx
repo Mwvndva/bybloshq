@@ -32,40 +32,11 @@ import AestheticCategories from '@/components/AestheticCategories';
 import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
-import RefundCard from './RefundCard';
+
 import { useBybx } from '@/contexts/BybxContext';
 import BybxImporter from '@/components/BybxImporter';
 
-// Local helper for localized integers
-const formatNumber = (value: number | null | undefined) => {
-  const num = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-  return num.toLocaleString();
-};
 
-const StatsCard = ({ icon: Icon, title, value, subtitle }: {
-  icon: any;
-  title: string;
-  value: string | number;
-  subtitle: string;
-}) => (
-  <Card
-    className="relative overflow-hidden rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg"
-  >
-    <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/10 via-transparent to-yellow-600/10" />
-    <CardContent className="relative p-3 sm:p-4 md:p-5">
-      <div className="flex items-center justify-between gap-2 sm:gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-[10px] sm:text-xs font-semibold text-gray-300 uppercase tracking-wide truncate">{title}</p>
-          <p className="text-lg sm:text-xl md:text-2xl font-black text-white leading-tight">{value}</p>
-          <p className="text-[10px] sm:text-xs text-gray-300 font-medium truncate">{subtitle}</p>
-        </div>
-        <div className="shrink-0 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-500 w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 grid place-items-center shadow">
-          <Icon className="text-white h-4 w-4 sm:h-5 sm:w-5" />
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 // Main dashboard component
 function BuyerDashboard() {
@@ -261,12 +232,7 @@ function BuyerDashboard() {
   return (
     <>
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-        {/* Stats Overview - Mobile Responsive */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-10">
-          {stats.map((stat, index) => (
-            <StatsCard key={index} {...stat} />
-          ))}
-        </div>
+
 
         {/* Navigation Tabs - Mobile Responsive */}
         <div
@@ -648,25 +614,13 @@ function BuyerDashboard() {
                         </div>
                       </>
                     )}
-                    <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Member Since</label>
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1">
-                        {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'Not available'}
-                      </p>
-                    </div>
+
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            <div className="space-y-6 sm:space-y-8">
 
-
-              {/* Refund Card */}
-              <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6" style={glassStyle}>
-                <RefundCard refundAmount={refundAmount} />
-              </div>
-            </div>
           </div>
         )}
       </div>

@@ -170,25 +170,8 @@ export const getProfile = async (req, res, next) => {
       return next(new AppError('No buyer found with that ID', 404));
     }
 
-    // SECURITY: Strict DTO Generation
-    // We explicitly define fields to ensure no internal implementation details leak
-    const userData = {
-      id: buyer.id,
-      name: buyer.fullName || buyer.full_name,
-      email: buyer.email,
-      whatsapp_number: buyer.whatsapp_number || buyer.whatsappNumber,
-      payment_phone: buyer.mobile_payment || buyer.mobilePayment,
-      city: buyer.city,
-      location: buyer.location,
-      physical_address: buyer.location, // Alias for API compliance
-      role: 'buyer',
-
-      // Frontend Compatibility Keys (camelCase)
-      fullName: buyer.fullName || buyer.full_name,
-      firstName: (buyer.fullName || buyer.full_name || '').split(' ')[0],
-      whatsappNumber: buyer.whatsapp_number || buyer.whatsappNumber,
-      mobilePayment: buyer.mobile_payment || buyer.mobilePayment
-    };
+    // Use centralized Strict DTO from sanitize.js
+    const userData = sanitizeBuyer(buyer);
 
     res.status(200).json({
       status: 'success',
