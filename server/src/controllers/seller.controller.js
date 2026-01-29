@@ -184,10 +184,34 @@ export const updateProfile = async (req, res) => {
       });
     }
 
+    // Check availability if shop name is changing
+    if (req.body.shopName) {
+      const currentSeller = await findSellerById(req.user.id);
+      if (!currentSeller) {
+        return res.status(404).json({ status: 'error', message: 'Seller not found' });
+      }
+
+      // Only check if the name is actually different
+      if (req.body.shopName !== currentSeller.shopName) {
+        // Validate length
+        if (req.body.shopName.length < 3) {
+          return res.status(400).json({ status: 'error', message: 'Shop name must be at least 3 characters' });
+        }
+
+        const available = await isShopNameAvailable(req.body.shopName);
+        if (!available) {
+          return res.status(400).json({
+            status: 'error',
+            message: 'This shop name is already taken'
+          });
+        }
+      }
+    }
+
     const seller = await updateSeller(req.user.id, req.body);
 
     if (!seller) {
-      console.error('Failed to update seller:', req.seller.id);
+      console.error('Failed to update seller:', req.seller?.id);
       return res.status(500).json({
         status: 'error',
         message: 'Failed to update profile: no seller returned'
