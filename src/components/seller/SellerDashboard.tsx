@@ -696,20 +696,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   if (isAuthLoading || isLoading) {
     return (
       <div className="min-h-screen bg-black">
-        <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
-          <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-            <div className="flex items-center justify-between space-y-2">
-              <h2 className="text-3xl font-bold tracking-tight text-white">
-                {activeTab === 'dashboard' ? 'Dashboard' :
-                  activeTab === 'products' ? 'Products' :
-                    'Seller Dashboard'}
-              </h2>
-              <Skeleton className="h-10 w-24" />
-            </div>
-          </div>
-        </div>
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
           <div className="flex justify-center mb-8">
             <Skeleton className="h-32 w-96" />
           </div>
@@ -823,9 +811,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-black">
+    <>
       {/* Header */}
-      <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
+      <div className="hidden">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="py-2 md:py-0">
             {/* Mobile: 2-row layout to prevent overlap */}
@@ -1697,6 +1685,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         )}
       </div>
 
-    </div >
+    </ >
   );
 };

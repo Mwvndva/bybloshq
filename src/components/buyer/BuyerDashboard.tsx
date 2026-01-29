@@ -241,45 +241,7 @@ function BuyerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-black">
-      {/* Header - Mobile Responsive */}
-      <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
-        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 h-auto sm:h-20 py-3 sm:py-0">
-            <Button
-              variant="ghost"
-              onClick={handleBackToHome}
-              className="text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl px-3 py-2 font-normal w-fit self-start"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Back to Home</span>
-              <span className="sm:hidden">Back</span>
-            </Button>
-
-            <div className="flex items-center gap-2 sm:gap-3 justify-between sm:justify-end self-start sm:self-auto w-full sm:w-auto flex-wrap">
-              <div className="flex items-center gap-3 min-w-0 max-w-full sm:max-w-none">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg shrink-0">
-                  <User className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-                </div>
-                <div className="min-w-0 max-w-[70vw] sm:max-w-none">
-                  <h1 className="text-base sm:text-lg md:text-xl font-semibold text-white tracking-tight truncate">Buyer Dashboard</h1>
-                  <p className="text-xs sm:text-sm text-gray-300 font-normal truncate">{user?.fullName || 'Buyer'}</p>
-                </div>
-              </div>
-
-              {(!user?.city || !user?.location) && (
-                <Badge className="bg-red-500/20 text-red-200 border border-red-500/30">
-                  Add location
-                </Badge>
-              )}
-              <div className="ml-0 sm:ml-2 shrink-0">
-                <BybxImporter onFileLoaded={onFileLoaded} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <>
       <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         {/* Stats Overview - Mobile Responsive */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-10">
@@ -712,7 +674,7 @@ function BuyerDashboard() {
           </div>
         )}
       </div>
-    </div >
+    </ >
   );
 }
 
