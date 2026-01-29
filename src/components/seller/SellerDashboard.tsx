@@ -35,7 +35,7 @@ import {
   Loader2,
   Info
 } from 'lucide-react';
-import { sellerApi } from '@/api/sellerApi';
+import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
@@ -182,6 +182,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState<{
+    shopName: string;
     city: string;
     location: string;
     physicalAddress: string;
@@ -190,6 +191,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     instagramLink: string;
     whatsappNumber: string;
   }>({
+    shopName: '',
     city: '',
     location: '',
     physicalAddress: '',
@@ -198,6 +200,41 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     instagramLink: '',
     whatsappNumber: ''
   });
+
+  const [shopNameAvailable, setShopNameAvailable] = useState<boolean | null>(null);
+  const [isCheckingShopName, setIsCheckingShopName] = useState(false);
+
+  // Check shop name availability
+  useEffect(() => {
+    const checkShopName = async () => {
+      const trimmedShopName = formData.shopName.trim();
+
+      // Don't check if empty or same as current
+      if (!trimmedShopName || trimmedShopName === sellerProfile?.shopName) {
+        setShopNameAvailable(null);
+        return;
+      }
+
+      if (trimmedShopName.length < 3) {
+        setShopNameAvailable(null);
+        return;
+      }
+
+      setIsCheckingShopName(true);
+      try {
+        const result = await checkShopNameAvailability(trimmedShopName);
+        setShopNameAvailable(result.available);
+      } catch (error) {
+        console.error('Error checking shop name:', error);
+        setShopNameAvailable(false);
+      } finally {
+        setIsCheckingShopName(false);
+      }
+    };
+
+    const timer = setTimeout(checkShopName, 500);
+    return () => clearTimeout(timer);
+  }, [formData.shopName, sellerProfile?.shopName]);
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
@@ -366,6 +403,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       // When entering edit mode, populate form with current values
       if (!prev) {
         setFormData({
+          shopName: sellerProfile?.shopName || '',
           city: sellerProfile?.city || '',
           location: sellerProfile?.location || '',
           physicalAddress: sellerProfile?.physicalAddress || '',
@@ -374,16 +412,27 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           instagramLink: sellerProfile?.instagramLink || '',
           whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || ''
         });
+        setShopNameAvailable(null);
       }
       return !prev;
     });
   }, [sellerProfile]);
 
   const handleSaveProfile = useCallback(async () => {
-    if (!formData.city || !formData.location) {
+    if (!formData.city || !formData.location || !formData.shopName) {
       toast({
         title: 'Error',
-        description: 'Please fill in all fields',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if shop name is valid (only if changed)
+    if (formData.shopName !== sellerProfile?.shopName && shopNameAvailable === false) {
+      toast({
+        title: 'Error',
+        description: 'Shop name is not available. Please choose another.',
         variant: 'destructive',
       });
       return;
@@ -393,6 +442,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
     try {
       const payload: any = {
+        shopName: formData.shopName,
         city: formData.city,
         location: formData.location,
         physicalAddress: formData.physicalAddress,
@@ -414,17 +464,17 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         title: 'Success',
         description: 'Profile updated successfully',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating profile:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update profile. Please try again.',
+        description: error.message || 'Failed to update profile. Please try again.',
         variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
     }
-  }, [formData]); // toast is stable, no need to track it
+  }, [formData, shopNameAvailable, sellerProfile?.shopName, toast]);
 
   // fetchProfile removed - profile data now comes from useSellerAuth context
 
@@ -1219,6 +1269,34 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Store Overview</h2>
               <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Manage your products and track your store performance</p>
+              {sellerProfile?.shopName && (
+                <div className="mt-4 flex justify-center">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-xl"
+                    onClick={async () => {
+                      const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName!)}`;
+                      try {
+                        await navigator.clipboard.writeText(shopUrl);
+                        toast({
+                          title: 'Link copied!',
+                          description: 'Your shop link has been copied to clipboard.',
+                        });
+                      } catch (err) {
+                        toast({
+                          title: 'Error',
+                          description: 'Failed to copy link. Please try again.',
+                          variant: 'destructive',
+                        });
+                      }
+                    }}
+                  >
+                    <LinkIcon className="h-4 w-4" />
+                    Copy Shop Link
+                  </Button>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-4 lg:grid-cols-3 items-start">
@@ -1514,6 +1592,43 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
                 {/* Profile Information */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Shop Name</p>
+                    {isEditing ? (
+                      <div className="space-y-1">
+                        <div className="relative">
+                          <Input
+                            name="shopName"
+                            value={formData.shopName}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\s/g, '');
+                              setFormData(prev => ({ ...prev, shopName: val }));
+                            }}
+                            placeholder="Shop Name"
+                            className={`h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 pr-10 ${formData.shopName !== sellerProfile?.shopName && shopNameAvailable === false ? 'border-red-500 focus:border-red-500' :
+                                formData.shopName !== sellerProfile?.shopName && shopNameAvailable === true ? 'border-green-500 focus:border-green-500' : ''
+                              }`}
+                          />
+                          {isCheckingShopName && (
+                            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
+                          )}
+                          {!isCheckingShopName && formData.shopName && formData.shopName !== sellerProfile?.shopName && shopNameAvailable !== null && (
+                            <div className={`absolute right-3 top-1/2 -translate-y-1/2 h-2.5 w-2.5 rounded-full ${shopNameAvailable ? 'bg-green-500' : 'bg-red-500'}`} />
+                          )}
+                        </div>
+                        {formData.shopName !== sellerProfile?.shopName && shopNameAvailable !== null && !isCheckingShopName && (
+                          <p className={`text-[10px] ${shopNameAvailable ? 'text-green-400' : 'text-red-400'}`}>
+                            {shopNameAvailable ? 'Name available' : 'Name already taken'}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-gray-400 truncate">byblos.com/shop/{formData.shopName}</p>
+                      </div>
+                    ) : (
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.shopName || 'Not set'}>
+                        {sellerProfile?.shopName || 'Not set'}
+                      </p>
+                    )}
+                  </div>
                   <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
                     <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Full Name</p>
                     <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.fullName || 'Not set'}>
