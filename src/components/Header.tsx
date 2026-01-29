@@ -1,12 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
-import { Instagram, Calendar, ShoppingBag, Shield } from 'lucide-react';
+import { Instagram, Calendar, ShoppingBag, Shield, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBybx } from '@/contexts/BybxContext';
+import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import BybxImporter from './BybxImporter';
 
 const Header = () => {
   const { onFileLoaded } = useBybx();
+  const { isAuthenticated: isSellerAuthenticated } = useSellerAuth();
   const location = useLocation();
 
   return (
@@ -44,15 +46,19 @@ const Header = () => {
               </Button>
             </Link>
 
-            {/* Sell */}
-            <Link to="/seller">
+            {/* Sell / Dashboard */}
+            <Link to={isSellerAuthenticated ? "/seller/dashboard" : "/seller/register"}>
               <Button
                 className="bg-white/10 hover:bg-white/20 text-white rounded-full px-6 transition-all duration-300 border border-white/10 hover:border-white/20 shadow-lg backdrop-blur-md"
-                aria-label="Sell Products"
+                aria-label={isSellerAuthenticated ? "Seller Dashboard" : "Sell Products"}
               >
-                <ShoppingBag className="h-4 w-4 mr-2" />
+                {isSellerAuthenticated ? (
+                  <LayoutDashboard className="h-4 w-4 mr-2" />
+                ) : (
+                  <ShoppingBag className="h-4 w-4 mr-2" />
+                )}
                 <span className="hidden sm:inline text-sm font-semibold tracking-wide uppercase">
-                  Create Shop
+                  {isSellerAuthenticated ? "Dashboard" : "Create Shop"}
                 </span>
               </Button>
             </Link>
