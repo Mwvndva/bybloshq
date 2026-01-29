@@ -93,7 +93,8 @@ class OrderService {
         notes: notes,
         metadata: JSON.stringify(metadata),
         status: initialStatus,
-        payment_status: 'pending' // Default
+        payment_status: 'pending', // Default
+        service_requirements: metadata.service_requirements || null
       };
 
       // 6. Insert Order (Using Model as DAO)
@@ -553,7 +554,8 @@ class OrderService {
               orderNumber: fullOrder.order_number,
               totalAmount: fullOrder.total_amount,
               status: newStatus,
-              metadata: fullOrder.metadata
+              metadata: fullOrder.metadata,
+              service_requirements: fullOrder.service_requirements
             },
             items: items
           };
