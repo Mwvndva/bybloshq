@@ -35,6 +35,7 @@ import WishlistSection from './WishlistSection';
 
 import { useBybx } from '@/contexts/BybxContext';
 import BybxImporter from '@/components/BybxImporter';
+import RefundCard from './RefundCard';
 
 
 
@@ -607,7 +608,12 @@ function BuyerDashboard() {
               </Card>
             </div>
 
-
+            <div className="space-y-6 sm:space-y-8">
+              {/* Refund Card */}
+              <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6" style={glassStyle}>
+                <RefundCard refundAmount={user?.refunds || 0} />
+              </div>
+            </div>
           </div>
         )}
       </div>
