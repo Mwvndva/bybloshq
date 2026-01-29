@@ -42,7 +42,8 @@ export const sanitizeBuyer = (buyer) => {
         city: buyerObj.city,
         location: buyerObj.location,
         mobilePayment: buyerObj.mobilePayment || buyerObj.mobile_payment,
-        whatsappNumber: buyerObj.whatsappNumber || buyerObj.whatsapp_number
+        whatsappNumber: buyerObj.whatsappNumber || buyerObj.whatsapp_number,
+        email: buyerObj.email
     };
 };
 
