@@ -170,20 +170,25 @@ export const getProfile = async (req, res, next) => {
       return next(new AppError('No buyer found with that ID', 404));
     }
 
-    // Ensure the user gets their OWN private data
-    const userData = sanitizeBuyer(buyer);
-    if (buyer.email) userData.email = buyer.email;
-    if (buyer.mobile_payment) userData.mobilePayment = buyer.mobile_payment;
-    if (buyer.whatsapp_number) userData.whatsappNumber = buyer.whatsapp_number;
+    // SECURITY: Strict DTO Generation
+    // We explicitly define fields to ensure no internal implementation details leak
+    const userData = {
+      id: buyer.id,
+      name: buyer.fullName || buyer.full_name,
+      email: buyer.email,
+      whatsapp_number: buyer.whatsapp_number || buyer.whatsappNumber,
+      payment_phone: buyer.mobile_payment || buyer.mobilePayment,
+      city: buyer.city,
+      location: buyer.location,
+      physical_address: buyer.location, // Alias for API compliance
+      role: 'buyer',
 
-    // Also restore fullName which might be sanitized out but is needed for frontend checks
-    if (buyer.full_name) userData.fullName = buyer.full_name;
-    else if (buyer.fullName) userData.fullName = buyer.fullName;
-    else {
-      const first = buyer.first_name || buyer.firstName || '';
-      const last = buyer.last_name || buyer.lastName || '';
-      userData.fullName = `${first} ${last}`.trim();
-    }
+      // Frontend Compatibility Keys (camelCase)
+      fullName: buyer.fullName || buyer.full_name,
+      firstName: (buyer.fullName || buyer.full_name || '').split(' ')[0],
+      whatsappNumber: buyer.whatsapp_number || buyer.whatsappNumber,
+      mobilePayment: buyer.mobile_payment || buyer.mobilePayment
+    };
 
     res.status(200).json({
       status: 'success',
@@ -198,13 +203,27 @@ export const getProfile = async (req, res, next) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-
-
-
-    // 1) Filter out unwanted fields that are not allowed to be updated
+    // 1) Filter out unwanted fields that are not allowed to be updated directly
+    // password is handled separately
     const { password, passwordConfirm, ...updateData } = req.body;
 
-    // 2) If password is being updated, handle it separately
+    // 2) Security: Basic Input Validation for Phones
+    const phoneRegex = /^(\+?254|0)?[17]\d{8}$/; // Matches 07xx or 01xx or +2547xx
+
+    if (updateData.whatsappNumber && !phoneRegex.test(updateData.whatsappNumber)) {
+      // Allow empty string if user is clearing it, but valid if provided
+      if (updateData.whatsappNumber.trim() !== '') {
+        return next(new AppError('Invalid WhatsApp number format. Use 07... or 01...', 400));
+      }
+    }
+
+    if (updateData.mobilePayment && !phoneRegex.test(updateData.mobilePayment)) {
+      if (updateData.mobilePayment.trim() !== '') {
+        return next(new AppError('Invalid Mobile Payment number format. Use 07... or 01...', 400));
+      }
+    }
+
+    // 3) If password is being updated, handle it separately
     if (password) {
       if (password !== passwordConfirm) {
         return next(new AppError('Passwords do not match', 400));
@@ -212,10 +231,9 @@ export const updateProfile = async (req, res, next) => {
       await Buyer.updatePassword(req.user.id, password);
     }
 
-    // 3) If there's nothing else to update, return early
-    if (Object.keys(updateData).length === 0) {
+    // 4) If there's nothing else to update, return early
+    if (Object.keys(updateData).length === 0 && !password) {
       const currentUser = await Buyer.findById(req.user.id);
-
       return res.status(200).json({
         status: 'success',
         message: 'No profile updates provided',
@@ -225,9 +243,13 @@ export const updateProfile = async (req, res, next) => {
       });
     }
 
-    // 4) Update other buyer data
-    const updatedBuyer = await Buyer.update(req.user.id, updateData);
-
+    // 5) Update other buyer data
+    let updatedBuyer = null;
+    if (Object.keys(updateData).length > 0) {
+      updatedBuyer = await Buyer.update(req.user.id, updateData);
+    } else {
+      updatedBuyer = await Buyer.findById(req.user.id);
+    }
 
     if (!updatedBuyer) {
       console.error('Failed to update buyer profile');
