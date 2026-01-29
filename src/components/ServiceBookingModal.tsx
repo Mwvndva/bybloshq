@@ -1,15 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Product } from '@/types';
-import { format, addDays, isBefore, startOfDay, parse } from 'date-fns';
+import { format, isBefore, startOfDay } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { Calendar as CalendarIcon, Clock, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 interface ServiceBookingModalProps {
     product: Product;
@@ -22,7 +19,6 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState<string>('');
     const [location, setLocation] = useState<string>('');
-    // For hybrid/buyer_visits_seller: user selects specific location or enters own
     const [selectedLocationType, setSelectedLocationType] = useState<'seller' | 'buyer'>('seller');
     const [customLocation, setCustomLocation] = useState<string>('');
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
@@ -36,7 +32,6 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             setTime('');
             setLocation('');
             setCustomLocation('');
-            // Default based on product settings
             if (serviceOptions.location_type === 'seller_visits_buyer') {
                 setSelectedLocationType('buyer');
             } else {
@@ -45,22 +40,17 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
         }
     }, [isOpen, product, serviceOptions]);
 
-    // Generate time slots based on product service options
+    // Generate time slots
     useEffect(() => {
         if (serviceOptions.start_time && serviceOptions.end_time) {
             const slots: string[] = [];
             const start = parseInt(serviceOptions.start_time.split(':')[0]);
             const end = parseInt(serviceOptions.end_time.split(':')[0]);
-
             for (let i = start; i < end; i++) {
-                // Create 1-hour slots for simplicity
-                const hour = i.toString().padStart(2, '0');
-                const nextHour = (i + 1).toString().padStart(2, '0');
-                slots.push(`${hour}:00 - ${nextHour}:00`);
+                slots.push(`${i.toString().padStart(2, '0')}:00 - ${(i + 1).toString().padStart(2, '0')}:00`);
             }
             setAvailableTimeSlots(slots);
         } else {
-            // Default slots if not specified
             setAvailableTimeSlots([
                 '09:00 - 10:00', '10:00 - 11:00', '11:00 - 12:00',
                 '13:00 - 14:00', '14:00 - 15:00', '15:00 - 16:00', '16:00 - 17:00'
@@ -68,26 +58,14 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
         }
     }, [product, serviceOptions]);
 
-    // Parse service locations
     const rawLocations = product.service_locations || (product as any).serviceLocations;
-    // Treat as single location, don't split by comma as users enter full addresses with commas
     const locations = rawLocations ? [rawLocations] : [];
-
-    // Parse availability days
     const availableDays = serviceOptions.availability_days || [];
 
-    // Disable unavailable days
     const isDateDisabled = (date: Date) => {
-        const dayName = format(date, 'EEE'); // Mon, Tue, Wed...
-
-        // 1. Disable past dates
         if (isBefore(date, startOfDay(new Date()))) return true;
-
-        // 2. Disable days not in availability_days (if specified)
         if (availableDays.length > 0) {
-            // Map short names to what presumably is stored or match logic
-            // Assuming stored as "Mon", "Tue" etc or full names. 
-            // Let's do a loose check.
+            const dayName = format(date, 'EEE');
             const dayNameFull = format(date, 'EEEE');
             const isAvailable = availableDays.some(d =>
                 d.toLowerCase().includes(dayName.toLowerCase()) ||
@@ -95,13 +73,11 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             );
             if (!isAvailable) return true;
         }
-
         return false;
     };
 
     const handleConfirm = () => {
         let finalLocation = location;
-
         if (selectedLocationType === 'buyer') {
             finalLocation = customLocation;
         } else if (locations.length === 0 && !location) {
@@ -122,12 +98,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
 
-    // Validation
     const isLocationValid = () => {
         if (selectedLocationType === 'buyer' || isSellerVisits) {
             return customLocation.trim().length > 0;
         }
-        // Seller location selected
         return location.length > 0 || locations.length === 0;
     };
 
@@ -135,155 +109,182 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="flex flex-col w-[95vw] max-w-[425px] max-h-[85dvh] gap-0 p-0 overflow-hidden rounded-3xl border border-white/10 shadow-2xl bg-[#0a0a0a] text-white">
-                <DialogHeader className="p-6 sm:p-8 pb-3 shrink-0 space-y-4">
-                    <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
-                        <CalendarIcon className="h-7 w-7 text-yellow-400" />
-                    </div>
-                    <div className="space-y-1">
-                        <DialogTitle className="text-2xl font-black text-center text-white">Book Service</DialogTitle>
-                        <DialogDescription className="text-center text-[#a1a1a1] font-medium text-sm">
-                            {product.name}
-                        </DialogDescription>
-                    </div>
-                </DialogHeader>
+            <DialogContent className="sm:max-w-[450px] p-0 border-none bg-transparent shadow-none overflow-visible">
+                {/* GLASS MINIMALIST CARD */}
+                <div className="relative w-full p-10 text-white text-center bg-[#0a0a0ae6] backdrop-blur-xl border border-yellow-400/30 shadow-[0_0_40px_rgba(0,0,0,0.8)] rounded-sm">
 
-                <div className="flex-1 overflow-y-auto p-6 sm:p-8 py-2">
-                    <div className="grid gap-6">
-                        {/* Date Selection */}
-                        <div className="space-y-2">
-                            <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
-                                1. Select Date
+                    {/* Header */}
+                    <div className="flex flex-col items-center mb-6">
+                        <div className="w-[50px] h-[50px] mb-5 border border-yellow-400 flex items-center justify-center">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#FFD700" strokeWidth="1.5" className="w-6 h-6">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                        </div>
+                        <h1 className="font-bebas text-4xl tracking-[4px] leading-none mb-1">
+                            BOOK SERVICE
+                        </h1>
+                        <p className="text-[10px] text-gray-400 tracking-[1px] uppercase">
+                            {product.name}
+                        </p>
+                        <button
+                            onClick={onClose}
+                            className="absolute top-5 right-5 text-gray-400 hover:text-white transition-colors text-2xl leading-none"
+                        >
+                            &times;
+                        </button>
+                    </div>
+
+                    {/* Body */}
+                    <div className="text-left space-y-6">
+
+                        {/* 01. Date */}
+                        <div>
+                            <Label className="block text-[10px] text-yellow-400 tracking-[2px] font-bold mb-3 uppercase">
+                                01. Select Expedition Date
                             </Label>
-                            <div className="border border-white/10 rounded-2xl p-2 flex justify-center bg-white/5 shadow-inner backdrop-blur-sm">
+                            <div className="border border-[#333] p-4 bg-[#0a0a0a]/50">
                                 <Calendar
                                     mode="single"
                                     selected={date}
                                     onSelect={setDate}
                                     disabled={isDateDisabled}
                                     initialFocus
-                                    className="bg-transparent text-white"
+                                    className="p-0 pointer-events-auto"
+                                    classNames={{
+                                        months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0 text-white font-playfair",
+                                        month: "space-y-4 w-full",
+                                        caption: "flex justify-center pt-1 relative items-center mb-2",
+                                        caption_label: "text-base font-medium font-playfair uppercase tracking-widest",
+                                        nav: "space-x-1 flex items-center",
+                                        nav_button: "h-7 w-7 bg-transparent p-0 text-gray-400 hover:text-white hover:bg-transparent",
+                                        nav_button_previous: "absolute left-1",
+                                        nav_button_next: "absolute right-1",
+                                        table: "w-full border-collapse space-y-1",
+                                        head_row: "flex",
+                                        head_cell: "text-gray-500 rounded-md w-9 font-normal text-[0.8rem] uppercase font-bebas tracking-wider",
+                                        row: "flex w-full mt-2",
+                                        cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-transparent focus-within:relative focus-within:z-20",
+                                        day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-[#222] hover:text-white text-gray-300 rounded-sm font-sans",
+                                        day_selected: "!bg-[#FFD700] !text-black !font-black !shadow-[0_0_15px_rgba(255,215,0,0.4)] hover:bg-[#FFD700] hover:text-black",
+                                        day_today: "bg-white/5 text-white/70",
+                                        day_outside: "text-gray-700 opacity-50",
+                                        day_disabled: "text-gray-800 opacity-30",
+                                        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                                        day_hidden: "invisible",
+                                    }}
                                 />
                             </div>
-                            {date && <p className="text-xs font-bold text-yellow-400 text-center uppercase tracking-tighter">Selected: {format(date, 'PPP')}</p>}
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4">
-                            {/* Time Selection */}
-                            <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
-                                    2. Select Time
+                        {/* Inline Fields */}
+                        <div className="grid grid-cols-2 gap-4">
+                            {/* 02. Time */}
+                            <div className="space-y-3">
+                                <Label className="block text-[10px] text-yellow-400 tracking-[2px] font-bold uppercase">
+                                    02. Select Time
                                 </Label>
                                 <Select value={time} onValueChange={setTime}>
-                                    <SelectTrigger className="rounded-xl border-white/10 h-12 focus:ring-yellow-400 bg-white/5 text-white">
-                                        <SelectValue placeholder="Choose a time slot" />
+                                    <SelectTrigger className="w-full h-[45px] rounded-none border border-[#333] bg-transparent text-xs text-white uppercase focus:ring-1 focus:ring-yellow-400/50">
+                                        <SelectValue placeholder="CHOOSE A TIME" />
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#111111] border-white/10 text-white">
+                                    <SelectContent className="bg-[#0a0a0ae6] backdrop-blur-xl border border-[#333] text-white rounded-none">
                                         {availableTimeSlots.map(slot => (
-                                            <SelectItem key={slot} value={slot} className="focus:bg-white/5">{slot}</SelectItem>
+                                            <SelectItem key={slot} value={slot} className="text-xs uppercase focus:bg-yellow-400/20 focus:text-yellow-400 cursor-pointer">{slot}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
 
-                            {/* Location Selection Logic */}
-                            <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
-                                    3. Select Location
+                            {/* 03. Location */}
+                            <div className="space-y-3">
+                                <Label className="block text-[10px] text-yellow-400 tracking-[2px] font-bold uppercase">
+                                    03. Select Location
                                 </Label>
 
-                                {/* Hybrid Toggle */}
-                                {isHybrid && (
-                                    <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 mb-2">
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedLocationType('seller')}
-                                            className={cn(
-                                                "flex-1 py-2 rounded-lg text-xs font-black transition-all",
-                                                selectedLocationType === 'seller' ? "bg-white/10 text-white shadow-sm" : "text-[#555555] hover:text-[#a1a1a1]"
-                                            )}
-                                        >
-                                            Visit Shop
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedLocationType('buyer')}
-                                            className={cn(
-                                                "flex-1 py-2 rounded-lg text-xs font-black transition-all",
-                                                selectedLocationType === 'buyer' ? "bg-white/10 text-white shadow-sm" : "text-[#555555] hover:text-[#a1a1a1]"
-                                            )}
-                                        >
-                                            Come to Me
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Content based on selection */}
-                                {(selectedLocationType === 'seller' && !isSellerVisits) && (
-                                    <div className="space-y-2">
-                                        {locations.length > 0 ? (
-                                            <RadioGroup value={location} onValueChange={setLocation} className="gap-2">
-                                                {locations.map(loc => (
-                                                    <div
-                                                        key={loc}
-                                                        className={cn(
-                                                            "flex items-center space-x-3 border rounded-xl p-3 cursor-pointer transition-all",
-                                                            location === loc ? "border-yellow-400/50 bg-yellow-400/5" : "border-white/5 bg-white/2 hover:border-white/10"
-                                                        )}
-                                                        onClick={() => setLocation(loc)}
-                                                    >
-                                                        <RadioGroupItem value={loc} id={loc} className="border-white/20 text-yellow-400" />
-                                                        <Label htmlFor={loc} className="cursor-pointer flex-1 text-sm font-bold text-white pr-2">{loc}</Label>
-                                                    </div>
-                                                ))}
-                                            </RadioGroup>
-                                        ) : (
-                                            <div className="text-xs font-medium text-[#a1a1a1] p-4 border border-white/5 rounded-xl bg-white/2 backdrop-blur-sm">
-                                                <span className="text-[#555555] block mb-1 font-black uppercase tracking-widest text-[9px]">Shop Address</span>
-                                                {product.seller?.location || product.seller?.city || 'Seller Shop Address'}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {(selectedLocationType === 'buyer' || isSellerVisits) && (
-                                    <div className="space-y-3">
-                                        <div className="relative">
-                                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#555555]" />
-                                            <input
-                                                type="text"
-                                                placeholder="Enter your address/location"
-                                                className="flex h-12 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white placeholder:text-[#555555] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 transition-all"
-                                                value={customLocation}
-                                                onChange={(e) => setCustomLocation(e.target.value)}
-                                            />
+                                {isHybrid ? (
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex border border-[#333] rounded-sm overflow-hidden h-[45px]">
+                                            <button
+                                                onClick={() => setSelectedLocationType('seller')}
+                                                className={cn("flex-1 text-[10px] font-bold uppercase transition-colors", selectedLocationType === 'seller' ? "bg-white text-black" : "bg-transparent text-[#555] hover:text-white")}
+                                            >
+                                                Shop
+                                            </button>
+                                            <button
+                                                onClick={() => setSelectedLocationType('buyer')}
+                                                className={cn("flex-1 text-[10px] font-bold uppercase transition-colors border-l border-[#333]", selectedLocationType === 'buyer' ? "bg-white text-black" : "bg-transparent text-[#555] hover:text-white")}
+                                            >
+                                                Custom
+                                            </button>
                                         </div>
-                                        <p className="text-[10px] font-bold text-[#555555] uppercase tracking-wide leading-relaxed px-1">
-                                            Provide the address where you'd like the service.
-                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="border border-[#333] h-[45px] flex items-center px-3 gap-2">
+                                        <div className="w-[4px] h-[20px] bg-[#FFD700]"></div>
+                                        <span className="text-[10px] text-white uppercase truncate">
+                                            {isSellerVisits ? "Custom Location" : "Shop Location"}
+                                        </span>
                                     </div>
                                 )}
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <div className="flex flex-col gap-3 p-6 sm:p-8 pt-4 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
-                    <Button
-                        onClick={handleConfirm}
-                        disabled={!isValid}
-                        variant="secondary-byblos"
-                        className="w-full h-12 rounded-xl font-black text-base shadow-lg transition-all active:scale-[0.98]"
-                    >
-                        Confirm Booking
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        onClick={onClose}
-                        className="w-full text-sm font-bold text-[#a1a1a1] hover:text-white"
-                    >
-                        Cancel
-                    </Button>
+                        {/* Dynamic Location Input */}
+                        <div className="mt-2 text-left">
+                            {(selectedLocationType === 'buyer' || isSellerVisits) && (
+                                <input
+                                    type="text"
+                                    placeholder="ENTER FULL ADDRESS"
+                                    className="w-full h-[45px] bg-[#0a0a0ae6] border border-[#333] p-3 text-xs text-white placeholder:text-[#444] rounded-none focus:outline-none focus:border-yellow-400 transition-colors uppercase"
+                                    value={customLocation}
+                                    onChange={(e) => setCustomLocation(e.target.value)}
+                                />
+                            )}
+
+                            {(selectedLocationType === 'seller' && !isSellerVisits && locations.length > 0) && (
+                                <Select value={location} onValueChange={setLocation}>
+                                    <SelectTrigger className="w-full h-[45px] rounded-none border border-[#333] bg-transparent text-xs text-white uppercase focus:ring-1 focus:ring-yellow-400/50">
+                                        <SelectValue placeholder="CHOOSE SHOP BRANCH" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-[#0a0a0ae6] backdrop-blur-xl border border-[#333] text-white rounded-none">
+                                        {locations.map(loc => (
+                                            <SelectItem key={loc} value={loc} className="text-xs uppercase focus:bg-yellow-400/20 focus:text-yellow-400 cursor-pointer">{loc}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                            {(selectedLocationType === 'seller' && !isSellerVisits && locations.length === 0) && (
+                                <div className="border border-[#333] p-3 flex items-center gap-2">
+                                    <MapPin className="w-3 h-3 text-[#555]" />
+                                    <span className="text-[10px] text-[#888] uppercase tracking-wide">
+                                        {product.seller?.location || product.seller?.city || 'Main Branch'}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+
+                    </div>
+
+                    {/* Footer */}
+                    <div className="mt-8">
+                        <button
+                            onClick={handleConfirm}
+                            disabled={!isValid}
+                            className="w-full bg-[#FFD700] text-black h-[50px] font-bebas text-lg tracking-[2px] transition-all hover:bg-white hover:shadow-[0_0_20px_rgba(255,215,0,0.6)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#FFD700] disabled:hover:shadow-none"
+                        >
+                            CONFIRM BOOKING
+                        </button>
+                        <button
+                            onClick={onClose}
+                            className="mt-4 text-[10px] text-[#666] tracking-[2px] font-bold uppercase hover:text-white transition-colors"
+                        >
+                            CANCEL
+                        </button>
+                    </div>
+
                 </div>
             </DialogContent>
         </Dialog>
