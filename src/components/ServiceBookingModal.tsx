@@ -173,7 +173,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                         head_cell: "text-[#666] text-[0.8rem] font-medium pt-1 w-8 sm:w-9",
                                         cell: "h-8 w-8 sm:h-9 sm:w-9 text-center text-sm p-0 flex items-center justify-center",
                                         day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-white/5 rounded-xl aria-selected:opacity-100 text-yellow-400",
-                                        day_selected: "bg-yellow-400 text-black hover:bg-yellow-400 hover:text-black focus:bg-yellow-400 focus:text-black font-bold",
+                                        day_selected: "!bg-yellow-400 !text-black hover:!bg-yellow-400 hover:!text-black focus:!bg-yellow-400 focus:!text-black font-bold",
                                         day_today: "text-white bg-white/5 font-bold",
                                         day_outside: "text-[#333] opacity-50",
                                         day_disabled: "text-[#333] opacity-50 hover:bg-transparent",
