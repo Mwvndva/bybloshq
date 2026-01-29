@@ -91,14 +91,16 @@ export default defineConfig(({ command, mode }) => {
         drop: isProduction ? ['console', 'debugger'] : [],
       },
       copyPublicDir: true,
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 1600,
       // Ensure static files are copied with proper content types
       assetsInlineLimit: 0, // Don't inline any assets to ensure proper content types
       rollupOptions: {
         output: {
           manualChunks: {
-            react: ['react', 'react-dom', 'react-router-dom'],
-            vendor: ['@tanstack/react-query', 'lodash', 'date-fns', 'axios'],
+            'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+            'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-slot', '@radix-ui/react-toast', 'lucide-react', 'class-variance-authority', 'clsx', 'tailwind-merge'],
+            'utils-vendor': ['lodash', 'date-fns', 'axios', '@tanstack/react-query'],
+            'charts-vendor': ['recharts', 'chart.js', 'react-chartjs-2'],
           },
         },
       },
