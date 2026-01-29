@@ -702,7 +702,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <Skeleton className="h-32 w-96" />
           </div>
 
-          <div className="flex space-x-2 mb-12 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] p-2 rounded-2xl shadow-lg border border-white/10 w-fit mx-auto">
+          <div className="flex space-x-2 mb-12 bg-black/40 backdrop-blur-[12px] p-2 rounded-2xl shadow-lg border border-white/10 w-fit mx-auto">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-12 w-24 rounded-xl" />
             ))}
@@ -960,7 +960,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
-        <div className="mb-6 sm:mb-8 bg-[rgba(20,20,20,0.55)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-white/10 w-full overflow-x-auto">
+        <div className="mb-6 sm:mb-8 bg-black/40 backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-white/10 w-full overflow-x-auto">
           <div className="flex items-center justify-start sm:justify-center gap-2 min-w-max">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -1672,7 +1672,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               {/* Theme Settings */}
-              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
+              <div className="bg-black/40 backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
                 <ThemeSelector
                   currentTheme={(sellerProfile?.theme as Theme) || 'default'}
                   onThemeChange={(theme) => {
