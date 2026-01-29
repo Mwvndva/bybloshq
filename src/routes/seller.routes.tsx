@@ -9,13 +9,13 @@ import { SellerLogin } from '../components/seller/SellerLogin';
 import { ProductsList } from '../components/seller/ProductsList';
 import AddProductForm from '../components/seller/AddProductForm';
 import { EditProductForm } from '../components/seller/EditProductForm';
-import { Button } from '../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { useToast } from '../hooks/use-toast';
 import { sellerApi } from '../api/sellerApi';
 import { Plus, Pencil, Trash2, EyeOff, RefreshCw, CheckCircle, Loader2 } from 'lucide-react';
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '../lib/utils';
 import {
   AlertDialog,
@@ -26,7 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '../components/ui/alert-dialog';
+} from '@/components/ui/alert-dialog';
 
 // Products route component that will be rendered within the dashboard
 function ProductsListWrapper() {

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { purchaseApi } from '../../../api/purchaseApi';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
 interface TicketValidationState {
@@ -21,7 +21,7 @@ export function TicketValidationPage() {
   const { ticketNumber = '' } = useParams<{ ticketNumber: string }>();
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   const [validationState, setValidationState] = useState<TicketValidationState>({
     status: 'loading',
     message: 'Validating ticket...',
@@ -43,7 +43,7 @@ export function TicketValidationPage() {
       });
 
       const result = await purchaseApi.validateTicket(ticketNum);
-      
+
       if (result.valid && result.status === 'valid' && result.ticket) {
         setValidationState({
           status: 'valid',
@@ -76,7 +76,7 @@ export function TicketValidationPage() {
     let isMounted = true;
     const params = new URLSearchParams(location.search);
     const fromQr = params.get('qr') === 'true';
-    
+
     const validate = async () => {
       if (ticketNumber) {
         if (isMounted) {
@@ -85,12 +85,12 @@ export function TicketValidationPage() {
             message: 'Validating ticket...',
           });
         }
-        
+
         try {
           const result = await purchaseApi.validateTicket(ticketNumber);
-          
+
           if (!isMounted) return;
-          
+
           if (result.valid && result.status === 'valid' && result.ticket) {
             setValidationState({
               status: 'valid',
@@ -124,9 +124,9 @@ export function TicketValidationPage() {
         });
       }
     };
-    
+
     validate();
-    
+
     return () => {
       isMounted = false;
     };
