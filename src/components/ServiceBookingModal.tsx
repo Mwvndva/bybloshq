@@ -55,7 +55,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 setSelectedLocationType('seller');
             }
         }
-    }, [isOpen, product, serviceOptions, locations]);
+    }, [isOpen, product]);
 
     // Generate time slots based on product service options
     useEffect(() => {
