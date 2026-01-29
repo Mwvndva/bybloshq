@@ -29,13 +29,25 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
     const serviceOptions = product.service_options || (product as any).serviceOptions || {};
 
+    // Parse service locations
+    const rawLocations = product.service_locations || (product as any).serviceLocations;
+    // Treat as single location, don't split by comma as users enter full addresses with commas
+    const locations = rawLocations ? [rawLocations] : [];
+
     // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
             setDate(undefined);
             setTime('');
-            setLocation('');
             setCustomLocation('');
+
+            // Auto-select first location if available
+            if (locations.length > 0) {
+                setLocation(locations[0]);
+            } else {
+                setLocation('');
+            }
+
             // Default based on product settings
             if (serviceOptions.location_type === 'seller_visits_buyer') {
                 setSelectedLocationType('buyer');
@@ -43,7 +55,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 setSelectedLocationType('seller');
             }
         }
-    }, [isOpen, product, serviceOptions]);
+    }, [isOpen, product, serviceOptions, locations]);
 
     // Generate time slots based on product service options
     useEffect(() => {
@@ -67,11 +79,6 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             ]);
         }
     }, [product, serviceOptions]);
-
-    // Parse service locations
-    const rawLocations = product.service_locations || (product as any).serviceLocations;
-    // Treat as single location, don't split by comma as users enter full addresses with commas
-    const locations = rawLocations ? [rawLocations] : [];
 
     // Parse availability days
     const availableDays = serviceOptions.availability_days || [];
@@ -161,11 +168,11 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                     initialFocus
                                     className="bg-transparent text-white p-0"
                                     classNames={{
-                                        nav_button: "border-0 hover:bg-white/5 hover:text-white text-[#666]",
+                                        nav_button: "border-0 hover:bg-white/5 hover:text-white text-[#666] h-8 w-8",
                                         caption: "text-sm font-bold pt-1",
-                                        head_cell: "text-[#666] text-[0.8rem] font-medium pt-1",
-                                        cell: "h-9 w-9 text-center text-sm p-0 flex items-center justify-center",
-                                        day: "h-9 w-9 p-0 font-normal hover:bg-white/5 rounded-xl aria-selected:opacity-100",
+                                        head_cell: "text-[#666] text-[0.8rem] font-medium pt-1 w-8 sm:w-9",
+                                        cell: "h-8 w-8 sm:h-9 sm:w-9 text-center text-sm p-0 flex items-center justify-center",
+                                        day: "h-8 w-8 sm:h-9 sm:w-9 p-0 font-normal hover:bg-white/5 rounded-xl aria-selected:opacity-100 text-yellow-400",
                                         day_selected: "bg-yellow-400 text-black hover:bg-yellow-400 hover:text-black focus:bg-yellow-400 focus:text-black font-bold",
                                         day_today: "text-white bg-white/5 font-bold",
                                         day_outside: "text-[#333] opacity-50",
@@ -181,7 +188,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                             <div className="space-y-1.5">
                                 <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">Time</Label>
                                 <Select value={time} onValueChange={setTime}>
-                                    <SelectTrigger className="w-full h-11 rounded-xl bg-white/5 border-0 text-sm font-medium focus:ring-1 focus:ring-yellow-400 transition-all text-white">
+                                    <SelectTrigger className="w-full h-11 rounded-xl bg-white/5 border-0 text-base sm:text-sm font-medium focus:ring-1 focus:ring-yellow-400 transition-all text-white">
                                         <div className="flex items-center gap-2">
                                             <Clock className="w-4 h-4 text-[#666]" />
                                             <SelectValue placeholder="Select time" />
@@ -189,7 +196,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                     </SelectTrigger>
                                     <SelectContent className="bg-[#111] border-white/5 text-white max-h-[200px]">
                                         {availableTimeSlots.map(slot => (
-                                            <SelectItem key={slot} value={slot} className="focus:bg-white/10 focus:text-white text-sm py-2.5 cursor-pointer">{slot}</SelectItem>
+                                            <SelectItem key={slot} value={slot} className="focus:bg-white/10 focus:text-white text-base sm:text-sm py-2.5 cursor-pointer">{slot}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -228,32 +235,13 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                 {/* Content based on selection */}
                                 {(selectedLocationType === 'seller' && !isSellerVisits) && (
                                     <div className="space-y-2">
-                                        {locations.length > 0 ? (
-                                            <div className="flex flex-wrap gap-2">
-                                                {locations.map(loc => (
-                                                    <div
-                                                        key={loc}
-                                                        className={cn(
-                                                            "flex items-center px-3 py-2.5 rounded-xl cursor-pointer transition-all border text-xs font-medium",
-                                                            location === loc
-                                                                ? "bg-yellow-400 text-black border-yellow-400 font-bold"
-                                                                : "bg-white/5 border-transparent text-[#999] hover:bg-white/10 hover:text-white"
-                                                        )}
-                                                        onClick={() => setLocation(loc)}
-                                                    >
-                                                        {loc}
-                                                    </div>
-                                                ))}
+                                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/5">
+                                            <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
+                                            <div>
+                                                <p className="text-sm font-bold text-white line-clamp-1">{location || product.seller?.location || product.seller?.city || 'Main Shop'}</p>
+                                                <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">Selected Location</p>
                                             </div>
-                                        ) : (
-                                            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/5">
-                                                <MapPin className="w-4 h-4 text-yellow-400 shrink-0" />
-                                                <div>
-                                                    <p className="text-xs font-medium text-white line-clamp-1">{product.seller?.location || product.seller?.city || 'Main Shop'}</p>
-                                                    <p className="text-[10px] text-[#666] line-clamp-1">Default Location</p>
-                                                </div>
-                                            </div>
-                                        )}
+                                        </div>
                                     </div>
                                 )}
 
