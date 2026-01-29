@@ -193,20 +193,7 @@ function BuyerDashboard() {
   // Get refund amount from user
   const refundAmount = user?.refunds || 0;
 
-  const stats = [
-    {
-      icon: Heart,
-      title: 'Wishlist Items',
-      value: formatNumber(wishlist.length),
-      subtitle: 'Saved for later'
-    },
-    {
-      icon: TrendingUp,
-      title: 'Refund Balance',
-      value: `KSh ${formatNumber(refundAmount)}`,
-      subtitle: 'Available refunds'
-    }
-  ];
+
 
   useEffect(() => {
     const originalBodyStyle = document.body.style.cssText;
