@@ -3,6 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
@@ -72,6 +73,7 @@ function BuyerDashboard() {
   const location = useLocation();
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
+  const { toast } = useToast();
   const { onFileLoaded } = useBybx();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
   const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>(() => {
@@ -117,7 +119,15 @@ function BuyerDashboard() {
   };
 
   const handleSaveProfile = async () => {
-    if (!city || !locationArea) return;
+    if (!city || !locationArea) {
+      toast({
+        title: "Missing Information",
+        description: "Please select both a city and a location area.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsSavingProfile(true);
     try {
       await updateBuyerProfile({
@@ -126,11 +136,26 @@ function BuyerDashboard() {
         mobilePayment,
         whatsappNumber
       });
+
+      toast({
+        title: "Profile Updated",
+        description: "Your profile information has been saved successfully.",
+      });
+
       // Update the filter city when profile is updated
       setFilterCity(city);
-      window.location.reload();
+
+      // Delay reload to allow toast to be seen and data to propagate
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
     } catch (e) {
       console.error('Failed to update profile', e);
+      toast({
+        title: "Update Failed",
+        description: "There was a problem saving your profile. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsSavingProfile(false);
     }
@@ -635,29 +660,7 @@ function BuyerDashboard() {
             </div>
 
             <div className="space-y-6 sm:space-y-8">
-              {/* Actions Card */}
-              <Card className="rounded-2xl sm:rounded-3xl" style={glassStyle}>
-                <CardHeader className="pb-3 sm:pb-4">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-                      <Settings className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">Account Actions</CardTitle>
-                      <p className="text-gray-300 font-normal text-sm sm:text-base">Manage your account</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Button
-                    onClick={handleLogout}
-                    className="w-full bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white rounded-xl sm:rounded-2xl py-3 sm:py-4 font-bold text-sm sm:text-base lg:text-lg shadow-lg transition-all duration-200"
-                  >
-                    <LogOut className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" />
-                    Sign Out
-                  </Button>
-                </CardContent>
-              </Card>
+
 
               {/* Refund Card */}
               <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6" style={glassStyle}>
