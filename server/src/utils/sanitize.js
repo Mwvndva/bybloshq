@@ -31,19 +31,16 @@ export const sanitizeBuyer = (buyer) => {
     if (!buyer) return null;
     const buyerObj = buyer.toObject ? buyer.toObject() : buyer;
 
-    // Extract first name from full name
-    const fullName = buyerObj.fullName || buyerObj.full_name || '';
-    const firstName = fullName.split(' ')[0]; // Get first word as first name
-
-    // Return minimal profile data
+    // Strict DTO (Allowed Fields Only)
     return {
         id: buyerObj.id,
-        firstName: firstName, // Only first name, not full name
+        name: buyerObj.fullName || buyerObj.full_name || '',
+        email: buyerObj.email,
+        whatsapp_number: buyerObj.whatsappNumber || buyerObj.whatsapp_number,
+        payment_phone: buyerObj.mobilePayment || buyerObj.mobile_payment,
         city: buyerObj.city,
-        location: buyerObj.location,
-        mobilePayment: buyerObj.mobilePayment || buyerObj.mobile_payment,
-        whatsappNumber: buyerObj.whatsappNumber || buyerObj.whatsapp_number,
-        email: buyerObj.email
+        physical_address: buyerObj.location || buyerObj.physical_address,
+        role: 'buyer'
     };
 };
 
