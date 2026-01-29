@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
+import { Button } from '@/components/ui/button';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -48,14 +48,7 @@ const StatsCard = ({ icon: Icon, title, value, subtitle }: {
   subtitle: string;
 }) => (
   <Card
-    className="relative overflow-hidden rounded-2xl"
-    style={{
-      background: 'rgba(17, 17, 17, 0.7)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
-    }}
+    className="relative overflow-hidden rounded-2xl bg-black/40 backdrop-blur-md border border-white/10 shadow-lg"
   >
     <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/10 via-transparent to-yellow-600/10" />
     <CardContent className="relative p-3 sm:p-4 md:p-5">
