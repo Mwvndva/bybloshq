@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from '@/components/ui/use-toast';
+
 import {
   ArrowLeft,
   BarChart3,
@@ -1686,7 +1686,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               {/* Theme Settings */}
               <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
                 <ThemeSelector
-                  currentTheme={sellerProfile?.theme}
+                  currentTheme={(sellerProfile?.theme as Theme) || 'default'}
                   onThemeChange={(theme) => {
                     // Profile will be automatically updated by SellerAuthContext
                   }}
