@@ -135,52 +135,61 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="flex flex-col w-[95vw] max-w-[425px] max-h-[85dvh] gap-0 p-0 overflow-hidden rounded-3xl border border-white/10 shadow-2xl bg-[#0a0a0a] text-white">
-                <DialogHeader className="p-6 sm:p-8 pb-3 shrink-0 space-y-4">
-                    <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
-                        <CalendarIcon className="h-7 w-7 text-yellow-400" />
+            <DialogContent className="flex flex-col w-[95vw] max-w-[400px] max-h-[85dvh] gap-0 p-0 overflow-hidden rounded-[32px] border border-white/5 shadow-2xl bg-[#0a0a0a] text-white">
+                <DialogHeader className="p-6 pb-2 shrink-0 space-y-4 pt-8">
+                    <div className="mx-auto w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center">
+                        <CalendarIcon className="h-6 w-6 text-yellow-400" />
                     </div>
-                    <div className="space-y-1">
-                        <DialogTitle className="text-2xl font-black text-center text-white">Book Service</DialogTitle>
-                        <DialogDescription className="text-center text-[#a1a1a1] font-medium text-sm">
+                    <div className="space-y-1 text-center">
+                        <DialogTitle className="text-xl font-bold bg-gradient-to-br from-white to-white/60 bg-clip-text text-transparent">Book Service</DialogTitle>
+                        <DialogDescription className="text-sm font-medium text-[#666]">
                             {product.name}
                         </DialogDescription>
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto p-6 sm:p-8 py-2">
-                    <div className="grid gap-6">
+                <div className="flex-1 overflow-y-auto px-6 py-4">
+                    <div className="space-y-6">
                         {/* Date Selection */}
-                        <div className="space-y-2">
-                            <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
-                                1. Select Date
-                            </Label>
-                            <div className="border border-white/10 rounded-2xl p-2 flex justify-center bg-white/5 shadow-inner backdrop-blur-sm">
+                        <div className="space-y-3">
+                            <div className="flex justify-center">
                                 <Calendar
                                     mode="single"
                                     selected={date}
                                     onSelect={setDate}
                                     disabled={isDateDisabled}
                                     initialFocus
-                                    className="bg-transparent text-white"
+                                    className="bg-transparent text-white p-0"
+                                    classNames={{
+                                        nav_button: "border-0 hover:bg-white/5 hover:text-white text-[#666]",
+                                        caption: "text-sm font-bold pt-1",
+                                        head_cell: "text-[#666] text-[0.8rem] font-medium pt-1",
+                                        cell: "h-9 w-9 text-center text-sm p-0 flex items-center justify-center",
+                                        day: "h-9 w-9 p-0 font-normal hover:bg-white/5 rounded-xl aria-selected:opacity-100",
+                                        day_selected: "bg-yellow-400 text-black hover:bg-yellow-400 hover:text-black focus:bg-yellow-400 focus:text-black font-bold",
+                                        day_today: "text-white bg-white/5 font-bold",
+                                        day_outside: "text-[#333] opacity-50",
+                                        day_disabled: "text-[#333] opacity-50 hover:bg-transparent",
+                                    }}
                                 />
                             </div>
-                            {date && <p className="text-xs font-bold text-yellow-400 text-center uppercase tracking-tighter">Selected: {format(date, 'PPP')}</p>}
+
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-4">
                             {/* Time Selection */}
-                            <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
-                                    2. Select Time
-                                </Label>
+                            <div className="space-y-1.5">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">Time</Label>
                                 <Select value={time} onValueChange={setTime}>
-                                    <SelectTrigger className="rounded-xl border-white/10 h-12 focus:ring-yellow-400 bg-white/5 text-white">
-                                        <SelectValue placeholder="Choose a time slot" />
+                                    <SelectTrigger className="w-full h-11 rounded-xl bg-white/5 border-0 text-sm font-medium focus:ring-1 focus:ring-yellow-400 transition-all text-white">
+                                        <div className="flex items-center gap-2">
+                                            <Clock className="w-4 h-4 text-[#666]" />
+                                            <SelectValue placeholder="Select time" />
+                                        </div>
                                     </SelectTrigger>
-                                    <SelectContent className="bg-[#111111] border-white/10 text-white">
+                                    <SelectContent className="bg-[#111] border-white/5 text-white max-h-[200px]">
                                         {availableTimeSlots.map(slot => (
-                                            <SelectItem key={slot} value={slot} className="focus:bg-white/5">{slot}</SelectItem>
+                                            <SelectItem key={slot} value={slot} className="focus:bg-white/10 focus:text-white text-sm py-2.5 cursor-pointer">{slot}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
@@ -188,32 +197,30 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
                             {/* Location Selection Logic */}
                             <div className="space-y-2">
-                                <Label className="text-xs font-black uppercase tracking-wider text-[#a1a1a1/70] flex items-center gap-2">
-                                    3. Select Location
-                                </Label>
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">Location</Label>
 
                                 {/* Hybrid Toggle */}
                                 {isHybrid && (
-                                    <div className="flex p-1 bg-white/5 rounded-xl border border-white/10 mb-2">
+                                    <div className="flex p-0.5 bg-white/5 rounded-xl mb-3">
                                         <button
                                             type="button"
                                             onClick={() => setSelectedLocationType('seller')}
                                             className={cn(
-                                                "flex-1 py-2 rounded-lg text-xs font-black transition-all",
-                                                selectedLocationType === 'seller' ? "bg-white/10 text-white shadow-sm" : "text-[#555555] hover:text-[#a1a1a1]"
+                                                "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
+                                                selectedLocationType === 'seller' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
                                             )}
                                         >
-                                            Visit Shop
+                                            In-Store
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setSelectedLocationType('buyer')}
                                             className={cn(
-                                                "flex-1 py-2 rounded-lg text-xs font-black transition-all",
-                                                selectedLocationType === 'buyer' ? "bg-white/10 text-white shadow-sm" : "text-[#555555] hover:text-[#a1a1a1]"
+                                                "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
+                                                selectedLocationType === 'buyer' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
                                             )}
                                         >
-                                            Come to Me
+                                            Home Service
                                         </button>
                                     </div>
                                 )}
@@ -222,45 +229,44 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                 {(selectedLocationType === 'seller' && !isSellerVisits) && (
                                     <div className="space-y-2">
                                         {locations.length > 0 ? (
-                                            <RadioGroup value={location} onValueChange={setLocation} className="gap-2">
+                                            <div className="flex flex-wrap gap-2">
                                                 {locations.map(loc => (
                                                     <div
                                                         key={loc}
                                                         className={cn(
-                                                            "flex items-center space-x-3 border rounded-xl p-3 cursor-pointer transition-all",
-                                                            location === loc ? "border-yellow-400/50 bg-yellow-400/5" : "border-white/5 bg-white/2 hover:border-white/10"
+                                                            "flex items-center px-3 py-2.5 rounded-xl cursor-pointer transition-all border text-xs font-medium",
+                                                            location === loc
+                                                                ? "bg-yellow-400 text-black border-yellow-400 font-bold"
+                                                                : "bg-white/5 border-transparent text-[#999] hover:bg-white/10 hover:text-white"
                                                         )}
                                                         onClick={() => setLocation(loc)}
                                                     >
-                                                        <RadioGroupItem value={loc} id={loc} className="border-white/20 text-yellow-400" />
-                                                        <Label htmlFor={loc} className="cursor-pointer flex-1 text-sm font-bold text-white pr-2">{loc}</Label>
+                                                        {loc}
                                                     </div>
                                                 ))}
-                                            </RadioGroup>
+                                            </div>
                                         ) : (
-                                            <div className="text-xs font-medium text-[#a1a1a1] p-4 border border-white/5 rounded-xl bg-white/2 backdrop-blur-sm">
-                                                <span className="text-[#555555] block mb-1 font-black uppercase tracking-widest text-[9px]">Shop Address</span>
-                                                {product.seller?.location || product.seller?.city || 'Seller Shop Address'}
+                                            <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-white/5 border border-white/5">
+                                                <MapPin className="w-4 h-4 text-yellow-400 shrink-0" />
+                                                <div>
+                                                    <p className="text-xs font-medium text-white line-clamp-1">{product.seller?.location || product.seller?.city || 'Main Shop'}</p>
+                                                    <p className="text-[10px] text-[#666] line-clamp-1">Default Location</p>
+                                                </div>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
                                 {(selectedLocationType === 'buyer' || isSellerVisits) && (
-                                    <div className="space-y-3">
-                                        <div className="relative">
-                                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#555555]" />
-                                            <input
-                                                type="text"
-                                                placeholder="Enter your address/location"
-                                                className="flex h-12 w-full rounded-xl border border-white/10 bg-white/5 pl-10 pr-4 text-sm text-white placeholder:text-[#555555] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 transition-all"
-                                                value={customLocation}
-                                                onChange={(e) => setCustomLocation(e.target.value)}
-                                            />
-                                        </div>
-                                        <p className="text-[10px] font-bold text-[#555555] uppercase tracking-wide leading-relaxed px-1">
-                                            Provide the address where you'd like the service.
-                                        </p>
+                                    <div className="relative">
+                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666]" />
+                                        <input
+                                            type="text"
+                                            placeholder="Enter address"
+                                            className="flex h-11 w-full rounded-xl bg-white/5 border-0 pl-10 pr-4 text-sm text-white placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 transition-all font-medium"
+                                            value={customLocation}
+                                            onChange={(e) => setCustomLocation(e.target.value)}
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -268,19 +274,26 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                     </div>
                 </div>
 
-                <div className="flex flex-col gap-3 p-6 sm:p-8 pt-4 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
+                <div className="p-6 pt-2 pb-8 mt-auto shrink-0 space-y-3">
+                    {/* Summary Line */}
+                    <div className="flex items-center justify-between text-xs px-1 mb-1">
+                        <span className="text-[#666] font-medium">Total Price</span>
+                        <span className="text-lg font-black text-white">
+                            {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(product.price)}
+                        </span>
+                    </div>
+
                     <Button
                         onClick={handleConfirm}
                         disabled={!isValid}
-                        variant="secondary-byblos"
-                        className="w-full h-12 rounded-xl font-black text-base shadow-lg transition-all active:scale-[0.98]"
+                        className="w-full h-12 rounded-xl bg-yellow-400 text-black font-bold text-sm hover:bg-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.1)] disabled:opacity-50 disabled:shadow-none transition-all active:scale-[0.98]"
                     >
                         Confirm Booking
                     </Button>
                     <Button
                         variant="ghost"
                         onClick={onClose}
-                        className="w-full text-sm font-bold text-[#a1a1a1] hover:text-white"
+                        className="w-full h-10 rounded-xl text-xs font-bold text-[#666] hover:text-white hover:bg-transparent"
                     >
                         Cancel
                     </Button>
