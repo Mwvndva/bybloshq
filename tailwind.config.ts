@@ -70,9 +70,7 @@ export default {
 				serif: ['Poppins', 'serif'],
 				mono: ['Poppins', 'monospace'],
 				display: ['Poppins', 'sans-serif'],
-				body: ['Poppins', 'sans-serif'],
-				bebas: ['Bebas Neue', 'sans-serif'],
-				playfair: ['Playfair Display', 'serif']
+				body: ['Poppins', 'sans-serif']
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
