@@ -13,11 +13,7 @@ export function SellerLayout() {
         { label: 'Settings', path: '/seller/settings', icon: Settings },
     ];
 
-    // If we are on the dashboard page, don't show the global layout/header
-    // The dashboard component has its own header and layout
-    if (location.pathname === '/seller/dashboard') {
-        return <Outlet />;
-    }
+
 
     return (
         <SellerDashboardLayout
