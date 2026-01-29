@@ -57,10 +57,14 @@ const router = createBrowserRouter([
   },
 ]);
 
+import ChunkErrorBoundary from "./components/common/ChunkErrorBoundary";
+
 function App() {
   return (
     <ErrorBoundary>
-      <RouterProvider router={router} fallbackElement={<LoadingScreen />} />
+      <ChunkErrorBoundary>
+        <RouterProvider router={router} fallbackElement={<LoadingScreen />} />
+      </ChunkErrorBoundary>
     </ErrorBoundary>
   );
 }
