@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import pg from 'pg';
-import migrate from 'node-pg-migrate';
+import { createRequire } from 'module';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -8,6 +8,10 @@ import { fileURLToPath } from 'url';
 // Handle __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const require = createRequire(import.meta.url);
+
+// Task 1: Correct the Import using createRequire for robust CJS handling
+const migrate = require('node-pg-migrate').default || require('node-pg-migrate');
 
 // Task 1: Absolute Path Loading & Task 2: Debugging
 const envPath = path.resolve(__dirname, '../.env');
@@ -58,8 +62,9 @@ async function run() {
         // 4. Migration Execution
         console.log(`[${new Date().toISOString()}] [INFO] Running Migrations...`);
 
+        // Task 2: Fix the Function Call & Task 3: Path Verification
         await migrate({
-            dir: path.join(__dirname, '../migrations'), // Use absolute path for migrations dir too
+            dir: path.resolve(__dirname, '../migrations'), // Ensure absolute path to migrations folder
             direction: 'up',
             migrationsTable: 'pgmigrations',
             databaseUrl: process.env.DATABASE_URL,
