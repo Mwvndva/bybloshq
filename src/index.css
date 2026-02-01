@@ -120,6 +120,24 @@
         @apply border-border;
     }
 
+    /* Force OLED theme for seller pages */
+    body[class*="seller"],
+    .seller-layout,
+    .seller-dashboard,
+    .seller-products-page,
+    .seller-products-page *,
+    div[class*="seller"] {
+        background-color: #000000 !important;
+        background: #000000 !important;
+        color: white !important;
+    }
+    
+    /* Force OLED for all elements inside seller pages */
+    .seller-products-page * {
+        color: white !important;
+        border-color: rgba(255, 255, 255, 0.1) !important;
+    }
+    
     /* Remove body styling to allow OLED theme components to control their own appearance */
 
     /* Mobile-first font sizing - 30% reduction on mobile */
