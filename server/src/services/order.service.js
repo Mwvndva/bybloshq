@@ -11,6 +11,7 @@ class OrderService {
    * Create a new order with fee calculations and status determination
    */
   static async createOrder(orderData) {
+    let sellerInfo = null;
     const client = await pool.connect();
     try {
       const {
@@ -31,13 +32,40 @@ class OrderService {
       await client.query('BEGIN');
 
       // 1. Verify seller exists and is active
-      const sellerCheck = await client.query(
-        'SELECT id FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
-        [sellerId, 'active']
-      );
+      try {
+        const sellerCheck = await client.query(
+          'SELECT id, shop_id, user_id, whatsapp_number, full_name, email FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+          [sellerId, 'active']
+        );
 
-      if (sellerCheck.rows.length === 0) {
-        throw new Error(`Seller with ID ${sellerId} not found or inactive`);
+        if (sellerCheck.rows.length === 0) {
+          throw new Error(`Seller with ID ${sellerId} not found or inactive`);
+        }
+
+        sellerInfo = sellerCheck.rows[0];
+
+        // Refactor: If shop_id is null (shopless), ensure we have user details
+        if (!sellerInfo.shop_id && sellerInfo.user_id) {
+          const userCheck = await client.query(
+            'SELECT full_name, whatsapp_number, email FROM users WHERE id = $1',
+            [sellerInfo.user_id]
+          );
+          
+          if (userCheck.rows.length > 0) {
+            const userInfo = userCheck.rows[0];
+            // Prioritize User table info for shopless sellers if missing in Seller table
+            sellerInfo.full_name = sellerInfo.full_name || userInfo.full_name;
+            sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || userInfo.whatsapp_number;
+            sellerInfo.email = sellerInfo.email || userInfo.email;
+          }
+        }
+        
+        // Ensure 'name' and 'whatsapp_number' are available for notifications
+        sellerInfo.name = sellerInfo.full_name;
+        
+      } catch (err) {
+        logger.error(`Error fetching seller info for ID ${sellerId}:`, err);
+        throw err;
       }
 
       // 2. Process and validate order items
