@@ -33,10 +33,21 @@ class OrderService {
 
       // 1. Verify seller exists and is active
       try {
-        const sellerCheck = await client.query(
-          'SELECT id, user_id, whatsapp_number, full_name, email, physical_address FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
-          [sellerId, 'active']
-        );
+        // First try to get basic seller info that should definitely exist
+        let sellerCheck;
+        try {
+          sellerCheck = await client.query(
+            'SELECT id, user_id, physical_address, status FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+            [sellerId, 'active']
+          );
+        } catch (schemaError) {
+          // If even basic columns don't exist, try minimal query
+          logger.warn('Seller schema issue, trying minimal query:', schemaError);
+          sellerCheck = await client.query(
+            'SELECT id, user_id FROM sellers WHERE id = $1 FOR UPDATE',
+            [sellerId]
+          );
+        }
 
         if (sellerCheck.rows.length === 0) {
           throw new Error(`Seller with ID ${sellerId} not found or inactive`);
@@ -44,24 +55,41 @@ class OrderService {
 
         sellerInfo = sellerCheck.rows[0];
 
-        // Refactor: If physical_address is null (shopless), ensure we have user details
-        if (!sellerInfo.physical_address && sellerInfo.user_id) {
+        // Always fetch user details since sellers table might not have the contact info
+        if (sellerInfo.user_id) {
           const userCheck = await client.query(
-            'SELECT full_name, whatsapp_number, email FROM users WHERE id = $1',
+            'SELECT id, email, role FROM users WHERE id = $1',
             [sellerInfo.user_id]
           );
           
           if (userCheck.rows.length > 0) {
             const userInfo = userCheck.rows[0];
-            // Prioritize User table info for shopless sellers if missing in Seller table
-            sellerInfo.full_name = sellerInfo.full_name || userInfo.full_name;
-            sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || userInfo.whatsapp_number;
-            sellerInfo.email = sellerInfo.email || userInfo.email;
+            
+            // Map user info to sellerInfo structure expected by the rest of the code
+            sellerInfo.full_name = userInfo.role === 'seller' ? 'Seller' : userInfo.email; // Fallback name
+            sellerInfo.email = userInfo.email;
+            sellerInfo.whatsapp_number = null; // Will be set later if available
+            
+            // Try to get additional contact info from buyers table (some sellers might have buyer records too)
+            try {
+              const buyerContactCheck = await client.query(
+                'SELECT full_name, whatsapp_number FROM buyers WHERE user_id = $1 LIMIT 1',
+                [sellerInfo.user_id]
+              );
+              
+              if (buyerContactCheck.rows.length > 0) {
+                const buyerInfo = buyerContactCheck.rows[0];
+                sellerInfo.full_name = sellerInfo.full_name || buyerInfo.full_name;
+                sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || buyerInfo.whatsapp_number;
+              }
+            } catch (buyerError) {
+              logger.debug('Could not fetch buyer contact info:', buyerError);
+            }
           }
         }
         
-        // Ensure 'name' and 'whatsapp_number' are available for notifications
-        sellerInfo.name = sellerInfo.full_name;
+        // Ensure 'name' is available for notifications
+        sellerInfo.name = sellerInfo.full_name || 'Unknown Seller';
         
       } catch (err) {
         logger.error(`Error fetching seller info for ID ${sellerId}:`, err);
@@ -236,15 +264,18 @@ class OrderService {
       await client.query('COMMIT');
 
       // 7. Send Notification
-      try {
+        try {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
                   b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, 
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
+                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
+                  COALESCE(s.email, u.email) as seller_email, 
                   s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
+           LEFT JOIN users u ON s.user_id = u.id
            WHERE o.id = $1`,
           [orderId]
         );
@@ -556,11 +587,14 @@ class OrderService {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
                   b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, 
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
+                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
+                  COALESCE(s.email, u.email) as seller_email, 
                   s.physical_address as seller_address, s.shop_name, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
+           LEFT JOIN users u ON s.user_id = u.id
            WHERE o.id = $1`,
           [orderId]
         );
@@ -677,10 +711,14 @@ class OrderService {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
                   b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
+                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
+                  COALESCE(s.email, u.email) as seller_email, 
+                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
+           LEFT JOIN users u ON s.user_id = u.id
            WHERE o.id = $1`,
           [orderId]
         );
