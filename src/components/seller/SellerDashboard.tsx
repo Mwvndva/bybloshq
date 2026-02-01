@@ -1302,20 +1302,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <div className="grid gap-4 lg:grid-cols-3 items-start">
               {/* Recent Products */}
               <div className="lg:col-span-2 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
-                    <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    onClick={() => navigate('/seller/add-product')}
-                    className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-xl font-semibold text-xs w-full sm:w-auto"
-                  >
-                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Add Product
-                  </Button>
+                <div className="mb-4">
+                  <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
+                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
                 </div>
 
                 {products.length > 0 ? (
@@ -1405,52 +1394,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Product Management</h2>
               <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">Manage all your products in one place</p>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                <div>
-                  <h3 className="text-base sm:text-lg font-black text-white">Quick Actions</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Common tasks for your products</p>
-                </div>
-
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/seller/add-product')}
-                  className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-xl font-semibold text-xs w-full sm:w-auto"
-                >
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  Add Product
-                </Button>
-              </div>
-
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-                <Button
-                  variant="outline"
-                  className="h-12 justify-start gap-2 text-left border-white/10 bg-transparent text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-lg sm:rounded-xl px-3"
-                  onClick={() => navigate('/seller/products')}
-                >
-                  <Package className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">View All Products</p>
-                    <p className="text-xs text-gray-300 truncate">See all your products</p>
-                  </div>
-                </Button>
-
-                <Button
-                  variant="outline"
-                  className="h-12 justify-start gap-2 text-left border-white/10 bg-transparent text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-lg sm:rounded-xl px-3"
-                  onClick={() => navigate('/seller/add-product')}
-                >
-                  <Plus className="h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0" />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-sm truncate">Add New Product</p>
-                    <p className="text-xs text-gray-300 truncate">Create a new listing</p>
-                  </div>
-                </Button>
-
-              </div>
             </div>
 
             {/* Recent Products */}
