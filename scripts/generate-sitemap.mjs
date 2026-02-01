@@ -1,5 +1,5 @@
-import { writeFileSync } from 'fs';
-import { resolve, dirname } from 'path';
+import { writeFileSync, existsSync, mkdirSync } from 'fs';
+import { resolve, dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { SitemapStream, streamToPromise } from 'sitemap';
 import { Readable } from 'stream';
@@ -36,11 +36,17 @@ async function generateSitemap() {
       Readable.from(routes).pipe(stream)
     ).then((data) => data.toString());
 
+    // Define the path
+    const publicDir = join(process.cwd(), 'public');
+    const sitemapPath = join(publicDir, 'sitemap.xml');
+
+    // Ensure public directory exists
+    if (!existsSync(publicDir)) {
+      mkdirSync(publicDir, { recursive: true });
+    }
+
     // Write sitemap to file
-    writeFileSync(
-      resolve(__dirname, '../public/sitemap.xml'),
-      xmlString
-    );
+    writeFileSync(sitemapPath, xmlString);
 
     console.log('Sitemap generated successfully!');
   } catch (error) {
