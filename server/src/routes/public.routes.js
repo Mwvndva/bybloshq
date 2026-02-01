@@ -1,7 +1,7 @@
 import express from 'express';
 import * as publicController from '../controllers/public.controller.js';
 import * as eventController from '../controllers/event.controller.js';
-import publicTicketRoutes from './public/ticket.routes.js';
+import publicTicketRoutes from './ticket.routes.js';
 import paymentController from '../controllers/payment.controller.js';
 
 const router = express.Router();
