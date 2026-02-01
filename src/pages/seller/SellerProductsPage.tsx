@@ -142,7 +142,7 @@ export default function SellerProductsPage() {
           </div>
           <Button 
             onClick={() => navigate('/seller/products/new')}
-            className="bg-emerald-500 text-black font-bold px-6 py-2 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95 transition-transform"
+            className="bg-emerald-500 text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] px-6 py-3 hover:scale-105 active:scale-95 transition-all duration-200"
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Product

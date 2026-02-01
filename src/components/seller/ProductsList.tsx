@@ -97,7 +97,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 p-0 text-gray-300 hover:bg-red-500/10 hover:text-red-200"
+          className="h-8 w-8 p-0 text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             handleDeleteClick(product.id);
@@ -110,14 +110,6 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             <Trash2 className="h-4 w-4" />
           )}
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onEdit(product.id)}
-          className="h-8 w-8 text-gray-300 hover:bg-white/5 hover:text-white"
-        >
-          <Edit className="h-4 w-4" />
-        </Button>
       </div>
     );
   };
@@ -129,7 +121,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
           <DialogHeader>
             <DialogTitle className="text-white">Delete Product</DialogTitle>
-            <DialogDescription className="text-gray-300">
+            <DialogDescription className="text-zinc-300">
               Are you sure you want to delete this product? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -141,7 +133,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 setProductToDelete(null);
               }}
               disabled={!!deletingId}
-              className="bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
+              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
             >
               Cancel
             </Button>
@@ -165,7 +157,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       {/* Grid View - Hidden on larger screens */}
       <div className="md:hidden grid gap-6 grid-cols-1 sm:grid-cols-2">
         {products.map((product) => (
-          <Card key={product.id} className="relative group bg-zinc-900/30 backdrop-blur-xl border border-white/5 rounded-2xl hover:border-emerald-500/50 transition-all">
+          <Card key={product.id} className="relative group bg-zinc-900/40 backdrop-blur-md border border-white/10 rounded-2xl hover:border-emerald-500/50 transition-all shadow-2xl">
             <div className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -178,7 +170,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     onClick={() => onEdit(product.id)}
                     className="flex items-center gap-2 cursor-pointer text-white hover:bg-white/5"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-4 w-4 text-emerald-400" />
                     <span>Edit</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
@@ -227,7 +219,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     onClick={() => onEdit(product.id)}
                     className="border-white/10 text-white hover:bg-white/5 hover:border-white/20"
                   >
-                    <Edit className="h-4 w-4 mr-1" />
+                    <Edit className="h-4 w-4 mr-1 text-emerald-400" />
                     Edit
                   </Button>
                   {renderActions(product)}
@@ -239,20 +231,20 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       </div>
 
       {/* Table View - Visible on medium screens and up */}
-      <div className="hidden md:block bg-zinc-900/30 backdrop-blur-xl border border-white/5 rounded-2xl overflow-hidden">
+      <div className="hidden md:block bg-zinc-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
         <Table>
-          <TableHeader className="border-b border-white/5">
-            <TableRow>
-              <TableHead className="w-2/5 text-zinc-400">Product</TableHead>
-              <TableHead className="w-1/5 text-zinc-400">Aesthetic</TableHead>
-              <TableHead className="w-1/6 text-zinc-400">Price</TableHead>
-              <TableHead className="w-1/6 text-zinc-400">Status</TableHead>
-              <TableHead className="w-1/6 text-right text-zinc-400">Actions</TableHead>
+          <TableHeader className="border-b border-white/10">
+            <TableRow className="bg-zinc-900/20">
+              <TableHead className="w-2/5 text-zinc-400 font-semibold">Product</TableHead>
+              <TableHead className="w-1/5 text-zinc-400 font-semibold">Aesthetic</TableHead>
+              <TableHead className="w-1/6 text-zinc-400 font-semibold">Price</TableHead>
+              <TableHead className="w-1/6 text-zinc-400 font-semibold">Status</TableHead>
+              <TableHead className="w-1/6 text-right text-zinc-400 font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {products.map((product) => (
-              <TableRow key={product.id} className="border-b border-white/5 hover:bg-white/5">
+              <TableRow key={product.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-3">
                     {product.image_url ? (
@@ -267,7 +259,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       </div>
                     )}
                     <div className="flex flex-col">
-                      <span className="line-clamp-2 text-white">{product.name}</span>
+                      <span className="line-clamp-2 text-white font-medium">{product.name}</span>
                       <div className="flex gap-1 mt-1">
                         {(product.product_type === 'digital' || product.productType === 'digital' || product.is_digital) && (
                           <Badge variant="outline" className="w-fit text-[10px] h-5 px-1.5 border-blue-500/30 text-blue-400 bg-blue-500/10">
@@ -276,7 +268,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         )}
                         {(product.product_type === 'service' || product.productType === 'service') && (
                           <Badge variant="outline" className="w-fit text-[10px] h-5 px-1.5 border-purple-500/30 text-purple-400 bg-purple-500/10">
-                            <Handshake className="h-3 w-3 mr-1" />
+                            <Handshake className="h-3 w-3 mr-1 text-purple-400" />
                             Service
                           </Badge>
                         )}
@@ -285,10 +277,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                   </div>
                 </TableCell>
                 <TableCell className="capitalize text-zinc-300">{product.aesthetic}</TableCell>
-                <TableCell className="text-white font-medium">{formatCurrency(product.price)}</TableCell>
+                <TableCell className="text-white font-semibold">{formatCurrency(product.price)}</TableCell>
                 <TableCell>
                   <Badge
-                    className={`capitalize ${
+                    className={`capitalize font-medium ${
                       product.status === 'sold' 
                         ? 'bg-red-500/20 text-red-400 border-red-500/30' 
                         : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
@@ -318,14 +310,14 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       variant="ghost"
                       size="icon"
                       onClick={() => onEdit(product.id)}
-                      className="h-8 w-8 text-zinc-400 hover:bg-white/5 hover:text-white"
+                      className="h-8 w-8 text-zinc-400 hover:bg-white/5 hover:text-emerald-400 transition-colors"
                     >
                       <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteClick(product.id);
