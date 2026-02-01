@@ -82,7 +82,7 @@ class PaymentService {
      */
     async initiatePayment(paymentData) {
         try {
-            const { email, amount, invoice_id, phone, narrative, firstName, lastName } = paymentData;
+            const { email, amount, invoice_id, phone, narrative, firstName, lastName, billing_address } = paymentData;
 
             if (!this.networkCode || !this.channelId) {
                 throw new Error('Payd network code or channel ID not configured');
@@ -850,7 +850,8 @@ class PaymentService {
             // initiatePayment expects 'phone' key for the number to charge
             phone: buyerMobilePayment,
             firstName: customerName?.split(' ')[0],
-            narrative: paymentData.metadata.narrative
+            narrative: paymentData.metadata.narrative,
+            billing_address: billingAddress // Add billing_address for Payd V3 requirements
         };
 
         const result = await this.initiatePayment(gwPayload);
