@@ -133,54 +133,72 @@ export default function SellerProductsPage() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold">My Products</h1>
-          <p className="text-muted-foreground">Manage your product listings</p>
+    <div className="min-h-screen bg-[#000000] text-white">
+      <div className="container mx-auto py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-white">My Products</h1>
+            <p className="text-zinc-400">Manage your product listings</p>
+          </div>
+          <Button 
+            onClick={() => navigate('/seller/products/new')}
+            className="bg-emerald-500 text-black font-bold px-6 py-2 rounded-full shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-95 transition-transform"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Product
+          </Button>
         </div>
-        <Button onClick={() => navigate('/seller/products/new')}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Product
-        </Button>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Product List</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            </div>
-          ) : products.length > 0 ? (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Your Products</h2>
-                <Button onClick={fetchProducts} variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh
+        <div className="bg-zinc-900/30 backdrop-blur-xl border border-white/5 rounded-2xl">
+          <div className="p-6 border-b border-white/5">
+            <h2 className="text-xl font-semibold text-white">Product List</h2>
+          </div>
+          <div className="p-6">
+            {isLoading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+              </div>
+            ) : products.length > 0 ? (
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold text-white">Your Products</h2>
+                  <Button 
+                    onClick={fetchProducts} 
+                    variant="outline" 
+                    size="sm"
+                    className="border-white/10 text-white hover:bg-white/10 hover:border-white/20"
+                  >
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+                <ProductsList
+                  products={products}
+                  onDelete={handleDelete}
+                  onEdit={handleEdit}
+                  onStatusUpdate={handleStatusUpdate}
+                  onRefresh={fetchProducts}
+                />
+              </div>
+            ) : (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/10 flex items-center justify-center">
+                  <Plus className="h-8 w-8 text-emerald-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">No products yet</h3>
+                <p className="text-zinc-400 mb-6">Add your first product to get started</p>
+                <Button 
+                  variant="link" 
+                  onClick={() => navigate('/seller/products/new')}
+                  className="text-emerald-400 hover:text-emerald-300"
+                >
+                  Add Product
                 </Button>
               </div>
-              <ProductsList
-                products={products}
-                onDelete={handleDelete}
-                onEdit={handleEdit}
-                onStatusUpdate={handleStatusUpdate}
-                onRefresh={fetchProducts}
-              />
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No products found. Add your first product to get started.</p>
-              <Button variant="link" onClick={() => navigate('/seller/products/new')}>
-                Add Product
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
