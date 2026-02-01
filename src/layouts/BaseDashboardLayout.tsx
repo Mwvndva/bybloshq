@@ -73,7 +73,7 @@ export function BaseDashboardLayout({
     };
 
     return (
-        <div className="min-h-screen bg-[#000000] flex">
+        <div className="seller-layout min-h-screen bg-[#000000] flex">
             {/* Sidebar (if enabled) */}
             {showSidebar && (
                 <>

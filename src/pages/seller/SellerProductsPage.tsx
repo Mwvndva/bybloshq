@@ -133,7 +133,7 @@ export default function SellerProductsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#000000] text-white">
+    <div className="seller-products-page min-h-screen bg-[#000000] text-white">
       <div className="container mx-auto py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
