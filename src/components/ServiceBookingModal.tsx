@@ -114,7 +114,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const handleConfirm = () => {
         let finalLocation = location;
 
-        if (selectedLocationType === 'buyer') {
+        if (isShopless) {
+            // For shopless sellers, default to virtual location
+            finalLocation = 'Online/Virtual';
+        } else if (selectedLocationType === 'buyer') {
             finalLocation = customLocation;
         } else if (locations.length === 0 && !location) {
             finalLocation = 'Default Seller Location';
@@ -125,8 +128,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 date,
                 time,
                 location: finalLocation,
-                locationType: selectedLocationType === 'buyer' ? 'seller_visits_buyer' : 'buyer_visits_seller',
-                serviceRequirements: serviceRequirements.trim()
+                locationType: isShopless ? 'virtual' : (selectedLocationType === 'buyer' ? 'seller_visits_buyer' : 'buyer_visits_seller'),
+                serviceRequirements: serviceRequirements.trim() || '' // Ensure empty string instead of null
             });
         }
     };
@@ -138,8 +141,11 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     // Check if seller is shopless (no physical address)
     const isShopless = !product.seller?.physical_address;
 
-    // Validation
+    // Validation - for shopless sellers, location is auto-filled
     const isLocationValid = () => {
+        if (isShopless) {
+            return true; // Always valid for shopless sellers
+        }
         if (selectedLocationType === 'buyer' || isSellerVisits) {
             return customLocation.trim().length > 0;
         }
@@ -148,6 +154,21 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     };
 
     const isValid = date && time && isLocationValid() && wordCount <= maxWords;
+    
+    // Get disabled reason for UI feedback
+    const getDisabledReason = () => {
+        if (!date) return 'Please select a date';
+        if (!time) return 'Please select a time';
+        if (!isLocationValid()) {
+            if (isShopless) return 'Loading seller details...';
+            if (selectedLocationType === 'buyer' || isSellerVisits) {
+                return 'Please enter your address';
+            }
+            return 'Please select a location';
+        }
+        if (wordCount > maxWords) return 'Service requirements too long';
+        return '';
+    };
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -312,6 +333,11 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                     >
                         Confirm Booking
                     </Button>
+                    {!isValid && (
+                        <p className="text-xs text-[#666] text-center font-medium">
+                            {getDisabledReason()}
+                        </p>
+                    )}
                     <Button
                         variant="ghost"
                         onClick={onClose}
