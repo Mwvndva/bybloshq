@@ -49,13 +49,18 @@ export function BaseDashboardLayout({
 }: BaseDashboardLayoutProps) {
     const navigate = useNavigate();
     const location = useLocation();
-    const { logout } = useGlobalAuth();
+    const { logout, isAuthenticated } = useGlobalAuth();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
     // Check if current path matches navigation item
     const isActivePath = (path: string) => {
         return location.pathname === path || location.pathname.startsWith(path + '/');
     };
+
+    // Determine if logout button should be shown
+    const authRoutes = ['/login', '/register', '/seller/login', '/seller/register'];
+    const isAuthRoute = authRoutes.includes(location.pathname);
+    const shouldShowLogout = isAuthenticated && !isAuthRoute;
 
     // Handle logout
     const handleLogout = () => {
@@ -136,14 +141,16 @@ export function BaseDashboardLayout({
 
                         {/* Sidebar Footer */}
                         <div className="p-4 border-t border-white/10">
-                            <Button
-                                variant="outline"
-                                onClick={handleLogout}
-                                className="w-full border-white/10 text-white hover:bg-white/5 hover:border-white/20 rounded-xl"
-                            >
-                                <LogOut className="h-4 w-4 mr-2" />
-                                Log out
-                            </Button>
+                            {shouldShowLogout && (
+                                <Button
+                                    variant="outline"
+                                    onClick={handleLogout}
+                                    className="w-full border-white/10 text-white hover:bg-white/5 hover:border-white/20 rounded-xl"
+                                >
+                                    <LogOut className="h-4 w-4 mr-2" />
+                                    Log out
+                                </Button>
+                            )}
                         </div>
                     </aside>
                 </>
@@ -196,7 +203,7 @@ export function BaseDashboardLayout({
                             {/* Right: Actions/Logout */}
                             <div className="flex-1 flex items-center justify-end gap-2">
                                 {headerActions}
-                                {!showSidebar && (
+                                {!showSidebar && shouldShowLogout && (
                                     <Button
                                         variant="outline"
                                         onClick={handleLogout}
