@@ -112,7 +112,8 @@ class PaymentService {
                 phone_number: cleanPhone,
                 narration: narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
-                callback_url: callbackUrl
+                callback_url: callbackUrl,
+                billing_address: billing_address || 'Nairobi, Kenya' // Ensure it's never empty
             });
 
             // Use native HTTPS to avoid Axios "socket hang up" issues
@@ -722,6 +723,10 @@ class PaymentService {
         } else if (user?.city || user?.location) {
             shippingAddress = { city: user.city, location: user.location };
         }
+
+        // Fallback for Billing Address (Payd Requirement)
+        // Use provided location, user location, or default to Nairobi
+        const billingAddress = shippingAddress?.location || shippingAddress?.city || 'Nairobi, Kenya';
 
         // Basic buyer cleanup if user is not authenticated
         if (!buyerId) {
