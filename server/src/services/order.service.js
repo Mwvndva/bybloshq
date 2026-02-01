@@ -69,6 +69,14 @@ class OrderService {
         }
       });
 
+      // Shopless Service Logic: If seller has no shop_id and product is service, ensure location_type is set
+      if (!sellerInfo.shop_id) {
+        const hasService = items.some(i => i.productType === ProductType.SERVICE || i.productType === 'service');
+        if (hasService && !metadata.location_type) {
+          metadata.location_type = 'Virtual/Online';
+        }
+      }
+
       logger.info('OrderService: items enriched', {
         items: items.map(i => ({ id: i.productId, type: i.productType, digital: i.isDigital }))
       });

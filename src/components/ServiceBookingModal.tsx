@@ -212,56 +212,68 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">Location</Label>
 
-                                {/* Hybrid Toggle */}
-                                {isHybrid && (
-                                    <div className="flex p-0.5 bg-white/5 rounded-xl mb-3">
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedLocationType('seller')}
-                                            className={cn(
-                                                "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
-                                                selectedLocationType === 'seller' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
-                                            )}
-                                        >
-                                            In-Store
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setSelectedLocationType('buyer')}
-                                            className={cn(
-                                                "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
-                                                selectedLocationType === 'buyer' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
-                                            )}
-                                        >
-                                            Home Service
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Content based on selection */}
-                                {(selectedLocationType === 'seller' && !isSellerVisits) && (
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/5">
-                                            <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
-                                            <div>
-                                                <p className="text-sm font-bold text-white line-clamp-1">{location || product.seller?.location || product.seller?.city || 'Main Shop'}</p>
-                                                <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">Selected Location</p>
-                                            </div>
+                                {isShopless ? (
+                                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#000000] border border-white/5">
+                                        <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
+                                        <div>
+                                            <p className="text-sm font-bold text-white line-clamp-1">Location: Online/Remote</p>
+                                            <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">Shopless Service</p>
                                         </div>
                                     </div>
-                                )}
+                                ) : (
+                                    <>
+                                        {/* Hybrid Toggle */}
+                                        {isHybrid && (
+                                            <div className="flex p-0.5 bg-white/5 rounded-xl mb-3">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedLocationType('seller')}
+                                                    className={cn(
+                                                        "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
+                                                        selectedLocationType === 'seller' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
+                                                    )}
+                                                >
+                                                    In-Store
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setSelectedLocationType('buyer')}
+                                                    className={cn(
+                                                        "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
+                                                        selectedLocationType === 'buyer' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
+                                                    )}
+                                                >
+                                                    Home Service
+                                                </button>
+                                            </div>
+                                        )}
 
-                                {(selectedLocationType === 'buyer' || isSellerVisits) && (
-                                    <div className="relative">
-                                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666]" />
-                                        <input
-                                            type="text"
-                                            placeholder="Enter address"
-                                            className="flex h-11 w-full rounded-xl bg-white/5 border-0 pl-10 pr-4 text-sm text-white placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 transition-all font-medium"
-                                            value={customLocation}
-                                            onChange={(e) => setCustomLocation(e.target.value)}
-                                        />
-                                    </div>
+                                        {/* Content based on selection */}
+                                        {(selectedLocationType === 'seller' && !isSellerVisits) && (
+                                            <div className="space-y-2">
+                                                <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5 border border-white/5">
+                                                    <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
+                                                    <div>
+                                                        <p className="text-sm font-bold text-white line-clamp-1">{location || product.seller?.location || product.seller?.city || 'Main Shop'}</p>
+                                                        <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">Selected Location</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {(selectedLocationType === 'buyer' || isSellerVisits) && (
+                                            <div className="relative">
+                                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666]" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Enter address"
+                                                    className="flex h-11 w-full rounded-xl bg-white/5 border-0 pl-10 pr-4 text-sm text-white placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 transition-all font-medium"
+                                                    value={customLocation}
+                                                    onChange={(e) => setCustomLocation(e.target.value)}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
 
