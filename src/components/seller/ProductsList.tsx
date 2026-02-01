@@ -206,7 +206,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <EyeOff className="h-8 w-8 text-zinc-500" />
+                    <EyeOff className="h-8 w-8 text-zinc-400" />
                   </div>
                 )}
               </div>
@@ -255,7 +255,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       />
                     ) : (
                       <div className="h-10 w-10 rounded-lg bg-zinc-800 border border-white/5 flex items-center justify-center">
-                        <EyeOff className="h-5 w-5 text-zinc-500" />
+                        <EyeOff className="h-5 w-5 text-zinc-400" />
                       </div>
                     )}
                     <div className="flex flex-col">
