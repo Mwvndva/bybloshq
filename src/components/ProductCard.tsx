@@ -584,7 +584,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           <span className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90",
             theme === 'black' ? 'text-gray-300' : 'text-gray-800'
           )}>{displaySellerName}</span>
-          {displaySeller?.hasPhysicalShop && (
+          {displaySeller?.physical_address && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>
                 <PopoverTrigger asChild>

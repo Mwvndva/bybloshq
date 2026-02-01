@@ -134,6 +134,9 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const locationType = serviceOptions.location_type || 'buyer_visits_seller';
     const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
+    
+    // Check if seller is shopless (no physical address)
+    const isShopless = !product.seller?.physical_address;
 
     // Validation
     const isLocationValid = () => {
