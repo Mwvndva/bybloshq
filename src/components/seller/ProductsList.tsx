@@ -157,7 +157,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       {/* Grid View - Hidden on larger screens */}
       <div className="md:hidden grid gap-6 grid-cols-1 sm:grid-cols-2">
         {products.map((product) => (
-          <Card key={product.id} className="relative group bg-zinc-900/40 backdrop-blur-md border border-white/10 rounded-2xl hover:border-emerald-500/50 transition-all shadow-2xl">
+          <Card key={product.id} className="relative group bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl hover:border-emerald-500/50 transition-all shadow-2xl">
             <div className="absolute right-2 top-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -231,7 +231,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       </div>
 
       {/* Table View - Visible on medium screens and up */}
-      <div className="hidden md:block bg-zinc-900/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
+      <div className="hidden md:block bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl overflow-hidden shadow-2xl">
         <Table>
           <TableHeader className="border-b border-white/10">
             <TableRow className="bg-zinc-900/20">
