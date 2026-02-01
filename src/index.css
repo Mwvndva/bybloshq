@@ -33,9 +33,7 @@
         letter-spacing: -0.025em;
     }
 
-    body {
-        @apply text-gray-900;
-    }
+    /* Remove default body styling to allow OLED theme */
 
     :root {
         --background: 0 0% 100%;
@@ -122,9 +120,7 @@
         @apply border-border;
     }
 
-    body {
-        @apply bg-background text-foreground;
-    }
+    /* Remove body styling to allow OLED theme components to control their own appearance */
 
     /* Mobile-first font sizing - 30% reduction on mobile */
     html {
