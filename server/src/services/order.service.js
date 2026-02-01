@@ -34,7 +34,7 @@ class OrderService {
       // 1. Verify seller exists and is active
       try {
         const sellerCheck = await client.query(
-          'SELECT id, shop_id, user_id, whatsapp_number, full_name, email FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+          'SELECT id, user_id, whatsapp_number, full_name, email, physical_address FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
           [sellerId, 'active']
         );
 
@@ -44,8 +44,8 @@ class OrderService {
 
         sellerInfo = sellerCheck.rows[0];
 
-        // Refactor: If shop_id is null (shopless), ensure we have user details
-        if (!sellerInfo.shop_id && sellerInfo.user_id) {
+        // Refactor: If physical_address is null (shopless), ensure we have user details
+        if (!sellerInfo.physical_address && sellerInfo.user_id) {
           const userCheck = await client.query(
             'SELECT full_name, whatsapp_number, email FROM users WHERE id = $1',
             [sellerInfo.user_id]
@@ -97,8 +97,8 @@ class OrderService {
         }
       });
 
-      // Shopless Service Logic: If seller has no shop_id and product is service, ensure location_type is set
-      if (!sellerInfo.shop_id) {
+      // Shopless Service Logic: If seller has no physical_address and product is service, ensure location_type is set
+      if (!sellerInfo.physical_address) {
         const hasService = items.some(i => i.productType === ProductType.SERVICE || i.productType === 'service');
         if (hasService && !metadata.location_type) {
           metadata.location_type = 'Virtual/Online';
