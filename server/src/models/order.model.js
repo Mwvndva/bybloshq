@@ -136,18 +136,47 @@ class Order {
 
   static async findById(orderId) {
     const query = `
-      SELECT o.*,
-             json_agg(
-               json_build_object(
-                 'id', oi.id,
-                 'productId', oi.product_id,
-                 'name', oi.product_name,
-                 'price', oi.product_price,
-                 'quantity', oi.quantity,
-                 'subtotal', oi.subtotal,
-                 'metadata', oi.metadata
-               )
-             ) as items
+      SELECT 
+        o.id,
+        o.order_number as "orderNumber",
+        o.buyer_id as "buyerId",
+        o.seller_id as "sellerId",
+        o.total_amount as "totalAmount",
+        o.platform_fee_amount as "platformFeeAmount",
+        o.seller_payout_amount as "sellerPayoutAmount",
+        o.payment_method as "paymentMethod",
+        o.buyer_name as "buyerName",
+        o.buyer_email as "buyerEmail",
+        o.buyer_mobile_payment as "buyerMobilePayment",
+        o.buyer_whatsapp_number as "buyerWhatsappNumber",
+        o.shipping_address as "shippingAddress",
+        o.notes,
+        o.metadata,
+        o.status,
+        o.payment_status as "paymentStatus",
+        o.payment_reference as "paymentReference",
+        o.service_requirements as "serviceRequirements",
+        o.created_at as "createdAt",
+        o.updated_at as "updatedAt",
+        o.paid_at as "paidAt",
+        o.completed_at as "completedAt",
+        o.cancelled_at as "cancelledAt",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'productId', oi.product_id,
+              'name', oi.product_name,
+              'price', oi.product_price,
+              'quantity', oi.quantity,
+              'subtotal', oi.subtotal,
+              'productType', COALESCE(oi.metadata->>'productType', 'physical'),
+              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
+              'metadata', oi.metadata
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
+        ) as items
       FROM product_orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
       WHERE o.id = $1
@@ -160,18 +189,47 @@ class Order {
 
   static async findByReference(reference) {
     const query = `
-      SELECT o.*,
-             json_agg(
-               json_build_object(
-                 'id', oi.id,
-                 'productId', oi.product_id,
-                 'name', oi.product_name,
-                 'price', oi.product_price,
-                 'quantity', oi.quantity,
-                 'subtotal', oi.subtotal,
-                 'metadata', oi.metadata
-               )
-             ) as items
+      SELECT 
+        o.id,
+        o.order_number as "orderNumber",
+        o.buyer_id as "buyerId",
+        o.seller_id as "sellerId",
+        o.total_amount as "totalAmount",
+        o.platform_fee_amount as "platformFeeAmount",
+        o.seller_payout_amount as "sellerPayoutAmount",
+        o.payment_method as "paymentMethod",
+        o.buyer_name as "buyerName",
+        o.buyer_email as "buyerEmail",
+        o.buyer_mobile_payment as "buyerMobilePayment",
+        o.buyer_whatsapp_number as "buyerWhatsappNumber",
+        o.shipping_address as "shippingAddress",
+        o.notes,
+        o.metadata,
+        o.status,
+        o.payment_status as "paymentStatus",
+        o.payment_reference as "paymentReference",
+        o.service_requirements as "serviceRequirements",
+        o.created_at as "createdAt",
+        o.updated_at as "updatedAt",
+        o.paid_at as "paidAt",
+        o.completed_at as "completedAt",
+        o.cancelled_at as "cancelledAt",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'productId', oi.product_id,
+              'name', oi.product_name,
+              'price', oi.product_price,
+              'quantity', oi.quantity,
+              'subtotal', oi.subtotal,
+              'productType', COALESCE(oi.metadata->>'productType', 'physical'),
+              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
+              'metadata', oi.metadata
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
+        ) as items
       FROM product_orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
       WHERE o.order_number = $1 OR o.payment_reference = $1
@@ -194,11 +252,51 @@ class Order {
     }
 
     const query = `
-      SELECT o.*,
-             (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) as item_count,
-             (SELECT SUM(oi.subtotal) FROM order_items oi WHERE oi.order_id = o.id) as total_amount
+      SELECT 
+        o.id,
+        o.order_number as "orderNumber",
+        o.buyer_id as "buyerId",
+        o.seller_id as "sellerId",
+        o.total_amount as "totalAmount",
+        o.platform_fee_amount as "platformFeeAmount",
+        o.seller_payout_amount as "sellerPayoutAmount",
+        o.payment_method as "paymentMethod",
+        o.buyer_name as "buyerName",
+        o.buyer_email as "buyerEmail",
+        o.buyer_mobile_payment as "buyerMobilePayment",
+        o.buyer_whatsapp_number as "buyerWhatsappNumber",
+        o.shipping_address as "shippingAddress",
+        o.notes,
+        o.metadata,
+        o.status,
+        o.payment_status as "paymentStatus",
+        o.payment_reference as "paymentReference",
+        o.service_requirements as "serviceRequirements",
+        o.created_at as "createdAt",
+        o.updated_at as "updatedAt",
+        o.paid_at as "paidAt",
+        o.completed_at as "completedAt",
+        o.cancelled_at as "cancelledAt",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'productId', oi.product_id,
+              'name', oi.product_name,
+              'price', oi.product_price,
+              'quantity', oi.quantity,
+              'subtotal', oi.subtotal,
+              'productType', COALESCE(oi.metadata->>'productType', 'physical'),
+              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
+              'metadata', oi.metadata
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
+        ) as items
       FROM product_orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
       ${whereClause}
+      GROUP BY o.id
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
@@ -239,11 +337,51 @@ class Order {
     }
 
     const query = `
-      SELECT o.*,
-             (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) as item_count,
-             (SELECT SUM(oi.subtotal) FROM order_items oi WHERE oi.order_id = o.id) as total_amount
+      SELECT 
+        o.id,
+        o.order_number as "orderNumber",
+        o.buyer_id as "buyerId",
+        o.seller_id as "sellerId",
+        o.total_amount as "totalAmount",
+        o.platform_fee_amount as "platformFeeAmount",
+        o.seller_payout_amount as "sellerPayoutAmount",
+        o.payment_method as "paymentMethod",
+        o.buyer_name as "buyerName",
+        o.buyer_email as "buyerEmail",
+        o.buyer_mobile_payment as "buyerMobilePayment",
+        o.buyer_whatsapp_number as "buyerWhatsappNumber",
+        o.shipping_address as "shippingAddress",
+        o.notes,
+        o.metadata,
+        o.status,
+        o.payment_status as "paymentStatus",
+        o.payment_reference as "paymentReference",
+        o.service_requirements as "serviceRequirements",
+        o.created_at as "createdAt",
+        o.updated_at as "updatedAt",
+        o.paid_at as "paidAt",
+        o.completed_at as "completedAt",
+        o.cancelled_at as "cancelledAt",
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', oi.id,
+              'productId', oi.product_id,
+              'name', oi.product_name,
+              'price', oi.product_price,
+              'quantity', oi.quantity,
+              'subtotal', oi.subtotal,
+              'metadata', oi.metadata,
+              'productType', COALESCE(oi.metadata->>'productType', 'physical'),
+              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false)
+            ) ORDER BY oi.id
+          ) FILTER (WHERE oi.id IS NOT NULL),
+          '[]'::json
+        ) as items
       FROM product_orders o
+      LEFT JOIN order_items oi ON o.id = oi.order_id
       ${whereClause}
+      GROUP BY o.id
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
