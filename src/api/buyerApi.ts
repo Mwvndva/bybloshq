@@ -305,10 +305,9 @@ const buyerApi = {
         return buyerApi.getWishlist(maxRetries, retryCount + 1);
       }
 
-      // Handle 401 Unauthorized
+      // Handle 401 Unauthorized - let global interceptor handle redirect
       if (error.response?.status === 401) {
-        console.log('🔒 Authentication failed, redirecting to login');
-        window.location.href = '/buyer/login';
+        console.log('🔒 Authentication failed - global interceptor will handle redirect');
       }
 
       // For other errors, return empty array but don't retry
@@ -338,8 +337,7 @@ const buyerApi = {
       });
 
       if (error.response?.status === 401) {
-        console.log('Authentication failed, redirecting to login');
-        window.location.href = '/buyer/login';
+        console.log('Authentication failed - global interceptor will handle redirect');
       }
 
       // Handle duplicate entry (409) - throw error to be caught by frontend
@@ -377,8 +375,7 @@ const buyerApi = {
         console.error('Response data:', error.response.data);
 
         if (error.response.status === 401) {
-          console.log('Authentication failed, redirecting to login');
-          window.location.href = '/buyer/login';
+          console.log('Authentication failed - global interceptor will handle redirect');
         }
 
         // Handle 404 as success since item is not in wishlist (already removed)
@@ -404,7 +401,7 @@ const buyerApi = {
       console.error('Error syncing wishlist:', error);
 
       if ((error as any).response?.status === 401) {
-        window.location.href = '/buyer/login';
+        console.log('Authentication failed - global interceptor will handle redirect');
       }
 
       return false;

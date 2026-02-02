@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { toast } from 'sonner';
+import { authStateManager } from './authState';
 
 // Determine Base URL
 // Priority: VITE_API_URL -> localhost logic
@@ -79,10 +80,28 @@ apiClient.interceptors.response.use(
                 url.includes('/me') ||
                 url.includes('/check-auth');
 
-            if (!isAuthCheck) {
+            // REHYDRATION CHECK: If app is currently checking auth, queue the error
+            if (authStateManager.isCurrentlyRehydrating()) {
+                console.log('[API Client] 401 during rehydration - queuing error');
+                authStateManager.queueError(error);
+                return Promise.reject(error);
+            }
+
+            // Check if user had an active session before this 401
+            const hadActiveSession = ['buyer', 'seller', 'organizer', 'admin'].some(role => 
+                localStorage.getItem(`${role}SessionActive`) === 'true'
+            );
+
+            if (!isAuthCheck && hadActiveSession) {
+                // User was previously authenticated but session is now invalid
                 toast.error('Session Expired', {
                     description: 'Please log in again to continue.',
                     duration: 4000,
+                });
+
+                // Clear all session flags
+                ['buyer', 'seller', 'organizer', 'admin'].forEach(role => {
+                    localStorage.removeItem(`${role}SessionActive`);
                 });
 
                 // Determine which login page to redirect to based on the URL
@@ -96,6 +115,12 @@ apiClient.interceptors.response.use(
                 const redirectPath = Object.entries(redirectMap).find(([key]) =>
                     url.includes(key)
                 )?.[1] || '/buyer/login';
+
+                // Save current location for redirect after login
+                const currentPath = window.location.pathname;
+                if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+                    sessionStorage.setItem('redirectAfterLogin', currentPath);
+                }
 
                 // Only redirect if not already on a login page
                 if (!window.location.pathname.includes('/login')) {

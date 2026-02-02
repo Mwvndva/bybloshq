@@ -260,7 +260,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
 
         if (saveResult.requiresLogin) {
-          window.location.href = '/buyer/login';
+          // Save current location for redirect after login
+          sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
+          navigate('/buyer/login', { replace: true });
           return;
         }
 
@@ -378,7 +380,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           // We assume the Dashboard page has its own auth guard to redirect to login if session is missing.
           // This avoids race conditions where getProfile() might fail immediately after signup.
           setTimeout(() => {
-            window.location.href = '/buyer/dashboard?section=orders';
+            navigate('/buyer/dashboard?section=orders', { replace: true });
           }, 1500);
 
         } else if (status === 'failed') {

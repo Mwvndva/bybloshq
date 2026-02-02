@@ -76,10 +76,8 @@ api.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       // Clear client-side auth state marker if used
       localStorage.removeItem('admin_authenticated');
-      // Optional: Redirect if not already on login
-      if (!window.location.pathname.includes('/admin/login')) {
-        window.location.href = '/admin/login';
-      }
+      // Let global apiClient interceptor handle redirect with proper auth state checks
+      console.log('Admin 401 - global interceptor will handle redirect');
     }
     return Promise.reject(error);
   }
