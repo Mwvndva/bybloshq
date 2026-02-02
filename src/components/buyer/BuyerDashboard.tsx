@@ -53,9 +53,9 @@ function BuyerDashboard() {
     const stateSection = (location.state as any)?.activeSection;
     if (stateSection) return stateSection;
 
-    // Priority 2: Query parameters (useful for full page reloads)
+    // Priority 2: Query parameters (useful for full page reloads and payment success)
     const queryParams = new URLSearchParams(location.search);
-    const querySection = queryParams.get('section');
+    const querySection = queryParams.get('section') || queryParams.get('tab');
     if (querySection && ['shop', 'wishlist', 'orders', 'profile'].includes(querySection)) {
       return querySection as any;
     }
