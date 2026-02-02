@@ -641,7 +641,7 @@ export default function OrdersSection() {
                   {order.status === 'CONFIRMED' && (
                     <Button
                       size="sm"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-emerald-500 text-black font-bold hover:bg-emerald-600 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200"
                       onClick={() => handleConfirmReceiptClick(order.id)}
                     >
                       <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
