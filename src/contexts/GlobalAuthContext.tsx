@@ -5,6 +5,7 @@ import buyerApi from '@/api/buyerApi';
 import { sellerApi } from '@/api/sellerApi';
 import adminApi from '@/api/adminApi';
 import apiClient from '@/lib/apiClient';
+import { authStateManager } from '@/lib/authState';
 
 // ============================================================================
 // TYPES
@@ -231,6 +232,15 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             return;
         }
 
+        // CRITICAL: Set rehydration state to prevent 401 interceptor from redirecting
+        authStateManager.setRehydrating(true);
+
+        // Persisted State Check: Check if session was active before reload
+        const sessionKey = `${currentRole}SessionActive`;
+        const hadActiveSession = localStorage.getItem(sessionKey) === 'true';
+        
+        console.log(`[GlobalAuth] Checking auth for ${currentRole}, hadActiveSession: ${hadActiveSession}`);
+
         try {
             const api = getApiForRole(currentRole);
             let profileData;
@@ -240,7 +250,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 const isAuth = adminApi.isAuthenticated();
                 if (!isAuth) {
                     setUser(null);
-                    setIsLoading(false);
+                    localStorage.removeItem(sessionKey);
                     return;
                 }
                 // For admin, we don't have a profile endpoint, so create minimal profile
@@ -257,10 +267,17 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData,
                 isAuthenticated: true
             });
+            
+            // Mark session as active
+            localStorage.setItem(sessionKey, 'true');
+            console.log(`[GlobalAuth] Auth successful for ${currentRole}`);
         } catch (error: any) {
             console.log(`[GlobalAuth] Auth check failed for ${currentRole}:`, error.message);
             setUser(null);
+            localStorage.removeItem(sessionKey);
         } finally {
+            // CRITICAL: Always set isLoading to false and clear rehydration state
+            authStateManager.setRehydrating(false);
             setIsLoading(false);
         }
     }, [location.pathname]);
@@ -293,14 +310,24 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData,
                 isAuthenticated: true
             });
+            
+            // Mark session as active
+            localStorage.setItem(`${role}SessionActive`, 'true');
 
             toast.success('Welcome back!', {
                 description: 'You have successfully logged in.',
                 duration: 2000,
             });
 
-            // Navigate to dashboard
-            navigate(getDashboardPath(role), { replace: true });
+            // Check for saved redirect location
+            const redirectPath = sessionStorage.getItem('redirectAfterLogin');
+            if (redirectPath) {
+                sessionStorage.removeItem('redirectAfterLogin');
+                navigate(redirectPath, { replace: true });
+            } else {
+                // Navigate to dashboard
+                navigate(getDashboardPath(role), { replace: true });
+            }
         } catch (error: any) {
             console.error(`[GlobalAuth] Login error for ${role}:`, error);
 
@@ -339,6 +366,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData,
                 isAuthenticated: true
             });
+            
+            // Mark session as active
+            localStorage.setItem(`${role}SessionActive`, 'true');
 
             console.log(`[GlobalAuth] Auto-login successful for ${role}`);
         } catch (error: any) {
@@ -366,6 +396,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                     profile: { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() },
                     isAuthenticated: true
                 });
+                
+                // Mark session as active
+                localStorage.setItem('adminSessionActive', 'true');
 
                 toast.success('Welcome Admin', {
                     description: 'You have successfully logged in.',
@@ -415,6 +448,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData!,
                 isAuthenticated: true
             });
+            
+            // Mark session as active
+            localStorage.setItem(`${role}SessionActive`, 'true');
 
             toast.success('Account created!', {
                 description: 'Your account has been successfully created.',
@@ -439,6 +475,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // ============================================================================
 
     const logout = useCallback(() => {
+        // Clear session active flags for all roles
+        ['buyer', 'seller', 'organizer', 'admin'].forEach(role => {
+            localStorage.removeItem(`${role}SessionActive`);
+        });
         if (!user) return;
 
         const role = user.role;
