@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, XCircle, X } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useGlobalAuth } from '@/contexts/GlobalAuthContext';
 import apiClient from '@/lib/apiClient';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { logout } = useGlobalAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing your payment...');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -73,22 +74,9 @@ export default function PaymentSuccess() {
 
         <CardContent className="text-center space-y-4">
           {status === 'error' && (
-            <>
-              <Button
-                onClick={() => navigate('/buyer/dashboard')}
-                className="w-full bg-yellow-500 text-black font-bold hover:bg-yellow-600"
-              >
-                Go to Dashboard
-              </Button>
-
-              <Button
-                onClick={() => navigate('/')}
-                variant="ghost"
-                className="w-full text-zinc-300 hover:bg-white/5"
-              >
-                Continue Shopping
-              </Button>
-            </>
+            <p className="text-sm text-red-400">
+              Please contact support if you believe this is an error.
+            </p>
           )}
         </CardContent>
       </Card>
@@ -99,14 +87,16 @@ export default function PaymentSuccess() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-[#000000]/95 backdrop-blur-xl"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="relative w-full max-w-lg mx-4 bg-[rgba(20,20,20,0.95)] backdrop-blur-[20px] border border-emerald-500/30 rounded-3xl shadow-2xl overflow-hidden">
+          <div className="relative w-full max-w-lg mx-4 bg-[#000000] backdrop-blur-[20px] border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
             {/* Emerald Glow Effect */}
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
             
             {/* Close Button */}
             <button
-              onClick={() => {
+              onClick={async () => {
                 setShowSuccessModal(false);
+                // Clear any existing session to ensure fresh login
+                await logout();
                 navigate('/buyer/login', {
                   state: { 
                     message: 'Payment successful! Please log in to view your order.',
@@ -149,12 +139,14 @@ export default function PaymentSuccess() {
               {/* Login Instruction */}
               <div className="space-y-4">
                 <p className="text-base text-gray-300">
-                  To track your order, please log in to your account.
+                  Please log in to your buyer account to track this order.
                 </p>
 
                 {/* Go to Login Button */}
                 <button
-                  onClick={() => {
+                  onClick={async () => {
+                    // Clear any existing session to ensure fresh login
+                    await logout();
                     navigate('/buyer/login', {
                       state: { 
                         message: 'Payment successful! Please log in to view your order.',
