@@ -535,8 +535,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const handleStatusUpdate = async (productId: string, newStatus: 'available' | 'sold') => {
     try {
       setUpdatingId(productId);
-      const soldAt = newStatus === 'sold' ? new Date().toISOString() : null;
-      await sellerApi.updateProductStatus(productId, newStatus, soldAt);
+      const isSold = newStatus === 'sold';
+      const soldAt = isSold ? new Date().toISOString() : null;
+      
+      // Update the backend using the existing updateProduct method
+      await sellerApi.updateProduct(productId, {
+        status: newStatus,
+        soldAt: soldAt
+      });
       
       // Refresh products list
       await fetchData();
@@ -546,6 +552,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         description: `Product marked as ${newStatus}`,
       });
     } catch (error) {
+      console.error('Failed to update product status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update product status',
