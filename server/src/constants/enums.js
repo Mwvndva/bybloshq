@@ -1,19 +1,18 @@
 /**
  * @readonly
  * @enum {string}
+ * Matches database order_status enum exactly
  */
 export const OrderStatus = {
     PENDING: 'PENDING',
     SERVICE_PENDING: 'SERVICE_PENDING',
     DELIVERY_PENDING: 'DELIVERY_PENDING',
-    COLLECTION_PENDING: 'COLLECTION_PENDING', // Waiting for buyer pickup
+    COLLECTION_PENDING: 'COLLECTION_PENDING', // Waiting for buyer pickup at shop
     DELIVERY_COMPLETE: 'DELIVERY_COMPLETE',
     CONFIRMED: 'CONFIRMED',
     COMPLETED: 'COMPLETED',
     CANCELLED: 'CANCELLED',
-    FAILED: 'FAILED',
-    SHIPPED: 'shipped', // Legacy casing support if needed, or normalize
-    DELIVERED: 'delivered'
+    FAILED: 'FAILED'
 };
 
 /**

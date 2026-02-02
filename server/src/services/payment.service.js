@@ -403,11 +403,11 @@ class PaymentService {
             }
         }
 
-        // 3. Mark as Success in DB
-        // Use DAO logic effectively? Or direct query? Direct query is fine inside Service for transaction control.
+        // 3. Mark as Success in DB (normalized to lowercase 'completed' per PaymentStatus enum)
+        logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed'`);
         await pool.query(
-            `UPDATE payments SET status = 'success', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2`,
-            [JSON.stringify({ payd_confirmation: metadata }), payment.id]
+            `UPDATE payments SET status = $1, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb WHERE id = $3`,
+            [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id]
         );
 
         // 4. Trigger Post-Payment Logic
@@ -416,12 +416,18 @@ class PaymentService {
         const updatedPayment = updatedRows[0];
         const paymentMeta = updatedPayment.metadata || {};
 
+        logger.info(`[PURCHASE-FLOW] 6c. Payment updated, determining downstream action`, {
+            hasOrderId: !!paymentMeta.order_id,
+            hasProductId: !!paymentMeta.product_id,
+            hasTicketTypeId: !!(updatedPayment.ticket_type_id || paymentMeta.ticket_type_id)
+        });
+
         if (paymentMeta.order_id || paymentMeta.product_id) {
             // It's a Product Order
             // Call OrderService to complete
             import('./order.service.js').then(async ({ default: OrderService }) => {
                 try {
-                    logger.info(`[PURCHASE-FLOW] 7. Completing Order ${paymentMeta.order_id} via OrderService`);
+                    logger.info(`[PURCHASE-FLOW] 7. Completing Order ${paymentMeta.order_id} via OrderService.completeOrder()`);
                     const completionResult = await OrderService.completeOrder(updatedPayment);
                     logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
                 } catch (e) {
@@ -436,16 +442,18 @@ class PaymentService {
                 const client = await pool.connect();
                 try {
                     await client.query('BEGIN');
+                    logger.info(`[PURCHASE-FLOW] 7. Creating ticket for payment ${updatedPayment.id}`);
                     const ticket = await TicketService.createTicket(client, updatedPayment);
                     const qr = await TicketService.generateQRCode(ticket);
                     await TicketService.sendTicketEmail(ticket, updatedPayment, qr);
 
-                    // Update payment to fully COMPLETED
-                    await client.query("UPDATE payments SET status = 'completed' WHERE id = $1", [updatedPayment.id]);
+                    // Update payment to fully COMPLETED (already set above, but ensure consistency)
+                    await client.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, updatedPayment.id]);
                     await client.query('COMMIT');
+                    logger.info(`[PURCHASE-FLOW] 8. Ticket created and sent successfully`);
                 } catch (e) {
                     await client.query('ROLLBACK');
-                    logger.error('Error processing ticket after payment:', e);
+                    logger.error('[PURCHASE-FLOW] ERROR - Error processing ticket after payment:', e);
                     // Don't fail the webhook response, just log.
                 } finally {
                     client.release();
@@ -454,6 +462,7 @@ class PaymentService {
             return { status: 'success', message: 'Payment processed and Ticket generation queued' };
         }
 
+        logger.warn(`[PURCHASE-FLOW] Payment ${payment.id} completed but no downstream action defined (no order_id or ticket_type_id)`);
         return { status: 'success', message: 'Payment received but no downstream action defined' };
     }
 
