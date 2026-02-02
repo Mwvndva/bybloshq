@@ -365,22 +365,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           clearInterval(interval);
           setIsProcessingPurchase(false);
 
-          // Do NOT clear auth data here. We want the user to remain authenticated (if they are)
-          // or at least keep their session cookies for the dashboard to pick up.
-          // clearAllAuthData();
-
           toast({
             title: 'Payment Successful',
             description: 'Your purchase has been confirmed! Redirecting...',
             className: 'bg-green-600 text-white',
-            duration: 5000
+            duration: 2000
           });
 
-          // **NAVIGATION**: Redirect directly to dashboard
-          // We assume the Dashboard page has its own auth guard to redirect to login if session is missing.
-          // This avoids race conditions where getProfile() might fail immediately after signup.
+          // **NAVIGATION**: Redirect to payment success page to show modal
+          // User will manually click "Go to Login" button from success modal
           setTimeout(() => {
-            navigate('/buyer/dashboard?section=orders', { replace: true });
+            navigate(`/payment/success?reference=${invoiceId}&status=success`, { replace: true });
           }, 1500);
 
         } else if (status === 'failed') {
