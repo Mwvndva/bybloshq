@@ -49,21 +49,7 @@ export default function CheckoutPage() {
         if (message) newSearchParams.set('message', message);
         window.history.replaceState({}, '', `${window.location.pathname}?${newSearchParams.toString()}`);
 
-
-        // Automatically redirect to buyer dashboard after 3 seconds with countdown
-        setRedirectCountdown(3);
-        const countdownInterval = setInterval(() => {
-          setRedirectCountdown(prev => {
-            if (prev === null || prev <= 1) {
-              clearInterval(countdownInterval);
-              navigate('/buyer/dashboard', {
-                state: { activeSection: 'orders' }
-              });
-              return null;
-            }
-            return prev - 1;
-          });
-        }, 1000);
+        // No automatic redirect - user must manually click button
         break;
 
       case 'pending':
