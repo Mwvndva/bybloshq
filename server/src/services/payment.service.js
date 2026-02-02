@@ -485,7 +485,24 @@ class PaymentService {
 
         const payment = rows[0];
         if (!payment) throw new Error('Payment not found');
-        return payment;
+
+        // If payment is successful and has buyer info, generate auto-login token
+        let autoLoginToken = null;
+        if ((payment.status === 'completed' || payment.status === 'success') && payment.buyer_id) {
+            try {
+                const { signAutoLoginToken } = await import('../utils/jwt.js');
+                autoLoginToken = signAutoLoginToken(payment.buyer_id, 'buyer', 'payment_success');
+                logger.info(`[PaymentService] Generated auto-login token for buyer ${payment.buyer_id}`);
+            } catch (error) {
+                logger.error('[PaymentService] Failed to generate auto-login token:', error);
+                // Don't fail the request if token generation fails
+            }
+        }
+
+        return {
+            ...payment,
+            autoLoginToken
+        };
     }
 
     /**

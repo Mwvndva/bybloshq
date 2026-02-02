@@ -117,6 +117,7 @@ interface GlobalAuthContextType {
 
     // Auth operations
     login: (email: string, password: string, role: UserRole) => Promise<void>;
+    loginWithToken: (token: string, role: UserRole) => Promise<void>;
     loginAdmin: (pin: string) => Promise<void>;
     register: (data: RegistrationData, role: UserRole) => Promise<void>;
     logout: () => void;
@@ -311,6 +312,43 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
         }
     }, [navigate]);
+
+    // ============================================================================
+    // LOGIN WITH TOKEN (AUTO-LOGIN)
+    // ============================================================================
+
+    const loginWithToken = useCallback(async (token: string, role: UserRole) => {
+        setIsLoading(true);
+        try {
+            // Set token in localStorage for API calls
+            localStorage.setItem(`${role}Token`, token);
+
+            // Fetch profile with the token
+            const api = getApiForRole(role);
+            let profileData;
+
+            if (role === 'organizer') {
+                const profileResponse = await api.getProfile();
+                profileData = profileResponse.data.data.organizer;
+            } else {
+                profileData = await api.getProfile();
+            }
+
+            setUser({
+                role,
+                profile: profileData,
+                isAuthenticated: true
+            });
+
+            console.log(`[GlobalAuth] Auto-login successful for ${role}`);
+        } catch (error: any) {
+            console.error(`[GlobalAuth] Auto-login error for ${role}:`, error);
+            localStorage.removeItem(`${role}Token`);
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
 
     // ============================================================================
     // ADMIN LOGIN (PIN-BASED)
@@ -553,6 +591,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         role: user?.role || null,
         login,
+        loginWithToken,
         loginAdmin,
         register,
         logout,
