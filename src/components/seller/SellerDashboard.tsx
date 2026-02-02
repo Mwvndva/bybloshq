@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 import {
   ArrowLeft,
@@ -33,7 +34,9 @@ import {
   Wallet,
   XCircle,
   Loader2,
-  Info
+  Info,
+  Trash2,
+  Handshake
 } from 'lucide-react';
 import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
@@ -238,6 +241,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
@@ -490,7 +497,64 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         variant: 'destructive',
       });
     }
-  }, []); // toast is stable, no need to track it
+  }, [toast]);
+
+  const handleDeleteClick = (id: string) => {
+    setProductToDelete(id);
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!productToDelete) return;
+
+    try {
+      setDeletingId(productToDelete);
+      await sellerApi.deleteProduct(productToDelete);
+      setShowDeleteDialog(false);
+      setProductToDelete(null);
+      
+      // Refresh products list
+      await fetchData();
+      
+      toast({
+        title: 'Success',
+        description: 'Product deleted successfully',
+      });
+    } catch (error: any) {
+      console.error('Failed to delete product:', error);
+      toast({
+        title: 'Error',
+        description: error?.response?.data?.message || error?.message || 'Failed to delete product. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleStatusUpdate = async (productId: string, newStatus: 'available' | 'sold') => {
+    try {
+      setUpdatingId(productId);
+      const soldAt = newStatus === 'sold' ? new Date().toISOString() : null;
+      await sellerApi.updateProductStatus(productId, newStatus, soldAt);
+      
+      // Refresh products list
+      await fetchData();
+      
+      toast({
+        title: 'Success',
+        description: `Product marked as ${newStatus}`,
+      });
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update product status',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const handleWithdrawalRequest = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1342,18 +1406,60 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                               {new Date(product.createdAt).toLocaleDateString()}
                             </span>
                           </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="flex-1 h-8 text-xs text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(product.id);
+                              }}
+                              disabled={!!deletingId}
+                            >
+                              {deletingId === product.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <>
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                  Delete
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="flex-1 h-8 text-xs text-zinc-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newStatus = product.status === 'sold' || product.isSold ? 'available' : 'sold';
+                                handleStatusUpdate(product.id, newStatus);
+                              }}
+                              disabled={!!updatingId}
+                            >
+                              {updatingId === product.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <>
+                                  <Handshake className="h-3.5 w-3.5 mr-1" />
+                                  {product.status === 'sold' || product.isSold ? 'Mark Available' : 'Mark Sold'}
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-10">
+                  <div className="text-center py-20">
                     <div className="w-24 h-24 mx-auto mb-8 bg-yellow-500/10 border border-yellow-400/20 rounded-3xl flex items-center justify-center shadow-lg">
                       <Package className="h-12 w-12 text-yellow-300" />
-
                     </div>
                     <h3 className="text-2xl font-black text-white mb-3">No products found</h3>
-                    <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
+                    <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
                     <Button
                       onClick={() => navigate('/seller/add-product')}
                       className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
@@ -1440,6 +1546,49 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           <span className="text-xs text-gray-300">
                             {new Date(product.createdAt).toLocaleDateString()}
                           </span>
+                        </div>
+                        
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1 h-8 text-xs text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(product.id);
+                            }}
+                            disabled={!!deletingId}
+                          >
+                            {deletingId === product.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                Delete
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="flex-1 h-8 text-xs text-zinc-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newStatus = product.status === 'sold' || product.isSold ? 'available' : 'sold';
+                              handleStatusUpdate(product.id, newStatus);
+                            }}
+                            disabled={!!updatingId}
+                          >
+                            {updatingId === product.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <>
+                                <Handshake className="h-3.5 w-3.5 mr-1" />
+                                {product.status === 'sold' || product.isSold ? 'Mark Available' : 'Mark Sold'}
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -1743,6 +1892,44 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         )}
       </div>
 
-    </ >
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white">Delete Product</DialogTitle>
+            <DialogDescription className="text-zinc-300">
+              Are you sure you want to delete this product? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setProductToDelete(null);
+              }}
+              disabled={!!deletingId}
+              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={!!deletingId}
+            >
+              {deletingId ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
