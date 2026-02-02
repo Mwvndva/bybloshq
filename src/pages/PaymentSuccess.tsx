@@ -9,7 +9,7 @@ import apiClient from '@/lib/apiClient';
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { loginWithToken } = useGlobalAuth();
+  const { loginWithToken, refreshRole, role } = useGlobalAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing your payment...');
 
@@ -41,6 +41,12 @@ export default function PaymentSuccess() {
               
               // Set flag for GlobalAuthContext to detect payment success flow
               sessionStorage.setItem('fromPaymentSuccess', 'true');
+              
+              // CROSS-ROLE FIX: If user is logged in as seller, refresh to buyer role
+              if (role && role !== 'buyer') {
+                console.log(`[PaymentSuccess] User is ${role}, switching to buyer role`);
+                await refreshRole('buyer');
+              }
               
               // Redirect to buyer dashboard orders section immediately
               setTimeout(() => {

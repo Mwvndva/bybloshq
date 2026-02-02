@@ -119,14 +119,30 @@ export const protect = async (req, res, next) => {
 
       const userData = userResult.rows[0];
 
+      // CROSS-ROLE SUPPORT: Check if user has other role profiles
+      // This allows sellers who make purchases to access buyer endpoints
+      const crossRoleQuery = `
+        SELECT 
+          (SELECT COUNT(*) FROM buyers WHERE user_id = $1 AND status = 'active') as has_buyer,
+          (SELECT COUNT(*) FROM sellers WHERE user_id = $1) as has_seller,
+          (SELECT COUNT(*) FROM organizers WHERE user_id = $1) as has_organizer
+      `;
+      const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
+      const crossRoles = crossRoleResult.rows[0];
+
       // Merge user and profile data
       user = {
         id: userData.id, // Profile ID from role-specific table
         userId: decoded.id, // User ID from users table
         email: userData.email,
         userType: userType,
+        hasBuyerProfile: crossRoles.has_buyer > 0,
+        hasSellerProfile: crossRoles.has_seller > 0,
+        hasOrganizerProfile: crossRoles.has_organizer > 0,
         ...userData
       };
+
+      console.log(`[AUTH] Cross-role check for ${user.email}: buyer=${user.hasBuyerProfile}, seller=${user.hasSellerProfile}, organizer=${user.hasOrganizerProfile}`);
     }
 
     // 4) Fetch permissions and attach to user

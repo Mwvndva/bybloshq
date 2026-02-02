@@ -122,6 +122,7 @@ interface GlobalAuthContextType {
     loginAdmin: (pin: string) => Promise<void>;
     register: (data: RegistrationData, role: UserRole) => Promise<void>;
     logout: () => void;
+    refreshRole: (newRole: UserRole) => Promise<void>;
 
     // Password management
     forgotPassword: (email: string, role: UserRole) => Promise<boolean>;
@@ -517,6 +518,56 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     }, [user, navigate]);
 
     // ============================================================================
+    // REFRESH ROLE (CROSS-ROLE SWITCHING)
+    // ============================================================================
+
+    const refreshRole = useCallback(async (newRole: UserRole) => {
+        setIsLoading(true);
+        try {
+            console.log(`[GlobalAuth] Refreshing role to ${newRole}`);
+            
+            // Fetch profile for the new role
+            const api = getApiForRole(newRole);
+            let profileData;
+
+            if (newRole === 'organizer') {
+                const profileResponse = await api.getProfile();
+                profileData = profileResponse.data.data.organizer;
+            } else if (newRole === 'admin') {
+                profileData = { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() };
+            } else {
+                profileData = await api.getProfile();
+            }
+
+            // Update user state with new role and profile
+            setUser({
+                role: newRole,
+                profile: profileData,
+                isAuthenticated: true
+            });
+
+            // Mark new role session as active
+            localStorage.setItem(`${newRole}SessionActive`, 'true');
+
+            console.log(`[GlobalAuth] Role refreshed successfully to ${newRole}`);
+            
+            toast.success('Role Switched', {
+                description: `Switched to ${newRole} dashboard`,
+                duration: 2000,
+            });
+        } catch (error: any) {
+            console.error(`[GlobalAuth] Role refresh error for ${newRole}:`, error);
+            
+            const message = error.response?.data?.message || 'Failed to switch role';
+            toast.error('Role Switch Failed', { description: message });
+            
+            throw error;
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // ============================================================================
     // FORGOT PASSWORD
     // ============================================================================
 
@@ -646,6 +697,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         loginAdmin,
         register,
         logout,
+        refreshRole,
         forgotPassword,
         resetPassword,
         getProfile,

@@ -164,7 +164,15 @@ export const resetPassword = async (req, res, next) => {
 
 export const getProfile = async (req, res, next) => {
   try {
-    const buyer = await Buyer.findById(req.user.id);
+    // CROSS-ROLE SUPPORT: Try to find buyer by profile ID first, then by user_id
+    // This allows sellers who make purchases to access their buyer profile
+    let buyer = await Buyer.findById(req.user.id);
+
+    // If not found and user has a buyer profile flag, try finding by user_id
+    if (!buyer && req.user.hasBuyerProfile && req.user.userId) {
+      console.log(`[BuyerController] User ${req.user.email} is ${req.user.userType} but has buyer profile, fetching by user_id`);
+      buyer = await Buyer.findByUserId(req.user.userId);
+    }
 
     if (!buyer) {
       return next(new AppError('No buyer found with that ID', 404));

@@ -128,6 +128,13 @@ class Buyer {
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
+  // Find buyer by user_id (for cross-role access)
+  static async findByUserId(userId) {
+    const query = 'SELECT *, user_id AS "userId" FROM buyers WHERE user_id = $1';
+    const result = await pool.query(query, [userId]);
+    return result.rows.length ? this.createInstance(result.rows[0]) : null;
+  }
+
   // Update buyer
   static async update(id, updateData) {
     const fields = [];
