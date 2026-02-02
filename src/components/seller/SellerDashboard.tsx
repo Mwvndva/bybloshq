@@ -1406,49 +1406,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                               {new Date(product.createdAt).toLocaleDateString()}
                             </span>
                           </div>
-                          
-                          {/* Action Buttons */}
-                          <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1 h-8 text-xs text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(product.id);
-                              }}
-                              disabled={!!deletingId}
-                            >
-                              {deletingId === product.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <>
-                                  <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                  Delete
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="flex-1 h-8 text-xs text-zinc-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const newStatus = product.status === 'sold' || product.isSold ? 'available' : 'sold';
-                                handleStatusUpdate(product.id, newStatus);
-                              }}
-                              disabled={!!updatingId}
-                            >
-                              {updatingId === product.id ? (
-                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                              ) : (
-                                <>
-                                  <Handshake className="h-3.5 w-3.5 mr-1" />
-                                  {product.status === 'sold' || product.isSold ? 'Mark Available' : 'Mark Sold'}
-                                </>
-                              )}
-                            </Button>
-                          </div>
                         </CardContent>
                       </Card>
                     ))}
@@ -1504,11 +1461,20 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
             {/* Recent Products */}
             <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
-              <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
                 <div>
                   <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
                   <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
                 </div>
+                
+                <Button
+                  size="sm"
+                  onClick={() => navigate('/seller/add-product')}
+                  className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-xl font-semibold text-xs w-full sm:w-auto"
+                >
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Add Product
+                </Button>
               </div>
 
               {products.length > 0 ? (
