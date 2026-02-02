@@ -80,6 +80,11 @@ apiClient.interceptors.response.use(
                 url.includes('/me') ||
                 url.includes('/check-auth');
 
+            // CRITICAL: Don't auto-redirect from payment success page
+            // User must manually click "Go to Login" button in success modal
+            const isPaymentSuccessPage = window.location.pathname.includes('/payment/success') ||
+                window.location.pathname.includes('/checkout/success');
+
             // REHYDRATION CHECK: If app is currently checking auth, queue the error
             if (authStateManager.isCurrentlyRehydrating()) {
                 console.log('[API Client] 401 during rehydration - queuing error');
@@ -92,7 +97,7 @@ apiClient.interceptors.response.use(
                 localStorage.getItem(`${role}SessionActive`) === 'true'
             );
 
-            if (!isAuthCheck && hadActiveSession) {
+            if (!isAuthCheck && !isPaymentSuccessPage && hadActiveSession) {
                 // User was previously authenticated but session is now invalid
                 toast.error('Session Expired', {
                     description: 'Please log in again to continue.',
