@@ -228,9 +228,10 @@ class OrderService {
 
       // 3. Validate Status Transition
       const validTransitions = {
-        [OrderStatus.PENDING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.CANCELLED],
-        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED], // Added Service flow
+        [OrderStatus.PENDING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED],
+        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
         [OrderStatus.DELIVERY_PENDING]: [OrderStatus.DELIVERY_COMPLETE, OrderStatus.CANCELLED],
+        [OrderStatus.COLLECTION_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
         [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.COMPLETED]: [],
@@ -241,9 +242,14 @@ class OrderService {
       const currentStatus = order.status || OrderStatus.PENDING;
       const newStatus = status;
 
+      logger.info(`[OrderService] Status transition requested: ${currentStatus} -> ${newStatus} for Order #${order.order_number}`);
+
       if (!validTransitions[currentStatus]?.includes(newStatus)) {
+        logger.error(`[OrderService] Invalid status transition blocked: ${currentStatus} -> ${newStatus}`);
         throw new Error(`Invalid status transition from ${currentStatus} to ${newStatus}`);
       }
+
+      logger.info(`[OrderService] Status transition validated: ${currentStatus} -> ${newStatus}`);
 
       // 4. Determine side-effects (payment status updates)
       let paymentStatus = order.payment_status;
@@ -463,15 +469,24 @@ class OrderService {
   }
 
   static _determineInitialStatus(items) {
+    // Determine product types in the order
+    const hasPhysical = items.some(item => item.productType === ProductType.PHYSICAL || (!item.productType && !item.isDigital));
+    const hasDigital = items.some(item => item.productType === ProductType.DIGITAL || item.isDigital);
+    const hasService = items.some(item => item.productType === ProductType.SERVICE);
+
+    // Digital-only orders start as PENDING (will auto-complete after payment)
+    // Service-only orders start as SERVICE_PENDING (requires seller confirmation)
+    // Physical orders start as PENDING (will transition based on shop availability)
     let initialStatus = OrderStatus.PENDING;
 
-    const hasPhysical = items.some(item => item.productType === ProductType.PHYSICAL || (!item.productType && !item.isDigital));
-    const hasService = items.some(item => item.productType === ProductType.SERVICE);
-    const isServiceOnly = hasService && !hasPhysical;
-
+    const isServiceOnly = hasService && !hasPhysical && !hasDigital;
     if (isServiceOnly) {
       initialStatus = OrderStatus.SERVICE_PENDING;
+      logger.info(`[OrderService] Service-only order detected -> Initial status: ${initialStatus}`);
+    } else {
+      logger.info(`[OrderService] Order type: Physical=${hasPhysical}, Digital=${hasDigital}, Service=${hasService} -> Initial status: ${initialStatus}`);
     }
+
     return initialStatus;
   }
 
@@ -540,24 +555,40 @@ class OrderService {
         if (metadata.product_type === ProductType.SERVICE) hasService = true;
       }
 
-      logger.info(`[PURCHASE-FLOW] CompleteOrder Check: hasPhysical=${hasPhysical}, hasService=${hasService}, ItemsCount=${items.length}`);
+      logger.info(`[PURCHASE-FLOW] CompleteOrder - Product Analysis:`, {
+        hasPhysical,
+        hasService,
+        itemsCount: items.length,
+        sellerHasShop,
+        sellerId: order.seller_id
+      });
 
+      // Determine final status based on product type and seller shop availability
       let newStatus = OrderStatus.COMPLETED;
       if (hasPhysical) {
         if (sellerHasShop) {
           newStatus = OrderStatus.COLLECTION_PENDING;
+          logger.info(`[PURCHASE-FLOW] Physical product with shop -> Status: ${newStatus} (buyer must collect)`);
         } else {
           newStatus = OrderStatus.DELIVERY_PENDING;
+          logger.info(`[PURCHASE-FLOW] Physical product without shop -> Status: ${newStatus} (delivery required)`);
         }
       } else if (hasService) {
         newStatus = OrderStatus.SERVICE_PENDING;
-        logger.info(`[PURCHASE-FLOW] Service Order Detected -> Setting Status to SERVICE_PENDING`);
+        logger.info(`[PURCHASE-FLOW] Service order detected -> Status: ${newStatus} (seller must confirm)`);
+      } else {
+        // Digital or unknown - auto-complete
+        logger.info(`[PURCHASE-FLOW] Digital/Auto-complete order -> Status: ${newStatus}`);
       }
 
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
 
-      logger.info(`[PURCHASE-FLOW] 8a. Order Status Updated to: ${newStatus}, Payment Status: completed, Shop Detected: ${sellerHasShop}`, {
-        orderId, newStatus
+      logger.info(`[PURCHASE-FLOW] 8a. Order #${order.order_number} status updated:`, {
+        orderId,
+        previousStatus: order.status,
+        newStatus,
+        paymentStatus: 'completed',
+        sellerHasShop
       });
 
       // Check if we accidentally auto-completed it (e.g. digital) - handle payout?
