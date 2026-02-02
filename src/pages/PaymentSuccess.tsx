@@ -48,16 +48,11 @@ export default function PaymentSuccess() {
                 await refreshRole('buyer');
               }
               
-              // Redirect to buyer dashboard orders section immediately
+              // FORCE NAVIGATION: Use window.location.href to bypass router guards
+              // This forces a clean state reload and ensures the buyer dashboard loads properly
+              console.log('[PaymentSuccess] Forcing hard navigation to buyer dashboard');
               setTimeout(() => {
-                navigate('/buyer/dashboard', { 
-                  replace: true,
-                  state: { 
-                    activeSection: 'orders',
-                    paymentReference: reference,
-                    fromPaymentSuccess: true
-                  }
-                });
+                window.location.href = `/buyer/dashboard?tab=orders&ref=${reference}`;
               }, 1500);
             } catch (loginError) {
               console.error('[PaymentSuccess] Auto-login failed:', loginError);

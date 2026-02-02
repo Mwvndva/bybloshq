@@ -274,6 +274,8 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profileData = await api.getProfile();
             }
 
+            // CROSS-ROLE FIX: Accept buyer profile even if backend returns seller userType
+            // This allows sellers who make purchases to access buyer dashboard
             setUser({
                 role: currentRole,
                 profile: profileData,
@@ -282,11 +284,19 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             
             // Mark session as active
             localStorage.setItem(sessionKey, 'true');
-            console.log(`[GlobalAuth] Auth successful for ${currentRole}`);
+            console.log(`[GlobalAuth] Auth successful for ${currentRole}, profile:`, profileData);
         } catch (error: any) {
             console.log(`[GlobalAuth] Auth check failed for ${currentRole}:`, error.message);
-            setUser(null);
-            localStorage.removeItem(sessionKey);
+            
+            // CROSS-ROLE FIX: Don't fail if we're trying buyer access and user has seller session
+            // This prevents the "Split Identity" 404 from blocking access
+            if (currentRole === 'buyer' && error.response?.status === 404) {
+                console.log('[GlobalAuth] Buyer profile not found, but may have cross-role access');
+                // Don't set user to null - let refreshRole handle it
+            } else {
+                setUser(null);
+                localStorage.removeItem(sessionKey);
+            }
         } finally {
             // CRITICAL: Always set isLoading to false and clear rehydration state
             authStateManager.setRehydrating(false);

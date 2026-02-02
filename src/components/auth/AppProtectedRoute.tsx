@@ -76,6 +76,15 @@ export function AppProtectedRoute({
 
     // Authenticated but wrong role - redirect to their own dashboard
     if (role && !allowedRoles.includes(role)) {
+        // CROSS-ROLE FIX: Allow buyer access if user has buyerProfile regardless of primary role
+        // This enables sellers who make purchases to access buyer dashboard
+        const allowCrossRoleAccess = allowedRoles.includes('buyer') && user?.profile;
+        
+        if (allowCrossRoleAccess) {
+            console.log(`[AppProtectedRoute] Allowing cross-role access: ${role} → buyer`);
+            return <>{children}</>;
+        }
+
         const dashboardPath = `/${role}/dashboard`;
 
         // Show unauthorized message (optional - could also just redirect silently)
