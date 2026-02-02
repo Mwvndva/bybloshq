@@ -346,7 +346,7 @@ export default function SellerOrdersSection() {
                                         </div>
 
                                         {/* Service Booking Details */}
-                                        {(order.metadata?.booking_date || order.metadata?.service_location) && (
+                                        {(order.metadata?.booking_date || order.metadata?.service_location || order.metadata?.service_requirements) && (
                                             <div className="mt-4 p-3 bg-purple-500/10 rounded-lg border border-purple-400/20 shadow-sm">
                                                 <h4 className="flex items-center text-sm font-semibold text-purple-100 mb-2">
                                                     <Calendar className="h-4 w-4 mr-2 text-purple-300" />
@@ -367,6 +367,14 @@ export default function SellerOrdersSection() {
                                                         </p>
                                                     </div>
                                                 </div>
+                                                {order.metadata?.service_requirements && (
+                                                    <div className="mt-3 bg-white/5 p-2 rounded border border-white/10">
+                                                        <p className="text-purple-200 text-xs font-medium mb-1">Special Requirements</p>
+                                                        <p className="text-sm text-white break-words">
+                                                            {order.metadata.service_requirements}
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -427,7 +435,7 @@ export default function SellerOrdersSection() {
                                                     <div className="space-y-2">
                                                         <Button
                                                             size="sm"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-emerald-500 text-black font-bold hover:bg-emerald-600 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200"
                                                             onClick={() => {
                                                                 // Reuse delivery complete logic but update status to CONFIRMED
                                                                 const confirmServiceOrder = async () => {
