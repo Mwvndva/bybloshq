@@ -821,8 +821,17 @@ class OrderService {
         throw new Error('Unauthorized: You can only update your own orders');
       }
 
-      // Allow if shipped, delivered, or pending (if stuck)
-      const allowedStatuses = [OrderStatus.SHIPPED, OrderStatus.DELIVERED, OrderStatus.PENDING, OrderStatus.DELIVERY_PENDING, 'delivery_pending']; // Add loose check
+      // Allow if shipped, delivered, pending, or confirmed (for services)
+      const allowedStatuses = [
+        OrderStatus.SHIPPED, 
+        OrderStatus.DELIVERED, 
+        OrderStatus.PENDING, 
+        OrderStatus.DELIVERY_PENDING, 
+        OrderStatus.CONFIRMED,        // Service orders that seller confirmed
+        OrderStatus.SERVICE_PENDING,  // Service orders awaiting confirmation
+        OrderStatus.COLLECTION_PENDING, // Physical orders awaiting pickup
+        'delivery_pending'
+      ];
       if (!allowedStatuses.includes(order.status)) {
         throw new Error(`Cannot confirm receipt for order in ${order.status} status`);
       }
