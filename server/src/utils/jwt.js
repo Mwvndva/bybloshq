@@ -20,6 +20,25 @@ export const signToken = (id, role = 'buyer') => {
 };
 
 /**
+ * Sign a short-lived auto-login token for post-payment authentication
+ * @param {string|number} id - User ID
+ * @param {string} role - User role (buyer, seller, organizer, admin)
+ * @param {string} purpose - Token purpose (e.g., 'payment_success')
+ * @returns {string} Short-lived JWT token
+ */
+export const signAutoLoginToken = (id, role = 'buyer', purpose = 'payment_success') => {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not defined in environment variables');
+  }
+
+  return jwt.sign(
+    { id, role, purpose, autoLogin: true },
+    process.env.JWT_SECRET,
+    { expiresIn: '5m' } // 5 minutes expiration for security
+  );
+};
+
+/**
  * Verify a JWT token
  * @param {string} token - JWT token to verify
  * @returns {Object} Decoded token payload
