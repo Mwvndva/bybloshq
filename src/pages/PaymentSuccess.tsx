@@ -39,13 +39,20 @@ export default function PaymentSuccess() {
               await loginWithToken(paymentData.autoLoginToken, 'buyer');
               console.log('[PaymentSuccess] Auto-login successful');
               
-              // Redirect to buyer dashboard orders section after 2 seconds
+              // Set flag for GlobalAuthContext to detect payment success flow
+              sessionStorage.setItem('fromPaymentSuccess', 'true');
+              
+              // Redirect to buyer dashboard orders section immediately
               setTimeout(() => {
                 navigate('/buyer/dashboard', { 
                   replace: true,
-                  state: { activeSection: 'orders' }
+                  state: { 
+                    activeSection: 'orders',
+                    paymentReference: reference,
+                    fromPaymentSuccess: true
+                  }
                 });
-              }, 2000);
+              }, 1500);
             } catch (loginError) {
               console.error('[PaymentSuccess] Auto-login failed:', loginError);
               // Fallback: redirect to login with message
@@ -53,7 +60,8 @@ export default function PaymentSuccess() {
                 navigate('/buyer/login', {
                   state: { 
                     message: 'Payment successful! Please log in to view your order.',
-                    from: '/buyer/dashboard'
+                    from: '/buyer/dashboard',
+                    paymentReference: reference
                   }
                 });
               }, 2000);
@@ -64,7 +72,8 @@ export default function PaymentSuccess() {
               navigate('/buyer/login', {
                 state: { 
                   message: 'Payment successful! Please log in to view your order.',
-                  from: '/buyer/dashboard'
+                  from: '/buyer/dashboard',
+                  paymentReference: reference
                 }
               });
             }, 2000);

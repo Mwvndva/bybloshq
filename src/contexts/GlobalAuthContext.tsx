@@ -235,6 +235,17 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         // CRITICAL: Set rehydration state to prevent 401 interceptor from redirecting
         authStateManager.setRehydrating(true);
 
+        // Check if arriving from payment success - force buyer session
+        const fromPaymentSuccess = sessionStorage.getItem('fromPaymentSuccess') === 'true';
+        if (fromPaymentSuccess && currentRole === 'buyer') {
+            console.log('[GlobalAuth] Payment success flow detected - forcing buyer session');
+            sessionStorage.removeItem('fromPaymentSuccess');
+            
+            // Clear any conflicting seller sessions
+            localStorage.removeItem('sellerSessionActive');
+            localStorage.removeItem('sellerToken');
+        }
+
         // Persisted State Check: Check if session was active before reload
         const sessionKey = `${currentRole}SessionActive`;
         const hadActiveSession = localStorage.getItem(sessionKey) === 'true';

@@ -12,6 +12,7 @@ export interface AppProtectedRouteProps {
     allowedRoles: UserRole[];
     redirectTo?: string;
     fallback?: React.ReactNode;
+    bypassRedirect?: boolean;
 }
 
 // ============================================================================
@@ -38,6 +39,7 @@ export function AppProtectedRoute({
     allowedRoles,
     redirectTo,
     fallback,
+    bypassRedirect = false,
 }: AppProtectedRouteProps) {
     const { user, isAuthenticated, isLoading, role } = useGlobalAuth();
     const location = useLocation();
@@ -49,6 +51,12 @@ export function AppProtectedRoute({
 
     // Not authenticated - redirect to appropriate login page
     if (!isAuthenticated || !user) {
+        // If bypassRedirect is true, wait for external checkAuth signal
+        // This is used during payment success flow to prevent premature redirects
+        if (bypassRedirect) {
+            return fallback || <LoadingScreen message="Completing authentication..." />;
+        }
+
         // Determine which login page to redirect to based on the current path
         const getLoginPath = (): string => {
             if (redirectTo) return redirectTo;
