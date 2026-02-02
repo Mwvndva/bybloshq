@@ -513,8 +513,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       setShowDeleteDialog(false);
       setProductToDelete(null);
       
-      // Refresh products list
-      await fetchData();
+      // Refresh only the products list (lighter than fetchData which also fetches analytics)
+      await fetchProducts();
       
       toast({
         title: 'Success',
@@ -544,8 +544,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         soldAt: soldAt
       });
       
-      // Refresh products list
-      await fetchData();
+      // Refresh only the products list (lighter than fetchData which also fetches analytics)
+      await fetchProducts();
       
       toast({
         title: 'Success',
