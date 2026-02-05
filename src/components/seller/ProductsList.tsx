@@ -8,6 +8,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { sellerApi } from '@/api/sellerApi';
+import { aestheticCategories } from '../AestheticCategories';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +43,114 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
   const [lowStockThreshold, setLowStockThreshold] = useState<number>(5);
   const [trackInventory, setTrackInventory] = useState<boolean>(false);
   const [updatingStock, setUpdatingStock] = useState(false);
+  
+  // Edit product modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    price: '',
+    description: '',
+    aesthetic: 'afro-futuristic',
+    image: null as File | null,
+    imagePreview: ''
+  });
+  const [isLoadingEdit, setIsLoadingEdit] = useState(false);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const handleEditClick = async (id: string) => {
+    setIsLoadingEdit(true);
+    setShowEditModal(true);
+    
+    try {
+      // Fetch product data from database
+      const product = await sellerApi.getProduct(id);
+      setEditingProduct(product as any);
+      setEditFormData({
+        name: product.name || '',
+        price: (product.price ?? 0).toString(),
+        description: product.description || '',
+        aesthetic: product.aesthetic || 'afro-futuristic',
+        image: null,
+        imagePreview: product.image_url || ''
+      });
+    } catch (error) {
+      console.error('Error fetching product:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load product data',
+        variant: 'destructive',
+      });
+      setShowEditModal(false);
+    } finally {
+      setIsLoadingEdit(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingProduct) return;
+    
+    // Validation
+    if (!editFormData.name || !editFormData.price || !editFormData.description) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required fields',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const priceValue = parseFloat(editFormData.price);
+    if (isNaN(priceValue) || priceValue <= 0) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid price',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSavingEdit(true);
+
+    try {
+      const updateData: any = {
+        name: editFormData.name.trim(),
+        price: priceValue,
+        description: editFormData.description.trim(),
+        aesthetic: editFormData.aesthetic
+      };
+
+      // Process image if changed
+      if (editFormData.image) {
+        const reader = new FileReader();
+        const imageData = await new Promise<string>((resolve, reject) => {
+          reader.onload = (e) => resolve(e.target?.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(editFormData.image!);
+        });
+        updateData.image_url = imageData;
+      }
+
+      await sellerApi.updateProduct(editingProduct.id, updateData);
+      
+      toast({
+        title: 'Success',
+        description: 'Product updated successfully!',
+      });
+      
+      setShowEditModal(false);
+      onRefresh?.();
+    } catch (error: any) {
+      console.error('Error updating product:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to update product',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
 
   const handleDeleteClick = (id: string) => {
     setProductToDelete(id);
@@ -354,7 +468,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
-                        onEdit(product.id);
+                        handleEditClick(product.id);
                       }}
                       title="Edit product"
                     >
@@ -518,6 +632,144 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Updating...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Modal */}
+      <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
+        <DialogContent className="bg-[#000000] border border-white/10 text-white max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white">Edit Product</DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Update product information
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoadingEdit ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-name" className="text-white">Product Name</Label>
+                    <Input
+                      id="edit-name"
+                      value={editFormData.name}
+                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                      className="bg-zinc-900 border-white/10 text-white"
+                      placeholder="Enter product name"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-price" className="text-white">Price (KES)</Label>
+                    <Input
+                      id="edit-price"
+                      type="number"
+                      value={editFormData.price}
+                      onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
+                      className="bg-zinc-900 border-white/10 text-white"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-description" className="text-white">Description</Label>
+                    <Textarea
+                      id="edit-description"
+                      value={editFormData.description}
+                      onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                      className="bg-zinc-900 border-white/10 text-white min-h-[100px]"
+                      placeholder="Enter product description"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="edit-aesthetic" className="text-white">Category</Label>
+                    <Select
+                      value={editFormData.aesthetic}
+                      onValueChange={(value) => setEditFormData({ ...editFormData, aesthetic: value })}
+                    >
+                      <SelectTrigger className="bg-zinc-900 border-white/10 text-white">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="bg-zinc-900 border-white/10">
+                        {aestheticCategories.map((category) => (
+                          <SelectItem key={category.id} value={category.id} className="text-white hover:bg-white/5">
+                            {category.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* Right Column - Image */}
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-image" className="text-white">Product Image</Label>
+                    <div className="mt-2">
+                      {editFormData.imagePreview && (
+                        <div className="mb-3">
+                          <img
+                            src={editFormData.imagePreview}
+                            alt="Preview"
+                            className="w-full h-48 object-cover rounded-lg border border-white/10"
+                          />
+                        </div>
+                      )}
+                      <Input
+                        id="edit-image"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setEditFormData({
+                              ...editFormData,
+                              image: file,
+                              imagePreview: URL.createObjectURL(file)
+                            });
+                          }
+                        }}
+                        className="bg-zinc-900 border-white/10 text-white file:bg-emerald-500/20 file:text-emerald-400 file:border-0 file:mr-4 file:py-2 file:px-4"
+                      />
+                      <p className="text-xs text-zinc-500 mt-1">PNG, JPG, GIF up to 2MB</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowEditModal(false)}
+              className="border border-white/10 text-zinc-300 hover:bg-white/5"
+              disabled={isSavingEdit}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={isSavingEdit || isLoadingEdit}
+              className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-semibold"
+            >
+              {isSavingEdit ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
                 </>
               ) : (
                 'Save Changes'
