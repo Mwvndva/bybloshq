@@ -733,7 +733,7 @@ class PaymentService {
     }
 
     async initiateProductPayment(payload, user) {
-        const { phone, email, amount, productId, sellerId, productName, customerName, narrative, city, location } = payload;
+        const { phone, email, amount, productId, sellerId, productName, customerName, narrative, city, location, quantity = 1 } = payload;
 
         // 1. Resolve Buyer Info
         let buyerId = user?.id || null;
@@ -826,8 +826,8 @@ class PaymentService {
                     productId: productId,
                     name: product.name,
                     price: dbPrice,
-                    quantity: 1,
-                    subtotal: dbPrice,
+                    quantity: parseInt(quantity, 10),
+                    subtotal: dbPrice * parseInt(quantity, 10),
                     productType: product.product_type,
                     isDigital: product.is_digital,
                     serviceLocations: product.service_locations // Pass location info
