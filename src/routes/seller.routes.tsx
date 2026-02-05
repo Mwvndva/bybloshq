@@ -465,6 +465,10 @@ export const sellerRoutes: RouteObject[] = [
             element: <EditProductForm onSuccess={() => { }} />,
           },
           {
+            path: 'edit-product/:id',
+            element: <EditProductForm onSuccess={() => { }} />,
+          },
+          {
             path: 'add-product',
             element: <AddProductForm onSuccess={() => { }} />,
           },
