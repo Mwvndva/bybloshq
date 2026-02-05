@@ -351,14 +351,6 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => onEdit(product.id)}
-                      className="h-8 w-8 text-zinc-400 hover:bg-white/5 hover:text-emerald-400 transition-colors"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
                       className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
