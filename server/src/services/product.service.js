@@ -14,8 +14,8 @@ class ProductService {
         } = data;
 
         // Validation Logic
-        if (!name || !price || !description || (!image && !image_url)) {
-            throw new Error('Name, price, description, and image are required');
+        if (!name || !price || !description) {
+            throw new Error('Name, price, and description are required');
         }
 
         if (is_digital && !digital_file_path) {
@@ -31,14 +31,18 @@ class ProductService {
             throw new Error('Availability days are required for services');
         }
 
-        // Image Handling
-        const imageData = image_url || image;
-        if (!imageData.startsWith('data:image/') && !imageData.startsWith('/uploads/')) {
-            throw new Error('Invalid image format');
-        }
-        const imageSize = (imageData.length * 0.75);
-        if (imageSize > 2 * 1024 * 1024) {
-            throw new Error('Image size exceeds 2MB limit');
+        // Image Handling - now optional
+        let imageData = image_url || image || null;
+        
+        if (imageData) {
+            // Validate image format only if image is provided
+            if (!imageData.startsWith('data:image/') && !imageData.startsWith('/uploads/')) {
+                throw new Error('Invalid image format');
+            }
+            const imageSize = (imageData.length * 0.75);
+            if (imageSize > 2 * 1024 * 1024) {
+                throw new Error('Image size exceeds 2MB limit');
+            }
         }
 
         let finalProductType = product_type;

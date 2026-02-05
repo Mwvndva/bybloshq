@@ -244,15 +244,6 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
       // Get seller ID first
       const sellerId = await getSellerId();
 
-      if (!formData.image_url) {
-        toast({
-          title: 'Image is required',
-          description: 'Please upload an image for your product',
-          variant: 'destructive',
-        });
-        return;
-      }
-
       if (!formData.name.trim() || !formData.price || !formData.description.trim()) {
         toast({
           title: 'Missing required fields',
