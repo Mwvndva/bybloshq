@@ -45,6 +45,7 @@ import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
+import { ProductsList } from './ProductsList';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -1466,12 +1467,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">Manage all your products in one place</p>
             </div>
 
-            {/* Recent Products */}
-            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            {/* Products List with Inventory Management */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
+                  <h3 className="text-base sm:text-lg font-black text-white">All Products</h3>
+                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Manage inventory and track stock levels</p>
                 </div>
                 
                 <Button
@@ -1484,105 +1485,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 </Button>
               </div>
 
-              {products.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                  {products.slice(0, 6).map((product) => (
-                    <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 transform hover:-translate-y-2">
-                      <div className="relative overflow-hidden rounded-t-2xl">
-                        <img
-                          src={getImageUrl(product.image_url || product.imageUrl) || '/placeholder-image.jpg'}
-                          alt={product.name}
-                          className="w-full h-36 object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
-
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                        <Badge
-                          variant="secondary"
-                          className="absolute top-4 left-4 bg-yellow-500/10 text-yellow-200 border border-yellow-400/20 px-3 py-1 text-xs font-bold rounded-xl"
-                        >
-                          Available
-                        </Badge>
-                      </div>
-                      <CardContent className="p-4">
-                        <h3 className="font-bold text-white mb-1 line-clamp-1 text-sm sm:text-base">{product.name}</h3>
-                        <p className="text-yellow-300 font-black text-base sm:text-lg mb-2">
-                          {formatCurrency(product.price)}
-                        </p>
-                        <p className="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed">
-                          {product.description}
-                        </p>
-                        <div className="flex items-center justify-between mt-3">
-                          <Badge variant="outline" className="text-xs bg-white/5 text-gray-200 border-white/10">
-                            {product.aesthetic}
-                          </Badge>
-
-                          <span className="text-xs text-gray-300">
-                            {new Date(product.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-white/10">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1 h-8 text-xs text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteClick(product.id);
-                            }}
-                            disabled={!!deletingId}
-                          >
-                            {deletingId === product.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <>
-                                <Trash2 className="h-3.5 w-3.5 mr-1" />
-                                Delete
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="flex-1 h-8 text-xs text-zinc-400 hover:bg-emerald-500/10 hover:text-emerald-400 transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newStatus = product.status === 'sold' || product.isSold ? 'available' : 'sold';
-                              handleStatusUpdate(product.id, newStatus);
-                            }}
-                            disabled={!!updatingId}
-                          >
-                            {updatingId === product.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            ) : (
-                              <>
-                                <Handshake className="h-3.5 w-3.5 mr-1" />
-                                {product.status === 'sold' || product.isSold ? 'Mark Available' : 'Mark Sold'}
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20">
-                  <div className="w-24 h-24 mx-auto mb-8 bg-yellow-500/10 border border-yellow-400/20 rounded-3xl flex items-center justify-center shadow-lg">
-                    <Package className="h-12 w-12 text-yellow-300" />
-                  </div>
-                  <h3 className="text-2xl font-black text-white mb-3">No products found</h3>
-                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">Add your first product to get started with your store</p>
-                  <Button
-                    onClick={() => navigate('/seller/add-product')}
-                    className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
-                  >
-                    <Plus className="h-5 w-5 mr-2" />
-                    Add Your First Product
-                  </Button>
-                </div>
-              )}
+              <ProductsList
+                products={products}
+                onDelete={handleDeleteProduct}
+                onEdit={(id) => navigate(`/seller/edit-product/${id}`)}
+                onStatusUpdate={handleStatusUpdate}
+                onRefresh={fetchProducts}
+              />
             </div>
           </div>
         )}
