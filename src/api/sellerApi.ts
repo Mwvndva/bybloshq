@@ -357,6 +357,15 @@ export const sellerApi = {
     return transformProduct(response.data);
   },
 
+  updateInventory: async (id: string, inventoryData: {
+    track_inventory: boolean;
+    quantity: number | null;
+    low_stock_threshold: number | null;
+  }): Promise<Product> => {
+    const response = await sellerApiInstance.patch(`/sellers/products/${id}/inventory`, inventoryData);
+    return transformProduct(response.data);
+  },
+
   deleteProduct: async (id: string): Promise<void> => {
     await sellerApiInstance.delete(`/sellers/products/${id}`);
   },

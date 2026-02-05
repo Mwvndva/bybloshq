@@ -147,6 +147,47 @@ export const updateProduct = async (req, res) => {
   }
 };
 
+export const updateInventory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { track_inventory, quantity, low_stock_threshold } = req.body;
+
+    // Fetch product first to check ownership
+    const product = await ProductService.getProduct(id, null);
+
+    if (!(await req.user.can('manage-products', product, 'product', 'manage'))) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'You do not have permission to update this product'
+      });
+    }
+
+    // Validate inventory data
+    if (track_inventory && quantity !== null && quantity < 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Quantity cannot be negative'
+      });
+    }
+
+    const updatedProduct = await ProductService.updateInventory(id, {
+      track_inventory,
+      quantity: track_inventory ? quantity : null,
+      low_stock_threshold: track_inventory ? low_stock_threshold : null
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: { product: updatedProduct }
+    });
+  } catch (error) {
+    logger.error('Error updating inventory:', error);
+    let status = 500;
+    if (error.message.includes('not found')) status = 404;
+    res.status(status).json({ status: 'error', message: error.message });
+  }
+};
+
 export const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
