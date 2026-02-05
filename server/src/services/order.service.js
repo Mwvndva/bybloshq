@@ -559,11 +559,7 @@ class OrderService {
       for (const item of items) {
         if (item.track_inventory === true && item.product_id) {
           const requestedQty = item.quantity || 1;
-          logger.info(`[INVENTORY-DEBUG] Item data for product ${item.product_id}:`, {
-            quantity: item.quantity,
-            requestedQty,
-            itemKeys: Object.keys(item)
-          });
+          logger.info(`[INVENTORY-DEBUG] Product ${item.product_id} - quantity field: ${item.quantity}, type: ${typeof item.quantity}, requestedQty: ${requestedQty}`);
           
           // Decrement inventory atomically
           const updateResult = await client.query(
