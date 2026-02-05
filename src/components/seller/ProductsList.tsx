@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake } from 'lucide-react';
+import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
@@ -31,6 +31,12 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [showStockModal, setShowStockModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [stockQuantity, setStockQuantity] = useState<number>(0);
+  const [lowStockThreshold, setLowStockThreshold] = useState<number>(5);
+  const [trackInventory, setTrackInventory] = useState<boolean>(false);
+  const [updatingStock, setUpdatingStock] = useState(false);
 
   const handleDeleteClick = (id: string) => {
     setProductToDelete(id);
@@ -235,10 +241,11 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         <Table>
           <TableHeader className="border-b border-white/10">
             <TableRow className="bg-zinc-900/20">
-              <TableHead className="w-2/5 text-zinc-400 font-semibold">Product</TableHead>
-              <TableHead className="w-1/5 text-zinc-400 font-semibold">Aesthetic</TableHead>
-              <TableHead className="w-1/6 text-zinc-400 font-semibold">Price</TableHead>
-              <TableHead className="w-1/6 text-zinc-400 font-semibold">Status</TableHead>
+              <TableHead className="w-1/4 text-zinc-400 font-semibold">Product</TableHead>
+              <TableHead className="w-1/6 text-zinc-400 font-semibold">Aesthetic</TableHead>
+              <TableHead className="w-1/8 text-zinc-400 font-semibold">Price</TableHead>
+              <TableHead className="w-1/8 text-zinc-400 font-semibold">Stock</TableHead>
+              <TableHead className="w-1/8 text-zinc-400 font-semibold">Status</TableHead>
               <TableHead className="w-1/6 text-right text-zinc-400 font-semibold">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -278,6 +285,41 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 </TableCell>
                 <TableCell className="capitalize text-zinc-300">{product.aesthetic}</TableCell>
                 <TableCell className="text-white font-semibold">{formatCurrency(product.price)}</TableCell>
+                <TableCell>
+                  {(product as any).track_inventory ? (
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        className={cn(
+                          'font-mono font-semibold',
+                          (product as any).quantity === 0
+                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                            : (product as any).quantity <= ((product as any).low_stock_threshold || 5)
+                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                        )}
+                      >
+                        <Package className="h-3 w-3 mr-1" />
+                        {(product as any).quantity ?? 0}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setStockQuantity((product as any).quantity ?? 0);
+                          setLowStockThreshold((product as any).low_stock_threshold ?? 5);
+                          setTrackInventory((product as any).track_inventory ?? false);
+                          setShowStockModal(true);
+                        }}
+                        className="h-7 px-2 text-xs text-zinc-400 hover:text-emerald-400 hover:bg-white/5"
+                      >
+                        Edit
+                      </Button>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-zinc-500 italic">Not tracked</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge
                     className={`capitalize font-medium ${
@@ -337,6 +379,149 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
           </TableBody>
         </Table>
       </div>
+
+      {/* OLED Edit Stock Modal */}
+      <Dialog open={showStockModal} onOpenChange={setShowStockModal}>
+        <DialogContent className="bg-[#000000] border border-white/10 text-white max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Package className="h-5 w-5 text-emerald-400" />
+              Manage Inventory
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400">
+              Update stock levels for {selectedProduct?.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            {/* Track Inventory Toggle */}
+            <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-xl">
+              <div>
+                <label className="text-sm font-medium text-white">Track Inventory</label>
+                <p className="text-xs text-zinc-400 mt-1">Enable stock tracking for this product</p>
+              </div>
+              <button
+                onClick={() => setTrackInventory(!trackInventory)}
+                className={cn(
+                  'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                  trackInventory ? 'bg-emerald-500' : 'bg-zinc-700'
+                )}
+              >
+                <span
+                  className={cn(
+                    'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                    trackInventory ? 'translate-x-6' : 'translate-x-1'
+                  )}
+                />
+              </button>
+            </div>
+
+            {trackInventory && (
+              <>
+                {/* Current Stock */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">Current Stock</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      value={stockQuantity}
+                      onChange={(e) => setStockQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                      className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
+                      placeholder="0"
+                    />
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                      <Badge
+                        className={cn(
+                          'font-semibold',
+                          stockQuantity === 0
+                            ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                            : stockQuantity <= lowStockThreshold
+                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                        )}
+                      >
+                        {stockQuantity === 0 ? 'OUT' : stockQuantity <= lowStockThreshold ? 'LOW' : 'OK'}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Low Stock Threshold */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-white">Low Stock Alert Threshold</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={lowStockThreshold}
+                    onChange={(e) => setLowStockThreshold(Math.max(1, parseInt(e.target.value) || 5))}
+                    className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
+                    placeholder="5"
+                  />
+                  <p className="text-xs text-zinc-400">
+                    You'll receive a WhatsApp alert when stock falls to or below this level
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setShowStockModal(false)}
+              className="border border-white/10 text-zinc-300 hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!selectedProduct) return;
+                
+                try {
+                  setUpdatingStock(true);
+                  
+                  // Import sellerApi dynamically to avoid circular dependencies
+                  const { sellerApi } = await import('@/api/sellerApi');
+                  
+                  await sellerApi.updateInventory(selectedProduct.id, {
+                    track_inventory: trackInventory,
+                    quantity: trackInventory ? stockQuantity : null,
+                    low_stock_threshold: trackInventory ? lowStockThreshold : null
+                  });
+                  
+                  toast({
+                    title: 'Inventory Updated',
+                    description: `Stock levels updated for ${selectedProduct.name}`,
+                  });
+                  
+                  setShowStockModal(false);
+                  onRefresh?.();
+                } catch (error: any) {
+                  toast({
+                    title: 'Error',
+                    description: error.response?.data?.message || error.message || 'Failed to update inventory',
+                    variant: 'destructive',
+                  });
+                } finally {
+                  setUpdatingStock(false);
+                }
+              }}
+              disabled={updatingStock}
+              className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700"
+            >
+              {updatingStock ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

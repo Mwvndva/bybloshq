@@ -104,10 +104,10 @@ class OrderService {
       const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
       logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
-      // 4. Enrich items with product type for status determination
+      // 4. Enrich items with product type and inventory data
       const productIds = items.map(item => parseInt(item.productId, 10));
       const productsResult = await client.query(
-        'SELECT id, product_type::text as product_type, is_digital, service_options FROM products WHERE id = ANY($1)',
+        'SELECT id, product_type::text as product_type, is_digital, service_options, track_inventory, quantity FROM products WHERE id = ANY($1)',
         [productIds]
       );
       const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
@@ -117,6 +117,8 @@ class OrderService {
         if (prod) {
           item.productType = prod.product_type;
           item.isDigital = prod.is_digital;
+          item.trackInventory = prod.track_inventory;
+          item.availableQuantity = prod.quantity;
 
           // Robustness: Infer 'service' type if missing but has service options
           if (!item.productType && prod.service_options) {
@@ -124,6 +126,25 @@ class OrderService {
           }
         }
       });
+
+      // 4b. INVENTORY CHECK: Verify stock availability for tracked products
+      for (const item of items) {
+        if (item.trackInventory === true) {
+          const requestedQty = item.quantity || 1;
+          
+          if (item.availableQuantity === null || item.availableQuantity === undefined) {
+            throw new Error(`Product "${item.name || item.productId}" has inventory tracking enabled but no quantity set`);
+          }
+          
+          if (item.availableQuantity < requestedQty) {
+            throw new Error(`Insufficient stock for "${item.name || item.productId}". Available: ${item.availableQuantity}, Requested: ${requestedQty}`);
+          }
+          
+          if (item.availableQuantity === 0) {
+            throw new Error(`Product "${item.name || item.productId}" is out of stock`);
+          }
+        }
+      }
 
       // Shopless Service Logic: If seller has no physical_address and product is service, ensure location_type is set
       if (!sellerInfo.physical_address) {
@@ -526,13 +547,55 @@ class OrderService {
       // The original code checked items. Let's replicate that logic smarty.
 
       const itemsQuery = `
-        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options
+        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options, p.track_inventory, p.quantity, p.low_stock_threshold, p.name
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = $1
       `;
       const itemsResult = await client.query(itemsQuery, [orderId]);
       const items = itemsResult.rows;
+
+      // 3a. INVENTORY DECREMENT: Update stock for tracked products
+      for (const item of items) {
+        if (item.track_inventory === true && item.product_id) {
+          const requestedQty = item.quantity || 1;
+          
+          // Decrement inventory atomically
+          const updateResult = await client.query(
+            `UPDATE products 
+             SET quantity = quantity - $1 
+             WHERE id = $2 AND track_inventory = true AND quantity >= $3
+             RETURNING quantity, low_stock_threshold, name`,
+            [requestedQty, item.product_id, requestedQty]
+          );
+
+          if (updateResult.rows.length === 0) {
+            throw new Error(`Failed to decrement inventory for product ${item.name || item.product_id}. Insufficient stock.`);
+          }
+
+          const updatedProduct = updateResult.rows[0];
+          const newQuantity = updatedProduct.quantity;
+          
+          logger.info(`[INVENTORY] Decremented stock for product ${item.product_id}: ${newQuantity + requestedQty} -> ${newQuantity}`);
+
+          // Check if low stock alert should be sent
+          if (updatedProduct.low_stock_threshold && newQuantity <= updatedProduct.low_stock_threshold && newQuantity > 0) {
+            logger.warn(`[INVENTORY] Low stock alert for product ${updatedProduct.name || item.product_id}: ${newQuantity} units remaining`);
+            
+            // Send low stock WhatsApp alert to seller (async, don't block)
+            this._sendLowStockAlert(order.seller_id, updatedProduct.name || item.product_id, newQuantity, updatedProduct.low_stock_threshold).catch(err => {
+              logger.error('[INVENTORY] Failed to send low stock alert:', err);
+            });
+          } else if (newQuantity === 0) {
+            logger.warn(`[INVENTORY] Product ${updatedProduct.name || item.product_id} is now OUT OF STOCK`);
+            
+            // Send out of stock alert
+            this._sendOutOfStockAlert(order.seller_id, updatedProduct.name || item.product_id).catch(err => {
+              logger.error('[INVENTORY] Failed to send out of stock alert:', err);
+            });
+          }
+        }
+      }
 
       // Fetch Seller to check for Shop Address
       const { rows: sellers } = await client.query('SELECT physical_address FROM sellers WHERE id = $1', [order.seller_id]);
@@ -854,6 +917,68 @@ class OrderService {
       throw error;
     } finally {
       client.release();
+    }
+  }
+
+  /**
+   * Send low stock WhatsApp alert to seller
+   */
+  static async _sendLowStockAlert(sellerId, productName, currentQuantity, threshold) {
+    try {
+      const sellerResult = await pool.query(
+        'SELECT u.phone FROM sellers s JOIN users u ON s.user_id = u.id WHERE s.id = $1',
+        [sellerId]
+      );
+
+      if (sellerResult.rows.length === 0) {
+        logger.warn(`[INVENTORY] Could not find seller ${sellerId} for low stock alert`);
+        return;
+      }
+
+      const sellerPhone = sellerResult.rows[0].phone;
+      if (!sellerPhone) {
+        logger.warn(`[INVENTORY] Seller ${sellerId} has no phone number for low stock alert`);
+        return;
+      }
+
+      const message = `⚠️ *LOW STOCK ALERT*\n\nProduct: *${productName}*\nCurrent Stock: *${currentQuantity} units*\nThreshold: ${threshold} units\n\nPlease restock soon to avoid running out.`;
+
+      await whatsappService.sendMessage(sellerPhone, message);
+      logger.info(`[INVENTORY] Low stock alert sent to seller ${sellerId} for product ${productName}`);
+    } catch (error) {
+      logger.error('[INVENTORY] Error sending low stock alert:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Send out of stock WhatsApp alert to seller
+   */
+  static async _sendOutOfStockAlert(sellerId, productName) {
+    try {
+      const sellerResult = await pool.query(
+        'SELECT u.phone FROM sellers s JOIN users u ON s.user_id = u.id WHERE s.id = $1',
+        [sellerId]
+      );
+
+      if (sellerResult.rows.length === 0) {
+        logger.warn(`[INVENTORY] Could not find seller ${sellerId} for out of stock alert`);
+        return;
+      }
+
+      const sellerPhone = sellerResult.rows[0].phone;
+      if (!sellerPhone) {
+        logger.warn(`[INVENTORY] Seller ${sellerId} has no phone number for out of stock alert`);
+        return;
+      }
+
+      const message = `🚨 *OUT OF STOCK ALERT*\n\nProduct: *${productName}*\nStatus: *SOLD OUT*\n\nThis product is now unavailable for purchase. Please restock as soon as possible.`;
+
+      await whatsappService.sendMessage(sellerPhone, message);
+      logger.info(`[INVENTORY] Out of stock alert sent to seller ${sellerId} for product ${productName}`);
+    } catch (error) {
+      logger.error('[INVENTORY] Error sending out of stock alert:', error);
+      throw error;
     }
   }
 }

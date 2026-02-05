@@ -60,6 +60,9 @@ router.route('/products/:id')
   .patch(productController.updateProduct)     // Update a product
   .delete(productController.deleteProduct);   // Delete a product
 
+// Update product inventory
+router.patch('/products/:id/inventory', productController.updateInventory);
+
 // Digital product upload
 router.post('/products/upload-digital',
   protect,

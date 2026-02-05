@@ -143,6 +143,69 @@ class ProductService {
         }
     }
 
+    static async updateInventory(productId, inventoryData) {
+        const { track_inventory, quantity, low_stock_threshold } = inventoryData;
+        const client = await pool.connect();
+
+        try {
+            await client.query('BEGIN');
+
+            // Build update query
+            const updateFields = [];
+            const values = [];
+            let paramCount = 1;
+
+            if (track_inventory !== undefined) {
+                updateFields.push(`track_inventory = $${paramCount++}`);
+                values.push(track_inventory);
+            }
+
+            if (quantity !== undefined) {
+                updateFields.push(`quantity = $${paramCount++}`);
+                values.push(quantity);
+            }
+
+            if (low_stock_threshold !== undefined) {
+                updateFields.push(`low_stock_threshold = $${paramCount++}`);
+                values.push(low_stock_threshold);
+            }
+
+            if (updateFields.length === 0) {
+                throw new Error('No inventory fields to update');
+            }
+
+            values.push(productId);
+            const query = `
+                UPDATE products 
+                SET ${updateFields.join(', ')}, updated_at = NOW()
+                WHERE id = $${paramCount}
+                RETURNING *
+            `;
+
+            const result = await client.query(query, values);
+
+            if (result.rows.length === 0) {
+                throw new Error('Product not found');
+            }
+
+            await client.query('COMMIT');
+            logger.info(`[INVENTORY] Updated inventory for product ${productId}:`, {
+                track_inventory,
+                quantity,
+                low_stock_threshold
+            });
+
+            return result.rows[0];
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            logger.error('[INVENTORY] Error updating inventory:', error);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
     static async deleteProduct(sellerId, productId) {
         const deleted = await ProductModel.delete(null, productId, sellerId);
         if (!deleted) {

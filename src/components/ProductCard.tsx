@@ -63,7 +63,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
-  const isSold = product.status === 'sold' || product.isSold;
+  
+  // Check if product is out of stock (inventory tracking)
+  const isOutOfStock = (product as any).track_inventory === true && ((product as any).quantity === 0 || (product as any).quantity === null);
+  const isSold = product.status === 'sold' || product.isSold || isOutOfStock;
   const isWishlisted = isInWishlist(product.id);
 
   const glassCardStyle: React.CSSProperties = {
@@ -504,6 +507,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                 Hybrid
               </Badge>
             )}
+          </div>
+        )}
+
+        {/* Out of Stock Badge - High contrast red on black */}
+        {isOutOfStock && (
+          <div className="absolute top-2 right-2 z-10">
+            <Badge className="bg-[#000000] text-red-500 border-2 border-red-500 font-bold backdrop-blur-sm shadow-lg animate-pulse">
+              SOLD OUT
+            </Badge>
           </div>
         )}
         {isImageLoading && (
