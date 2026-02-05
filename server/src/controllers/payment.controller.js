@@ -145,6 +145,32 @@ class PaymentController {
       });
     } catch (error) {
       logger.error('Product payment initiation failed:', error);
+      
+      // Mark order and payment as failed if they were created
+      if (error.orderId) {
+        try {
+          await pool.query(
+            `UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1`,
+            [error.orderId]
+          );
+          logger.info(`Order ${error.orderId} marked as FAILED due to payment initiation error`);
+        } catch (updateError) {
+          logger.error('Failed to update order status:', updateError);
+        }
+      }
+      
+      if (error.paymentId) {
+        try {
+          await pool.query(
+            `UPDATE payments SET status = 'failed' WHERE id = $1`,
+            [error.paymentId]
+          );
+          logger.info(`Payment ${error.paymentId} marked as failed`);
+        } catch (updateError) {
+          logger.error('Failed to update payment status:', updateError);
+        }
+      }
+      
       res.status(500).json({
         status: 'error',
         message: 'Product payment initiation failed',

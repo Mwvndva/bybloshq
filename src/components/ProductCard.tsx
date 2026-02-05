@@ -342,11 +342,24 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       }
 
     } catch (error: any) {
-      console.error(error);
+      console.error('Payment initiation error:', error);
+      
+      // Extract error message from response
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Could not initiate payment';
+      
+      // Check for specific error types
+      const isNetworkError = errorMessage.includes('socket hang up') || 
+                            errorMessage.includes('ECONNRESET') || 
+                            errorMessage.includes('network') ||
+                            error.code === 'ECONNRESET';
+      
       toast({
         title: 'Payment Failed',
-        description: error.message || 'Could not initiate payment.',
-        variant: 'destructive'
+        description: isNetworkError 
+          ? 'Payment gateway connection failed. Please try again in a moment.'
+          : errorMessage,
+        variant: 'destructive',
+        duration: 8000
       });
       setIsProcessingPurchase(false);
     }
