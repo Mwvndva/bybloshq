@@ -926,7 +926,7 @@ class OrderService {
   static async _sendLowStockAlert(sellerId, productName, currentQuantity, threshold) {
     try {
       const sellerResult = await pool.query(
-        'SELECT u.phone FROM sellers s JOIN users u ON s.user_id = u.id WHERE s.id = $1',
+        'SELECT whatsapp_number FROM sellers WHERE id = $1',
         [sellerId]
       );
 
@@ -935,7 +935,7 @@ class OrderService {
         return;
       }
 
-      const sellerPhone = sellerResult.rows[0].phone;
+      const sellerPhone = sellerResult.rows[0].whatsapp_number;
       if (!sellerPhone) {
         logger.warn(`[INVENTORY] Seller ${sellerId} has no phone number for low stock alert`);
         return;
@@ -957,7 +957,7 @@ class OrderService {
   static async _sendOutOfStockAlert(sellerId, productName) {
     try {
       const sellerResult = await pool.query(
-        'SELECT u.phone FROM sellers s JOIN users u ON s.user_id = u.id WHERE s.id = $1',
+        'SELECT whatsapp_number FROM sellers WHERE id = $1',
         [sellerId]
       );
 
@@ -966,7 +966,7 @@ class OrderService {
         return;
       }
 
-      const sellerPhone = sellerResult.rows[0].phone;
+      const sellerPhone = sellerResult.rows[0].whatsapp_number;
       if (!sellerPhone) {
         logger.warn(`[INVENTORY] Seller ${sellerId} has no phone number for out of stock alert`);
         return;
