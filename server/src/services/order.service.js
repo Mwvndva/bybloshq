@@ -547,7 +547,7 @@ class OrderService {
       // The original code checked items. Let's replicate that logic smarty.
 
       const itemsQuery = `
-        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options, p.track_inventory, p.quantity, p.low_stock_threshold, p.name
+        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options, p.track_inventory, p.quantity as available_quantity, p.low_stock_threshold, p.name as product_name
         FROM order_items oi
         LEFT JOIN products p ON oi.product_id = p.id
         WHERE oi.order_id = $1
@@ -581,17 +581,17 @@ class OrderService {
 
           // Check if low stock alert should be sent
           if (updatedProduct.low_stock_threshold && newQuantity <= updatedProduct.low_stock_threshold && newQuantity > 0) {
-            logger.warn(`[INVENTORY] Low stock alert for product ${updatedProduct.name || item.product_id}: ${newQuantity} units remaining`);
+            logger.warn(`[INVENTORY] Low stock alert for product ${updatedProduct.name || item.product_name || item.product_id}: ${newQuantity} units remaining`);
             
             // Send low stock WhatsApp alert to seller (async, don't block)
-            this._sendLowStockAlert(order.seller_id, updatedProduct.name || item.product_id, newQuantity, updatedProduct.low_stock_threshold).catch(err => {
+            this._sendLowStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id, newQuantity, updatedProduct.low_stock_threshold).catch(err => {
               logger.error('[INVENTORY] Failed to send low stock alert:', err);
             });
           } else if (newQuantity === 0) {
-            logger.warn(`[INVENTORY] Product ${updatedProduct.name || item.product_id} is now OUT OF STOCK`);
+            logger.warn(`[INVENTORY] Product ${updatedProduct.name || item.product_name || item.product_id} is now OUT OF STOCK`);
             
             // Send out of stock alert
-            this._sendOutOfStockAlert(order.seller_id, updatedProduct.name || item.product_id).catch(err => {
+            this._sendOutOfStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id).catch(err => {
               logger.error('[INVENTORY] Failed to send out of stock alert:', err);
             });
           }
