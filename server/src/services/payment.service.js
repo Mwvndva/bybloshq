@@ -871,25 +871,32 @@ class PaymentService {
         const payment = insertRes.rows[0];
 
         // 5. Initiate Gateway
-        const gwPayload = {
-            ...paymentData,
-            // initiatePayment expects 'phone' key for the number to charge
-            phone: buyerMobilePayment,
-            firstName: customerName?.split(' ')[0],
-            narrative: paymentData.metadata.narrative,
-            billing_address: billingAddress // Add billing_address for Payd V3 requirements
-        };
+        try {
+            const gwPayload = {
+                ...paymentData,
+                // initiatePayment expects 'phone' key for the number to charge
+                phone: buyerMobilePayment,
+                firstName: customerName?.split(' ')[0],
+                narrative: paymentData.metadata.narrative,
+                billing_address: billingAddress // Add billing_address for Payd V3 requirements
+            };
 
-        const result = await this.initiatePayment(gwPayload);
+            const result = await this.initiatePayment(gwPayload);
 
-        // 6. Update Payment with Reference
-        await pool.query("UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2", [result.reference, payment.id]);
+            // 6. Update Payment with Reference
+            await pool.query("UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2", [result.reference, payment.id]);
 
-        return {
-            ...result,
-            order_id: order.id,
-            order_number: order.order_number
-        };
+            return {
+                ...result,
+                order_id: order.id,
+                order_number: order.order_number
+            };
+        } catch (gwError) {
+            // Attach order and payment IDs to error for controller to mark as failed
+            gwError.orderId = order.id;
+            gwError.paymentId = payment.id;
+            throw gwError;
+        }
     }
 }
 
