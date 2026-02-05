@@ -286,8 +286,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 <TableCell className="capitalize text-zinc-300">{product.aesthetic}</TableCell>
                 <TableCell className="text-white font-semibold">{formatCurrency(product.price)}</TableCell>
                 <TableCell>
-                  {(product as any).track_inventory ? (
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    {(product as any).track_inventory ? (
                       <Badge
                         className={cn(
                           'font-mono font-semibold',
@@ -301,24 +301,24 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         <Package className="h-3 w-3 mr-1" />
                         {(product as any).quantity ?? 0}
                       </Badge>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedProduct(product);
-                          setStockQuantity((product as any).quantity ?? 0);
-                          setLowStockThreshold((product as any).low_stock_threshold ?? 5);
-                          setTrackInventory((product as any).track_inventory ?? false);
-                          setShowStockModal(true);
-                        }}
-                        className="h-7 px-2 text-xs text-zinc-400 hover:text-emerald-400 hover:bg-white/5"
-                      >
-                        Edit
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="text-xs text-zinc-500 italic">Not tracked</span>
-                  )}
+                    ) : (
+                      <span className="text-xs text-zinc-500 italic">Not tracked</span>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedProduct(product);
+                        setStockQuantity((product as any).quantity ?? 0);
+                        setLowStockThreshold((product as any).low_stock_threshold ?? 5);
+                        setTrackInventory((product as any).track_inventory ?? false);
+                        setShowStockModal(true);
+                      }}
+                      className="h-7 px-2 text-xs text-zinc-400 hover:text-emerald-400 hover:bg-white/5"
+                    >
+                      Edit
+                    </Button>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Badge
