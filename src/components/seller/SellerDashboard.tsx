@@ -500,7 +500,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     }
   }, [toast]);
 
-  const handleDeleteClick = (id: string) => {
+  const handleDeleteProduct = (id: string) => {
     setProductToDelete(id);
     setShowDeleteDialog(true);
   };
