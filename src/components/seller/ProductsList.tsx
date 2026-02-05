@@ -60,20 +60,24 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
   const handleEditClick = async (id: string) => {
     setIsLoadingEdit(true);
-    setShowEditModal(true);
     
     try {
       // Fetch product data from database
       const product = await sellerApi.getProduct(id);
+      
+      // Set the data first
       setEditingProduct(product as any);
       setEditFormData({
         name: product.name || '',
         price: (product.price ?? 0).toString(),
         description: product.description || '',
-        aesthetic: product.aesthetic || 'afro-futuristic',
+        aesthetic: product.aesthetic || 'clothes-style',
         image: null,
         imagePreview: product.image_url || ''
       });
+      
+      // Then open the modal
+      setShowEditModal(true);
     } catch (error) {
       console.error('Error fetching product:', error);
       toast({
@@ -81,7 +85,6 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         description: 'Failed to load product data',
         variant: 'destructive',
       });
-      setShowEditModal(false);
     } finally {
       setIsLoadingEdit(false);
     }
