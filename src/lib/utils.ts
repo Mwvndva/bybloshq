@@ -139,7 +139,8 @@ export function isTokenExpired(token: string): boolean {
  * Handles base64, absolute URLs, and relative paths from the backend
  */
 export function getImageUrl(path: string | undefined | null): string {
-  if (!path) return '';
+  // Return placeholder image if no path provided
+  if (!path) return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect width="400" height="400" fill="%23111111"/%3E%3Ctext x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="20" fill="%23666666"%3ENo Image%3C/text%3E%3C/svg%3E';
 
   // 1. If it's already a full URL (http/https) or a data URL (base64), return it as is
   if (path.startsWith('http') || path.startsWith('data:')) {
