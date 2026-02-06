@@ -1476,24 +1476,26 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             <span>{new Date(debt.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                           </div>
 
-                          <Button
-                            size="sm"
-                            className="w-full h-8 text-xs font-bold bg-gradient-to-r from-yellow-400/80 to-yellow-500/80 text-black border-none hover:from-yellow-400 hover:to-yellow-500 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]"
-                            onClick={() => handleSendDebtPrompt(debt.id)}
-                            disabled={processingDebtId === debt.id}
-                          >
-                            {processingDebtId === debt.id ? (
-                              <>
-                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <Wallet className="h-3.5 w-3.5 mr-1.5" />
-                                Send Prompt
-                              </>
-                            )}
-                          </Button>
+                          <div className="flex justify-end mt-2">
+                            <Button
+                              size="sm"
+                              className="w-auto h-7 px-3 text-[10px] font-bold bg-gradient-to-r from-yellow-400/80 to-yellow-500/80 text-black border-none hover:from-yellow-400 hover:to-yellow-500 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]"
+                              onClick={() => handleSendDebtPrompt(debt.id)}
+                              disabled={processingDebtId === debt.id}
+                            >
+                              {processingDebtId === debt.id ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <Wallet className="h-3.5 w-3.5 mr-1.5" />
+                                  Send Prompt
+                                </>
+                              )}
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>
