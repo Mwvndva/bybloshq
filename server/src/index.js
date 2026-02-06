@@ -355,6 +355,7 @@ const startServer = async () => {
         }
 
         // Column update
+        const colCheck = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'is_debt'`);
         if (colCheck.rowCount === 0) {
           await client.query("ALTER TABLE product_orders ADD COLUMN is_debt BOOLEAN DEFAULT FALSE");
           console.log("Added 'is_debt' column.");
