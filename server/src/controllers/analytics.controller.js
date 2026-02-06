@@ -127,6 +127,15 @@ export const getSellerAnalytics = async (req, res, next) => {
     );
 
 
+    // 7. Get pending debt count
+    console.log('Fetching pending debt count...');
+    const debtCountResult = await pool.query(
+      `SELECT COUNT(*) as count 
+       FROM product_orders 
+       WHERE seller_id = $1 AND status = 'DEBT_PENDING'`,
+      [sellerId]
+    );
+
     // Commit the transaction
     await pool.query('COMMIT');
     console.log('Transaction committed successfully');
