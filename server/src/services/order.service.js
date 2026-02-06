@@ -1222,33 +1222,31 @@ class OrderService {
       client.release();
     }
   }
-}
 
   /**
    * Helper to decrement inventory for sold items
    */
   static async _decrementInventory(client, items) {
-  const Product = (await import('../models/product.model.js')).default;
+    const Product = (await import('../models/product.model.js')).default;
 
-  for (const item of items) {
-    // Skip digital products or services if they don't track stock
-    if (item.productType === 'digital' || item.productType === 'service') {
-      continue;
-    }
+    for (const item of items) {
+      // Skip digital products or services if they don't track stock
+      if (item.productType === 'digital' || item.productType === 'service') {
+        continue;
+      }
 
-    // Decrease stock
-    await client.query(
-      `UPDATE products 
+      // Decrease stock
+      await client.query(
+        `UPDATE products 
          SET stock_count = stock_count - $1, 
              updated_at = NOW() 
          WHERE id = $2`,
-      [item.quantity, item.productId]
-    );
+        [item.quantity, item.productId]
+      );
 
-    logger.info(`[ClientOrder] Decremented inventory for product ${item.productId} by ${item.quantity}`);
+      logger.info(`[ClientOrder] Decremented inventory for product ${item.productId} by ${item.quantity}`);
+    }
   }
-}
 }
 
 export default OrderService;
-
