@@ -1467,10 +1467,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
               {/* Store Information */}
               <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div className="mb-2 sm:mb-0 flex-1 min-w-0">
-                    <h3 className="text-lg sm:text-xl lg:text-2xl xl:text-3xl font-black text-white truncate">Store Information</h3>
-                    <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium mt-1">
+                    <h3 className="text-base sm:text-xl lg:text-2xl font-black text-white truncate">Store Information</h3>
+                    <p className="text-gray-300 text-[10px] sm:text-sm font-medium mt-1">
                       Your store details and contact information
                     </p>
                   </div>
@@ -1564,15 +1564,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       {sellerProfile?.email || 'Not set'}
                     </p>
                   </div>
-                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
-                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">WhatsApp Number</p>
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl">
+                    <p className="text-[10px] sm:text-xs font-medium text-gray-300 mb-1">WhatsApp Number</p>
                     {isEditing ? (
                       <Input
                         name="whatsappNumber"
                         value={formData.whatsappNumber}
                         onChange={(e) => setFormData(prev => ({ ...prev, whatsappNumber: e.target.value }))}
                         placeholder="e.g. 0712345678"
-                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                        className="h-8 text-xs bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                       />
                     ) : (
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
@@ -1721,54 +1721,53 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
           </div>
         )}
-      </div>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-white">Delete Product</DialogTitle>
-            <DialogDescription className="text-zinc-300">
-              Are you sure you want to delete this product? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setProductToDelete(null);
-              }}
-              disabled={!!deletingId}
-              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={!!deletingId}
-            >
-              {deletingId ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
+            <DialogHeader>
+              <DialogTitle className="text-white">Delete Product</DialogTitle>
+              <DialogDescription className="text-zinc-300">
+                Are you sure you want to delete this product? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteDialog(false);
+                  setProductToDelete(null);
+                }}
+                disabled={!!deletingId}
+                className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={confirmDelete}
+                disabled={!!deletingId}
+              >
+                {deletingId ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-      {/* New Client Order Modal */}
-      <NewClientOrderModal
-        isOpen={showClientOrderModal}
-        onClose={() => setShowClientOrderModal(false)}
-        products={products as any}
-        onSubmit={handleClientOrderSubmit}
-      />
-    </>
-  );
+        {/* New Client Order Modal */}
+        <NewClientOrderModal
+          isOpen={showClientOrderModal}
+          onClose={() => setShowClientOrderModal(false)}
+          products={products as any}
+          onSubmit={handleClientOrderSubmit}
+        />
+      </>
+      );
 };
