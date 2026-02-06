@@ -100,6 +100,7 @@ export default function NewClientOrderModal({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('[NewClientOrderModal] Form submitted', { clientName, clientPhone, cart });
 
         // Validation
         if (!clientName.trim()) {
@@ -134,11 +135,15 @@ export default function NewClientOrderModal({
         // Submit
         setIsSubmitting(true);
         try {
+            console.log('[NewClientOrderModal] Calling onSubmit...');
             await onSubmit({
                 clientName: clientName.trim(),
                 clientPhone: clientPhone.replace(/\s+/g, ''),
                 items: cart
             });
+            console.log('[NewClientOrderModal] onSubmit completed successfully');
+        } catch (error) {
+            console.error('[NewClientOrderModal] onSubmit error:', error);
         } finally {
             setIsSubmitting(false);
         }
@@ -285,7 +290,10 @@ export default function NewClientOrderModal({
                     <div className="flex justify-end gap-3 px-6 py-5 border-t border-white/10 bg-white/5">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={() => {
+                                console.log('[NewClientOrderModal] Cancel button clicked');
+                                onClose();
+                            }}
                             className="px-6 py-2.5 bg-transparent border border-white/10 text-gray-200 hover:bg-white/5 rounded-xl transition-all font-semibold"
                             disabled={isSubmitting}
                         >
