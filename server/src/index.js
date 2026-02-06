@@ -394,6 +394,30 @@ const startServer = async () => {
 
         await client.query('COMMIT');
         console.log('Debt Feature migration completed.');
+
+        // Client Debts Table Migration
+        const debtsTableCheck = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_name = 'client_debts'`);
+        if (debtsTableCheck.rowCount === 0) {
+          await client.query('BEGIN');
+          await client.query(`
+            CREATE TABLE client_debts (
+              id SERIAL PRIMARY KEY,
+              seller_id INTEGER REFERENCES sellers(id),
+              client_id INTEGER REFERENCES clients(id),
+              product_id INTEGER REFERENCES products(id),
+              amount DECIMAL(10, 2) NOT NULL,
+              quantity INTEGER DEFAULT 1,
+              is_paid BOOLEAN DEFAULT FALSE,
+              created_at TIMESTAMP DEFAULT NOW(),
+              updated_at TIMESTAMP DEFAULT NOW()
+            )
+          `);
+          await client.query('COMMIT');
+          console.log('Created client_debts table.');
+        } else {
+          console.log('client_debts table already exists.');
+        }
+
       } catch (err) {
         await client.query('ROLLBACK');
         console.error('Debt Feature migration failed:', err);
