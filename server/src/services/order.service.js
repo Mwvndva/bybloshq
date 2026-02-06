@@ -1003,7 +1003,7 @@ class OrderService {
         items
       } = data;
 
-      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone, paymentType });
+      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone, paymentType, fullData: JSON.stringify(data) });
       await client.query('BEGIN');
 
       // 1. Upsert Client
