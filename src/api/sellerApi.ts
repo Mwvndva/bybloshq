@@ -63,6 +63,7 @@ interface SellerAnalytics {
   totalPayout: number;
   balance: number;
   pendingDebt: number;
+  pendingDebtCount: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: Array<{
     id: number;
@@ -76,14 +77,6 @@ interface SellerAnalytics {
       quantity: number;
       price: number;
     }>;
-  }>;
-  pendingDebtOrders?: Array<{
-    id: number;
-    orderNumber: string;
-    totalAmount: number;
-    createdAt: string;
-    clientName: string;
-    clientPhone: string;
   }>;
 }
 

@@ -47,7 +47,6 @@ import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
 import NewClientOrderModal from './NewClientOrderModal';
-import { DebtOrderListModal } from './DebtOrderListModal';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -116,15 +115,6 @@ interface RecentOrder {
   items: OrderItem[];
 }
 
-interface PendingDebtOrder {
-  id: number;
-  orderNumber: string;
-  totalAmount: number;
-  createdAt: string;
-  clientName: string;
-  clientPhone: string;
-}
-
 interface AnalyticsData {
   totalProducts: number;
   totalSales: number;
@@ -132,9 +122,9 @@ interface AnalyticsData {
   totalPayout: number;
   balance: number;  // Made required since it's now always provided by the backend
   pendingDebt: number;
+  pendingDebtCount: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: RecentOrder[];
-  pendingDebtOrders: PendingDebtOrder[];
 }
 
 interface SellerDashboardProps {
@@ -152,7 +142,6 @@ interface StatsCardProps {
   bgColor?: string;
   textColor?: string;
   className?: string;
-  onClick?: () => void;
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({
@@ -280,9 +269,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [showClientOrderModal, setShowClientOrderModal] = useState(false);
   const [isCreatingClientOrder, setIsCreatingClientOrder] = useState(false);
 
-  // Pending Debt Modal State
-  const [showDebtModal, setShowDebtModal] = useState(false);
-
   // Define cities and their locations
   const cities = {
     'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
@@ -356,9 +342,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalPayout: analyticsData.totalRevenue * 0.85, // Assuming 15% platform fee
         balance: analyticsData.balance || 0,
         pendingDebt: analyticsData.pendingDebt || 0,
+        pendingDebtCount: (analyticsData as any).pendingDebtCount || 0,
         monthlySales: analyticsData.monthlySales || [],
-        recentOrders: analyticsData.recentOrders || [],
-        pendingDebtOrders: analyticsData.pendingDebtOrders || []
+        recentOrders: analyticsData.recentOrders || []
       };
 
 
@@ -370,9 +356,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalPayout: processedAnalytics.totalPayout,
         balance: processedAnalytics.balance,
         pendingDebt: processedAnalytics.pendingDebt,
+        pendingDebtCount: processedAnalytics.pendingDebtCount,
         monthlySales: processedAnalytics.monthlySales,
-        recentOrders: processedAnalytics.recentOrders,
-        pendingDebtOrders: processedAnalytics.pendingDebtOrders
+        recentOrders: processedAnalytics.recentOrders
       };
 
       setAnalytics(processedAnalytics);
@@ -407,9 +393,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalPayout: 0,
         balance: 0,
         pendingDebt: 0,
+        pendingDebtCount: 0,
         monthlySales: [],
-        recentOrders: [],
-        pendingDebtOrders: []
+        recentOrders: []
       };
     } finally {
       setIsLoading(false);
@@ -748,63 +734,29 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           let totalRevenue = 0;
           let calculatedPayout = 0;
 
-          // Calculate revenue from recent orders if available
-          const ordersData = (analyticsData as any).recentOrders;
+          // Try to calculate revenue from orders first (most accurate)
+          // We don't have orders here directly unless we fetch them, but analyticsData includes totalRevenue
+          // The component logic previously had complex fallbacks. Simplified here:
 
-          if (Array.isArray(ordersData) && ordersData.length > 0) {
-            const completedOrders = ordersData.filter((order: any) => {
-              const isCompleted = order.status === 'COMPLETED';
-              return isCompleted;
-            });
-
-
-            totalRevenue = completedOrders.reduce((sum: number, order: any) => {
-              let orderTotal = 0;
-
-              if (Array.isArray(order.items) && order.items.length > 0) {
-                const itemsTotal = order.items.reduce((itemSum: number, item: any) => {
-                  const itemPrice = item.price || 0;
-                  const itemQty = item.quantity || 1;
-                  const itemTotal = itemPrice * itemQty;
-                  return itemSum + itemTotal;
-                }, 0);
-                orderTotal = itemsTotal;
-              } else {
-                orderTotal = order.totalAmount || 0;
-              }
-
-              return sum + orderTotal;
-            }, 0);
-
-          }
-
-          // If no revenue from orders, use monthly sales as fallback
-          if (totalRevenue === 0) {
+          if (analyticsData.totalRevenue) {
+            totalRevenue = analyticsData.totalRevenue;
+          } else if (salesTotal > 0) {
             totalRevenue = salesTotal;
           }
 
-          // Only use the API's totalRevenue if we couldn't calculate from orders or monthly sales
-          if (totalRevenue === 0 && analyticsData.totalRevenue) {
-            totalRevenue = analyticsData.totalRevenue;
-          }
-
-          // Use the full revenue amount for payout
           calculatedPayout = totalRevenue;
 
           const updatedAnalytics: AnalyticsData = {
             ...analyticsData,
-            totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
+            totalSales: (analyticsData as any).totalSales || 0,
             totalRevenue: totalRevenue,
             totalPayout: calculatedPayout,
             balance: analyticsData.balance || 0,
             pendingDebt: analyticsData.pendingDebt || 0,
             monthlySales: analyticsData.monthlySales || [],
-            recentOrders: (analyticsData as any).recentOrders || [], // Handle recentOrders if it exists
-            pendingDebtOrders: (analyticsData as any).pendingDebtOrders || []
+            recentOrders: (analyticsData as any).recentOrders || []
           };
 
-
-          // Return the analytics data with the correct type
           const result: AnalyticsData = {
             totalProducts: updatedAnalytics.totalProducts,
             totalSales: updatedAnalytics.totalSales,
@@ -812,23 +764,26 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             totalPayout: updatedAnalytics.totalPayout,
             balance: updatedAnalytics.balance,
             pendingDebt: updatedAnalytics.pendingDebt,
+            pendingDebtCount: updatedAnalytics.pendingDebtCount,
             monthlySales: updatedAnalytics.monthlySales,
-            recentOrders: updatedAnalytics.recentOrders,
-            pendingDebtOrders: updatedAnalytics.pendingDebtOrders || []
+            recentOrders: updatedAnalytics.recentOrders
           };
 
           setAnalytics(updatedAnalytics);
         } else {
-          // Transform SellerAnalytics to AnalyticsData by adding missing required properties
-          const transformedData: AnalyticsData = {
-            ...analyticsData,
-            totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
-            totalPayout: analyticsData.totalRevenue * (1 - PLATFORM_FEE_RATE), // Calculate payout using constant
-            pendingDebt: analyticsData.pendingDebt || 0,
-            recentOrders: [], // Initialize as empty array since we don't have this data
-            pendingDebtOrders: []
+          // Fallback if analyticsData is null
+          const defaultData: AnalyticsData = {
+            totalProducts: productsData.length || 0,
+            totalSales: 0,
+            totalRevenue: 0,
+            totalPayout: 0,
+            balance: 0,
+            pendingDebt: 0,
+            pendingDebtCount: 0,
+            monthlySales: [],
+            recentOrders: []
           };
-          setAnalytics(transformedData);
+          setAnalytics(defaultData);
         }
       } catch (err) {
         setError('Failed to load data. Please try again later.');
@@ -958,15 +913,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       textColor: 'text-white'
     },
     {
-      icon: Wallet,
-      title: 'Balance',
-      // Format balance as a simple string with fixed decimal places
-      value: new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((analytics.balance ?? 0)),
-      subtitle: 'Available',
+      icon: Clock,
+      title: 'Pending Payments',
+      value: (analytics.pendingDebtCount || 0).toString(),
+      subtitle: 'Debt Orders',
       iconColor: 'text-purple-300',
       bgColor: 'bg-purple-500/10 border border-purple-400/30 shadow-[0_0_18px_rgba(168,85,247,0.22)]',
       textColor: 'text-white',
-      className: 'whitespace-nowrap' // Prevent line breaks
+      className: 'whitespace-nowrap'
     },
     {
       icon: DollarSign,
@@ -1003,16 +957,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       iconColor: 'text-green-300',
       bgColor: 'bg-green-500/10 border border-green-400/30 shadow-[0_0_18px_rgba(34,197,94,0.20)]',
       textColor: 'text-white'
-    },
-    {
-      icon: Clock,
-      title: 'Pending Payments',
-      value: `${analytics.pendingDebtOrders?.length || 0} Orders`,
-      subtitle: formatCurrency(analytics.pendingDebtOrders?.reduce((acc, curr) => acc + curr.totalAmount, 0) || 0),
-      iconColor: 'text-orange-500',
-      bgColor: 'bg-orange-500/10 border border-orange-400/30 shadow-[0_0_18px_rgba(249,115,22,0.25)]',
-      textColor: 'text-orange-500',
-      onClick: () => setShowDebtModal(true)
     }
   ];
 
@@ -1912,19 +1856,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         onClose={() => setShowClientOrderModal(false)}
         products={products as any}
         onSubmit={handleClientOrderSubmit}
-      />
-
-      <DebtOrderListModal
-        isOpen={showDebtModal}
-        onClose={() => setShowDebtModal(false)}
-        orders={analytics?.pendingDebtOrders || []}
-        onInitiatePayment={(order) => {
-          // For now just show a toast or we can implement re-initiation later
-          toast({
-            title: "Feature coming soon",
-            description: "Payment initiation for existing debt orders will be available shortly.",
-          });
-        }}
       />
     </>
   );
