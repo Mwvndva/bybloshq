@@ -46,6 +46,7 @@ import { ThemeSelector } from './ThemeSelector';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
+import NewClientOrderModal from './NewClientOrderModal';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -261,6 +262,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   });
   const [isRequestingWithdrawal, setIsRequestingWithdrawal] = useState(false);
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
+
+  // Client Order Modal State
+  const [showClientOrderModal, setShowClientOrderModal] = useState(false);
+  const [isCreatingClientOrder, setIsCreatingClientOrder] = useState(false);
 
   // Define cities and their locations
   const cities = {
@@ -513,10 +518,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       await sellerApi.deleteProduct(productToDelete);
       setShowDeleteDialog(false);
       setProductToDelete(null);
-      
+
       // Refresh only the products list (lighter than fetchData which also fetches analytics)
       await fetchProducts();
-      
+
       toast({
         title: 'Success',
         description: 'Product deleted successfully',
@@ -538,16 +543,16 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       setUpdatingId(productId);
       const isSold = newStatus === 'sold';
       const soldAt = isSold ? new Date().toISOString() : null;
-      
+
       // Update the backend using the existing updateProduct method
       await sellerApi.updateProduct(productId, {
         status: newStatus,
         soldAt: soldAt
       });
-      
+
       // Refresh only the products list (lighter than fetchData which also fetches analytics)
       await fetchProducts();
-      
+
       toast({
         title: 'Success',
         description: `Product marked as ${newStatus}`,
@@ -633,6 +638,37 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       setIsRequestingWithdrawal(false);
     }
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
+
+  const handleClientOrderSubmit = useCallback(async (data: {
+    clientName: string;
+    clientPhone: string;
+    items: Array<{ productId: string; name: string; quantity: number; price: number }>;
+  }) => {
+    setIsCreatingClientOrder(true);
+    try {
+      const result = await sellerApi.createClientOrder(data);
+
+      toast({
+        title: 'Order Created!',
+        description: `Order ${result.order.orderNumber} created. Payment request sent to ${data.clientPhone}`,
+        className: 'bg-green-50 border-green-200 text-green-900',
+      });
+
+      setShowClientOrderModal(false);
+
+      // Refresh dashboard data to reflect new order
+      await fetchData();
+    } catch (error: any) {
+      console.error('Error creating client order:', error);
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || error.message || 'Failed to create client order',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCreatingClientOrder(false);
+    }
+  }, [toast, fetchData]);
 
   // Token expiration check removed - auth is now handled by SellerAuthContext with HttpOnly cookies
 
@@ -1342,7 +1378,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Store Overview</h2>
               <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Manage your products and track your store performance</p>
               {sellerProfile?.shopName && (
-                <div className="mt-4 flex justify-center">
+                <div className="mt-4 flex justify-center gap-3">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1366,6 +1402,16 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   >
                     <LinkIcon className="h-4 w-4" />
                     Copy Shop Link
+                  </Button>
+
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2 bg-green-600 text-white hover:bg-green-700 border-green-500/30 rounded-xl shadow-lg hover:shadow-green-500/20 transition-all"
+                    onClick={() => setShowClientOrderModal(true)}
+                  >
+                    <Handshake className="h-4 w-4" />
+                    New Client Order
                   </Button>
                 </div>
               )}
@@ -1474,7 +1520,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <h3 className="text-base sm:text-lg font-black text-white">All Products</h3>
                   <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Manage inventory and track stock levels</p>
                 </div>
-                
+
                 <Button
                   size="sm"
                   onClick={() => navigate('/seller/add-product')}
@@ -1580,7 +1626,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             }}
                             placeholder="Shop Name"
                             className={`h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 pr-10 ${formData.shopName !== sellerProfile?.shopName && shopNameAvailable === false ? 'border-red-500 focus:border-red-500' :
-                                formData.shopName !== sellerProfile?.shopName && shopNameAvailable === true ? 'border-green-500 focus:border-green-500' : ''
+                              formData.shopName !== sellerProfile?.shopName && shopNameAvailable === true ? 'border-green-500 focus:border-green-500' : ''
                               }`}
                           />
                           {isCheckingShopName && (
@@ -1812,6 +1858,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* New Client Order Modal */}
+      <NewClientOrderModal
+        isOpen={showClientOrderModal}
+        onClose={() => setShowClientOrderModal(false)}
+        products={products}
+        onSubmit={handleClientOrderSubmit}
+      />
     </>
   );
 };
