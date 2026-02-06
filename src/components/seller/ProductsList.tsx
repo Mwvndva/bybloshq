@@ -43,7 +43,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
   const [lowStockThreshold, setLowStockThreshold] = useState<number>(5);
   const [trackInventory, setTrackInventory] = useState<boolean>(false);
   const [updatingStock, setUpdatingStock] = useState(false);
-  
+
   // Edit product modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -60,11 +60,11 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
   const handleEditClick = async (id: string) => {
     setIsLoadingEdit(true);
-    
+
     try {
       // Fetch product data from database
       const product = await sellerApi.getProduct(id);
-      
+
       // Set the data first
       setEditingProduct(product as any);
       setEditFormData({
@@ -75,7 +75,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         image: null,
         imagePreview: product.image_url || ''
       });
-      
+
       // Then open the modal
       setShowEditModal(true);
     } catch (error) {
@@ -92,7 +92,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
   const handleSaveEdit = async () => {
     if (!editingProduct) return;
-    
+
     // Validation
     if (!editFormData.name || !editFormData.price || !editFormData.description) {
       toast({
@@ -135,12 +135,12 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       }
 
       await sellerApi.updateProduct(editingProduct.id, updateData);
-      
+
       toast({
         title: 'Success',
         description: 'Product updated successfully!',
       });
-      
+
       setShowEditModal(false);
       onRefresh?.();
     } catch (error: any) {
@@ -306,21 +306,20 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
-            <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-sm font-medium truncate text-white">{product.name}</CardTitle>
+            <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
+              <CardTitle className="text-xs sm:text-sm font-medium truncate text-white">{product.name}</CardTitle>
               <Badge
                 variant={product.status === 'sold' ? 'destructive' : 'default'}
-                className={`mt-2 w-fit ${
-                  product.status === 'sold' 
-                    ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                className={`mt-2 w-fit text-[10px] px-1.5 py-0 ${product.status === 'sold'
+                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
                     : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                }`}
+                  }`}
               >
                 {product.status?.toUpperCase() || 'ACTIVE'}
               </Badge>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className="aspect-square bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden mb-3">
+            <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
+              <div className="aspect-square bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden mb-2 sm:mb-3">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -334,15 +333,15 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 )}
               </div>
               <div className="flex justify-between items-center">
-                <span className="font-medium text-white">{formatCurrency(product.price)}</span>
-                <div className="flex gap-2">
+                <span className="font-medium text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
+                <div className="flex gap-1 sm:gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onEdit(product.id)}
-                    className="border-white/10 text-white hover:bg-white/5 hover:border-white/20"
+                    className="h-7 px-2 text-xs border-white/10 text-white hover:bg-white/5 hover:border-white/20"
                   >
-                    <Edit className="h-4 w-4 mr-1 text-emerald-400" />
+                    <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 text-emerald-400" />
                     Edit
                   </Button>
                   {renderActions(product)}
@@ -411,8 +410,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                           (product as any).quantity === 0
                             ? 'bg-red-500/20 text-red-400 border-red-500/30'
                             : (product as any).quantity <= ((product as any).low_stock_threshold || 5)
-                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                              : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                         )}
                       >
                         <Package className="h-3 w-3 mr-1" />
@@ -439,11 +438,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 </TableCell>
                 <TableCell>
                   <Badge
-                    className={`capitalize font-medium ${
-                      product.status === 'sold' 
-                        ? 'bg-red-500/20 text-red-400 border-red-500/30' 
+                    className={`capitalize font-medium ${product.status === 'sold'
+                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
                         : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
-                    }`}
+                      }`}
                   >
                     {product.status || 'available'}
                   </Badge>
@@ -558,8 +556,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                           stockQuantity === 0
                             ? 'bg-red-500/20 text-red-400 border-red-500/30'
                             : stockQuantity <= lowStockThreshold
-                            ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                              ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                              : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                         )}
                       >
                         {stockQuantity === 0 ? 'OUT' : stockQuantity <= lowStockThreshold ? 'LOW' : 'OK'}
@@ -598,24 +596,24 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             <Button
               onClick={async () => {
                 if (!selectedProduct) return;
-                
+
                 try {
                   setUpdatingStock(true);
-                  
+
                   // Import sellerApi dynamically to avoid circular dependencies
                   const { sellerApi } = await import('@/api/sellerApi');
-                  
+
                   await sellerApi.updateInventory(selectedProduct.id, {
                     track_inventory: trackInventory,
                     quantity: trackInventory ? stockQuantity : null,
                     low_stock_threshold: trackInventory ? lowStockThreshold : null
                   });
-                  
+
                   toast({
                     title: 'Inventory Updated',
                     description: `Stock levels updated for ${selectedProduct.name}`,
                   });
-                  
+
                   setShowStockModal(false);
                   onRefresh?.();
                 } catch (error: any) {
