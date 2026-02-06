@@ -62,6 +62,7 @@ interface SellerAnalytics {
   totalRevenue: number;
   totalPayout: number;
   balance: number;
+  pendingDebt: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: Array<{
     id: number;
@@ -614,6 +615,7 @@ export const sellerApi = {
   async createClientOrder(data: {
     clientName: string;
     clientPhone: string;
+    paymentType?: 'stk' | 'debt';
     items: Array<{
       productId: string;
       name: string;

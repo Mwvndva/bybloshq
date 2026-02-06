@@ -336,6 +336,46 @@ const startServer = async () => {
     // Test database connection before starting the server
     await testConnection();
 
+    // --- DEBT FEATURE MIGRATION ---
+    try {
+      console.log('Running Debt Feature migration...');
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+
+        // Enum update
+        const enumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'order_status') AND enumlabel = 'debt_pending'`);
+        if (enumCheck.rowCount === 0) {
+          await client.query('COMMIT');
+          await client.query("ALTER TYPE order_status ADD VALUE 'debt_pending'");
+          await client.query('BEGIN');
+          console.log("Added 'debt_pending' to order_status.");
+        } else {
+          console.log("'debt_pending' already exists.");
+        }
+
+        // Column update
+        const colCheck = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'is_debt'`);
+        if (colCheck.rowCount === 0) {
+          await client.query("ALTER TABLE product_orders ADD COLUMN is_debt BOOLEAN DEFAULT FALSE");
+          console.log("Added 'is_debt' column.");
+        } else {
+          console.log("'is_debt' column already exists.");
+        }
+
+        await client.query('COMMIT');
+        console.log('Debt Feature migration completed.');
+      } catch (err) {
+        await client.query('ROLLBACK');
+        console.error('Debt Feature migration failed:', err);
+      } finally {
+        client.release();
+      }
+    } catch (err) {
+      console.error('Migration wrapper failed:', err);
+    }
+    // --- END MIGRATION ---
+
     const port = process.env.PORT || 3002;
     const server = app.listen(port, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
