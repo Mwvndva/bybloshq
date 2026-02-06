@@ -355,12 +355,26 @@ const startServer = async () => {
         }
 
         // Column update
-        const colCheck = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'is_debt'`);
         if (colCheck.rowCount === 0) {
           await client.query("ALTER TABLE product_orders ADD COLUMN is_debt BOOLEAN DEFAULT FALSE");
           console.log("Added 'is_debt' column.");
         } else {
           console.log("'is_debt' column already exists.");
+        }
+
+        // Payment Method Enum update
+        const payEnumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'payment_method') AND enumlabel = 'debt'`);
+        if (payEnumCheck.rowCount === 0) {
+          // Check if the type payment_method exists first to avoid error if it's text
+          const typeExists = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'payment_method'`);
+          if (typeExists.rowCount > 0) {
+            await client.query('COMMIT');
+            await client.query("ALTER TYPE payment_method ADD VALUE 'debt'");
+            await client.query('BEGIN');
+            console.log("Added 'debt' to payment_method enum.");
+          }
+        } else {
+          console.log("'debt' already exists in payment_method enum.");
         }
 
         await client.query('COMMIT');
