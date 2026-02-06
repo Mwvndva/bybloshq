@@ -1469,13 +1469,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         <div key={debt.id} className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex flex-col">
-                              <span className="font-bold text-sm text-white truncate max-w-[120px]" title={debt.clientName}>{debt.clientName}</span>
-                              <span className="text-[10px] text-gray-400 font-mono">{debt.clientPhone}</span>
+                              <span className="font-bold text-base text-white truncate max-w-[150px]" title={debt.clientName}>{debt.clientName}</span>
+                              <span className="text-xs text-gray-400 font-mono">{debt.clientPhone}</span>
                             </div>
-                            <span className="text-xs font-mono text-yellow-300 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{formatCurrency(debt.amount)}</span>
+                            <span className="text-sm font-mono text-yellow-300 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{formatCurrency(debt.amount)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-xs text-gray-400 mb-3">
-                            <span className="truncate max-w-[120px]" title={debt.productName}>{debt.productName}</span>
+                          <div className="flex justify-between items-center text-sm text-gray-400 mb-3">
+                            <span className="truncate max-w-[150px]" title={debt.productName}>{debt.productName}</span>
                             <span>{new Date(debt.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                           </div>
 
