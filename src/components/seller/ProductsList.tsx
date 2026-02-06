@@ -337,7 +337,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               </div>
             </CardHeader>
             <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 space-y-2">
-              <div className="h-16 bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden">
+              <div className="h-12 w-12 bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -401,7 +401,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     size="sm"
                     onClick={() => handleStatusUpdate(product.id, product.status === 'sold' ? 'available' : 'sold')}
                     disabled={updatingId === product.id}
-                    className={`w-full ${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'} h-6 px-2 text-[10px]`}
+                    className={`w-full ${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'} h-5 px-2 text-[10px]`}
                   >
                     {updatingId === product.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
@@ -518,12 +518,12 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         size="sm"
                         onClick={() => handleStatusUpdate(product.id, product.status === 'sold' ? 'available' : 'sold')}
                         disabled={updatingId === product.id}
-                        className={`${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'} h-7 px-2 text-xs`}
+                        className={`${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'} h-6 px-2 text-[10px]`}
                       >
                         {updatingId === product.id ? (
                           <Loader2 className="h-3 w-3 animate-spin mr-1" />
                         ) : (
-                          <span>{product.status === 'sold' ? 'Mark Available' : 'Mark Sold'}</span>
+                          <span>{product.status === 'sold' ? 'Mark Available' : 'Sold Out'}</span>
                         )}
                       </Button>
                     )}
