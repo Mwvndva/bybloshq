@@ -708,8 +708,8 @@ export const initiateDebtPayment = async (req, res) => {
     // 2. Create Payment Record (Pending)
     const { rows: payments } = await pool.query(
       `INSERT INTO payments 
-       (amount, mobile_payment, status, provider_reference, api_ref, invoice_id, payment_method, metadata, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $5, $6, $7, NOW(), NOW())
+       (amount, mobile_payment, status, provider_reference, api_ref, invoice_id, email, payment_method, metadata, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $5, $6, 'mpesa', $7, NOW(), NOW())
        RETURNING id`,
       [
         debt.amount,
@@ -717,7 +717,7 @@ export const initiateDebtPayment = async (req, res) => {
         'pending',
         null, // Provider ref will be updated after initiation
         `DEBT-${debt.id}-${Date.now()}`,
-        'mpesa',
+        `client_${debt.client_id}@byblos.local`,
         JSON.stringify({
           type: 'debt',
           debt_id: debt.id,
