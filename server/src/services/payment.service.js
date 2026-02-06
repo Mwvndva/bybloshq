@@ -476,8 +476,31 @@ class PaymentService {
                 }
             });
             return { status: 'success', message: 'Payment processed and Ticket generation queued' };
-        }
+        } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
+            // It's a Debt Payment
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
+                logger.info(`[PURCHASE-FLOW] 7. Marking debt ${paymentMeta.debt_id} as paid`);
 
+                await client.query(
+                    'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
+                    [paymentMeta.debt_id]
+                );
+
+                // Update payment status (already done, but good to ensure transaction consistency if needed)
+                await client.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, updatedPayment.id]);
+
+                await client.query('COMMIT');
+                logger.info(`[PURCHASE-FLOW] 8. Debt ${paymentMeta.debt_id} settled successfully`);
+            } catch (e) {
+                await client.query('ROLLBACK');
+                logger.error('[PURCHASE-FLOW] ERROR - Error settling debt after payment:', e);
+            } finally {
+                client.release();
+            }
+            return { status: 'success', message: 'Payment processed and Debt settled' };
+        }
         logger.warn(`[PURCHASE-FLOW] Payment ${payment.id} completed but no downstream action defined (no order_id or ticket_type_id)`);
         return { status: 'success', message: 'Payment received but no downstream action defined' };
     }

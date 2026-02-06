@@ -125,6 +125,14 @@ interface AnalyticsData {
   pendingDebtCount: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: RecentOrder[];
+  recentDebts?: Array<{
+    id: number;
+    amount: number;
+    clientName: string;
+    clientPhone: string;
+    productName: string;
+    createdAt: string;
+  }>;
 }
 
 interface SellerDashboardProps {
@@ -344,7 +352,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         pendingDebt: analyticsData.pendingDebt || 0,
         pendingDebtCount: (analyticsData as any).pendingDebtCount || 0,
         monthlySales: analyticsData.monthlySales || [],
-        recentOrders: analyticsData.recentOrders || []
+        recentOrders: analyticsData.recentOrders || [],
+        recentDebts: (analyticsData as any).recentDebts || []
       };
 
 
@@ -358,7 +367,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         pendingDebt: processedAnalytics.pendingDebt,
         pendingDebtCount: processedAnalytics.pendingDebtCount,
         monthlySales: processedAnalytics.monthlySales,
-        recentOrders: processedAnalytics.recentOrders
+        recentOrders: processedAnalytics.recentOrders,
+        recentDebts: processedAnalytics.recentDebts
       };
 
       setAnalytics(processedAnalytics);
@@ -395,7 +405,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         pendingDebt: 0,
         pendingDebtCount: 0,
         monthlySales: [],
-        recentOrders: []
+        recentOrders: [],
+        recentDebts: []
       };
     } finally {
       setIsLoading(false);
@@ -753,8 +764,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             totalPayout: calculatedPayout,
             balance: analyticsData.balance || 0,
             pendingDebt: analyticsData.pendingDebt || 0,
+            pendingDebtCount: (analyticsData as any).pendingDebtCount || 0,
             monthlySales: analyticsData.monthlySales || [],
-            recentOrders: (analyticsData as any).recentOrders || []
+            recentOrders: (analyticsData as any).recentOrders || [],
+            recentDebts: (analyticsData as any).recentDebts || []
           };
 
           const result: AnalyticsData = {
@@ -766,7 +779,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             pendingDebt: updatedAnalytics.pendingDebt,
             pendingDebtCount: updatedAnalytics.pendingDebtCount,
             monthlySales: updatedAnalytics.monthlySales,
-            recentOrders: updatedAnalytics.recentOrders
+            recentOrders: updatedAnalytics.recentOrders,
+            recentDebts: updatedAnalytics.recentDebts
           };
 
           setAnalytics(updatedAnalytics);
@@ -913,14 +927,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       textColor: 'text-white'
     },
     {
-      icon: Clock,
-      title: 'Pending Payments',
-      value: (analytics.pendingDebtCount || 0).toString(),
-      subtitle: 'Debt Orders',
+      icon: Wallet,
+      title: 'Balance',
+      // Format balance as a simple string with fixed decimal places
+      value: new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((analytics.balance ?? 0)),
+      subtitle: 'Available',
       iconColor: 'text-purple-300',
       bgColor: 'bg-purple-500/10 border border-purple-400/30 shadow-[0_0_18px_rgba(168,85,247,0.22)]',
       textColor: 'text-white',
-      className: 'whitespace-nowrap'
+      className: 'whitespace-nowrap' // Prevent line breaks
     },
     {
       icon: DollarSign,
@@ -1485,13 +1500,32 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
-                  <div className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
+                  <div className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl mb-3">
                     <div>
-                      <p className="text-xs font-semibold text-gray-300">Pending Debt</p>
-                      <p className="text-lg sm:text-xl font-black text-white">{formatCurrency(analytics.pendingDebt)}</p>
+                      <p className="text-xs font-semibold text-gray-300">Debts</p>
+                      <p className="text-lg sm:text-xl font-black text-white">{(analytics.pendingDebtCount || 0).toString()}</p>
                     </div>
                     <Clock className="h-6 w-6 text-blue-300" />
                   </div>
+
+                  {/* Recent Debts List */}
+                  {analytics.recentDebts && analytics.recentDebts.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      <p className="text-xs font-semibold text-gray-400 px-1">Latest Unpaid</p>
+                      {analytics.recentDebts.map((debt) => (
+                        <div key={debt.id} className="p-2.5 bg-white/5 border border-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-bold text-sm text-white truncate max-w-[120px]" title={debt.clientName}>{debt.clientName}</span>
+                            <span className="text-xs font-mono text-yellow-300">{formatCurrency(debt.amount)}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs text-gray-400">
+                            <span className="truncate max-w-[120px]" title={debt.productName}>{debt.productName}</span>
+                            <span>{new Date(debt.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>            </div>
           </div>

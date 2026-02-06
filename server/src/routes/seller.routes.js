@@ -79,4 +79,7 @@ router.post('/products/upload-digital',
 router.post('/withdrawal-request', sellerController.createWithdrawalRequest);
 router.get('/withdrawal-requests', sellerController.getWithdrawalRequests);
 
+// Debt payment route
+router.post('/debts/:debtId/pay', sellerController.initiateDebtPayment);
+
 export default router;
