@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ShoppingCart, Clock } from 'lucide-react';
+import { Loader2, ShoppingCart, Clock, Smartphone, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Product {
     id: number;
@@ -40,12 +41,15 @@ export default function NewClientOrderModal({
     const [clientName, setClientName] = useState('');
     const [clientPhone, setClientPhone] = useState('');
     const [selectedProductId, setSelectedProductId] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'stk' | 'debt'>('stk');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Filter for available products only
     const availableProducts = products.filter(p => p.status === 'available');
 
-    const handleSubmit = async (paymentType: 'stk' | 'debt') => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+
         // Validation
         if (!clientName.trim()) {
             toast.error('Please enter client name');
@@ -81,7 +85,7 @@ export default function NewClientOrderModal({
             await onSubmit({
                 clientName: clientName.trim(),
                 clientPhone: clientPhone.replace(/\s+/g, ''),
-                paymentType,
+                paymentType: paymentMethod,
                 items: [
                     {
                         productId: selectedProductId,
@@ -96,6 +100,7 @@ export default function NewClientOrderModal({
             setClientName('');
             setClientPhone('');
             setSelectedProductId('');
+            setPaymentMethod('stk');
         } catch (error) {
             console.error('Submission error:', error);
         } finally {
@@ -108,128 +113,165 @@ export default function NewClientOrderModal({
             setClientName('');
             setClientPhone('');
             setSelectedProductId('');
+            setPaymentMethod('stk');
             onClose();
         }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10 max-w-md shadow-[0_0_24px_rgba(250,204,21,0.12)]">
+            <DialogContent className="bg-[#09090b] border border-white/10 max-w-md shadow-2xl">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                        <div className="w-10 h-10 bg-yellow-400/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-xl flex items-center justify-center">
-                            <ShoppingCart className="h-5 w-5 text-yellow-300" />
+                    <DialogTitle className="text-xl font-bold text-white flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
+                            <ShoppingCart className="h-5 w-5 text-yellow-400" />
                         </div>
                         New Client Order
                     </DialogTitle>
                 </DialogHeader>
 
-                <form onSubmit={(e) => { e.preventDefault(); handleSubmit('stk'); }} className="space-y-4 mt-4">
-                    {/* Client Name */}
+                <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+                    {/* Payment Method Selector */}
                     <div className="space-y-2">
-                        <Label htmlFor="clientName" className="text-sm font-semibold text-gray-200">
-                            Client Name
+                        <Label className="text-sm font-medium text-gray-400 uppercase tracking-wider text-[10px]">
+                            Payment Method
                         </Label>
-                        <Input
-                            id="clientName"
-                            type="text"
-                            value={clientName}
-                            onChange={(e) => setClientName(e.target.value)}
-                            placeholder="Enter client name"
-                            className="bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-400/50 focus:ring-yellow-400/20"
-                            disabled={isSubmitting}
-                        />
-                    </div>
-
-                    {/* Phone Number */}
-                    <div className="space-y-2">
-                        <Label htmlFor="clientPhone" className="text-sm font-semibold text-gray-200">
-                            M-Pesa Phone Number
-                        </Label>
-                        <Input
-                            id="clientPhone"
-                            type="tel"
-                            value={clientPhone}
-                            onChange={(e) => setClientPhone(e.target.value)}
-                            placeholder="0712345678"
-                            className="bg-white/5 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-400/50 focus:ring-yellow-400/20"
-                            disabled={isSubmitting}
-                        />
-                        <p className="text-xs text-gray-400">Payment prompt will be sent to this number</p>
-                    </div>
-
-                    {/* Product Select */}
-                    <div className="space-y-2">
-                        <Label htmlFor="product" className="text-sm font-semibold text-gray-200">
-                            Select Product
-                        </Label>
-                        <Select
-                            value={selectedProductId}
-                            onValueChange={setSelectedProductId}
-                            disabled={isSubmitting || availableProducts.length === 0}
-                        >
-                            <SelectTrigger className="bg-white/5 border-white/10 text-white focus:border-yellow-400/50 focus:ring-yellow-400/20">
-                                <SelectValue placeholder="Choose a product" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[rgba(17,17,17,0.95)] backdrop-blur-xl border-white/10">
-                                {availableProducts.length === 0 ? (
-                                    <SelectItem value="none" disabled>
-                                        No available products
-                                    </SelectItem>
-                                ) : (
-                                    availableProducts.map((product) => (
-                                        <SelectItem
-                                            key={product.id}
-                                            value={product.id.toString()}
-                                            className="text-white hover:bg-white/10 focus:bg-white/10"
-                                        >
-                                            {product.name} - KSh {product.price.toLocaleString()}
-                                        </SelectItem>
-                                    ))
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setPaymentMethod('stk')}
+                                className={cn(
+                                    "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all duration-200",
+                                    paymentMethod === 'stk'
+                                        ? "bg-yellow-400/10 border-yellow-400/50 text-yellow-400"
+                                        : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200"
                                 )}
-                            </SelectContent>
-                        </Select>
+                            >
+                                <Smartphone className="h-5 w-5" />
+                                <span className="text-xs font-semibold">M-Pesa Prompt</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPaymentMethod('debt')}
+                                className={cn(
+                                    "flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all duration-200",
+                                    paymentMethod === 'debt'
+                                        ? "bg-blue-500/10 border-blue-400/50 text-blue-400"
+                                        : "bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:text-gray-200"
+                                )}
+                            >
+                                <Clock className="h-5 w-5" />
+                                <span className="text-xs font-semibold">Record as Debt</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4">
+                        {/* Client Name */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="clientName" className="text-sm font-medium text-gray-200">
+                                Client Name
+                            </Label>
+                            <Input
+                                id="clientName"
+                                type="text"
+                                value={clientName}
+                                onChange={(e) => setClientName(e.target.value)}
+                                placeholder="Enter client name"
+                                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-white/20 focus:ring-1 focus:ring-white/20 h-11"
+                                disabled={isSubmitting}
+                            />
+                        </div>
+
+                        {/* Phone Number */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="clientPhone" className="text-sm font-medium text-gray-200">
+                                Phone Number
+                            </Label>
+                            <Input
+                                id="clientPhone"
+                                type="tel"
+                                value={clientPhone}
+                                onChange={(e) => setClientPhone(e.target.value)}
+                                placeholder="0712345678"
+                                className="bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:border-white/20 focus:ring-1 focus:ring-white/20 h-11"
+                                disabled={isSubmitting}
+                            />
+                            <p className="text-[11px] text-gray-500">
+                                {paymentMethod === 'stk'
+                                    ? "Payment prompt will be sent to this number"
+                                    : "Used for order notifications and records"}
+                            </p>
+                        </div>
+
+                        {/* Product Select */}
+                        <div className="space-y-1.5">
+                            <Label htmlFor="product" className="text-sm font-medium text-gray-200">
+                                Select Product
+                            </Label>
+                            <Select
+                                value={selectedProductId}
+                                onValueChange={setSelectedProductId}
+                                disabled={isSubmitting || availableProducts.length === 0}
+                            >
+                                <SelectTrigger className="bg-white/5 border-white/10 text-white focus:border-white/20 focus:ring-1 focus:ring-white/20 h-11">
+                                    <SelectValue placeholder="Choose a product" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#18181b] border-white/10">
+                                    {availableProducts.length === 0 ? (
+                                        <SelectItem value="none" disabled>
+                                            No available products
+                                        </SelectItem>
+                                    ) : (
+                                        availableProducts.map((product) => (
+                                            <SelectItem
+                                                key={product.id}
+                                                value={product.id.toString()}
+                                                className="text-white hover:bg-white/10"
+                                            >
+                                                {product.name} - KSh {product.price.toLocaleString()}
+                                            </SelectItem>
+                                        ))
+                                    )}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                    <div className="flex justify-end gap-3 pt-4">
                         <Button
                             type="button"
                             variant="ghost"
                             onClick={handleClose}
                             disabled={isSubmitting}
-                            className="text-gray-300 hover:text-white hover:bg-white/10 order-3 sm:order-1"
+                            className="text-gray-400 hover:text-white hover:bg-white/5"
                         >
                             Cancel
                         </Button>
                         <Button
-                            type="button"
-                            onClick={() => handleSubmit('debt')}
+                            type="submit"
                             disabled={isSubmitting || availableProducts.length === 0}
-                            className="bg-white/10 text-white hover:bg-white/20 border border-white/10 order-2"
-                        >
-                            {isSubmitting ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <Clock className="mr-2 h-4 w-4" />
+                            className={cn(
+                                "min-w-[160px] font-bold shadow-lg transition-all duration-300",
+                                paymentMethod === 'stk'
+                                    ? "bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-yellow-500/20"
+                                    : "bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 shadow-blue-500/20"
                             )}
-                            Record as Debt
-                        </Button>
-                        <Button
-                            type="button"
-                            onClick={() => handleSubmit('stk')}
-                            disabled={isSubmitting || availableProducts.length === 0}
-                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg font-bold order-1 sm:order-3"
                         >
                             {isSubmitting ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Sending...
+                                    Processing...
                                 </>
                             ) : (
                                 <>
-                                    <ShoppingCart className="mr-2 h-4 w-4" />
-                                    Send Payment Prompt
+                                    {paymentMethod === 'stk' ? (
+                                        <Smartphone className="mr-2 h-4 w-4" />
+                                    ) : (
+                                        <Clock className="mr-2 h-4 w-4" />
+                                    )}
+                                    {paymentMethod === 'stk' ? 'Send Prompt' : 'Record Debt'}
                                 </>
                             )}
                         </Button>
