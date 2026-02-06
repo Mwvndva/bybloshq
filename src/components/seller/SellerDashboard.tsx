@@ -505,7 +505,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     }
   }, [toast]);
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     setProductToDelete(id);
     setShowDeleteDialog(true);
   };
@@ -649,9 +649,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       const result = await sellerApi.createClientOrder(data);
 
       toast({
-        title: 'Order Created!',
+        title: '✅ Order Created!',
         description: `Order ${result.order.orderNumber} created. Payment request sent to ${data.clientPhone}`,
-        className: 'bg-green-50 border-green-200 text-green-900',
+        className: 'bg-green-500/10 border-green-400/30 text-green-200',
       });
 
       setShowClientOrderModal(false);
@@ -661,14 +661,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     } catch (error: any) {
       console.error('Error creating client order:', error);
       toast({
-        title: 'Error',
+        title: '❌ Error',
         description: error.response?.data?.message || error.message || 'Failed to create client order',
-        variant: 'destructive',
+        className: 'bg-red-500/10 border-red-400/30 text-red-200',
       });
     } finally {
       setIsCreatingClientOrder(false);
     }
   }, [toast, fetchData]);
+
 
   // Token expiration check removed - auth is now handled by SellerAuthContext with HttpOnly cookies
 
@@ -837,7 +838,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // Create context value to pass to child routes
   const outletContext = {
     products,
-    onDeleteProduct: () => { },
+    onDeleteProduct: async () => { },
     fetchData,
   };
 
@@ -1407,7 +1408,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <Button
                     variant="default"
                     size="sm"
-                    className="gap-2 bg-green-600 text-white hover:bg-green-700 border-green-500/30 rounded-xl shadow-lg hover:shadow-green-500/20 transition-all"
+                    className="gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 border-emerald-400/30 rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all font-bold"
                     onClick={() => setShowClientOrderModal(true)}
                   >
                     <Handshake className="h-4 w-4" />
@@ -1532,7 +1533,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               <ProductsList
-                products={products}
+                products={products as any}
                 onDelete={handleDeleteProduct}
                 onEdit={(id) => navigate(`/seller/edit-product/${id}`)}
                 onStatusUpdate={handleStatusUpdate}
@@ -1863,7 +1864,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       <NewClientOrderModal
         isOpen={showClientOrderModal}
         onClose={() => setShowClientOrderModal(false)}
-        products={products}
+        products={products as any}
         onSubmit={handleClientOrderSubmit}
       />
     </>
