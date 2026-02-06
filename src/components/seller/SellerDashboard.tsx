@@ -43,6 +43,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
+import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
@@ -141,44 +142,7 @@ interface SellerDashboardProps {
   }) => React.ReactNode;
 }
 
-interface StatsCardProps {
-  icon: any;
-  title: string;
-  value: string | number;
-  subtitle: string;
-  iconColor?: string;
-  bgColor?: string;
-  textColor?: string;
-  className?: string;
-}
 
-const StatsCard: React.FC<StatsCardProps> = ({
-  icon: Icon,
-  title,
-  value,
-  subtitle,
-  iconColor = 'text-white',
-  bgColor = 'bg-yellow-400/10 border border-yellow-400/30 shadow-[0_0_18px_rgba(250,204,21,0.25)]',
-  textColor = 'text-white',
-  className = ''
-}) => (
-  <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow hover:shadow-md transition-all duration-300 h-full">
-    <CardContent className="p-2 sm:p-2.5">
-      <div className="flex items-center justify-between gap-2 sm:gap-3">
-        <div className={`space-y-0.5 flex-1 min-w-0 ${className}`}>
-          <p className="text-[10px] sm:text-xs md:text-sm font-medium text-gray-300 uppercase tracking-wide truncate">{title}</p>
-          <p className={`text-base sm:text-lg font-bold ${textColor} break-words leading-tight`}>
-            {value}
-          </p>
-          <p className="text-[10px] sm:text-xs text-gray-300 font-medium truncate">{subtitle}</p>
-        </div>
-        <div className={`w-9 h-9 sm:w-10 sm:h-10 ${bgColor} rounded-xl flex-shrink-0 flex items-center justify-center`}>
-          <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${iconColor}`} />
-        </div>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
   const navigate = useNavigate();
@@ -932,73 +896,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     );
   }
 
-  const stats = [
-    {
-      icon: Package,
-      title: 'Products',
-      value: formatNumber(analytics.totalProducts),
-      subtitle: 'Products',
-      iconColor: 'text-yellow-300',
-      bgColor: 'bg-yellow-400/10 border border-yellow-400/30 shadow-[0_0_18px_rgba(250,204,21,0.25)]',
-      textColor: 'text-white'
-    },
-    {
-      icon: DollarSign,
-      title: 'Sales',
-      value: formatCurrency(analytics.totalRevenue ?? 0),
-      subtitle: 'Gross',
-      iconColor: 'text-blue-300',
-      bgColor: 'bg-blue-500/10 border border-blue-400/30 shadow-[0_0_18px_rgba(59,130,246,0.22)]',
-      textColor: 'text-white'
-    },
-    {
-      icon: Wallet,
-      title: 'Balance',
-      // Format balance as a simple string with fixed decimal places
-      value: new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format((analytics.balance ?? 0)),
-      subtitle: 'Available',
-      iconColor: 'text-purple-300',
-      bgColor: 'bg-purple-500/10 border border-purple-400/30 shadow-[0_0_18px_rgba(168,85,247,0.22)]',
-      textColor: 'text-white',
-      className: 'whitespace-nowrap' // Prevent line breaks
-    },
-    {
-      icon: DollarSign,
-      title: 'Net',
-      value: (() => {
-        const totalSales = parseFloat((((analytics as any)?.totalSales ?? 0)).toFixed(2));
-        const platformFee = parseFloat((totalSales * PLATFORM_FEE_RATE).toFixed(2));
-        const netSales = parseFloat((totalSales - platformFee).toFixed(2));
 
-        console.log('Net Sales Calculation:', {
-          rawTotalSales: (analytics as any).totalSales,
-          parsedTotalSales: totalSales,
-          platformFeeRate: '3%',
-          calculatedPlatformFee: platformFee,
-          calculatedNetSales: netSales,
-          formattedNetSales: formatCurrency(netSales),
-          formattedWithDecimals: new Intl.NumberFormat('en-KE', {
-            style: 'currency',
-            currency: 'KES',
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-          }).format(netSales)
-        });
-
-        // Force 2 decimal places in the display
-        return new Intl.NumberFormat('en-KE', {
-          style: 'currency',
-          currency: 'KES',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        }).format(netSales);
-      })(),
-      subtitle: 'After 1%',
-      iconColor: 'text-green-300',
-      bgColor: 'bg-green-500/10 border border-green-400/30 shadow-[0_0_18px_rgba(34,197,94,0.20)]',
-      textColor: 'text-white'
-    }
-  ];
 
   return (
     <>
@@ -1140,13 +1038,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
       <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 2xl:px-12 py-4 sm:py-5 md:py-6">
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-7 md:mb-8">
-          {stats.map((stat, index) => (
-            <div key={index} className="col-span-1">
-              <StatsCard {...stat} />
-
-            </div>
-          ))}
+        {/* Stats Overview */}
+        <div className="mb-6 sm:mb-7 md:mb-8">
+          <UnifiedAnalyticsHub
+            analytics={analytics}
+            onWithdraw={() => setActiveTab('withdrawals')}
+          />
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
