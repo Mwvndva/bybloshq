@@ -8,6 +8,7 @@ export const OrderStatus = {
     SERVICE_PENDING: 'SERVICE_PENDING',
     DELIVERY_PENDING: 'DELIVERY_PENDING',
     COLLECTION_PENDING: 'COLLECTION_PENDING', // Waiting for buyer pickup at shop
+    CLIENT_PAYMENT_PENDING: 'CLIENT_PAYMENT_PENDING', // Seller-initiated order awaiting client payment
     DELIVERY_COMPLETE: 'DELIVERY_COMPLETE',
     CONFIRMED: 'CONFIRMED',
     COMPLETED: 'COMPLETED',

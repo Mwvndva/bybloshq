@@ -7,9 +7,9 @@ import {
   updateOrderStatus,
   confirmReceipt,
   cancelOrder,
-
   sellerCancelOrder,
-  downloadDigitalProduct
+  downloadDigitalProduct,
+  createSellerClientOrder
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -397,6 +397,66 @@ router.get(
   '/:orderId/download/:productId',
   protect,
   downloadDigitalProduct
+);
+
+/**
+ * @swagger
+ * /api/orders/client-order:
+ *   post:
+ *     summary: Create a client order (seller-initiated)
+ *     description: Allows sellers to create orders for their manual clients with M-Pesa STK push payment
+ *     tags: [Orders]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - clientName
+ *               - clientPhone
+ *               - items
+ *             properties:
+ *               clientName:
+ *                 type: string
+ *                 description: Full name of the client
+ *               clientPhone:
+ *                 type: string
+ *                 description: Client's M-Pesa phone number (0712345678 or 254712345678)
+ *               items:
+ *                 type: array
+ *                 description: Products to include in the order
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - productId
+ *                     - quantity
+ *                     - price
+ *                   properties:
+ *                     productId:
+ *                       type: integer
+ *                     name:
+ *                       type: string
+ *                     quantity:
+ *                       type: integer
+ *                     price:
+ *                       type: number
+ *     responses:
+ *       201:
+ *         description: Client order created and payment initiated
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.post(
+  '/client-order',
+  protect,
+  createSellerClientOrder
 );
 
 export default router;
