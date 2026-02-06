@@ -6,7 +6,7 @@ import {
     CreditCard,
     AlertCircle
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'; // Button might be unused now, but keeping import for safety or if I use it elsewhere
 import { formatCurrency } from '@/lib/utils';
 import { PLATFORM_FEE_RATE } from '@/lib/constants';
 
@@ -87,7 +87,7 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                     </div>
                 </div>
 
-                {/* Metric 3: Available Balance (Interactive) */}
+                {/* Metric 3: Available Balance */}
                 <div className="group relative p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 lg:border-r border-white/5 transition-all duration-300 hover:bg-white/5 bg-gradient-to-b from-transparent to-emerald-500/5 hover:to-emerald-500/10">
                     <div className="absolute inset-0 bg-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
@@ -102,13 +102,10 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                     </div>
 
                     <div className="mt-4 relative z-10">
-                        <Button
-                            size="sm"
-                            onClick={onWithdraw}
-                            className="w-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/20 hover:border-emerald-500/40 transition-all shadow-lg hover:shadow-emerald-500/10 font-bold h-8 text-xs"
-                        >
-                            Withdraw Funds
-                        </Button>
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-bold">
+                            <Wallet className="h-3 w-3" />
+                            Ready to withdraw
+                        </span>
                     </div>
                 </div>
 
@@ -122,22 +119,21 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                         <h3 className="text-gray-400 text-sm font-medium uppercase tracking-wider">Pending Payments</h3>
                         <div className="flex items-baseline gap-2">
                             <p className="text-3xl font-black text-white tracking-tight">
-                                {analytics.pendingDebtCount || 0}
+                                {formatCurrency(analytics.pendingDebt || 0)}
                             </p>
-                            <span className="text-sm font-medium text-gray-500">Orders</span>
                         </div>
                     </div>
 
                     <div className="mt-4">
-                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <p className="text-sm font-medium text-gray-500">
+                            {analytics.pendingDebtCount || 0} Orders Pending
+                        </p>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden mt-2">
                             <div
                                 className="h-full bg-purple-500/50 rounded-full"
                                 style={{ width: `${Math.min((analytics.pendingDebtCount / 10) * 100, 100)}%` }}
                             />
                         </div>
-                        <p className="text-[10px] text-gray-500 mt-1.5 text-right">
-                            {analytics.pendingDebtCount > 0 ? 'Wait for payments' : 'All clear'}
-                        </p>
                     </div>
                 </div>
 
