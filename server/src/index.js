@@ -344,14 +344,14 @@ const startServer = async () => {
         await client.query('BEGIN');
 
         // Enum update
-        const enumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'order_status') AND enumlabel = 'debt_pending'`);
+        const enumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'order_status') AND enumlabel = 'DEBT_PENDING'`);
         if (enumCheck.rowCount === 0) {
           await client.query('COMMIT');
-          await client.query("ALTER TYPE order_status ADD VALUE 'debt_pending'");
+          await client.query("ALTER TYPE order_status ADD VALUE 'DEBT_PENDING'");
           await client.query('BEGIN');
-          console.log("Added 'debt_pending' to order_status.");
+          console.log("Added 'DEBT_PENDING' to order_status.");
         } else {
-          console.log("'debt_pending' already exists.");
+          console.log("'DEBT_PENDING' already exists.");
         }
 
         // Column update
