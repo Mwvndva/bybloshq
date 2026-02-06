@@ -13,8 +13,8 @@ class Order {
       INSERT INTO product_orders (
         buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
         payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
-        notes, metadata, status, payment_status, service_requirements
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        notes, metadata, status, payment_status, service_requirements, is_debt
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *
     `;
 
@@ -34,7 +34,8 @@ class Order {
       data.metadata,
       data.status,
       data.payment_status || 'pending',
-      data.service_requirements
+      data.service_requirements,
+      data.is_debt || false
     ];
 
     const result = await client.query(query, values);
