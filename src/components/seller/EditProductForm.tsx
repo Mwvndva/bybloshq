@@ -43,7 +43,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
   useEffect(() => {
     const fetchProduct = async () => {
       if (!id) return;
-      
+
       try {
         const product = await sellerApi.getProduct(id);
         setFormData({
@@ -99,9 +99,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!id) return;
-    
+
     // Basic validation
     if (!formData.name || !formData.price || !formData.description) {
       toast({
@@ -153,17 +153,17 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
 
       // Update the product
       await sellerApi.updateProduct(id, updateData);
-      
+
       toast({
         title: 'Success',
         description: 'Product updated successfully!',
       });
-      
+
       // Call the onSuccess callback if provided
       if (onSuccess) {
         await onSuccess();
       }
-      
+
       // Navigate back to products list
       navigate('/seller/products', { replace: true });
     } catch (error: any) {
@@ -182,7 +182,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
   const processImage = (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (event) => {
         if (event.target?.result) {
           resolve(event.target.result as string);
@@ -190,11 +190,11 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
           reject(new Error('Failed to process image'));
         }
       };
-      
+
       reader.onerror = () => {
         reject(new Error('Failed to read image file'));
       };
-      
+
       reader.readAsDataURL(file);
     });
   };
@@ -213,7 +213,7 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
         <CardHeader>
           <CardTitle>Edit Product</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -284,9 +284,9 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md">
                     {imagePreview ? (
                       <div className="relative">
-                        <img 
-                          src={imagePreview} 
-                          alt="Preview" 
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
                           className="h-48 w-48 object-cover rounded-md"
                         />
                         <div className="mt-2 text-sm text-center">
@@ -328,7 +328,10 @@ export const EditProductForm: React.FC<EditProductFormProps> = ({ onSuccess }) =
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate('/seller/products')}
+                onClick={() => {
+                  if (onSuccess) onSuccess();
+                  navigate('/seller/products');
+                }}
                 disabled={isSubmitting}
               >
                 Cancel
