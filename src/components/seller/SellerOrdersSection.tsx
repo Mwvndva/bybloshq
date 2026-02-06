@@ -18,7 +18,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
     if (value === undefined || isNaN(value)) return `${currency} 0.00`;
     return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
-import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar } from 'lucide-react';
+import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 
@@ -289,6 +289,12 @@ export default function SellerOrdersSection() {
                                             <div>
                                                 <h3 className="font-semibold text-base sm:text-lg text-white">Order #{order.orderNumber}</h3>
                                                 <p className="text-xs sm:text-sm text-gray-300">{formatDate(order.createdAt)}</p>
+                                                {(order.buyerName || order.customer?.name) && (
+                                                    <div className="flex items-center gap-1.5 mt-1.5 text-xs sm:text-sm text-blue-200 bg-blue-500/10 border border-blue-400/20 px-2 py-1 rounded-md w-fit">
+                                                        <User className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                                                        <span className="font-medium truncate max-w-[150px] sm:max-w-xs ">{order.buyerName || order.customer?.name}</span>
+                                                    </div>
+                                                )}
                                             </div>
                                             {/* Status Badge - positioned for mobile */}
                                             <div className="self-start sm:self-auto">
