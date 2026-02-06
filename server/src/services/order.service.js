@@ -1065,8 +1065,8 @@ class OrderService {
       }
 
       // 8. Initiate M-Pesa STK Push
-      const PaymentService = (await import('./payment.service.js')).default;
-      const paymentService = new PaymentService();
+      const paymentService = (await import('./payment.service.js')).default;
+
 
       // Create payment record
       const paymentData = {
