@@ -338,7 +338,7 @@ export const sellerApi = {
   getProduct: async (id: string): Promise<Product> => {
     try {
       const response = await sellerApiInstance.get<ProductResponse>(`/sellers/products/${id}`);
-      const productData = response.data?.data;
+      const productData = response.data?.data?.product;
       if (!productData) {
         throw new Error('Product not found');
       }
