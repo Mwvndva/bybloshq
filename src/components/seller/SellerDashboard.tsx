@@ -44,6 +44,7 @@ import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
 import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
+import { WithdrawalModal } from './WithdrawalModal';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
@@ -243,6 +244,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   // Debt Prompt State
   const [processingDebtId, setProcessingDebtId] = useState<number | null>(null);
+  const [showWithdrawalModal, setShowWithdrawalModal] = useState(false);
 
   const handleSendDebtPrompt = async (debtId: number) => {
     if (processingDebtId) return;
@@ -1053,7 +1055,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'products', label: 'Products', icon: Package },
               { id: 'orders', label: 'Orders', icon: ShoppingBag },
-              { id: 'withdrawals', label: 'Withdrawals', icon: Wallet },
               { id: 'settings', label: 'Settings', icon: Settings },
             ].map(({ id, label, icon: Icon }) => (
               <button
@@ -1081,7 +1082,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
                 )}
               </button>
-            ))}
+            ))
+            }
           </div>
         </div>
 
@@ -1096,210 +1098,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           </div>
         )}
 
-        {activeTab === 'withdrawals' && (
-          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
-            <div className="text-center px-2 sm:px-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Withdrawal Management</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
-            </div>
 
-            {/* Available Balance Card */}
-            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-white/10">
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Available Balance</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your current balance available for withdrawal</p>
-                </div>
-                <div className="bg-green-500/10 border border-green-400/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
-                  <p className="text-lg sm:text-xl md:text-2xl font-black text-green-200">
-                    {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
-                  </p>
-                </div>
-
-                {/* Minimum Withdrawal Notification */}
-                <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-4 mb-4 flex items-start gap-3">
-                  <div className="bg-blue-500/10 border border-blue-400/20 rounded-full p-1 mt-0.5">
-                    <Info className="h-4 w-4 text-blue-300" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-blue-100 text-xs">Minimum Withdrawal Amount</h4>
-                    <p className="text-blue-200/80 text-xs mt-1">
-                      The minimum balance required to request a withdrawal is KSh 50. Please ensure you have sufficient funds before proceeding.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {!showWithdrawalForm ? (
-                <Button
-                  onClick={() => setShowWithdrawalForm(true)}
-                  className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto"
-                  disabled={(analytics?.balance || 0) <= 0}
-                >
-                  <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  Request Withdrawal
-                </Button>
-              ) : (
-                <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
-                  <h4 className="text-lg sm:text-xl font-bold text-white mb-4">Request Withdrawal</h4>
-                  <form onSubmit={handleWithdrawalRequest} className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="amount" className="text-xs font-semibold text-gray-300 mb-2 block">
-                          Amount (KSh)
-                        </Label>
-
-                        <Input
-                          id="amount"
-                          type="number"
-                          value={withdrawalForm.amount}
-                          onChange={(e) => setWithdrawalForm(prev => ({ ...prev, amount: e.target.value }))}
-                          placeholder="Enter amount"
-                          min="1"
-                          max={analytics?.balance || 0}
-                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
-                          required
-                        />
-                        <p className="text-xs text-gray-300 mt-1">
-                          Max: {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
-                        </p>
-                      </div>
-                      <div>
-                        <Label htmlFor="mpesaNumber" className="text-xs font-semibold text-gray-300 mb-2 block">
-                          M-Pesa Number
-                        </Label>
-
-                        <Input
-                          id="mpesaNumber"
-                          type="tel"
-                          value={withdrawalForm.mpesaNumber}
-                          onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaNumber: e.target.value }))}
-                          placeholder="0712345678"
-                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
-                          required
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="mpesaName" className="text-xs font-semibold text-gray-300 mb-2 block">
-                        Name on M-Pesa Number
-                      </Label>
-
-                      <Input
-                        id="mpesaName"
-                        type="text"
-                        value={withdrawalForm.mpesaName}
-                        onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaName: e.target.value }))}
-                        placeholder="Enter name as registered on M-Pesa"
-                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-900 border-white/10 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
-                        required
-                      />
-                    </div>
-                    <div className="flex gap-3 pt-4">
-                      <Button
-                        type="submit"
-                        disabled={isRequestingWithdrawal}
-                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-2 rounded-xl font-semibold"
-                      >
-                        {isRequestingWithdrawal ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <Wallet className="h-4 w-4 mr-2" />
-                            Submit Request
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          setShowWithdrawalForm(false);
-                          setWithdrawalForm({
-                            amount: '',
-                            mpesaNumber: '',
-                            mpesaName: ''
-                          });
-                        }}
-                        className="px-6 py-2 rounded-xl bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-                  </form>
-                </div>
-              )}
-            </div>
-
-            {/* Withdrawal Requests History */}
-            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-white/10">
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Withdrawal Requests</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Track your withdrawal request history</p>
-                </div>
-              </div>
-
-              {withdrawalRequests.length > 0 ? (
-                <div className="space-y-4">
-                  {withdrawalRequests.map((request) => (
-                    <Card key={request.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10">
-                      <CardContent className="p-6">
-                        <div className="flex justify-between items-start">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-3">
-                              <p className="text-lg sm:text-xl font-black text-white">
-                                {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(request.amount)}
-                              </p>
-                              <Badge
-                                variant="outline"
-                                className={`${request.status === 'pending'
-                                  ? 'bg-yellow-500/10 text-yellow-200 border-yellow-400/20'
-                                  : request.status === 'approved'
-                                    ? 'bg-green-500/10 text-green-200 border-green-400/20'
-                                    : request.status === 'rejected' || request.status === 'failed'
-                                      ? 'bg-red-500/10 text-red-200 border-red-400/20'
-                                      : 'bg-blue-500/10 text-blue-200 border-blue-400/20'
-                                  } rounded-full px-3 py-1 font-semibold`}
-                              >
-                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-gray-300">
-                              M-Pesa: {request.mpesaNumber} ({request.mpesaName})
-                            </p>
-                            <p className="text-xs text-gray-300">
-                              Requested on {new Date(request.createdAt).toLocaleDateString()}
-                            </p>
-                            {request.status === 'failed' && request.failureReason && (
-                              <div className="mt-2 p-2 bg-red-500/10 border border-red-400/20 rounded-lg">
-                                <p className="text-xs text-red-200 font-medium flex items-center gap-1">
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                                  Reason: {request.failureReason}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-20">
-                  <div className="w-24 h-24 mx-auto mb-8 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center shadow-lg">
-                    <Wallet className="h-12 w-12 text-gray-300" />
-                  </div>
-                  <h3 className="text-xl font-black text-white mb-3">No withdrawal requests</h3>
-                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {activeTab === 'overview' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
@@ -1768,6 +1567,62 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         onClose={() => setShowClientOrderModal(false)}
         products={products as any}
         onSubmit={handleClientOrderSubmit}
+      />
+
+      <WithdrawalModal
+        isOpen={showWithdrawalModal}
+        onClose={() => setShowWithdrawalModal(false)}
+        balance={analytics?.balance || 0}
+        isLoading={isRequestingWithdrawal}
+        onWithdraw={async (data: { amount: string; mpesaNumber: string; mpesaName: string }) => {
+          // Re-use existing handler logic adapted for the modal
+          const updatedEvent = { preventDefault: () => { } } as any; // Mock event
+          setWithdrawalForm(data); // Update state to match form data
+
+          // Wait for state update is tricky in sync flow, so we might need to modify handleWithdrawalRequest 
+          // to accept data directly or just update the state and call it.
+          // Better approach: Call handleWithdrawalRequest with the data directly if I refactor it, 
+          // but for now, I'll update the state and call the logic manually or refactor the handler.
+
+          // Actually, let's just implement the logic here directly or call a refactored version.
+          // Since I can't easily change the hook state and expect immediate availability in the same closure,
+          // I will use the data passed from the modal directly.
+
+          setIsRequestingWithdrawal(true);
+          try {
+            const amount = parseFloat(data.amount);
+            if (isNaN(amount) || amount < 50) {
+              throw new Error('Minimum withdrawal amount is KSh 50');
+            }
+            if (amount > (analytics?.balance || 0)) {
+              throw new Error('Insufficient funds');
+            }
+
+            await sellerApi.requestWithdrawal({
+              amount,
+              mpesaNumber: data.mpesaNumber,
+              mpesaName: data.mpesaName
+            });
+
+            toast({
+              title: 'Request Submitted',
+              description: 'Your withdrawal request has been received.'
+            });
+            setShowWithdrawalModal(false);
+            // Refresh data
+            fetchData();
+            fetchWithdrawalRequests();
+          } catch (error: any) {
+            toast({
+              title: 'Error',
+              description: error.message || 'Failed to request withdrawal',
+              variant: 'destructive'
+            });
+          } finally {
+            setIsRequestingWithdrawal(false);
+          }
+        }}
+        withdrawalRequests={withdrawalRequests}
       />
     </>
   );
