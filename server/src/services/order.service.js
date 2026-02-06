@@ -1173,7 +1173,7 @@ class OrderService {
         // If STK push fails, mark both order and payment as failed
         await client.query(
           'UPDATE product_orders SET status = $1 WHERE id = $2',
-          ['failed', order.id]
+          ['FAILED', order.id]
         );
         await client.query(
           'UPDATE payments SET status = $1, metadata = metadata || $2::jsonb WHERE id = $3',
