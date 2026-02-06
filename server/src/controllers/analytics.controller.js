@@ -126,6 +126,24 @@ export const getSellerAnalytics = async (req, res, next) => {
       [sellerId]
     );
 
+    // 6.5. Get pending debt orders
+    console.log('Fetching pending debt orders...');
+    const pendingDebtOrdersResult = await pool.query(
+      `SELECT 
+         o.id, 
+         o.order_number,
+         o.total_amount,
+         o.created_at,
+         c.full_name as client_name,
+         c.phone as client_phone
+       FROM product_orders o
+       LEFT JOIN clients c ON o.buyer_id = c.id
+       WHERE o.seller_id = $1
+         AND o.status IN ('DEBT_PENDING', 'CLIENT_PAYMENT_PENDING')
+       ORDER BY o.created_at DESC`,
+      [sellerId]
+    );
+
 
     // Commit the transaction
     await pool.query('COMMIT');
@@ -142,6 +160,7 @@ export const getSellerAnalytics = async (req, res, next) => {
           month: row.month,
           sales: parseFloat(row.sales || 0)
         })),
+
         recentOrders: recentOrdersResult.rows.map(order => ({
           id: order.id,
           orderNumber: order.order_number,
@@ -149,6 +168,14 @@ export const getSellerAnalytics = async (req, res, next) => {
           totalAmount: parseFloat(order.total_amount || 0),
           createdAt: order.created_at,
           items: order.items || []
+        })),
+        pendingDebtOrders: pendingDebtOrdersResult.rows.map(order => ({
+          id: order.id,
+          orderNumber: order.order_number,
+          totalAmount: parseFloat(order.total_amount || 0),
+          createdAt: order.created_at,
+          clientName: order.client_name || 'Unknown Client',
+          clientPhone: order.client_phone || 'N/A'
         }))
       };
 
