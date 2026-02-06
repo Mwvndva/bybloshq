@@ -1721,53 +1721,54 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
           </div>
         )}
+      </div>
 
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
-            <DialogHeader>
-              <DialogTitle className="text-white">Delete Product</DialogTitle>
-              <DialogDescription className="text-zinc-300">
-                Are you sure you want to delete this product? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="mt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowDeleteDialog(false);
-                  setProductToDelete(null);
-                }}
-                disabled={!!deletingId}
-                className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={confirmDelete}
-                disabled={!!deletingId}
-              >
-                {deletingId ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  'Delete'
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
+          <DialogHeader>
+            <DialogTitle className="text-white">Delete Product</DialogTitle>
+            <DialogDescription className="text-zinc-300">
+              Are you sure you want to delete this product? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowDeleteDialog(false);
+                setProductToDelete(null);
+              }}
+              disabled={!!deletingId}
+              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={!!deletingId}
+            >
+              {deletingId ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {/* New Client Order Modal */}
-        <NewClientOrderModal
-          isOpen={showClientOrderModal}
-          onClose={() => setShowClientOrderModal(false)}
-          products={products as any}
-          onSubmit={handleClientOrderSubmit}
-        />
-      </>
-      );
+      {/* New Client Order Modal */}
+      <NewClientOrderModal
+        isOpen={showClientOrderModal}
+        onClose={() => setShowClientOrderModal(false)}
+        products={products as any}
+        onSubmit={handleClientOrderSubmit}
+      />
+    </>
+  );
 };
