@@ -1166,16 +1166,21 @@ class OrderService {
         };
 
       } catch (paymentError) {
-        // If STK push fails, still commit the order but mark payment as failed
+        // If STK push fails, mark both order and payment as failed
+        await client.query(
+          'UPDATE orders SET status = $1 WHERE id = $2',
+          ['failed', order.id]
+        );
         await client.query(
           'UPDATE payments SET status = $1, metadata = metadata || $2::jsonb WHERE id = $3',
           ['failed', JSON.stringify({ error: paymentError.message }), payment.id]
         );
         await client.query('COMMIT');
 
-        logger.error('[ClientOrder] STK Push failed:', paymentError);
+        logger.error('[ClientOrder] STK Push failed, order marked as failed:', paymentError);
         throw new Error(`Order created but payment initiation failed: ${paymentError.message}`);
       }
+
 
     } catch (error) {
       await client.query('ROLLBACK');
