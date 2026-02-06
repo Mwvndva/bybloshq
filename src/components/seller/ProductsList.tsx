@@ -393,34 +393,24 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 <span className="font-medium text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex gap-1.5 pt-1">
-                {onStatusUpdate && (
+              {/* Action Button - Only Status Toggle */}
+              {onStatusUpdate && (
+                <div className="pt-1">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleStatusUpdate(product.id, product.status === 'sold' ? 'available' : 'sold')}
                     disabled={updatingId === product.id}
-                    className={`flex-1 ${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'} h-7 px-2 text-[10px]`}
+                    className={`w-full ${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30'} h-6 px-2 text-[10px]`}
                   >
                     {updatingId === product.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <span>{product.status === 'sold' ? 'Mark Available' : 'Mark Sold'}</span>
+                      <span>{product.status === 'sold' ? 'Mark Available' : 'Sold Out'}</span>
                     )}
                   </Button>
-                )}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleEditClick(product.id)}
-                  className="h-7 px-2 text-[10px] border-white/10 text-white hover:bg-white/5 hover:border-white/20"
-                >
-                  <Edit className="h-3 w-3 mr-1 text-emerald-400" />
-                  Edit
-                </Button>
-                {renderActions(product)}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -718,19 +708,19 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
       {/* Edit Product Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="bg-[#000000] border border-white/10 text-white w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
-          <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-4">
+        <DialogContent className="bg-[#000000] border border-white/10 text-white w-[95vw] max-w-md max-h-[85vh] overflow-y-auto p-3 sm:p-4 rounded-xl">
+          <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowEditModal(false)}
-              className="h-8 w-8 -ml-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full"
+              className="h-7 w-7 -ml-1 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full"
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <DialogTitle className="text-lg sm:text-xl font-bold text-white">Edit Product</DialogTitle>
-              <DialogDescription className="text-zinc-400 text-xs sm:text-sm">
+              <DialogTitle className="text-base sm:text-lg font-bold text-white">Edit Product</DialogTitle>
+              <DialogDescription className="text-zinc-400 text-[10px] sm:text-xs">
                 Update product information
               </DialogDescription>
             </div>
@@ -741,96 +731,90 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               <Loader2 className="h-8 w-8 animate-spin text-emerald-400" />
             </div>
           ) : (
-            <div className="space-y-4 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Left Column */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit-name" className="text-white">Product Name</Label>
-                    <Input
-                      id="edit-name"
-                      value={editFormData.name}
-                      onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                      className="bg-zinc-900 border-white/10 text-white"
-                      placeholder="Enter product name"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-price" className="text-white">Price (KES)</Label>
-                    <Input
-                      id="edit-price"
-                      type="number"
-                      value={editFormData.price}
-                      onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
-                      className="bg-zinc-900 border-white/10 text-white"
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-description" className="text-white">Description</Label>
-                    <Textarea
-                      id="edit-description"
-                      value={editFormData.description}
-                      onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                      className="bg-zinc-900 border-white/10 text-white min-h-[100px]"
-                      placeholder="Enter product description"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="edit-aesthetic" className="text-white">Category</Label>
-                    <Select
-                      value={editFormData.aesthetic}
-                      onValueChange={(value) => setEditFormData({ ...editFormData, aesthetic: value })}
-                    >
-                      <SelectTrigger className="bg-zinc-900 border-white/10 text-white">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-zinc-900 border-white/10">
-                        {aestheticCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id} className="text-white hover:bg-white/5">
-                            {category.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="space-y-3 py-2">
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="edit-name" className="text-white text-xs">Product Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                    className="bg-zinc-900 border-white/10 text-white h-9 text-sm"
+                    placeholder="Enter product name"
+                  />
                 </div>
 
-                {/* Right Column - Image */}
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="edit-image" className="text-white">Product Image</Label>
-                    <div className="mt-2">
-                      {editFormData.imagePreview && (
-                        <div className="mb-3">
-                          <img
-                            src={editFormData.imagePreview}
-                            alt="Preview"
-                            className="w-full h-48 object-cover rounded-lg border border-white/10"
-                          />
-                        </div>
-                      )}
-                      <Input
-                        id="edit-image"
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setEditFormData({
-                              ...editFormData,
-                              image: file,
-                              imagePreview: URL.createObjectURL(file)
-                            });
-                          }
-                        }}
-                        className="bg-zinc-900 border-white/10 text-white file:bg-emerald-500/20 file:text-emerald-400 file:border-0 file:mr-4 file:py-2 file:px-4"
-                      />
-                      <p className="text-xs text-zinc-500 mt-1">PNG, JPG, GIF up to 2MB</p>
-                    </div>
+                <div>
+                  <Label htmlFor="edit-price" className="text-white text-xs">Price (KES)</Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    value={editFormData.price}
+                    onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
+                    className="bg-zinc-900 border-white/10 text-white h-9 text-sm"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-description" className="text-white text-xs">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editFormData.description}
+                    onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                    className="bg-zinc-900 border-white/10 text-white min-h-[60px] text-sm"
+                    placeholder="Enter product description"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-aesthetic" className="text-white text-xs">Category</Label>
+                  <Select
+                    value={editFormData.aesthetic}
+                    onValueChange={(value) => setEditFormData({ ...editFormData, aesthetic: value })}
+                  >
+                    <SelectTrigger className="bg-zinc-900 border-white/10 text-white h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-zinc-900 border-white/10">
+                      {aestheticCategories.map((category) => (
+                        <SelectItem key={category.id} value={category.id} className="text-white hover:bg-white/5">
+                          {category.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-image" className="text-white text-xs">Product Image</Label>
+                  <div className="mt-2">
+                    {editFormData.imagePreview && (
+                      <div className="mb-2">
+                        <img
+                          src={editFormData.imagePreview}
+                          alt="Preview"
+                          className="w-full h-32 object-cover rounded-lg border border-white/10"
+                        />
+                      </div>
+                    )}
+                    <Input
+                      id="edit-image"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setEditFormData({
+                            ...editFormData,
+                            image: file,
+                            imagePreview: URL.createObjectURL(file)
+                          });
+                        }
+                      }}
+                      className="bg-zinc-900 border-white/10 text-white text-xs file:bg-emerald-500/20 file:text-emerald-400 file:border-0 file:mr-2 file:py-1.5 file:px-3 file:text-xs"
+                    />
+                    <p className="text-[10px] text-zinc-500 mt-1">PNG, JPG, GIF up to 2MB</p>
                   </div>
                 </div>
               </div>
