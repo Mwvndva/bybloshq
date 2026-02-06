@@ -1133,7 +1133,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               {!showWithdrawalForm ? (
                 <Button
                   onClick={() => setShowWithdrawalForm(true)}
-                  className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto"
+                  className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto h-8 sm:h-auto"
                   disabled={(analytics?.balance || 0) <= 0}
                 >
                   <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -1200,6 +1200,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         type="submit"
                         disabled={isRequestingWithdrawal}
                         className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-1.5 h-8 text-xs rounded-lg font-semibold"
+                        size="sm"
                       >
                         {isRequestingWithdrawal ? (
                           <>
@@ -1251,7 +1252,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         <div className="flex justify-between items-start">
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
-                              <p className="text-lg sm:text-xl font-black text-white">
+                              <p className="text-base sm:text-xl font-black text-white">
                                 {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(request.amount)}
                               </p>
                               <Badge
@@ -1514,7 +1515,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 </div>
 
                 {/* Profile Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6 lg:mb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-2 gap-4 sm:gap-4 mb-4 sm:mb-6 lg:mb-8 space-y-4 sm:space-y-0">
                   <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
                     <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Shop Name</p>
                     {isEditing ? (
