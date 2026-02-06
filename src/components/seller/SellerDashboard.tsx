@@ -1110,8 +1110,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Available Balance</h3>
                   <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your current balance available for withdrawal</p>
                 </div>
-                <div className="bg-green-500/10 border border-green-400/20 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
-                  <p className="text-lg sm:text-xl md:text-2xl font-black text-green-200">
+                <div className="bg-green-500/10 border border-green-400/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-5 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
+                  <p className="text-base sm:text-lg md:text-xl font-black text-green-200">
                     {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                   </p>
                 </div>
@@ -1133,10 +1133,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               {!showWithdrawalForm ? (
                 <Button
                   onClick={() => setShowWithdrawalForm(true)}
-                  className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto h-8 sm:h-auto"
+                  className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto h-7 sm:h-auto"
                   disabled={(analytics?.balance || 0) <= 0}
                 >
-                  <Wallet className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   Request Withdrawal
                 </Button>
               ) : (
@@ -1157,7 +1157,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           placeholder="Enter amount"
                           min="1"
                           max={analytics?.balance || 0}
-                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-7 sm:h-8 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
                         <p className="text-xs text-gray-300 mt-1">
@@ -1175,7 +1175,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           value={withdrawalForm.mpesaNumber}
                           onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaNumber: e.target.value }))}
                           placeholder="0712345678"
-                          className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-7 sm:h-8 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
                       </div>
@@ -1191,7 +1191,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         value={withdrawalForm.mpesaName}
                         onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaName: e.target.value }))}
                         placeholder="Enter name as registered on M-Pesa"
-                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-900 border-white/10 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                        className="h-7 sm:h-8 text-xs sm:text-sm bg-gray-900 border-white/10 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
                         required
                       />
                     </div>
@@ -1199,17 +1199,17 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       <Button
                         type="submit"
                         disabled={isRequestingWithdrawal}
-                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-1.5 h-8 text-xs rounded-lg font-semibold"
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-1.5 h-6 text-xs rounded-lg font-semibold"
                         size="sm"
                       >
                         {isRequestingWithdrawal ? (
                           <>
-                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                            <Loader2 className="h-2.5 w-2.5 mr-1.5 animate-spin" />
                             Processing...
                           </>
                         ) : (
                           <>
-                            <Wallet className="h-3 w-3 mr-1.5" />
+                            <Wallet className="h-2.5 w-2.5 mr-1.5" />
                             Submit Request
                           </>
                         )}
@@ -1225,7 +1225,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             mpesaName: ''
                           });
                         }}
-                        className="px-4 py-1.5 h-8 text-xs rounded-lg bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
+                        className="px-4 py-1.5 h-6 text-xs rounded-lg bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
                       >
                         Cancel
                       </Button>
@@ -1449,15 +1449,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'settings' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-xl sm:text-2xl lg:text-3xl xl:text-4xl font-black text-white mb-2 sm:mb-3">Store Settings</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base xl:text-lg font-medium max-w-3xl mx-auto px-4 sm:px-0">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-2 sm:mb-3">Store Settings</h2>
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto px-4 sm:px-0">
                 Manage your store configuration and preferences. Update your store details, location, and appearance.
               </p>
             </div>
 
             <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
               {/* Banner Upload Section */}
-              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
+              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-2.5 sm:p-3 lg:p-5 xl:p-6 shadow-lg border border-white/10">
                 <BannerUpload
                   currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
@@ -1467,11 +1467,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               {/* Store Information */}
-              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
+              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-2.5 sm:p-3 lg:p-5 xl:p-6 shadow-lg border border-white/10">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div className="mb-2 sm:mb-0 flex-1 min-w-0">
-                    <h3 className="text-base sm:text-xl lg:text-2xl font-black text-white truncate">Store Information</h3>
-                    <p className="text-gray-300 text-[10px] sm:text-sm font-medium mt-1">
+                    <h3 className="text-sm sm:text-lg lg:text-xl font-black text-white truncate">Store Information</h3>
+                    <p className="text-gray-300 text-[10px] sm:text-xs font-medium mt-1">
                       Your store details and contact information
                     </p>
                   </div>
@@ -1499,7 +1499,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         onClick={toggleEdit}
                         className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                       >
-                        <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
+                        <Edit className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 sm:mr-1.5" />
                         Edit Profile
                       </Button>
                     )}
@@ -1508,7 +1508,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       onClick={handleLogout}
                       className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
                     >
-                      <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
+                      <LogOut className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 sm:mr-1.5" />
                       Logout
                     </Button>
                   </div>
