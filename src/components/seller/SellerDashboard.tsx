@@ -657,7 +657,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       setShowClientOrderModal(false);
 
       // Refresh dashboard data to reflect new order
-      await fetchData();
+      try {
+        await fetchData();
+      } catch (refreshError) {
+        console.error('Dashboard refresh failed:', refreshError);
+        // Don't block the user if dashboard refresh fails
+        // The order was created successfully
+      }
     } catch (error: any) {
       console.error('Error creating client order:', error);
       toast({
