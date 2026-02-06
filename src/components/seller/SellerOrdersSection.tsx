@@ -398,40 +398,40 @@ export default function SellerOrdersSection() {
                                         {/* Action Buttons */}
                                         <div className="w-full sm:w-auto lg:w-full">
                                             {order.status === 'PENDING' && (
-                                                <div className="space-y-2">
+                                                <div className="space-y-1.5">
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                        className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
                                                         onClick={() => handleCancelClick(order.id)}
                                                         disabled={isUpdating}
                                                     >
-                                                        <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-2" />
+                                                        <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
                                                         Cancel Order
                                                     </Button>
                                                 </div>
                                             )}
                                             {order.status === 'DELIVERY_PENDING' &&
                                                 (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')) && (
-                                                    <div className="space-y-2">
+                                                    <div className="space-y-1.5">
                                                         <Button
                                                             size="sm"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-7"
+                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
                                                             onClick={() => handleReadyForPickupClick(order.id)}
                                                             disabled={isUpdating}
                                                         >
-                                                            <Truck className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-2" />
+                                                            <Truck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
                                                             <span className="hidden sm:inline">Mark as Ready for Pickup</span>
                                                             <span className="sm:hidden">Ready for Pickup</span>
                                                         </Button>
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
+                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
                                                             onClick={() => handleCancelClick(order.id)}
                                                             disabled={isUpdating}
                                                         >
-                                                            <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-2" />
+                                                            <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
                                                             Cancel Order
                                                         </Button>
                                                     </div>
