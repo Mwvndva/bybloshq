@@ -1235,12 +1235,12 @@ class OrderService {
         continue;
       }
 
-      // Decrease stock
+      // Decrease stock (only if track_inventory is true)
       await client.query(
         `UPDATE products 
-         SET stock_count = stock_count - $1, 
+         SET quantity = quantity - $1, 
              updated_at = NOW() 
-         WHERE id = $2`,
+         WHERE id = $2 AND track_inventory = true`,
         [item.quantity, item.productId]
       );
 
