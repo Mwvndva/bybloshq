@@ -1409,10 +1409,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     variant="default"
                     size="sm"
                     className="gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 border-emerald-400/30 rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all font-bold"
-                    onClick={() => {
-                      console.log('[SellerDashboard] New Client Order button clicked, opening modal...');
-                      setShowClientOrderModal(true);
-                    }}
+                    onClick={() => setShowClientOrderModal(true)}
                   >
                     <Handshake className="h-4 w-4" />
                     New Client Order
