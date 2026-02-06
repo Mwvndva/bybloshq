@@ -378,6 +378,20 @@ const startServer = async () => {
           console.log("'debt' already exists in payment_method enum.");
         }
 
+        // Payment Status Enum update
+        const payStatusEnumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'payment_status') AND enumlabel = 'pending_debt'`);
+        if (payStatusEnumCheck.rowCount === 0) {
+          const typeExists = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'payment_status'`);
+          if (typeExists.rowCount > 0) {
+            await client.query('COMMIT');
+            await client.query("ALTER TYPE payment_status ADD VALUE 'pending_debt'");
+            await client.query('BEGIN');
+            console.log("Added 'pending_debt' to payment_status enum.");
+          }
+        } else {
+          console.log("'pending_debt' already exists in payment_status enum.");
+        }
+
         await client.query('COMMIT');
         console.log('Debt Feature migration completed.');
       } catch (err) {
