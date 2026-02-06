@@ -1168,7 +1168,7 @@ class OrderService {
       } catch (paymentError) {
         // If STK push fails, mark both order and payment as failed
         await client.query(
-          'UPDATE orders SET status = $1 WHERE id = $2',
+          'UPDATE product_orders SET status = $1 WHERE id = $2',
           ['failed', order.id]
         );
         await client.query(
