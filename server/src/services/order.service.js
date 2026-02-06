@@ -1116,9 +1116,10 @@ class OrderService {
         );
 
         // 9. Send WhatsApp notification to client
+        // DISABLED: WhatsApp notification temporarily disabled due to enrichedItems error
+        /*
         try {
           const waService = (await import('./whatsapp.service.js')).default;
-
 
           // Get seller details
           const sellerQuery = await client.query(
@@ -1127,16 +1128,24 @@ class OrderService {
           );
           const seller = sellerQuery.rows[0];
 
-          await waService.notifyClientOrderCreated(clientPhone, {
-            order,
-            items: enrichedItems,
-            seller
-          });
+          await waService.sendClientOrderNotification(
+            clientPhone,
+            {
+              sellerName: seller.shop_name || seller.businessName || 'Seller',
+              orderNumber: order.order_number,
+              totalAmount,
+              items: enrichedItems
+            }
+          );
           logger.info(`[ClientOrder] WhatsApp notification sent to ${clientPhone}`);
         } catch (waError) {
-          logger.error(`[ClientOrder] Failed to send WhatsApp notification:`, waError);
-          // Don't fail the order creation if WhatsApp fails
+          logger.error('[ClientOrder] Failed to send WhatsApp notification:', waError.message);
+          // Non-critical, continue
         }
+        */
+        logger.info('[ClientOrder] WhatsApp notification skipped (disabled)');
+        // Don't fail the order creation if WhatsApp fails
+
 
         await client.query('COMMIT');
         logger.info(`[ClientOrder] STK Push initiated successfully for order ${order.id}`);
