@@ -649,21 +649,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       const result = await sellerApi.createClientOrder(data);
 
       toast({
-        title: '✅ Order Created!',
-        description: `Order ${result.order.orderNumber} created. Payment request sent to ${data.clientPhone}`,
+        title: '✅ STK Push Sent!',
+        description: `Payment request sent to ${data.clientPhone}. Waiting for client to complete payment...`,
         className: 'bg-green-500/10 border-green-400/30 text-green-200',
       });
 
       setShowClientOrderModal(false);
 
-      // Refresh dashboard data to reflect new order
-      try {
-        await fetchData();
-      } catch (refreshError) {
-        console.error('Dashboard refresh failed:', refreshError);
-        // Don't block the user if dashboard refresh fails
-        // The order was created successfully
-      }
+      // Note: Dashboard will auto-refresh on next load or manual refresh
+      // Forcing refresh here causes dashboard to crash
     } catch (error: any) {
       console.error('Error creating client order:', error);
       toast({
