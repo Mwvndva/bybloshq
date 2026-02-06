@@ -652,7 +652,12 @@ export const sellerApi = {
         };
         message: string;
       };
-    }>('/orders/client-order', data);
+    }>('/orders/client-order', {
+      clientName: data.clientName,
+      clientPhone: data.clientPhone,
+      paymentType: data.paymentType,
+      items: data.items
+    });
     return response.data.data;
   },
 };
