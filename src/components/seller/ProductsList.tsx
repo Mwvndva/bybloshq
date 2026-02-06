@@ -220,7 +220,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 p-0 text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+          className="h-7 w-7 p-0 text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
             handleDeleteClick(product.id);
@@ -228,9 +228,9 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
           disabled={!!deletingId}
         >
           {deletingId === product.id ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3 w-3" />
           )}
         </Button>
       </div>
@@ -256,7 +256,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 setProductToDelete(null);
               }}
               disabled={!!deletingId}
-              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
+              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 h-8 text-xs"
             >
               Cancel
             </Button>
@@ -264,10 +264,11 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               variant="destructive"
               onClick={confirmDelete}
               disabled={!!deletingId}
+              className="h-8 text-xs"
             >
               {deletingId ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3 w-3 animate-spin" />
                   Deleting...
                 </>
               ) : (
@@ -311,8 +312,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               <Badge
                 variant={product.status === 'sold' ? 'destructive' : 'default'}
                 className={`mt-2 w-fit text-[10px] px-1.5 py-0 ${product.status === 'sold'
-                    ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                    : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                  : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                   }`}
               >
                 {product.status?.toUpperCase() || 'ACTIVE'}
@@ -439,8 +440,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 <TableCell>
                   <Badge
                     className={`capitalize font-medium ${product.status === 'sold'
-                        ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                        : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      ? 'bg-red-500/20 text-red-400 border-red-500/30'
+                      : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                       }`}
                   >
                     {product.status || 'available'}
@@ -454,10 +455,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         size="sm"
                         onClick={() => handleStatusUpdate(product.id, product.status === 'sold' ? 'available' : 'sold')}
                         disabled={updatingId === product.id}
-                        className={`${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'}`}
+                        className={`${product.status === 'sold' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30' : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30'} h-7 px-2 text-xs`}
                       >
                         {updatingId === product.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                          <Loader2 className="h-3 w-3 animate-spin mr-1" />
                         ) : (
                           <span>{product.status === 'sold' ? 'Mark Available' : 'Mark Sold'}</span>
                         )}
@@ -466,19 +467,19 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
+                      className="h-7 w-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEditClick(product.id);
                       }}
                       title="Edit product"
                     >
-                      <Edit className="h-4 w-4" />
+                      <Edit className="h-3 w-3" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                      className="h-7 w-7 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleDeleteClick(product.id);
@@ -486,9 +487,9 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       disabled={!!deletingId}
                     >
                       {deletingId === product.id ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="h-3 w-3 animate-spin" />
                       ) : (
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3 w-3" />
                       )}
                     </Button>
                   </div>

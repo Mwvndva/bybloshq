@@ -1199,16 +1199,16 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       <Button
                         type="submit"
                         disabled={isRequestingWithdrawal}
-                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-6 py-2 rounded-xl font-semibold"
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-1.5 h-8 text-xs rounded-lg font-semibold"
                       >
                         {isRequestingWithdrawal ? (
                           <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
                             Processing...
                           </>
                         ) : (
                           <>
-                            <Wallet className="h-4 w-4 mr-2" />
+                            <Wallet className="h-3 w-3 mr-1.5" />
                             Submit Request
                           </>
                         )}
@@ -1224,7 +1224,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             mpesaName: ''
                           });
                         }}
-                        className="px-6 py-2 rounded-xl bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
+                        className="px-4 py-1.5 h-8 text-xs rounded-lg bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
                       >
                         Cancel
                       </Button>
@@ -1311,7 +1311,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-2 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-xl"
+                    className="gap-1.5 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-lg h-8 px-3 text-xs font-medium"
                     onClick={async () => {
                       const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName!)}`;
                       try {
@@ -1329,17 +1329,17 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       }
                     }}
                   >
-                    <LinkIcon className="h-4 w-4" />
+                    <LinkIcon className="h-3 w-3" />
                     Copy Shop Link
                   </Button>
 
                   <Button
                     variant="default"
                     size="sm"
-                    className="gap-2 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 border-emerald-400/30 rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all font-bold"
+                    className="gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 border-emerald-400/30 rounded-lg shadow-lg hover:shadow-emerald-500/20 transition-all font-bold h-8 px-3 text-xs"
                     onClick={() => setShowClientOrderModal(true)}
                   >
-                    <Handshake className="h-4 w-4" />
+                    <Handshake className="h-3.5 w-3.5" />
                     New Client Order
                   </Button>
                 </div>
@@ -1379,18 +1379,18 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           <div className="flex justify-end mt-2">
                             <Button
                               size="sm"
-                              className="w-auto h-7 px-3 text-[10px] font-bold bg-gradient-to-r from-yellow-400/80 to-yellow-500/80 text-black border-none hover:from-yellow-400 hover:to-yellow-500 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]"
+                              className="w-auto h-6 px-2.5 text-[10px] font-bold bg-gradient-to-r from-yellow-400/80 to-yellow-500/80 text-black border-none hover:from-yellow-400 hover:to-yellow-500 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]"
                               onClick={() => handleSendDebtPrompt(debt.id)}
                               disabled={processingDebtId === debt.id}
                             >
                               {processingDebtId === debt.id ? (
                                 <>
-                                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                   Sending...
                                 </>
                               ) : (
                                 <>
-                                  <Wallet className="h-3.5 w-3.5 mr-1.5" />
+                                  <Wallet className="h-3 w-3 mr-1" />
                                   Send Prompt
                                 </>
                               )}
@@ -1427,9 +1427,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <Button
                   size="sm"
                   onClick={() => navigate('/seller/add-product')}
-                  className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-xl font-semibold text-xs w-full sm:w-auto"
+                  className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-lg font-semibold text-xs w-full sm:w-auto h-8"
                 >
-                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Plus className="h-3.5 w-3.5" />
                   Add Product
                 </Button>
               </div>
