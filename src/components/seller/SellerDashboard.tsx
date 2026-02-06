@@ -1468,7 +1468,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       {analytics.recentDebts.map((debt) => (
                         <div key={debt.id} className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
                           <div className="flex justify-between items-center mb-1">
-                            <span className="font-bold text-sm text-white truncate max-w-[120px]" title={debt.clientName}>{debt.clientName}</span>
+                            <div className="flex flex-col">
+                              <span className="font-bold text-sm text-white truncate max-w-[120px]" title={debt.clientName}>{debt.clientName}</span>
+                              <span className="text-[10px] text-gray-400 font-mono">{debt.clientPhone}</span>
+                            </div>
                             <span className="text-xs font-mono text-yellow-300 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{formatCurrency(debt.amount)}</span>
                           </div>
                           <div className="flex justify-between items-center text-xs text-gray-400 mb-3">
