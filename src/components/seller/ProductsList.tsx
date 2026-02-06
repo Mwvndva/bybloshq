@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake, Package } from 'lucide-react';
+import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake, Package, ArrowLeft } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
@@ -320,7 +320,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               </Badge>
             </CardHeader>
             <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0">
-              <div className="aspect-square bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden mb-2 sm:mb-3">
+              <div className="h-40 bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden mb-2 sm:mb-3">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -645,12 +645,22 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
       {/* Edit Product Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="bg-[#000000] border border-white/10 text-white max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white">Edit Product</DialogTitle>
-            <DialogDescription className="text-zinc-400">
-              Update product information
-            </DialogDescription>
+        <DialogContent className="bg-[#000000] border border-white/10 text-white w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+          <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowEditModal(false)}
+              className="h-8 w-8 -ml-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div>
+              <DialogTitle className="text-lg sm:text-xl font-bold text-white">Edit Product</DialogTitle>
+              <DialogDescription className="text-zinc-400 text-xs sm:text-sm">
+                Update product information
+              </DialogDescription>
+            </div>
           </DialogHeader>
 
           {isLoadingEdit ? (
