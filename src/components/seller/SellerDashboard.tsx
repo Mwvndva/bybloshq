@@ -38,7 +38,7 @@ import {
   Trash2,
   Handshake
 } from 'lucide-react';
-import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
+import { sellerApi, checkShopNameAvailability, debtService } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
@@ -276,6 +276,31 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // Client Order Modal State
   const [showClientOrderModal, setShowClientOrderModal] = useState(false);
   const [isCreatingClientOrder, setIsCreatingClientOrder] = useState(false);
+
+  // Debt Prompt State
+  const [processingDebtId, setProcessingDebtId] = useState<number | null>(null);
+
+  const handleSendDebtPrompt = async (debtId: number) => {
+    if (processingDebtId) return;
+
+    setProcessingDebtId(debtId);
+    try {
+      await debtService.initiatePayment(debtId);
+      toast({
+        title: 'Prompt Sent',
+        description: 'STK Push sent to client successfully.',
+        variant: 'default'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to send prompt.',
+        variant: 'destructive'
+      });
+    } finally {
+      setProcessingDebtId(null);
+    }
+  };
 
   // Define cities and their locations
   const cities = {
@@ -1500,30 +1525,44 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
-                  <div className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl mb-3">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-300">Debts</p>
-                      <p className="text-lg sm:text-xl font-black text-white">{(analytics.pendingDebtCount || 0).toString()}</p>
-                    </div>
-                    <Clock className="h-6 w-6 text-blue-300" />
-                  </div>
-
                   {/* Recent Debts List */}
-                  {analytics.recentDebts && analytics.recentDebts.length > 0 && (
+                  {analytics.recentDebts && analytics.recentDebts.length > 0 ? (
                     <div className="space-y-2 mt-2">
-                      <p className="text-xs font-semibold text-gray-400 px-1">Latest Unpaid</p>
                       {analytics.recentDebts.map((debt) => (
-                        <div key={debt.id} className="p-2.5 bg-white/5 border border-white/5 rounded-lg hover:bg-white/10 transition-colors">
+                        <div key={debt.id} className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
                           <div className="flex justify-between items-center mb-1">
                             <span className="font-bold text-sm text-white truncate max-w-[120px]" title={debt.clientName}>{debt.clientName}</span>
-                            <span className="text-xs font-mono text-yellow-300">{formatCurrency(debt.amount)}</span>
+                            <span className="text-xs font-mono text-yellow-300 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{formatCurrency(debt.amount)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-xs text-gray-400">
+                          <div className="flex justify-between items-center text-xs text-gray-400 mb-3">
                             <span className="truncate max-w-[120px]" title={debt.productName}>{debt.productName}</span>
                             <span>{new Date(debt.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                           </div>
+
+                          <Button
+                            size="sm"
+                            className="w-full h-8 text-xs font-bold bg-gradient-to-r from-yellow-400/80 to-yellow-500/80 text-black border-none hover:from-yellow-400 hover:to-yellow-500 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]"
+                            onClick={() => handleSendDebtPrompt(debt.id)}
+                            disabled={processingDebtId === debt.id}
+                          >
+                            {processingDebtId === debt.id ? (
+                              <>
+                                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Wallet className="h-3.5 w-3.5 mr-1.5" />
+                                Send Prompt
+                              </>
+                            )}
+                          </Button>
                         </div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center">
+                      <p className="text-gray-400 text-sm">No pending debts</p>
                     </div>
                   )}
                 </CardContent>

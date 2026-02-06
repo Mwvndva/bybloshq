@@ -671,4 +671,23 @@ export const sellerApi = {
   },
 };
 
+export const withdrawalService = {
+  createRequest: async (data: { amount: string; mpesaNumber: string; mpesaName: string }) => {
+    const response = await sellerApiInstance.post('/sellers/withdrawal-request', data);
+    return response.data;
+  },
+
+  getRequests: async () => {
+    const response = await sellerApiInstance.get('/sellers/withdrawal-requests');
+    return response.data;
+  }
+};
+
+export const debtService = {
+  initiatePayment: async (debtId: number) => {
+    const response = await sellerApiInstance.post(`/sellers/debts/${debtId}/pay`);
+    return response.data;
+  }
+};
+
 export default sellerApi;
