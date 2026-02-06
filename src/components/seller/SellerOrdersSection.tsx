@@ -287,8 +287,8 @@ export default function SellerOrdersSection() {
                                         {/* Order Header */}
                                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                             <div>
-                                                <h3 className="font-semibold text-base sm:text-lg text-white">Order #{order.orderNumber}</h3>
-                                                <p className="text-xs sm:text-sm text-gray-300">{formatDate(order.createdAt)}</p>
+                                                <h3 className="font-semibold text-sm sm:text-lg text-white">Order #{order.orderNumber}</h3>
+                                                <p className="text-[10px] sm:text-sm text-gray-300">{formatDate(order.createdAt)}</p>
                                                 {(order.buyerName || order.customer?.name) && (
                                                     <div className="flex items-center gap-1.5 mt-1.5 text-xs sm:text-sm text-blue-200 bg-blue-500/10 border border-blue-400/20 px-2 py-1 rounded-md w-fit">
                                                         <User className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
@@ -436,62 +436,6 @@ export default function SellerOrdersSection() {
                                                         </Button>
                                                     </div>
                                                 )}
-                                            {order.status === 'SERVICE_PENDING' &&
-                                                (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')) && (
-                                                    <div className="space-y-2">
-                                                        <Button
-                                                            size="sm"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-emerald-500 text-black font-bold hover:bg-emerald-600 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200"
-                                                            onClick={() => {
-                                                                // Reuse delivery complete logic but update status to CONFIRMED
-                                                                const confirmServiceOrder = async () => {
-                                                                    try {
-                                                                        setIsUpdating(true);
-                                                                        const updatedOrder = await sellerApi.updateOrderStatus(order.id, 'CONFIRMED' as OrderStatus);
-                                                                        setOrders(prevOrders =>
-                                                                            prevOrders.map(o =>
-                                                                                o.id === order.id ? {
-                                                                                    ...updatedOrder,
-                                                                                    status: 'CONFIRMED' as const,
-                                                                                    paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus
-                                                                                } : o
-                                                                            )
-                                                                        );
-                                                                        toast({
-                                                                            title: 'Order Confirmed',
-                                                                            description: 'The service booking has been confirmed. Waiting for buyer to mark as completed.',
-                                                                        });
-                                                                    } catch (err) {
-                                                                        console.error('Failed to confirm order:', err);
-                                                                        toast({
-                                                                            title: 'Error',
-                                                                            description: 'Failed to confirm order. Please try again.',
-                                                                            variant: 'destructive',
-                                                                        });
-                                                                    } finally {
-                                                                        setIsUpdating(false);
-                                                                    }
-                                                                };
-                                                                confirmServiceOrder();
-                                                            }}
-                                                            disabled={isUpdating}
-                                                        >
-                                                            <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                                                            <span className="hidden sm:inline">Confirm Order</span>
-                                                            <span className="sm:hidden">Confirm</span>
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-xs sm:text-sm font-semibold transition-all duration-200"
-                                                            onClick={() => handleCancelClick(order.id)}
-                                                            disabled={isUpdating}
-                                                        >
-                                                            <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                                                            Cancel Order
-                                                        </Button>
-                                                    </div>
-                                                )}
                                             {order.status === 'CONFIRMED' && (
                                                 <div className="space-y-2">
                                                     <Badge className="w-full justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
@@ -510,7 +454,7 @@ export default function SellerOrdersSection() {
             </div >
 
             {/* Ready for Pickup Confirmation Dialog */}
-            <Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog}>
+            < Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog} >
                 <DialogContent className="sm:max-w-md bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10 shadow-xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
@@ -574,10 +518,10 @@ export default function SellerOrdersSection() {
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* Cancel Order Confirmation Dialog */}
-            <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+            < Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog} >
                 <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10 shadow-xl">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
@@ -624,7 +568,7 @@ export default function SellerOrdersSection() {
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
         </>
     );
 }

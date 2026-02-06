@@ -1068,17 +1068,17 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     setHasUnreadOrders(false);
                   }
                 }}
-                className={`relative flex items-center justify-center flex-shrink-0 space-x-2 sm:space-x-3 px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base transition-all duration-300 border ${activeTab === id
+                className={`relative flex items-center justify-center flex-shrink-0 space-x-1.5 sm:space-x-3 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-base transition-all duration-300 border ${activeTab === id
                   ? 'text-yellow-300 border-yellow-400/30 bg-yellow-400/10 shadow-[0_0_22px_rgba(250,204,21,0.25)] transform scale-[1.03]'
                   : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'
                   }`}
               >
-                <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                 <span>{label}</span>
 
                 {/* Notification Badge - Red Dot */}
                 {id === 'orders' && hasUnreadOrders && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
+                  <span className="absolute -top-1 -right-1 h-2.5 w-2.5 sm:h-3 sm:w-3 bg-red-500 rounded-full border-2 border-white animate-pulse" />
                 )}
               </button>
             ))}
@@ -1366,13 +1366,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         <div key={debt.id} className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
                           <div className="flex justify-between items-center mb-1">
                             <div className="flex flex-col">
-                              <span className="font-bold text-base text-white truncate max-w-[150px]" title={debt.clientName}>{debt.clientName}</span>
-                              <span className="text-xs text-gray-400 font-mono">{debt.clientPhone}</span>
+                              <span className="font-bold text-sm sm:text-base text-white truncate max-w-[120px] sm:max-w-[150px]" title={debt.clientName}>{debt.clientName}</span>
+                              <span className="text-[10px] sm:text-xs text-gray-400 font-mono">{debt.clientPhone}</span>
                             </div>
-                            <span className="text-sm font-mono text-yellow-300 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{formatCurrency(debt.amount)}</span>
+                            <span className="text-xs sm:text-sm font-mono text-yellow-300 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{formatCurrency(debt.amount)}</span>
                           </div>
-                          <div className="flex justify-between items-center text-sm text-gray-400 mb-3">
-                            <span className="truncate max-w-[150px]" title={debt.productName}>{debt.productName}</span>
+                          <div className="flex justify-between items-center text-xs sm:text-sm text-gray-400 mb-3">
+                            <span className="truncate max-w-[120px] sm:max-w-[150px]" title={debt.productName}>{debt.productName}</span>
                             <span>{new Date(debt.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
                           </div>
 
