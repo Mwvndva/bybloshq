@@ -8,7 +8,6 @@ import ShopSetup from '../components/seller/ShopSetup';
 import { SellerLogin } from '../components/seller/SellerLogin';
 import { ProductsList } from '../components/seller/ProductsList';
 import AddProductForm from '../components/seller/AddProductForm';
-import { EditProductForm } from '../components/seller/EditProductForm';
 import { Button } from '@/components/ui/button';
 import { useToast } from '../hooks/use-toast';
 import { sellerApi } from '../api/sellerApi';
@@ -459,14 +458,6 @@ export const sellerRoutes: RouteObject[] = [
           {
             path: 'shop-setup',
             element: <ShopSetup />,
-          },
-          {
-            path: 'products/:id/edit',
-            element: <EditProductForm onSuccess={() => { }} />,
-          },
-          {
-            path: 'edit-product/:id',
-            element: <EditProductForm onSuccess={() => { }} />,
           },
           {
             path: 'add-product',
