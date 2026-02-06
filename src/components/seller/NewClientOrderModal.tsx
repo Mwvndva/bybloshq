@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ShoppingCart } from 'lucide-react';
+import { Loader2, ShoppingCart, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Product {
@@ -21,6 +21,7 @@ interface NewClientOrderModalProps {
     onSubmit: (data: {
         clientName: string;
         clientPhone: string;
+        paymentType: 'stk' | 'debt';
         items: Array<{
             productId: string;
             name: string;
@@ -44,9 +45,7 @@ export default function NewClientOrderModal({
     // Filter for available products only
     const availableProducts = products.filter(p => p.status === 'available');
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-
+    const handleSubmit = async (paymentType: 'stk' | 'debt') => {
         // Validation
         if (!clientName.trim()) {
             toast.error('Please enter client name');
@@ -82,6 +81,7 @@ export default function NewClientOrderModal({
             await onSubmit({
                 clientName: clientName.trim(),
                 clientPhone: clientPhone.replace(/\s+/g, ''),
+                paymentType,
                 items: [
                     {
                         productId: selectedProductId,
@@ -124,7 +124,7 @@ export default function NewClientOrderModal({
                     </DialogTitle>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={(e) => { e.preventDefault(); handleSubmit('stk'); }} className="space-y-4 mt-4">
                     {/* Client Name */}
                     <div className="space-y-2">
                         <Label htmlFor="clientName" className="text-sm font-semibold text-gray-200">
@@ -192,20 +192,34 @@ export default function NewClientOrderModal({
                     </div>
 
                     {/* Action Buttons */}
-                    <div className="flex justify-end gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                         <Button
                             type="button"
                             variant="ghost"
                             onClick={handleClose}
                             disabled={isSubmitting}
-                            className="text-gray-300 hover:text-white hover:bg-white/10"
+                            className="text-gray-300 hover:text-white hover:bg-white/10 order-3 sm:order-1"
                         >
                             Cancel
                         </Button>
                         <Button
-                            type="submit"
+                            type="button"
+                            onClick={() => handleSubmit('debt')}
                             disabled={isSubmitting || availableProducts.length === 0}
-                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg font-bold"
+                            className="bg-white/10 text-white hover:bg-white/20 border border-white/10 order-2"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Clock className="mr-2 h-4 w-4" />
+                            )}
+                            Record as Debt
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => handleSubmit('stk')}
+                            disabled={isSubmitting || availableProducts.length === 0}
+                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg font-bold order-1 sm:order-3"
                         >
                             {isSubmitting ? (
                                 <>

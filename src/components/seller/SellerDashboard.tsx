@@ -121,6 +121,7 @@ interface AnalyticsData {
   totalRevenue: number;
   totalPayout: number;
   balance: number;  // Made required since it's now always provided by the backend
+  pendingDebt: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: RecentOrder[];
 }
@@ -339,6 +340,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalRevenue: analyticsData.totalRevenue,
         totalPayout: analyticsData.totalRevenue * 0.85, // Assuming 15% platform fee
         balance: analyticsData.balance || 0,
+        pendingDebt: analyticsData.pendingDebt || 0,
         monthlySales: analyticsData.monthlySales || [],
         recentOrders: analyticsData.recentOrders || []
       };
@@ -351,6 +353,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalRevenue: processedAnalytics.totalRevenue,
         totalPayout: processedAnalytics.totalPayout,
         balance: processedAnalytics.balance,
+        pendingDebt: processedAnalytics.pendingDebt,
         monthlySales: processedAnalytics.monthlySales,
         recentOrders: processedAnalytics.recentOrders
       };
@@ -386,6 +389,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalRevenue: 0,
         totalPayout: 0,
         balance: 0,
+        pendingDebt: 0,
         monthlySales: [],
         recentOrders: []
       };
@@ -642,17 +646,26 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const handleClientOrderSubmit = useCallback(async (data: {
     clientName: string;
     clientPhone: string;
+    paymentType?: 'stk' | 'debt';
     items: Array<{ productId: string; name: string; quantity: number; price: number }>;
   }) => {
     setIsCreatingClientOrder(true);
     try {
       const result = await sellerApi.createClientOrder(data);
 
-      toast({
-        title: '✅ STK Push Sent!',
-        description: `Payment request sent to ${data.clientPhone}. Waiting for client to complete payment...`,
-        className: 'bg-green-500/10 border-green-400/30 text-green-200',
-      });
+      if (data.paymentType === 'debt') {
+        toast({
+          title: '✅ Order Recorded',
+          description: `Order recorded as debt for ${data.clientName}. Inventory updated.`,
+          className: 'bg-blue-500/10 border-blue-400/30 text-blue-200',
+        });
+      } else {
+        toast({
+          title: '✅ STK Push Sent!',
+          description: `Payment request sent to ${data.clientPhone}. Waiting for client to complete payment...`,
+          className: 'bg-green-500/10 border-green-400/30 text-green-200',
+        });
+      }
 
       setShowClientOrderModal(false);
 
@@ -766,6 +779,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             totalRevenue: totalRevenue,
             totalPayout: calculatedPayout,
             balance: analyticsData.balance || 0,
+            pendingDebt: analyticsData.pendingDebt || 0,
             monthlySales: analyticsData.monthlySales || [],
             recentOrders: (analyticsData as any).recentOrders || [] // Handle recentOrders if it exists
           };
@@ -778,6 +792,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             totalRevenue: updatedAnalytics.totalRevenue,
             totalPayout: updatedAnalytics.totalPayout,
             balance: updatedAnalytics.balance,
+            pendingDebt: updatedAnalytics.pendingDebt,
             monthlySales: updatedAnalytics.monthlySales,
             recentOrders: updatedAnalytics.recentOrders
           };
@@ -789,6 +804,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             ...analyticsData,
             totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
             totalPayout: analyticsData.totalRevenue * (1 - PLATFORM_FEE_RATE), // Calculate payout using constant
+            pendingDebt: analyticsData.pendingDebt || 0,
             recentOrders: [] // Initialize as empty array since we don't have this data
           };
           setAnalytics(transformedData);
@@ -1488,22 +1504,21 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <CardHeader className="p-4">
                   <CardTitle className="text-base sm:text-lg font-black text-white flex items-center">
                     <div className="w-9 h-9 bg-yellow-500/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-xl flex items-center justify-center mr-3">
-                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    Store Performance
+                    Pending Payments
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
                   <div className="flex items-center justify-between p-3 bg-white/5 border border-white/10 rounded-xl">
                     <div>
-                      <p className="text-xs font-semibold text-gray-300">Active Products</p>
-                      <p className="text-lg sm:text-xl font-black text-white">{formatNumber(analytics.totalProducts)}</p>
+                      <p className="text-xs font-semibold text-gray-300">Pending Debt</p>
+                      <p className="text-lg sm:text-xl font-black text-white">{formatCurrency(analytics.pendingDebt)}</p>
                     </div>
-                    <Package className="h-6 w-6 text-blue-300" />
+                    <Clock className="h-6 w-6 text-blue-300" />
                   </div>
                 </CardContent>
-              </Card>
-            </div>
+              </Card>            </div>
           </div>
         )}
 
