@@ -237,12 +237,28 @@ class PaymentService {
 
         if (!isSuccess) {
             logger.warn(`[PURCHASE-FLOW] 4b. Transaction Failed - Marking DB as Failed`, { reference, reason: callbackData.remarks });
-            const { rowCount } = await pool.query(
-                "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE provider_reference = $2",
+            const { rows } = await pool.query(
+                "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE provider_reference = $2 RETURNING id, metadata",
                 [JSON.stringify({ failure_reason: callbackData.remarks || callbackData.status_description || 'Failed', raw_callback: callbackData }), reference]
             );
 
-            if (rowCount > 0) {
+            if (rows.length > 0) {
+                const updatedPayment = rows[0];
+                const paymentMeta = updatedPayment.metadata || {};
+
+                // If linked to an order, mark the order as failed too
+                if (paymentMeta.order_id) {
+                    try {
+                        await pool.query(
+                            "UPDATE product_orders SET status = 'failed', payment_status = 'failed' WHERE id = $1",
+                            [paymentMeta.order_id]
+                        );
+                        logger.info(`[PURCHASE-FLOW] Marked Order ${paymentMeta.order_id} as FAILED due to payment failure`);
+                    } catch (orderErr) {
+                        logger.error(`[PURCHASE-FLOW] Failed to mark order ${paymentMeta.order_id} as failed:`, orderErr);
+                    }
+                }
+
                 return { status: 'failed', message: 'Payment marked as failed' };
             }
 
@@ -623,6 +639,20 @@ class PaymentService {
                                 provider_data: providerData || { error_code: 404 }
                             }), payment.id]
                         );
+
+                        // If linked to an order, mark the order as failed too
+                        if (payment.metadata?.order_id) {
+                            try {
+                                await pool.query(
+                                    "UPDATE product_orders SET status = 'failed', payment_status = 'failed' WHERE id = $1",
+                                    [payment.metadata.order_id]
+                                );
+                                logger.info(`[Cron] Marked Order ${payment.metadata.order_id} as FAILED due to payment failure`);
+                            } catch (orderErr) {
+                                logger.error(`[Cron] Failed to mark order ${payment.metadata.order_id} as failed:`, orderErr);
+                            }
+                        }
+
                         results.failedCount++;
                     }
 
