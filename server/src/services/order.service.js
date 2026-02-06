@@ -1117,8 +1117,8 @@ class OrderService {
 
         // 9. Send WhatsApp notification to client
         try {
-          const WhatsAppService = (await import('./whatsapp.service.js')).default;
-          const waService = new WhatsAppService();
+          const waService = (await import('./whatsapp.service.js')).default;
+
 
           // Get seller details
           const sellerQuery = await client.query(
