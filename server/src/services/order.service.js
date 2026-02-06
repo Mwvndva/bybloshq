@@ -999,10 +999,11 @@ class OrderService {
       const {
         clientName,
         clientPhone,
+        paymentType,
         items
       } = data;
 
-      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone });
+      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone, paymentType });
       await client.query('BEGIN');
 
       // 1. Upsert Client
@@ -1034,29 +1035,35 @@ class OrderService {
         }
       });
 
-      // 5. Prepare Order Record with CLIENT_PAYMENT_PENDING status
+      // Determine if this is a debt order
+      const isDebt = paymentType === 'debt';
+      const orderStatus = isDebt ? OrderStatus.DEBT_PENDING : OrderStatus.CLIENT_PAYMENT_PENDING;
+
+      // 5. Prepare Order Record
       const orderRecord = {
         buyer_id: null, // No buyer for client orders
         seller_id: sellerId,
         total_amount: totalAmount,
         platform_fee_amount: platformFee,
         seller_payout_amount: sellerPayout,
-        payment_method: 'mpesa',
+        payment_method: isDebt ? 'debt' : 'mpesa',
         buyer_name: clientName,
         buyer_email: `client_${clientRecord.id}@byblos.local`, // Placeholder email
         buyer_mobile_payment: clientPhone,
         buyer_whatsapp_number: clientPhone,
         shipping_address: null,
-        notes: 'Seller-initiated client order',
+        notes: isDebt ? 'Seller-initiated debt order' : 'Seller-initiated client order',
         metadata: JSON.stringify({
           items,
           client_id: clientRecord.id,
-          seller_initiated: true
+          seller_initiated: true,
+          is_debt: isDebt
         }),
-        status: OrderStatus.CLIENT_PAYMENT_PENDING,
-        payment_status: 'pending',
+        status: orderStatus,
+        payment_status: isDebt ? 'pending_debt' : 'pending',
         client_id: clientRecord.id,
-        is_seller_initiated: true
+        is_seller_initiated: true,
+        is_debt: isDebt
       };
 
       // 6. Insert Order
@@ -1068,6 +1075,27 @@ class OrderService {
         await Order.insertItems(client, order.id, items);
       }
 
+      // BRANCH: DEBT FLOW
+      if (isDebt) {
+        // Decrement inventory immediately
+        await this._decrementInventory(client, items);
+
+        await client.query('COMMIT');
+        logger.info(`[ClientOrder] Debt order created successfully for order ${order.id}`);
+
+        return {
+          success: true,
+          order: {
+            id: order.id,
+            orderNumber: order.order_number,
+            totalAmount,
+            status: OrderStatus.DEBT_PENDING
+          },
+          message: 'Order recorded as debt'
+        };
+      }
+
+      // BRANCH: STK FLOW (Default)
       // 8. Initiate M-Pesa STK Push
       const paymentService = (await import('./payment.service.js')).default;
 
