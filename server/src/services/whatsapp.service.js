@@ -531,6 +531,20 @@ Great news! Your ${serviceType} has accepted your booking.
 ${sellerAddr}
 
 📦 Order #${order.orderNumber}`;
+        } else if (newStatus === 'CLIENT_PAYMENT_PENDING') {
+            // Client order created by seller - waiting for M-Pesa payment
+            const amount = parseFloat(order.totalAmount || 0);
+            msg = `💳 *PAYMENT REQUEST SENT*
+
+📦 Order #${order.orderNumber}
+💰 Amount: KSh ${amount.toLocaleString()}
+
+📱 *ACTION REQUIRED:*
+Please enter your M-Pesa PIN to complete payment.
+
+⏰ This payment request will expire in a few minutes.
+
+Thank you for shopping with us!`;
         } else {
             msg = `📋 *STATUS UPDATE*\n\nOrder #${order.orderNumber}: ${newStatus}`;
         }
@@ -606,6 +620,42 @@ Order #${order.orderNumber} status changed to: *${newStatus}*`;
 
         logger.info(`[PURCHASE-FLOW] 9d. Sending Status Update (${newStatus}) to Seller ${sellerWhatsApp}`);
         return this.sendMessage(sellerWhatsApp, msg);
+    }
+
+    async notifyClientOrderCreated(clientPhone, orderData) {
+        const { order, items, seller } = orderData;
+        if (!clientPhone) return false;
+
+        const itemsList = items.map((item, i) => {
+            const name = item.name || item.product_name || 'Item';
+            const price = parseFloat(item.price || item.product_price || 0);
+            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
+        }).join('\n');
+
+        const total = parseFloat(order.totalAmount || 0);
+        const shopName = seller?.shop_name || seller?.businessName || 'Byblos Seller';
+
+        const msg = `
+💳 *PAYMENT REQUEST*
+
+Hello! ${shopName} has created an order for you.
+
+📦 *Order #${order.orderNumber}*
+💰 Total: KSh ${total.toLocaleString()}
+
+📋 *Items:*
+${itemsList}
+
+📱 *ACTION REQUIRED:*
+Please enter your M-Pesa PIN to complete payment on the prompt sent to this number.
+
+⏰ Payment request expires in a few minutes.
+
+Thank you!
+        `.trim();
+
+        logger.info(`[CLIENT-ORDER] Sending payment request to client ${clientPhone}`);
+        return this.sendMessage(clientPhone, msg);
     }
 
     async sendRefundApprovedNotification(buyer, refundAmount) {

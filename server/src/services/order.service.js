@@ -1115,6 +1115,29 @@ class OrderService {
           [stkResult.reference, payment.id]
         );
 
+        // 9. Send WhatsApp notification to client
+        try {
+          const WhatsAppService = (await import('./whatsapp.service.js')).default;
+          const waService = new WhatsAppService();
+
+          // Get seller details
+          const sellerQuery = await client.query(
+            'SELECT id, shop_name, full_name as businessName FROM sellers WHERE id = $1',
+            [sellerId]
+          );
+          const seller = sellerQuery.rows[0];
+
+          await waService.notifyClientOrderCreated(clientPhone, {
+            order,
+            items: enrichedItems,
+            seller
+          });
+          logger.info(`[ClientOrder] WhatsApp notification sent to ${clientPhone}`);
+        } catch (waError) {
+          logger.error(`[ClientOrder] Failed to send WhatsApp notification:`, waError);
+          // Don't fail the order creation if WhatsApp fails
+        }
+
         await client.query('COMMIT');
         logger.info(`[ClientOrder] STK Push initiated successfully for order ${order.id}`);
 
