@@ -47,6 +47,7 @@ import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
 import NewClientOrderModal from './NewClientOrderModal';
+import { DebtOrderListModal } from './DebtOrderListModal';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -115,6 +116,15 @@ interface RecentOrder {
   items: OrderItem[];
 }
 
+interface PendingDebtOrder {
+  id: number;
+  orderNumber: string;
+  totalAmount: number;
+  createdAt: string;
+  clientName: string;
+  clientPhone: string;
+}
+
 interface AnalyticsData {
   totalProducts: number;
   totalSales: number;
@@ -124,6 +134,7 @@ interface AnalyticsData {
   pendingDebt: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: RecentOrder[];
+  pendingDebtOrders: PendingDebtOrder[];
 }
 
 interface SellerDashboardProps {
@@ -141,6 +152,7 @@ interface StatsCardProps {
   bgColor?: string;
   textColor?: string;
   className?: string;
+  onClick?: () => void;
 }
 
 const StatsCard: React.FC<StatsCardProps> = ({
@@ -268,6 +280,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [showClientOrderModal, setShowClientOrderModal] = useState(false);
   const [isCreatingClientOrder, setIsCreatingClientOrder] = useState(false);
 
+  // Pending Debt Modal State
+  const [showDebtModal, setShowDebtModal] = useState(false);
+
   // Define cities and their locations
   const cities = {
     'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
@@ -342,7 +357,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         balance: analyticsData.balance || 0,
         pendingDebt: analyticsData.pendingDebt || 0,
         monthlySales: analyticsData.monthlySales || [],
-        recentOrders: analyticsData.recentOrders || []
+        recentOrders: analyticsData.recentOrders || [],
+        pendingDebtOrders: analyticsData.pendingDebtOrders || []
       };
 
 
@@ -355,7 +371,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         balance: processedAnalytics.balance,
         pendingDebt: processedAnalytics.pendingDebt,
         monthlySales: processedAnalytics.monthlySales,
-        recentOrders: processedAnalytics.recentOrders
+        recentOrders: processedAnalytics.recentOrders,
+        pendingDebtOrders: processedAnalytics.pendingDebtOrders
       };
 
       setAnalytics(processedAnalytics);
@@ -391,7 +408,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         balance: 0,
         pendingDebt: 0,
         monthlySales: [],
-        recentOrders: []
+        recentOrders: [],
+        pendingDebtOrders: []
       };
     } finally {
       setIsLoading(false);
@@ -781,7 +799,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             balance: analyticsData.balance || 0,
             pendingDebt: analyticsData.pendingDebt || 0,
             monthlySales: analyticsData.monthlySales || [],
-            recentOrders: (analyticsData as any).recentOrders || [] // Handle recentOrders if it exists
+            recentOrders: (analyticsData as any).recentOrders || [], // Handle recentOrders if it exists
+            pendingDebtOrders: (analyticsData as any).pendingDebtOrders || []
           };
 
 
@@ -794,7 +813,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             balance: updatedAnalytics.balance,
             pendingDebt: updatedAnalytics.pendingDebt,
             monthlySales: updatedAnalytics.monthlySales,
-            recentOrders: updatedAnalytics.recentOrders
+            recentOrders: updatedAnalytics.recentOrders,
+            pendingDebtOrders: updatedAnalytics.pendingDebtOrders || []
           };
 
           setAnalytics(updatedAnalytics);
@@ -805,7 +825,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             totalSales: (analyticsData as any).totalSales || 0, // Safely access totalSales
             totalPayout: analyticsData.totalRevenue * (1 - PLATFORM_FEE_RATE), // Calculate payout using constant
             pendingDebt: analyticsData.pendingDebt || 0,
-            recentOrders: [] // Initialize as empty array since we don't have this data
+            recentOrders: [], // Initialize as empty array since we don't have this data
+            pendingDebtOrders: []
           };
           setAnalytics(transformedData);
         }
@@ -982,6 +1003,16 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       iconColor: 'text-green-300',
       bgColor: 'bg-green-500/10 border border-green-400/30 shadow-[0_0_18px_rgba(34,197,94,0.20)]',
       textColor: 'text-white'
+    },
+    {
+      icon: Clock,
+      title: 'Pending Payments',
+      value: `${analytics.pendingDebtOrders?.length || 0} Orders`,
+      subtitle: formatCurrency(analytics.pendingDebtOrders?.reduce((acc, curr) => acc + curr.totalAmount, 0) || 0),
+      iconColor: 'text-orange-500',
+      bgColor: 'bg-orange-500/10 border border-orange-400/30 shadow-[0_0_18px_rgba(249,115,22,0.25)]',
+      textColor: 'text-orange-500',
+      onClick: () => setShowDebtModal(true)
     }
   ];
 
@@ -1881,6 +1912,19 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         onClose={() => setShowClientOrderModal(false)}
         products={products as any}
         onSubmit={handleClientOrderSubmit}
+      />
+
+      <DebtOrderListModal
+        isOpen={showDebtModal}
+        onClose={() => setShowDebtModal(false)}
+        orders={analytics?.pendingDebtOrders || []}
+        onInitiatePayment={(order) => {
+          // For now just show a toast or we can implement re-initiation later
+          toast({
+            title: "Feature coming soon",
+            description: "Payment initiation for existing debt orders will be available shortly.",
+          });
+        }}
       />
     </>
   );

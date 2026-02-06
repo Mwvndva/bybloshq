@@ -77,6 +77,14 @@ interface SellerAnalytics {
       price: number;
     }>;
   }>;
+  pendingDebtOrders?: Array<{
+    id: number;
+    orderNumber: string;
+    totalAmount: number;
+    createdAt: string;
+    clientName: string;
+    clientPhone: string;
+  }>;
 }
 
 interface WithdrawalRequest {
