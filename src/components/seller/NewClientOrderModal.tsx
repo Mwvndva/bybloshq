@@ -292,7 +292,7 @@ export default function NewClientOrderModal({
                             Cancel
                         </button>
                         <button
-                            onClick={handleSubmit}
+                            type="submit"
                             className="px-6 py-2.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg hover:shadow-[0_0_24px_rgba(250,204,21,0.25)] rounded-xl transition-all font-bold flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                             disabled={cart.length === 0 || isSubmitting}
                         >
