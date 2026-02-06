@@ -680,3 +680,90 @@ export const getWithdrawalRequests = async (req, res) => {
     });
   }
 };
+// @desc    Initiate debt payment (STK Push)
+// @route   POST /api/sellers/debts/:debtId/pay
+// @access  Private
+export const initiateDebtPayment = async (req, res) => {
+  const sellerId = req.user?.id;
+  const { debtId } = req.params;
+
+  try {
+    if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
+
+    // 1. Fetch Debt & Client Details
+    const { rows: debts } = await pool.query(
+      `SELECT cd.*, c.phone as client_phone, c.full_name as client_name, p.name as product_name
+       FROM client_debts cd
+       JOIN clients c ON cd.client_id = c.id
+       JOIN products p ON cd.product_id = p.id
+       WHERE cd.id = $1 AND cd.seller_id = $2 AND cd.is_paid = false`,
+      [debtId, sellerId]
+    );
+
+    const debt = debts[0];
+    if (!debt) return res.status(404).json({ status: 'error', message: 'Debt record not found or already paid' });
+
+    if (!debt.client_phone) return res.status(400).json({ status: 'error', message: 'Client has no phone number associated' });
+
+    // 2. Create Payment Record (Pending)
+    const { rows: payments } = await pool.query(
+      `INSERT INTO payments 
+       (amount, mobile_payment, status, provider_reference, api_ref, payment_method, metadata, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+       RETURNING id`,
+      [
+        debt.amount,
+        debt.client_phone,
+        'pending',
+        null, // Provider ref will be updated after initiation
+        `DEBT-${debt.id}-${Date.now()}`,
+        'mpesa',
+        JSON.stringify({
+          type: 'debt',
+          debt_id: debt.id,
+          seller_id: sellerId,
+          client_name: debt.client_name,
+          product_name: debt.product_name
+        })
+      ]
+    );
+    const paymentId = payments[0].id;
+
+    // 3. Import PaymentService dynamically (to avoid circular deps if any)
+    const { default: paymentService } = await import('../services/payment.service.js');
+
+    // 4. Initiate STK Push
+    const initiationResult = await paymentService.initiatePayment({
+      amount: debt.amount,
+      phone: debt.client_phone,
+      narrative: `Pay Debt: ${debt.product_name}`,
+      firstName: debt.client_name.split(' ')[0] || 'Client',
+      lastName: debt.client_name.split(' ').slice(1).join(' ') || 'Customer',
+      billing_address: 'Nairobi',
+      email: 'debt-payment@byblos.com', // Placeholder
+      invoice_id: `DEBT-${debt.id}`
+    });
+
+    // 5. Update Payment with Provider Reference
+    await pool.query(
+      'UPDATE payments SET provider_reference = $1 WHERE id = $2',
+      [initiationResult.reference, paymentId]
+    );
+
+    res.status(200).json({
+      status: 'success',
+      message: 'STK Push initiated successfully',
+      data: {
+        paymentId,
+        reference: initiationResult.reference
+      }
+    });
+
+  } catch (error) {
+    logger.error(`Debt Payment Initiation Failed for debt ${debtId}:`, error);
+    res.status(500).json({
+      status: 'error',
+      message: error.message || 'Failed to initiate payment'
+    });
+  }
+};
