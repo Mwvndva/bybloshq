@@ -61,22 +61,22 @@ class OrderService {
             'SELECT id, email, role FROM users WHERE id = $1',
             [sellerInfo.user_id]
           );
-          
+
           if (userCheck.rows.length > 0) {
             const userInfo = userCheck.rows[0];
-            
+
             // Map user info to sellerInfo structure expected by the rest of the code
             sellerInfo.full_name = userInfo.role === 'seller' ? 'Seller' : userInfo.email; // Fallback name
             sellerInfo.email = userInfo.email;
             sellerInfo.whatsapp_number = null; // Will be set later if available
-            
+
             // Try to get additional contact info from buyers table (some sellers might have buyer records too)
             try {
               const buyerContactCheck = await client.query(
                 'SELECT full_name, whatsapp_number FROM buyers WHERE user_id = $1 LIMIT 1',
                 [sellerInfo.user_id]
               );
-              
+
               if (buyerContactCheck.rows.length > 0) {
                 const buyerInfo = buyerContactCheck.rows[0];
                 sellerInfo.full_name = sellerInfo.full_name || buyerInfo.full_name;
@@ -87,10 +87,10 @@ class OrderService {
             }
           }
         }
-        
+
         // Ensure 'name' is available for notifications
         sellerInfo.name = sellerInfo.full_name || 'Unknown Seller';
-        
+
       } catch (err) {
         logger.error(`Error fetching seller info for ID ${sellerId}:`, err);
         throw err;
@@ -131,15 +131,15 @@ class OrderService {
       for (const item of items) {
         if (item.trackInventory === true) {
           const requestedQty = item.quantity || 1;
-          
+
           if (item.availableQuantity === null || item.availableQuantity === undefined) {
             throw new Error(`Product "${item.name || item.productId}" has inventory tracking enabled but no quantity set`);
           }
-          
+
           if (item.availableQuantity < requestedQty) {
             throw new Error(`Insufficient stock for "${item.name || item.productId}". Available: ${item.availableQuantity}, Requested: ${requestedQty}`);
           }
-          
+
           if (item.availableQuantity === 0) {
             throw new Error(`Product "${item.name || item.productId}" is out of stock`);
           }
@@ -291,7 +291,7 @@ class OrderService {
       await client.query('COMMIT');
 
       // 7. Send Notification
-        try {
+      try {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
                   b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
@@ -560,7 +560,7 @@ class OrderService {
         if (item.track_inventory === true && item.product_id) {
           const requestedQty = item.quantity || 1;
           logger.info(`[INVENTORY-DEBUG] Product ${item.product_id} - quantity field: ${item.quantity}, type: ${typeof item.quantity}, requestedQty: ${requestedQty}`);
-          
+
           // Decrement inventory atomically
           const updateResult = await client.query(
             `UPDATE products 
@@ -576,20 +576,20 @@ class OrderService {
 
           const updatedProduct = updateResult.rows[0];
           const newQuantity = updatedProduct.quantity;
-          
+
           logger.info(`[INVENTORY] Decremented stock for product ${item.product_id}: ${newQuantity + requestedQty} -> ${newQuantity}`);
 
           // Check if low stock alert should be sent
           if (updatedProduct.low_stock_threshold && newQuantity <= updatedProduct.low_stock_threshold && newQuantity > 0) {
             logger.warn(`[INVENTORY] Low stock alert for product ${updatedProduct.name || item.product_name || item.product_id}: ${newQuantity} units remaining`);
-            
+
             // Send low stock WhatsApp alert to seller (async, don't block)
             this._sendLowStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id, newQuantity, updatedProduct.low_stock_threshold).catch(err => {
               logger.error('[INVENTORY] Failed to send low stock alert:', err);
             });
           } else if (newQuantity === 0) {
             logger.warn(`[INVENTORY] Product ${updatedProduct.name || item.product_name || item.product_id} is now OUT OF STOCK`);
-            
+
             // Send out of stock alert
             this._sendOutOfStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id).catch(err => {
               logger.error('[INVENTORY] Failed to send out of stock alert:', err);
@@ -887,10 +887,10 @@ class OrderService {
 
       // Allow if shipped, delivered, pending, or confirmed (for services)
       const allowedStatuses = [
-        OrderStatus.SHIPPED, 
-        OrderStatus.DELIVERED, 
-        OrderStatus.PENDING, 
-        OrderStatus.DELIVERY_PENDING, 
+        OrderStatus.SHIPPED,
+        OrderStatus.DELIVERED,
+        OrderStatus.PENDING,
+        OrderStatus.DELIVERY_PENDING,
         OrderStatus.CONFIRMED,        // Service orders that seller confirmed
         OrderStatus.SERVICE_PENDING,  // Service orders awaiting confirmation
         OrderStatus.COLLECTION_PENDING, // Physical orders awaiting pickup
@@ -982,6 +982,178 @@ class OrderService {
       throw error;
     }
   }
+
+  /**
+   * Create a client order (seller-initiated)
+   * @param {number} sellerId - The seller creating the order
+   * @param {Object} data - Order data including client info and products
+   * @returns {Promise<Object>} Created order and payment reference
+   */
+  static async createClientOrder(sellerId, data) {
+    const client = await pool.connect();
+    try {
+      const {
+        clientName,
+        clientPhone,
+        items
+      } = data;
+
+      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone });
+      await client.query('BEGIN');
+
+      // 1. Upsert Client
+      const ClientModel = (await import('../models/client.model.js')).default;
+      const clientRecord = await ClientModel.upsertClient(client, sellerId, clientName, clientPhone);
+      logger.info(`[ClientOrder] Client upserted: ID ${clientRecord.id}`);
+
+      // 2. Validate items
+      this._validateItems(items);
+
+      // 3. Calculate totals
+      const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
+      logger.info(`[ClientOrder] Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
+
+      // 4. Enrich items with product data
+      const productIds = items.map(item => parseInt(item.productId, 10));
+      const productsResult = await client.query(
+        'SELECT id, product_type::text as product_type, is_digital, service_options, name FROM products WHERE id = ANY($1)',
+        [productIds]
+      );
+      const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
+
+      items.forEach(item => {
+        const prod = productsMap.get(parseInt(item.productId, 10));
+        if (prod) {
+          item.productType = prod.product_type;
+          item.isDigital = prod.is_digital;
+          item.name = item.name || prod.name;
+        }
+      });
+
+      // 5. Prepare Order Record with CLIENT_PAYMENT_PENDING status
+      const orderRecord = {
+        buyer_id: null, // No buyer for client orders
+        seller_id: sellerId,
+        total_amount: totalAmount,
+        platform_fee_amount: platformFee,
+        seller_payout_amount: sellerPayout,
+        payment_method: 'mpesa',
+        buyer_name: clientName,
+        buyer_email: `client_${clientRecord.id}@byblos.local`, // Placeholder email
+        buyer_mobile_payment: clientPhone,
+        buyer_whatsapp_number: clientPhone,
+        shipping_address: null,
+        notes: 'Seller-initiated client order',
+        metadata: JSON.stringify({
+          items,
+          client_id: clientRecord.id,
+          seller_initiated: true
+        }),
+        status: OrderStatus.CLIENT_PAYMENT_PENDING,
+        payment_status: 'pending',
+        client_id: clientRecord.id,
+        is_seller_initiated: true
+      };
+
+      // 6. Insert Order
+      const order = await Order.insert(client, orderRecord);
+      logger.info(`[ClientOrder] Order created: ID ${order.id}, Number ${order.order_number}`);
+
+      // 7. Insert Order Items
+      if (items.length > 0) {
+        await Order.insertItems(client, order.id, items);
+      }
+
+      // 8. Initiate M-Pesa STK Push
+      const PaymentService = (await import('./payment.service.js')).default;
+      const paymentService = new PaymentService();
+
+      // Create payment record
+      const paymentData = {
+        invoice_id: order.order_number,
+        amount: totalAmount,
+        currency: 'KES',
+        status: 'pending',
+        payment_method: 'mpesa',
+        mobile_payment: clientPhone,
+        whatsapp_number: clientPhone,
+        email: `client_${clientRecord.id}@byblos.local`,
+        metadata: {
+          order_id: order.id,
+          order_number: order.order_number,
+          client_id: clientRecord.id,
+          seller_initiated: true
+        }
+      };
+
+      const paymentInsert = await client.query(
+        `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
+         VALUES ($1, $2, $3, $4, $5, 'pending', 'mpesa', $6) RETURNING *`,
+        [
+          paymentData.invoice_id,
+          paymentData.email,
+          paymentData.mobile_payment,
+          paymentData.whatsapp_number,
+          paymentData.amount,
+          JSON.stringify(paymentData.metadata)
+        ]
+      );
+      const payment = paymentInsert.rows[0];
+
+      // Initiate STK Push
+      try {
+        const stkResult = await paymentService.initiatePayment({
+          ...paymentData,
+          phone: clientPhone,
+          narrative: `Payment for Order ${order.order_number}`,
+          billing_address: 'Kenya'
+        });
+
+        // Update payment with provider reference
+        await client.query(
+          'UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2',
+          [stkResult.reference, payment.id]
+        );
+
+        await client.query('COMMIT');
+        logger.info(`[ClientOrder] STK Push initiated successfully for order ${order.id}`);
+
+        return {
+          success: true,
+          order: {
+            id: order.id,
+            orderNumber: order.order_number,
+            totalAmount,
+            status: OrderStatus.CLIENT_PAYMENT_PENDING
+          },
+          payment: {
+            id: payment.id,
+            reference: stkResult.reference
+          },
+          message: 'Payment prompt sent to client'
+        };
+
+      } catch (paymentError) {
+        // If STK push fails, still commit the order but mark payment as failed
+        await client.query(
+          'UPDATE payments SET status = $1, metadata = metadata || $2::jsonb WHERE id = $3',
+          ['failed', JSON.stringify({ error: paymentError.message }), payment.id]
+        );
+        await client.query('COMMIT');
+
+        logger.error('[ClientOrder] STK Push failed:', paymentError);
+        throw new Error(`Order created but payment initiation failed: ${paymentError.message}`);
+      }
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      logger.error('[ClientOrder] Error creating client order:', error);
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 export default OrderService;
+

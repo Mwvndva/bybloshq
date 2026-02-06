@@ -609,6 +609,50 @@ export const sellerApi = {
       fileName: response.data.data.fileName
     };
   },
+
+  // Client Orders
+  async createClientOrder(data: {
+    clientName: string;
+    clientPhone: string;
+    items: Array<{
+      productId: string;
+      name: string;
+      quantity: number;
+      price: number;
+    }>;
+  }): Promise<{
+    success: boolean;
+    order: {
+      id: number;
+      orderNumber: string;
+      totalAmount: number;
+      status: string;
+    };
+    payment: {
+      id: number;
+      reference: string;
+    };
+    message: string;
+  }> {
+    const response = await sellerApiInstance.post<{
+      status: string;
+      data: {
+        success: boolean;
+        order: {
+          id: number;
+          orderNumber: string;
+          totalAmount: number;
+          status: string;
+        };
+        payment: {
+          id: number;
+          reference: string;
+        };
+        message: string;
+      };
+    }>('/orders/client-order', data);
+    return response.data.data;
+  },
 };
 
 export default sellerApi;
