@@ -250,7 +250,7 @@ class PaymentService {
                 if (paymentMeta.order_id) {
                     try {
                         await pool.query(
-                            "UPDATE product_orders SET status = 'failed', payment_status = 'failed' WHERE id = $1",
+                            "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
                             [paymentMeta.order_id]
                         );
                         logger.info(`[PURCHASE-FLOW] Marked Order ${paymentMeta.order_id} as FAILED due to payment failure`);
@@ -644,7 +644,7 @@ class PaymentService {
                         if (payment.metadata?.order_id) {
                             try {
                                 await pool.query(
-                                    "UPDATE product_orders SET status = 'failed', payment_status = 'failed' WHERE id = $1",
+                                    "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
                                     [payment.metadata.order_id]
                                 );
                                 logger.info(`[Cron] Marked Order ${payment.metadata.order_id} as FAILED due to payment failure`);
