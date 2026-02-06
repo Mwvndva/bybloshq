@@ -75,10 +75,6 @@ export default function SellerProductsPage() {
     }
   };
 
-  const handleEdit = (id: string) => {
-    navigate(`/seller/products/edit/${id}`);
-  };
-
   const handleStatusUpdate = async (productId: string, status: 'available' | 'sold', soldAt: string | null) => {
     // Get the current product data
     const product = products.find(p => p.id === productId);
@@ -140,7 +136,7 @@ export default function SellerProductsPage() {
             <h1 className="text-3xl font-bold text-white">My Products</h1>
             <p className="text-zinc-400">Manage your product listings</p>
           </div>
-          <Button 
+          <Button
             onClick={() => navigate('/seller/products/new')}
             className="bg-emerald-500 text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] px-6 py-3 hover:scale-105 active:scale-95 transition-all duration-200"
           >
@@ -162,9 +158,9 @@ export default function SellerProductsPage() {
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-white">Your Products</h2>
-                  <Button 
-                    onClick={fetchProducts} 
-                    variant="outline" 
+                  <Button
+                    onClick={fetchProducts}
+                    variant="outline"
                     size="sm"
                     className="border-white/10 text-white hover:bg-white/10 hover:border-white/20"
                   >
@@ -175,7 +171,6 @@ export default function SellerProductsPage() {
                 <ProductsList
                   products={products}
                   onDelete={handleDelete}
-                  onEdit={handleEdit}
                   onStatusUpdate={handleStatusUpdate}
                   onRefresh={fetchProducts}
                 />
@@ -187,8 +182,8 @@ export default function SellerProductsPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">No products yet</h3>
                 <p className="text-zinc-400 mb-6">Add your first product to get started</p>
-                <Button 
-                  variant="link" 
+                <Button
+                  variant="link"
                   onClick={() => navigate('/seller/products/new')}
                   className="text-emerald-400 hover:text-emerald-300"
                 >
