@@ -213,6 +213,7 @@ export const createSellerClientOrder = async (req, res) => {
         const result = await OrderService.createClientOrder(sellerId, {
             clientName: clientName.trim(),
             clientPhone: clientPhone.replace(/\s+/g, ''),
+            paymentType: req.body.paymentType,
             items
         });
 
