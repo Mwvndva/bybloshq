@@ -78,6 +78,14 @@ interface SellerAnalytics {
       price: number;
     }>;
   }>;
+  recentDebts?: Array<{
+    id: number;
+    amount: number;
+    clientName: string;
+    clientPhone: string;
+    productName: string;
+    createdAt: string;
+  }>;
 }
 
 interface WithdrawalRequest {

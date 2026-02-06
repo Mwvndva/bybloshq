@@ -127,12 +127,30 @@ export const getSellerAnalytics = async (req, res, next) => {
     );
 
 
-    // 7. Get pending debt count
-    console.log('Fetching pending debt count using client_debts table...');
+    // 7. Get pending debt count and recent debt list
+    console.log('Fetching pending debts...');
     const debtCountResult = await pool.query(
       `SELECT COUNT(*) as count 
        FROM client_debts 
        WHERE seller_id = $1 AND is_paid = false`,
+      [sellerId]
+    );
+
+    console.log('Fetching recent debts list...');
+    const recentDebtsResult = await pool.query(
+      `SELECT 
+         cd.id,
+         cd.amount,
+         cd.created_at,
+         c.full_name as client_name,
+         c.phone as client_phone,
+         p.name as product_name
+       FROM client_debts cd
+       JOIN clients c ON cd.client_id = c.id
+       JOIN products p ON cd.product_id = p.id
+       WHERE cd.seller_id = $1 AND cd.is_paid = false
+       ORDER BY cd.created_at DESC
+       LIMIT 5`,
       [sellerId]
     );
 
@@ -159,7 +177,15 @@ export const getSellerAnalytics = async (req, res, next) => {
           createdAt: order.created_at,
           items: order.items || []
         })),
-        pendingDebtCount: parseInt(debtCountResult.rows[0]?.count || 0)
+        pendingDebtCount: parseInt(debtCountResult.rows[0]?.count || 0),
+        recentDebts: recentDebtsResult.rows.map(debt => ({
+          id: debt.id,
+          amount: parseFloat(debt.amount || 0),
+          clientName: debt.client_name,
+          clientPhone: debt.client_phone,
+          productName: debt.product_name,
+          createdAt: debt.created_at
+        }))
       };
 
 
