@@ -402,11 +402,11 @@ export default function SellerOrdersSection() {
                                                     <Button
                                                         size="sm"
                                                         variant="outline"
-                                                        className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-xs sm:text-sm font-semibold transition-all duration-200"
+                                                        className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
                                                         onClick={() => handleCancelClick(order.id)}
                                                         disabled={isUpdating}
                                                     >
-                                                        <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                                                        <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-2" />
                                                         Cancel Order
                                                     </Button>
                                                 </div>
@@ -416,22 +416,22 @@ export default function SellerOrdersSection() {
                                                     <div className="space-y-2">
                                                         <Button
                                                             size="sm"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-7"
                                                             onClick={() => handleReadyForPickupClick(order.id)}
                                                             disabled={isUpdating}
                                                         >
-                                                            <Truck className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                                                            <Truck className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-2" />
                                                             <span className="hidden sm:inline">Mark as Ready for Pickup</span>
                                                             <span className="sm:hidden">Ready for Pickup</span>
                                                         </Button>
                                                         <Button
                                                             size="sm"
                                                             variant="outline"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-xs sm:text-sm font-semibold transition-all duration-200"
+                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-7"
                                                             onClick={() => handleCancelClick(order.id)}
                                                             disabled={isUpdating}
                                                         >
-                                                            <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                                                            <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-2" />
                                                             Cancel Order
                                                         </Button>
                                                     </div>
@@ -495,23 +495,23 @@ export default function SellerOrdersSection() {
                             variant="outline"
                             onClick={() => setShowPickupDialog(false)}
                             disabled={isUpdating}
-                            className="w-full sm:w-auto bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
+                            className="w-full sm:w-auto bg-transparent border-white/10 text-gray-200 hover:bg-white/5 h-8 text-xs"
                         >
                             Cancel
                         </Button>
                         <Button
                             onClick={markAsReadyForPickup}
                             disabled={isUpdating}
-                            className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                            className="w-full sm:w-auto bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-8 text-xs"
                         >
                             {isUpdating ? (
                                 <>
-                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    <RefreshCw className="h-3 w-3 mr-2 animate-spin" />
                                     Updating...
                                 </>
                             ) : (
                                 <>
-                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    <CheckCircle className="h-3 w-3 mr-2" />
                                     Confirm Drop-off
                                 </>
                             )}
