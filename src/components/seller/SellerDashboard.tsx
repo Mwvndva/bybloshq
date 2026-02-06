@@ -1449,70 +1449,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               )}
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-3 items-start">
-              {/* Recent Products */}
-              <div className="lg:col-span-2 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl p-4 sm:p-5 shadow-lg border border-white/10">
-                <div className="mb-4">
-                  <h3 className="text-base sm:text-lg font-black text-white">Recent Products</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your most recently added products</p>
-                </div>
-
-                {products.length > 0 ? (
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {products.slice(0, 6).map((product) => (
-                      <Card key={product.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 transform hover:-translate-y-2">
-                        <div className="relative overflow-hidden rounded-t-2xl">
-                          <img
-                            src={getImageUrl(product.image_url || product.imageUrl) || '/placeholder-image.jpg'}
-                            alt={product.name}
-
-                            className="w-full h-36 object-cover group-hover:scale-110 transition-transform duration-500"
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                          <Badge
-                            variant="secondary"
-                            className="absolute top-4 left-4 bg-yellow-500/10 text-yellow-200 border border-yellow-400/20 px-3 py-1 text-xs font-bold rounded-xl"
-                          >
-                            Available
-                          </Badge>
-                        </div>
-                        <CardContent className="p-4">
-                          <h3 className="font-bold text-white mb-1 line-clamp-1 text-sm sm:text-base">{product.name}</h3>
-                          <p className="text-yellow-300 font-black text-base sm:text-lg mb-2">
-                            {formatCurrency(product.price)}
-                          </p>
-                          <p className="text-xs sm:text-sm text-gray-300 line-clamp-2 leading-relaxed">
-                            {product.description}
-                          </p>
-                          <div className="flex items-center justify-between mt-3">
-                            <Badge variant="outline" className="text-xs bg-white/5 text-gray-200 border-white/10">
-                              {product.aesthetic}
-                            </Badge>
-                            <span className="text-xs text-gray-300">
-                              {new Date(product.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-20">
-                    <div className="w-24 h-24 mx-auto mb-8 bg-yellow-500/10 border border-yellow-400/20 rounded-3xl flex items-center justify-center shadow-lg">
-                      <Package className="h-12 w-12 text-yellow-300" />
-                    </div>
-                    <h3 className="text-2xl font-black text-white mb-3">No products found</h3>
-                    <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
-                    <Button
-                      onClick={() => navigate('/seller/add-product')}
-                      className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Add Your First Product
-                    </Button>
-                  </div>
-                )}
-              </div>
+            <div className="space-y-4">
 
               {/* Store Performance */}
               <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl w-full rounded-2xl">
