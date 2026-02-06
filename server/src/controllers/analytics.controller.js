@@ -127,10 +127,12 @@ export const getSellerAnalytics = async (req, res, next) => {
     );
 
 
-    // 7. Get pending debt count and recent debt list
+    // 7. Get pending debt count, total amount, and recent debt list
     console.log('Fetching pending debts...');
-    const debtCountResult = await pool.query(
-      `SELECT COUNT(*) as count 
+    const debtStatsResult = await pool.query(
+      `SELECT 
+         COUNT(*) as count,
+         COALESCE(SUM(amount), 0) as total_amount
        FROM client_debts 
        WHERE seller_id = $1 AND is_paid = false`,
       [sellerId]
@@ -177,7 +179,8 @@ export const getSellerAnalytics = async (req, res, next) => {
           createdAt: order.created_at,
           items: order.items || []
         })),
-        pendingDebtCount: parseInt(debtCountResult.rows[0]?.count || 0),
+        pendingDebtCount: parseInt(debtStatsResult.rows[0]?.count || 0),
+        pendingDebt: parseFloat(debtStatsResult.rows[0]?.total_amount || 0),
         recentDebts: recentDebtsResult.rows.map(debt => ({
           id: debt.id,
           amount: parseFloat(debt.amount || 0),
