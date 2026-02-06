@@ -1104,32 +1104,34 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
 
             {/* Available Balance Card */}
-            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-white/10">
-              <div className="flex justify-between items-center mb-4 sm:mb-6">
-                <div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Available Balance</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Your current balance available for withdrawal</p>
+            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-lg border border-white/10">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
+                <div className="flex-1">
+                  <h3 className="text-base sm:text-lg md:text-xl font-black text-white">Available Balance</h3>
+                  <p className="text-gray-300 text-[10px] sm:text-xs font-medium mt-0.5">Current balance for withdrawal</p>
                 </div>
-                <div className="bg-green-500/10 border border-green-400/20 rounded-xl sm:rounded-2xl p-2.5 sm:p-3 md:p-5 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
-                  <p className="text-base sm:text-lg md:text-xl font-black text-green-200">
+                <div className="bg-green-500/10 border border-green-400/20 rounded-lg sm:rounded-xl p-2 sm:p-2.5 md:p-4 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
+                  <p className="text-lg sm:text-xl md:text-2xl font-black text-green-200">
                     {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                   </p>
                 </div>
-
-                {/* Minimum Withdrawal Notification */}
-                <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-4 mb-4 flex items-start gap-3">
-                  <div className="bg-blue-500/10 border border-blue-400/20 rounded-full p-1 mt-0.5">
-                    <Info className="h-4 w-4 text-blue-300" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-blue-100 text-xs">Minimum Withdrawal Amount</h4>
-                    <p className="text-blue-200/80 text-xs mt-1">
-                      The minimum balance required to request a withdrawal is KSh 50. Please ensure you have sufficient funds before proceeding.
-                    </p>
-                  </div>
-                </div>
               </div>
+            </div>
 
+            {/* Minimum Withdrawal Notification */}
+            <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
+              <div className="bg-blue-500/10 border border-blue-400/20 rounded-full p-0.5 sm:p-1 mt-0.5 flex-shrink-0">
+                <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-300" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-blue-100 text-[10px] sm:text-xs">Minimum: KSh 50</h4>
+                <p className="text-blue-200/80 text-[9px] sm:text-[10px] mt-0.5 leading-tight">
+                  Ensure sufficient balance before requesting withdrawal.
+                </p>
+              </div>
+            </div>
+
+            <div>
               {!showWithdrawalForm ? (
                 <Button
                   onClick={() => setShowWithdrawalForm(true)}
