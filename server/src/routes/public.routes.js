@@ -12,6 +12,7 @@ router.get('/products', publicController.getProducts);
 router.get('/products/:id', publicController.getProduct);
 
 // Public seller info
+router.get('/sellers/active', publicController.getSellers);
 router.get('/sellers/:id/public', publicController.getSellerPublicInfo);
 
 // Public events

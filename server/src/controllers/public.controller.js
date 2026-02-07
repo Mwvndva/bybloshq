@@ -240,3 +240,55 @@ export const getSellerPublicInfo = async (req, res) => {
     });
   }
 };
+// Get all active sellers with wishlist count
+export const getSellers = async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        s.id, 
+        s.full_name, 
+        s.shop_name, 
+        s.shop_link, 
+        s.banner_url, 
+        s.avatar_url,
+        s.theme_color,
+        s.created_at,
+        COUNT(w.id) as total_wishlist_count
+      FROM sellers s
+      LEFT JOIN products p ON s.id = p.seller_id
+      LEFT JOIN wishlist w ON p.id = w.product_id
+      WHERE s.status = 'active'
+      GROUP BY s.id
+      ORDER BY total_wishlist_count DESC
+    `;
+
+    const result = await pool.query(query);
+
+    const sellers = result.rows.map(row => ({
+      id: row.id,
+      shopName: row.shop_name,
+      shopLink: row.shop_link || row.shop_name || row.id, // Fallback if shop_link is missing
+      fullName: row.full_name,
+      bannerUrl: row.banner_url,
+      avatarUrl: row.avatar_url,
+      themeColor: row.theme_color,
+      totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
+      createdAt: row.created_at
+    }));
+
+    res.status(200).json({
+      status: 'success',
+      results: sellers.length,
+      data: {
+        sellers
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching sellers:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch sellers',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
