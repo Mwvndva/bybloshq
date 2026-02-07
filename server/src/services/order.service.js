@@ -556,44 +556,51 @@ class OrderService {
       const items = itemsResult.rows;
 
       // 3a. INVENTORY DECREMENT: Update stock for tracked products
-      for (const item of items) {
-        if (item.track_inventory === true && item.product_id) {
-          const requestedQty = item.quantity || 1;
-          logger.info(`[INVENTORY-DEBUG] Product ${item.product_id} - quantity field: ${item.quantity}, type: ${typeof item.quantity}, requestedQty: ${requestedQty}`);
+      // Skip if this is a debt payment order (inventory already decremented when debt was created)
+      const skipInventory = order.metadata?.skip_inventory_decrement === true;
 
-          // Decrement inventory atomically
-          const updateResult = await client.query(
-            `UPDATE products 
-             SET quantity = quantity - $1 
-             WHERE id = $2 AND track_inventory = true AND quantity >= $3
-             RETURNING quantity, low_stock_threshold, name`,
-            [requestedQty, item.product_id, requestedQty]
-          );
+      if (skipInventory) {
+        logger.info(`[INVENTORY] Skipping inventory decrement for debt payment order ${orderId}`);
+      } else {
+        for (const item of items) {
+          if (item.track_inventory === true && item.product_id) {
+            const requestedQty = item.quantity || 1;
+            logger.info(`[INVENTORY-DEBUG] Product ${item.product_id} - quantity field: ${item.quantity}, type: ${typeof item.quantity}, requestedQty: ${requestedQty}`);
 
-          if (updateResult.rows.length === 0) {
-            throw new Error(`Failed to decrement inventory for product ${item.name || item.product_id}. Insufficient stock.`);
-          }
+            // Decrement inventory atomically
+            const updateResult = await client.query(
+              `UPDATE products 
+               SET quantity = quantity - $1 
+               WHERE id = $2 AND track_inventory = true AND quantity >= $3
+               RETURNING quantity, low_stock_threshold, name`,
+              [requestedQty, item.product_id, requestedQty]
+            );
 
-          const updatedProduct = updateResult.rows[0];
-          const newQuantity = updatedProduct.quantity;
+            if (updateResult.rows.length === 0) {
+              throw new Error(`Failed to decrement inventory for product ${item.name || item.product_id}. Insufficient stock.`);
+            }
 
-          logger.info(`[INVENTORY] Decremented stock for product ${item.product_id}: ${newQuantity + requestedQty} -> ${newQuantity}`);
+            const updatedProduct = updateResult.rows[0];
+            const newQuantity = updatedProduct.quantity;
 
-          // Check if low stock alert should be sent
-          if (updatedProduct.low_stock_threshold && newQuantity <= updatedProduct.low_stock_threshold && newQuantity > 0) {
-            logger.warn(`[INVENTORY] Low stock alert for product ${updatedProduct.name || item.product_name || item.product_id}: ${newQuantity} units remaining`);
+            logger.info(`[INVENTORY] Decremented stock for product ${item.product_id}: ${newQuantity + requestedQty} -> ${newQuantity}`);
 
-            // Send low stock WhatsApp alert to seller (async, don't block)
-            this._sendLowStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id, newQuantity, updatedProduct.low_stock_threshold).catch(err => {
-              logger.error('[INVENTORY] Failed to send low stock alert:', err);
-            });
-          } else if (newQuantity === 0) {
-            logger.warn(`[INVENTORY] Product ${updatedProduct.name || item.product_name || item.product_id} is now OUT OF STOCK`);
+            // Check if low stock alert should be sent
+            if (updatedProduct.low_stock_threshold && newQuantity <= updatedProduct.low_stock_threshold && newQuantity > 0) {
+              logger.warn(`[INVENTORY] Low stock alert for product ${updatedProduct.name || item.product_name || item.product_id}: ${newQuantity} units remaining`);
 
-            // Send out of stock alert
-            this._sendOutOfStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id).catch(err => {
-              logger.error('[INVENTORY] Failed to send out of stock alert:', err);
-            });
+              // Send low stock WhatsApp alert to seller (async, don't block)
+              this._sendLowStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id, newQuantity, updatedProduct.low_stock_threshold).catch(err => {
+                logger.error('[INVENTORY] Failed to send low stock alert:', err);
+              });
+            } else if (newQuantity === 0) {
+              logger.warn(`[INVENTORY] Product ${updatedProduct.name || item.product_name || item.product_id} is now OUT OF STOCK`);
+
+              // Send out of stock alert
+              this._sendOutOfStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id).catch(err => {
+                logger.error('[INVENTORY] Failed to send out of stock alert:', err);
+              });
+            }
           }
         }
       }
@@ -627,22 +634,34 @@ class OrderService {
         sellerId: order.seller_id
       });
 
-      // Determine final status based on product type and seller shop availability
+      // Check if this is a client order (seller-initiated)
+      // Client orders should auto-complete since clients don't have accounts to update status
+      const isClientOrder = order.client_id !== null || order.is_seller_initiated === true;
+
+      // Determine final status based on order type
       let newStatus = OrderStatus.COMPLETED;
-      if (hasPhysical) {
-        if (sellerHasShop) {
-          newStatus = OrderStatus.COLLECTION_PENDING;
-          logger.info(`[PURCHASE-FLOW] Physical product with shop -> Status: ${newStatus} (buyer must collect)`);
-        } else {
-          newStatus = OrderStatus.DELIVERY_PENDING;
-          logger.info(`[PURCHASE-FLOW] Physical product without shop -> Status: ${newStatus} (delivery required)`);
-        }
-      } else if (hasService) {
-        newStatus = OrderStatus.SERVICE_PENDING;
-        logger.info(`[PURCHASE-FLOW] Service order detected -> Status: ${newStatus} (seller must confirm)`);
+
+      if (isClientOrder) {
+        // Client orders always auto-complete (client has no account to update status)
+        newStatus = OrderStatus.COMPLETED;
+        logger.info(`[PURCHASE-FLOW] Client order detected (client_id: ${order.client_id}, is_seller_initiated: ${order.is_seller_initiated}) → Auto-completing to COMPLETED`);
       } else {
-        // Digital or unknown - auto-complete
-        logger.info(`[PURCHASE-FLOW] Digital/Auto-complete order -> Status: ${newStatus}`);
+        // Regular buyer orders follow product-type logic
+        if (hasPhysical) {
+          if (sellerHasShop) {
+            newStatus = OrderStatus.COLLECTION_PENDING;
+            logger.info(`[PURCHASE-FLOW] Physical product with shop → Status: ${newStatus} (buyer must collect)`);
+          } else {
+            newStatus = OrderStatus.DELIVERY_PENDING;
+            logger.info(`[PURCHASE-FLOW] Physical product without shop → Status: ${newStatus} (delivery required)`);
+          }
+        } else if (hasService) {
+          newStatus = OrderStatus.SERVICE_PENDING;
+          logger.info(`[PURCHASE-FLOW] Service order detected → Status: ${newStatus} (seller must confirm)`);
+        } else {
+          // Digital or unknown - auto-complete
+          logger.info(`[PURCHASE-FLOW] Digital/Auto-complete order → Status: ${newStatus}`);
+        }
       }
 
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
@@ -660,6 +679,19 @@ class OrderService {
       if (newStatus === OrderStatus.COMPLETED) {
         logger.info(`[PURCHASE-FLOW] 8b. Auto-completing Order (Digital/Collection), Processing Payout...`);
         await this._processSellerPayout(client, updatedOrder);
+
+        // If this order is linked to a debt, mark the debt as paid
+        if (order.metadata?.debt_id) {
+          const debtId = order.metadata.debt_id;
+          logger.info(`[DEBT-PAYMENT] Order ${orderId} linked to debt ${debtId}, marking debt as paid`);
+
+          await client.query(
+            'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
+            [debtId]
+          );
+
+          logger.info(`[DEBT-PAYMENT] Debt ${debtId} marked as paid after order completion`);
+        }
       }
 
       // 4. Update Payment Metadata
@@ -1000,10 +1032,12 @@ class OrderService {
         clientName,
         clientPhone,
         paymentType,
-        items
+        items,
+        skipInventoryDecrement = false, // For debt payments where inventory already decremented
+        debtId = null // Link to debt record if this is a debt payment
       } = data;
 
-      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone, paymentType, fullData: JSON.stringify(data) });
+      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone, paymentType, skipInventoryDecrement, debtId, fullData: JSON.stringify(data) });
       await client.query('BEGIN');
 
       // 1. Upsert Client
@@ -1054,12 +1088,14 @@ class OrderService {
           buyer_mobile_payment: clientPhone,
           buyer_whatsapp_number: clientPhone,
           shipping_address: null,
-          notes: 'Seller-initiated client order',
+          notes: skipInventoryDecrement ? 'Debt payment order' : 'Seller-initiated client order',
           metadata: JSON.stringify({
             items,
             client_id: clientRecord.id,
             seller_initiated: true,
-            is_debt: false
+            is_debt: false,
+            skip_inventory_decrement: skipInventoryDecrement,
+            debt_id: debtId
           }),
           status: OrderStatus.CLIENT_PAYMENT_PENDING,
           payment_status: 'pending',
