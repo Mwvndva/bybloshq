@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake, Package, ArrowLeft } from 'lucide-react';
+import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake, Package, ArrowLeft, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
@@ -57,6 +57,9 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
   });
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleEditClick = async (id: string) => {
     setIsLoadingEdit(true);
@@ -236,6 +239,18 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       </div>
     );
   };
+
+  // Filter products based on search query
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+
+    const query = searchQuery.toLowerCase();
+    return products.filter(product =>
+      product.name.toLowerCase().includes(query) ||
+      product.description?.toLowerCase().includes(query) ||
+      product.aesthetic?.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
 
   return (
     <div className="space-y-4">
