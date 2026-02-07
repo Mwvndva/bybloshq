@@ -94,7 +94,7 @@ interface ApiResponse<T> {
   statusText: string;
 }
 
-interface Product {
+export interface Product {
   id: string;
   name: string;
   price: number;
@@ -116,7 +116,7 @@ interface Product {
   seller?: Seller;
 }
 
-interface Seller {
+export interface Seller {
   id: string;
   fullName: string;
   full_name?: string;
@@ -141,6 +141,7 @@ interface Seller {
   physicalAddress?: string;
   latitude?: number;
   longitude?: number;
+  totalWishlistCount?: number;
 }
 
 // Helper function to transform product data from API
@@ -254,6 +255,43 @@ export const publicApiService = {
         } : 'No response',
         stack: error.stack
       });
+      return [];
+    }
+  },
+
+  // Get all active sellers with wishlist count
+  getSellers: async (): Promise<Seller[]> => {
+    try {
+      const response = await publicApi.get('sellers/active');
+      let sellersData: any[] = [];
+      const responseData = response.data;
+
+      if (Array.isArray(responseData)) {
+        sellersData = responseData;
+      } else if (responseData && 'data' in responseData && responseData.data.sellers) {
+        sellersData = responseData.data.sellers;
+      } else if (responseData && 'sellers' in responseData) {
+        sellersData = responseData.sellers;
+      }
+
+      return sellersData.map(item => {
+        const seller = transformSeller(item);
+        if (seller) {
+          // Add extra property for this specific view if needed, but Seller interface usually is enough.
+          // We might need to extend Seller interface if we want to type totalWishlistCount strictly,
+          // but for now let's attach it or just rely on the fact that the API returns it.
+          // Since TypeScript interface doesn't have it, we might need to add it or just ignore it for now.
+          // Actually, let's update the Seller interface in the next step or right here if possible.
+          // For now, let's just return the seller object as is, assuming the component will cast it or we update type.
+          return {
+            ...seller,
+            totalWishlistCount: Number(item.totalWishlistCount || item.total_wishlist_count || 0)
+          } as Seller;
+        }
+        return null;
+      }).filter((seller): seller is Seller => seller !== null);
+    } catch (error) {
+      console.error('Error fetching sellers:', error);
       return [];
     }
   },

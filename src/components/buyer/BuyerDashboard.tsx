@@ -36,6 +36,7 @@ import WishlistSection from './WishlistSection';
 import { useBybx } from '@/contexts/BybxContext';
 import BybxImporter from '@/components/BybxImporter';
 import RefundCard from './RefundCard';
+import SellersGrid from '@/components/SellersGrid';
 
 
 
@@ -273,154 +274,13 @@ function BuyerDashboard() {
         {activeSection === 'shop' && (
           <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
             <div className="mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">Discover Amazing Products</h2>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">Discover Shops</h2>
               <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal mb-4 sm:mb-6">
-                Browse through our curated collection of unique items
+                Explore our curated selection of brands and creators
               </p>
-
-              <div className="mb-6 sm:mb-8">
-                {/* Filters */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-                  <div>
-                    <Select
-                      value={filterCity || '__all__'}
-                      onValueChange={(val) => {
-                        if (val === '__all__') {
-                          setFilterCity('');
-                          setFilterArea('');
-                        } else {
-                          setFilterCity(val);
-                          setFilterArea('');
-                        }
-                      }}
-                      defaultValue="__all__"
-                    >
-                      <SelectTrigger className="h-10 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400">
-                        <SelectValue placeholder="City" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">All Cities</SelectItem>
-                        {Object.keys(locationData).map((c) => (
-                          <SelectItem key={c} value={c}>{c}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Select
-                      value={filterArea || '__all__'}
-                      onValueChange={(val) => {
-                        if (val === '__all__') setFilterArea(''); else setFilterArea(val);
-                      }}
-                      disabled={!filterCity}
-                    >
-                      <SelectTrigger className="h-10 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400">
-                        <SelectValue placeholder={filterCity ? 'Area' : 'Select city first'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__all__">All Areas</SelectItem>
-                        {(locationData[filterCity] || []).map((a) => (
-                          <SelectItem key={a} value={a}>{a}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="Min Price"
-                      value={priceMin}
-                      onChange={(e) => setPriceMin(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <Input
-                      type="number"
-                      min={0}
-                      placeholder="Max Price"
-                      value={priceMax}
-                      onChange={(e) => setPriceMax(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <AestheticCategories
-                  selectedAesthetic={selectedAesthetic}
-                  onAestheticChange={handleAestheticChange}
-                />
-
-                {/* Search Bar */}
-                <div className="relative mt-6">
-                  <div className="relative">
-                    <Input
-                      type="text"
-                      placeholder="Search products by keyword..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-4 pr-10"
-                    />
-                    {searchQuery ? (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-300 hover:text-white focus:outline-none"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    ) : (
-                      <svg
-                        className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-300"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="mb-4 sm:mb-6">
-                <p className="text-sm sm:text-base lg:text-lg font-semibold text-white">
-                  {selectedAesthetic
-                    ? `Showing ${selectedAesthetic} products`
-                    : 'Showing all products'
-                  }
-                  {selectedAesthetic && (
-                    <button
-                      onClick={() => setSelectedAesthetic('')}
-                      className="ml-2 sm:ml-4 text-yellow-400 hover:text-yellow-300 underline font-medium text-sm sm:text-base"
-                    >
-                      Clear filter
-                    </button>
-                  )}
-                </p>
-              </div>
-
-              {selectedAesthetic && (
-                <div className="mb-4 sm:mb-6">
-                  <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-sm">
-                    {selectedAesthetic}
-                  </Badge>
-                </div>
-              )}
             </div>
 
-            <ProductGrid
-              selectedAesthetic={selectedAesthetic}
-              searchQuery={searchQuery}
-              locationCity={filterCity}
-              locationArea={filterArea}
-              priceMin={priceMin ? Number(priceMin) : undefined}
-              priceMax={priceMax ? Number(priceMax) : undefined}
-            />
+            <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} />
           </div>
         )}
 
@@ -617,7 +477,7 @@ function BuyerDashboard() {
           </div>
         )}
       </div>
-    </ >
+    </>
   );
 }
 
