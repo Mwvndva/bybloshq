@@ -82,7 +82,8 @@ export const sanitizePublicSeller = (seller) => {
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
         latitude: sellerObj.latitude,
         longitude: sellerObj.longitude,
-        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link
+        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
+        clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
         // Removed: createdAt - no need to expose when shop was created
         // NO email, phone, balance, revenue, internal IDs
     };
