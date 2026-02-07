@@ -248,16 +248,13 @@ export const getSellers = async (req, res) => {
         s.id, 
         s.full_name, 
         s.shop_name, 
-        s.shop_link, 
-        s.banner_url, 
-        s.avatar_url,
-        s.theme_color,
+        s.banner_image,
+        s.theme,
         s.created_at,
         COUNT(w.id) as total_wishlist_count
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
       LEFT JOIN wishlist w ON p.id = w.product_id
-      WHERE s.status = 'active'
       GROUP BY s.id
       ORDER BY total_wishlist_count DESC
     `;
@@ -267,11 +264,11 @@ export const getSellers = async (req, res) => {
     const sellers = result.rows.map(row => ({
       id: row.id,
       shopName: row.shop_name,
-      shopLink: row.shop_link || row.shop_name || row.id, // Fallback if shop_link is missing
+      shopLink: row.shop_name, // Use shop_name as the link slug
       fullName: row.full_name,
-      bannerUrl: row.banner_url,
-      avatarUrl: row.avatar_url,
-      themeColor: row.theme_color,
+      bannerUrl: row.banner_image, // Mapped from banner_image
+      avatarUrl: null, // avatar_url not available in sellers table
+      themeColor: row.theme, // Mapped from theme
       totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
       createdAt: row.created_at
     }));
