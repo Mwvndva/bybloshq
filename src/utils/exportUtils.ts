@@ -2,13 +2,16 @@ import { Order } from '@/types/order';
 import { format } from 'date-fns';
 
 interface WithdrawalRequest {
-    id: number;
-    amount: number | string;
-    status: 'processing' | 'completed' | 'failed' | 'cancelled';
-    mpesa_number: string;
-    mpesa_name?: string;
-    created_at: string;
-    updated_at?: string;
+    id: string;
+    amount: number;
+    mpesaNumber: string;
+    mpesaName: string;
+    status: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed';
+    createdAt: string;
+    processedAt?: string;
+    updatedAt?: string;
+    processedBy?: string;
+    failureReason?: string;
 }
 
 /**
@@ -79,13 +82,13 @@ export const formatOrdersForExport = (orders: Order[]) => {
 export const formatWithdrawalsForExport = (withdrawals: WithdrawalRequest[]) => {
     return withdrawals.map(withdrawal => ({
         'Request ID': withdrawal.id,
-        'Date': format(new Date(withdrawal.created_at), 'yyyy-MM-dd HH:mm:ss'),
+        'Date': format(new Date(withdrawal.createdAt), 'yyyy-MM-dd HH:mm:ss'),
         'Amount': `KSh ${withdrawal.amount}`,
-        'M-Pesa Number': withdrawal.mpesa_number,
-        'M-Pesa Name': withdrawal.mpesa_name || 'N/A',
+        'M-Pesa Number': withdrawal.mpesaNumber,
+        'M-Pesa Name': withdrawal.mpesaName || 'N/A',
         'Status': withdrawal.status,
-        'Processed Date': withdrawal.updated_at
-            ? format(new Date(withdrawal.updated_at), 'yyyy-MM-dd HH:mm:ss')
+        'Processed Date': withdrawal.updatedAt
+            ? format(new Date(withdrawal.updatedAt), 'yyyy-MM-dd HH:mm:ss')
             : 'Pending',
     }));
 };
