@@ -19,10 +19,11 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
   }, []);
 
   // Transform product data to ensure it matches our Product interface
-  const transformProduct = (product: any): Product => {
-    if (!product.image_url && !product.imageUrl) {
-      console.error('Product is missing required image URL:', product);
-      throw new Error('Product is missing required image');
+  const transformProduct = (product: any): Product | null => {
+    // Relaxed validation: Allow missing images (will use placeholder)
+    if (!product.id || !product.name || product.price === undefined) {
+      console.error('Product is missing required fields:', product);
+      return null; // Skip invalid products instead of crashing
     }
 
     const transformedProduct: any = {
@@ -30,7 +31,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       name: String(product.name || 'Unnamed Product'),
       description: String(product.description || ''),
       price: Number(product.price) || 0,
-      image_url: product.image_url || product.imageUrl,
+      image_url: product.image_url || product.imageUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80',
       sellerId: String(product.sellerId || product.seller_id || ''),
       isSold: Boolean(product.isSold || product.status === 'sold'),
       status: product.status || (product.isSold ? 'sold' : 'available'),
@@ -115,7 +116,9 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       }
 
       // Transform and set products
-      const transformedProducts = fetchedProducts.map(transformProduct);
+      const transformedProducts = fetchedProducts
+        .map(transformProduct)
+        .filter((p): p is Product => p !== null);
 
       // Extract sellers from the products that have them
       const sellersFromProducts = transformedProducts.reduce<Record<string, Seller>>((acc, product) => {

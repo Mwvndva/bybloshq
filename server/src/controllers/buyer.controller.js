@@ -72,6 +72,13 @@ export const register = async (req, res, next) => {
       createSendToken(loginData, 201, req, res);
     } catch (err) {
       if (err.code === '23505') return next(new AppError('Email already in use', 400));
+      // Handle manual duplications checks from Service
+      if (err.message && (
+        err.message.includes('A buyer account with this email already exists') ||
+        err.message.includes('An account with this email already exists')
+      )) {
+        return next(new AppError(err.message, 409));
+      }
       throw err;
     }
 
