@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package, Users } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
@@ -64,6 +64,7 @@ interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
 
 const ShopPage = () => {
   const { shopName } = useParams<{ shopName: string }>();
+  const location = useLocation();
   const [products, setProducts] = useState<ShopProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -434,15 +435,15 @@ const ShopPage = () => {
         {/* Sleek Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-opacity duration-300" />
 
-        {/* Back to Home Button - Top Left */}
+        {/* Back to Home/Dashboard Button - Top Left */}
         <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20">
           <Button
             asChild
             className="bg-white/10 hover:bg-white/20 text-white backdrop-blur-md border border-white/20 shadow-lg px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 flex items-center group"
           >
-            <Link to="/" className="flex items-center gap-1.5 sm:gap-2">
+            <Link to={location.pathname.startsWith('/buyer') ? "/buyer/dashboard" : "/"} className="flex items-center gap-1.5 sm:gap-2">
               <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:-translate-x-1 transition-transform" />
-              <span>Back to Home</span>
+              <span>{location.pathname.startsWith('/buyer') ? "Back to Dashboard" : "Back to Home"}</span>
             </Link>
           </Button>
         </div>

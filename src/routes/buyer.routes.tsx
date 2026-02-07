@@ -12,6 +12,7 @@ const BuyerResetPassword = lazy(() => import('@/components/buyer/BuyerResetPassw
 const BuyerDashboard = lazy(() => import('@/components/buyer/BuyerDashboard').then(module => ({ default: module.default })));
 const CheckoutPage = lazy(() => import('@/pages/checkout').then(module => ({ default: module.default })));
 const BuyerLayout = lazy(() => import('@/layouts/BuyerLayout').then(module => ({ default: module.default })));
+const ShopPage = lazy(() => import('@/pages/ShopPage'));
 
 // Simple loading component
 const Loader = () => (
@@ -85,6 +86,14 @@ export const buyerRoutes = [
         element: (
           <Suspense fallback={<Loader />}>
             <BuyerDashboard />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'shop/:shopName',
+        element: (
+          <Suspense fallback={<Loader />}>
+            <ShopPage />
           </Suspense>
         ),
       },

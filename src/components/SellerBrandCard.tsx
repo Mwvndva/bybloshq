@@ -7,14 +7,19 @@ import { Seller } from '@/api/publicApi';
 interface SellerBrandCardProps {
     seller: Seller;
     className?: string;
+    isBuyer?: boolean;
 }
 
-const SellerBrandCard = ({ seller, className }: SellerBrandCardProps) => {
+const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) => {
     // Use a transparent placeholder if banner is missing to maintain layout
     const bannerUrl = seller.bannerUrl || seller.banner_url;
 
     // Theme color fallback
     const themeColor = (seller as any).themeColor || 'black';
+
+    const shopLink = isBuyer
+        ? `/buyer/shop/${seller.shopName || seller.shop_name}`
+        : `/shop/${seller.shopName || seller.shop_name}`;
 
     return (
         <div className={cn("group relative aspect-square overflow-hidden rounded-2xl bg-gray-900", className)}>
@@ -61,7 +66,7 @@ const SellerBrandCard = ({ seller, className }: SellerBrandCardProps) => {
 
                     {/* Open Shop Button */}
                     <Link
-                        to={`/shop/${seller.shopName || seller.shop_name}`} // Using shop name as slug/link
+                        to={shopLink} // Using shop name as slug/link
                         className="rounded-full border border-white/20 bg-white/10 px-6 py-2 text-xs font-bold text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-105 active:scale-95"
                     >
                         Open Shop
