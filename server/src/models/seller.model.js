@@ -388,3 +388,43 @@ export const becomeClient = async (sellerId, userId) => {
     client.release();
   }
 };
+
+export const removeClient = async (sellerId, userId) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Check if relationship exists
+    const check = await client.query(
+      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
+
+    if (check.rowCount === 0) {
+      // Not a client, nothing to remove
+      await client.query('ROLLBACK');
+      const countResult = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
+      return { clientCount: countResult.rows[0]?.client_count || 0, wasClient: false };
+    }
+
+    // 2. Remove from seller_clients
+    await client.query(
+      'DELETE FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
+
+    // 3. Decrement client_count in sellers
+    const updateResult = await client.query(
+      'UPDATE sellers SET client_count = GREATEST(COALESCE(client_count, 0) - 1, 0) WHERE id = $1 RETURNING client_count',
+      [sellerId]
+    );
+
+    await client.query('COMMIT');
+    return { clientCount: updateResult.rows[0].client_count, wasClient: true };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
