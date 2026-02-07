@@ -123,9 +123,9 @@ export const protect = async (req, res, next) => {
       // This allows sellers who make purchases to access buyer endpoints
       const crossRoleQuery = `
         SELECT 
-          (SELECT COUNT(*) FROM buyers WHERE user_id = $1 AND status = 'active') as has_buyer,
-          (SELECT COUNT(*) FROM sellers WHERE user_id = $1) as has_seller,
-          (SELECT COUNT(*) FROM organizers WHERE user_id = $1) as has_organizer
+          (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
+          (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id,
+          (SELECT id FROM organizers WHERE user_id = $1 LIMIT 1) as organizer_id
       `;
       const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
       const crossRoles = crossRoleResult.rows[0];
@@ -136,9 +136,17 @@ export const protect = async (req, res, next) => {
         userId: decoded.id, // User ID from users table
         email: userData.email,
         userType: userType,
-        hasBuyerProfile: crossRoles.has_buyer > 0,
-        hasSellerProfile: crossRoles.has_seller > 0,
-        hasOrganizerProfile: crossRoles.has_organizer > 0,
+
+        // Profiles IDs
+        buyerProfileId: crossRoles.buyer_id,
+        sellerProfileId: crossRoles.seller_id,
+        organizerProfileId: crossRoles.organizer_id,
+
+        // Boolean flags (kept for backward compatibility)
+        hasBuyerProfile: !!crossRoles.buyer_id,
+        hasSellerProfile: !!crossRoles.seller_id,
+        hasOrganizerProfile: !!crossRoles.organizer_id,
+
         ...userData
       };
 

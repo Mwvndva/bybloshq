@@ -107,7 +107,12 @@ export const updateOrderStatus = async (req, res) => {
 
 export const getUserOrders = async (req, res) => {
     try {
-        const buyerId = req.user.id;
+        // CROSS-ROLE FIX
+        const buyerId = req.user.buyerProfileId || (req.user.userType === 'buyer' ? req.user.id : null);
+
+        if (!buyerId) {
+            return res.status(200).json({ success: true, status: 'success', data: [], pagination: {} });
+        }
         const { page, limit, status } = req.query;
 
         const result = await Order.findByBuyerId(buyerId, {
