@@ -142,6 +142,18 @@ const buyerApi = {
 
   register: async (data: RegisterData): Promise<LoginResponse> => {
     try {
+      // Map frontend camelCase to backend snake_case
+      const payload = {
+        fullName: data.fullName,
+        email: data.email,
+        mobile_payment: data.mobilePayment,
+        whatsapp_number: data.whatsappNumber,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+        city: data.city,
+        location: data.location
+      };
+
       // Add proper type to the response - backend returns token and data directly
       const response = await buyerApiInstance.post<{
         status: string;
@@ -149,7 +161,7 @@ const buyerApi = {
         data: {
           buyer: Buyer;
         };
-      }>('/buyers/register', data);
+      }>('/buyers/register', payload);
 
       console.log('=== REGISTRATION RESPONSE ===');
       console.log('Status:', response.status);
