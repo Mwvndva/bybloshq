@@ -130,9 +130,9 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
 
             {/* Wishlist Indicator - Top Right */}
             <div className="absolute top-3 right-3 z-10">
-                <div className="flex items-center gap-1 rounded-full bg-yellow-400 px-2.5 py-1 shadow-sm">
-                    <Heart className="h-3 w-3 text-black fill-black" />
-                    <span className="text-[10px] font-bold text-black">
+                <div className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 shadow-sm backdrop-blur-sm", styles.badge)}>
+                    <Heart className={cn("h-3 w-3 fill-current", styles.icon)} />
+                    <span className={cn("text-[10px] font-bold", styles.icon)}>
                         {seller.totalWishlistCount || 0}
                     </span>
                 </div>
@@ -143,7 +143,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 <div className="flex flex-col items-center text-center">
 
                     {/* Shop Name */}
-                    <h3 className={cn("mb-3 text-lg font-black tracking-tight drop-shadow-lg", "text-white")}>
+                    <h3 className={cn("mb-3 text-lg font-black tracking-tight drop-shadow-lg", styles.text)}>
                         {seller.shopName || seller.shop_name}
                     </h3>
 

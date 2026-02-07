@@ -84,7 +84,7 @@ export const protect = async (req, res, next) => {
       switch (userType) {
         case 'buyer':
           userQuery = `
-            SELECT u.*, b.* 
+            SELECT u.*, b.*, b.id as profile_id
             FROM users u 
             LEFT JOIN buyers b ON u.id = b.user_id 
             WHERE u.id = $1 AND b.status = $2
@@ -93,7 +93,7 @@ export const protect = async (req, res, next) => {
           break;
         case 'seller':
           userQuery = `
-            SELECT u.*, s.* 
+            SELECT u.*, s.*, s.id as profile_id
             FROM users u 
             LEFT JOIN sellers s ON u.id = s.user_id 
             WHERE u.id = $1
@@ -101,7 +101,7 @@ export const protect = async (req, res, next) => {
           break;
         case 'organizer':
           userQuery = `
-            SELECT u.*, o.* 
+            SELECT u.*, o.*, o.id as profile_id
             FROM users u 
             LEFT JOIN organizers o ON u.id = o.user_id 
             WHERE u.id = $1
@@ -132,7 +132,7 @@ export const protect = async (req, res, next) => {
 
       // Merge user and profile data
       user = {
-        id: userData.id, // Profile ID from role-specific table
+        id: userData.profile_id || userData.id, // Profile ID from role-specific table (aliased to avoid collision)
         userId: decoded.id, // User ID from users table
         email: userData.email,
         userType: userType,

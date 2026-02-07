@@ -170,6 +170,9 @@ class Order {
           'id', s.id,
           'name', s.full_name,
           'shopName', s.shop_name,
+          'theme', s.theme,
+          'location', s.location,
+          'city', s.city,
           'clientCount', s.client_count
         ) as seller,
         COALESCE(
@@ -232,6 +235,9 @@ class Order {
           'id', s.id,
           'name', s.full_name,
           'shopName', s.shop_name,
+          'theme', s.theme,
+          'location', s.location,
+          'city', s.city,
           'clientCount', s.client_count
         ) as seller,
         COALESCE(
@@ -304,6 +310,9 @@ class Order {
           'id', s.id,
           'name', s.full_name,
           'shopName', s.shop_name,
+          'theme', s.theme,
+          'location', s.location,
+          'city', s.city,
           'clientCount', s.client_count
         ) as seller,
         COALESCE(

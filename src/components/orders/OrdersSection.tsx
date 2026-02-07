@@ -561,11 +561,7 @@ export default function OrdersSection() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm sm:text-base font-semibold text-white truncate">{item.name}</p>
-                      <p className="text-xs sm:text-sm text-gray-400">Qty: {item.quantity}</p>
                     </div>
-                    <p className="text-sm sm:text-base font-semibold text-white whitespace-nowrap">
-                      {formatCurrency(item.price * item.quantity, order.currency)}
-                    </p>
                   </div>
                 ))}
                 {order.items.length > 2 && (
@@ -703,7 +699,7 @@ export default function OrdersSection() {
             <>
               <DialogHeader>
                 <DialogTitle className="text-2xl font-bold text-white">
-                  Order #{selectedOrderForDetails.orderNumber || selectedOrderForDetails.id.slice(0, 8).toUpperCase()}
+                  Order Details
                 </DialogTitle>
                 <DialogDescription className="text-gray-400">
                   {formatDate(selectedOrderForDetails)}
@@ -713,54 +709,75 @@ export default function OrdersSection() {
               <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
                 {/* Items */}
                 {selectedOrderForDetails.items.map((item, idx) => (
-                  <div key={idx} className="space-y-4">
-                    {/* Product Image - only show if available */}
-                    {item.imageUrl && (
-                      <div className="w-full h-48 rounded-lg overflow-hidden bg-black/40">
+                  <div key={idx} className="flex gap-4 items-start">
+                    {/* Product Image */}
+                    <div className="h-20 w-20 rounded-lg bg-black/40 overflow-hidden border border-white/10 flex-shrink-0">
+                      {item.imageUrl ? (
                         <img
                           src={getImageUrl(item.imageUrl)}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />
-                      </div>
-                    )}
-
-                    {/* Product Details */}
-                    <div className="space-y-3">
-                      <div>
-                        <h3 className="text-lg font-bold text-white">{item.name}</h3>
-                        <p className="text-sm text-gray-400 mt-1">
-                          Quantity: {item.quantity}
-                        </p>
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
-                        <span className="text-gray-400">Price</span>
-                        <span className="text-xl font-bold text-white">
-                          {formatCurrency(item.price * item.quantity, selectedOrderForDetails.currency)}
-                        </span>
-                      </div>
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-8 w-8 text-gray-600" />
+                        </div>
+                      )}
                     </div>
 
-                    {idx < selectedOrderForDetails.items.length - 1 && (
-                      <div className="border-t border-white/10 pt-4" />
-                    )}
+                    {/* Product Details */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-base font-bold text-white leading-tight mb-1">{item.name}</h4>
+                      <div className="flex items-center text-sm text-gray-400 gap-3">
+                        <span>Qty: {item.quantity}</span>
+                        <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
+                        <span className="text-white font-medium">{formatCurrency(item.price * item.quantity, selectedOrderForDetails.currency)}</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
 
+                <div className="border-t border-white/10 my-4" />
+
                 {/* Shop Information */}
-                <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-2">
-                  <p className="text-xs text-gray-400 uppercase tracking-wider">Shop Details</p>
-                  {selectedOrderForDetails.seller?.shopName && (
-                    <p className="font-semibold text-white">
-                      {selectedOrderForDetails.seller.shopName}
-                    </p>
-                  )}
+                <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-emerald-400" />
+                    <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Shop Details</p>
+                  </div>
+
+                  <div className="space-y-1">
+                    {selectedOrderForDetails.seller?.shopName && (
+                      <p className="font-bold text-white text-lg">
+                        {selectedOrderForDetails.seller.shopName}
+                      </p>
+                    )}
+
+                    {/* Shop Address / Location - NEW */}
+                    {selectedOrderForDetails.seller?.location && (
+                      <a
+                        href={selectedOrderForDetails.seller.location.startsWith('http') ? selectedOrderForDetails.seller.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrderForDetails.seller.location)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-start gap-2 text-sm text-gray-300 hover:text-emerald-400 transition-colors group"
+                      >
+                        <div className="mt-0.5"><i className="fas fa-map-marker-alt" /></div>
+                        <span>
+                          {selectedOrderForDetails.seller.city ? `${selectedOrderForDetails.seller.city} - ` : ''}
+                          {selectedOrderForDetails.seller.location}
+                        </span>
+                      </a>
+                    )}
+                  </div>
+
                   {selectedOrderForDetails.shippingAddress && (
-                    <p className="text-sm text-gray-300">
-                      {selectedOrderForDetails.shippingAddress.address}
-                      {selectedOrderForDetails.shippingAddress.city && `, ${selectedOrderForDetails.shippingAddress.city}`}
-                    </p>
+                    <div className="pt-2 border-t border-white/5 mt-2">
+                      <p className="text-xs text-gray-500 mb-1">Shipping To:</p>
+                      <p className="text-sm text-gray-300">
+                        {selectedOrderForDetails.shippingAddress.address}
+                        {selectedOrderForDetails.shippingAddress.city && `, ${selectedOrderForDetails.shippingAddress.city}`}
+                      </p>
+                    </div>
                   )}
                 </div>
 
