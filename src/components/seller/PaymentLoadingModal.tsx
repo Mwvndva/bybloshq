@@ -98,6 +98,7 @@ export default function PaymentLoadingModal({
     return (
         <Dialog open={isOpen} onOpenChange={handleCancel}>
             <DialogContent className="sm:max-w-md bg-[#0a0a0a] border-white/10 p-0 gap-0">
+                <DialogTitle className="sr-only">Payment Status</DialogTitle>
                 {/* Close button */}
                 {status !== 'loading' && (
                     <button
@@ -109,41 +110,27 @@ export default function PaymentLoadingModal({
                     </button>
                 )}
 
-                <div className="flex flex-col items-center justify-center py-10 px-6">
+                <div className="flex flex-col items-center justify-center py-8 px-6">
                     {status === 'loading' && (
                         <>
-                            <div className="relative mb-6">
-                                <Smartphone className="w-16 h-16 text-blue-400" />
-                                <Loader2 className="w-8 h-8 text-blue-400 animate-spin absolute -top-2 -right-2" />
+                            <div className="relative mb-4">
+                                <Smartphone className="w-12 h-12 text-blue-400" />
+                                <Loader2 className="w-6 h-6 text-blue-400 animate-spin absolute -top-1 -right-1" />
                             </div>
-                            <h3 className="text-xl font-semibold text-white mb-2 text-center">
+                            <h3 className="text-lg font-semibold text-white mb-2 text-center">
                                 Waiting for Payment
                             </h3>
                             <p className="text-sm text-gray-400 text-center mb-4">
-                                STK push sent to <span className="text-blue-400 font-medium">{clientPhone}</span>
+                                STK sent to <span className="text-blue-400">{clientPhone}</span>
                             </p>
-
-                            <div className="w-full bg-white/5 rounded-lg p-4 mb-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm text-gray-400">Time remaining</span>
-                                    <span className="text-lg font-mono text-blue-400">{formatTime(countdown)}</span>
-                                </div>
-                                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
-                                    <div
-                                        className="bg-blue-500 h-full transition-all duration-1000"
-                                        style={{ width: `${(countdown / 120) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-
                             <p className="text-xs text-gray-500 text-center mb-4">
-                                Enter your M-Pesa PIN to complete payment
+                                {formatTime(countdown)}
                             </p>
-
                             <Button
                                 onClick={handleCancel}
                                 variant="outline"
-                                className="w-full bg-transparent border-white/20 text-gray-300 hover:bg-white/5"
+                                size="sm"
+                                className="bg-transparent border-white/20 text-gray-400 hover:bg-white/5"
                             >
                                 Cancel
                             </Button>

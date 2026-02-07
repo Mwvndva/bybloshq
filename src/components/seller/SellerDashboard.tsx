@@ -736,8 +736,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       duration: 5000,
     });
     // Refresh dashboard data
-    fetchData();
-  }, [toast, fetchData]);
+    // Note: Using window.location.reload() to avoid infinite loop from fetchData dependency
+    setTimeout(() => window.location.reload(), 2000);
+  }, [toast]);
 
   const handlePaymentFailure = useCallback(() => {
     toast({
