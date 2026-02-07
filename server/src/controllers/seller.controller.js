@@ -714,8 +714,8 @@ export const initiateDebtPayment = async (req, res) => {
       items: [{
         productId: debt.product_id.toString(),
         name: debt.product_name,
-        quantity: debt.quantity,
-        price: debt.price
+        quantity: parseInt(debt.quantity, 10),
+        price: parseFloat(debt.price) // Parse as number for validation
       }],
       skipInventoryDecrement: true, // Inventory already decremented when debt was created
       debtId: parseInt(debtId, 10) // Link order to debt
