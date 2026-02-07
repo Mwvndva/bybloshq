@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, RefreshCw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Plus, RefreshCw, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { ProductsList } from '@/components/seller/ProductsList';
 import { sellerApi } from '@/api/sellerApi';
@@ -11,6 +12,7 @@ export default function SellerProductsPage() {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
   // Toast is imported directly from sonner
 
   const fetchProducts = async () => {
@@ -128,6 +130,18 @@ export default function SellerProductsPage() {
     }
   };
 
+  // Filter products based on search query
+  const filteredProducts = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+
+    const query = searchQuery.toLowerCase();
+    return products.filter(product =>
+      product.name?.toLowerCase().includes(query) ||
+      product.description?.toLowerCase().includes(query) ||
+      product.aesthetic?.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
+
   return (
     <div className="seller-products-page min-h-screen bg-[#000000] text-white">
       <div className="container mx-auto py-8">
@@ -168,8 +182,20 @@ export default function SellerProductsPage() {
                     Refresh
                   </Button>
                 </div>
+
+                {/* Search Bar */}
+                <div className="relative mb-4">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Search products by name, description, or aesthetic..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10 bg-zinc-900/50 border-white/10 text-white placeholder:text-gray-400 focus:border-emerald-500/50 focus:ring-emerald-500/20"
+                  />
+                </div>
+
                 <ProductsList
-                  products={products}
+                  products={filteredProducts}
                   onDelete={handleDelete}
                   onStatusUpdate={handleStatusUpdate}
                   onRefresh={fetchProducts}
