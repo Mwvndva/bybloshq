@@ -262,7 +262,7 @@ export const publicApiService = {
   // Get all active sellers with wishlist count
   getSellers: async (): Promise<Seller[]> => {
     try {
-      const response = await publicApi.get('sellers/active');
+      const response = await publicApi.get('public/sellers/active');
       let sellersData: any[] = [];
       const responseData = response.data;
 
