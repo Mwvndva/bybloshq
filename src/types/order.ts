@@ -27,6 +27,8 @@ export interface OrderSeller {
   id: string;
   name: string;
   shopName?: string;
+  location?: string;
+  city?: string;
 }
 
 export interface ShippingAddress {
