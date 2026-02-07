@@ -29,6 +29,7 @@ export interface OrderSeller {
   shopName?: string;
   location?: string;
   city?: string;
+  isClient?: boolean;
 }
 
 export interface ShippingAddress {

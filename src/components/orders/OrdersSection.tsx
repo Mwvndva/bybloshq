@@ -208,8 +208,17 @@ export default function OrdersSection() {
     try {
 
       const orders = await buyerApi.getOrders();
-
       setOrders(orders);
+
+      // Initialize client status from orders
+      const statusMap: Record<string, boolean> = {};
+      orders.forEach(order => {
+        if (order.seller && order.seller.id) {
+          statusMap[order.seller.id] = !!order.seller.isClient;
+        }
+      });
+      setClientStatus(statusMap);
+
     } catch (err) {
       console.error('Failed to fetch orders:', err);
       const errorMessage = err.response?.data?.message || err.message || 'Failed to load orders. Please try again later.';
@@ -239,6 +248,8 @@ export default function OrdersSection() {
     productId: string;
     fileName: string;
   } | null>(null);
+
+  const [viewingImage, setViewingImage] = useState<string | null>(null);
 
 
   const getConfirmationContent = () => {
@@ -414,28 +425,42 @@ export default function OrdersSection() {
   const [clientStatus, setClientStatus] = useState<Record<string, boolean>>({});
   const [isBecomingClient, setIsBecomingClient] = useState<Record<string, boolean>>({});
 
-  const handleBecomeClient = async (sellerId: string, sellerName: string) => {
+  const handleToggleClientStatus = async (sellerId: string, sellerName: string) => {
     if (!sellerId) return;
 
+    const isClient = clientStatus[sellerId];
     setIsBecomingClient(prev => ({ ...prev, [sellerId]: true }));
+
     try {
-      // @ts-ignore - publicApiService is correctly imported but TS might complain about path aliases sometimes
-      const result = await publicApiService.becomeClient(sellerId);
-
-      setClientStatus(prev => ({ ...prev, [sellerId]: true }));
-
-      if (result.data?.alreadyClient) {
-        toast.info(`You are already a client of ${sellerName}`);
+      if (isClient) {
+        // Leave client
+        const result = await buyerApi.leaveClient(sellerId);
+        if (result.success) {
+          setClientStatus(prev => ({ ...prev, [sellerId]: false }));
+          toast.success(`You have left ${sellerName}'s clientele`);
+        } else {
+          toast.error(result.message || 'Failed to leave clientele');
+        }
       } else {
-        toast.success(`You have successfully joined ${sellerName}'s clientele!`);
+        // Join client
+        // @ts-ignore
+        const result = await publicApiService.becomeClient(sellerId);
+        setClientStatus(prev => ({ ...prev, [sellerId]: true }));
+
+        if (result.data?.alreadyClient) {
+          toast.info(`You are already a client of ${sellerName}`);
+        } else {
+          toast.success(`You have successfully joined ${sellerName}'s clientele!`);
+        }
       }
     } catch (error: any) {
-      console.error('Error becoming client:', error);
-      toast.error(error.message || 'Failed to join clientele');
+      console.error('Error toggling client status:', error);
+      toast.error(error.message || 'Failed to update client status');
     } finally {
       setIsBecomingClient(prev => ({ ...prev, [sellerId]: false }));
     }
   };
+
 
 
   // Always use real data from the API
@@ -550,15 +575,7 @@ export default function OrdersSection() {
               <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
                 {order.items.slice(0, 2).map((item, idx) => (
                   <div key={idx} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-black/40 overflow-hidden shrink-0 border border-white/10">
-                      {item.imageUrl ? (
-                        <img src={getImageUrl(item.imageUrl)} alt={item.name} className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                          <Package className="h-4 w-4 sm:h-6 sm:w-6 text-gray-500" />
-                        </div>
-                      )}
-                    </div>
+                    {/* Image removed as per request */}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm sm:text-base font-semibold text-white truncate">{item.name}</p>
                     </div>
@@ -609,15 +626,23 @@ export default function OrdersSection() {
                     </Button>
                   )}
 
-                  {order.seller && !clientStatus[order.seller.id] && (
+                  {order.seller && (
                     <Button
                       size="sm"
-                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-xs sm:text-sm"
-                      onClick={() => handleBecomeClient(order.seller.id, order.seller.name || '')}
+                      className={`font-semibold text-xs sm:text-sm ${clientStatus[order.seller.id]
+                        ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50'
+                        : 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                        }`}
+                      onClick={() => handleToggleClientStatus(order.seller.id, order.seller.name || '')}
                       disabled={isBecomingClient[order.seller.id]}
                     >
                       {isBecomingClient[order.seller.id] ? (
                         <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                      ) : clientStatus[order.seller.id] ? (
+                        <>
+                          <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                          Leave
+                        </>
                       ) : (
                         <>
                           <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
@@ -711,7 +736,8 @@ export default function OrdersSection() {
                 {selectedOrderForDetails.items.map((item, idx) => (
                   <div key={idx} className="flex gap-4 items-start">
                     {/* Product Image */}
-                    <div className="h-20 w-20 rounded-lg bg-black/40 overflow-hidden border border-white/10 flex-shrink-0">
+                    <div className="h-20 w-20 rounded-lg bg-black/40 overflow-hidden border border-white/10 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                      onClick={() => item.imageUrl && setViewingImage(getImageUrl(item.imageUrl))}>
                       {item.imageUrl ? (
                         <img
                           src={getImageUrl(item.imageUrl)}
@@ -951,6 +977,26 @@ export default function OrdersSection() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Image Viewer Dialog */}
+      <Dialog open={!!viewingImage} onOpenChange={(open) => !open && setViewingImage(null)}>
+        <DialogContent className="sm:max-w-3xl bg-transparent border-0 shadow-none p-0 flex items-center justify-center pointer-events-none">
+          <div className="relative w-full h-full flex items-center justify-center pointer-events-auto">
+            <button
+              onClick={() => setViewingImage(null)}
+              className="absolute -top-10 right-0 sm:-right-10 z-50 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-colors border border-white/20"
+            >
+              <XCircle className="h-6 w-6" />
+            </button>
+            {viewingImage && (
+              <img
+                src={viewingImage}
+                alt="Full View"
+                className="max-h-[85vh] max-w-full object-contain rounded-lg shadow-2xl"
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

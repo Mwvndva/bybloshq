@@ -688,8 +688,26 @@ const buyerApi = {
         message: error.response?.data?.message || 'Failed to mark order as collected'
       };
     }
+  },
+
+  leaveClient: async (sellerId: string): Promise<{ success: boolean; message: string; wasClient?: boolean }> => {
+    try {
+      const response = await buyerApiInstance.post<{ message: string; data: { wasClient: boolean } }>(`/buyers/sellers/${sellerId}/leave-client`);
+      return {
+        success: true,
+        message: response.data.message || 'Successfully left clientele',
+        wasClient: response.data.data?.wasClient
+      };
+    } catch (error: any) {
+      console.error('Error leaving clientele:', error);
+      return {
+        success: false,
+        message: error.response?.data?.message || 'Failed to leave clientele'
+      };
+    }
   }
 };
+
 
 export default buyerApi;
 

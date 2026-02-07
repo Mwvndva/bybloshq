@@ -45,6 +45,10 @@ router.use('/wishlist', wishlistRoutes);
 // Become a client of a seller
 router.post('/sellers/:sellerId/become-client', sellerController.handleBecomeClient);
 
+// Leave a seller's clientele
+router.post('/sellers/:sellerId/leave-client', sellerController.handleLeaveClient);
+
+
 
 
 
