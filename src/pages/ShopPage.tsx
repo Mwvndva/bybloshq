@@ -7,6 +7,7 @@ import { formatCurrency, getImageUrl, cn } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
 import type { Product as ProductType, Seller, Aesthetic } from '@/types';
 import type { Product as SellerApiProduct } from '@/api/sellerApi';
+import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -71,6 +72,9 @@ const ShopPage = () => {
   const [sellerInfo, setSellerInfo] = useState<ShopSeller | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const defaultBanner = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
+
+  // Get buyer authentication status
+  const { isAuthenticated } = useBuyerAuth();
 
   // Get theme classes based on seller's theme
   const getThemeClasses = useCallback(() => {
@@ -328,8 +332,9 @@ const ShopPage = () => {
             status: p.status || 'available',
             createdAt: p.createdAt || new Date().toISOString(),
             updatedAt: p.updatedAt || new Date().toISOString(),
-            aesthetic: isAesthetic((p as any).aesthetic) ? (p as any).aesthetic : 'all'
-          } as ProductType))
+            aesthetic: isAesthetic((p as any).aesthetic) ? (p as any).aesthetic : 'all',
+            seller: sellerData
+          } as unknown as ShopProduct))
           .filter(p => !p.isSold && p.status !== 'sold');
 
         setProducts(availableProducts);
@@ -615,7 +620,7 @@ const ShopPage = () => {
                     <ProductCard
                       product={productWithSeller}
                       seller={sellerForCard}
-                      hideWishlist={true}
+                      hideWishlist={!isAuthenticated}
                       theme={sellerInfo?.theme as Theme}
                     />
                   </div>
