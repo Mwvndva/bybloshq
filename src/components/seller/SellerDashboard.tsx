@@ -358,13 +358,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     setError(null);
 
     try {
-      // Check for seller token first
-      const token = localStorage.getItem('sellerToken');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
       // Fetch products and analytics data in parallel
+      // Auth is handled by HttpOnly cookies, no need to check localStorage
       const [productsData, analyticsData] = await Promise.all([
         sellerApi.getProducts(),
         sellerApi.getAnalytics()

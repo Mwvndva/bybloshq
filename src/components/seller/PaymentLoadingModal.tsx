@@ -112,39 +112,38 @@ export default function PaymentLoadingModal({
                 <div className="flex flex-col items-center justify-center py-10 px-6">
                     {status === 'loading' && (
                         <>
-                            <div className="relative mb-8">
-                                <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl"></div>
-                                <Smartphone className="w-20 h-20 text-blue-400 relative z-10" />
-                                <Loader2 className="w-10 h-10 text-blue-400 animate-spin absolute -top-3 -right-3 z-10" />
+                            <div className="relative mb-6">
+                                <Smartphone className="w-16 h-16 text-blue-400" />
+                                <Loader2 className="w-8 h-8 text-blue-400 animate-spin absolute -top-2 -right-2" />
                             </div>
-                            <h3 className="text-2xl font-bold text-white mb-3 text-center">
+                            <h3 className="text-xl font-semibold text-white mb-2 text-center">
                                 Waiting for Payment
                             </h3>
-                            <p className="text-sm text-gray-400 text-center mb-6 max-w-xs">
-                                STK push sent to <span className="text-blue-400 font-semibold">{clientPhone}</span>
+                            <p className="text-sm text-gray-400 text-center mb-4">
+                                STK push sent to <span className="text-blue-400 font-medium">{clientPhone}</span>
                             </p>
 
-                            <div className="w-full bg-white/5 backdrop-blur-sm rounded-xl p-5 mb-6 border border-white/10">
-                                <div className="flex items-center justify-between mb-3">
-                                    <span className="text-sm font-medium text-gray-300">Time remaining</span>
-                                    <span className="text-2xl font-mono font-bold text-blue-400">{formatTime(countdown)}</span>
+                            <div className="w-full bg-white/5 rounded-lg p-4 mb-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-gray-400">Time remaining</span>
+                                    <span className="text-lg font-mono text-blue-400">{formatTime(countdown)}</span>
                                 </div>
-                                <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
+                                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
                                     <div
-                                        className="bg-gradient-to-r from-blue-500 to-blue-400 h-full transition-all duration-1000 ease-linear"
+                                        className="bg-blue-500 h-full transition-all duration-1000"
                                         style={{ width: `${(countdown / 120) * 100}%` }}
                                     />
                                 </div>
                             </div>
 
-                            <p className="text-xs text-gray-500 text-center mb-6 max-w-sm">
-                                Please enter your M-Pesa PIN on your phone to complete the payment
+                            <p className="text-xs text-gray-500 text-center mb-4">
+                                Enter your M-Pesa PIN to complete payment
                             </p>
 
                             <Button
                                 onClick={handleCancel}
                                 variant="outline"
-                                className="w-full bg-transparent border-white/20 text-gray-300 hover:bg-white/5 hover:text-white"
+                                className="w-full bg-transparent border-white/20 text-gray-300 hover:bg-white/5"
                             >
                                 Cancel
                             </Button>
