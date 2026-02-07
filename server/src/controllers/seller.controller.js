@@ -783,3 +783,43 @@ export const handleBecomeClient = async (req, res) => {
     });
   }
 };
+
+export const handleLeaveClient = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+    const { sellerId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    if (!sellerId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Seller ID is required'
+      });
+    }
+
+    const result = await removeClient(sellerId, userId);
+
+    res.status(200).json({
+      status: 'success',
+      message: 'You have left the clientele',
+      data: {
+        clientCount: result.clientCount,
+        wasClient: result.wasClient
+      }
+    });
+
+  } catch (error) {
+    console.error('Error leaving clientele:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to leave clientele',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
