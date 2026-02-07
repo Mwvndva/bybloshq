@@ -515,164 +515,126 @@ export default function OrdersSection() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      <div className="grid grid-cols-1 gap-6">
-        {displayOrders.map((order) => {
-          // Find the main product image (first item with image)
-          const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
-          const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
+    <div className="space-y-6">
+      {displayOrders.map((order) => {
+        const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
+        const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
 
-          return (
-            <Card key={order.id} className="border-0 overflow-hidden relative group" style={glassCardStyle}>
-              <CardContent className="p-0">
-                <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[280px]">
-
-                  {/* LEFT COLUMN - Order Intelligence (lg:col-span-8) */}
-                  <div className="lg:col-span-8 p-6 flex flex-col justify-between relative z-10">
-
-                    {/* Header */}
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                      <div>
-                        <h3 className="text-2xl font-black tracking-tighter text-white">
-                          #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1 font-medium">
-                          {formatDate(order)}
-                        </p>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
+        return (
+          <Card key={order.id} className="border-0 overflow-hidden" style={glassCardStyle}>
+            <CardContent className="p-0">
+              {/* Header Section */}
+              <div className="p-6 border-b border-white/5">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-xl font-bold text-white">
+                        #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
+                      </h3>
+                      <div className="flex gap-2">
                         {getStatusBadge(order.status)}
                         {getPaymentStatusBadge(order.paymentStatus)}
                       </div>
                     </div>
-
-                    {/* Body - Item Summary */}
-                    <div className="space-y-4 mb-6 flex-grow">
-                      <div className="space-y-3">
-                        {order.items.slice(0, 2).map((item, idx) => (
-                          <div key={idx} className="flex items-center justify-between text-sm p-3 rounded-xl bg-white/5 border border-white/5">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-black/40 flex items-center justify-center border border-white/10 shrink-0 overflow-hidden">
-                                {item.imageUrl ? (
-                                  <img src={getImageUrl(item.imageUrl)} alt={item.name} className="h-full w-full object-cover" />
-                                ) : (
-                                  <Package className="h-5 w-5 text-gray-500" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-bold text-white line-clamp-1">{item.name}</p>
-                                <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
-                              </div>
-                            </div>
-                            <p className="font-medium text-white">
-                              {formatCurrency(item.price * item.quantity, order.currency)}
-                            </p>
-                          </div>
-                        ))}
-                        {order.items.length > 2 && (
-                          <p className="text-xs text-center text-gray-400 font-medium">
-                            + {order.items.length - 2} more items
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Footer - Total & Actions */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-white/10 gap-4">
-                      <div className="flex flex-col">
-                        <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">Total Amount</span>
-                        <span className="text-2xl font-black text-white tracking-tight">
-                          {formatCurrency((order as any).total_amount || order.totalAmount, order.currency)}
-                        </span>
-                      </div>
-
-                      <div className="flex gap-3 w-full sm:w-auto">
-                        <Button
-                          variant="outline"
-                          className="flex-1 sm:flex-none border-white/10 hover:bg-white/5 text-white"
-                          onClick={() => setSelectedOrderForDetails(order)}
-                        >
-                          View Details
-                        </Button>
-
-                        {/* Primary Order Action based on status */}
-                        {order.status === 'DELIVERY_COMPLETE' && (
-                          <Button
-                            className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
-                            onClick={() => handleConfirmReceiptClick(order.id)}
-                          >
-                            Confirm Receipt
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                    <p className="text-sm text-gray-400">{formatDate(order)}</p>
                   </div>
-
-                  {/* RIGHT COLUMN - Brand Stage (lg:col-span-4) */}
-                  <div className="lg:col-span-4 relative h-64 lg:h-auto min-h-[280px] p-1">
-                    <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/40 to-transparent lg:hidden z-10" />
-
-                    {/* Background Image Container */}
-                    <div className="absolute inset-0 lg:m-2 rounded-2xl overflow-hidden">
-                      {mainImage ? (
-                        <img
-                          src={mainImage}
-                          alt="Product"
-                          className="h-full w-full object-cover opacity-60 lg:opacity-100 transition-transform duration-700 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-gray-900 to-black" />
-                      )}
-                      {/* Overlay Gradient for readability */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
-                    </div>
-
-                    {/* Content Overlay */}
-                    <div className="absolute inset-0 p-6 flex flex-col justify-end items-center text-center z-20">
-
-                      <div className="mb-4">
-                        <p className="text-gray-300 text-xs font-medium uppercase tracking-widest mb-1">Seller</p>
-                        <h4 className="text-xl font-black text-white tracking-tight mb-4">
-                          {order.seller?.shopName || order.seller?.name || "Store"}
-                        </h4>
-
-                        {/* Become Client Button */}
-                        {order.seller && (
-                          <Button
-                            className={cn(
-                              "w-full shadow-xl transition-all duration-300 transform active:scale-95",
-                              clientStatus[order.seller.id]
-                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default"
-                                : "bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-black font-black uppercase tracking-wide border-0 shadow-[0_0_20px_rgba(250,204,21,0.3)] animate-pulse hover:animate-none"
-                            )}
-                            onClick={() => !clientStatus[order.seller.id] && handleBecomeClient(order.seller.id, order.seller.name || '')}
-                            disabled={isBecomingClient[order.seller.id] || clientStatus[order.seller.id]}
-                          >
-                            {isBecomingClient[order.seller.id] ? (
-                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                            ) : clientStatus[order.seller.id] ? (
-                              <>
-                                <UserCheck className="mr-2 h-4 w-4" />
-                                Joined Clientele
-                              </>
-                            ) : (
-                              <>
-                                <Users className="mr-2 h-4 w-4" />
-                                Become Client
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total</p>
+                    <p className="text-2xl font-bold text-white">
+                      {formatCurrency((order as any).total_amount || order.totalAmount, order.currency)}
+                    </p>
                   </div>
-
                 </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+              </div>
+
+              {/* Items Section */}
+              <div className="p-6 space-y-3">
+                {order.items.slice(0, 2).map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <div className="h-12 w-12 rounded-lg bg-black/40 overflow-hidden shrink-0 border border-white/10">
+                      {item.imageUrl ? (
+                        <img src={getImageUrl(item.imageUrl)} alt={item.name} className="h-full w-full object-cover" />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <Package className="h-6 w-6 text-gray-500" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-white truncate">{item.name}</p>
+                      <p className="text-sm text-gray-400">Qty: {item.quantity}</p>
+                    </div>
+                    <p className="font-semibold text-white whitespace-nowrap">
+                      {formatCurrency(item.price * item.quantity, order.currency)}
+                    </p>
+                  </div>
+                ))}
+                {order.items.length > 2 && (
+                  <p className="text-sm text-center text-gray-400 py-2">
+                    + {order.items.length - 2} more item{order.items.length - 2 > 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+
+              {/* Footer Section */}
+              <div className="p-6 pt-0 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+                {/* Seller Info */}
+                <div className="flex items-center gap-3">
+                  {mainImage && (
+                    <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-white/10">
+                      <img src={mainImage} alt="Seller" className="h-full w-full object-cover" />
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs text-gray-400">Seller</p>
+                    <p className="font-semibold text-white">
+                      {order.seller?.shopName || order.seller?.name || "Store"}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 text-white"
+                    onClick={() => setSelectedOrderForDetails(order)}
+                  >
+                    View Details
+                  </Button>
+
+                  {order.status === 'DELIVERY_COMPLETE' && (
+                    <Button
+                      className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+                      onClick={() => handleConfirmReceiptClick(order.id)}
+                    >
+                      Confirm Receipt
+                    </Button>
+                  )}
+
+                  {order.seller && !clientStatus[order.seller.id] && (
+                    <Button
+                      size="sm"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                      onClick={() => handleBecomeClient(order.seller.id, order.seller.name || '')}
+                      disabled={isBecomingClient[order.seller.id]}
+                    >
+                      {isBecomingClient[order.seller.id] ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <>
+                          <Users className="mr-2 h-4 w-4" />
+                          Join
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Direct Viewer */}
       {viewingFile && (
