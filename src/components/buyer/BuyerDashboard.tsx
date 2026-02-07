@@ -280,7 +280,7 @@ function BuyerDashboard() {
               </p>
             </div>
 
-            <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} />
+            <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
           </div>
         )}
 

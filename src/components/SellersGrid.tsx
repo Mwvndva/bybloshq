@@ -6,9 +6,10 @@ interface SellersGridProps {
     filterCity: string;
     filterArea: string;
     searchQuery: string;
+    isBuyer?: boolean;
 }
 
-const SellersGrid = ({ filterCity, filterArea, searchQuery }: SellersGridProps) => {
+const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGridProps) => {
     const [sellers, setSellers] = useState<Seller[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -55,7 +56,7 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery }: SellersGridProps) 
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {filteredSellers.map((seller) => (
-                <SellerBrandCard key={seller.id} seller={seller} />
+                <SellerBrandCard key={seller.id} seller={seller} isBuyer={isBuyer} />
             ))}
         </div>
     );
