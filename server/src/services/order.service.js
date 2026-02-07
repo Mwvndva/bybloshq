@@ -255,6 +255,8 @@ class OrderService {
         [OrderStatus.COLLECTION_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
         [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.CLIENT_PAYMENT_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Client orders can only complete or cancel
+        [OrderStatus.DEBT_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Debt orders can only complete or cancel
         [OrderStatus.COMPLETED]: [],
         [OrderStatus.CANCELLED]: [],
         [OrderStatus.FAILED]: []
