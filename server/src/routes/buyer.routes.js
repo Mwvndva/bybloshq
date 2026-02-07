@@ -37,8 +37,13 @@ router.get('/refund-requests/pending', buyerController.getPendingRefundRequests)
 // Mark order as collected
 router.post('/orders/:orderId/collected', buyerController.markOrderAsCollected);
 
+import * as sellerController from '../controllers/seller.controller.js';
+
 // Wishlist routes
 router.use('/wishlist', wishlistRoutes);
+
+// Become a client of a seller
+router.post('/sellers/:sellerId/become-client', sellerController.handleBecomeClient);
 
 
 

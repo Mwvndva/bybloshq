@@ -142,6 +142,7 @@ export interface Seller {
   latitude?: number;
   longitude?: number;
   totalWishlistCount?: number;
+  clientCount?: number;
 }
 
 // Helper function to transform product data from API
@@ -209,7 +210,10 @@ export function transformSeller(seller: any): Seller | null {
     ...(seller.physicalAddress && { physicalAddress: seller.physicalAddress }),
     ...(seller.physical_address && { physicalAddress: seller.physical_address }), // Handle both cases
     ...(seller.latitude && { latitude: seller.latitude }),
-    ...(seller.longitude && { longitude: seller.longitude })
+    ...(seller.longitude && { longitude: seller.longitude }),
+    // Metrics
+    ...(seller.clientCount !== undefined && { clientCount: Number(seller.clientCount) }),
+    ...(seller.client_count !== undefined && { clientCount: Number(seller.client_count) })
   };
 }
 
@@ -581,6 +585,18 @@ export const publicApiService = {
     } catch (error) {
       console.error('Error fetching products by location:', error);
       return [];
+    }
+  },
+
+  // Become a client of a seller
+  becomeClient: async (sellerId: string): Promise<any> => {
+    try {
+      // Use the buyers/sellers/... endpoint we created in buyer.routes.js
+      const response = await publicApi.post(`buyers/sellers/${sellerId}/become-client`);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error becoming client:', error);
+      throw error;
     }
   }
 };

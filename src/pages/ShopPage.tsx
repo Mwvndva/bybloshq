@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeft, Store, Package } from 'lucide-react';
+import { Loader2, ArrowLeft, Store, Package, Users } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 import { formatCurrency, getImageUrl, cn } from '@/lib/utils';
 import { ProductCard } from '@/components/ProductCard';
@@ -43,6 +43,7 @@ interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
   theme?: Theme;         // New field
   city?: string;         // New field
   instagramLink?: string; // New field
+  clientCount?: number;   // New field
   // createdAt is required from Seller
   // updatedAt is optional from Seller
   // All required fields from Seller remain required:
@@ -288,6 +289,7 @@ const ShopPage = () => {
           location: seller.location,
           theme: (seller.theme as Theme) || 'black', // Default to black when unset
           instagramLink: seller.instagramLink || '', // Map from API
+          clientCount: seller.clientCount || seller.client_count || 0,
           // Physical shop fields
           hasPhysicalShop: !!seller.physicalAddress,
           physicalAddress: seller.physicalAddress,
@@ -496,6 +498,13 @@ const ShopPage = () => {
                   </a>
                 </>
               )}
+
+              <div className="h-1 w-1 bg-white/50 rounded-full" />
+              <span className="flex items-center gap-1.5 px-2">
+                <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
+                <span>Clients</span>
+              </span>
             </div>
           </div>
         </div>

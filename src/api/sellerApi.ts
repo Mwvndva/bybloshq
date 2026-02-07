@@ -33,6 +33,8 @@ export interface Seller {
   updatedAt?: string;
   updated_at?: string;
   instagramLink?: string;
+  clientCount?: number;
+  client_count?: number;
 }
 
 export interface Product {

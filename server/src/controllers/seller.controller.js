@@ -14,7 +14,8 @@ import {
   findSellerByShopName,
   isShopNameAvailable,
   findSellerByEmail,
-  updateSeller
+  updateSeller,
+  becomeClient
 } from '../models/seller.model.js';
 
 import {
@@ -734,6 +735,49 @@ export const initiateDebtPayment = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: error.message || 'Failed to initiate payment'
+    });
+  }
+};
+
+// @desc    Become a client of a seller
+// @route   POST /api/buyers/sellers/:sellerId/become-client
+// @access  Private (Buyer)
+export const handleBecomeClient = async (req, res) => {
+  try {
+    const userId = req.user?.id;
+    const { sellerId } = req.params;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    if (!sellerId) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Seller ID is required'
+      });
+    }
+
+    const result = await becomeClient(sellerId, userId);
+
+    res.status(200).json({
+      status: 'success',
+      message: result.alreadyClient ? 'You are already a client of this shop' : 'You have successfully joined the clientele',
+      data: {
+        clientCount: result.clientCount,
+        alreadyClient: result.alreadyClient
+      }
+    });
+
+  } catch (error) {
+    console.error('Error becoming client:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to join clientele',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
