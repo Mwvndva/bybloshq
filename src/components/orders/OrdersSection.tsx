@@ -3,7 +3,6 @@ import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isValid, parseISO } from 'date-fns';
@@ -524,23 +523,23 @@ export default function OrdersSection() {
           <Card key={order.id} className="border-0 overflow-hidden" style={glassCardStyle}>
             <CardContent className="p-0">
               {/* Header Section */}
-              <div className="p-6 border-b border-white/5">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div className="p-4 sm:p-6 border-b border-white/5">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-xl font-bold text-white">
+                    <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                      <h3 className="text-lg sm:text-xl font-bold text-white">
                         #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
                       </h3>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1.5 sm:gap-2">
                         {getStatusBadge(order.status)}
                         {getPaymentStatusBadge(order.paymentStatus)}
                       </div>
                     </div>
-                    <p className="text-sm text-gray-400">{formatDate(order)}</p>
+                    <p className="text-xs sm:text-sm text-gray-400">{formatDate(order)}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total</p>
-                    <p className="text-2xl font-bold text-white">
+                    <p className="text-xl sm:text-2xl font-bold text-white">
                       {formatCurrency((order as any).total_amount || order.totalAmount, order.currency)}
                     </p>
                   </div>
@@ -548,56 +547,57 @@ export default function OrdersSection() {
               </div>
 
               {/* Items Section */}
-              <div className="p-6 space-y-3">
+              <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
                 {order.items.slice(0, 2).map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                    <div className="h-12 w-12 rounded-lg bg-black/40 overflow-hidden shrink-0 border border-white/10">
+                  <div key={idx} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg bg-black/40 overflow-hidden shrink-0 border border-white/10">
                       {item.imageUrl ? (
                         <img src={getImageUrl(item.imageUrl)} alt={item.name} className="h-full w-full object-cover" />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center">
-                          <Package className="h-6 w-6 text-gray-500" />
+                          <Package className="h-4 w-4 sm:h-6 sm:w-6 text-gray-500" />
                         </div>
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-white truncate">{item.name}</p>
-                      <p className="text-sm text-gray-400">Qty: {item.quantity}</p>
+                      <p className="text-sm sm:text-base font-semibold text-white truncate">{item.name}</p>
+                      <p className="text-xs sm:text-sm text-gray-400">Qty: {item.quantity}</p>
                     </div>
-                    <p className="font-semibold text-white whitespace-nowrap">
+                    <p className="text-sm sm:text-base font-semibold text-white whitespace-nowrap">
                       {formatCurrency(item.price * item.quantity, order.currency)}
                     </p>
                   </div>
                 ))}
                 {order.items.length > 2 && (
-                  <p className="text-sm text-center text-gray-400 py-2">
+                  <p className="text-xs sm:text-sm text-center text-gray-400 py-1 sm:py-2">
                     + {order.items.length - 2} more item{order.items.length - 2 > 1 ? 's' : ''}
                   </p>
                 )}
               </div>
 
               {/* Footer Section */}
-              <div className="p-6 pt-0 flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between">
+              <div className="p-4 sm:p-6 pt-0 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
                 {/* Seller Info */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
                   {mainImage && (
-                    <div className="h-10 w-10 rounded-full overflow-hidden border-2 border-white/10">
+                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden border-2 border-white/10">
                       <img src={mainImage} alt="Seller" className="h-full w-full object-cover" />
                     </div>
                   )}
                   <div>
                     <p className="text-xs text-gray-400">Seller</p>
-                    <p className="font-semibold text-white">
+                    <p className="text-sm sm:text-base font-semibold text-white">
                       {order.seller?.shopName || order.seller?.name || "Store"}
                     </p>
                   </div>
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3">
+                <div className="flex gap-2 sm:gap-3">
                   <Button
                     variant="outline"
-                    className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 text-white"
+                    size="sm"
+                    className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 text-white text-xs sm:text-sm"
                     onClick={() => setSelectedOrderForDetails(order)}
                   >
                     View Details
@@ -605,7 +605,8 @@ export default function OrdersSection() {
 
                   {order.status === 'DELIVERY_COMPLETE' && (
                     <Button
-                      className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+                      size="sm"
+                      className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm"
                       onClick={() => handleConfirmReceiptClick(order.id)}
                     >
                       Confirm Receipt
@@ -615,15 +616,15 @@ export default function OrdersSection() {
                   {order.seller && !clientStatus[order.seller.id] && (
                     <Button
                       size="sm"
-                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-xs sm:text-sm"
                       onClick={() => handleBecomeClient(order.seller.id, order.seller.name || '')}
                       disabled={isBecomingClient[order.seller.id]}
                     >
                       {isBecomingClient[order.seller.id] ? (
-                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
                       ) : (
                         <>
-                          <Users className="mr-2 h-4 w-4" />
+                          <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
                           Join
                         </>
                       )}
@@ -695,150 +696,113 @@ export default function OrdersSection() {
         </DialogContent>
       </Dialog>
 
-      {/* Full Order Details Sheet */}
-      <Sheet open={!!selectedOrderForDetails} onOpenChange={(open) => !open && setSelectedOrderForDetails(null)}>
-        <SheetContent className="w-full sm:max-w-md bg-black/95 border-l border-white/10 text-white overflow-y-auto">
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrderForDetails} onOpenChange={(open) => !open && setSelectedOrderForDetails(null)}>
+        <DialogContent className="sm:max-w-2xl bg-black/95 border border-white/10 text-white">
           {selectedOrderForDetails && (
             <>
-              <SheetHeader className="text-left mb-6">
-                <Badge variant="outline" className="w-fit mb-2 border-white/20 text-white/70">
-                  Order Details
-                </Badge>
-                <SheetTitle className="text-2xl font-black text-white">
-                  Order #{selectedOrderForDetails.orderNumber || selectedOrderForDetails.id}
-                </SheetTitle>
-                <SheetDescription className="text-gray-400">
-                  Placed on {formatDate(selectedOrderForDetails)}
-                </SheetDescription>
-              </SheetHeader>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold text-white">
+                  Order #{selectedOrderForDetails.orderNumber || selectedOrderForDetails.id.slice(0, 8).toUpperCase()}
+                </DialogTitle>
+                <DialogDescription className="text-gray-400">
+                  {formatDate(selectedOrderForDetails)}
+                </DialogDescription>
+              </DialogHeader>
 
-              <div className="space-y-8">
-                {/* Status Section */}
-                <div className="space-y-3">
-                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Status</h4>
-                  <div className="flex gap-2">
-                    {getStatusBadge(selectedOrderForDetails.status)}
-                    {getPaymentStatusBadge(selectedOrderForDetails.paymentStatus)}
-                  </div>
-                </div>
-
-                {/* Items List */}
-                <div className="space-y-4">
-                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Items ({selectedOrderForDetails.items.length})</h4>
-                  <div className="space-y-3">
-                    {selectedOrderForDetails.items.map((item, idx) => (
-                      <div key={idx} className="flex flex-col gap-3 p-4 rounded-xl bg-white/5 border border-white/5">
-                        <div className="flex gap-4">
-                          <div className="h-16 w-16 rounded-lg bg-black/40 overflow-hidden shrink-0 border border-white/10">
-                            {item.imageUrl ? (
-                              <img src={getImageUrl(item.imageUrl)} alt={item.name} className="h-full w-full object-cover" />
-                            ) : (
-                              <Package className="h-8 w-8 text-gray-600 m-auto mt-4" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-bold text-white">{item.name}</p>
-                            <p className="text-sm text-gray-400 mt-1">
-                              {item.quantity} x {formatCurrency(item.price, selectedOrderForDetails.currency)}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Download Button Logic (Restored) */}
-                        {(() => {
-                          const isDigitalProduct = item.isDigital || item.productType === 'digital' || (item as any).is_digital;
-                          const isPaymentComplete = ['success', 'completed', 'paid'].includes(selectedOrderForDetails.paymentStatus?.toLowerCase() || '') || selectedOrderForDetails.status === 'COMPLETED';
-
-                          return isDigitalProduct && isPaymentComplete ? (
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              className="w-full mt-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20"
-                              onClick={async () => {
-                                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-                                if (!isStandalone) {
-                                  setViewingFile({
-                                    orderId: selectedOrderForDetails.id,
-                                    productId: item.productId,
-                                    fileName: item.name
-                                  });
-                                  return;
-                                }
-                                try {
-                                  toast.loading('Starting download...', { id: 'download-sheet' });
-                                  await buyerApi.downloadDigitalProduct(selectedOrderForDetails.id, item.productId);
-                                  toast.success('Download started', { id: 'download-sheet' });
-                                } catch (error) {
-                                  toast.error('Failed to download file', { id: 'download-sheet' });
-                                }
-                              }}
-                            >
-                              <FileText className="mr-2 h-4 w-4" />
-                              Access Content
-                            </Button>
-                          ) : null;
-                        })()}
+              <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+                {/* Items */}
+                {selectedOrderForDetails.items.map((item, idx) => (
+                  <div key={idx} className="space-y-4">
+                    {/* Product Image - only show if available */}
+                    {item.imageUrl && (
+                      <div className="w-full h-48 rounded-lg overflow-hidden bg-black/40">
+                        <img
+                          src={getImageUrl(item.imageUrl)}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
-                    ))}
+                    )}
+
+                    {/* Product Details */}
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="text-lg font-bold text-white">{item.name}</h3>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Quantity: {item.quantity}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                        <span className="text-gray-400">Price</span>
+                        <span className="text-xl font-bold text-white">
+                          {formatCurrency(item.price * item.quantity, selectedOrderForDetails.currency)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {idx < selectedOrderForDetails.items.length - 1 && (
+                      <div className="border-t border-white/10 pt-4" />
+                    )}
                   </div>
+                ))}
+
+                {/* Shop Information */}
+                <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-2">
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">Shop Details</p>
+                  {selectedOrderForDetails.seller?.shopName && (
+                    <p className="font-semibold text-white">
+                      {selectedOrderForDetails.seller.shopName}
+                    </p>
+                  )}
+                  {selectedOrderForDetails.shippingAddress && (
+                    <p className="text-sm text-gray-300">
+                      {selectedOrderForDetails.shippingAddress.address}
+                      {selectedOrderForDetails.shippingAddress.city && `, ${selectedOrderForDetails.shippingAddress.city}`}
+                    </p>
+                  )}
                 </div>
 
-                {/* Shipping Info */}
-                {selectedOrderForDetails.shippingAddress && (
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Shipping Details</h4>
-                    <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-sm space-y-2 text-gray-300">
-                      <p><strong className="text-white">To:</strong> {selectedOrderForDetails.customer.name}</p>
-                      <p><strong className="text-white">Phone:</strong> {selectedOrderForDetails.customer.phone}</p>
-                      <p className="border-t border-white/10 pt-2 mt-2">
-                        {selectedOrderForDetails.shippingAddress.address}, {selectedOrderForDetails.shippingAddress.city}
-                      </p>
-                    </div>
-                  </div>
-                )}
+                {/* Total */}
+                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <span className="text-lg font-semibold text-white">Total</span>
+                  <span className="text-2xl font-bold text-emerald-400">
+                    {formatCurrency((selectedOrderForDetails as any).total_amount || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
+                  </span>
+                </div>
 
-                {/* Total Summary */}
-                <div className="border-t border-white/10 pt-6">
-                  <div className="flex justify-between items-center mb-6">
-                    <span className="text-lg font-bold text-white">Total Paid</span>
-                    <span className="text-2xl font-black text-emerald-400">
-                      {formatCurrency((selectedOrderForDetails as any).total_amount || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
-                    </span>
-                  </div>
-
-                  {/* Action Buttons in Sheet */}
-                  <div className="space-y-3">
-                    {selectedOrderForDetails.status === 'PENDING' && (
-                      <Button
-                        variant="destructive"
-                        className="w-full"
-                        onClick={() => {
-                          handleCancelOrderClick(selectedOrderForDetails.id);
-                          setSelectedOrderForDetails(null);
-                        }}
-                      >
-                        Cancel Order
-                      </Button>
-                    )}
-
-                    {selectedOrderForDetails.status === 'DELIVERY_COMPLETE' && (
-                      <Button
-                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
-                        onClick={() => {
-                          handleConfirmReceiptClick(selectedOrderForDetails.id);
-                          setSelectedOrderForDetails(null);
-                        }}
-                      >
-                        Confirm Receipt
-                      </Button>
-                    )}
-                  </div>
+                {/* Status Badges */}
+                <div className="flex gap-2">
+                  {getStatusBadge(selectedOrderForDetails.status)}
+                  {getPaymentStatusBadge(selectedOrderForDetails.paymentStatus)}
                 </div>
               </div>
+
+              <DialogFooter className="gap-2">
+                {selectedOrderForDetails.status === 'DELIVERY_COMPLETE' && (
+                  <Button
+                    className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
+                    onClick={() => {
+                      handleConfirmReceiptClick(selectedOrderForDetails.id);
+                      setSelectedOrderForDetails(null);
+                    }}
+                  >
+                    Confirm Receipt
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  className="border-white/20 hover:bg-white/10 text-white"
+                  onClick={() => setSelectedOrderForDetails(null)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
             </>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirm Receipt Dialog */}
       <Dialog open={showReceiptDialog} onOpenChange={setShowReceiptDialog}>
