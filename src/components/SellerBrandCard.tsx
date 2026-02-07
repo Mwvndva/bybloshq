@@ -1,6 +1,6 @@
 
 import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
+import { Heart, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Seller } from '@/api/publicApi';
 
@@ -29,6 +29,16 @@ const SellerBrandCard = ({ seller, className }: SellerBrandCardProps) => {
                 // Fallback gradient if no banner
                 <div className={`h-full w-full bg-gradient-to-br from-${themeColor === 'white' ? 'gray-200' : 'gray-800'} to-${themeColor === 'white' ? 'gray-400' : 'black'}`} />
             )}
+
+            {/* Client Count Indicator - Top Left */}
+            <div className="absolute top-3 left-3 z-10">
+                <div className="flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 shadow-sm backdrop-blur-sm">
+                    <Users className="h-3 w-3 text-black fill-black/20" />
+                    <span className="text-[10px] font-bold text-black">
+                        {seller.clientCount || 0}
+                    </span>
+                </div>
+            </div>
 
             {/* Wishlist Indicator - Top Right */}
             <div className="absolute top-3 right-3 z-10">

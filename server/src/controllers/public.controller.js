@@ -250,6 +250,7 @@ export const getSellers = async (req, res) => {
         s.shop_name, 
         s.banner_image,
         s.theme,
+        s.client_count,
         s.created_at,
         COUNT(w.id) as total_wishlist_count
       FROM sellers s
@@ -269,6 +270,7 @@ export const getSellers = async (req, res) => {
       bannerUrl: row.banner_image, // Mapped from banner_image
       avatarUrl: null, // avatar_url not available in sellers table
       themeColor: row.theme, // Mapped from theme
+      clientCount: row.client_count || 0,
       totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
       createdAt: row.created_at
     }));

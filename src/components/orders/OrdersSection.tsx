@@ -51,9 +51,10 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Handshake, FileText } from 'lucide-react';
+import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Handshake, FileText, Users, UserCheck } from 'lucide-react';
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 import buyerApi from '@/api/buyerApi';
+import { publicApiService } from '@/api/publicApi';
 import { toast } from 'sonner';
 import DirectBybxViewer from '@/components/DirectBybxViewer';
 
@@ -408,6 +409,32 @@ export default function OrdersSection() {
     }
   };
 
+  const [clientStatus, setClientStatus] = useState<Record<string, boolean>>({});
+  const [isBecomingClient, setIsBecomingClient] = useState<Record<string, boolean>>({});
+
+  const handleBecomeClient = async (sellerId: string, sellerName: string) => {
+    if (!sellerId) return;
+
+    setIsBecomingClient(prev => ({ ...prev, [sellerId]: true }));
+    try {
+      // @ts-ignore - publicApiService is correctly imported but TS might complain about path aliases sometimes
+      const result = await publicApiService.becomeClient(sellerId);
+
+      setClientStatus(prev => ({ ...prev, [sellerId]: true }));
+
+      if (result.data?.alreadyClient) {
+        toast.info(`You are already a client of ${sellerName}`);
+      } else {
+        toast.success(`You have successfully joined ${sellerName}'s clientele!`);
+      }
+    } catch (error: any) {
+      console.error('Error becoming client:', error);
+      toast.error(error.message || 'Failed to join clientele');
+    } finally {
+      setIsBecomingClient(prev => ({ ...prev, [sellerId]: false }));
+    }
+  };
+
 
   // Always use real data from the API
   const displayOrders = orders;
@@ -647,6 +674,36 @@ export default function OrdersSection() {
                       <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
                       <span className="hidden sm:inline">Mark as Completed</span>
                       <span className="sm:hidden">Done</span>
+                    </Button>
+                  )}
+
+                  {/* Become Client Button */}
+                  {order.seller && (
+                    <Button
+                      size="sm"
+                      className={`w-full sm:w-auto lg:w-full justify-center sm:justify-center ${clientStatus[order.seller.id]
+                        ? 'bg-gray-800 text-gray-400 cursor-default border border-gray-700'
+                        : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-black uppercase'
+                        } py-3 h-auto rounded-xl shadow-sm transition-all duration-200`}
+                      onClick={() => !clientStatus[order.seller.id] && handleBecomeClient(order.seller.id, order.seller.fullName || order.seller.shopName || 'Seller')}
+                      disabled={isBecomingClient[order.seller.id] || clientStatus[order.seller.id]}
+                    >
+                      {isBecomingClient[order.seller.id] ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Joining...
+                        </>
+                      ) : clientStatus[order.seller.id] ? (
+                        <>
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          Joined Clientele
+                        </>
+                      ) : (
+                        <>
+                          <Users className="mr-2 h-4 w-4" />
+                          Become Client
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>

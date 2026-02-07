@@ -346,3 +346,43 @@ export const updatePassword = async (email, newPassword) => {
   );
   return true;
 };
+
+export const becomeClient = async (sellerId, userId) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // 1. Check if relationship already exists
+    const check = await client.query(
+      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
+
+    if (check.rowCount > 0) {
+      // Already a client, just return current count or do nothing
+      await client.query('ROLLBACK');
+      const countResult = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
+      return { clientCount: countResult.rows[0]?.client_count || 0, alreadyClient: true };
+    }
+
+    // 2. Insert into seller_clients
+    await client.query(
+      'INSERT INTO seller_clients (seller_id, user_id) VALUES ($1, $2)',
+      [sellerId, userId]
+    );
+
+    // 3. Increment client_count in sellers
+    const updateResult = await client.query(
+      'UPDATE sellers SET client_count = COALESCE(client_count, 0) + 1 WHERE id = $1 RETURNING client_count',
+      [sellerId]
+    );
+
+    await client.query('COMMIT');
+    return { clientCount: updateResult.rows[0].client_count, alreadyClient: false };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
