@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Loader2, CheckCircle2, XCircle, Smartphone } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader2, CheckCircle2, XCircle, Smartphone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PaymentLoadingModalProps {
@@ -46,24 +46,32 @@ export default function PaymentLoadingModal({
         return () => clearInterval(timer);
     }, [isOpen, onFailure]);
 
-    // Poll for payment status (you can implement this based on your backend)
+    // Poll for payment status
     useEffect(() => {
         if (!isOpen || !paymentReference) return;
 
         const pollInterval = setInterval(async () => {
             try {
-                // TODO: Replace with actual API call to check payment status
-                // const response = await fetch(`/api/payments/status/${paymentReference}`);
-                // const data = await response.json();
-                // if (data.status === 'completed') {
-                //   setStatus('success');
-                //   onSuccess?.();
-                //   clearInterval(pollInterval);
-                // } else if (data.status === 'failed') {
-                //   setStatus('failed');
-                //   onFailure?.();
-                //   clearInterval(pollInterval);
-                // }
+                // Check payment status via API
+                const response = await fetch(`/api/payments/status/${paymentReference}`);
+                const data = await response.json();
+
+                if (data.status === 'success' && data.data) {
+                    const paymentStatus = data.data.status;
+
+                    // Check if payment completed
+                    if (paymentStatus === 'completed' || paymentStatus === 'success') {
+                        setStatus('success');
+                        onSuccess?.();
+                        clearInterval(pollInterval);
+                    }
+                    // Check if payment failed
+                    else if (paymentStatus === 'failed') {
+                        setStatus('failed');
+                        onFailure?.();
+                        clearInterval(pollInterval);
+                    }
+                }
             } catch (error) {
                 console.error('Error polling payment status:', error);
             }
@@ -78,54 +86,86 @@ export default function PaymentLoadingModal({
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    const handleCancel = () => {
+        if (status === 'loading') {
+            // User cancelled while waiting
+            setStatus('failed');
+            onFailure?.();
+        }
+        onClose();
+    };
+
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md bg-[#0a0a0a] border-white/10">
-                <div className="flex flex-col items-center justify-center py-8 px-4">
+        <Dialog open={isOpen} onOpenChange={handleCancel}>
+            <DialogContent className="sm:max-w-md bg-[#0a0a0a] border-white/10 p-0 gap-0">
+                {/* Close button */}
+                {status !== 'loading' && (
+                    <button
+                        onClick={onClose}
+                        className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground z-10"
+                    >
+                        <X className="h-4 w-4 text-white" />
+                        <span className="sr-only">Close</span>
+                    </button>
+                )}
+
+                <div className="flex flex-col items-center justify-center py-10 px-6">
                     {status === 'loading' && (
                         <>
-                            <div className="relative mb-6">
-                                <Smartphone className="w-16 h-16 text-blue-400" />
-                                <Loader2 className="w-8 h-8 text-blue-400 animate-spin absolute -top-2 -right-2" />
+                            <div className="relative mb-8">
+                                <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-xl"></div>
+                                <Smartphone className="w-20 h-20 text-blue-400 relative z-10" />
+                                <Loader2 className="w-10 h-10 text-blue-400 animate-spin absolute -top-3 -right-3 z-10" />
                             </div>
-                            <h3 className="text-xl font-semibold text-white mb-2 text-center">
+                            <h3 className="text-2xl font-bold text-white mb-3 text-center">
                                 Waiting for Payment
                             </h3>
-                            <p className="text-sm text-gray-400 text-center mb-4">
-                                STK push sent to <span className="text-white font-medium">{clientPhone}</span>
+                            <p className="text-sm text-gray-400 text-center mb-6 max-w-xs">
+                                STK push sent to <span className="text-blue-400 font-semibold">{clientPhone}</span>
                             </p>
-                            <div className="w-full bg-white/5 rounded-lg p-4 mb-4">
-                                <div className="flex items-center justify-between mb-2">
-                                    <span className="text-sm text-gray-400">Time remaining</span>
-                                    <span className="text-lg font-mono text-blue-400">{formatTime(countdown)}</span>
+
+                            <div className="w-full bg-white/5 backdrop-blur-sm rounded-xl p-5 mb-6 border border-white/10">
+                                <div className="flex items-center justify-between mb-3">
+                                    <span className="text-sm font-medium text-gray-300">Time remaining</span>
+                                    <span className="text-2xl font-mono font-bold text-blue-400">{formatTime(countdown)}</span>
                                 </div>
-                                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                                <div className="w-full bg-white/10 rounded-full h-2.5 overflow-hidden">
                                     <div
-                                        className="bg-blue-500 h-full transition-all duration-1000"
+                                        className="bg-gradient-to-r from-blue-500 to-blue-400 h-full transition-all duration-1000 ease-linear"
                                         style={{ width: `${(countdown / 120) * 100}%` }}
                                     />
                                 </div>
                             </div>
-                            <p className="text-xs text-gray-500 text-center">
+
+                            <p className="text-xs text-gray-500 text-center mb-6 max-w-sm">
                                 Please enter your M-Pesa PIN on your phone to complete the payment
                             </p>
+
+                            <Button
+                                onClick={handleCancel}
+                                variant="outline"
+                                className="w-full bg-transparent border-white/20 text-gray-300 hover:bg-white/5 hover:text-white"
+                            >
+                                Cancel
+                            </Button>
                         </>
                     )}
 
                     {status === 'success' && (
                         <>
-                            <div className="mb-6">
-                                <CheckCircle2 className="w-20 h-20 text-green-400" />
+                            <div className="mb-8 relative">
+                                <div className="absolute inset-0 bg-green-500/20 rounded-full blur-xl"></div>
+                                <CheckCircle2 className="w-24 h-24 text-green-400 relative z-10" />
                             </div>
-                            <h3 className="text-2xl font-semibold text-white mb-2 text-center">
+                            <h3 className="text-3xl font-bold text-white mb-3 text-center">
                                 Payment Successful!
                             </h3>
-                            <p className="text-sm text-gray-400 text-center mb-6">
+                            <p className="text-sm text-gray-400 text-center mb-8 max-w-sm">
                                 The order has been completed and your balance has been updated.
                             </p>
                             <Button
                                 onClick={onClose}
-                                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-6 text-base"
                             >
                                 Done
                             </Button>
@@ -134,18 +174,19 @@ export default function PaymentLoadingModal({
 
                     {status === 'failed' && (
                         <>
-                            <div className="mb-6">
-                                <XCircle className="w-20 h-20 text-red-400" />
+                            <div className="mb-8 relative">
+                                <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl"></div>
+                                <XCircle className="w-24 h-24 text-red-400 relative z-10" />
                             </div>
-                            <h3 className="text-2xl font-semibold text-white mb-2 text-center">
+                            <h3 className="text-3xl font-bold text-white mb-3 text-center">
                                 Payment Timeout
                             </h3>
-                            <p className="text-sm text-gray-400 text-center mb-6">
-                                The payment request has expired. Please try again.
+                            <p className="text-sm text-gray-400 text-center mb-8 max-w-sm">
+                                The payment request has expired. You can send a new prompt if needed.
                             </p>
                             <Button
                                 onClick={onClose}
-                                className="w-full bg-white/10 hover:bg-white/20 text-white"
+                                className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-6 text-base border border-white/20"
                             >
                                 Close
                             </Button>
