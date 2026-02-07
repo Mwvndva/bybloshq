@@ -692,7 +692,7 @@ export const initiateDebtPayment = async (req, res) => {
 
     // 1. Fetch Debt & Client Details
     const { rows: debts } = await pool.query(
-      `SELECT cd.*, c.phone as client_phone, c.full_name as client_name, p.name as product_name
+      `SELECT cd.*, c.phone as client_phone, c.full_name as client_name, p.name as product_name, p.id as product_id, p.price
        FROM client_debts cd
        JOIN clients c ON cd.client_id = c.id
        JOIN products p ON cd.product_id = p.id
@@ -702,61 +702,31 @@ export const initiateDebtPayment = async (req, res) => {
 
     const debt = debts[0];
     if (!debt) return res.status(404).json({ status: 'error', message: 'Debt record not found or already paid' });
-
     if (!debt.client_phone) return res.status(400).json({ status: 'error', message: 'Client has no phone number associated' });
 
-    // 2. Create Payment Record (Pending)
-    const { rows: payments } = await pool.query(
-      `INSERT INTO payments 
-       (amount, mobile_payment, status, provider_reference, api_ref, invoice_id, email, payment_method, metadata, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $5, $6, 'mpesa', $7, NOW(), NOW())
-       RETURNING id`,
-      [
-        debt.amount,
-        debt.client_phone,
-        'pending',
-        null, // Provider ref will be updated after initiation
-        `DEBT-${debt.id}-${Date.now()}`,
-        `client_${debt.client_id}@byblos.local`,
-        JSON.stringify({
-          type: 'debt',
-          debt_id: debt.id,
-          seller_id: sellerId,
-          client_name: debt.client_name,
-          product_name: debt.product_name
-        })
-      ]
-    );
-    const paymentId = payments[0].id;
+    // 2. Create Client Order (reuse existing logic)
+    const { default: OrderService } = await import('../services/order.service.js');
 
-    // 3. Import PaymentService dynamically (to avoid circular deps if any)
-    const { default: paymentService } = await import('../services/payment.service.js');
+    const orderData = {
+      clientName: debt.client_name,
+      clientPhone: debt.client_phone,
+      paymentType: 'stk', // STK Push
+      items: [{
+        productId: debt.product_id.toString(),
+        name: debt.product_name,
+        quantity: debt.quantity,
+        price: debt.price
+      }],
+      skipInventoryDecrement: true, // Inventory already decremented when debt was created
+      debtId: parseInt(debtId, 10) // Link order to debt
+    };
 
-    // 4. Initiate STK Push
-    const initiationResult = await paymentService.initiatePayment({
-      amount: debt.amount,
-      phone: debt.client_phone,
-      narrative: `Pay Debt: ${debt.product_name}`,
-      firstName: debt.client_name.split(' ')[0] || 'Client',
-      lastName: debt.client_name.split(' ').slice(1).join(' ') || 'Customer',
-      billing_address: 'Nairobi',
-      email: 'debt-payment@byblos.com', // Placeholder
-      invoice_id: `DEBT-${debt.id}`
-    });
-
-    // 5. Update Payment with Provider Reference
-    await pool.query(
-      'UPDATE payments SET provider_reference = $1 WHERE id = $2',
-      [initiationResult.reference, paymentId]
-    );
+    const result = await OrderService.createClientOrder(sellerId, orderData);
 
     res.status(200).json({
       status: 'success',
       message: 'STK Push initiated successfully',
-      data: {
-        paymentId,
-        reference: initiationResult.reference
-      }
+      data: result
     });
 
   } catch (error) {
