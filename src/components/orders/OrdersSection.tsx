@@ -3,6 +3,7 @@ import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isValid, parseISO } from 'date-fns';
@@ -57,7 +58,7 @@ import buyerApi from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
 import { toast } from 'sonner';
 import DirectBybxViewer from '@/components/DirectBybxViewer';
-import { getImageUrl } from '@/lib/utils';
+import { getImageUrl, cn } from '@/lib/utils';
 
 const glassCardStyle: React.CSSProperties = {
   background: 'rgba(20, 20, 20, 0.7)',
@@ -231,6 +232,7 @@ export default function OrdersSection() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
+  const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<Order | null>(null);
 
   // Direct View State
   const [viewingFile, setViewingFile] = useState<{
@@ -514,223 +516,163 @@ export default function OrdersSection() {
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {displayOrders.map((order) => (
-        <Card key={order.id} className="border-0 transition-all duration-300 transform hover:-translate-y-1" style={glassCardStyle}>
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
-              {/* Order Information Section */}
-              <div className="space-y-3 sm:space-y-4 flex-1">
-                {/* Order Header */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div>
-                    <h3 className="font-semibold text-base sm:text-lg text-white">Order #{order.orderNumber || order.id}</h3>
-                    <p className="text-xs sm:text-sm text-gray-300">{formatDate(order)}</p>
-                  </div>
-                  {/* Status Badges */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 self-start sm:self-auto">
-                    {getStatusBadge(order.status)}
-                    {getPaymentStatusBadge(order.paymentStatus)}
-                  </div>
-                </div>
+      <div className="grid grid-cols-1 gap-6">
+        {displayOrders.map((order) => {
+          // Find the main product image (first item with image)
+          const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
+          const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
 
-                {/* Products Section */}
-                <div>
-                  <h4 className="text-sm sm:text-base font-semibold text-white mb-3">Products:</h4>
-                  <ul className="space-y-2">
-                    {order.items.map((item) => (
-                      <li key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-gray-200 bg-gray-900/50 rounded-lg px-3 py-2 border border-gray-800">
-                        <div className="flex items-center">
-                          <div className="h-10 w-10 rounded-md overflow-hidden bg-gray-800 mr-3 flex-shrink-0 border border-gray-700">
-                            {item.imageUrl ? (
-                              <img
-                                src={getImageUrl(item.imageUrl)}
-                                alt={item.name}
-                                className="h-full w-full object-cover"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=100&h=100&fit=crop';
-                                }}
-                              />
-                            ) : (
-                              <div className="h-full w-full flex items-center justify-center text-gray-500">
-                                <Package className="h-5 w-5" />
+          return (
+            <Card key={order.id} className="border-0 overflow-hidden relative group" style={glassCardStyle}>
+              <CardContent className="p-0">
+                <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[280px]">
+
+                  {/* LEFT COLUMN - Order Intelligence (lg:col-span-8) */}
+                  <div className="lg:col-span-8 p-6 flex flex-col justify-between relative z-10">
+
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                      <div>
+                        <h3 className="text-2xl font-black tracking-tighter text-white">
+                          #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mt-1 font-medium">
+                          {formatDate(order)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {getStatusBadge(order.status)}
+                        {getPaymentStatusBadge(order.paymentStatus)}
+                      </div>
+                    </div>
+
+                    {/* Body - Item Summary */}
+                    <div className="space-y-4 mb-6 flex-grow">
+                      <div className="space-y-3">
+                        {order.items.slice(0, 2).map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm p-3 rounded-xl bg-white/5 border border-white/5">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-black/40 flex items-center justify-center border border-white/10 shrink-0 overflow-hidden">
+                                {item.imageUrl ? (
+                                  <img src={getImageUrl(item.imageUrl)} alt={item.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  <Package className="h-5 w-5 text-gray-500" />
+                                )}
                               </div>
-                            )}
+                              <div>
+                                <p className="font-bold text-white line-clamp-1">{item.name}</p>
+                                <p className="text-xs text-gray-400">Qty: {item.quantity}</p>
+                              </div>
+                            </div>
+                            <p className="font-medium text-white">
+                              {formatCurrency(item.price * item.quantity, order.currency)}
+                            </p>
                           </div>
-                          <div>
-                            <div className="font-semibold text-white">{item.name}</div>
-                            <div className="text-gray-400 text-xs mt-0.5">Quantity: {item.quantity}</div>
-                          </div>
-                          {(item.isDigital || item.productType === 'digital' || (item as any).is_digital) && (
-                            <Badge variant="outline" className="ml-2 text-xs border-gray-600 text-gray-200 bg-gray-800">
-                              <FileText className="h-3 w-3 mr-1" />
-                              Digital
-                            </Badge>
-                          )}
-                          {(item.productType === 'service' || (item as any).isService) && (
-                            <Badge variant="outline" className="ml-2 text-xs border-purple-500/40 text-purple-200 bg-purple-900/30">
-                              <Handshake className="h-3 w-3 mr-1" />
-                              Service
-                            </Badge>
-                          )}
-                        </div>
-                        {(() => {
-                          const isDigitalProduct = item.isDigital || item.productType === 'digital' || (item as any).is_digital;
-                          const isPaymentComplete = ['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '') || order.status === 'COMPLETED';
+                        ))}
+                        {order.items.length > 2 && (
+                          <p className="text-xs text-center text-gray-400 font-medium">
+                            + {order.items.length - 2} more items
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                          // Debug logging for order 63
-                          if (String(order.id) === '63') {
-                            console.log('Download button check for order 63:', {
-                              itemName: item.name,
-                              isDigital: item.isDigital,
-                              productType: item.productType,
-                              isDigitalProduct,
-                              paymentStatus: order.paymentStatus,
-                              orderStatus: order.status,
-                              isPaymentComplete,
-                              shouldShowButton: isDigitalProduct && isPaymentComplete
-                            });
-                          }
+                    {/* Footer - Total & Actions */}
+                    <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-white/10 gap-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-400 uppercase tracking-wider font-bold">Total Amount</span>
+                        <span className="text-2xl font-black text-white tracking-tight">
+                          {formatCurrency((order as any).total_amount || order.totalAmount, order.currency)}
+                        </span>
+                      </div>
 
-                          return isDigitalProduct && isPaymentComplete ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="mt-2 sm:mt-0 text-blue-300 hover:text-blue-200 hover:bg-blue-900/30 h-8"
-                              onClick={async () => {
-                                // Check if running in browser (not standalone PWA/App)
-                                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-                                const isBrowser = !isStandalone;
+                      <div className="flex gap-3 w-full sm:w-auto">
+                        <Button
+                          variant="outline"
+                          className="flex-1 sm:flex-none border-white/10 hover:bg-white/5 text-white"
+                          onClick={() => setSelectedOrderForDetails(order)}
+                        >
+                          View Details
+                        </Button>
 
-                                if (isBrowser) {
-                                  setViewingFile({
-                                    orderId: order.id,
-                                    productId: item.productId,
-                                    fileName: item.name
-                                  });
-                                  return;
-                                }
+                        {/* Primary Order Action based on status */}
+                        {order.status === 'DELIVERY_COMPLETE' && (
+                          <Button
+                            className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
+                            onClick={() => handleConfirmReceiptClick(order.id)}
+                          >
+                            Confirm Receipt
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
-                                try {
-                                  toast.loading('Starting download...', { id: 'download-toast' });
-                                  await buyerApi.downloadDigitalProduct(order.id, item.productId);
-                                  toast.success('Download started', { id: 'download-toast' });
-                                } catch (error) {
-                                  console.error('Download failed:', error);
-                                  toast.error('Failed to download file', { id: 'download-toast' });
-                                }
-                              }}
-                            >
-                              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                              </svg>
-                              Download
-                            </Button>
-                          ) : null;
-                        })()}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
+                  {/* RIGHT COLUMN - Brand Stage (lg:col-span-4) */}
+                  <div className="lg:col-span-4 relative h-64 lg:h-auto min-h-[280px] p-1">
+                    <div className="absolute inset-0 bg-gradient-to-l from-black/80 via-black/40 to-transparent lg:hidden z-10" />
 
-              {/* Price and Actions Section */}
-              <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
-                {/* Total Amount */}
-                <div className="flex-1 sm:flex-none">
-                  <p className="font-bold text-lg sm:text-xl text-white">
-                    {formatCurrency(
-                      // Handle both snake_case and camelCase
-                      (order as any).total_amount !== undefined
-                        ? (order as any).total_amount
-                        : order.totalAmount,
-                      order.currency || 'KSH'
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-300">Total Amount</p>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="w-full sm:w-auto lg:w-full space-y-2">
-                  {order.status === 'PENDING' && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-900/30 border-red-500/40 hover:border-red-500/60 text-xs sm:text-sm font-semibold transition-all duration-200"
-                      onClick={() => handleCancelOrderClick(order.id)}
-                    >
-                      <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      Cancel Order
-                    </Button>
-                  )}
-                  {order.status === 'DELIVERY_COMPLETE' && (
-                    <Button
-                      size="sm"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-                      onClick={() => handleConfirmReceiptClick(order.id)}
-                    >
-                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      <span className="hidden sm:inline">Confirm Receipt</span>
-                      <span className="sm:hidden">Confirm Receipt</span>
-                    </Button>
-                  )}
-                  {order.status === 'COLLECTION_PENDING' && (
-                    <Button
-                      size="sm"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white text-xs sm:text-sm font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-                      onClick={() => handleCollectionClick(order.id)}
-                    >
-                      <Package className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      <span className="hidden sm:inline">Mark as Collected</span>
-                      <span className="sm:hidden">Collected</span>
-                    </Button>
-                  )}
-                  {order.status === 'CONFIRMED' && (
-                    <Button
-                      size="sm"
-                      className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-emerald-500 text-black font-bold hover:bg-emerald-600 text-xs sm:text-sm shadow-sm hover:shadow-md transition-all duration-200"
-                      onClick={() => handleConfirmReceiptClick(order.id)}
-                    >
-                      <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                      <span className="hidden sm:inline">Mark as Completed</span>
-                      <span className="sm:hidden">Done</span>
-                    </Button>
-                  )}
-
-                  {/* Become Client Button */}
-                  {order.seller && (
-                    <Button
-                      size="sm"
-                      className={`w-full sm:w-auto lg:w-full justify-center sm:justify-center ${clientStatus[order.seller.id]
-                        ? 'bg-gray-800 text-gray-400 cursor-default border border-gray-700'
-                        : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-black uppercase'
-                        } py-3 h-auto rounded-xl shadow-sm transition-all duration-200`}
-                      onClick={() => !clientStatus[order.seller.id] && handleBecomeClient(order.seller.id, order.seller.name || order.seller.shopName || 'Seller')}
-                      disabled={isBecomingClient[order.seller.id] || clientStatus[order.seller.id]}
-                    >
-                      {isBecomingClient[order.seller.id] ? (
-                        <>
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                          Joining...
-                        </>
-                      ) : clientStatus[order.seller.id] ? (
-                        <>
-                          <UserCheck className="mr-2 h-4 w-4" />
-                          Joined Clientele
-                        </>
+                    {/* Background Image Container */}
+                    <div className="absolute inset-0 lg:m-2 rounded-2xl overflow-hidden">
+                      {mainImage ? (
+                        <img
+                          src={mainImage}
+                          alt="Product"
+                          className="h-full w-full object-cover opacity-60 lg:opacity-100 transition-transform duration-700 group-hover:scale-105"
+                        />
                       ) : (
-                        <>
-                          <Users className="mr-2 h-4 w-4" />
-                          Become Client
-                        </>
+                        <div className="h-full w-full bg-gradient-to-br from-gray-900 to-black" />
                       )}
-                    </Button>
-                  )}
+                      {/* Overlay Gradient for readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+                    </div>
+
+                    {/* Content Overlay */}
+                    <div className="absolute inset-0 p-6 flex flex-col justify-end items-center text-center z-20">
+
+                      <div className="mb-4">
+                        <p className="text-gray-300 text-xs font-medium uppercase tracking-widest mb-1">Seller</p>
+                        <h4 className="text-xl font-black text-white tracking-tight mb-4">
+                          {order.seller?.shopName || order.seller?.name || "Store"}
+                        </h4>
+
+                        {/* Become Client Button */}
+                        {order.seller && (
+                          <Button
+                            className={cn(
+                              "w-full shadow-xl transition-all duration-300 transform active:scale-95",
+                              clientStatus[order.seller.id]
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 cursor-default"
+                                : "bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-300 hover:to-yellow-400 text-black font-black uppercase tracking-wide border-0 shadow-[0_0_20px_rgba(250,204,21,0.3)] animate-pulse hover:animate-none"
+                            )}
+                            onClick={() => !clientStatus[order.seller.id] && handleBecomeClient(order.seller.id, order.seller.name || '')}
+                            disabled={isBecomingClient[order.seller.id] || clientStatus[order.seller.id]}
+                          >
+                            {isBecomingClient[order.seller.id] ? (
+                              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            ) : clientStatus[order.seller.id] ? (
+                              <>
+                                <UserCheck className="mr-2 h-4 w-4" />
+                                Joined Clientele
+                              </>
+                            ) : (
+                              <>
+                                <Users className="mr-2 h-4 w-4" />
+                                Become Client
+                              </>
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
 
       {/* Direct Viewer */}
       {viewingFile && (
@@ -790,6 +732,151 @@ export default function OrdersSection() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Full Order Details Sheet */}
+      <Sheet open={!!selectedOrderForDetails} onOpenChange={(open) => !open && setSelectedOrderForDetails(null)}>
+        <SheetContent className="w-full sm:max-w-md bg-black/95 border-l border-white/10 text-white overflow-y-auto">
+          {selectedOrderForDetails && (
+            <>
+              <SheetHeader className="text-left mb-6">
+                <Badge variant="outline" className="w-fit mb-2 border-white/20 text-white/70">
+                  Order Details
+                </Badge>
+                <SheetTitle className="text-2xl font-black text-white">
+                  Order #{selectedOrderForDetails.orderNumber || selectedOrderForDetails.id}
+                </SheetTitle>
+                <SheetDescription className="text-gray-400">
+                  Placed on {formatDate(selectedOrderForDetails)}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-8">
+                {/* Status Section */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Status</h4>
+                  <div className="flex gap-2">
+                    {getStatusBadge(selectedOrderForDetails.status)}
+                    {getPaymentStatusBadge(selectedOrderForDetails.paymentStatus)}
+                  </div>
+                </div>
+
+                {/* Items List */}
+                <div className="space-y-4">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider">Items ({selectedOrderForDetails.items.length})</h4>
+                  <div className="space-y-3">
+                    {selectedOrderForDetails.items.map((item, idx) => (
+                      <div key={idx} className="flex flex-col gap-3 p-4 rounded-xl bg-white/5 border border-white/5">
+                        <div className="flex gap-4">
+                          <div className="h-16 w-16 rounded-lg bg-black/40 overflow-hidden shrink-0 border border-white/10">
+                            {item.imageUrl ? (
+                              <img src={getImageUrl(item.imageUrl)} alt={item.name} className="h-full w-full object-cover" />
+                            ) : (
+                              <Package className="h-8 w-8 text-gray-600 m-auto mt-4" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-white">{item.name}</p>
+                            <p className="text-sm text-gray-400 mt-1">
+                              {item.quantity} x {formatCurrency(item.price, selectedOrderForDetails.currency)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Download Button Logic (Restored) */}
+                        {(() => {
+                          const isDigitalProduct = item.isDigital || item.productType === 'digital' || (item as any).is_digital;
+                          const isPaymentComplete = ['success', 'completed', 'paid'].includes(selectedOrderForDetails.paymentStatus?.toLowerCase() || '') || selectedOrderForDetails.status === 'COMPLETED';
+
+                          return isDigitalProduct && isPaymentComplete ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              className="w-full mt-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20"
+                              onClick={async () => {
+                                const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+                                if (!isStandalone) {
+                                  setViewingFile({
+                                    orderId: selectedOrderForDetails.id,
+                                    productId: item.productId,
+                                    fileName: item.name
+                                  });
+                                  return;
+                                }
+                                try {
+                                  toast.loading('Starting download...', { id: 'download-sheet' });
+                                  await buyerApi.downloadDigitalProduct(selectedOrderForDetails.id, item.productId);
+                                  toast.success('Download started', { id: 'download-sheet' });
+                                } catch (error) {
+                                  toast.error('Failed to download file', { id: 'download-sheet' });
+                                }
+                              }}
+                            >
+                              <FileText className="mr-2 h-4 w-4" />
+                              Access Content
+                            </Button>
+                          ) : null;
+                        })()}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Shipping Info */}
+                {selectedOrderForDetails.shippingAddress && (
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-bold text-white uppercase tracking-wider">Shipping Details</h4>
+                    <div className="p-4 rounded-xl bg-white/5 border border-white/5 text-sm space-y-2 text-gray-300">
+                      <p><strong className="text-white">To:</strong> {selectedOrderForDetails.customer.name}</p>
+                      <p><strong className="text-white">Phone:</strong> {selectedOrderForDetails.customer.phone}</p>
+                      <p className="border-t border-white/10 pt-2 mt-2">
+                        {selectedOrderForDetails.shippingAddress.address}, {selectedOrderForDetails.shippingAddress.city}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Total Summary */}
+                <div className="border-t border-white/10 pt-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <span className="text-lg font-bold text-white">Total Paid</span>
+                    <span className="text-2xl font-black text-emerald-400">
+                      {formatCurrency((selectedOrderForDetails as any).total_amount || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
+                    </span>
+                  </div>
+
+                  {/* Action Buttons in Sheet */}
+                  <div className="space-y-3">
+                    {selectedOrderForDetails.status === 'PENDING' && (
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        onClick={() => {
+                          handleCancelOrderClick(selectedOrderForDetails.id);
+                          setSelectedOrderForDetails(null);
+                        }}
+                      >
+                        Cancel Order
+                      </Button>
+                    )}
+
+                    {selectedOrderForDetails.status === 'DELIVERY_COMPLETE' && (
+                      <Button
+                        className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
+                        onClick={() => {
+                          handleConfirmReceiptClick(selectedOrderForDetails.id);
+                          setSelectedOrderForDetails(null);
+                        }}
+                      >
+                        Confirm Receipt
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Confirm Receipt Dialog */}
       <Dialog open={showReceiptDialog} onOpenChange={setShowReceiptDialog}>
