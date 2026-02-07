@@ -61,6 +61,7 @@ export const findSellerByShopName = async (shopName) => {
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
+      client_count AS "clientCount",
       created_at AS "createdAt"
     FROM sellers 
     WHERE slug = $1 OR shop_name = $1
@@ -107,6 +108,7 @@ export const findSellerById = async (id) => {
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
+      client_count AS "clientCount",
       created_at AS "createdAt", 
       updated_at AS "updatedAt"
      FROM sellers 
