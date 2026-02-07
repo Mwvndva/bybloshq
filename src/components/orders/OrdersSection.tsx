@@ -57,6 +57,7 @@ import buyerApi from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
 import { toast } from 'sonner';
 import DirectBybxViewer from '@/components/DirectBybxViewer';
+import { getImageUrl } from '@/lib/utils';
 
 const glassCardStyle: React.CSSProperties = {
   background: 'rgba(20, 20, 20, 0.7)',
@@ -539,8 +540,26 @@ export default function OrdersSection() {
                     {order.items.map((item) => (
                       <li key={item.id} className="flex flex-col sm:flex-row sm:items-center justify-between text-xs sm:text-sm text-gray-200 bg-gray-900/50 rounded-lg px-3 py-2 border border-gray-800">
                         <div className="flex items-center">
-                          <span className="font-semibold">{item.name}</span>
-                          <span className="text-gray-300 ml-2">× {item.quantity}</span>
+                          <div className="h-10 w-10 rounded-md overflow-hidden bg-gray-800 mr-3 flex-shrink-0 border border-gray-700">
+                            {item.imageUrl ? (
+                              <img
+                                src={getImageUrl(item.imageUrl)}
+                                alt={item.name}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=100&h=100&fit=crop';
+                                }}
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-gray-500">
+                                <Package className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-semibold text-white">{item.name}</div>
+                            <div className="text-gray-400 text-xs mt-0.5">Quantity: {item.quantity}</div>
+                          </div>
                           {(item.isDigital || item.productType === 'digital' || (item as any).is_digital) && (
                             <Badge variant="outline" className="ml-2 text-xs border-gray-600 text-gray-200 bg-gray-800">
                               <FileText className="h-3 w-3 mr-1" />
@@ -685,7 +704,7 @@ export default function OrdersSection() {
                         ? 'bg-gray-800 text-gray-400 cursor-default border border-gray-700'
                         : 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-black uppercase'
                         } py-3 h-auto rounded-xl shadow-sm transition-all duration-200`}
-                      onClick={() => !clientStatus[order.seller.id] && handleBecomeClient(order.seller.id, order.seller.fullName || order.seller.shopName || 'Seller')}
+                      onClick={() => !clientStatus[order.seller.id] && handleBecomeClient(order.seller.id, order.seller.name || order.seller.shopName || 'Seller')}
                       disabled={isBecomingClient[order.seller.id] || clientStatus[order.seller.id]}
                     >
                       {isBecomingClient[order.seller.id] ? (

@@ -429,51 +429,7 @@ const startServer = async () => {
     }
     // --- END MIGRATION ---
 
-    // --- CLIENT FEATURE MIGRATION ---
-    try {
-      console.log('Running Client Feature migration...');
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
 
-        // 1. Add client_count to sellers table
-        const colCheck = await client.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'sellers' AND column_name = 'client_count'");
-        if (colCheck.rowCount === 0) {
-          await client.query("ALTER TABLE sellers ADD COLUMN client_count INTEGER DEFAULT 0");
-          console.log("Added 'client_count' to sellers table.");
-        } else {
-          // console.log("'client_count' column already exists in sellers table.");
-        }
-
-        // 2. Create seller_clients table to track unique relationships
-        // Check if table exists
-        const tableCheck = await client.query("SELECT 1 FROM information_schema.tables WHERE table_name = 'seller_clients'");
-
-        if (tableCheck.rowCount === 0) {
-          await client.query(`
-            CREATE TABLE seller_clients (
-              id SERIAL PRIMARY KEY,
-              seller_id INTEGER REFERENCES sellers(id),
-              user_id INTEGER REFERENCES users(id),
-              created_at TIMESTAMP DEFAULT NOW(),
-              UNIQUE(seller_id, user_id)
-            )
-          `);
-          console.log('Created seller_clients table.');
-        }
-
-        await client.query('COMMIT');
-        console.log('Client Feature migration completed.');
-      } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Client Feature migration failed:', err);
-      } finally {
-        client.release();
-      }
-    } catch (err) {
-      console.error('Client migration wrapper failed:', err);
-    }
-    // --- END CLIENT MIGRATION ---
 
     const port = process.env.PORT || 3002;
     const server = app.listen(port, '0.0.0.0', () => {
