@@ -72,6 +72,14 @@ export const sanitizePublicSeller = (seller) => {
     if (!seller) return null;
     const sellerObj = seller.toObject ? seller.toObject() : seller;
 
+    console.log('Sanitizing public seller:', {
+        id: sellerObj.id,
+        shopName: sellerObj.shopName,
+        keys: Object.keys(sellerObj),
+        clientCountOriginal: sellerObj.clientCount,
+        clientCountSnake: sellerObj.client_count
+    });
+
     return {
         id: sellerObj.id,
         shopName: sellerObj.shopName || sellerObj.shop_name,
