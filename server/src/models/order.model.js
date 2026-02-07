@@ -166,6 +166,12 @@ class Order {
         o.cancelled_at as "cancelledAt",
         o.client_id as "clientId",
         o.is_seller_initiated as "isSellerInitiated",
+        json_build_object(
+          'id', s.id,
+          'name', s.full_name,
+          'shopName', s.shop_name,
+          'clientCount', s.client_count
+        ) as seller,
         COALESCE(
           json_agg(
             json_build_object(
@@ -177,15 +183,18 @@ class Order {
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
               'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
-              'metadata', oi.metadata
+              'metadata', oi.metadata,
+              'imageUrl', p.image_url
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json
         ) as items
       FROM product_orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      LEFT JOIN sellers s ON o.seller_id = s.id
       WHERE o.id = $1
-      GROUP BY o.id
+      GROUP BY o.id, s.id
     `;
 
     const { rows } = await pool.query(query, [orderId]);
@@ -219,6 +228,12 @@ class Order {
         o.paid_at as "paidAt",
         o.completed_at as "completedAt",
         o.cancelled_at as "cancelledAt",
+        json_build_object(
+          'id', s.id,
+          'name', s.full_name,
+          'shopName', s.shop_name,
+          'clientCount', s.client_count
+        ) as seller,
         COALESCE(
           json_agg(
             json_build_object(
@@ -230,15 +245,18 @@ class Order {
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
               'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
-              'metadata', oi.metadata
+              'metadata', oi.metadata,
+              'imageUrl', p.image_url
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json
         ) as items
       FROM product_orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      LEFT JOIN sellers s ON o.seller_id = s.id
       WHERE o.order_number = $1 OR o.payment_reference = $1
-      GROUP BY o.id
+      GROUP BY o.id, s.id
     `;
 
     const { rows } = await pool.query(query, [reference]);
@@ -282,6 +300,12 @@ class Order {
         o.paid_at as "paidAt",
         o.completed_at as "completedAt",
         o.cancelled_at as "cancelledAt",
+        json_build_object(
+          'id', s.id,
+          'name', s.full_name,
+          'shopName', s.shop_name,
+          'clientCount', s.client_count
+        ) as seller,
         COALESCE(
           json_agg(
             json_build_object(
@@ -293,15 +317,18 @@ class Order {
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
               'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
-              'metadata', oi.metadata
+              'metadata', oi.metadata,
+              'imageUrl', p.image_url
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json
         ) as items
       FROM product_orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
+      LEFT JOIN sellers s ON o.seller_id = s.id
       ${whereClause}
-      GROUP BY o.id
+      GROUP BY o.id, s.id
       ORDER BY o.created_at DESC
       LIMIT $${params.length + 1} OFFSET $${params.length + 2}
     `;
