@@ -32,9 +32,9 @@ const SellerBrandCard = ({ seller, className }: SellerBrandCardProps) => {
 
             {/* Wishlist Indicator - Top Right */}
             <div className="absolute top-3 right-3 z-10">
-                <div className="flex items-center gap-1 rounded-full border border-white/20 bg-white/10 px-2.5 py-1 backdrop-blur-lg">
-                    <Heart className="h-3 w-3 text-white fill-white" />
-                    <span className="text-[10px] font-bold text-white">
+                <div className="flex items-center gap-1 rounded-full bg-yellow-400 px-2.5 py-1 shadow-sm">
+                    <Heart className="h-3 w-3 text-black fill-black" />
+                    <span className="text-[10px] font-bold text-black">
                         {seller.totalWishlistCount || 0}
                     </span>
                 </div>
