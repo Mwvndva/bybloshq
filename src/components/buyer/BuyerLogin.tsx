@@ -126,11 +126,11 @@ export function BuyerLogin() {
       </div>
 
       {/* Main Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-6 sm:py-8 md:py-12 px-3 sm:px-4 md:px-6 lg:px-8">
+      <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] py-2 sm:py-8 md:py-12 px-3 sm:px-4 md:px-6 lg:px-8">
         <div className="w-[90%] sm:w-[95%] md:w-full md:max-w-md">
           {/* Login Card */}
           <div
-            className="rounded-2xl sm:rounded-3xl border shadow-2xl p-4 sm:p-5 md:p-6"
+            className="rounded-2xl sm:rounded-3xl border shadow-2xl p-3 sm:p-5 md:p-6"
             style={{
               background: 'rgba(17, 17, 17, 0.7)',
               backdropFilter: 'blur(12px)',
@@ -139,28 +139,28 @@ export function BuyerLogin() {
               boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)'
             }}
           >
-            <div className="text-center mb-5 sm:mb-6 md:mb-8">
-              <div className="w-12 h-12 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto mb-3 sm:mb-4 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-                <ShoppingBag className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
+            <div className="text-center mb-3 sm:mb-6 md:mb-8">
+              <div className="w-10 h-10 sm:w-14 sm:h-14 md:w-16 md:h-16 mx-auto mb-2 sm:mb-4 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
+                <ShoppingBag className="h-5 w-5 sm:h-7 sm:w-7 md:h-8 md:w-8 text-white" />
               </div>
-              <h1 className="mobile-heading mb-1.5 sm:mb-2 font-semibold tracking-tight text-white">Welcome Back</h1>
-              <p className="mobile-text text-gray-300 font-normal">Sign in to your buyer account</p>
+              <h1 className="mobile-heading mb-1 sm:mb-2 font-semibold tracking-tight text-white text-lg sm:text-xl">Welcome Back</h1>
+              <p className="mobile-text text-gray-300 font-normal text-xs sm:text-sm">Sign in to your buyer account</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-6">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-200">
+              <div className="space-y-1 sm:space-y-2">
+                <Label htmlFor="email" className="text-xs sm:text-sm font-medium text-gray-200">
                   Email Address
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-300" />
+                  <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-gray-300" />
                   </div>
                   <Input
                     id="email"
@@ -171,18 +171,18 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="input-mobile !pl-14 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="input-mobile !pl-10 sm:!pl-14 h-9 sm:h-10 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-xs sm:text-sm"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-200">
+              <div className="space-y-1 sm:space-y-2">
+                <Label htmlFor="password" className="text-xs sm:text-sm font-medium text-gray-200">
                   Password
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-300" />
+                  <div className="absolute inset-y-0 left-0 pl-3 sm:pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-gray-300" />
                   </div>
                   <Input
                     id="password"
@@ -193,18 +193,18 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="!pl-14 !pr-12 h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                    className="!pl-10 sm:!pl-14 !pr-10 sm:!pr-12 h-9 sm:h-10 md:h-12 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 text-xs sm:text-sm"
                   />
                   <button
                     type="button"
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-300 hover:text-gray-300"
+                    className="absolute inset-y-0 right-0 pr-3 sm:pr-4 flex items-center text-gray-300 hover:text-gray-300"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={isLoading}
                   >
                     {showPassword ? (
-                      <EyeOff className="h-5 w-5" />
+                      <EyeOff className="h-4 w-4 sm:h-5 sm:w-5" />
                     ) : (
-                      <Eye className="h-5 w-5" />
+                      <Eye className="h-4 w-4 sm:h-5 sm:w-5" />
                     )}
                   </button>
                 </div>
@@ -212,12 +212,12 @@ export function BuyerLogin() {
 
               <Button
                 type="submit"
-                className="button-mobile w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-medium tracking-tight transition-all duration-200"
+                className="button-mobile w-full h-9 sm:h-10 md:h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-medium tracking-tight transition-all duration-200 text-xs sm:text-sm"
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <>
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
                     Signing In...
                   </>
                 ) : (
