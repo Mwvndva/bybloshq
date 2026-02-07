@@ -50,14 +50,14 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
             {/* Grid Layout: Changed to grid-cols-2 for mobile to show 2x2 */}
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 relative z-10">
 
-                {/* Metric 1: Gross Revenue */}
+                {/* Metric 1: Sales */}
                 <div className="group relative p-3 sm:p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 lg:border-r border-r border-white/5 transition-all duration-300 hover:bg-white/5">
                     <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <TrendingUp className="h-8 w-8 sm:h-12 sm:w-12 text-yellow-500/10" />
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-1">
-                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Gross Sales</h3>
+                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Sales</h3>
                         <p className="text-lg sm:text-3xl lg:text-4xl font-black text-white tracking-tight truncate">
                             {formatCurrency(analytics.totalRevenue || 0)}
                         </p>
@@ -71,10 +71,10 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                     </div>
                 </div>
 
-                {/* Metric 2: Net Revenue */}
+                {/* Metric 2: Revenue */}
                 <div className="group relative p-3 sm:p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 lg:border-r border-white/5 transition-all duration-300 hover:bg-white/5">
                     <div className="space-y-0.5 sm:space-y-1">
-                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Net Revenue</h3>
+                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Revenue</h3>
                         <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white/90 tracking-tight truncate">
                             {formatCurrency(netRevenue)}
                         </p>
