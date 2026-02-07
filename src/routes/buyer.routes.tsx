@@ -89,14 +89,16 @@ export const buyerRoutes = [
           </Suspense>
         ),
       },
-      {
-        path: 'shop/:shopName',
-        element: (
-          <Suspense fallback={<Loader />}>
-            <ShopPage />
-          </Suspense>
-        ),
-      },
     ],
+  },
+  {
+    path: '/buyer/shop/:shopName',
+    element: (
+      <BuyerProtectedRoute>
+        <Suspense fallback={<Loader />}>
+          <ShopPage />
+        </Suspense>
+      </BuyerProtectedRoute>
+    ),
   },
 ];
