@@ -294,13 +294,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
       toast({
         title: '📱 Prompt Sent',
-        description: 'STK Push sent to client successfully.',
-      });
-    } catch (error: any) {
-      toast({
-        title: '❌ Error',
-        description: error.response?.data?.message || 'Failed to send prompt.',
-        variant: 'destructive'
+        description: `STK Push sent to ${debt?.client_phone || 'client'}. Waiting for payment...`,
+        className: 'bg-yellow-500/10 border-yellow-400/30 text-yellow-200',
       });
     } finally {
       setProcessingDebtId(null);
