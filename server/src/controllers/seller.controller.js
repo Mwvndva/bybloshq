@@ -744,7 +744,7 @@ export const initiateDebtPayment = async (req, res) => {
 // @access  Private (Buyer)
 export const handleBecomeClient = async (req, res) => {
   try {
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
     const { sellerId } = req.params;
 
     if (!userId) {
