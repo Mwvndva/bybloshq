@@ -126,6 +126,7 @@ export interface Seller {
   avatarUrl?: string;
   bannerUrl?: string;  // Add bannerUrl to the interface
   banner_url?: string; // Also support the snake_case version
+  theme?: string;
   location?: string;
   city?: string;
   website?: string;
@@ -196,6 +197,7 @@ export function transformSeller(seller: any): Seller | null {
     // Timestamps
     createdAt: seller.created_at || seller.createdAt || new Date().toISOString(),
     updatedAt: seller.updated_at || seller.updatedAt || new Date().toISOString(),
+    theme: seller.theme || 'black',
     // Optional fields
     ...(seller.bio && { bio: seller.bio }),
     ...(seller.avatar_url && { avatarUrl: seller.avatar_url }),

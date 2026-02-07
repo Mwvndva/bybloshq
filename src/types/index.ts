@@ -23,6 +23,7 @@ export interface Seller {
   updatedAt?: string;
   bio?: string;
   avatarUrl?: string;
+  theme?: string;
   location?: string;
   city?: string;
   physicalAddress?: string;

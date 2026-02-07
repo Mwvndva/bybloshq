@@ -356,6 +356,7 @@ async function searchSellersInDB(city, location = null) {
       whatsapp_number AS "whatsappNumber", 
       city, 
       location,
+      theme,
       created_at AS "createdAt"
     FROM sellers 
     WHERE LOWER(city) = LOWER($1)
