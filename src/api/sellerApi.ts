@@ -154,6 +154,7 @@ const transformSeller = (data: any): Seller => {
     bannerImage: seller.bannerImage || seller.banner_image || null,
     theme: seller.theme || 'black',
     instagramLink: seller.instagramLink || seller.instagram_link || '',
+    clientCount: seller.clientCount || seller.client_count || 0,
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
   };
