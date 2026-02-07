@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { PLATFORM_FEE_RATE } from '@/lib/constants';
 import { formatCurrency, decodeJwt, isTokenExpired, getImageUrl } from '@/lib/utils';
@@ -32,6 +32,9 @@ import {
   Clock,
   Truck,
   Wallet,
+  Download,
+  Calendar,
+  X,
   XCircle,
   Loader2,
   Info,
@@ -43,6 +46,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
+import { exportWithdrawalsToCSV } from '@/utils/exportUtils';
 import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
@@ -236,6 +240,30 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   });
   const [isRequestingWithdrawal, setIsRequestingWithdrawal] = useState(false);
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
+
+  // Date filter state for withdrawals
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
+  // Filter withdrawals based on date range
+  const filteredWithdrawals = useMemo(() => {
+    if (!startDate && !endDate) return withdrawalRequests;
+
+    return withdrawalRequests.filter(withdrawal => {
+      const withdrawalDate = new Date(withdrawal.createdAt);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+
+      if (start && end) {
+        return withdrawalDate >= start && withdrawalDate <= end;
+      } else if (start) {
+        return withdrawalDate >= start;
+      } else if (end) {
+        return withdrawalDate <= end;
+      }
+      return true;
+    });
+  }, [withdrawalRequests, startDate, endDate]);
 
   // Client Order Modal State
   const [showClientOrderModal, setShowClientOrderModal] = useState(false);
@@ -1246,9 +1274,61 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 </div>
               </div>
 
-              {withdrawalRequests.length > 0 ? (
+              {/* Date Filter and Export Controls */}
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+                {/* Date Range Filter */}
+                <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                  <div className="relative flex-1">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="pl-10 bg-zinc-900/50 border-white/10 text-white focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      placeholder="Start date"
+                    />
+                  </div>
+                  <span className="hidden sm:flex items-center text-gray-400 text-sm">to</span>
+                  <div className="relative flex-1">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="pl-10 bg-zinc-900/50 border-white/10 text-white focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      placeholder="End date"
+                    />
+                  </div>
+                  {(startDate || endDate) && (
+                    <Button
+                      onClick={() => {
+                        setStartDate('');
+                        setEndDate('');
+                      }}
+                      variant="outline"
+                      size="icon"
+                      className="border-white/10 text-white hover:bg-white/10"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Export Button */}
+                <Button
+                  onClick={() => exportWithdrawalsToCSV(withdrawalRequests)}
+                  variant="outline"
+                  className="border-white/10 text-white hover:bg-white/10 hover:border-white/20 gap-2"
+                  disabled={withdrawalRequests.length === 0}
+                >
+                  <Download className="h-4 w-4" />
+                  <span className="hidden sm:inline">Export</span>
+                </Button>
+              </div>
+
+              {filteredWithdrawals.length > 0 ? (
                 <div className="space-y-4">
-                  {withdrawalRequests.map((request) => (
+                  {filteredWithdrawals.map((request) => (
                     <Card key={request.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start">

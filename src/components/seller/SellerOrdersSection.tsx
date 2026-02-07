@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { format, isValid, parseISO } from 'date-fns';
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
@@ -18,9 +19,10 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
     if (value === undefined || isNaN(value)) return `${currency} 0.00`;
     return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
-import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User } from 'lucide-react';
+import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Search, Download } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
+import { exportOrdersToCSV } from '@/utils/exportUtils';
 
 export default function SellerOrdersSection() {
     // Force TS re-check
@@ -31,8 +33,21 @@ export default function SellerOrdersSection() {
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
     const [cancellingOrderId, setCancellingOrderId] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const { toast } = useToast();
+
+    // Filter orders based on search query
+    const filteredOrders = useMemo(() => {
+        if (!searchQuery.trim()) return orders;
+
+        const query = searchQuery.toLowerCase();
+        return orders.filter(order =>
+            order.buyerName?.toLowerCase().includes(query) ||
+            order.productName?.toLowerCase().includes(query) ||
+            order.id?.toString().toLowerCase().includes(query)
+        );
+    }, [orders, searchQuery]);
 
     // Fetch orders from the API
     const fetchOrders = async () => {
@@ -259,7 +274,33 @@ export default function SellerOrdersSection() {
     return (
         <>
             <div className="space-y-4 sm:space-y-6">
-                {orders.map((order) => {
+                {/* Search and Export Controls */}
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    {/* Search Bar */}
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                            placeholder="Search by buyer name, product, or order ID..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 bg-zinc-900/50 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                        />
+                    </div>
+
+                    {/* Export Button */}
+                    <Button
+                        onClick={() => exportOrdersToCSV(orders)}
+                        variant="outline"
+                        className="border-white/10 text-white hover:bg-white/10 hover:border-white/20 gap-2"
+                        disabled={orders.length === 0}
+                    >
+                        <Download className="h-4 w-4" />
+                        <span className="hidden sm:inline">Export Orders</span>
+                        <span className="sm:hidden">Export</span>
+                    </Button>
+                </div>
+
+                {filteredOrders.map((order) => {
                     const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                     const isDigital = order.items?.some(i => i.productType === 'digital');
 
