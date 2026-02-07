@@ -15,7 +15,6 @@ import {
   isShopNameAvailable,
   findSellerByEmail,
   updateSeller,
-  updateSeller,
   becomeClient,
   removeClient
 } from '../models/seller.model.js';
