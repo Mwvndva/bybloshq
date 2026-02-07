@@ -48,6 +48,7 @@ import { BannerUpload } from './BannerUpload';
 import { ThemeSelector } from './ThemeSelector';
 import { exportWithdrawalsToCSV } from '@/utils/exportUtils';
 import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
+import PaymentLoadingModal from './PaymentLoadingModal';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
@@ -269,6 +270,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [showClientOrderModal, setShowClientOrderModal] = useState(false);
   const [isCreatingClientOrder, setIsCreatingClientOrder] = useState(false);
 
+  // Payment Loading Modal State
+  const [showPaymentLoadingModal, setShowPaymentLoadingModal] = useState(false);
+  const [paymentReference, setPaymentReference] = useState<string | undefined>();
+  const [paymentClientPhone, setPaymentClientPhone] = useState<string | undefined>();
+
   // Debt Prompt State
   const [processingDebtId, setProcessingDebtId] = useState<number | null>(null);
 
@@ -277,15 +283,22 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
     setProcessingDebtId(debtId);
     try {
-      await debtService.initiatePayment(debtId);
+      const result = await debtService.initiatePayment(debtId) as any;
+
+      // Show payment loading modal
+      setPaymentReference(result.data?.payment?.reference || result.data?.payment?.api_ref);
+      // Find the debt to get client phone
+      const debt = (analytics as any)?.pendingPayments?.find((d: any) => d.id === debtId);
+      setPaymentClientPhone(debt?.client_phone);
+      setShowPaymentLoadingModal(true);
+
       toast({
-        title: 'Prompt Sent',
+        title: '📱 Prompt Sent',
         description: 'STK Push sent to client successfully.',
-        variant: 'default'
       });
     } catch (error: any) {
       toast({
-        title: 'Error',
+        title: '❌ Error',
         description: error.response?.data?.message || 'Failed to send prompt.',
         variant: 'destructive'
       });
@@ -692,8 +705,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           className: 'bg-blue-500/10 border-blue-400/30 text-blue-200',
         });
       } else {
+        // STK Push - show loading modal
+        setPaymentReference((result as any).payment?.reference || (result as any).payment?.api_ref);
+        setPaymentClientPhone(data.clientPhone);
+        setShowPaymentLoadingModal(true);
+
         toast({
-          title: '✅ STK Push Sent!',
+          title: '📱 STK Push Sent!',
           description: `Payment request sent to ${data.clientPhone}. Waiting for client to complete payment...`,
           className: 'bg-green-500/10 border-green-400/30 text-green-200',
         });
@@ -714,6 +732,25 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       setIsCreatingClientOrder(false);
     }
   }, [toast, fetchData]);
+
+  const handlePaymentSuccess = useCallback(() => {
+    toast({
+      title: '✅ Payment Successful!',
+      description: 'The client has completed the payment. Your balance has been updated.',
+      className: 'bg-green-500/10 border-green-400/30 text-green-200',
+      duration: 5000,
+    });
+    // Refresh dashboard data
+    fetchData();
+  }, [toast, fetchData]);
+
+  const handlePaymentFailure = useCallback(() => {
+    toast({
+      title: '⏱️ Payment Timeout',
+      description: 'The payment request has expired. You can send a new prompt if needed.',
+      className: 'bg-orange-500/10 border-orange-400/30 text-orange-200',
+    });
+  }, [toast]);
 
 
   // Token expiration check removed - auth is now handled by SellerAuthContext with HttpOnly cookies
@@ -1845,12 +1882,22 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         </DialogContent>
       </Dialog>
 
-      {/* New Client Order Modal */}
+      {/* New Client OrderModal */}
       <NewClientOrderModal
         isOpen={showClientOrderModal}
         onClose={() => setShowClientOrderModal(false)}
         products={products as any}
         onSubmit={handleClientOrderSubmit}
+      />
+
+      {/* Payment Loading Modal */}
+      <PaymentLoadingModal
+        isOpen={showPaymentLoadingModal}
+        onClose={() => setShowPaymentLoadingModal(false)}
+        paymentReference={paymentReference}
+        clientPhone={paymentClientPhone}
+        onSuccess={handlePaymentSuccess}
+        onFailure={handlePaymentFailure}
       />
     </>
   );

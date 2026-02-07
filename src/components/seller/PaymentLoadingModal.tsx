@@ -1,0 +1,158 @@
+import { useEffect, useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Loader2, CheckCircle2, XCircle, Smartphone } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+interface PaymentLoadingModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    paymentReference?: string;
+    clientPhone?: string;
+    onSuccess?: () => void;
+    onFailure?: () => void;
+}
+
+export default function PaymentLoadingModal({
+    isOpen,
+    onClose,
+    paymentReference,
+    clientPhone,
+    onSuccess,
+    onFailure
+}: PaymentLoadingModalProps) {
+    const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
+    const [countdown, setCountdown] = useState(120); // 2 minutes timeout
+
+    useEffect(() => {
+        if (!isOpen) {
+            setStatus('loading');
+            setCountdown(120);
+            return;
+        }
+
+        // Countdown timer
+        const timer = setInterval(() => {
+            setCountdown(prev => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    setStatus('failed');
+                    onFailure?.();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [isOpen, onFailure]);
+
+    // Poll for payment status (you can implement this based on your backend)
+    useEffect(() => {
+        if (!isOpen || !paymentReference) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                // TODO: Replace with actual API call to check payment status
+                // const response = await fetch(`/api/payments/status/${paymentReference}`);
+                // const data = await response.json();
+                // if (data.status === 'completed') {
+                //   setStatus('success');
+                //   onSuccess?.();
+                //   clearInterval(pollInterval);
+                // } else if (data.status === 'failed') {
+                //   setStatus('failed');
+                //   onFailure?.();
+                //   clearInterval(pollInterval);
+                // }
+            } catch (error) {
+                console.error('Error polling payment status:', error);
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [isOpen, paymentReference, onSuccess, onFailure]);
+
+    const formatTime = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onClose}>
+            <DialogContent className="sm:max-w-md bg-[#0a0a0a] border-white/10">
+                <div className="flex flex-col items-center justify-center py-8 px-4">
+                    {status === 'loading' && (
+                        <>
+                            <div className="relative mb-6">
+                                <Smartphone className="w-16 h-16 text-blue-400" />
+                                <Loader2 className="w-8 h-8 text-blue-400 animate-spin absolute -top-2 -right-2" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-2 text-center">
+                                Waiting for Payment
+                            </h3>
+                            <p className="text-sm text-gray-400 text-center mb-4">
+                                STK push sent to <span className="text-white font-medium">{clientPhone}</span>
+                            </p>
+                            <div className="w-full bg-white/5 rounded-lg p-4 mb-4">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm text-gray-400">Time remaining</span>
+                                    <span className="text-lg font-mono text-blue-400">{formatTime(countdown)}</span>
+                                </div>
+                                <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                                    <div
+                                        className="bg-blue-500 h-full transition-all duration-1000"
+                                        style={{ width: `${(countdown / 120) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-xs text-gray-500 text-center">
+                                Please enter your M-Pesa PIN on your phone to complete the payment
+                            </p>
+                        </>
+                    )}
+
+                    {status === 'success' && (
+                        <>
+                            <div className="mb-6">
+                                <CheckCircle2 className="w-20 h-20 text-green-400" />
+                            </div>
+                            <h3 className="text-2xl font-semibold text-white mb-2 text-center">
+                                Payment Successful!
+                            </h3>
+                            <p className="text-sm text-gray-400 text-center mb-6">
+                                The order has been completed and your balance has been updated.
+                            </p>
+                            <Button
+                                onClick={onClose}
+                                className="w-full bg-green-600 hover:bg-green-700 text-white"
+                            >
+                                Done
+                            </Button>
+                        </>
+                    )}
+
+                    {status === 'failed' && (
+                        <>
+                            <div className="mb-6">
+                                <XCircle className="w-20 h-20 text-red-400" />
+                            </div>
+                            <h3 className="text-2xl font-semibold text-white mb-2 text-center">
+                                Payment Timeout
+                            </h3>
+                            <p className="text-sm text-gray-400 text-center mb-6">
+                                The payment request has expired. Please try again.
+                            </p>
+                            <Button
+                                onClick={onClose}
+                                className="w-full bg-white/10 hover:bg-white/20 text-white"
+                            >
+                                Close
+                            </Button>
+                        </>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
