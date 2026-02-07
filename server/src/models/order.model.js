@@ -13,8 +13,8 @@ class Order {
       INSERT INTO product_orders (
         buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
         payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
-        notes, metadata, status, payment_status, service_requirements, is_debt
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
       RETURNING *
     `;
 
@@ -35,7 +35,9 @@ class Order {
       data.status,
       data.payment_status || 'pending',
       data.service_requirements,
-      data.is_debt || false
+      data.is_debt || false,
+      data.client_id || null,
+      data.is_seller_initiated || false
     ];
 
     const result = await client.query(query, values);
@@ -162,6 +164,8 @@ class Order {
         o.paid_at as "paidAt",
         o.completed_at as "completedAt",
         o.cancelled_at as "cancelledAt",
+        o.client_id as "clientId",
+        o.is_seller_initiated as "isSellerInitiated",
         COALESCE(
           json_agg(
             json_build_object(
