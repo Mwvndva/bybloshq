@@ -38,6 +38,9 @@ export const getProducts = async (req, res) => {
              s.bio as seller_bio,
              s.shop_name as seller_shop_name,
              s.created_at as seller_created_at,
+             s.shop_name as seller_shop_name,
+             s.theme as seller_theme,
+             s.created_at as seller_created_at,
              s.updated_at as seller_updated_at
       FROM products p
       JOIN sellers s ON p.seller_id = s.id
@@ -91,6 +94,7 @@ export const getProducts = async (req, res) => {
           avatarUrl: row.seller_avatar_url,
           avatar_url: row.seller_avatar_url,
           bio: row.seller_bio,
+          theme: row.seller_theme || 'black',
           shopName: row.seller_shop_name,
           shop_name: row.seller_shop_name,
           createdAt: row.seller_created_at,
@@ -209,7 +213,7 @@ export const getSellerPublicInfo = async (req, res) => {
 
     // Only select columns that exist in the sellers table
     const result = await pool.query(
-      `SELECT id, full_name, email, whatsapp_number as phone, created_at, updated_at
+      `SELECT id, full_name, email, whatsapp_number as phone, theme, created_at, updated_at
        FROM sellers 
        WHERE id = $1`,
       [id]
@@ -269,7 +273,7 @@ export const getSellers = async (req, res) => {
       fullName: row.full_name,
       bannerUrl: row.banner_image, // Mapped from banner_image
       avatarUrl: null, // avatar_url not available in sellers table
-      themeColor: row.theme, // Mapped from theme
+      theme: row.theme, // Mapped from theme
       clientCount: row.client_count || 0,
       totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
       createdAt: row.created_at
