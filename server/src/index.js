@@ -139,8 +139,21 @@ const additionalOrigins = process.env.CORS_ORIGIN
 // Consolidated CORS options
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, postman)
+    // ========================================
+    // P1-004: TIGHTENED CORS CONFIGURATION
+    // ========================================
+
+    // In production, reject requests with no origin for security
+    // In development, allow for testing with tools like Postman
     if (!origin) {
+      if (process.env.NODE_ENV === 'production') {
+        logger.warn('[CORS] Blocked request with no origin in production', {
+          ip: this.ip,
+          userAgent: this.get('user-agent')
+        });
+        return callback(new Error('CORS: Origin header required in production'));
+      }
+
       if (process.env.NODE_ENV === 'development') {
         console.log('CORS: Request with no origin - allowing in development');
       }
@@ -163,30 +176,29 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    // Log rejected origins for debugging
-    console.warn(`CORS: Blocked origin: ${origin}`);
-    console.warn('Allowed origins:', [...whitelist, ...additionalOrigins]);
+    // Log rejected origins for security monitoring
+    logger.warn('[CORS] Blocked unauthorized origin', {
+      origin,
+      allowedOrigins: [...whitelist, ...additionalOrigins].length,
+      ip: this.ip
+    });
+
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  // Removed duplicate entries and tightened allowed headers
   allowedHeaders: [
     'Content-Type',
     'Authorization',
     'X-Requested-With',
     'Accept',
     'Origin',
-    'Access-Control-Allow-Origin',
-    'X-Requested-With',
-    'Accept',
     'X-Access-Token',
     'X-Refresh-Token',
     'X-Request-ID',
-    'cache-control',
     'Cache-Control',
-    'pragma',
     'Pragma',
-    'expires',
     'Expires'
   ],
   exposedHeaders: [
@@ -266,8 +278,6 @@ import models from './models/index.js';
 const { Payment } = models;
 
 // Mount public routes (no authentication required)
-// Mount routes
-app.use('/api/organizers', organizerRoutes);
 app.use('/api/sellers', sellerRoutes);
 app.use('/api/buyers', buyerRoutes);
 app.use('/api/public', publicRoutes);
@@ -278,19 +288,10 @@ app.use('/api/discount-codes', discountCodeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/events', eventRoutes);
-app.use('/api/auth', refreshTokenRoutes); // Add refresh token route
+app.use('/api/auth', refreshTokenRoutes);
 app.use('/api/callbacks', callbackRoutes); // Webhook callbacks
-
-// Mount protected organizer routes
-app.use('/api/organizers', protectedOrganizerRoutes);
-
-// Mount order routes
 app.use('/api/orders', orderRoutes);
-
-// Mount WhatsApp routes
 app.use('/api/whatsapp', whatsappRoutes);
-
-// Mount Activation routes
 app.use('/api/activation', activationRoutes);
 
 // Organizer protected routes
@@ -318,11 +319,6 @@ protectedRouter.use('/', protectedOrganizerRoutes);
 
 // Mount the protected router under /api/organizers
 app.use('/api/organizers', protectedRouter);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'ok', message: 'Server is running' });
-});
 
 // 404 handler - must be after all other routes
 app.all('*', notFoundHandler);

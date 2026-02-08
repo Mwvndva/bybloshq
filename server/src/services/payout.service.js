@@ -20,11 +20,11 @@ class PayoutService {
                 'User-Agent': 'ByblosHQ/1.0 (Node.js)'
             },
             timeout: 30000,
-            // Bypass self-signed certificate errors and ensure connection stability
+            // Ensure connection stability
             httpsAgent: new https.Agent({
-                rejectUnauthorized: false,
                 keepAlive: true,
-                family: 4 // Force IPv4
+                family: 4, // Force IPv4
+                // SSL verification is enabled by default - DO NOT DISABLE
             })
         });
     }
