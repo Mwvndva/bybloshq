@@ -1,10 +1,11 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Outlet, useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { safeLazy } from '@/utils/safeLazy';
 
 // Lazy load the event pages
-const EventsPage = lazy(() => import('@/pages/events/EventsPage'));
-const EventBookingPage = lazy(() => import('@/pages/events/EventBookingPage'));
+const EventsPage = safeLazy(() => import('@/pages/events/EventsPage'));
+const EventBookingPage = safeLazy(() => import('@/pages/events/EventBookingPage'));
 
 // Type definitions for the EventRouter props
 interface EventRouterProps {
@@ -35,13 +36,13 @@ const withSuspense = (Component: React.ComponentType) => (props: any) => (
 const EventRouter: React.FC<{ type?: 'view' | 'purchase' | 'confirmation' }> = ({ type = 'view' }) => {
   const params = useParams<{ eventId: string; slug?: string }>();
   let eventId = params.eventId;
-  
+
   // Extract ID from slug format (e.g., "123-event-name" -> "123")
   // This handles the legacy URL format with slugs
   if (eventId?.includes('-')) {
     eventId = eventId.split('-')[0];
   }
-  
+
   switch (type) {
     case 'purchase':
       return <EventBookingPage eventId={eventId} />;
@@ -65,7 +66,7 @@ export const eventRoutes = [
     path: '/events/:eventId/purchase',
     element: withSuspense(EventRouter)({ type: 'purchase' }),
   },
-  
+
   // New clean URL structure with just event ID (preferred format)
   {
     path: '/e/:eventId',
@@ -79,7 +80,7 @@ export const eventRoutes = [
     path: '/e/:eventId/confirmation',
     element: withSuspense(EventRouter)({ type: 'confirmation' }),
   },
-  
+
   // Legacy slug-based URLs (kept for backward compatibility)
   {
     path: '/e/:eventId-:slug',
@@ -93,13 +94,13 @@ export const eventRoutes = [
     path: '/e/:eventId-:slug/confirmation',
     element: withSuspense(EventRouter)({ type: 'confirmation' }),
   },
-  
+
   // Embed route
   {
     path: '/embed/event/:eventId',
     element: withSuspense(EventsPage)({ isEmbed: true }),
   },
-  
+
   // 404 handler for event routes
   {
     path: '*',

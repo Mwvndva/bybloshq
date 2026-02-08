@@ -264,9 +264,9 @@ export default function OrdersSection() {
     if (isService) {
       return (
         <div className="space-y-4">
-          <p>By clicking <strong>"Confirm Receipt"</strong>, you agree that you have received the service satisfactorily.</p>
+          <p>By clicking <strong>"Mark as Done"</strong>, you agree that the service has been completed to your satisfaction.</p>
           <p className="text-sm text-muted-foreground">
-            This will release the funds to the seller.
+            Once confirmed, funds will be released to the provider.
           </p>
         </div>
       );
@@ -647,13 +647,33 @@ export default function OrdersSection() {
                       View Details
                     </Button>
 
-                    {(order.status === 'DELIVERY_COMPLETE' || order.status === 'SERVICE_PENDING') && (
+                    {order.status === 'DELIVERY_COMPLETE' && (
                       <Button
                         size="sm"
                         className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm"
                         onClick={() => handleConfirmReceiptClick(order.id)}
                       >
-                        {order.status === 'SERVICE_PENDING' ? 'Confirm Booking' : 'Confirm Receipt'}
+                        Confirm Receipt
+                      </Button>
+                    )}
+
+                    {order.status === 'CONFIRMED' && (
+                      <Button
+                        size="sm"
+                        className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm"
+                        onClick={() => handleConfirmReceiptClick(order.id)}
+                      >
+                        Mark as Done
+                      </Button>
+                    )}
+
+                    {order.status === 'COLLECTION_PENDING' && (
+                      <Button
+                        size="sm"
+                        className="flex-1 sm:flex-none bg-indigo-500 hover:bg-indigo-600 text-white font-semibold text-xs sm:text-sm"
+                        onClick={() => handleCollectionClick(order.id)}
+                      >
+                        Mark as Collected
                       </Button>
                     )}
 
@@ -855,7 +875,7 @@ export default function OrdersSection() {
               </div>
 
               <DialogFooter className="gap-2">
-                {selectedOrderForDetails.status === 'DELIVERY_COMPLETE' && (
+                {(selectedOrderForDetails.status === 'DELIVERY_COMPLETE' || selectedOrderForDetails.status === 'CONFIRMED') && (
                   <Button
                     className="bg-emerald-500 hover:bg-emerald-600 text-white font-semibold"
                     onClick={() => {
@@ -863,7 +883,18 @@ export default function OrdersSection() {
                       setSelectedOrderForDetails(null);
                     }}
                   >
-                    Confirm Receipt
+                    {selectedOrderForDetails.status === 'CONFIRMED' ? 'Mark as Done' : 'Confirm Receipt'}
+                  </Button>
+                )}
+                {selectedOrderForDetails.status === 'COLLECTION_PENDING' && (
+                  <Button
+                    className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold"
+                    onClick={() => {
+                      handleCollectionClick(selectedOrderForDetails.id);
+                      setSelectedOrderForDetails(null);
+                    }}
+                  >
+                    Mark as Collected
                   </Button>
                 )}
                 <Button
@@ -884,10 +915,10 @@ export default function OrdersSection() {
         <DialogContent className="sm:max-w-[425px] bg-gradient-to-br from-white to-gray-50 border-0 shadow-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-              <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center">
+              <div className={`w-8 h-8 bg-gradient-to-r ${orders.find(o => o.id === currentOrderId)?.items.some((i: any) => i.productType === 'service' || i.isService) ? 'from-purple-500 to-indigo-500' : 'from-green-500 to-emerald-500'} rounded-full flex items-center justify-center`}>
                 <CheckCircle className="h-4 w-4 text-white" />
               </div>
-              Confirm Package Receipt
+              {orders.find(o => o.id === currentOrderId)?.items.some((i: any) => i.productType === 'service' || i.isService) ? 'Confirm Service Completion' : 'Confirm Package Receipt'}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-600 leading-relaxed">
               {getConfirmationContent()}
@@ -934,7 +965,7 @@ export default function OrdersSection() {
             <Button
               onClick={handleConfirmReceipt}
               disabled={isConfirming === currentOrderId}
-              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+              className={`bg-gradient-to-r ${orders.find(o => o.id === currentOrderId)?.items.some((i: any) => i.productType === 'service' || i.isService) ? 'from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600' : 'from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'} text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200`}
             >
               {isConfirming === currentOrderId ? (
                 <>
@@ -944,7 +975,7 @@ export default function OrdersSection() {
               ) : (
                 <>
                   <CheckCircle className="mr-2 h-4 w-4" />
-                  Confirm Receipt
+                  {orders.find(o => o.id === currentOrderId)?.items.some((i: any) => i.productType === 'service' || i.isService) ? 'Mark as Done' : 'Confirm Receipt'}
                 </>
               )}
             </Button>

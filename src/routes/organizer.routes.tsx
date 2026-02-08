@@ -1,18 +1,22 @@
+import { Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { OrganizerLayout } from '@/layouts/OrganizerLayout';
 import { OrganizerProtectedRoute } from '@/components/auth/AppProtectedRoute';
-import DashboardPage from '@/pages/organizer/dashboard/DashboardPage';
-import EventsListPage from '@/pages/organizer/events/EventsListPage';
-import CreateEventPage from '@/pages/organizer/events/CreateEventPage';
-import EventDetailPage from '@/pages/organizer/events/EventDetailPage';
-import EditEventPage from '@/pages/organizer/events/EditEventPage';
-import TicketsListPage from '@/pages/organizer/tickets/TicketsListPage';
-import SettingsPage from '@/pages/organizer/settings/SettingsPage';
-import LoginPage from '@/pages/organizer/auth/LoginPage';
-import RegisterPage from '@/pages/organizer/auth/RegisterPage';
-import ForgotPasswordPage from '@/pages/organizer/auth/ForgotPasswordPage';
-import ResetPasswordPage from '@/pages/organizer/auth/ResetPasswordPage';
-import TermsPage from '@/pages/organizer/terms/TermsPage';
+import { safeLazy } from '@/utils/safeLazy';
+import { Loader2 } from 'lucide-react';
+
+const DashboardPage = safeLazy(() => import('@/pages/organizer/dashboard/DashboardPage'));
+const EventsListPage = safeLazy(() => import('@/pages/organizer/events/EventsListPage'));
+const CreateEventPage = safeLazy(() => import('@/pages/organizer/events/CreateEventPage'));
+const EventDetailPage = safeLazy(() => import('@/pages/organizer/events/EventDetailPage'));
+const EditEventPage = safeLazy(() => import('@/pages/organizer/events/EditEventPage'));
+const TicketsListPage = safeLazy(() => import('@/pages/organizer/tickets/TicketsListPage'));
+const SettingsPage = safeLazy(() => import('@/pages/organizer/settings/SettingsPage'));
+const LoginPage = safeLazy(() => import('@/pages/organizer/auth/LoginPage'));
+const RegisterPage = safeLazy(() => import('@/pages/organizer/auth/RegisterPage'));
+const ForgotPasswordPage = safeLazy(() => import('@/pages/organizer/auth/ForgotPasswordPage'));
+const ResetPasswordPage = safeLazy(() => import('@/pages/organizer/auth/ResetPasswordPage'));
+const TermsPage = safeLazy(() => import('@/pages/organizer/terms/TermsPage'));
 
 // Define the routes array
 export const organizerRoutes = [
@@ -30,67 +34,123 @@ export const organizerRoutes = [
       },
       {
         path: 'dashboard',
-        element: <DashboardPage />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <DashboardPage />
+          </Suspense>
+        ),
       },
       {
         path: 'events',
         children: [
           {
             index: true,
-            element: <EventsListPage />,
+            element: (
+              <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+                <EventsListPage />
+              </Suspense>
+            ),
           },
           {
             path: 'new',
-            element: <CreateEventPage />,
+            element: (
+              <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+                <CreateEventPage />
+              </Suspense>
+            ),
           },
           {
             path: ':id',
-            element: <EventDetailPage />,
+            element: (
+              <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+                <EventDetailPage />
+              </Suspense>
+            ),
           },
           {
             path: ':id/edit',
-            element: <EditEventPage />,
+            element: (
+              <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+                <EditEventPage />
+              </Suspense>
+            ),
           },
           {
             path: ':id/tickets',
-            element: <TicketsListPage />,
+            element: (
+              <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+                <TicketsListPage />
+              </Suspense>
+            ),
           },
         ],
       },
       {
         path: 'tickets',
-        element: <TicketsListPage />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <TicketsListPage />
+          </Suspense>
+        ),
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <SettingsPage />
+          </Suspense>
+        ),
       },
       {
         path: 'terms',
-        element: <TermsPage />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <TermsPage />
+          </Suspense>
+        ),
       },
     ],
   },
   // Auth routes (not protected)
   {
     path: '/organizer/login',
-    element: <LoginPage />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <LoginPage />
+      </Suspense>
+    ),
   },
   {
     path: '/organizer/register',
-    element: <RegisterPage />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <RegisterPage />
+      </Suspense>
+    ),
   },
   {
     path: '/organizer/forgot-password',
-    element: <ForgotPasswordPage />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <ForgotPasswordPage />
+      </Suspense>
+    ),
   },
   {
     path: '/organizer/reset-password',
-    element: <ResetPasswordPage />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <ResetPasswordPage />
+      </Suspense>
+    ),
   },
   {
     path: '/organizer/terms',
-    element: <TermsPage />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <TermsPage />
+      </Suspense>
+    ),
   },
 
 ];

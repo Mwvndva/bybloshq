@@ -3,16 +3,17 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { BuyerProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { Loader2 } from 'lucide-react';
 import { WishlistProvider } from '@/contexts/WishlistContext';
+import { safeLazy } from '@/utils/safeLazy';
 
 // Lazy load components with default exports
-const BuyerLogin = lazy(() => import('@/components/buyer/BuyerLogin').then(module => ({ default: module.BuyerLogin })));
-const BuyerRegister = lazy(() => import('@/components/buyer/BuyerRegister').then(module => ({ default: module.BuyerRegister })));
-const BuyerForgotPassword = lazy(() => import('@/components/buyer/BuyerForgotPassword').then(module => ({ default: module.BuyerForgotPassword })));
-const BuyerResetPassword = lazy(() => import('@/components/buyer/BuyerResetPassword').then(module => ({ default: module.BuyerResetPassword })));
-const BuyerDashboard = lazy(() => import('@/components/buyer/BuyerDashboard').then(module => ({ default: module.default })));
-const CheckoutPage = lazy(() => import('@/pages/checkout').then(module => ({ default: module.default })));
-const BuyerLayout = lazy(() => import('@/layouts/BuyerLayout').then(module => ({ default: module.default })));
-const ShopPage = lazy(() => import('@/pages/ShopPage'));
+const BuyerLogin = safeLazy(() => import('@/components/buyer/BuyerLogin').then(module => module.BuyerLogin));
+const BuyerRegister = safeLazy(() => import('@/components/buyer/BuyerRegister').then(module => module.BuyerRegister));
+const BuyerForgotPassword = safeLazy(() => import('@/components/buyer/BuyerForgotPassword').then(module => module.BuyerForgotPassword));
+const BuyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetPassword').then(module => module.BuyerResetPassword));
+const BuyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
+const CheckoutPage = safeLazy(() => import('@/pages/checkout'));
+const BuyerLayout = safeLazy(() => import('@/layouts/BuyerLayout'));
+const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
 
 // Simple loading component
 const Loader = () => (

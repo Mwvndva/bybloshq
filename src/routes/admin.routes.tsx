@@ -1,21 +1,31 @@
+import { Suspense } from 'react';
 import { RouteObject, createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { AdminProtectedRoute } from '@/components/auth/AppProtectedRoute';
-import NewAdminDashboard from '@/pages/admin/NewDashboardPage';
-import { AdminLoginPage } from '@/pages/admin/AdminLoginPage';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { safeLazy } from '@/utils/safeLazy';
+import { Loader2 } from 'lucide-react';
+
+const NewAdminDashboard = safeLazy(() => import('@/pages/admin/NewDashboardPage'));
+const AdminLoginPage = safeLazy(() => import('@/pages/admin/AdminLoginPage').then(m => m.AdminLoginPage));
 
 // Admin routes configuration
 export const adminRoutes: RouteObject[] = [
   {
     path: 'login',
-    element: <AdminLoginPage />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <AdminLoginPage />
+      </Suspense>
+    ),
   },
   {
     path: 'dashboard',
     element: (
       <AdminProtectedRoute>
-        <NewAdminDashboard />
+        <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+          <NewAdminDashboard />
+        </Suspense>
       </AdminProtectedRoute>
     ),
   },
@@ -23,7 +33,9 @@ export const adminRoutes: RouteObject[] = [
     path: '',
     element: (
       <AdminProtectedRoute>
-        <NewAdminDashboard />
+        <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+          <NewAdminDashboard />
+        </Suspense>
       </AdminProtectedRoute>
     ),
   },
