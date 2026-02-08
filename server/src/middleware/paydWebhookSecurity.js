@@ -36,10 +36,11 @@ export const verifyPaydWebhook = (req, res, next) => {
     });
 
     // Get allowed IPs from environment
-    const allowedIPsString = process.env.PAYD_ALLOWED_IPS || '';
+    const allowedIPsString = (process.env.PAYD_ALLOWED_IPS || '').trim();
 
     if (!allowedIPsString) {
         logger.error('[WEBHOOK-SECURITY] ⛔ CRITICAL: PAYD_ALLOWED_IPS not configured!');
+        logger.info(`[WEBHOOK-SECURITY] TIP: To authorize this IP, add ${clientIP} to PAYD_ALLOWED_IPS in .env`);
 
         // In production, BLOCK all requests if IP whitelist not configured
         if (process.env.NODE_ENV === 'production') {
@@ -50,8 +51,10 @@ export const verifyPaydWebhook = (req, res, next) => {
         } else {
             // In development, log warning but allow (for testing)
             logger.warn('[WEBHOOK-SECURITY] ⚠️  WARNING: IP whitelist disabled in development mode');
-            logger.warn('[WEBHOOK-SECURITY] ⚠️  This is INSECURE and should NEVER be used in production');
         }
+    } else if (allowedIPsString.toLowerCase() === 'skip' || allowedIPsString === '*') {
+        logger.warn(`[WEBHOOK-SECURITY] ⚠️  SECURITY ALERT: IP Whitelisting is explicitly DISABLED (Value: ${allowedIPsString})`);
+        logger.info(`[WEBHOOK-SECURITY] Authorized incoming IP ${clientIP} via skip rule`);
     } else {
         // Parse allowed IPs
         const allowedIPs = allowedIPsString.split(',').map(ip => ip.trim()).filter(ip => ip);
