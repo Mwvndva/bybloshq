@@ -12,7 +12,8 @@ import { PLATFORM_FEE_RATE } from '@/lib/constants';
 
 interface AnalyticsData {
     totalSales: number;
-    totalPayout: number;
+    totalRevenue: number;
+    totalPayout?: number;
     balance: number;
     pendingDebt: number;
     pendingDebtCount: number;
@@ -68,7 +69,7 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                     <div className="space-y-0.5 sm:space-y-1">
                         <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Revenue</h3>
                         <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white/90 tracking-tight truncate">
-                            {formatCurrency(analytics.totalPayout || 0)}
+                            {formatCurrency(analytics.totalRevenue || 0)}
                         </p>
                     </div>
 
