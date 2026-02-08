@@ -25,7 +25,7 @@ export async function findByBuyerId(buyerId) {
       p.service_options,
       p.service_locations,
       p.digital_file_name
-    FROM wishlist w
+    FROM wishlists w
     LEFT JOIN products p ON w.product_id = p.id
     LEFT JOIN sellers s ON p.seller_id = s.id
     WHERE w.buyer_id = $1
@@ -44,7 +44,7 @@ export async function findByBuyerId(buyerId) {
 export async function add(buyerId, productId) {
   // First, check if the item is already in the wishlist
   const checkSql = `
-    SELECT id FROM wishlist 
+    SELECT id FROM wishlists 
     WHERE buyer_id = $1 AND product_id = $2
   `;
 
@@ -59,7 +59,7 @@ export async function add(buyerId, productId) {
 
   // Otherwise, insert the new item
   const insertSql = `
-    INSERT INTO wishlist (buyer_id, product_id)
+    INSERT INTO wishlists (buyer_id, product_id)
     VALUES ($1, $2)
     RETURNING *
   `;
@@ -75,7 +75,7 @@ export async function add(buyerId, productId) {
  */
 export async function remove(buyerId, productId) {
   const sql = `
-    DELETE FROM wishlist
+    DELETE FROM wishlists
     WHERE buyer_id = $1 AND product_id = $2
     RETURNING id
   `;
