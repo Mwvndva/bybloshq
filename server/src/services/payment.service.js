@@ -480,7 +480,6 @@ class PaymentService {
                 `UPDATE payments 
                  SET status = $1, 
                      metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-                     processed_at = NOW(),
                      updated_at = NOW()
                  WHERE id = $3`,
                 [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id]
