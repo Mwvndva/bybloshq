@@ -129,7 +129,13 @@ export default function LocationPicker({
         setSearchQuery(result.display_name);
         setShowResults(false);
 
-        onLocationChange(address, { lat, lng: lon });
+        // Update detailed address if empty, and trigger change
+        const finalDetailedAddress = address.trim() !== '' ? address : result.display_name;
+        if (address.trim() === '') {
+            setAddress(result.display_name);
+        }
+
+        onLocationChange(finalDetailedAddress, { lat, lng: lon });
     };
 
     const handleManualAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,14 +159,14 @@ export default function LocationPicker({
                 </Label>
                 <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <Search className="h-5 w-5 text-gray-300" />
+                        <Search className="h-5 w-5 text-gray-400" />
                     </div>
                     <Input
                         id="location-search"
                         type="text"
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        className="pl-10 h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                        className="pl-12 md:pl-12 h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                         placeholder={placeholder}
                         autoComplete="off"
                     />
@@ -171,7 +177,7 @@ export default function LocationPicker({
                     )}
 
                     {showResults && searchResults.length > 0 && (
-                        <div className="absolute z-[100] w-full mt-1 bg-[#1a1a1a] border border-white/10 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <div className="absolute z-[1000] w-full mt-1 bg-[#1a1a1a] border border-white/10 rounded-md shadow-lg max-h-60 overflow-auto">
                             {searchResults.map((result, index) => (
                                 <button
                                     key={index}

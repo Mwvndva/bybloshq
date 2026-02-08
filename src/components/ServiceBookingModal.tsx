@@ -141,7 +141,16 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     };
 
     const saveLocationToProfile = async () => {
-        if (!buyerLocation || !buyerProfile) return;
+        if (!buyerLocation) return;
+
+        // If not logged in as buyer, just use the location for this session
+        if (!buyerProfile) {
+            setIsChangingLocation(false);
+            toast.success('Location updated', {
+                description: 'Location set for this booking.'
+            });
+            return;
+        }
 
         setIsUpdatingProfile(true);
         try {
