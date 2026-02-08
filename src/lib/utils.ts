@@ -43,7 +43,7 @@ export function formatCurrency(amount: number | string | null | undefined): stri
       style: 'currency',
       currency: 'KES',
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 2
     }).format(numericAmount);
 
     return formatted;
