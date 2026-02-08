@@ -15,8 +15,9 @@ class PaymentService {
         this.networkCode = process.env.PAYD_NETWORK_CODE;
         this.channelId = process.env.PAYD_CHANNEL_ID;
         this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx';
+        this.sslVerify = process.env.PAYD_SSL_VERIFY !== 'false'; // Default to true
 
-        logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl}`);
+        logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl} (SSL Verify: ${this.sslVerify})`);
 
         // Create axios instance with optimized config
         this.client = axios.create({
@@ -29,7 +30,7 @@ class PaymentService {
             // Disable keepAlive to prevent socket hang-ups (stale sockets)
             httpsAgent: new https.Agent({
                 keepAlive: false, // Changed to false for stability
-                // SSL verification is enabled by default - DO NOT DISABLE
+                rejectUnauthorized: this.sslVerify
             })
         });
     }
@@ -123,7 +124,7 @@ class PaymentService {
                     method: 'POST',
                     hostname: url.hostname,
                     path: url.pathname,
-                    // SSL verification is enabled by default - DO NOT DISABLE
+                    rejectUnauthorized: this.sslVerify,
                     headers: {
                         'Authorization': this.getAuthHeader(),
                         'Content-Type': 'application/json',
