@@ -10,7 +10,7 @@ class PayoutService {
         this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
-        this.channelId = process.env.PAYD_CHANNEL_ID;
+        this.sslVerify = process.env.PAYD_SSL_VERIFY !== 'false';
 
         // Create axios instance
         this.client = axios.create({
@@ -24,7 +24,7 @@ class PayoutService {
             httpsAgent: new https.Agent({
                 keepAlive: true,
                 family: 4, // Force IPv4
-                // SSL verification is enabled by default - DO NOT DISABLE
+                rejectUnauthorized: this.sslVerify
             })
         });
     }
