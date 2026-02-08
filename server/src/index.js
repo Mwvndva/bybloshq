@@ -145,15 +145,12 @@ const corsOptions = {
 
     // In production, reject requests with no origin for security
     // In development, allow for testing with tools like Postman
+    // UPDATE: Allow no-origin requests in production too (same-origin requests don't send Origin)
     if (!origin) {
-      if (process.env.NODE_ENV === 'production') {
-        logger.warn('[CORS] Blocked request with no origin in production');
-        return callback(new Error('CORS: Origin header required in production'));
-      }
-
       if (process.env.NODE_ENV === 'development') {
         console.log('CORS: Request with no origin - allowing in development');
       }
+      // Allow requests without origin (same-origin, direct navigation, etc.)
       return callback(null, true);
     }
 
