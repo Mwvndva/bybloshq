@@ -1259,8 +1259,14 @@ class OrderService {
         );
         await client.query('COMMIT');
 
-        logger.error('[ClientOrder] STK Push failed, order marked as failed:', paymentError);
-        throw new Error(`Order created but payment initiation failed: ${paymentError.message}`);
+        logger.error('[ClientOrder] STK Push failed, order marked as failed:', paymentError.message);
+
+        // Return a cleaner message for the frontend toast
+        const userFriendlyMessage = paymentError.message.includes('Network connection lost')
+          ? 'Connection to payment provider failed. Please try again.'
+          : paymentError.message;
+
+        throw new Error(userFriendlyMessage);
       }
 
 
