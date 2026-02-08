@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import dotenv from 'dotenv';
 import AppError from '../utils/appError.js';
 import AdminService from '../services/admin.service.js';
+import { pool } from '../config/database.js';
 
 dotenv.config();
 

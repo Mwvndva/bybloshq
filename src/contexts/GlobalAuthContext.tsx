@@ -119,7 +119,7 @@ interface GlobalAuthContextType {
     // Auth operations
     login: (email: string, password: string, role: UserRole) => Promise<void>;
     loginWithToken: (token: string, role: UserRole) => Promise<void>;
-    loginAdmin: (pin: string) => Promise<void>;
+    loginAdmin: (email: string, password: string) => Promise<void>;
     register: (data: RegistrationData, role: UserRole) => Promise<void>;
     logout: () => void;
     refreshRole: (newRole: UserRole) => Promise<void>;
@@ -156,7 +156,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     /**
      * Get the appropriate API module for a given role
      */
-    const getApiForRole = (role: UserRole) => {
+    const getApiForRole = (role: UserRole): any => {
         switch (role) {
             case 'buyer':
                 return buyerApi;
