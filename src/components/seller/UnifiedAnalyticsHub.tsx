@@ -11,7 +11,8 @@ import { formatCurrency } from '@/lib/utils';
 import { PLATFORM_FEE_RATE } from '@/lib/constants';
 
 interface AnalyticsData {
-    totalRevenue: number;
+    totalSales: number;
+    totalPayout: number;
     balance: number;
     pendingDebt: number;
     pendingDebtCount: number;
@@ -27,15 +28,6 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
     analytics,
     onWithdraw
 }) => {
-    // Calculate Net Revenue (Gross - Platform Fee)
-    const calculateNetRevenue = () => {
-        const gross = analytics.totalRevenue || 0;
-        const fee = gross * PLATFORM_FEE_RATE;
-        return gross - fee;
-    };
-
-    const netRevenue = calculateNetRevenue();
-
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -59,7 +51,7 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                     <div className="space-y-0.5 sm:space-y-1">
                         <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Sales</h3>
                         <p className="text-lg sm:text-3xl lg:text-4xl font-black text-white tracking-tight truncate">
-                            {formatCurrency(analytics.totalRevenue || 0)}
+                            {formatCurrency(analytics.totalSales || 0)}
                         </p>
                     </div>
 
@@ -76,14 +68,14 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                     <div className="space-y-0.5 sm:space-y-1">
                         <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Revenue</h3>
                         <p className="text-lg sm:text-2xl lg:text-3xl font-black text-white/90 tracking-tight truncate">
-                            {formatCurrency(netRevenue)}
+                            {formatCurrency(analytics.totalPayout || 0)}
                         </p>
                     </div>
 
                     <div className="mt-2 sm:mt-4">
                         <p className="text-[9px] sm:text-xs text-gray-500 flex items-center gap-1 sm:gap-1.5">
                             <AlertCircle className="h-2.5 w-2.5 sm:h-3.5 sm:w-3.5" />
-                            After {PLATFORM_FEE_RATE * 100}% Fee
+                            After Platform Commission
                         </p>
                     </div>
                 </div>
