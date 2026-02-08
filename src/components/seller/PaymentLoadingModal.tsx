@@ -97,7 +97,7 @@ export default function PaymentLoadingModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleCancel}>
-            <DialogContent className="sm:max-w-md bg-[#0a0a0a] border-white/10 p-0 gap-0">
+            <DialogContent className="w-[92%] sm:max-w-md bg-[#0a0a0a] border-white/10 p-0 gap-0 overflow-hidden rounded-2xl">
                 <DialogTitle className="sr-only">Payment Status</DialogTitle>
                 {/* Close button */}
                 {status !== 'loading' && (
@@ -110,30 +110,40 @@ export default function PaymentLoadingModal({
                     </button>
                 )}
 
-                <div className="flex flex-col items-center justify-center py-8 px-6">
+                <div className="flex flex-col items-center justify-center py-10 px-6 sm:py-12">
                     {status === 'loading' && (
                         <>
-                            <div className="relative mb-4">
-                                <Smartphone className="w-12 h-12 text-blue-400" />
-                                <Loader2 className="w-6 h-6 text-blue-400 animate-spin absolute -top-1 -right-1" />
+                            <div className="mb-8 flex items-center justify-center relative">
+                                <div className="absolute inset-0 bg-blue-500/10 rounded-full blur-2xl animate-pulse"></div>
+                                <Loader2 className="w-12 h-12 text-blue-500 animate-spin relative z-10" />
                             </div>
-                            <h3 className="text-lg font-semibold text-white mb-2 text-center">
+                            <h3 className="text-xl font-bold text-white mb-2 text-center">
                                 Waiting for Payment
                             </h3>
-                            <p className="text-sm text-gray-400 text-center mb-4">
-                                STK sent to <span className="text-blue-400">{clientPhone}</span>
-                            </p>
-                            <p className="text-xs text-gray-500 text-center mb-4">
-                                {formatTime(countdown)}
-                            </p>
-                            <Button
-                                onClick={handleCancel}
-                                variant="outline"
-                                size="sm"
-                                className="bg-transparent border-white/20 text-gray-400 hover:bg-white/5"
-                            >
-                                Cancel
-                            </Button>
+                            <div className="flex flex-col items-center gap-1 mb-8">
+                                <p className="text-sm text-gray-400 text-center">
+                                    STK push sent to
+                                </p>
+                                <p className="text-base font-semibold text-blue-400">
+                                    {clientPhone}
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col items-center gap-6 w-full">
+                                <div className="px-4 py-1.5 bg-white/5 rounded-full border border-white/10">
+                                    <span className="text-xs font-mono text-gray-400 tabular-nums">
+                                        {formatTime(countdown)}
+                                    </span>
+                                </div>
+                                <Button
+                                    onClick={handleCancel}
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-gray-500 hover:text-white hover:bg-white/5 transition-colors font-medium"
+                                >
+                                    Cancel Request
+                                </Button>
+                            </div>
                         </>
                     )}
 

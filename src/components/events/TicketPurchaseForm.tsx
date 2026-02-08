@@ -548,20 +548,17 @@ export function TicketPurchaseForm({
               </Button>
             </div>
           ) : waitingForStk ? (
-            <div className="text-center py-10">
-              <div className="relative mx-auto w-20 h-20 mb-8">
-                <div className="absolute inset-0 bg-yellow-400/20 rounded-full animate-ping opacity-75"></div>
-                <div className="relative w-20 h-20 bg-yellow-400/10 rounded-full flex items-center justify-center border border-yellow-400/20">
-                  <Smartphone className="h-10 w-10 text-yellow-400" />
-                </div>
+            <div className="text-center py-10 px-4 sm:py-16">
+              <div className="relative mx-auto w-24 h-24 mb-10 flex items-center justify-center">
+                <div className="absolute inset-0 bg-yellow-400/10 rounded-full blur-3xl animate-pulse"></div>
+                <Loader2 className="h-16 w-16 text-yellow-400 animate-spin relative z-10" />
               </div>
-              <h3 className="text-2xl font-black text-white mb-3">Check Your Phone</h3>
-              <p className="text-[#a1a1a1] mb-8 max-w-xs mx-auto text-lg leading-relaxed">
-                We've sent an M-PESA prompt to <span className="font-bold text-white block mt-1">{formData.phoneNumber}</span>
+              <h3 className="text-2xl font-black text-white mb-4 tracking-tight">Waiting for Payment</h3>
+              <p className="text-[#a1a1a1] mb-10 max-w-[280px] mx-auto text-lg leading-snug font-medium">
+                We've sent an M-PESA prompt to <span className="text-yellow-400 font-bold">{formData.phoneNumber}</span>
               </p>
-              <div className="inline-flex items-center justify-center space-x-3 bg-yellow-400/5 text-yellow-400 px-8 py-3 rounded-full font-black animate-pulse border border-yellow-400/10">
-                <Loader2 className="h-5 w-5 animate-spin" />
-                <span>Waiting for PIN...</span>
+              <div className="bg-yellow-400/5 border border-yellow-400/10 px-8 py-3 rounded-2xl inline-block">
+                <p className="text-sm font-black text-yellow-400 uppercase tracking-widest">Check your phone</p>
               </div>
             </div>
           ) : (
