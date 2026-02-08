@@ -56,11 +56,6 @@ ON webhook_logs(client_ip, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_created 
 ON webhook_logs(created_at DESC);
 
--- Partial index for recent webhooks (most frequently queried)
-CREATE INDEX IF NOT EXISTS idx_webhook_logs_recent 
-ON webhook_logs(client_ip, reference) 
-WHERE created_at > NOW() - INTERVAL '24 hours';
-
 -- ==============================================
 -- 3. Add Comments for Documentation
 -- ==============================================
