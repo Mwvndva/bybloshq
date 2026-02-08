@@ -629,6 +629,8 @@ const getBuyerById = async (req, res, next) => {
         mobile_payment as phone,
         whatsapp_number,
         status,
+        city,
+        location,
         created_at
       FROM buyers 
       WHERE id = $1

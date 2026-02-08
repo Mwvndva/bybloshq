@@ -302,6 +302,10 @@ const NewAdminDashboard = () => {
   const [selectedSeller, setSelectedSeller] = useState<any | null>(null);
   const [isLoadingSeller, setIsLoadingSeller] = useState(false);
 
+  // State for buyer details modal
+  const [selectedBuyer, setSelectedBuyer] = useState<any | null>(null);
+  const [isLoadingBuyer, setIsLoadingBuyer] = useState(false);
+
   const [dashboardState, setDashboardState] = React.useState<DashboardState>({
     analytics: {
       totalRevenue: 0,
@@ -864,14 +868,22 @@ const NewAdminDashboard = () => {
   };
 
   // Handle viewing buyer details
-  const handleViewBuyer = (buyerId: string) => {
-    // Navigate to buyer details page or show a modal
-    // For now, we'll just log the ID and show a toast
-    console.log('Viewing buyer:', buyerId);
-    toast.info(`Viewing buyer ID: ${buyerId}`);
+  const handleViewBuyer = async (buyerId: string) => {
+    try {
+      setIsLoadingBuyer(true);
+      const response = await adminApi.getBuyerById(buyerId);
+      setSelectedBuyer(response.data);
+    } catch (error) {
+      console.error('Error fetching buyer details:', error);
+      toast.error('Failed to load buyer details');
+    } finally {
+      setIsLoadingBuyer(false);
+    }
+  };
 
-    // If you have a dedicated buyer details page, you can navigate there:
-    // navigate(`/admin/buyers/${buyerId}`);
+  // Close buyer details modal
+  const closeBuyerModal = () => {
+    setSelectedBuyer(null);
   };
 
   // Handle toggling buyer status (active/inactive)
@@ -1394,6 +1406,107 @@ const NewAdminDashboard = () => {
             <div className="p-6 border-t border-white/10 flex justify-end">
               <Button
                 onClick={closeSellerModal}
+                className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-2xl shadow-lg shadow-yellow-500/20 transition-all duration-200"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Buyer Details Modal */}
+      {selectedBuyer && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                  <UserCircle className="h-5 w-5 text-cyan-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Buyer Details
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {selectedBuyer.name || 'N/A'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={closeBuyerModal}
+                className="h-10 w-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors duration-200 border border-white/5"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="overflow-auto flex-1 p-6 custom-scrollbar">
+              {isLoadingBuyer ? (
+                <div className="flex flex-col items-center justify-center h-40 space-y-4">
+                  <div className="h-12 w-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 animate-pulse">
+                    <Loader2 className="h-6 w-6 text-cyan-500 animate-spin" />
+                  </div>
+                  <p className="text-gray-400 font-medium">Loading buyer details...</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Basic Info */}
+                  <Card className="bg-gray-800/40 border border-white/10 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-white">Basic Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Full Name</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Email</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Phone (Mobile Payment)</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.phone || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">WhatsApp Number</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.whatsapp_number || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">City</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.city || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Location</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.location || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Status</p>
+                        <Badge className={selectedBuyer.status === 'Active' || selectedBuyer.status === 'active'
+                          ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                          : 'bg-gray-500/10 text-gray-400 border border-white/10'}>
+                          {selectedBuyer.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Member Since</p>
+                        <p className="text-base text-gray-200">
+                          {selectedBuyer.created_at ? format(new Date(selectedBuyer.created_at), 'MMM d, yyyy') : 'N/A'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-6 border-t border-white/10 flex justify-end">
+              <Button
+                onClick={closeBuyerModal}
                 className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-2xl shadow-lg shadow-yellow-500/20 transition-all duration-200"
               >
                 Close
@@ -1936,7 +2049,7 @@ const NewAdminDashboard = () => {
                     <Input
                       type="text"
                       placeholder="Search events..."
-                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -2056,7 +2169,7 @@ const NewAdminDashboard = () => {
                     <Input
                       type="text"
                       placeholder="Search organizers..."
-                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -2180,7 +2293,7 @@ const NewAdminDashboard = () => {
                     <Input
                       type="text"
                       placeholder="Search sellers..."
-                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -2329,7 +2442,7 @@ const NewAdminDashboard = () => {
                     <Input
                       type="text"
                       placeholder="Search buyers..."
-                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -2478,7 +2591,7 @@ const NewAdminDashboard = () => {
                     <Input
                       type="text"
                       placeholder="Search requests..."
-                      className="pl-10 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
