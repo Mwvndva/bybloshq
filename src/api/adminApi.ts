@@ -114,6 +114,16 @@ export const adminApi = {
     }
   },
 
+  // Auth Helper
+  isAuthenticated() {
+    return localStorage.getItem('admin_authenticated') === 'true';
+  },
+
+  logout() {
+    localStorage.removeItem('admin_authenticated');
+    localStorage.removeItem('admin_user');
+  },
+
   // Dashboard Analytics
   async getAnalytics() {
     try {

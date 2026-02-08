@@ -100,7 +100,7 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="admin@example.com"
                       required
-                      className="w-full h-12 pl-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
+                      className="w-full h-12 pl-14 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
                     />
                   </div>
                 </div>
@@ -118,7 +118,7 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
                       required
-                      className="w-full h-12 pl-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
+                      className="w-full h-12 pl-14 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
                     />
                   </div>
                 </div>
