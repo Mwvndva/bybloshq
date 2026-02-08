@@ -767,6 +767,7 @@ export const handleBecomeClient = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
+      success: true,
       message: result.alreadyClient ? 'You are already a client of this shop' : 'You have successfully joined the clientele',
       data: {
         clientCount: result.clientCount,
@@ -807,6 +808,7 @@ export const handleLeaveClient = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
+      success: true,
       message: 'You have left the clientele',
       data: {
         clientCount: result.clientCount,
@@ -839,6 +841,7 @@ export const getBuyerShops = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
+      success: true,
       data: sellers.map(s => sanitizePublicSeller(s))
     });
 
