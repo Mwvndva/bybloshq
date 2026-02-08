@@ -145,7 +145,7 @@ class PaymentController {
       });
     } catch (error) {
       logger.error('Product payment initiation failed:', error);
-      
+
       // Mark order and payment as failed if they were created
       if (error.orderId) {
         try {
@@ -158,7 +158,7 @@ class PaymentController {
           logger.error('Failed to update order status:', updateError);
         }
       }
-      
+
       if (error.paymentId) {
         try {
           await pool.query(
@@ -170,7 +170,7 @@ class PaymentController {
           logger.error('Failed to update payment status:', updateError);
         }
       }
-      
+
       res.status(500).json({
         status: 'error',
         message: 'Product payment initiation failed',
@@ -199,6 +199,47 @@ class PaymentController {
       res.status(500).json({
         status: 'error',
         message: 'Payment status check failed',
+        error: error.message
+      });
+    }
+  }
+  /**
+   * Check Payd agent status
+   */
+  async getAgentStatus(req, res) {
+    try {
+      const status = paymentService.getAgentStatus();
+      res.status(200).json({
+        status: 'success',
+        data: status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Failed to get agent status:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to get agent status',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * Reset Payd agent
+   */
+  async resetAgent(req, res) {
+    try {
+      paymentService.resetAgent();
+      res.status(200).json({
+        status: 'success',
+        message: 'Payd HTTPS agent reset successfully',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Failed to reset agent:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to reset agent',
         error: error.message
       });
     }
