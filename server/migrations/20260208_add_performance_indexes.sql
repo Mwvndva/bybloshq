@@ -4,49 +4,50 @@
 -- This migration adds indexes to improve query performance
 -- for payment processing, webhooks, and user lookups
 --
--- Uses CREATE INDEX CONCURRENTLY to minimize production impact
--- Note: CONCURRENTLY cannot run inside a transaction block
+-- NOTE: CONCURRENTLY keyword removed to allow migration within transaction block
+-- For production deployment with zero downtime, run indexes manually with CONCURRENTLY
+-- Example: CREATE INDEX idx_name ON table(column);
 
 -- ==============================================
 -- 1. Payment Processing Indexes (CRITICAL)
 -- ==============================================
 
 -- Provider reference lookup (webhook processing)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_provider_reference 
+CREATE INDEX IF NOT EXISTS idx_payments_provider_reference 
 ON payments(provider_reference) 
 WHERE provider_reference IS NOT NULL;
 
 -- Invoice ID lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_invoice_id 
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_id 
 ON payments(invoice_id) 
 WHERE invoice_id IS NOT NULL;
 
 -- API reference lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_api_ref 
+CREATE INDEX IF NOT EXISTS idx_payments_api_ref 
 ON payments(api_ref) 
 WHERE api_ref IS NOT NULL;
 
 -- Status and creation date (for pending payment queries)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_status_created 
+CREATE INDEX IF NOT EXISTS idx_payments_status_created 
 ON payments(status, created_at DESC);
 
 -- Mobile payment lookup (fuzzy matching)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_mobile_payment 
+CREATE INDEX IF NOT EXISTS idx_payments_mobile_payment 
 ON payments(mobile_payment) 
 WHERE mobile_payment IS NOT NULL;
 
 -- Partial index for pending payments (most frequently queried)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_pending 
+CREATE INDEX IF NOT EXISTS idx_payments_pending 
 ON payments(created_at DESC, mobile_payment, amount) 
 WHERE status = 'pending';
 
 -- Buyer ID lookup (user payment history)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_buyer_id 
+CREATE INDEX IF NOT EXISTS idx_payments_buyer_id 
 ON payments(buyer_id) 
 WHERE buyer_id IS NOT NULL;
 
 -- Event ID lookup (event ticket payments)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_payments_event_id 
+CREATE INDEX IF NOT EXISTS idx_payments_event_id 
 ON payments(event_id) 
 WHERE event_id IS NOT NULL;
 
@@ -55,20 +56,20 @@ WHERE event_id IS NOT NULL;
 -- ==============================================
 
 -- Buyer orders lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_buyer_id 
+CREATE INDEX IF NOT EXISTS idx_orders_buyer_id 
 ON product_orders(buyer_id);
 
 -- Seller orders with status filter
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_seller_id_status 
+CREATE INDEX IF NOT EXISTS idx_orders_seller_id_status 
 ON product_orders(seller_id, status, created_at DESC);
 
 -- Payment reference lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_payment_ref 
+CREATE INDEX IF NOT EXISTS idx_orders_payment_ref 
 ON product_orders(payment_reference) 
 WHERE payment_reference IS NOT NULL;
 
 -- Order status tracking
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_orders_status_created 
+CREATE INDEX IF NOT EXISTS idx_orders_status_created 
 ON product_orders(status, created_at DESC);
 
 -- ==============================================
@@ -76,16 +77,16 @@ ON product_orders(status, created_at DESC);
 -- ==============================================
 
 -- Seller products with status
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_seller_status 
+CREATE INDEX IF NOT EXISTS idx_products_seller_status 
 ON products(seller_id, status, created_at DESC);
 
 -- Active products only (most common query)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_active 
+CREATE INDEX IF NOT EXISTS idx_products_active 
 ON products(seller_id, created_at DESC) 
 WHERE status = 'available';
 
 -- Product category browsing
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_products_category 
+CREATE INDEX IF NOT EXISTS idx_products_category 
 ON products(category, created_at DESC) 
 WHERE status = 'available';
 
@@ -94,19 +95,19 @@ WHERE status = 'available';
 -- ==============================================
 
 -- Event tickets lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tickets_event_id 
+CREATE INDEX IF NOT EXISTS idx_tickets_event_id 
 ON tickets(event_id);
 
 -- Customer email lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tickets_customer_email 
+CREATE INDEX IF NOT EXISTS idx_tickets_customer_email 
 ON tickets(customer_email);
 
 -- Ticket number lookup (QR code validation)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tickets_number 
+CREATE INDEX IF NOT EXISTS idx_tickets_number 
 ON tickets(ticket_number);
 
 -- Payment ID lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_tickets_payment_id 
+CREATE INDEX IF NOT EXISTS idx_tickets_payment_id 
 ON tickets(payment_id) 
 WHERE payment_id IS NOT NULL;
 
@@ -115,21 +116,21 @@ WHERE payment_id IS NOT NULL;
 -- ==============================================
 
 -- Provider reference lookup (webhook processing)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_withdrawals_provider_ref 
+CREATE INDEX IF NOT EXISTS idx_withdrawals_provider_ref 
 ON withdrawal_requests(provider_reference) 
 WHERE provider_reference IS NOT NULL;
 
 -- Seller withdrawals with status
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_withdrawals_seller_status 
+CREATE INDEX IF NOT EXISTS idx_withdrawals_seller_status 
 ON withdrawal_requests(seller_id, status, created_at DESC);
 
 -- Event withdrawals
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_withdrawals_event_id 
+CREATE INDEX IF NOT EXISTS idx_withdrawals_event_id 
 ON withdrawal_requests(event_id) 
 WHERE event_id IS NOT NULL;
 
 -- Organizer withdrawals
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_withdrawals_organizer_id 
+CREATE INDEX IF NOT EXISTS idx_withdrawals_organizer_id 
 ON withdrawal_requests(organizer_id) 
 WHERE organizer_id IS NOT NULL;
 
@@ -138,28 +139,28 @@ WHERE organizer_id IS NOT NULL;
 -- ==============================================
 
 -- Sellers
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_user_id 
+CREATE INDEX IF NOT EXISTS idx_sellers_user_id 
 ON sellers(user_id);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_email 
+CREATE INDEX IF NOT EXISTS idx_sellers_email 
 ON sellers(email);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_sellers_shop_name 
+CREATE INDEX IF NOT EXISTS idx_sellers_shop_name 
 ON sellers(shop_name) 
 WHERE shop_name IS NOT NULL;
 
 -- Buyers
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_buyers_user_id 
+CREATE INDEX IF NOT EXISTS idx_buyers_user_id 
 ON buyers(user_id);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_buyers_email 
+CREATE INDEX IF NOT EXISTS idx_buyers_email 
 ON buyers(email);
 
 -- Organizers
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_organizers_user_id 
+CREATE INDEX IF NOT EXISTS idx_organizers_user_id 
 ON organizers(user_id);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_organizers_email 
+CREATE INDEX IF NOT EXISTS idx_organizers_email 
 ON organizers(email);
 
 -- ==============================================
@@ -167,16 +168,16 @@ ON organizers(email);
 -- ==============================================
 
 -- Published events (public browsing)
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_status_date 
+CREATE INDEX IF NOT EXISTS idx_events_status_date 
 ON events(status, event_date DESC) 
 WHERE status = 'published';
 
 -- Organizer events
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_organizer_id 
+CREATE INDEX IF NOT EXISTS idx_events_organizer_id 
 ON events(organizer_id, created_at DESC);
 
 -- Event category
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_events_category 
+CREATE INDEX IF NOT EXISTS idx_events_category 
 ON events(category, event_date DESC) 
 WHERE status = 'published';
 
@@ -185,17 +186,17 @@ WHERE status = 'published';
 -- ==============================================
 
 -- User roles lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_roles_user_id 
+CREATE INDEX IF NOT EXISTS idx_user_roles_user_id 
 ON user_roles(user_id);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_user_roles_role_id 
+CREATE INDEX IF NOT EXISTS idx_user_roles_role_id 
 ON user_roles(role_id);
 
 -- Role permissions lookup
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_role_permissions_role_id 
+CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id 
 ON role_permissions(role_id);
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_role_permissions_permission_id 
+CREATE INDEX IF NOT EXISTS idx_role_permissions_permission_id 
 ON role_permissions(permission_id);
 
 -- ==============================================
@@ -206,10 +207,10 @@ ON role_permissions(permission_id);
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'client_seller_relationships') THEN
-        CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_client_seller_buyer_id 
+        CREATE INDEX IF NOT EXISTS idx_client_seller_buyer_id 
         ON client_seller_relationships(buyer_id);
         
-        CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_client_seller_seller_id 
+        CREATE INDEX IF NOT EXISTS idx_client_seller_seller_id 
         ON client_seller_relationships(seller_id);
         
         RAISE NOTICE 'Created indexes for client_seller_relationships';
