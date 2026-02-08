@@ -7,7 +7,7 @@ import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
 
-class PaymentService {
+export class PaymentService {
     constructor() {
         this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
         this.username = process.env.PAYD_USERNAME;
