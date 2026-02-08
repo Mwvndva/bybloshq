@@ -177,15 +177,10 @@ export function BuyerRegister() {
   };
 
   return (
-    <div
-      className="fixed top-0 left-0 right-0 bottom-0 w-full h-full bg-black overflow-y-auto"
+    <div className="min-h-screen w-full bg-black flex flex-col relative"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        margin: 0,
-        padding: 0,
         backgroundColor: '#000000',
-        width: '100vw',
-        minHeight: '100vh'
       }}
     >
       {/* Header */}
@@ -215,7 +210,7 @@ export function BuyerRegister() {
 
 
       {/* Main Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] py-4 px-3">
+      <div className="flex-1 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-[420px]">
           {/* Register Card */}
           <div

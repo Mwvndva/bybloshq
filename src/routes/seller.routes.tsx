@@ -405,84 +405,66 @@ function ProductsListWrapper() {
 
 // Create the seller routes
 export const sellerRoutes: RouteObject[] = [
-  // Public auth routes (no layout)
+  // Public auth routes (completely independent of dashboard layout)
+  {
+    path: '/seller/login',
+    element: <SellerLogin />,
+  },
+  {
+    path: '/seller/register',
+    element: <SellerRegistration />,
+  },
   {
     path: '/seller/reset-password',
     element: <ResetPasswordPage />,
   },
 
-  // Main seller routes with layout
+  // Protected seller routes with dashboard layout
   {
     path: '/seller',
-    element: <SellerLayout />,
+    element: (
+      <SellerProtectedRoute>
+        <SellerLayout />
+      </SellerProtectedRoute>
+    ),
     children: [
-      // Public routes (login, register) - no protection needed
       {
-        path: 'register',
-        element: <SellerRegistration />,
-      },
-      {
-        path: 'login',
-        element: <SellerLogin />,
-      },
-
-      // Protected routes - require authentication
-      {
-        element: (
-          <SellerProtectedRoute>
-            <Outlet />
-          </SellerProtectedRoute>
-        ),
+        path: 'dashboard',
+        element: <SellerDashboard />,
         children: [
           {
-            path: 'dashboard',
-            element: <SellerDashboard />,
-            children: [
-              {
-                index: true,
-                element: (
-                  <div className="p-6">
-                    <h2 className="text-2xl font-bold mb-6">Dashboard Overview</h2>
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {/* Overview content will be rendered by SellerDashboard */}
-                    </div>
-                  </div>
-                ),
-              },
-            ],
-          },
-          {
-            path: 'products',
-            element: <ProductsListWrapper />,
-          },
-          {
-            path: 'shop-setup',
-            element: <ShopSetup />,
-          },
-          {
-            path: 'add-product',
-            element: <AddProductForm onSuccess={() => { }} />,
-          },
-          // Redirects for protected routes
-          {
-            path: '',
-            element: <Navigate to="dashboard" replace />,
-          },
-          {
-            path: '*',
-            element: <Navigate to="dashboard" replace />,
+            index: true,
+            element: (
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-6">Dashboard Overview</h2>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {/* Overview content will be rendered by SellerDashboard */}
+                </div>
+              </div>
+            ),
           },
         ],
       },
-
-      // Redirects for non-protected routes
       {
-        path: '',
-        element: <Navigate to="login" replace />,
+        path: 'products',
+        element: <ProductsListWrapper />,
+      },
+      {
+        path: 'shop-setup',
+        element: <ShopSetup />,
+      },
+      {
+        path: 'add-product',
+        element: <AddProductForm onSuccess={() => { }} />,
+      },
+      // Redirects for protected routes
+      {
+        index: true,
+        element: <Navigate to="dashboard" replace />,
       },
       {
         path: '*',
-        element: <Navigate to="login" replace />,
+        element: <Navigate to="dashboard" replace />,
       },
     ],
   },
