@@ -1,3 +1,4 @@
+import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 import dotenv from 'dotenv';
@@ -22,7 +23,7 @@ const adminLogin = async (req, res, next) => {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
-    if (!user || user.role !== 'admin' || !(await require('bcrypt').compare(password, user.password_hash))) {
+    if (!user || user.role !== 'admin' || !(await bcrypt.compare(password, user.password_hash))) {
       return next(new AppError('Invalid email or password', 401));
     }
 
