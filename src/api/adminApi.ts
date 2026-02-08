@@ -230,6 +230,16 @@ export const adminApi = {
     }
   },
 
+  async getBuyerById(id: string) {
+    try {
+      const response = await api.get(`/admin/buyers/${id}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching buyer details:', error);
+      return null;
+    }
+  },
+
   // Sellers
   async getSellers() {
     try {

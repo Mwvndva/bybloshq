@@ -300,87 +300,68 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         minHeight: '100vh'
       }}
     >
-      {/* Header - Hidden on mobile to save space, or very compact */}
-      <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm hidden sm:block">
-        <div className="w-full px-3 sm:px-4 md:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-0 h-auto sm:h-16 py-3 sm:py-0">
+      {/* Header */}
+      <div className="bg-black/80 backdrop-blur-md border-b border-gray-800/50 sticky top-0 z-10 shadow-sm">
+        <div className="w-full px-3">
+          <div className="flex justify-between items-center h-14">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => navigate('/')}
-              className="text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl px-3 py-2 font-normal w-fit self-start sm:self-auto"
+              className="text-gray-300 hover:text-white hover:bg-gray-800 rounded-xl px-2 h-9 font-normal"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Back to Home</span>
-              <span className="sm:hidden">Back</span>
+              <ArrowLeft className="h-4 w-4 mr-1.5" />
+              <span className="text-xs sm:text-sm">Back</span>
             </Button>
-            <div className="flex items-center space-x-2 self-start sm:self-auto">
-              <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
-                <Store className="h-5 w-5 text-white" />
+            <div className="flex items-center space-x-1.5">
+              <div className="w-7 h-7 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
+                <Store className="h-4 w-4 text-white" />
               </div>
-              <span className="text-lg sm:text-xl font-semibold text-white tracking-tight">Seller Portal</span>
+              <span className="text-base font-semibold text-white tracking-tight">Seller Portal</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Mobile Only Compact Header */}
-      <div className="sm:hidden flex items-center justify-between px-3 py-2 bg-black/90 border-b border-gray-800/50 sticky top-0 z-20">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/')}
-          className="text-gray-300 hover:text-white p-0 h-auto"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <span className="text-sm font-semibold text-white">Seller Portal</span>
-        <div className="w-5"></div> {/* Spacer */}
-      </div>
+
 
       {/* Main Content */}
-      <div className="flex items-center justify-center min-h-[calc(100vh-6rem)] py-1 sm:py-8 md:py-12 px-2 sm:px-6 lg:px-8">
-        <div className="w-full max-w-md">
+      <div className="flex items-center justify-center min-h-[calc(100vh-3.5rem)] py-6 px-3">
+        <div className="w-full max-w-[420px]">
           {/* Register Card */}
           <div
-            className="rounded-xl sm:rounded-3xl border border-gray-800 sm:border-white/10 shadow-2xl p-2 sm:p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md"
-            style={{
-              // Inline styles apply primarily to desktop enhancement or are overridden by Tailwind classes
-            }}
+            className="rounded-2xl border border-white/10 shadow-2xl p-5 sm:p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md"
           >
-            <div className="text-center mb-2 sm:mb-8">
-              <div className="w-8 h-8 sm:w-12 sm:h-12 mx-auto mb-1 sm:mb-4 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg sm:rounded-xl flex items-center justify-center shadow-lg">
-                <Store className="h-4 w-4 sm:h-6 sm:w-6 text-white" />
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Store className="h-6 w-6 text-white" />
               </div>
-              <h1 className="text-base sm:text-2xl font-bold tracking-tight text-white mb-0.5 sm:mb-2">Create Account</h1>
-              <p className="text-[10px] sm:text-base text-gray-400">Join our seller community</p>
+              <h1 className="text-xl font-semibold tracking-tight text-white mb-1">Create Account</h1>
+              <p className="text-sm text-gray-400">Join our seller community</p>
 
               {/* Progress Indicator */}
-              <div className="mt-2 sm:mt-6 flex items-center justify-center gap-2">
+              <div className="mt-4 flex items-center justify-center gap-2">
                 <div className="flex items-center">
-                  <div className={`w-5 h-5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-sm font-semibold ${currentStep >= 1 ? 'bg-yellow-400 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 1 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
                     1
                   </div>
-                  <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs text-gray-400 hidden sm:inline">Personal</span>
                 </div>
-                <div className={`w-4 sm:w-8 h-0.5 ${currentStep >= 2 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 2 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
                 <div className="flex items-center">
-                  <div className={`w-5 h-5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-sm font-semibold ${currentStep >= 2 ? 'bg-yellow-400 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 2 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
                     2
                   </div>
-                  <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs text-gray-400 hidden sm:inline">Location</span>
                 </div>
-                <div className={`w-4 sm:w-8 h-0.5 ${currentStep >= 3 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
+                <div className={`w-6 h-0.5 ${currentStep >= 3 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
                 <div className="flex items-center">
-                  <div className={`w-5 h-5 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-sm font-semibold ${currentStep >= 3 ? 'bg-yellow-400 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 3 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
                     3
                   </div>
-                  <span className="ml-1 sm:ml-2 text-[10px] sm:text-xs text-gray-400 hidden sm:inline">Security</span>
                 </div>
               </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-1 sm:space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Step 1: Personal Details */}
               {currentStep === 1 && (
                 <>
@@ -574,9 +555,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
                   {/* Password Strength Checklist */}
                   {formData.password && (
-                    <div className="mt-1 sm:mt-2 p-2 sm:p-3 bg-gray-800/50 rounded-lg sm:rounded-xl border border-gray-700/50">
-                      <p className="text-[10px] sm:text-xs font-semibold text-gray-300 mb-1 sm:mb-2">Password Requirements:</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 sm:gap-2">
+                    <div className="mt-2 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50">
+                      <p className="text-xs font-semibold text-gray-300 mb-2">Password Requirements:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {[
                           { label: "8+ chars", met: checkPasswordStrength(formData.password).minLength },
                           { label: "1 Number", met: checkPasswordStrength(formData.password).hasNumber },
@@ -639,13 +620,12 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                 </>
               )}
 
-              {/* Navigation Buttons */}
-              <div className="flex gap-2 sm:gap-3 pt-1 sm:pt-2">
+              <div className="flex gap-3 mt-4">
                 {currentStep > 1 && (
                   <Button
                     type="button"
                     onClick={() => setCurrentStep(currentStep - 1)}
-                    className="flex-1 bg-gray-700 text-white hover:bg-gray-600 rounded-lg sm:rounded-xl h-8 sm:h-11 font-medium tracking-tight transition-all duration-200 text-xs sm:text-sm"
+                    className="flex-1 bg-gray-700 text-white hover:bg-gray-600 rounded-xl h-11 font-medium tracking-tight transition-all duration-200 text-sm"
                   >
                     Back
                   </Button>
@@ -654,52 +634,40 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                   <Button
                     type="button"
                     onClick={() => {
-                      // Validate current step before proceeding
+                      // ... validation logic ...
                       if (currentStep === 1) {
                         if (!formData.fullName || !formData.shopName || !formData.email || !formData.whatsappNumber) {
-                          toast({
-                            title: "Missing Information",
-                            description: "Please fill in all personal details",
-                            variant: 'destructive',
-                          });
+                          toast({ title: "Missing Information", description: "Please fill in all details", variant: 'destructive' });
                           return;
                         }
                         if (shopNameAvailable === false) {
-                          toast({
-                            title: "Shop Name Unavailable",
-                            description: "Please choose a different shop name",
-                            variant: 'destructive',
-                          });
+                          toast({ title: "Shop Name Unavailable", description: "Please choose another name", variant: 'destructive' });
                           return;
                         }
                       } else if (currentStep === 2) {
                         if (!formData.city || !formData.location) {
-                          toast({
-                            title: "Missing Information",
-                            description: "Please select your city and area",
-                            variant: 'destructive',
-                          });
+                          toast({ title: "Missing Information", description: "Please select your location", variant: 'destructive' });
                           return;
                         }
                       }
                       setCurrentStep(currentStep + 1);
                     }}
-                    className={`${currentStep === 1 ? 'flex-1' : 'flex-1'} bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-lg sm:rounded-xl h-8 sm:h-11 font-medium tracking-tight transition-all duration-200 text-xs sm:text-sm`}
+                    className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl h-11 font-semibold tracking-tight transition-all duration-200 text-sm"
                   >
                     Next
                   </Button>
                 ) : (
                   <Button
                     type="submit"
-                    className="flex-1 button-mobile bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-lg sm:rounded-xl h-8 sm:h-11 font-medium tracking-tight transition-all duration-200 text-xs sm:text-sm"
+                    className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl h-11 font-semibold tracking-tight transition-all duration-200 text-sm"
                     disabled={isLoading}
                   >
                     {isLoading ? (
                       <>
-                        <Loader2 className="mr-2 h-3.5 w-3.5 sm:h-5 sm:w-5 animate-spin" />
-                        Creating Account...
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
                       </>
-                    ) : 'Sign Up'}
+                    ) : 'Register'}
                   </Button>
                 )}
               </div>
