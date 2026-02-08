@@ -170,7 +170,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const handleBookingConfirm = async (data: { date: Date; time: string; location: string; locationType?: string; serviceRequirements?: string }) => {
+  const handleBookingConfirm = async (data: {
+    date: Date;
+    time: string;
+    location: string;
+    locationType?: string;
+    serviceRequirements?: string;
+    buyerLocation?: { latitude: number; longitude: number; fullAddress: string } | null
+  }) => {
     setBookingData(data);
     setIsBookingModalOpen(false);
 
@@ -319,6 +326,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           service_location: activeBooking.location,
           location_type: activeBooking.locationType,
           service_requirements: activeBooking.serviceRequirements,
+          buyer_location: activeBooking.buyerLocation,
           product_type: 'service'
         } : undefined
       };

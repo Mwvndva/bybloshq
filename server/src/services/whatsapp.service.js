@@ -226,12 +226,24 @@ class WhatsAppService {
         if (isService && order.metadata?.booking_date) {
             const locationType = order.metadata.location_type;
             const locationLabel = locationType === 'seller_visits_buyer' ? 'Client Location' : 'Service Location';
+            const locationVal = order.metadata.service_location || seller.physicalAddress || seller.location || seller.city || 'Not specified';
+
+            let locationExtra = '';
+            const buyerLoc = order.metadata.buyer_location;
+            if (buyerLoc && (buyerLoc.latitude || buyerLoc.fullAddress)) {
+                const address = buyerLoc.fullAddress || 'Coordinates provided';
+                const mapLink = (buyerLoc.latitude && buyerLoc.longitude)
+                    ? `https://www.google.com/maps?q=${buyerLoc.latitude},${buyerLoc.longitude}`
+                    : '';
+
+                locationExtra = `\n• *Buyer Map:* ${mapLink || 'N/A'}\n• *Full Address:* ${address}`;
+            }
 
             bookingInfo = `
 📅 *SERVICE BOOKING DETAILS*
 • Date: ${order.metadata.booking_date}
 • Time: ${order.metadata.booking_time}
-• ${locationLabel}: ${order.metadata.service_location || seller.physicalAddress || seller.location || seller.city || 'Not specified'}
+• ${locationLabel}: ${locationVal}${locationExtra}
 `.trim();
         }
 

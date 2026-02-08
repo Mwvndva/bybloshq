@@ -291,3 +291,33 @@ export const downloadDigitalProduct = async (req, res) => {
         res.status(500).json({ status: 'error', message: 'Download failed' });
     }
 };
+export const locationPreview = async (req, res) => {
+    try {
+        const { latitude, longitude, fullAddress } = req.body;
+
+        // Basic validation
+        if (!latitude || !longitude) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Latitude and longitude are required for location preview'
+            });
+        }
+
+        // Return the parsed location data for front-end preview
+        res.status(200).json({
+            status: 'success',
+            data: {
+                latitude: parseFloat(latitude),
+                longitude: parseFloat(longitude),
+                fullAddress: fullAddress || 'Address not provided',
+                mapUrl: `https://www.google.com/maps?q=${latitude},${longitude}`
+            }
+        });
+    } catch (error) {
+        logger.error('Error in location preview:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to process location preview'
+        });
+    }
+};

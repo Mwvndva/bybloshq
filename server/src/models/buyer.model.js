@@ -16,7 +16,7 @@ const toCamelCase = (obj) => {
 
 class Buyer {
   // Create a new buyer
-  static async create({ fullName, email, mobilePayment, whatsappNumber, password, city, location, userId = null }) {
+  static async create({ fullName, email, mobilePayment, whatsappNumber, password, city, location, latitude, longitude, fullAddress, userId = null }) {
     // If we have a userId, we expect the user record already exists (with hashed password)
     // and we just create the profile.
     let hashedPassword = null;
@@ -25,28 +25,41 @@ class Buyer {
     }
 
     const query = `
-      INSERT INTO buyers (full_name, email, mobile_payment, whatsapp_number, password, city, location, user_id, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      INSERT INTO buyers (
+        full_name, email, mobile_payment, whatsapp_number, password, 
+        city, location, latitude, longitude, full_address, user_id, 
+        created_at, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
       RETURNING *
     `;
-    const values = [fullName, email, mobilePayment, whatsappNumber, hashedPassword, city, location, userId];
+    const values = [
+      fullName, email, mobilePayment, whatsappNumber, hashedPassword,
+      city, location, latitude, longitude, fullAddress, userId
+    ];
     const result = await pool.query(query, values);
     return toCamelCase(result.rows[0]);
   }
 
   // Create a new buyer for guest checkout (generates secure random password)
-  static async createGuest({ fullName, email, mobilePayment, whatsappNumber, city, location }) {
+  static async createGuest({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress }) {
     // Generate a secure random password for guest accounts
     const randomPassword = crypto.randomBytes(32).toString('hex');
     const hashedPassword = await bcrypt.hash(randomPassword, 10);
 
     const query = `
-      INSERT INTO buyers (full_name, email, mobile_payment, whatsapp_number, password, city, location, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+      INSERT INTO buyers (
+        full_name, email, mobile_payment, whatsapp_number, password, 
+        city, location, latitude, longitude, full_address, created_at, updated_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *
     `;
 
-    const values = [fullName, email, mobilePayment, whatsappNumber, hashedPassword, city, location];
+    const values = [
+      fullName, email, mobilePayment, whatsappNumber, hashedPassword,
+      city, location, latitude, longitude, fullAddress
+    ];
     const result = await pool.query(query, values);
     return toCamelCase(result.rows[0]);
   }
@@ -148,6 +161,9 @@ class Buyer {
       whatsappNumber: 'whatsapp_number',
       city: 'city',
       location: 'location',
+      latitude: 'latitude',
+      longitude: 'longitude',
+      fullAddress: 'full_address',
       isVerified: 'is_verified',
       profileImage: 'profile_image'
       // Add other fields as needed
@@ -180,6 +196,18 @@ class Buyer {
 
     values.push(id);
     const result = await pool.query(query, values);
+    return result.rows.length ? toCamelCase(result.rows[0]) : null;
+  }
+
+  // Update buyer location coordinates
+  static async updateLocation(buyerId, { latitude, longitude, fullAddress }) {
+    const query = `
+      UPDATE buyers 
+      SET latitude = $1, longitude = $2, full_address = $3, updated_at = NOW()
+      WHERE id = $4
+      RETURNING *
+    `;
+    const result = await pool.query(query, [latitude, longitude, fullAddress, buyerId]);
     return result.rows.length ? toCamelCase(result.rows[0]) : null;
   }
 

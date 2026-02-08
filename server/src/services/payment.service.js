@@ -1316,6 +1316,7 @@ export class PaymentService {
             buyerMobilePayment,
             buyerWhatsApp,
             shippingAddress, // Pass the resolved address
+            buyerLocation: payload.metadata?.buyer_location, // Extract from metadata if provided by frontend
             metadata: {
                 ...(payload.metadata || {}),
                 product_type: product.product_type,
