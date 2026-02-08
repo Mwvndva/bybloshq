@@ -15,7 +15,14 @@ interface ServiceBookingModalProps {
     product: Product;
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (bookingData: { date: Date; time: string; location: string; locationType?: string; serviceRequirements?: string }) => void;
+    onConfirm: (bookingData: {
+        date: Date;
+        time: string;
+        location: string;
+        locationType?: string;
+        serviceRequirements?: string;
+        buyerLocation?: { latitude: number; longitude: number; fullAddress: string } | null
+    }) => void;
 }
 
 export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: ServiceBookingModalProps) {
@@ -28,6 +35,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
     const [serviceRequirements, setServiceRequirements] = useState('');
 
+    // Geolocation state
+    const [buyerLocation, setBuyerLocation] = useState<{ latitude: number; longitude: number; fullAddress: string } | null>(null);
+    const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+
     const serviceOptions = product.service_options || (product as any).serviceOptions || {};
 
     // Parse service locations
@@ -38,6 +49,13 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const wordCount = serviceRequirements.trim().split(/\s+/).filter(w => w.length > 0).length;
     const maxWords = 50;
 
+    const locationType = serviceOptions.location_type || 'buyer_visits_seller';
+    const isHybrid = locationType === 'hybrid';
+    const isSellerVisits = locationType === 'seller_visits_buyer';
+
+    // Check if seller is shopless (no physical address)
+    const isShopless = !product.seller?.physicalAddress;
+
     // Reset state when modal opens
     useEffect(() => {
         if (isOpen) {
@@ -45,6 +63,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             setTime('');
             setCustomLocation('');
             setServiceRequirements('');
+            setBuyerLocation(null);
 
             // Auto-select first location if available
             if (locations.length > 0) {
@@ -61,6 +80,35 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             }
         }
     }, [isOpen, product]);
+
+    const detectLocation = () => {
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            return;
+        }
+
+        setIsDetectingLocation(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+
+                // Set coordinates
+                const newLoc = {
+                    latitude,
+                    longitude,
+                    fullAddress: customLocation || 'Current Location'
+                };
+                setBuyerLocation(newLoc);
+                setIsDetectingLocation(false);
+            },
+            (error) => {
+                console.error('Error detecting location:', error);
+                alert('Could not detect location. Please enter your address manually.');
+                setIsDetectingLocation(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
 
     // Generate time slots based on product service options
     useEffect(() => {
@@ -129,17 +177,18 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 time,
                 location: finalLocation,
                 locationType: isShopless ? 'virtual' : (selectedLocationType === 'buyer' ? 'seller_visits_buyer' : 'buyer_visits_seller'),
-                serviceRequirements: serviceRequirements.trim() || '' // Ensure empty string instead of null
+                serviceRequirements: serviceRequirements.trim() || '', // Ensure empty string instead of null
+                buyerLocation: (selectedLocationType === 'buyer' || isSellerVisits) ? {
+                    ...buyerLocation,
+                    latitude: buyerLocation?.latitude || 0,
+                    longitude: buyerLocation?.longitude || 0,
+                    fullAddress: finalLocation
+                } : null
             });
         }
     };
 
-    const locationType = serviceOptions.location_type || 'buyer_visits_seller';
-    const isHybrid = locationType === 'hybrid';
-    const isSellerVisits = locationType === 'seller_visits_buyer';
-    
-    // Check if seller is shopless (no physical address)
-    const isShopless = !product.seller?.physical_address;
+
 
     // Validation - for shopless sellers, location is auto-filled
     const isLocationValid = () => {
@@ -154,7 +203,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     };
 
     const isValid = date && time && isLocationValid() && wordCount <= maxWords;
-    
+
     // Get disabled reason for UI feedback
     const getDisabledReason = () => {
         if (!date) return 'Please select a date';
@@ -286,15 +335,42 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                         )}
 
                                         {(selectedLocationType === 'buyer' || isSellerVisits) && (
-                                            <div className="relative">
-                                                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666]" />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Enter address"
-                                                    className="flex h-11 w-full rounded-xl bg-white/5 border-0 pl-10 pr-4 text-sm text-white placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 transition-all font-medium"
-                                                    value={customLocation}
-                                                    onChange={(e) => setCustomLocation(e.target.value)}
-                                                />
+                                            <div className="space-y-3">
+                                                <div className="relative">
+                                                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#666]" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Enter address"
+                                                        className="flex h-11 w-full rounded-xl bg-white/5 border-0 pl-10 pr-4 text-sm text-white placeholder:text-[#555] focus:ring-1 focus:ring-yellow-400 transition-all font-medium"
+                                                        value={customLocation}
+                                                        onChange={(e) => setCustomLocation(e.target.value)}
+                                                    />
+                                                </div>
+
+                                                <div className="flex items-center justify-between gap-2 px-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={detectLocation}
+                                                        className={cn(
+                                                            "text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-colors",
+                                                            buyerLocation ? "text-green-400" : "text-yellow-400 hover:text-yellow-300"
+                                                        )}
+                                                        disabled={isDetectingLocation}
+                                                    >
+                                                        {isDetectingLocation ? (
+                                                            <Clock className="w-3 h-3 animate-spin" />
+                                                        ) : (
+                                                            <MapPin className="w-3 h-3" />
+                                                        )}
+                                                        {buyerLocation ? 'Location Captured ✓' : 'Detect My Location'}
+                                                    </button>
+
+                                                    {buyerLocation && (
+                                                        <span className="text-[10px] text-[#444] font-medium">
+                                                            {buyerLocation.latitude.toFixed(4)}, {buyerLocation.longitude.toFixed(4)}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         )}
                                     </>

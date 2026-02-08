@@ -9,7 +9,8 @@ import {
   cancelOrder,
   sellerCancelOrder,
   downloadDigitalProduct,
-  createSellerClientOrder
+  createSellerClientOrder,
+  locationPreview
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -457,6 +458,12 @@ router.post(
   '/client-order',
   protect,
   createSellerClientOrder
+);
+
+router.post(
+  '/location-preview',
+  protect,
+  locationPreview
 );
 
 export default router;

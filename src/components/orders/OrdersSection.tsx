@@ -119,7 +119,7 @@ const getStatusBadge = (status: string) => {
     case 'SERVICE_PENDING':
       return (
         <Badge className={`bg-gradient-to-r from-purple-500/90 to-purple-600/90 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full ${badgeGlow}`}>
-          <CheckCircle className="h-3 w-3 mr-1" />
+          <Clock className="h-3 w-3 mr-1" />
           Service Pending
         </Badge>
       );
@@ -647,13 +647,13 @@ export default function OrdersSection() {
                       View Details
                     </Button>
 
-                    {order.status === 'DELIVERY_COMPLETE' && (
+                    {(order.status === 'DELIVERY_COMPLETE' || order.status === 'SERVICE_PENDING') && (
                       <Button
                         size="sm"
                         className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm"
                         onClick={() => handleConfirmReceiptClick(order.id)}
                       >
-                        Confirm Receipt
+                        {order.status === 'SERVICE_PENDING' ? 'Confirm Booking' : 'Confirm Receipt'}
                       </Button>
                     )}
 

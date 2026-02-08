@@ -25,10 +25,11 @@ class OrderService {
         buyerWhatsApp,
         shippingAddress,
         notes,
-        metadata = {}
+        metadata = {},
+        buyerLocation = null // { latitude, longitude, fullAddress }
       } = orderData;
 
-      logger.info('OrderService: Starting order creation', { buyerId, sellerId });
+      logger.info('OrderService: Starting order creation', { buyerId, sellerId, hasLocation: !!buyerLocation });
       await client.query('BEGIN');
 
       // 1. Verify seller exists and is active
@@ -143,6 +144,25 @@ class OrderService {
           if (item.availableQuantity === 0) {
             throw new Error(`Product "${item.name || item.productId}" is out of stock`);
           }
+        }
+      }
+
+      // 4c. Update Buyer Location if provided
+      if (buyerId && buyerLocation) {
+        try {
+          const Buyer = (await import('../models/buyer.model.js')).default;
+          await Buyer.updateLocation(buyerId, {
+            latitude: buyerLocation.latitude,
+            longitude: buyerLocation.longitude,
+            fullAddress: buyerLocation.fullAddress
+          });
+          logger.info(`Updated buyer ${buyerId} location coordinates`);
+
+          // Also store in metadata for this specific order
+          metadata.buyer_location = buyerLocation;
+        } catch (locError) {
+          logger.error('Error updating buyer location during order creation:', locError);
+          // Don't fail the order creation for location update failure
         }
       }
 
@@ -929,6 +949,7 @@ class OrderService {
         OrderStatus.DELIVERED,
         OrderStatus.PENDING,
         OrderStatus.DELIVERY_PENDING,
+        OrderStatus.DELIVERY_COMPLETE, // Added to fix Problem 3
         OrderStatus.CONFIRMED,        // Service orders that seller confirmed
         OrderStatus.SERVICE_PENDING,  // Service orders awaiting confirmation
         OrderStatus.COLLECTION_PENDING, // Physical orders awaiting pickup
