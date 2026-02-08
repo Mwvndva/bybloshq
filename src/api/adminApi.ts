@@ -139,6 +139,30 @@ export const adminApi = {
     }
   },
 
+  // Events
+  async getEvents() {
+    try {
+      console.log('Fetching events from API...');
+      const response = await api.get('/admin/events');
+      console.log('Events API response:', response);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      return [];
+    }
+  },
+
+  async getMonthlyEvents() {
+    try {
+      console.log('Fetching monthly events from API...');
+      const response = await api.get('/admin/events/monthly');
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching monthly events:', error);
+      return [];
+    }
+  },
+
   // Basic Stats (Legacy Dashboard)
   async getDashboardStats() {
     try {
@@ -193,6 +217,29 @@ export const adminApi = {
       console.error('Error fetching buyers:', error);
       // Return empty array instead of throwing to prevent UI crashes
       return [];
+    }
+  },
+
+  // Sellers
+  async getSellers() {
+    try {
+      console.log('Fetching sellers from API...');
+      const response = await api.get('/admin/sellers');
+      console.log('Sellers API response:', response);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching sellers:', error);
+      return [];
+    }
+  },
+
+  async getSellerById(id: string) {
+    try {
+      const response = await api.get(`/admin/sellers/${id}`);
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching seller details:', error);
+      return null;
     }
   },
 

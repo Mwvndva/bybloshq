@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, Clock, Users, Ticket, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, Clock, Users, Ticket, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -179,6 +179,30 @@ interface DashboardState {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 // Chart Components
+const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
+  <Card className="bg-white/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-3xl overflow-hidden hover:shadow-md transition-all duration-300">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-medium text-gray-600">
+        {title}
+      </CardTitle>
+      <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+        {icon}
+      </div>
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl font-bold text-gray-900">{value}</div>
+      <p className="text-xs text-gray-500 mt-1 flex items-center">
+        {trend !== null && trend !== undefined && (
+          <span className={`flex items-center ${trend >= 0 ? 'text-green-600' : 'text-red-600'} mr-1`}>
+            {trend >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
+            {Math.abs(trend)}%
+          </span>
+        )}
+        <span className="truncate">{description}</span>
+      </p>
+    </CardContent>
+  </Card>
+);
 const UserGrowthChart = ({ data }: { data: any[] }) => (
   <Card className="col-span-4 lg:col-span-2 bg-white/80 backdrop-blur-xl border border-white/20 shadow-sm rounded-3xl overflow-hidden">
     <CardHeader>
@@ -373,7 +397,8 @@ const NewAdminDashboard = () => {
           monthlyEvents,
           monthlyMetrics,
           financialMetrics,
-          monthlyFinancialData
+          monthlyFinancialData,
+          dashboardStats
         ] = await Promise.all([
           adminApi.getAnalytics().then(data => {
             console.log('Analytics data received:', data);
@@ -415,6 +440,10 @@ const NewAdminDashboard = () => {
           adminApi.getMonthlyFinancialData().then(data => {
             console.log('Monthly financial data received:', data);
             return data;
+          }),
+          adminApi.getDashboardStats().then(data => {
+            console.log('Dashboard stats received:', data);
+            return data;
           })
         ]);
 
@@ -422,12 +451,13 @@ const NewAdminDashboard = () => {
         const totalSellers = Array.isArray(sellers) ? sellers.length : 0;
         const totalBuyers = Array.isArray(buyers) ? buyers.length : 0;
         const safeAnalytics: DashboardAnalytics = {
-          totalRevenue: analytics?.totalRevenue || 0,
-          totalEvents: analytics?.totalEvents || 0,
-          totalOrganizers: analytics?.totalOrganizers || 0,
-          totalProducts: analytics?.totalProducts || 0,
-          totalSellers: totalSellers,
-          totalBuyers: totalBuyers,
+          totalRevenue: financialMetrics?.totalSales || 0,
+          totalEvents: dashboardStats?.totalEvents || events?.length || 0,
+          totalOrganizers: dashboardStats?.totalOrganizers || organizers?.length || 0,
+          totalProducts: dashboardStats?.totalProducts || 0,
+          totalSellers: dashboardStats?.totalSellers || totalSellers,
+          totalBuyers: dashboardStats?.totalBuyers || totalBuyers,
+          totalWishlists: dashboardStats?.totalWishlists || 0,
           monthlyGrowth: {
             revenue: analytics?.monthlyGrowth?.revenue || 0,
             events: analytics?.monthlyGrowth?.events || 0,
@@ -456,7 +486,7 @@ const NewAdminDashboard = () => {
           sellers: Array.isArray(sellers) ? sellers : [],
           organizers: Array.isArray(organizers) ? organizers : [],
           buyers: Array.isArray(buyers) ? buyers : [],
-          withdrawalRequests: Array.isArray(withdrawalRequests) ? withdrawalRequests : [],
+          withdrawalRequests: Array.isArray(withdrawalRequests) ? (withdrawalRequests as WithdrawalRequest[]) : [],
           monthlyEvents: Array.isArray(monthlyEvents) ? monthlyEvents : [],
           monthlyMetrics: metricsData,
           financialMetrics: financialMetrics || {
@@ -776,7 +806,7 @@ const NewAdminDashboard = () => {
             event.id === eventId
               ? {
                 ...event,
-                withdrawal_status: 'paid',
+                withdrawal_status: response.data.withdrawal_status as 'paid',
                 withdrawal_date: response.data.withdrawal_date,
                 withdrawal_amount: response.data.withdrawal_amount
               }

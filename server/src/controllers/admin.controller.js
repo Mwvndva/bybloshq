@@ -1052,5 +1052,6 @@ export {
   updateWithdrawalRequestStatus,
   getFinancialMetrics,
   getMonthlyFinancialData,
+  getAnalytics
 };
 
