@@ -11,7 +11,7 @@ class AdminService {
             events: 'SELECT COUNT(*) FROM events',
             buyers: 'SELECT COUNT(*) FROM buyers',
             orders: 'SELECT COUNT(*) FROM product_orders', // Assuming product_orders table exists
-            wishlists: 'SELECT COUNT(*) FROM wishlists' // Assuming wishlists table exists
+            wishlists: 'SELECT COUNT(*) FROM wishlist' // Corrected table name
         };
 
         const stats = {};
@@ -132,7 +132,7 @@ class AdminService {
 
     async getAllSellers() {
         const query = `
-            SELECT id, full_name as name, email, whatsapp_number as phone, status, city, location, created_at, shop_name, is_active, balance
+            SELECT id, full_name as name, email, whatsapp_number as phone, status, city, location, created_at, shop_name, balance
             FROM sellers ORDER BY created_at DESC
         `;
         const { rows } = await pool.query(query);

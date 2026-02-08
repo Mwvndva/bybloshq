@@ -92,7 +92,6 @@ export const AdminLoginPage = () => {
                     Email Address
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-4 top-3.5 h-5 w-5 text-gray-500" />
                     <Input
                       id="email"
                       type="email"
@@ -100,7 +99,7 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="admin@example.com"
                       required
-                      className="w-full h-12 pl-14 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
+                      className="w-full h-12 px-4 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
                     />
                   </div>
                 </div>
@@ -110,7 +109,6 @@ export const AdminLoginPage = () => {
                     Password
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-4 top-3.5 h-5 w-5 text-gray-500" />
                     <Input
                       id="password"
                       type="password"
@@ -118,7 +116,7 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="Enter your password"
                       required
-                      className="w-full h-12 pl-14 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
+                      className="w-full h-12 px-4 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-xl focus:border-yellow-500/50 focus:ring-yellow-500/20 transition-all font-medium"
                     />
                   </div>
                 </div>

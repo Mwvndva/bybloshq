@@ -269,68 +269,7 @@ const RevenueChart = ({ data }: { data: any[] }) => (
   </Card>
 );
 
-const ProductStatusChart = ({ data }: { data: any[] }) => (
-  <Card className="col-span-4 lg:col-span-2 bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-    <CardHeader className="relative z-10">
-      <CardTitle className="text-white">Product Status</CardTitle>
-      <CardDescription className="text-gray-400">Inventory overview</CardDescription>
-    </CardHeader>
-    <CardContent className="relative z-10">
-      <div className="h-[300px] w-full flex items-center justify-center">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="value"
-              stroke="none"
-            >
-              {data?.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={['#10b981', '#f43f5e', '#f59e0b', '#3b82f6'][index % 4]} />
-              ))}
-            </Pie>
-            <Tooltip
-              contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
-              itemStyle={{ color: '#e5e7eb' }}
-            />
-            <Legend wrapperStyle={{ color: '#9ca3af' }} />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-    </CardContent>
-  </Card>
-);
 
-const GeoDistributionChart = ({ data }: { data: any[] }) => (
-  <Card className="col-span-4 lg:col-span-2 bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-    <CardHeader className="relative z-10">
-      <CardTitle className="text-white">Top Cities</CardTitle>
-      <CardDescription className="text-gray-400">Buyer distribution by city</CardDescription>
-    </CardHeader>
-    <CardContent className="relative z-10">
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart layout="vertical" data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-            <XAxis type="number" stroke="#9ca3af" />
-            <YAxis dataKey="name" type="category" stroke="#9ca3af" width={100} />
-            <Tooltip
-              cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
-              contentStyle={{ backgroundColor: '#fff', border: '1px solid #e5e7eb', borderRadius: '8px', color: '#1f2937' }}
-            />
-            <Bar dataKey="value" fill="#0088FE" radius={[0, 4, 4, 0]} name="Buyers" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </CardContent>
-  </Card>
-);
 
 const NewAdminDashboard = () => {
   // All hooks must be called unconditionally at the top level
@@ -1732,11 +1671,7 @@ const NewAdminDashboard = () => {
                 </Card>
               </div>
 
-              {/* Product & Geo Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <ProductStatusChart data={dashboardState.analytics.productStatus || []} />
-                <GeoDistributionChart data={dashboardState.analytics.geoDistribution || []} />
-              </div>
+
 
               {/* Financial Charts */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">

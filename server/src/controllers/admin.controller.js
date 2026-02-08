@@ -151,9 +151,6 @@ const getAllEvents = async (req, res, next) => {
         e.location, 
         e.status, 
         e.created_at, 
-        e.withdrawal_status,
-        e.withdrawal_date,
-        e.withdrawal_amount,
         o.full_name as organizer_name,
         (SELECT COUNT(*) FROM tickets WHERE event_id = e.id) as attendees_count,
         COALESCE(
@@ -824,7 +821,17 @@ const markEventAsPaid = async (req, res, next) => {
     }
 
     // Check if event exists
-    const eventQuery = 'SELECT id, name, withdrawal_status FROM events WHERE id = $1';
+    // Check if event exists and withdrawal_status column is available
+    let eventQuery = 'SELECT id, name FROM events WHERE id = $1';
+    // Check if column exists (simple way: try to select it, if fails, it doesn't exist)
+    let hasWithdrawalStatus = true;
+    try {
+      await pool.query('SELECT withdrawal_status FROM events LIMIT 1');
+      eventQuery = 'SELECT id, name, withdrawal_status FROM events WHERE id = $1';
+    } catch (e) {
+      hasWithdrawalStatus = false;
+    }
+
     const eventResult = await pool.query(eventQuery, [eventId]);
 
     if (eventResult.rows.length === 0) {
@@ -834,8 +841,16 @@ const markEventAsPaid = async (req, res, next) => {
     const event = eventResult.rows[0];
 
     // Check if event is already marked as paid
-    if (event.withdrawal_status === 'paid') {
+    if (hasWithdrawalStatus && event.withdrawal_status === 'paid') {
       return next(new AppError('Event withdrawal has already been processed', 400));
+    }
+
+    if (!hasWithdrawalStatus) {
+      // If column is missing, we can't mark as paid properly in DB
+      // But we can still return successfully if the user just wants to see the financial summary
+      // However, the USER request implies they want to MARK it.
+      // For now, let's just abort with a clear message if we can't save the status.
+      return next(new AppError('Withdrawal tracking columns missing in database. Please run migrations.', 400));
     }
 
     // Calculate total revenue for the event
