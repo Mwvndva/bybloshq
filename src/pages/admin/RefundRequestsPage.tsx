@@ -113,27 +113,27 @@ export default function RefundRequestsPage() {
     switch (status) {
       case 'pending':
         return (
-          <Badge className="bg-yellow-100 text-yellow-800">
+          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 hover:bg-yellow-500/20">
             <Clock className="h-3 w-3 mr-1" />
             Pending
           </Badge>
         );
       case 'completed':
         return (
-          <Badge className="bg-green-100 text-green-800">
+          <Badge className="bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20">
             <CheckCircle className="h-3 w-3 mr-1" />
             Completed
           </Badge>
         );
       case 'rejected':
         return (
-          <Badge className="bg-red-100 text-red-800">
+          <Badge className="bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20">
             <XCircle className="h-3 w-3 mr-1" />
             Rejected
           </Badge>
         );
       default:
-        return <Badge>{status}</Badge>;
+        return <Badge className="bg-gray-500/10 text-gray-400 border-white/10">{status}</Badge>;
     }
   };
 
@@ -147,7 +147,7 @@ export default function RefundRequestsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-300" />
+        <Loader2 className="h-8 w-8 animate-spin text-yellow-500" />
       </div>
     );
   }
@@ -155,7 +155,7 @@ export default function RefundRequestsPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Refund Requests</h1>
+        <h1 className="text-3xl font-bold text-white">Refund Requests</h1>
 
         <div className="flex gap-2">
           {['pending', 'completed', 'rejected'].map((status) => (
@@ -163,7 +163,10 @@ export default function RefundRequestsPage() {
               key={status}
               variant={statusFilter === status ? 'default' : 'outline'}
               onClick={() => setStatusFilter(status)}
-              className="capitalize"
+              className={`capitalize ${statusFilter === status
+                ? 'bg-yellow-500 text-black hover:bg-yellow-400'
+                : 'bg-transparent text-gray-400 border-white/10 hover:bg-white/5 hover:text-white'
+                }`}
             >
               {status}
             </Button>
@@ -172,67 +175,67 @@ export default function RefundRequestsPage() {
       </div>
 
       {requests.length === 0 ? (
-        <Card>
+        <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <DollarSign className="h-12 w-12 text-gray-300 mb-4" />
-            <p className="text-gray-300">No {statusFilter} refund requests found</p>
+            <DollarSign className="h-12 w-12 text-gray-500 mb-4" />
+            <p className="text-gray-400">No {statusFilter} refund requests found</p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-4">
           {requests.map((request) => (
-            <Card key={request.id}>
-              <CardHeader>
+            <Card key={request.id} className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-xl">
+              <CardHeader className="bg-white/5 border-b border-white/10">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-xl">Request #{request.id}</CardTitle>
-                    <p className="text-sm text-gray-300">
+                    <CardTitle className="text-xl text-white">Request #{request.id}</CardTitle>
+                    <p className="text-sm text-gray-400 mt-1">
                       Requested: {format(new Date(request.requested_at), 'MMM d, yyyy h:mm a')}
                     </p>
                   </div>
                   {getStatusBadge(request.status)}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-4 pt-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     <div className="flex items-center text-sm">
-                      <User className="h-4 w-4 mr-2 text-gray-300" />
-                      <span className="font-medium">Buyer:</span>
-                      <span className="ml-2">{request.buyer_name}</span>
+                      <User className="h-4 w-4 mr-2 text-gray-400" />
+                      <span className="font-medium text-gray-300">Buyer:</span>
+                      <span className="ml-2 text-white">{request.buyer_name}</span>
                     </div>
                     <div className="flex items-center text-sm">
-                      <Mail className="h-4 w-4 mr-2 text-gray-300" />
-                      <span>{request.buyer_email}</span>
+                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                      <span className="text-gray-300">{request.buyer_email}</span>
                     </div>
                     <div className="flex items-center text-sm">
-                      <Phone className="h-4 w-4 mr-2 text-gray-300" />
-                      <span>{request.buyer_phone}</span>
+                      <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                      <span className="text-gray-300">{request.buyer_phone}</span>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                      <p className="text-sm text-gray-700 font-medium">Refund Amount</p>
-                      <p className="text-2xl font-bold text-green-600">
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3">
+                      <p className="text-sm text-green-400 font-medium">Refund Amount</p>
+                      <p className="text-2xl font-bold text-green-400">
                         {formatCurrency(request.amount)}
                       </p>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      Current Refund Balance: {formatCurrency(request.buyer_current_refunds)}
+                    <div className="text-sm text-gray-400">
+                      Current Refund Balance: <span className="text-white">{formatCurrency(request.buyer_current_refunds)}</span>
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
+                <div className="border-t border-white/10 pt-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <p className="text-sm font-medium mb-1">Payment Method</p>
-                      <p className="text-sm text-gray-700">{request.payment_method}</p>
+                      <p className="text-sm font-medium mb-1 text-gray-300">Payment Method</p>
+                      <p className="text-sm text-gray-400">{request.payment_method}</p>
                     </div>
                     <div>
-                      <p className="text-sm font-medium mb-1">Payment Details</p>
-                      <div className="text-sm text-gray-700 space-y-1">
+                      <p className="text-sm font-medium mb-1 text-gray-300">Payment Details</p>
+                      <div className="text-sm text-gray-400 space-y-1">
                         {(() => {
                           try {
                             const details = typeof request.payment_details === 'string'
@@ -254,28 +257,28 @@ export default function RefundRequestsPage() {
                   </div>
 
                   {request.notes && (
-                    <div className="mt-3">
-                      <p className="text-sm font-medium mb-1">Buyer Notes</p>
-                      <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded">{request.notes}</p>
+                    <div className="mt-4">
+                      <p className="text-sm font-medium mb-1 text-gray-300">Buyer Notes</p>
+                      <p className="text-sm text-gray-400 bg-black/20 p-3 rounded-xl border border-white/5">{request.notes}</p>
                     </div>
                   )}
 
                   {request.admin_notes && (
-                    <div className="mt-3">
-                      <p className="text-sm font-medium mb-1">Admin Notes</p>
-                      <p className="text-sm text-gray-700 bg-blue-50 p-2 rounded">{request.admin_notes}</p>
+                    <div className="mt-4">
+                      <p className="text-sm font-medium mb-1 text-gray-300">Admin Notes</p>
+                      <p className="text-sm text-blue-400 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">{request.admin_notes}</p>
                     </div>
                   )}
                 </div>
 
                 {request.status === 'pending' && (
-                  <div className="flex gap-2 pt-4">
+                  <div className="flex gap-3 pt-4">
                     <Button
                       onClick={() => {
                         setSelectedRequest(request);
                         setIsConfirmDialogOpen(true);
                       }}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      className="flex-1 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Confirm & Process
@@ -286,7 +289,7 @@ export default function RefundRequestsPage() {
                         setSelectedRequest(request);
                         setIsRejectDialogOpen(true);
                       }}
-                      className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                      className="flex-1 border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl bg-transparent"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
                       Reject
@@ -301,42 +304,43 @@ export default function RefundRequestsPage() {
 
       {/* Confirm Dialog */}
       <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-gray-900 border border-white/10 text-white sm:rounded-3xl">
           <DialogHeader>
-            <DialogTitle>Confirm Refund Request</DialogTitle>
+            <DialogTitle className="text-white">Confirm Refund Request</DialogTitle>
           </DialogHeader>
 
           {selectedRequest && (
             <div className="space-y-4 py-4">
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
+                <p className="text-sm text-green-400">
                   You are about to process a refund of:
                 </p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-2xl font-bold text-green-400">
                   {formatCurrency(selectedRequest.amount)}
                 </p>
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-green-300 mt-2">
                   To: {selectedRequest.buyer_name}
                 </p>
-                <p className="text-xs text-gray-300 mt-1">
+                <p className="text-xs text-green-500/70 mt-1">
                   This will deduct the amount from buyer's refund balance
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirmNotes">Admin Notes (Optional)</Label>
+                <Label htmlFor="confirmNotes" className="text-gray-300">Admin Notes (Optional)</Label>
                 <Textarea
                   id="confirmNotes"
                   placeholder="Add any notes about this refund..."
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   rows={3}
+                  className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-green-500/50"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -344,13 +348,14 @@ export default function RefundRequestsPage() {
                 setAdminNotes('');
               }}
               disabled={isProcessing}
+              className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white bg-transparent rounded-xl"
             >
               Cancel
             </Button>
             <Button
               onClick={handleConfirmRefund}
               disabled={isProcessing}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl"
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm & Process
@@ -361,39 +366,40 @@ export default function RefundRequestsPage() {
 
       {/* Reject Dialog */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <DialogContent>
+        <DialogContent className="bg-gray-900 border border-white/10 text-white sm:rounded-3xl">
           <DialogHeader>
-            <DialogTitle>Reject Refund Request</DialogTitle>
+            <DialogTitle className="text-white">Reject Refund Request</DialogTitle>
           </DialogHeader>
 
           {selectedRequest && (
             <div className="space-y-4 py-4">
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-sm text-gray-700">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
+                <p className="text-sm text-red-400">
                   You are about to reject a refund request for:
                 </p>
-                <p className="text-2xl font-bold text-red-600">
+                <p className="text-2xl font-bold text-red-400">
                   {formatCurrency(selectedRequest.amount)}
                 </p>
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-red-300 mt-2">
                   From: {selectedRequest.buyer_name}
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="rejectNotes">Reason for Rejection *</Label>
+                <Label htmlFor="rejectNotes" className="text-gray-300">Reason for Rejection *</Label>
                 <Textarea
                   id="rejectNotes"
                   placeholder="Please provide a reason for rejecting this request..."
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
                   rows={3}
+                  className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500/50"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => {
@@ -401,13 +407,14 @@ export default function RefundRequestsPage() {
                 setAdminNotes('');
               }}
               disabled={isProcessing}
+              className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white bg-transparent rounded-xl"
             >
               Cancel
             </Button>
             <Button
               onClick={handleRejectRefund}
               disabled={isProcessing || !adminNotes.trim()}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl"
             >
               {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Reject Request
