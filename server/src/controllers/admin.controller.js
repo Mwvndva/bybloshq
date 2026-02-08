@@ -7,17 +7,54 @@ import AdminService from '../services/admin.service.js';
 dotenv.config();
 
 // Admin login (kept as is, simple enough)
+// Admin login with Email/Password
 const adminLogin = async (req, res, next) => {
   try {
-    const { pin } = req.body;
-    if (!pin) return next(new AppError('Please provide a PIN', 400));
+    const { email, password } = req.body;
 
-    const adminPin = process.env.ADMIN_PIN || '123456';
-    if (pin !== adminPin) return next(new AppError('Incorrect PIN', 401));
+    if (!email || !password) {
+      return next(new AppError('Please provide email and password', 400));
+    }
 
-    const token = jwt.sign({ id: 'admin' }, process.env.JWT_SECRET, { expiresIn: '24h' });
+    // Reuse shared auth logic directly or via service
+    // For now, simpler to query user and check role
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const user = result.rows[0];
 
-    res.status(200).json({ status: 'success', data: { token } });
+    if (!user || user.role !== 'admin' || !(await require('bcrypt').compare(password, user.password_hash))) {
+      return next(new AppError('Invalid email or password', 401));
+    }
+
+    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '24h' });
+
+    // Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getAnalytics = async (req, res, next) => {
+  try {
+    const analytics = await AdminService.getAnalytics();
+    res.status(200).json({ status: 'success', data: analytics });
   } catch (error) {
     next(error);
   }

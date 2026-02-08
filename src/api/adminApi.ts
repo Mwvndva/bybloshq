@@ -86,202 +86,31 @@ api.interceptors.response.use(
 // Admin API methods
 export const adminApi = {
   // Admin login
-  async login(pin: string) {
+  // Admin login
+  async login(credentials: { email?: string; password?: string; pin?: string }) {
     try {
-      console.log('Starting admin login with PIN:', pin);
-      const response = await api.post('/admin/login', { pin });
+      console.log('Starting admin login...');
+      // Specific payload based on what's provided, favouring email/password
+      const payload = credentials.email && credentials.password
+        ? { email: credentials.email, password: credentials.password }
+        : { pin: credentials.pin };
+
+      const response = await api.post('/admin/login', payload);
       console.log('Login response:', response.data);
 
-      // We rely on HttpOnly cookies now. 
-      // We can set a simple flag to indicate we believe we are logged in, 
-      // but the real source of truth is the cookie.
       if (response.data?.status === 'success') {
         localStorage.setItem('admin_authenticated', 'true');
+        // Store user info if available
+        if (response.data.data?.user) {
+          localStorage.setItem('admin_user', JSON.stringify(response.data.data.user));
+        }
       }
 
       return response.data;
     } catch (error) {
-      // Type assertion for the error object
       const err = error as ApiError;
       console.error('Login error:', err.response?.data?.message || err.message);
       throw error;
-    }
-  },
-
-  logout(): void {
-    localStorage.removeItem('admin_authenticated');
-    // Ideally call a backend logout endpoint here too
-    // await api.post('/admin/logout');
-  },
-
-  isAuthenticated(): boolean {
-    // This is a weak check, real check happens on API calls.
-    // We keep this for simple UI guarding until proper check implementation.
-    const authenticated = localStorage.getItem('admin_authenticated');
-    return !!authenticated;
-  },
-
-  // Sellers
-  async getSellers() {
-    try {
-      console.log('Fetching sellers from API...');
-      const response = await api.get('/admin/sellers');
-      console.log('Sellers API response:', response);
-
-      // Handle different response formats
-      let sellersData = [];
-      if (response.data && Array.isArray(response.data.data)) {
-        sellersData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        sellersData = response.data;
-      } else {
-        console.error('Unexpected API response format:', response);
-        return [];
-      }
-
-      const sellers = sellersData.map((seller: any) => ({
-        id: String(seller.id || `seller-${Math.random().toString(36).substr(2, 9)}`),
-        name: String(seller.name || `${seller.first_name || ''} ${seller.last_name || ''}`.trim() || 'Unnamed Seller'),
-        email: String(seller.email || ''),
-        phone: seller.phone ? String(seller.phone) : undefined,
-        status: String(seller.status || 'Active'),
-        city: seller.city || 'N/A',
-        location: seller.location || 'N/A',
-        // Use camelCase for consistency
-        createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
-      }));
-
-      console.log(`Fetched ${sellers.length} sellers with location data`);
-      return sellers;
-    } catch (error) {
-      console.error('Error fetching sellers:', error);
-      // Return empty array instead of throwing to prevent UI crashes
-      return [];
-    }
-  },
-
-  async getSellerById(sellerId: string) {
-    try {
-      console.log(`Fetching seller ${sellerId} details from API...`);
-      const response = await api.get(`/admin/sellers/${sellerId}`);
-      console.log('Seller details API response:', response);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching seller details:', error);
-      throw error;
-    }
-  },
-
-  // Events
-  async getEvents() {
-    try {
-      console.log('Fetching events from API...');
-      const response = await api.get('/admin/events');
-      console.log('Raw API response:', response);
-
-      // Handle different response formats
-      let eventsData = [];
-      if (response.data && Array.isArray(response.data.data)) {
-        eventsData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        eventsData = response.data;
-      } else {
-        console.error('Unexpected API response format:', response);
-        return [];
-      }
-
-      const events = eventsData.map((event: any) => ({
-        id: String(event.id || `event-${Math.random().toString(36).substr(2, 9)}`),
-        title: String(event.title || 'Untitled Event'),
-        date: event.start_date || event.date || new Date().toISOString(),
-        end_date: event.end_date || undefined,
-        venue: String(event.venue || event.location || 'Venue not specified'),
-        location: String(event.location || event.venue || 'Location not specified'),
-        status: getEventStatus(event.start_date, event.end_date, event.status),
-        organizer_name: String(event.organizer?.name || event.organizer_name || 'Unknown Organizer'),
-        attendees_count: Number(event.attendees_count || event.attendeesCount || 0),
-        revenue: Number(event.revenue || 0),
-        // Use camelCase for consistency
-        createdAt: event.created_at || event.createdAt || new Date().toISOString()
-      }));
-
-      // Sort events by date (newest first)
-      events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      console.log(`Fetched ${events.length} events`);
-      return events;
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      // Return empty array instead of throwing to prevent UI crashes
-      return [];
-    }
-  },
-
-  // Products
-  async getProducts() {
-    try {
-      console.log('Fetching products from API...');
-      const { data } = await api.get('/admin/products');
-      console.log('Products API response:', data);
-
-      // Handle different response formats
-      let productsData = [];
-      if (data && Array.isArray(data.data)) {
-        productsData = data.data;
-      } else if (Array.isArray(data)) {
-        productsData = data;
-      } else {
-        console.error('Unexpected API response format:', data);
-        return [];
-      }
-
-      const products = productsData.map((product: any) => ({
-        id: String(product.id || `product-${Math.random().toString(36).substr(2, 9)}`),
-        name: String(product.name || 'Unnamed Product'),
-        price: Number(product.price || 0),
-        status: getProductStatus(Number(product.stock || 0)),
-        stock: Number(product.stock || 0),
-        seller_name: String(product.seller?.name || product.seller_name || 'Unknown Seller'),
-        // Use camelCase for consistency
-        createdAt: product.created_at || product.createdAt || new Date().toISOString(),
-        // Include additional fields that might be needed
-        image: product.image_url || product.image || '',
-        description: product.description || ''
-      }));
-
-      console.log(`Fetched ${products.length} products`);
-      return products;
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      // Return empty array instead of throwing to prevent UI crashes
-      return [];
-    }
-  },
-
-  // Get monthly event counts
-  async getMonthlyEvents() {
-    try {
-      console.log('Fetching monthly events...');
-      const { data } = await api.get('/admin/events/monthly');
-      console.log('Monthly events response:', data);
-
-      // Transform the data to match the expected format
-      const monthlyEvents = Array.isArray(data.data)
-        ? data.data.map((item: any) => ({
-          month: item.month || '',
-          count: item.count || 0,
-          revenue: item.revenue || 0,
-          // Include any additional fields
-          ...item
-        }))
-        : [];
-
-      console.log('Transformed monthly events:', monthlyEvents);
-      return monthlyEvents;
-    } catch (error) {
-      console.error('Error fetching monthly events:', error);
-      // Return an empty array with the expected structure
-      return [];
     }
   },
 
@@ -289,49 +118,41 @@ export const adminApi = {
   async getAnalytics() {
     try {
       console.log('Fetching dashboard analytics...');
-      const { data } = await api.get('/admin/dashboard');
+      const { data } = await api.get('/admin/analytics');
       console.log('Dashboard analytics response:', data);
 
-      // Transform the response to match the expected frontend format
-      const analytics = {
-        totalRevenue: data.data?.total_revenue || 0,
-        totalEvents: data.data?.total_events || 0,
-        totalOrganizers: data.data?.total_organizers || 0,
-        totalProducts: data.data?.total_products || 0,
-        totalSellers: data.data?.total_sellers || 0,
-        totalBuyers: data.data?.total_buyers || 0,
-        monthlyGrowth: {
-          revenue: data.data?.monthly_growth?.revenue || 0,
-          events: data.data?.monthly_growth?.events || 0,
-          organizers: data.data?.monthly_growth?.organizers || 0,
-          products: data.data?.monthly_growth?.products || 0,
-          sellers: data.data?.monthly_growth?.sellers || 0,
-          buyers: data.data?.monthly_growth?.buyers || 0
-        },
-        recentActivities: data.data?.recent_activities || []
+      return {
+        ...data.data,
+        userGrowth: data.data?.userGrowth || [],
+        revenueTrends: data.data?.revenueTrends || [],
+        productStatus: data.data?.productStatus || [],
+        geoDistribution: data.data?.geoDistribution || []
       };
-
-      console.log('Transformed analytics:', analytics);
-      return analytics;
     } catch (error) {
       console.error('Error fetching analytics:', error);
-      // Return default values that match the expected structure
       return {
-        totalRevenue: 0,
-        totalEvents: 0,
-        totalOrganizers: 0,
-        totalProducts: 0,
+        userGrowth: [],
+        revenueTrends: [],
+        productStatus: [],
+        geoDistribution: []
+      };
+    }
+  },
+
+  // Basic Stats (Legacy Dashboard)
+  async getDashboardStats() {
+    try {
+      const { data } = await api.get('/admin/stats');
+      return data.data;
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      return {
         totalSellers: 0,
         totalBuyers: 0,
-        monthlyGrowth: {
-          revenue: 0,
-          events: 0,
-          organizers: 0,
-          products: 0,
-          sellers: 0,
-          buyers: 0
-        },
-        recentActivities: []
+        totalEvents: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalWishlists: 0
       };
     }
   },
