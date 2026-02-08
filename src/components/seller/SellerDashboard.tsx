@@ -1613,14 +1613,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         Edit Profile
                       </Button>
                     )}
-                    <Button
-                      variant="destructive"
-                      onClick={handleLogout}
-                      className="bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 shadow-lg text-xs sm:text-sm flex-1 sm:flex-none min-w-[80px] sm:min-w-[100px]"
-                    >
-                      <LogOut className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1 sm:mr-1.5" />
-                      Logout
-                    </Button>
                   </div>
                 </div>
 

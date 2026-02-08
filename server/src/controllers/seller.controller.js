@@ -823,3 +823,31 @@ export const handleLeaveClient = async (req, res) => {
     });
   }
 };
+
+export const getBuyerShops = async (req, res) => {
+  try {
+    const userId = req.user?.userId;
+
+    if (!userId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Authentication required'
+      });
+    }
+
+    const sellers = await SellerModel.findSellersByUserId(userId);
+
+    res.status(200).json({
+      status: 'success',
+      data: sellers.map(s => sanitizePublicSeller(s))
+    });
+
+  } catch (error) {
+    console.error('Error fetching buyer shops:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch shops',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};

@@ -428,3 +428,25 @@ export const removeClient = async (sellerId, userId) => {
     client.release();
   }
 };
+
+export const findSellersByUserId = async (userId) => {
+  const result = await query(
+    `SELECT 
+      s.id, 
+      s.full_name AS "fullName", 
+      s.shop_name AS "shopName", 
+      s.city, 
+      s.location, 
+      s.banner_image AS "bannerImage",
+      s.theme,
+      s.instagram_link AS "instagramLink",
+      s.client_count AS "clientCount",
+      s.created_at AS "createdAt"
+     FROM sellers s
+     JOIN seller_clients sc ON s.id = sc.seller_id
+     WHERE sc.user_id = $1
+     ORDER BY sc.created_at DESC`,
+    [userId]
+  );
+  return result.rows;
+};
