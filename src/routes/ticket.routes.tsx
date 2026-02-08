@@ -1,7 +1,8 @@
 import { lazy, Suspense } from 'react';
+import { safeLazy } from '@/utils/safeLazy';
 
 // Lazy load the ticket validation page
-const TicketValidationPage = lazy(() => import('@/pages/tickets/validate/[ticketNumber]'));
+const TicketValidationPage = safeLazy(() => import('@/pages/tickets/validate/[ticketNumber]'));
 
 // Create a simple loading component
 const LoadingFallback = () => (

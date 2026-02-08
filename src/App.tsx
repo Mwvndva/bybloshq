@@ -46,6 +46,7 @@ const router = createBrowserRouter([
         <AppContentInner />
       </AppProviders>
     ),
+    errorElement: <RootErrorElement />,
     children: [
       ...routes,
       ...adminRouter.routes,
@@ -58,6 +59,7 @@ const router = createBrowserRouter([
 ]);
 
 import ChunkErrorBoundary from "./components/common/ChunkErrorBoundary";
+import RootErrorElement from "./components/common/RootErrorElement";
 
 function App() {
   return (

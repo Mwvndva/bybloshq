@@ -4,11 +4,12 @@ import { organizerRoutes } from './organizer.routes';
 import { eventRoutes } from './event.routes';
 import { ticketRoutes } from './ticket.routes';
 import { buyerRoutes } from './buyer.routes';
+import { safeLazy } from '@/utils/safeLazy';
 
 // Lazy load pages
-const IndexPage = lazy(() => import('@/pages/Index'));
-const ShopPage = lazy(() => import('@/pages/ShopPage'));
-const PaymentSuccessPage = lazy(() => import('@/pages/PaymentSuccess'));
+const IndexPage = safeLazy(() => import('@/pages/Index'));
+const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
+const PaymentSuccessPage = safeLazy(() => import('@/pages/PaymentSuccess'));
 
 // Create a simple loading component
 const LoadingFallback = () => (

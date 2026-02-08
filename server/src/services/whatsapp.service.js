@@ -450,7 +450,9 @@ ${sellerAddr}
 🗺️ *Map:* ${mapsLink}
 
 ⏰ *INSTRUCTIONS:*
-Please proceed to the shop to collect your items.`;
+Please proceed to the shop to collect your items. 
+
+*IMPORTANT:* Once you've collected the items, please visit your dashboard and click *'Mark as Collected'* to finalize the order.`;
 
         } else if (newStatus === 'COMPLETED') {
             // User Request: "After buyer clicks 'collected' sends order completion notification"
@@ -542,7 +544,9 @@ Great news! Your ${serviceType} has accepted your booking.
 *${shopName}*
 ${sellerAddr}
 
-📦 Order #${order.orderNumber}`;
+📦 Order #${order.orderNumber}
+
+⏰ *WHAT'S NEXT:* Once the service is completed to your satisfaction, please visit your dashboard and click *'Mark as Done'* to release the funds to the provider.`;
         } else if (newStatus === 'CLIENT_PAYMENT_PENDING') {
             // Client order created by seller - waiting for M-Pesa payment
             const amount = parseFloat(order.totalAmount || 0);

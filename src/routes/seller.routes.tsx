@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { RouteObject, Navigate, Outlet, useNavigate } from 'react-router-dom';
 import { SellerProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { SellerLayout } from '../layouts/SellerLayout';
-import SellerDashboard from '../components/seller/SellerDashboard';
-import SellerRegistration from '../components/seller/SellerRegistration';
-import ShopSetup from '../components/seller/ShopSetup';
-import { SellerLogin } from '../components/seller/SellerLogin';
-import { ProductsList } from '../components/seller/ProductsList';
-import AddProductForm from '../components/seller/AddProductForm';
+import { safeLazy } from '@/utils/safeLazy';
+
+const SellerDashboard = safeLazy(() => import('../components/seller/SellerDashboard'));
+const SellerRegistration = safeLazy(() => import('../components/seller/SellerRegistration'));
+const ShopSetup = safeLazy(() => import('../components/seller/ShopSetup'));
+const SellerLogin = safeLazy(() => import('../components/seller/SellerLogin').then(m => m.SellerLogin));
+const ProductsList = safeLazy(() => import('../components/seller/ProductsList').then(m => m.ProductsList));
+const AddProductForm = safeLazy(() => import('../components/seller/AddProductForm'));
+
 import { Button } from '@/components/ui/button';
 import { useToast } from '../hooks/use-toast';
 import { sellerApi } from '../api/sellerApi';
@@ -408,15 +411,27 @@ export const sellerRoutes: RouteObject[] = [
   // Public auth routes (completely independent of dashboard layout)
   {
     path: '/seller/login',
-    element: <SellerLogin />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <SellerLogin />
+      </Suspense>
+    ),
   },
   {
     path: '/seller/register',
-    element: <SellerRegistration />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <SellerRegistration />
+      </Suspense>
+    ),
   },
   {
     path: '/seller/reset-password',
-    element: <ResetPasswordPage />,
+    element: (
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+        <ResetPasswordPage />
+      </Suspense>
+    ),
   },
 
   // Protected seller routes with dashboard layout
@@ -430,7 +445,11 @@ export const sellerRoutes: RouteObject[] = [
     children: [
       {
         path: 'dashboard',
-        element: <SellerDashboard />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <SellerDashboard />
+          </Suspense>
+        ),
         children: [
           {
             index: true,
@@ -447,15 +466,27 @@ export const sellerRoutes: RouteObject[] = [
       },
       {
         path: 'products',
-        element: <ProductsListWrapper />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <ProductsListWrapper />
+          </Suspense>
+        ),
       },
       {
         path: 'shop-setup',
-        element: <ShopSetup />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <ShopSetup />
+          </Suspense>
+        ),
       },
       {
         path: 'add-product',
-        element: <AddProductForm onSuccess={() => { }} />,
+        element: (
+          <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
+            <AddProductForm onSuccess={() => { }} />
+          </Suspense>
+        ),
       },
       // Redirects for protected routes
       {

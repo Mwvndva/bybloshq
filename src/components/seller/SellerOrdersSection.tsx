@@ -448,9 +448,25 @@ export default function SellerOrdersSection() {
                                                             </div>
                                                             <div className="bg-white/5 p-2 rounded border border-white/10">
                                                                 <p className="text-purple-200 text-xs font-medium mb-1">Location</p>
-                                                                <p className="font-semibold text-white break-words">
-                                                                    {order.metadata.service_location || 'Not specified'}
-                                                                </p>
+                                                                <div className="font-semibold text-white break-words">
+                                                                    {order.metadata.buyer_location ? (
+                                                                        <div className="space-y-1">
+                                                                            <p>{order.metadata.buyer_location.fullAddress || 'Buyer Coordinates Provided'}</p>
+                                                                            {order.metadata.buyer_location.latitude && order.metadata.buyer_location.longitude && (
+                                                                                <a
+                                                                                    href={`https://www.google.com/maps?q=${order.metadata.buyer_location.latitude},${order.metadata.buyer_location.longitude}`}
+                                                                                    target="_blank"
+                                                                                    rel="noopener noreferrer"
+                                                                                    className="text-xs text-purple-400 hover:text-purple-300 underline block"
+                                                                                >
+                                                                                    View on Maps
+                                                                                </a>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p>{order.metadata.service_location || 'Not specified'}</p>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
                                                         {order.metadata?.service_requirements && (
