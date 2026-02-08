@@ -259,7 +259,7 @@ export const getSellers = async (req, res) => {
         COUNT(w.id) as total_wishlist_count
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
-      LEFT JOIN wishlist w ON p.id = w.product_id
+      LEFT JOIN wishlists w ON p.id = w.product_id
       GROUP BY s.id
       ORDER BY total_wishlist_count DESC
     `;

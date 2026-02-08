@@ -11,7 +11,7 @@ class AdminService {
             events: 'SELECT COUNT(*) FROM events',
             buyers: 'SELECT COUNT(*) FROM buyers',
             orders: 'SELECT COUNT(*) FROM product_orders', // Assuming product_orders table exists
-            wishlists: 'SELECT COUNT(*) FROM wishlist' // Corrected table name
+            wishlists: 'SELECT COUNT(*) FROM wishlists' // Corrected table name
         };
 
         const stats = {};
