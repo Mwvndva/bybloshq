@@ -147,10 +147,7 @@ const corsOptions = {
     // In development, allow for testing with tools like Postman
     if (!origin) {
       if (process.env.NODE_ENV === 'production') {
-        logger.warn('[CORS] Blocked request with no origin in production', {
-          ip: this.ip,
-          userAgent: this.get('user-agent')
-        });
+        logger.warn('[CORS] Blocked request with no origin in production');
         return callback(new Error('CORS: Origin header required in production'));
       }
 
@@ -179,8 +176,7 @@ const corsOptions = {
     // Log rejected origins for security monitoring
     logger.warn('[CORS] Blocked unauthorized origin', {
       origin,
-      allowedOrigins: [...whitelist, ...additionalOrigins].length,
-      ip: this.ip
+      allowedOrigins: [...whitelist, ...additionalOrigins].length
     });
 
     return callback(new Error(`Not allowed by CORS: ${origin}`));
