@@ -14,6 +14,7 @@ router.use(hasPermission('manage-all'));
 // Protected admin routes
 router.get('/stats', adminController.getDashboardStats);
 router.get('/dashboard', adminController.getDashboardStats);
+router.get('/analytics', adminController.getAnalytics);
 router.post('/process-pending-payments', adminController.processPendingPayments);
 
 // Seller management

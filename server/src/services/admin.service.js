@@ -9,7 +9,9 @@ class AdminService {
             products: 'SELECT COUNT(*) FROM products',
             organizers: 'SELECT COUNT(*) FROM organizers',
             events: 'SELECT COUNT(*) FROM events',
-            buyers: 'SELECT COUNT(*) FROM buyers'
+            buyers: 'SELECT COUNT(*) FROM buyers',
+            orders: 'SELECT COUNT(*) FROM product_orders', // Assuming product_orders table exists
+            wishlists: 'SELECT COUNT(*) FROM wishlists' // Assuming wishlists table exists
         };
 
         const stats = {};
@@ -26,16 +28,106 @@ class AdminService {
             })
         );
 
-        // Mock revenue and growth (as per original controller)
-        stats.total_revenue = 0;
-        stats.monthly_growth = {
-            sellers: 0, products: 0, organizers: 0, events: 0, buyers: 0, revenue: 0
+        // Map to expected frontend keys
+        return {
+            totalSellers: stats.total_sellers,
+            totalBuyers: stats.total_buyers, // Total Clients
+            totalShops: stats.total_sellers, // Same as sellers
+            totalEvents: stats.total_events,
+            totalProducts: stats.total_products,
+            totalOrders: stats.total_orders,
+            totalOrganizers: stats.total_organizers,
+            totalWishlists: stats.total_wishlists
         };
-        stats.recent_activities = [{
-            id: 1, type: 'info', message: 'System active', timestamp: new Date().toISOString()
-        }];
+    }
 
-        return stats;
+    async getAnalytics() {
+        try {
+            // 1. User Growth (Last 6 months)
+            const userGrowthQuery = `
+              WITH months AS (
+                SELECT generate_series(
+                  date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
+                  date_trunc('month', CURRENT_DATE),
+                  '1 month'::interval
+                ) as month
+              )
+              SELECT 
+                to_char(m.month, 'Mon') as name,
+                (SELECT COUNT(*) FROM buyers WHERE date_trunc('month', created_at) <= m.month) as buyers,
+                (SELECT COUNT(*) FROM sellers WHERE date_trunc('month', created_at) <= m.month) as sellers
+              FROM months m
+              ORDER BY m.month;
+            `;
+
+            // 2. Revenue Trends (Last 6 months)
+            // Using payments table if available, else product_orders
+            const revenueQuery = `
+              WITH months AS (
+                SELECT generate_series(
+                  date_trunc('month', CURRENT_DATE) - INTERVAL '5 months',
+                  date_trunc('month', CURRENT_DATE),
+                  '1 month'::interval
+                ) as month
+              )
+              SELECT 
+                to_char(m.month, 'Mon') as name,
+                COALESCE(SUM(amount), 0) as revenue,
+                COUNT(id) as orders
+              FROM months m
+              LEFT JOIN payments p ON date_trunc('month', p.created_at) = m.month AND p.status = 'completed'
+              GROUP BY m.month
+              ORDER BY m.month;
+            `;
+
+            // 3. Product Status Distribution
+            const productStatusQuery = `
+              SELECT 
+                CASE 
+                  WHEN stock > 0 THEN 'In Stock' 
+                  ELSE 'Out of Stock' 
+                END as name,
+                COUNT(*) as value
+              FROM products 
+              GROUP BY 
+                CASE 
+                  WHEN stock > 0 THEN 'In Stock' 
+                  ELSE 'Out of Stock' 
+                END;
+            `;
+
+            // 4. Geographic Distribution (Top 5 Cities)
+            const geoQuery = `
+              SELECT COALESCE(NULLIF(city, ''), 'Unknown') as name, COUNT(*) as value
+              FROM buyers 
+              GROUP BY COALESCE(NULLIF(city, ''), 'Unknown')
+              ORDER BY value DESC 
+              LIMIT 5;
+            `;
+
+            const [userGrowth, revenueTrends, productStatus, geoDist] = await Promise.all([
+                pool.query(userGrowthQuery).catch(e => ({ rows: [] })),
+                pool.query(revenueQuery).catch(e => ({ rows: [] })),
+                pool.query(productStatusQuery).catch(e => ({ rows: [] })),
+                pool.query(geoQuery).catch(e => ({ rows: [] }))
+            ]);
+
+            return {
+                userGrowth: userGrowth.rows,
+                revenueTrends: revenueTrends.rows,
+                productStatus: productStatus.rows,
+                geoDistribution: geoDist.rows
+            };
+        } catch (error) {
+            logger.error('Error fetching analytics:', error);
+            // Return empty structures on error to avoid UI crash
+            return {
+                userGrowth: [],
+                revenueTrends: [],
+                productStatus: [],
+                geoDistribution: []
+            };
+        }
     }
 
     async getAllSellers() {

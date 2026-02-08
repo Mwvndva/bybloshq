@@ -241,7 +241,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         if (fromPaymentSuccess && currentRole === 'buyer') {
             console.log('[GlobalAuth] Payment success flow detected - forcing buyer session');
             sessionStorage.removeItem('fromPaymentSuccess');
-            
+
             // Clear any conflicting seller sessions
             localStorage.removeItem('sellerSessionActive');
             localStorage.removeItem('sellerToken');
@@ -250,7 +250,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         // Persisted State Check: Check if session was active before reload
         const sessionKey = `${currentRole}SessionActive`;
         const hadActiveSession = localStorage.getItem(sessionKey) === 'true';
-        
+
         console.log(`[GlobalAuth] Checking auth for ${currentRole}, hadActiveSession: ${hadActiveSession}`);
 
         try {
@@ -281,13 +281,13 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData,
                 isAuthenticated: true
             });
-            
+
             // Mark session as active
             localStorage.setItem(sessionKey, 'true');
             console.log(`[GlobalAuth] Auth successful for ${currentRole}, profile:`, profileData);
         } catch (error: any) {
             console.log(`[GlobalAuth] Auth check failed for ${currentRole}:`, error.message);
-            
+
             // CROSS-ROLE FIX: Don't fail if we're trying buyer access and user has seller session
             // This prevents the "Split Identity" 404 from blocking access
             if (currentRole === 'buyer' && error.response?.status === 404) {
@@ -332,7 +332,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData,
                 isAuthenticated: true
             });
-            
+
             // Mark session as active
             localStorage.setItem(`${role}SessionActive`, 'true');
 
@@ -388,7 +388,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData,
                 isAuthenticated: true
             });
-            
+
             // Mark session as active
             localStorage.setItem(`${role}SessionActive`, 'true');
 
@@ -406,19 +406,24 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // ADMIN LOGIN (PIN-BASED)
     // ============================================================================
 
-    const loginAdmin = useCallback(async (pin: string) => {
+    // ============================================================================
+    // ADMIN LOGIN (EMAIL/PASSWORD)
+    // ============================================================================
+
+    const loginAdmin = useCallback(async (email: string, password: string) => {
         setIsLoading(true);
         try {
-            const response = await adminApi.login(pin);
+            // Using the object signature matching adminApi.ts update
+            const response = await adminApi.login({ email, password });
             const success = response?.status === 'success' || !!response?.data?.token;
 
             if (success) {
                 setUser({
                     role: 'admin',
-                    profile: { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() },
+                    profile: { id: 1, email: email, createdAt: new Date().toISOString() },
                     isAuthenticated: true
                 });
-                
+
                 // Mark session as active
                 localStorage.setItem('adminSessionActive', 'true');
 
@@ -429,12 +434,12 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
                 navigate('/admin/dashboard', { replace: true });
             } else {
-                throw new Error('Invalid PIN');
+                throw new Error('Invalid credentials');
             }
         } catch (error: any) {
             console.error('[GlobalAuth] Admin login error:', error);
 
-            const message = error.response?.data?.message || 'Invalid PIN. Please try again.';
+            const message = error.response?.data?.message || 'Invalid email or password. Please try again.';
             toast.error('Login Failed', { description: message });
 
             throw error;
@@ -470,7 +475,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 profile: profileData!,
                 isAuthenticated: true
             });
-            
+
             // Mark session as active
             localStorage.setItem(`${role}SessionActive`, 'true');
 
@@ -535,7 +540,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         try {
             console.log(`[GlobalAuth] Refreshing role to ${newRole}`);
-            
+
             // Fetch profile for the new role
             const api = getApiForRole(newRole);
             let profileData;
@@ -560,17 +565,17 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             localStorage.setItem(`${newRole}SessionActive`, 'true');
 
             console.log(`[GlobalAuth] Role refreshed successfully to ${newRole}`);
-            
+
             toast.success('Role Switched', {
                 description: `Switched to ${newRole} dashboard`,
                 duration: 2000,
             });
         } catch (error: any) {
             console.error(`[GlobalAuth] Role refresh error for ${newRole}:`, error);
-            
+
             const message = error.response?.data?.message || 'Failed to switch role';
             toast.error('Role Switch Failed', { description: message });
-            
+
             throw error;
         } finally {
             setIsLoading(false);
@@ -704,7 +709,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         role: user?.role || null,
         login,
         loginWithToken,
-        loginAdmin,
+        loginAdmin, // Now accepts (email, password)
         register,
         logout,
         refreshRole,
@@ -794,7 +799,7 @@ export const useAdminAuth = () => {
         isAuthenticated: isAuthenticated && user?.role === 'admin',
         loading: isLoading,
         error: null,
-        login: loginAdmin,
+        login: loginAdmin, // This now expects (email, password)
         logout,
     };
 };
