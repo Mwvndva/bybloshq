@@ -195,9 +195,17 @@ class PaymentService {
             } : { message: error.message, code: error.code };
 
             console.error('PAYD ERROR DETAILS:', JSON.stringify(errorDetails, null, 2));
-            logger.error('Payd initialization error:', errorDetails);
 
-            const errorMessage = error.response?.data?.message || error.message || 'Payment initialization failed';
+            // Check for specific connection errors to provide better context
+            if (error.message === 'socket hang up' || error.code === 'ECONNRESET') {
+                logger.error('[PURCHASE-FLOW] CRITICAL: Payd connection reset (socket hang up). This might be a temporary network issue or server-side termination.');
+            } else {
+                logger.error('Payd initialization error:', errorDetails);
+            }
+
+            const errorMessage = error.message === 'socket hang up' || error.code === 'ECONNRESET'
+                ? 'Network connection lost. Please try again in a moment.'
+                : (error.response?.data?.message || error.message || 'Payment initialization failed');
             throw new Error(errorMessage);
         }
     }
