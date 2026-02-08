@@ -58,60 +58,65 @@ BEGIN
     -- ==============================================
     -- 2. Create Admin Role (if using RBAC)
     -- ==============================================
-    INSERT INTO roles (
-        name, 
-        slug, 
-        description,
-        created_at
-    )
-    VALUES (
-        'Administrator', 
-        'admin', 
-        'Full system access with all permissions',
-        NOW()
-    )
-    ON CONFLICT (slug) DO NOTHING
-    RETURNING id INTO admin_role_id;
-    
-    -- Get role ID if already exists
-    IF admin_role_id IS NULL THEN
-        SELECT id INTO admin_role_id 
-        FROM roles 
-        WHERE slug = 'admin';
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'roles') THEN
+        INSERT INTO roles (
+            name, 
+            slug, 
+            description,
+            created_at
+        )
+        VALUES (
+            'Administrator', 
+            'admin', 
+            'Full system access with all permissions',
+            NOW()
+        )
+        ON CONFLICT (slug) DO NOTHING
+        RETURNING id INTO admin_role_id;
+        
+        -- Get role ID if already exists
+        IF admin_role_id IS NULL THEN
+            SELECT id INTO admin_role_id 
+            FROM roles 
+            WHERE slug = 'admin';
+        END IF;
+        
+        RAISE NOTICE 'Admin role created/found with ID: %', admin_role_id;
+        
+        -- ==============================================
+        -- 3. Assign Admin Role to User
+        -- ==============================================
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'user_roles') THEN
+            INSERT INTO user_roles (user_id, role_id)
+            VALUES (admin_user_id, admin_role_id)
+            ON CONFLICT (user_id, role_id) DO NOTHING;
+            
+            RAISE NOTICE 'Admin role assigned to user';
+        END IF;
+        
+        -- ==============================================
+        -- 4. Grant All Permissions to Admin Role
+        -- ==============================================
+        IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'role_permissions') 
+           AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'permissions') THEN
+            INSERT INTO role_permissions (role_id, permission_id)
+            SELECT admin_role_id, id
+            FROM permissions
+            ON CONFLICT (role_id, permission_id) DO NOTHING;
+            
+            RAISE NOTICE 'All permissions granted to admin role';
+        END IF;
+    ELSE
+        RAISE NOTICE 'RBAC tables not found - skipping role assignment';
     END IF;
-    
-    RAISE NOTICE 'Admin role created/found with ID: %', admin_role_id;
-    
-    -- ==============================================
-    -- 3. Assign Admin Role to User
-    -- ==============================================
-    INSERT INTO user_roles (user_id, role_id, created_at)
-    VALUES (admin_user_id, admin_role_id, NOW())
-    ON CONFLICT (user_id, role_id) DO NOTHING;
-    
-    RAISE NOTICE 'Admin role assigned to user';
-    
-    -- ==============================================
-    -- 4. Grant All Permissions to Admin Role
-    -- ==============================================
-    -- This ensures admin has access to everything
-    INSERT INTO role_permissions (role_id, permission_id, created_at)
-    SELECT admin_role_id, id, NOW()
-    FROM permissions
-    ON CONFLICT (role_id, permission_id) DO NOTHING;
-    
-    RAISE NOTICE 'All permissions granted to admin role';
     
     -- ==============================================
     -- 5. Log the Migration
     -- ==============================================
     RAISE NOTICE '✅ Admin user migration completed successfully';
     RAISE NOTICE 'Email: admin@bybloshq.space';
+    RAISE NOTICE 'Password: 14253553805';
     RAISE NOTICE 'User ID: %', admin_user_id;
-    RAISE NOTICE 'Role ID: %', admin_role_id;
-    RAISE NOTICE '';
-    RAISE NOTICE '⚠️  IMPORTANT: Update the password hash in this migration file before running!';
-    RAISE NOTICE 'Generate hash with: node -e "console.log(require(''bcrypt'').hashSync(''YOUR_SECURE_PASSWORD'', 12))"';
     
 END $$;
 
