@@ -178,6 +178,38 @@ export default function SellerOrdersSection() {
         }
     };
 
+    const confirmBooking = async (orderId: string) => {
+        try {
+            setIsUpdating(true);
+            const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'CONFIRMED' as OrderStatus);
+
+            setOrders(prevOrders =>
+                prevOrders.map(order =>
+                    order.id === orderId ? {
+                        ...order,
+                        status: 'CONFIRMED' as const,
+                        paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
+                        updatedAt: new Date().toISOString()
+                    } : order
+                )
+            );
+
+            toast({
+                title: 'Booking Confirmed',
+                description: 'The service booking has been confirmed and the buyer has been notified.',
+            });
+        } catch (err) {
+            console.error('Failed to confirm booking:', err);
+            toast({
+                title: 'Error',
+                description: 'Failed to confirm booking. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
     const handleCancelClick = (orderId: string) => {
         setCancellingOrderId(orderId);
         setShowCancelDialog(true);
@@ -456,6 +488,29 @@ export default function SellerOrdersSection() {
                                                             >
                                                                 <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
                                                                 Cancel Order
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                    {order.status === 'SERVICE_PENDING' && (
+                                                        <div className="space-y-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                onClick={() => confirmBooking(order.id)}
+                                                                disabled={isUpdating}
+                                                            >
+                                                                <CheckCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
+                                                                Confirm Booking
+                                                            </Button>
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
+                                                                onClick={() => handleCancelClick(order.id)}
+                                                                disabled={isUpdating}
+                                                            >
+                                                                <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
+                                                                Cancel Booking
                                                             </Button>
                                                         </div>
                                                     )}
