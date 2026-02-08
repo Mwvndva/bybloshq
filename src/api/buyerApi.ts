@@ -10,6 +10,9 @@ interface Buyer {
   whatsappNumber: string;
   city?: string;
   location?: string;
+  fullAddress?: string;
+  latitude?: number;
+  longitude?: number;
   refunds?: number;
   createdAt: string;
   updatedAt?: string;
@@ -85,6 +88,9 @@ const transformBuyer = (data: any): Buyer => {
     whatsappNumber: buyer.whatsapp_number || buyer.whatsappNumber || '',
     city: buyer.city || '',
     location: buyer.physical_address || buyer.location || '',
+    fullAddress: buyer.full_address || buyer.fullAddress || '',
+    latitude: buyer.latitude ? parseFloat(buyer.latitude) : undefined,
+    longitude: buyer.longitude ? parseFloat(buyer.longitude) : undefined,
     refunds: buyer.refunds != null ? parseFloat(buyer.refunds) : 0,
     // Handle missing createdAt (security restrictions)
     createdAt: buyer.createdAt || buyer.created_at || new Date().toISOString(),
@@ -269,6 +275,22 @@ const buyerApi = {
       return transformBuyer(buyerData);
     } catch (error: any) {
       console.error('Error fetching profile:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
+    }
+  },
+
+  updateProfile: async (data: any): Promise<Buyer> => {
+    try {
+      const response = await updateBuyerProfile(data) as any;
+      if (response.data && response.data.data && response.data.data.buyer) {
+        return transformBuyer(response.data.data.buyer);
+      }
+      return transformBuyer(response.data.data || response.data);
+    } catch (error: any) {
+      console.error('Error updating profile:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       }

@@ -29,6 +29,9 @@ export interface BuyerProfile extends BaseUser {
     whatsappNumber: string;
     city?: string;
     location?: string;
+    fullAddress?: string;
+    latitude?: number;
+    longitude?: number;
     refunds?: number;
 }
 
