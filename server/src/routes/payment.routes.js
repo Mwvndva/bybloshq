@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, param } from 'express-validator';
 import paymentController from '../controllers/payment.controller.js';
-import { protect } from '../middleware/auth.js';
+import { protect, hasPermission } from '../middleware/auth.js';
 import { verifyPaydWebhook } from '../middleware/paydWebhookSecurity.js';
 import validate from '../middleware/validation.middleware.js';
 import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
@@ -91,14 +91,21 @@ publicRouter.get(
 // Mount public routes
 router.use(publicRouter);
 
-// Protected routes (require authentication)
+// Mount protected routes
 const protectedRouter = express.Router();
 protectedRouter.use(protect);
 
-// Add protected payment routes here if needed
+// Add health check routes (admin only)
+protectedRouter.get('/health/payd-agent',
+  hasPermission('manage-all'),
+  paymentController.getAgentStatus
+);
 
-// Mount protected routes
-// Note: No protected payment routes at the moment. Keep public endpoints open for checkout + webhooks.
-// router.use(protectedRouter);
+protectedRouter.post('/health/payd-agent/reset',
+  hasPermission('manage-all'),
+  paymentController.resetAgent
+);
+
+router.use(protectedRouter);
 
 export default router;

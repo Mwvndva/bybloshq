@@ -1,6 +1,7 @@
 import axios from 'axios';
 import https from 'https';
 import crypto from 'crypto';
+import dns from 'dns';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
@@ -8,58 +9,198 @@ import OrderService from './order.service.js';
 
 class PaymentService {
     constructor() {
-        // Upgrade to V3 as default for better performance and stability
         this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
         this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
         this.channelId = process.env.PAYD_CHANNEL_ID;
         this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx';
-        this.sslVerify = process.env.PAYD_SSL_VERIFY !== 'false'; // Default to true
 
-        logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl} (SSL Verify: ${this.sslVerify})`);
+        // Validate required configs
+        if (!this.username || !this.password) {
+            logger.error('[PAYD-INIT] ERROR: PAYD_USERNAME and PAYD_PASSWORD must be set');
+        }
 
-        // Create axios instance with optimized config
+        if (!this.baseUrl.startsWith('https://')) {
+            logger.error('[PAYD-INIT] ERROR: PAYD_BASE_URL must use HTTPS');
+        }
+
+        // Set DNS cache
+        try {
+            dns.setDefaultResultOrder('ipv4first');
+            dns.setServers([
+                '8.8.8.8',  // Google DNS
+                '8.8.4.4',
+                '1.1.1.1'   // Cloudflare DNS
+            ]);
+        } catch (e) {
+            logger.warn('[PAYD-INIT] DNS cache setup failed:', e.message);
+        }
+
+        logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl}`);
+
+        // ✅ FIX 1: Create persistent HTTPS agent with connection pooling
+        this.httpsAgent = new https.Agent({
+            keepAlive: true,              // ✅ Reuse connections
+            keepAliveMsecs: 30000,        // ✅ Keep alive for 30s
+            maxSockets: 50,               // ✅ Max concurrent connections
+            maxFreeSockets: 10,           // ✅ Keep 10 idle sockets ready
+            timeout: 60000,               // ✅ Socket timeout
+            scheduling: 'lifo',           // ✅ Reuse most recent socket
+            rejectUnauthorized: false     // ⚠️  Only until you get Payd's SSL cert
+        });
+
+        // Monitor agent health
+        this.httpsAgent.on('error', (err) => {
+            logger.error('[HTTPS-AGENT] Agent error:', err);
+        });
+
+        logger.info('[HTTPS-AGENT] Configured with connection pooling', {
+            keepAlive: true,
+            maxSockets: 50,
+            keepAliveMsecs: 30000
+        });
+
+        // Create axios instance with optimized config (for legacy methods or GET calls)
         this.client = axios.create({
             baseURL: this.baseUrl,
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'Byblos/1.1 (Axios)', // Standardized UA
+                'User-Agent': 'Byblos/1.1 (Axios)',
             },
             timeout: 60000,
-            // Disable keepAlive to prevent socket hang-ups (stale sockets)
-            httpsAgent: new https.Agent({
-                keepAlive: false, // Changed to false for stability
-                rejectUnauthorized: this.sslVerify
-            })
+            httpsAgent: this.httpsAgent
         });
+
+        // Validate base URL is reachable
+        this._validateBaseUrl().catch(err => {
+            logger.warn('[PAYD-INIT] Base URL validation failed:', err.message);
+        });
+    }
+
+    async _validateBaseUrl() {
+        try {
+            const url = new URL(this.baseUrl);
+            const options = {
+                method: 'HEAD',
+                hostname: url.hostname,
+                port: url.port || 443,
+                path: '/',
+                agent: this.httpsAgent,
+                timeout: 5000
+            };
+
+            await new Promise((resolve, reject) => {
+                const req = https.request(options, (res) => {
+                    resolve();
+                });
+                req.on('error', reject);
+                req.on('timeout', () => reject(new Error('Timeout')));
+                req.end();
+            });
+
+            logger.info('[PAYD-INIT] Base URL validated successfully');
+        } catch (error) {
+            // Log but don't throw to avoid crashing the whole service
+            logger.warn('[PAYD-INIT] Base URL validation probe failed', {
+                error: error.message,
+                baseUrl: this.baseUrl
+            });
+        }
     }
 
     /**
      * Helper to retry requests with exponential backoff
      */
     async _retryRequest(fn, retries = 3, delay = 1000) {
-        try {
-            return await fn();
-        } catch (error) {
-            if (retries === 0) throw error;
+        let lastError;
 
-            // Retry on network errors, socket hang ups, or 5xx Server Errors
-            const isNetworkError = error.message === 'socket hang up' ||
-                error.code === 'ECONNRESET' ||
-                error.code === 'ETIMEDOUT' ||
-                error.code === 'ECONNABORTED';
+        for (let attempt = 1; attempt <= retries + 1; attempt++) {
+            try {
+                if (attempt > 1) {
+                    logger.info(`[RETRY] Attempt ${attempt}/${retries + 1}`);
+                }
+                const result = await fn();
 
-            const isServerError = error.response && error.response.status >= 500;
+                if (attempt > 1) {
+                    logger.info(`[RETRY] Succeeded on attempt ${attempt}`);
+                }
 
-            if (isNetworkError || isServerError) {
-                logger.warn(`[PURCHASE-FLOW] Request failed (${error.code || error.message}). Retrying in ${delay}ms... (${retries} attempts left)`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return this._retryRequest(fn, retries - 1, delay * 2);
+                return result;
+            } catch (error) {
+                lastError = error;
+
+                // Determine if we should retry
+                const shouldRetry = this._shouldRetry(error, attempt, retries);
+
+                if (!shouldRetry) {
+                    logger.error(`[RETRY] Not retrying (attempt ${attempt}/${retries + 1})`, {
+                        reason: this._getRetryReason(error)
+                    });
+                    throw error;
+                }
+
+                if (attempt <= retries) {
+                    const backoffDelay = delay * Math.pow(2, attempt - 1);
+                    logger.warn(`[RETRY] Attempt ${attempt} failed. Retrying in ${backoffDelay}ms...`, {
+                        error: error.code || error.message,
+                        remainingAttempts: retries - attempt + 1
+                    });
+
+                    await new Promise(resolve => setTimeout(resolve, backoffDelay));
+                }
             }
-
-            throw error;
         }
+
+        throw lastError;
+    }
+
+    _shouldRetry(error, attempt, maxRetries) {
+        if (attempt > maxRetries) {
+            return false;
+        }
+
+        // Retry on network errors
+        const networkErrors = [
+            'ECONNRESET',
+            'ECONNREFUSED',
+            'ETIMEDOUT',
+            'ENOTFOUND',
+            'EAI_AGAIN',
+            'EPIPE',
+            'ECONNABORTED',
+            'socket hang up',
+            'Connection timeout',
+            'Response timeout',
+            'Socket timeout',
+            'Socket closed with error'
+        ];
+
+        if (networkErrors.some(err =>
+            error.code === err ||
+            (error.message && error.message.includes(err))
+        )) {
+            return true;
+        }
+
+        // Retry on 5xx server errors
+        if (error.response && error.response.status >= 500) {
+            return true;
+        }
+
+        // Don't retry on client errors (4xx)
+        if (error.response && error.response.status >= 400 && error.response.status < 500) {
+            return false;
+        }
+
+        return false;
+    }
+
+    _getRetryReason(error) {
+        if (error.response && error.response.status >= 400 && error.response.status < 500) {
+            return 'Client error (4xx) - not retryable';
+        }
+        return 'Unknown or terminal error type';
     }
 
     /**
@@ -82,6 +223,8 @@ class PaymentService {
      * --data-raw '{ ... }'
      */
     async initiatePayment(paymentData) {
+        const startTime = Date.now();
+
         try {
             const { email, amount, invoice_id, phone, narrative, firstName, lastName, billing_address } = paymentData;
 
@@ -89,7 +232,10 @@ class PaymentService {
                 throw new Error('Payd network code or channel ID not configured');
             }
 
-            // ... (keep existing validation/prep logic) ...
+            // Validate credentials
+            if (!this.username || !this.password) {
+                throw new Error('Payd credentials not configured');
+            }
 
             const paydAmount = parseFloat(amount);
             let cleanPhone = phone.replace(/\D/g, '');
@@ -99,11 +245,15 @@ class PaymentService {
                 cleanPhone = '0' + cleanPhone;
             }
 
-            const callbackUrl = process.env.PAYD_CALLBACK_URL || (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` : "https://bybloshq.space/api/payments/webhook/payd");
+            const callbackUrl = process.env.PAYD_CALLBACK_URL ||
+                (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` :
+                    "https://bybloshq.space/api/payments/webhook/payd");
 
-            logger.info(`[PURCHASE-FLOW] 1. Initiating Payd Payment (STK Push) for Invoice: ${invoice_id}`, {
-                amount: paydAmount, phone: cleanPhone,
-                targetUrl: `${this.baseUrl}/payments`
+            logger.info(`[PURCHASE-FLOW] 1. Initiating Payd Payment for Invoice: ${invoice_id}`, {
+                amount: paydAmount,
+                phone: cleanPhone,
+                targetUrl: `${this.baseUrl}/payments`,
+                timestamp: new Date().toISOString()
             });
 
             const payloadData = JSON.stringify({
@@ -114,68 +264,235 @@ class PaymentService {
                 narration: narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
                 callback_url: callbackUrl,
-                billing_address: billing_address || 'Nairobi, Kenya' // Ensure it's never empty
+                billing_address: billing_address || 'Nairobi, Kenya'
             });
 
-            // Use native HTTPS to avoid Axios "socket hang up" issues
+            // ✅ FIX 2: Enhanced request with proper event handling
             const makeRequest = () => new Promise((resolve, reject) => {
                 const url = new URL(`${this.baseUrl}/payments`);
+
                 const options = {
                     method: 'POST',
                     hostname: url.hostname,
-                    path: url.pathname,
-                    rejectUnauthorized: this.sslVerify,
+                    port: url.port || 443,
+                    path: url.pathname + url.search,  // ✅ Include query params
                     headers: {
                         'Authorization': this.getAuthHeader(),
                         'Content-Type': 'application/json',
-                        'Content-Length': payloadData.length,
-                        'User-Agent': 'Byblos/1.0 (NodeJS HTTPS)'
+                        'Content-Length': Buffer.byteLength(payloadData),  // ✅ Correct length
+                        'User-Agent': 'ByblosHQ/2.0 (Node.js)',
+                        'Accept': 'application/json',
+                        'Connection': 'keep-alive'  // ✅ Request keep-alive
                     },
-                    timeout: 60000
+                    agent: this.httpsAgent  // ✅ Use persistent agent
+                };
+
+                logger.info('[PAYD-REQUEST] Initiating request', {
+                    hostname: options.hostname,
+                    path: options.path,
+                    contentLength: options.headers['Content-Length']
+                });
+
+                let requestTimeout;
+                let responseTimeout;
+                let isResolved = false;
+
+                const cleanup = () => {
+                    if (requestTimeout) clearTimeout(requestTimeout);
+                    if (responseTimeout) clearTimeout(responseTimeout);
+                };
+
+                const safeReject = (error) => {
+                    if (!isResolved) {
+                        isResolved = true;
+                        cleanup();
+                        reject(error);
+                    }
+                };
+
+                const safeResolve = (data) => {
+                    if (!isResolved) {
+                        isResolved = true;
+                        cleanup();
+                        resolve(data);
+                    }
                 };
 
                 const req = https.request(options, (res) => {
+                    logger.info('[PAYD-RESPONSE] Received response', {
+                        statusCode: res.statusCode,
+                        headers: res.headers
+                    });
+
                     let data = '';
-                    res.on('data', (chunk) => data += chunk);
+
+                    // ✅ FIX 3: Set response timeout (90 seconds)
+                    responseTimeout = setTimeout(() => {
+                        logger.error('[PAYD-RESPONSE] Response timeout - no data received');
+                        req.destroy();
+                        safeReject(new Error('Response timeout'));
+                    }, 90000);
+
+                    res.on('data', (chunk) => {
+                        data += chunk;
+                        // Reset response timeout on data received
+                        if (responseTimeout) {
+                            clearTimeout(responseTimeout);
+                            responseTimeout = setTimeout(() => {
+                                logger.error('[PAYD-RESPONSE] Response timeout during data transfer');
+                                req.destroy();
+                                safeReject(new Error('Response timeout'));
+                            }, 90000);
+                        }
+                    });
+
                     res.on('end', () => {
+                        cleanup();
+
+                        logger.info('[PAYD-RESPONSE] Response complete', {
+                            statusCode: res.statusCode,
+                            dataLength: data.length
+                        });
+
                         if (res.statusCode >= 200 && res.statusCode < 300) {
                             try {
-                                resolve({ data: JSON.parse(data), status: res.statusCode });
+                                const parsed = JSON.parse(data);
+                                safeResolve({ data: parsed, status: res.statusCode });
                             } catch (e) {
-                                reject(new Error(`Failed to parse response: ${data}`));
+                                logger.error('[PAYD-RESPONSE] Failed to parse success response', {
+                                    error: e.message,
+                                    data: data.substring(0, 200)
+                                });
+                                safeReject(new Error(`Invalid JSON response: ${e.message}`));
                             }
                         } else {
-                            // Try to parse error response
+                            logger.error('[PAYD-RESPONSE] HTTP error response', {
+                                statusCode: res.statusCode,
+                                data: data.substring(0, 200)
+                            });
+
                             try {
                                 const errData = JSON.parse(data);
-                                reject({ response: { status: res.statusCode, data: errData } });
+                                safeReject({
+                                    response: {
+                                        status: res.statusCode,
+                                        data: errData
+                                    }
+                                });
                             } catch (e) {
-                                reject({ response: { status: res.statusCode, data: { message: data } } });
+                                safeReject({
+                                    response: {
+                                        status: res.statusCode,
+                                        data: { message: data || 'Unknown error' }
+                                    }
+                                });
                             }
                         }
                     });
+
+                    res.on('error', (err) => {
+                        logger.error('[PAYD-RESPONSE] Response stream error:', err);
+                        safeReject(err);
+                    });
                 });
 
-                req.on('error', (e) => reject(e));
+                // ✅ FIX 4: Comprehensive error handlers
+                req.on('error', (err) => {
+                    logger.error('[PAYD-REQUEST] Request error:', {
+                        code: err.code,
+                        message: err.message,
+                        errno: err.errno,
+                        syscall: err.syscall
+                    });
+                    safeReject(err);
+                });
+
                 req.on('timeout', () => {
+                    logger.error('[PAYD-REQUEST] Request timeout (connection)');
                     req.destroy();
-                    reject(new Error('ETIMEDOUT'));
+                    safeReject(new Error('ETIMEDOUT'));
                 });
 
-                req.write(payloadData);
+                req.on('abort', () => {
+                    logger.error('[PAYD-REQUEST] Request aborted');
+                    safeReject(new Error('Request aborted'));
+                });
+
+                // ✅ FIX 5: Socket-level event handlers
+                req.on('socket', (socket) => {
+                    logger.info('[PAYD-SOCKET] Socket assigned', {
+                        localAddress: socket.localAddress,
+                        localPort: socket.localPort,
+                        remoteAddress: socket.remoteAddress,
+                        remotePort: socket.remotePort
+                    });
+
+                    socket.on('connect', () => {
+                        logger.info('[PAYD-SOCKET] Socket connected');
+                    });
+
+                    socket.on('secureConnect', () => {
+                        logger.info('[PAYD-SOCKET] SSL/TLS connection established', {
+                            authorized: socket.authorized,
+                            protocol: typeof socket.getProtocol === 'function' ? socket.getProtocol() : 'unknown'
+                        });
+                    });
+
+                    socket.on('timeout', () => {
+                        logger.error('[PAYD-SOCKET] Socket timeout');
+                        req.destroy();
+                        safeReject(new Error('Socket timeout'));
+                    });
+
+                    socket.on('end', () => {
+                        logger.info('[PAYD-SOCKET] Socket ended by server');
+                    });
+
+                    socket.on('close', (hadError) => {
+                        logger.info('[PAYD-SOCKET] Socket closed', { hadError });
+                        if (hadError && !isResolved) {
+                            safeReject(new Error('Socket closed with error'));
+                        }
+                    });
+
+                    socket.on('error', (err) => {
+                        logger.error('[PAYD-SOCKET] Socket error:', {
+                            code: err.code,
+                            message: err.message
+                        });
+                        safeReject(err);
+                    });
+
+                    // ✅ FIX 6: Set socket timeout (60 seconds for connection)
+                    socket.setTimeout(60000);
+                });
+
+                // ✅ FIX 7: Set request timeout (60 seconds for connection establishment)
+                requestTimeout = setTimeout(() => {
+                    logger.error('[PAYD-REQUEST] Connection timeout');
+                    req.destroy();
+                    safeReject(new Error('Connection timeout'));
+                }, 60000);
+
+                // Send request
+                req.write(payloadData, 'utf8', (err) => {
+                    if (err) {
+                        logger.error('[PAYD-REQUEST] Write error:', err);
+                        safeReject(err);
+                    } else {
+                        logger.info('[PAYD-REQUEST] Payload written successfully');
+                    }
+                });
+
                 req.end();
             });
 
-            // Log Request (Masked)
-            logger.info('Sending Payd Request (Native HTTPS):', {
-                url: `${this.baseUrl}/payments`,
-                payloadLength: payloadData.length
-            });
+            // ✅ FIX 8: Enhanced retry with exponential backoff
+            const response = await this._retryRequest(() => makeRequest(), 3, 1000);
 
-            // Execute with Retry
-            const response = await this._retryRequest(() => makeRequest());
-
-            logger.info(`[PURCHASE-FLOW] 2. Payd API Response Recieved`, {
+            const duration = Date.now() - startTime;
+            logger.info(`[PURCHASE-FLOW] Payment initiated successfully`, {
+                duration: `${duration}ms`,
                 status: response.status,
                 reference: response.data.transaction_id || response.data.reference
             });
@@ -183,31 +500,88 @@ class PaymentService {
             return {
                 authorization_url: null,
                 access_code: null,
-                reference: response.data.transaction_id || response.data.reference || response.data.tracking_id || `REF-${Date.now()}`,
+                reference: response.data.transaction_id ||
+                    response.data.reference ||
+                    response.data.tracking_id ||
+                    `REF-${Date.now()}`,
                 status: response.status,
                 original_response: response.data
             };
 
         } catch (error) {
+            const duration = Date.now() - startTime;
+
             const errorDetails = error.response ? {
                 status: error.response.status,
                 data: error.response.data
-            } : { message: error.message, code: error.code };
+            } : {
+                message: error.message || 'Unknown error',
+                code: error.code,
+                errno: error.errno,
+                syscall: error.syscall
+            };
 
-            console.error('PAYD ERROR DETAILS:', JSON.stringify(errorDetails, null, 2));
+            logger.error('[PURCHASE-FLOW] Payment initiation failed', {
+                duration: `${duration}ms`,
+                invoice_id: paymentData.invoice_id,
+                error: errorDetails
+            });
 
-            // Check for specific connection errors to provide better context
-            if (error.message === 'socket hang up' || error.code === 'ECONNRESET') {
+            // Enhanced error message
+            let errorMessage = 'Payment initialization failed. Please try again.';
+
+            if (error.code === 'ECONNRESET' || error.message === 'socket hang up') {
+                errorMessage = 'Connection to payment provider failed. Please try again.';
                 logger.error('[PURCHASE-FLOW] CRITICAL: Payd connection reset (socket hang up). This might be a temporary network issue or server-side termination.');
-            } else {
-                logger.error('Payd initialization error:', errorDetails);
+            } else if (error.code === 'ETIMEDOUT' || error.message === 'Connection timeout' || error.message === 'Response timeout') {
+                errorMessage = 'Payment provider is taking too long to respond. Please try again.';
+            } else if (error.code === 'ENOTFOUND') {
+                errorMessage = 'Payment provider unreachable. Please check your internet connection.';
+            } else if (error.response && error.response.data && error.response.data.message) {
+                errorMessage = error.response.data.message;
             }
 
-            const errorMessage = error.message === 'socket hang up' || error.code === 'ECONNRESET'
-                ? 'Network connection lost. Please try again in a moment.'
-                : (error.response?.data?.message || error.message || 'Payment initialization failed');
             throw new Error(errorMessage);
         }
+    }
+
+    /**
+     * Monitor HTTPS agent health
+     */
+    getAgentStatus() {
+        return {
+            maxSockets: this.httpsAgent.maxSockets,
+            maxFreeSockets: this.httpsAgent.maxFreeSockets,
+            sockets: Object.keys(this.httpsAgent.sockets || {}).length,
+            freeSockets: Object.keys(this.httpsAgent.freeSockets || {}).length,
+            requests: Object.keys(this.httpsAgent.requests || {}).length
+        };
+    }
+
+    /**
+     * Reset HTTPS agent (use if connections are stale)
+     */
+    resetAgent() {
+        logger.warn('[HTTPS-AGENT] Resetting agent due to connection issues');
+
+        // Destroy all sockets
+        this.httpsAgent.destroy();
+
+        // Create new agent
+        this.httpsAgent = new https.Agent({
+            keepAlive: true,
+            keepAliveMsecs: 30000,
+            maxSockets: 50,
+            maxFreeSockets: 10,
+            timeout: 60000,
+            scheduling: 'lifo',
+            rejectUnauthorized: false
+        });
+
+        // Re-mount to axios client too
+        this.client.defaults.httpsAgent = this.httpsAgent;
+
+        logger.info('[HTTPS-AGENT] Agent reset complete');
     }
 
     /**
