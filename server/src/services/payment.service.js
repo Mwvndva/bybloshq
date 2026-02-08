@@ -28,8 +28,8 @@ class PaymentService {
             timeout: 60000,
             // Disable keepAlive to prevent socket hang-ups (stale sockets)
             httpsAgent: new https.Agent({
-                rejectUnauthorized: false,
                 keepAlive: false, // Changed to false for stability
+                // SSL verification is enabled by default - DO NOT DISABLE
             })
         });
     }
@@ -123,7 +123,7 @@ class PaymentService {
                     method: 'POST',
                     hostname: url.hostname,
                     path: url.pathname,
-                    rejectUnauthorized: false, // Bypass SSL verification (Fix for self-signed cert error)
+                    // SSL verification is enabled by default - DO NOT DISABLE
                     headers: {
                         'Authorization': this.getAuthHeader(),
                         'Content-Type': 'application/json',
@@ -350,12 +350,12 @@ class PaymentService {
 
                 const { rows: fuzzyRows } = await pool.query(
                     `SELECT * FROM payments 
-                     WHERE status = '${PaymentStatus.PENDING}' 
-                     AND amount = $1 
-                     AND mobile_payment LIKE '%' || $2 
+                     WHERE status = $1 
+                     AND amount = $2 
+                     AND mobile_payment LIKE '%' || $3 
                      AND created_at > NOW() - INTERVAL '30 minute'
                      ORDER BY created_at DESC LIMIT 1`,
-                    [webhookAmount, phoneTail]
+                    [PaymentStatus.PENDING, webhookAmount, phoneTail]
                 );
 
                 if (fuzzyRows.length > 0) {
@@ -408,23 +408,86 @@ class PaymentService {
         }
 
         if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
+            logger.warn(`[IDEMPOTENCY] Payment ${payment.id} already processed (status: ${payment.status}). Skipping duplicate webhook.`, {
+                paymentId: payment.id,
+                currentStatus: payment.status,
+                webhookReference: reference
+            });
             return { status: 'success', message: 'Payment already completed' };
         }
 
-        // 2. Validate Amount
-        if (amount) {
-            const paidAmount = parseFloat(amount);
-            if (Math.abs(paidAmount - parseFloat(payment.amount)) > 1) {
-                logger.warn(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
-            }
-        }
+        // ========================================
+        // TRANSACTION-LEVEL LOCKING (P1-001)
+        // ========================================
+        // Use FOR UPDATE to prevent race conditions when multiple webhooks arrive simultaneously
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        // 3. Mark as Success in DB (normalized to lowercase 'completed' per PaymentStatus enum)
-        logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed'`);
-        await pool.query(
-            `UPDATE payments SET status = $1, metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb WHERE id = $3`,
-            [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id]
-        );
+            // Lock the payment row for update to prevent concurrent processing
+            const { rows: lockedRows } = await client.query(
+                `SELECT * FROM payments WHERE id = $1 FOR UPDATE`,
+                [payment.id]
+            );
+
+            if (lockedRows.length === 0) {
+                await client.query('ROLLBACK');
+                logger.error(`[LOCKING] Payment ${payment.id} not found during lock attempt`);
+                throw new Error('Payment not found');
+            }
+
+            const lockedPayment = lockedRows[0];
+
+            // ========================================
+            // DOUBLE-CHECK IDEMPOTENCY AFTER LOCK (P1-002)
+            // ========================================
+            // Another webhook might have processed it while we were waiting for the lock
+            if (lockedPayment.status === PaymentStatus.COMPLETED || lockedPayment.status === PaymentStatus.SUCCESS) {
+                await client.query('ROLLBACK');
+                logger.warn(`[IDEMPOTENCY] Payment ${payment.id} was processed by concurrent webhook. Skipping.`, {
+                    paymentId: payment.id,
+                    statusAfterLock: lockedPayment.status
+                });
+                return {
+                    status: 'success',
+                    message: 'Payment completed by concurrent webhook',
+                    paymentId: payment.id
+                };
+            }
+
+            logger.info(`[LOCKING] Successfully locked payment ${payment.id} for update`);
+
+            // 2. Validate Amount
+            if (amount) {
+                const paidAmount = parseFloat(amount);
+                if (Math.abs(paidAmount - parseFloat(payment.amount)) > 1) {
+                    logger.warn(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
+                }
+            }
+
+            // 3. Mark as Success in DB (normalized to lowercase 'completed' per PaymentStatus enum)
+            logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed'`);
+            await client.query(
+                `UPDATE payments 
+                 SET status = $1, 
+                     metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                     processed_at = NOW(),
+                     updated_at = NOW()
+                 WHERE id = $3`,
+                [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id]
+            );
+
+            // Commit the transaction to release the lock
+            await client.query('COMMIT');
+            logger.info(`[LOCKING] Transaction committed and lock released for payment ${payment.id}`);
+
+        } catch (error) {
+            await client.query('ROLLBACK');
+            logger.error(`[LOCKING] Error in locked transaction for payment ${payment.id}:`, error);
+            throw error;
+        } finally {
+            client.release();
+        }
 
         // 4. Trigger Post-Payment Logic
         // Determine if it's Ticket or Product

@@ -40,10 +40,10 @@ router.get('/status', async (req, res) => {
 
 /**
  * @route   GET /api/whatsapp/qr
- * @desc    Get QR code for WhatsApp authentication (Public for initial setup)
- * @access  Public (but should be secured in production after setup)
+ * @desc    Get QR code for WhatsApp authentication
+ * @access  Private (Admin only) - SECURITY: Prevents unauthorized WhatsApp takeover
  */
-router.get('/qr', async (req, res) => {
+router.get('/qr', protect, async (req, res) => {
   try {
     const qrCode = whatsappService.getQRCode();
     const isReady = whatsappService.isClientReady();
