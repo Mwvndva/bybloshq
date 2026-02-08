@@ -42,6 +42,9 @@ import * as sellerController from '../controllers/seller.controller.js';
 // Wishlist routes
 router.use('/wishlist', wishlistRoutes);
 
+// Get shops where user is a client
+router.get('/shops', sellerController.getBuyerShops);
+
 // Become a client of a seller
 router.post('/sellers/:sellerId/become-client', sellerController.handleBecomeClient);
 

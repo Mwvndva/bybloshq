@@ -705,6 +705,19 @@ const buyerApi = {
         message: error.response?.data?.message || 'Failed to leave clientele'
       };
     }
+  },
+
+  getShops: async (): Promise<any[]> => {
+    try {
+      const response = await buyerApiInstance.get<ApiResponse<any[]>>('/buyers/shops');
+      if (!response.data?.success) {
+        throw new Error('Failed to fetch shops');
+      }
+      return response.data.data;
+    } catch (error) {
+      console.error('Error fetching shops:', error);
+      throw error;
+    }
   }
 };
 

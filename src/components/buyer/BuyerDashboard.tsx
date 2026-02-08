@@ -18,13 +18,14 @@ import {
   LogOut,
   TrendingUp,
   Package,
+  ShoppingBag,
   Phone,
   Mail,
   Info,
   X
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { updateBuyerProfile } from '@/api/buyerApi';
+import buyerApi, { updateBuyerProfile } from '@/api/buyerApi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
@@ -49,7 +50,7 @@ function BuyerDashboard() {
   const { toast } = useToast();
   const { onFileLoaded } = useBybx();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
-  const [activeSection, setActiveSection] = useState<'shop' | 'wishlist' | 'orders' | 'profile'>(() => {
+  const [activeSection, setActiveSection] = useState<'shop' | 'shops' | 'wishlist' | 'orders' | 'profile'>(() => {
     // Priority 1: Navigation state
     const stateSection = (location.state as any)?.activeSection;
     if (stateSection) return stateSection;
@@ -57,7 +58,7 @@ function BuyerDashboard() {
     // Priority 2: Query parameters (useful for full page reloads and payment success)
     const queryParams = new URLSearchParams(location.search);
     const querySection = queryParams.get('section') || queryParams.get('tab');
-    if (querySection && ['shop', 'wishlist', 'orders', 'profile'].includes(querySection)) {
+    if (querySection && ['shop', 'shops', 'wishlist', 'orders', 'profile'].includes(querySection)) {
       return querySection as any;
     }
 
@@ -74,6 +75,26 @@ function BuyerDashboard() {
   const [mobilePayment, setMobilePayment] = useState<string>(user?.mobilePayment || '');
   const [whatsappNumber, setWhatsappNumber] = useState<string>(user?.whatsappNumber || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [shops, setShops] = useState<any[]>([]);
+  const [isLoadingShops, setIsLoadingShops] = useState(false);
+
+  const fetchShops = useCallback(async () => {
+    setIsLoadingShops(true);
+    try {
+      const fetchedShops = await buyerApi.getShops();
+      setShops(fetchedShops);
+    } catch (error) {
+      console.error('Error fetching shops:', error);
+    } finally {
+      setIsLoadingShops(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'shops') {
+      fetchShops();
+    }
+  }, [activeSection, fetchShops]);
 
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
@@ -230,6 +251,7 @@ function BuyerDashboard() {
         >
           {[
             { id: 'shop', label: 'Shop', icon: Package },
+            { id: 'shops', label: 'My Shops', icon: ShoppingBag },
             { id: 'orders', label: 'Orders', icon: Package },
             { id: 'wishlist', label: 'Wishlist', icon: Heart },
             { id: 'profile', label: 'Profile', icon: User },
@@ -281,6 +303,106 @@ function BuyerDashboard() {
             </div>
 
             <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
+          </div>
+        )}
+
+        {activeSection === 'shops' && (
+          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
+            <div className="mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">My Shops</h2>
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal">
+                Shops you have joined as a client
+              </p>
+            </div>
+
+            {isLoadingShops ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
+              </div>
+            ) : shops.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                {shops.map((shop) => (
+                  <Card key={shop.id} className="bg-white/5 border-white/10 overflow-hidden group hover:border-yellow-500/30 transition-all duration-300 rounded-2xl">
+                    <div className="relative h-24 sm:h-32 bg-gray-800">
+                      {shop.bannerImage ? (
+                        <img src={shop.bannerImage} alt={shop.shopName} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                          <Package className="h-8 w-8 text-white/20" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300" />
+                    </div>
+                    <CardContent className="p-4 sm:p-5 relative">
+                      <h3 className="text-white font-bold text-base sm:text-lg mb-1 truncate">{shop.shopName}</h3>
+                      <p className="text-gray-400 text-xs sm:text-sm mb-4 flex items-center">
+                        <span className="truncate">{shop.city}{shop.location ? `, ${shop.location}` : ''}</span>
+                      </p>
+
+                      <div className="flex items-center justify-between gap-3 mt-4">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
+                          onClick={() => navigate(`/shop/${encodeURIComponent(shop.shopName)}`)}
+                        >
+                          Visit Shop
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
+                          onClick={async () => {
+                            if (window.confirm(`Are you sure you want to leave ${shop.shopName}'s clientele?`)) {
+                              try {
+                                const res = await buyerApi.leaveClient(shop.id);
+                                if (res.success) {
+                                  toast({
+                                    title: "Success",
+                                    description: `You have successfully left ${shop.shopName}'s clientele.`,
+                                  });
+                                  fetchShops();
+                                } else {
+                                  toast({
+                                    title: "Error",
+                                    description: res.message,
+                                    variant: "destructive",
+                                  });
+                                }
+                              } catch (err) {
+                                toast({
+                                  title: "Error",
+                                  description: "An unexpected error occurred. Please try again.",
+                                  variant: "destructive",
+                                });
+                              }
+                            }
+                          }}
+                        >
+                          Leave
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 sm:py-20 bg-white/5 rounded-2xl border border-white/10">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center">
+                  <ShoppingBag className="h-8 w-8 sm:h-10 sm:w-10 text-gray-500" />
+                </div>
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-2">No shops joined yet</h3>
+                <p className="text-gray-400 text-sm sm:text-base max-w-sm mx-auto mb-8 px-4">
+                  You haven't joined any shop's clientele yet. Start exploring to find brands you love!
+                </p>
+                <Button
+                  onClick={() => setActiveSection('shop')}
+                  className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-bold px-6 py-2 rounded-xl hover:scale-105 transition-transform"
+                >
+                  Discover Shops
+                </Button>
+              </div>
+            )}
           </div>
         )}
 
