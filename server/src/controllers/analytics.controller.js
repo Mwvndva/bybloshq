@@ -32,55 +32,30 @@ export const getSellerAnalytics = async (req, res, next) => {
     );
 
 
-    // 2. Get total sales (sum of total_amount for all orders)
-    const totalSalesResult = await pool.query(
-      `SELECT COALESCE(SUM(o.total_amount), 0) as total_sales
-       FROM product_orders o
-       JOIN order_items oi ON o.id = oi.order_id
-       JOIN products p ON oi.product_id::INTEGER = p.id
-       WHERE p.seller_id = $1 
-         AND o.status IN ('PROCESSING', 'COMPLETED')`,
+    // 2. Get stats from sellers table (Source of Truth)
+    console.log('Fetching seller stats from sellers table...');
+    const sellerStatsResult = await pool.query(
+      `SELECT 
+         COALESCE(total_sales, 0) as total_sales, 
+         COALESCE(net_revenue, 0) as net_revenue, 
+         COALESCE(balance, 0) as balance 
+       FROM sellers WHERE id = $1`,
       [sellerId]
     );
-
-
-    // 3. Get total revenue (sum of total_amount for this seller)
-    // Include all COMPLETED and PROCESSING orders
-    const revenueResult = await pool.query(
-      `SELECT COALESCE(SUM(o.total_amount), 0) as total_revenue
-       FROM product_orders o
-       JOIN order_items oi ON o.id = oi.order_id
-       JOIN products p ON oi.product_id::INTEGER = p.id
-       WHERE p.seller_id = $1 
-         AND o.status IN ('PROCESSING', 'COMPLETED')`,
-      [sellerId]
-    );
-
-    // Also get the total seller payout for reference
-    const payoutResult = await pool.query(
-      `SELECT COALESCE(SUM(o.seller_payout_amount), 0) as total_payout
-       FROM product_orders o
-       JOIN order_items oi ON o.id = oi.order_id
-       JOIN products p ON oi.product_id::INTEGER = p.id
-       WHERE p.seller_id = $1 
-         AND o.status IN ('PROCESSING', 'COMPLETED')`,
-      [sellerId]
-    );
+    const sellerStats = sellerStatsResult.rows[0] || { total_sales: 0, net_revenue: 0, balance: 0 };
 
 
 
 
-    // 4. Get monthly sales data for the last 12 months
+    // 3. Get monthly sales data (using product_orders directly to avoid overcounting)
     console.log('Fetching monthly sales data...');
     const monthlySalesResult = await pool.query(
       `SELECT 
          TO_CHAR(o.created_at, 'YYYY-MM') as month,
-         COALESCE(SUM(o.seller_payout_amount), 0) as sales
+         COALESCE(SUM(o.total_amount), 0) as sales
        FROM product_orders o
-       JOIN order_items oi ON o.id = oi.order_id
-       JOIN products p ON oi.product_id::INTEGER = p.id
-       WHERE p.seller_id = $1 
-         AND o.status IN ('PROCESSING', 'COMPLETED')
+       WHERE o.seller_id = $1 
+         AND o.status IN ('PROCESSING', 'COMPLETED', 'DELIVERY_PENDING', 'COLLECTION_PENDING', 'SERVICE_PENDING')
          AND o.created_at >= NOW() - INTERVAL '12 months'
        GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
        ORDER BY month`,
@@ -88,13 +63,7 @@ export const getSellerAnalytics = async (req, res, next) => {
     );
 
 
-    // 5. Get seller's balance
-    console.log('Fetching seller balance...');
-    const sellerBalanceResult = await pool.query(
-      `SELECT balance FROM sellers WHERE id = $1`,
-      [sellerId]
-    );
-    const sellerBalance = parseFloat(sellerBalanceResult.rows[0]?.balance || 0);
+    const sellerBalance = parseFloat(sellerStats.balance);
 
 
     // 6. Get recent orders
@@ -164,8 +133,8 @@ export const getSellerAnalytics = async (req, res, next) => {
       // Format the response
       const analyticsData = {
         totalProducts: parseInt(productsResult.rows[0]?.total_products || 0),
-        totalSales: parseFloat(totalSalesResult.rows[0]?.total_sales || 0),
-        totalRevenue: parseFloat(revenueResult.rows[0]?.total_revenue || 0),
+        totalSales: parseFloat(sellerStats.total_sales),
+        totalRevenue: parseFloat(sellerStats.total_sales), // Map total_sales to totalRevenue for frontend calc
         balance: sellerBalance,
         monthlySales: monthlySalesResult.rows.map(row => ({
           month: row.month,
