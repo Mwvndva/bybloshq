@@ -22,7 +22,8 @@ import {
   Phone,
   Mail,
   Info,
-  X
+  X,
+  Search
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import buyerApi, { updateBuyerProfile } from '@/api/buyerApi';
@@ -76,6 +77,7 @@ function BuyerDashboard() {
   const [whatsappNumber, setWhatsappNumber] = useState<string>(user?.whatsappNumber || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [shops, setShops] = useState<any[]>([]);
+  const [shopsSearchQuery, setShopsSearchQuery] = useState('');
   const [isLoadingShops, setIsLoadingShops] = useState(false);
 
   const fetchShops = useCallback(async () => {
@@ -295,11 +297,23 @@ function BuyerDashboard() {
         {/* Content Sections */}
         {activeSection === 'shop' && (
           <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
-            <div className="mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">Discover Shops</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal mb-4 sm:mb-6">
-                Explore our curated selection of brands and creators
-              </p>
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">Discover Shops</h2>
+                <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal">
+                  Explore our curated selection of brands and creators
+                </p>
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Input
+                  type="text"
+                  placeholder="Search shops..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+                />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+              </div>
             </div>
 
             <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
@@ -308,11 +322,23 @@ function BuyerDashboard() {
 
         {activeSection === 'shops' && (
           <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
-            <div className="mb-4 sm:mb-6">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">My Shops</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal">
-                Shops you have joined as a client
-              </p>
+            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">My Shops</h2>
+                <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal">
+                  Shops you have joined as a client
+                </p>
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Input
+                  type="text"
+                  placeholder="Search my shops..."
+                  value={shopsSearchQuery}
+                  onChange={(e) => setShopsSearchQuery(e.target.value)}
+                  className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+                />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+              </div>
             </div>
 
             {isLoadingShops ? (
@@ -321,70 +347,76 @@ function BuyerDashboard() {
               </div>
             ) : shops.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {shops.map((shop) => (
-                  <Card key={shop.id} className="bg-white/5 border-white/10 overflow-hidden group hover:border-yellow-500/30 transition-all duration-300 rounded-2xl">
-                    <div className="relative h-24 sm:h-32 bg-gray-800">
-                      {shop.bannerImage ? (
-                        <img src={shop.bannerImage} alt={shop.shopName} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                          <Package className="h-8 w-8 text-white/20" />
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300" />
-                    </div>
-                    <CardContent className="p-4 sm:p-5 relative">
-                      <h3 className="text-white font-bold text-base sm:text-lg mb-1 truncate">{shop.shopName}</h3>
-                      <p className="text-gray-400 text-xs sm:text-sm mb-4 flex items-center">
-                        <span className="truncate">{shop.city}{shop.location ? `, ${shop.location}` : ''}</span>
-                      </p>
+                {shops
+                  .filter(shop =>
+                    shop.shopName.toLowerCase().includes(shopsSearchQuery.toLowerCase()) ||
+                    shop.city?.toLowerCase().includes(shopsSearchQuery.toLowerCase()) ||
+                    shop.location?.toLowerCase().includes(shopsSearchQuery.toLowerCase())
+                  )
+                  .map((shop) => (
+                    <Card key={shop.id} className="bg-white/5 border-white/10 overflow-hidden group hover:border-yellow-500/30 transition-all duration-300 rounded-2xl">
+                      <div className="relative h-24 sm:h-32 bg-gray-800">
+                        {shop.bannerImage ? (
+                          <img src={shop.bannerImage} alt={shop.shopName} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
+                            <Package className="h-8 w-8 text-white/20" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300" />
+                      </div>
+                      <CardContent className="p-4 sm:p-5 relative">
+                        <h3 className="text-white font-bold text-base sm:text-lg mb-1 truncate">{shop.shopName}</h3>
+                        <p className="text-gray-400 text-xs sm:text-sm mb-4 flex items-center">
+                          <span className="truncate">{shop.city}{shop.location ? `, ${shop.location}` : ''}</span>
+                        </p>
 
-                      <div className="flex items-center justify-between gap-3 mt-4">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
-                          onClick={() => navigate(`/shop/${encodeURIComponent(shop.shopName)}`)}
-                        >
-                          Visit Shop
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
-                          onClick={async () => {
-                            if (window.confirm(`Are you sure you want to leave ${shop.shopName}'s clientele?`)) {
-                              try {
-                                const res = await buyerApi.leaveClient(shop.id);
-                                if (res.success) {
-                                  toast({
-                                    title: "Success",
-                                    description: `You have successfully left ${shop.shopName}'s clientele.`,
-                                  });
-                                  fetchShops();
-                                } else {
+                        <div className="flex items-center justify-between gap-3 mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
+                            onClick={() => navigate(`/buyer/shop/${encodeURIComponent(shop.shopName)}`)}
+                          >
+                            Visit Shop
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
+                            onClick={async () => {
+                              if (window.confirm(`Are you sure you want to leave ${shop.shopName}'s clientele?`)) {
+                                try {
+                                  const res = await buyerApi.leaveClient(shop.id);
+                                  if (res.success) {
+                                    toast({
+                                      title: "Success",
+                                      description: `You have successfully left ${shop.shopName}'s clientele.`,
+                                    });
+                                    fetchShops();
+                                  } else {
+                                    toast({
+                                      title: "Error",
+                                      description: res.message,
+                                      variant: "destructive",
+                                    });
+                                  }
+                                } catch (err) {
                                   toast({
                                     title: "Error",
-                                    description: res.message,
+                                    description: "An unexpected error occurred. Please try again.",
                                     variant: "destructive",
                                   });
                                 }
-                              } catch (err) {
-                                toast({
-                                  title: "Error",
-                                  description: "An unexpected error occurred. Please try again.",
-                                  variant: "destructive",
-                                });
                               }
-                            }
-                          }}
-                        >
-                          Leave
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                            }}
+                          >
+                            Leave
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             ) : (
               <div className="text-center py-12 sm:py-20 bg-white/5 rounded-2xl border border-white/10">

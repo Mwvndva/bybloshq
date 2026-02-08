@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
 import { format, isValid, parseISO } from 'date-fns';
 
 // Type for objects that might have date properties
@@ -51,7 +52,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-import { ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Handshake, FileText, Users, UserCheck } from 'lucide-react';
+import { Search, ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Handshake, FileText, Users, UserCheck } from 'lucide-react';
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 import buyerApi from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
@@ -192,6 +193,7 @@ const getPaymentStatusBadge = (status?: string) => {
 export default function OrdersSection() {
   const { user } = useBuyerAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -464,7 +466,17 @@ export default function OrdersSection() {
 
 
   // Always use real data from the API
-  const displayOrders = orders;
+  // Filter orders based on search query
+  const filteredOrders = orders.filter(order => {
+    const query = searchQuery.toLowerCase();
+    const orderNum = (order.orderNumber || order.id || '').toLowerCase();
+    const shopName = (order.seller?.shopName || order.seller?.name || '').toLowerCase();
+    const itemMatch = order.items.some(item => item.name.toLowerCase().includes(query));
+
+    return orderNum.includes(query) || shopName.includes(query) || itemMatch;
+  });
+
+  const displayOrders = filteredOrders;
 
   if (isLoading) {
     return (
@@ -519,144 +531,164 @@ export default function OrdersSection() {
     );
   }
 
-  if (displayOrders.length === 0) {
-    return (
-      <div className="text-center py-12 px-4">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-4">
-          <Package className="h-8 w-8 text-yellow-500" />
-        </div>
-        <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
-        <p className="text-gray-300 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
-        <Button
-          onClick={() => (window.location.href = '/shop')}
-          className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
-        >
-          Start Shopping
-          <ArrowRight className="h-4 w-4 ml-2" />
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {displayOrders.map((order) => {
-        const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
-        const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
+      <div className="relative w-full max-w-md mx-auto mb-6">
+        <Input
+          type="text"
+          placeholder="Search orders, shops, or products..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+        />
+        <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+      </div>
 
-        return (
-          <Card key={order.id} className="border-0 overflow-hidden" style={glassCardStyle}>
-            <CardContent className="p-0">
-              {/* Header Section */}
-              <div className="p-4 sm:p-6 border-b border-white/5">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                      <h3 className="text-lg sm:text-xl font-bold text-white">
-                        #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
-                      </h3>
-                      <div className="flex gap-1.5 sm:gap-2">
-                        {getStatusBadge(order.status)}
-                        {getPaymentStatusBadge(order.paymentStatus)}
+      {displayOrders.length === 0 && searchQuery ? (
+        <div className="text-center py-12 px-4 bg-white/5 rounded-2xl border border-white/10">
+          <p className="text-gray-400">No orders found matching "{searchQuery}"</p>
+          <Button
+            variant="link"
+            onClick={() => setSearchQuery('')}
+            className="text-yellow-500 mt-2"
+          >
+            Clear search
+          </Button>
+        </div>
+      ) : displayOrders.length === 0 ? (
+        <div className="text-center py-12 px-4">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-4">
+            <Package className="h-8 w-8 text-yellow-500" />
+          </div>
+          <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
+          <p className="text-gray-300 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
+          <Button
+            onClick={() => (window.location.href = '/shop')}
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+          >
+            Start Shopping
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      ) : (
+        displayOrders.map((order) => {
+          const mainItem = order.items.find(item => item.imageUrl) || order.items[0];
+          const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
+
+          return (
+            <Card key={order.id} className="border-0 overflow-hidden" style={glassCardStyle}>
+              <CardContent className="p-0">
+                {/* Header Section */}
+                <div className="p-4 sm:p-6 border-b border-white/5">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-2">
+                        <h3 className="text-lg sm:text-xl font-bold text-white">
+                          #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
+                        </h3>
+                        <div className="flex gap-1.5 sm:gap-2">
+                          {getStatusBadge(order.status)}
+                          {getPaymentStatusBadge(order.paymentStatus)}
+                        </div>
+                      </div>
+                      <p className="text-xs sm:text-sm text-gray-400">{formatDate(order)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total</p>
+                      <p className="text-xl sm:text-2xl font-bold text-white">
+                        {formatCurrency((order as any).total_amount || order.totalAmount, order.currency)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items Section */}
+                <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
+                  {order.items.slice(0, 2).map((item, idx) => (
+                    <div key={idx} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                      {/* Image removed as per request */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm sm:text-base font-semibold text-white truncate">{item.name}</p>
                       </div>
                     </div>
-                    <p className="text-xs sm:text-sm text-gray-400">{formatDate(order)}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total</p>
-                    <p className="text-xl sm:text-2xl font-bold text-white">
-                      {formatCurrency((order as any).total_amount || order.totalAmount, order.currency)}
+                  ))}
+                  {order.items.length > 2 && (
+                    <p className="text-xs sm:text-sm text-center text-gray-400 py-1 sm:py-2">
+                      + {order.items.length - 2} more item{order.items.length - 2 > 1 ? 's' : ''}
                     </p>
-                  </div>
+                  )}
                 </div>
-              </div>
 
-              {/* Items Section */}
-              <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
-                {order.items.slice(0, 2).map((item, idx) => (
-                  <div key={idx} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                    {/* Image removed as per request */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm sm:text-base font-semibold text-white truncate">{item.name}</p>
+                {/* Footer Section */}
+                <div className="p-4 sm:p-6 pt-0 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
+                  {/* Seller Info */}
+                  <div className="flex items-center gap-2 sm:gap-3">
+                    {mainImage && (
+                      <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden border-2 border-white/10">
+                        <img src={mainImage} alt="Seller" className="h-full w-full object-cover" />
+                      </div>
+                    )}
+                    <div>
+                      <p className="text-xs text-gray-400">Seller</p>
+                      <p className="text-sm sm:text-base font-semibold text-white">
+                        {order.seller?.shopName || order.seller?.name || "Store"}
+                      </p>
                     </div>
                   </div>
-                ))}
-                {order.items.length > 2 && (
-                  <p className="text-xs sm:text-sm text-center text-gray-400 py-1 sm:py-2">
-                    + {order.items.length - 2} more item{order.items.length - 2 > 1 ? 's' : ''}
-                  </p>
-                )}
-              </div>
 
-              {/* Footer Section */}
-              <div className="p-4 sm:p-6 pt-0 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center justify-between">
-                {/* Seller Info */}
-                <div className="flex items-center gap-2 sm:gap-3">
-                  {mainImage && (
-                    <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full overflow-hidden border-2 border-white/10">
-                      <img src={mainImage} alt="Seller" className="h-full w-full object-cover" />
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-xs text-gray-400">Seller</p>
-                    <p className="text-sm sm:text-base font-semibold text-white">
-                      {order.seller?.shopName || order.seller?.name || "Store"}
-                    </p>
+                  {/* Actions */}
+                  <div className="flex gap-2 sm:gap-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 text-white text-xs sm:text-sm"
+                      onClick={() => setSelectedOrderForDetails(order)}
+                    >
+                      View Details
+                    </Button>
+
+                    {order.status === 'DELIVERY_COMPLETE' && (
+                      <Button
+                        size="sm"
+                        className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm"
+                        onClick={() => handleConfirmReceiptClick(order.id)}
+                      >
+                        Confirm Receipt
+                      </Button>
+                    )}
+
+                    {order.seller && (
+                      <Button
+                        size="sm"
+                        className={`font-semibold text-xs sm:text-sm ${clientStatus[order.seller.id]
+                          ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50'
+                          : 'bg-yellow-500 hover:bg-yellow-600 text-black'
+                          }`}
+                        onClick={() => handleToggleClientStatus(order.seller.id, order.seller.name || '')}
+                        disabled={isBecomingClient[order.seller.id]}
+                      >
+                        {isBecomingClient[order.seller.id] ? (
+                          <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
+                        ) : clientStatus[order.seller.id] ? (
+                          <>
+                            <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Leave
+                          </>
+                        ) : (
+                          <>
+                            <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
+                            Join
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 sm:gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 text-white text-xs sm:text-sm"
-                    onClick={() => setSelectedOrderForDetails(order)}
-                  >
-                    View Details
-                  </Button>
-
-                  {order.status === 'DELIVERY_COMPLETE' && (
-                    <Button
-                      size="sm"
-                      className="flex-1 sm:flex-none bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs sm:text-sm"
-                      onClick={() => handleConfirmReceiptClick(order.id)}
-                    >
-                      Confirm Receipt
-                    </Button>
-                  )}
-
-                  {order.seller && (
-                    <Button
-                      size="sm"
-                      className={`font-semibold text-xs sm:text-sm ${clientStatus[order.seller.id]
-                        ? 'bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50'
-                        : 'bg-yellow-500 hover:bg-yellow-600 text-black'
-                        }`}
-                      onClick={() => handleToggleClientStatus(order.seller.id, order.seller.name || '')}
-                      disabled={isBecomingClient[order.seller.id]}
-                    >
-                      {isBecomingClient[order.seller.id] ? (
-                        <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4 animate-spin" />
-                      ) : clientStatus[order.seller.id] ? (
-                        <>
-                          <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Leave
-                        </>
-                      ) : (
-                        <>
-                          <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                          Join
-                        </>
-                      )}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+              </CardContent>
+            </Card>
+          );
+        })
+      )}
 
       {/* Direct Viewer */}
       {viewingFile && (

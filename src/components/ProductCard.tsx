@@ -27,10 +27,11 @@ interface ProductCardProps {
   seller?: Seller;
   hideWishlist?: boolean;
   theme?: Theme;
+  forceWhiteText?: boolean;
 }
 
 
-export function ProductCard({ product, seller, hideWishlist = false, theme = 'default' }: ProductCardProps) {
+export function ProductCard({ product, seller, hideWishlist = false, theme = 'default', forceWhiteText = false }: ProductCardProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -63,7 +64,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   // Derived state
   const displaySeller = seller || product.seller;
   const displaySellerName = displaySeller?.shopName || displaySeller?.fullName || 'Unknown Shop';
-  
+
   // Check if product is out of stock (inventory tracking)
   const isOutOfStock = (product as any).track_inventory === true && ((product as any).quantity === 0 || (product as any).quantity === null);
   const isSold = product.status === 'sold' || product.isSold || isOutOfStock;
@@ -343,19 +344,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
     } catch (error: any) {
       console.error('Payment initiation error:', error);
-      
+
       // Extract error message from response
       const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Could not initiate payment';
-      
+
       // Check for specific error types
-      const isNetworkError = errorMessage.includes('socket hang up') || 
-                            errorMessage.includes('ECONNRESET') || 
-                            errorMessage.includes('network') ||
-                            error.code === 'ECONNRESET';
-      
+      const isNetworkError = errorMessage.includes('socket hang up') ||
+        errorMessage.includes('ECONNRESET') ||
+        errorMessage.includes('network') ||
+        error.code === 'ECONNRESET';
+
       toast({
         title: 'Payment Failed',
-        description: isNetworkError 
+        description: isNetworkError
           ? 'Payment gateway connection failed. Please try again in a moment.'
           : errorMessage,
         variant: 'destructive',
@@ -553,14 +554,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
         <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg antialiased",
-          theme === 'black' ? 'text-white' : 'text-black'
+          (theme === 'black' || forceWhiteText) ? 'text-white' : 'text-black'
         )}>
           {product.name}
         </h3>
         <p className={cn("font-black mobile-text-lg mb-1 sm:mb-1.5 flex items-center gap-1.5 sm:gap-2",
           (product.product_type === 'service' || (product as any).productType === 'service')
             ? 'text-purple-600'
-            : themeClasses.price
+            : (forceWhiteText && theme === 'default') ? 'text-yellow-400' : themeClasses.price
         )}>
           {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) ? (
             <span className="text-red-600">
@@ -576,7 +577,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
         {product.description && (
           <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2",
-            theme === 'black' ? 'text-gray-300' : 'text-gray-700'
+            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
           )}>
             {product.description}
           </p>
@@ -585,7 +586,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         {/* Service Location Info */}
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
           <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
-            theme === 'black' ? 'text-gray-300' : 'text-gray-700'
+            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
           )}>
             <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
             <span className="line-clamp-2">
@@ -602,13 +603,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
         {/* Seller Info */}
         <div className={cn("flex items-center gap-1 sm:gap-1.5 pt-1.5 sm:pt-2 border-t mt-1.5 sm:mt-2",
-          theme === 'black' ? 'border-gray-800' : 'border-gray-100'
+          (theme === 'black' || forceWhiteText) ? 'border-gray-800' : 'border-gray-100'
         )}>
           <Store className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
           <span className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90",
-            theme === 'black' ? 'text-gray-300' : 'text-gray-800'
+            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-800'
           )}>{displaySellerName}</span>
-          {displaySeller?.physical_address && (
+          {displaySeller?.physicalAddress && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>
                 <PopoverTrigger asChild>

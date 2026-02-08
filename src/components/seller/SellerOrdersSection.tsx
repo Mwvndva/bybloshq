@@ -44,8 +44,9 @@ export default function SellerOrdersSection() {
         const query = searchQuery.toLowerCase();
         return orders.filter(order =>
             order.buyerName?.toLowerCase().includes(query) ||
-            order.productName?.toLowerCase().includes(query) ||
-            order.id?.toString().toLowerCase().includes(query)
+            order.items?.some(item => item.name.toLowerCase().includes(query)) ||
+            order.id?.toString().toLowerCase().includes(query) ||
+            order.orderNumber?.toLowerCase().includes(query)
         );
     }, [orders, searchQuery]);
 
@@ -300,198 +301,207 @@ export default function SellerOrdersSection() {
                     </Button>
                 </div>
 
-                {filteredOrders.map((order) => {
-                    const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
-                    const isDigital = order.items?.some(i => i.productType === 'digital');
+                <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                    {filteredOrders.length === 0 ? (
+                        <div className="text-center py-12 px-4 bg-zinc-900/50 rounded-2xl border border-white/10">
+                            <p className="text-gray-400">No orders found matching "{searchQuery}"</p>
+                        </div>
+                    ) : (
+                        filteredOrders.map((order) => {
+                            const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
+                            const isDigital = order.items?.some(i => i.productType === 'digital');
 
-                    let cardClasses = "transition-all duration-300 transform hover:-translate-y-1 ";
-                    let itemClasses = "text-xs sm:text-sm text-gray-200 rounded-lg px-3 py-2 border ";
+                            let cardClasses = "transition-all duration-300 transform hover:-translate-y-1 ";
+                            let itemClasses = "text-xs sm:text-sm text-gray-200 rounded-lg px-3 py-2 border ";
 
-                    if (isService) {
-                        cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-purple-400/20 shadow-sm hover:shadow-md";
-                        itemClasses += "bg-purple-500/10 border-purple-400/20";
-                    } else if (isDigital) {
-                        cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-red-400/20 shadow-sm hover:shadow-md";
-                        itemClasses += "bg-red-500/10 border-red-400/20";
-                    } else {
-                        cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow hover:shadow-md";
-                        itemClasses += "bg-white/5 border-white/10";
-                    }
+                            if (isService) {
+                                cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-purple-400/20 shadow-sm hover:shadow-md";
+                                itemClasses += "bg-purple-500/10 border-purple-400/20";
+                            } else if (isDigital) {
+                                cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-red-400/20 shadow-sm hover:shadow-md";
+                                itemClasses += "bg-red-500/10 border-red-400/20";
+                            } else {
+                                cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow hover:shadow-md";
+                                itemClasses += "bg-white/5 border-white/10";
+                            }
 
-                    return (
-                        <Card key={order.id} className={cardClasses}>
-                            <CardContent className="p-4 sm:p-6">
-                                {/* Mobile-first responsive layout */}
-                                <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
-                                    {/* Order Information Section */}
-                                    <div className="space-y-3 sm:space-y-4 flex-1">
-                                        {/* Order Header */}
-                                        <div className="flex flex-row justify-between items-start gap-2">
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">Order #{order.orderNumber}</h3>
-                                                <p className="text-[10px] sm:text-sm text-gray-400">{formatDate(order.createdAt)}</p>
-                                                {(order.buyerName || order.customer?.name) && (
-                                                    <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-blue-200 bg-blue-500/10 border border-blue-400/20 px-2 py-0.5 rounded-md w-fit">
-                                                        <User className="h-3 w-3" />
-                                                        <span className="font-medium truncate max-w-[120px] sm:max-w-xs">{order.buyerName || order.customer?.name}</span>
+                            return (
+                                <Card key={order.id} className={cardClasses}>
+                                    <CardContent className="p-4 sm:p-6">
+                                        {/* Mobile-first responsive layout */}
+                                        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
+                                            {/* Order Information Section */}
+                                            <div className="space-y-3 sm:space-y-4 flex-1">
+                                                {/* Order Header */}
+                                                <div className="flex flex-row justify-between items-start gap-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">Order #{order.orderNumber}</h3>
+                                                        <p className="text-[10px] sm:text-sm text-gray-400">{formatDate(order.createdAt)}</p>
+                                                        {(order.buyerName || order.customer?.name) && (
+                                                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-blue-200 bg-blue-500/10 border border-blue-400/20 px-2 py-0.5 rounded-md w-fit">
+                                                                <User className="h-3 w-3" />
+                                                                <span className="font-medium truncate max-w-[120px] sm:max-w-xs">{order.buyerName || order.customer?.name}</span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    {/* Status Badge - positioned for mobile */}
+                                                    <div className="flex-none">
+                                                        {order.status === 'COMPLETED' ? (
+                                                            <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <CheckCircle className="h-3 w-3 mr-1" /> Completed
+                                                            </Badge>
+                                                        ) : order.status === 'DELIVERY_COMPLETE' ? (
+                                                            <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Package className="h-3 w-3 mr-1" /> Delivery Complete
+                                                            </Badge>
+                                                        ) : order.status === 'DELIVERY_PENDING' ? (
+                                                            <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Truck className="h-3 w-3 mr-1" /> Delivery Pending
+                                                            </Badge>
+                                                        ) : order.status === 'FAILED' ? (
+                                                            <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <XCircle className="h-3 w-3 mr-1" /> Failed
+                                                            </Badge>
+                                                        ) : order.status === 'CANCELLED' ? (
+                                                            <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <XCircle className="h-3 w-3 mr-1" /> Cancelled
+                                                            </Badge>
+                                                        ) : order.status === 'SERVICE_PENDING' ? (
+                                                            <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <CheckCircle className="h-3 w-3 mr-1" /> Service Pending
+                                                            </Badge>
+                                                        ) : order.status === 'COLLECTION_PENDING' ? (
+                                                            <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Package className="h-3 w-3 mr-1" /> Ready for Collection
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Clock className="h-3 w-3 mr-1" /> Pending
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Products Section */}
+                                                <div>
+                                                    <h4 className="text-sm sm:text-base font-semibold text-white mb-3">Products:</h4>
+                                                    <ul className="space-y-2">
+                                                        {order.items && order.items.length > 0 ? (
+                                                            order.items.map((item) => (
+                                                                <li key={item.id} className={itemClasses}>
+                                                                    <span className="font-semibold">{item.name}</span>
+                                                                    <span className="text-gray-300 ml-2">× {item.quantity}</span>
+                                                                </li>
+                                                            ))
+                                                        ) : (
+                                                            <li className="text-xs sm:text-sm text-gray-300 bg-white/5 rounded-lg px-3 py-2 border border-white/10">No items in this order</li>
+                                                        )}
+                                                    </ul>
+                                                </div>
+
+                                                {/* Service Booking Details */}
+                                                {(order.metadata?.booking_date || order.metadata?.service_location || order.metadata?.service_requirements) && (
+                                                    <div className="mt-4 p-3 bg-purple-500/10 rounded-lg border border-purple-400/20 shadow-sm">
+                                                        <h4 className="flex items-center text-sm font-semibold text-purple-100 mb-2">
+                                                            <Calendar className="h-4 w-4 mr-2 text-purple-300" />
+                                                            Service Booking Details
+                                                        </h4>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                                            <div className="bg-white/5 p-2 rounded border border-white/10">
+                                                                <p className="text-purple-200 text-xs font-medium mb-1">Date & Time</p>
+                                                                <p className="font-semibold text-white">
+                                                                    {order.metadata.booking_date ? formatDate(order.metadata.booking_date) : 'N/A'}
+                                                                    {order.metadata.booking_time && <span className="text-gray-300 font-normal"> at {order.metadata.booking_time}</span>}
+                                                                </p>
+                                                            </div>
+                                                            <div className="bg-white/5 p-2 rounded border border-white/10">
+                                                                <p className="text-purple-200 text-xs font-medium mb-1">Location</p>
+                                                                <p className="font-semibold text-white break-words">
+                                                                    {order.metadata.service_location || 'Not specified'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        {order.metadata?.service_requirements && (
+                                                            <div className="mt-3 bg-white/5 p-2 rounded border border-white/10">
+                                                                <p className="text-purple-200 text-xs font-medium mb-1">Special Requirements</p>
+                                                                <p className="text-sm text-white break-words">
+                                                                    {order.metadata.service_requirements}
+                                                                </p>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
-                                            {/* Status Badge - positioned for mobile */}
-                                            <div className="flex-none">
-                                                {order.status === 'COMPLETED' ? (
-                                                    <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <CheckCircle className="h-3 w-3 mr-1" /> Completed
-                                                    </Badge>
-                                                ) : order.status === 'DELIVERY_COMPLETE' ? (
-                                                    <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <Package className="h-3 w-3 mr-1" /> Delivery Complete
-                                                    </Badge>
-                                                ) : order.status === 'DELIVERY_PENDING' ? (
-                                                    <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <Truck className="h-3 w-3 mr-1" /> Delivery Pending
-                                                    </Badge>
-                                                ) : order.status === 'FAILED' ? (
-                                                    <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <XCircle className="h-3 w-3 mr-1" /> Failed
-                                                    </Badge>
-                                                ) : order.status === 'CANCELLED' ? (
-                                                    <Badge className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <XCircle className="h-3 w-3 mr-1" /> Cancelled
-                                                    </Badge>
-                                                ) : order.status === 'SERVICE_PENDING' ? (
-                                                    <Badge className="bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <CheckCircle className="h-3 w-3 mr-1" /> Service Pending
-                                                    </Badge>
-                                                ) : order.status === 'COLLECTION_PENDING' ? (
-                                                    <Badge className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <Package className="h-3 w-3 mr-1" /> Ready for Collection
-                                                    </Badge>
-                                                ) : (
-                                                    <Badge className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <Clock className="h-3 w-3 mr-1" /> Pending
-                                                    </Badge>
-                                                )}
+
+                                            {/* Price and Actions Section */}
+                                            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
+                                                {/* Total Amount */}
+                                                <div className="flex-1 sm:flex-none">
+                                                    <p className="font-bold text-lg sm:text-xl text-white">
+                                                        {formatCurrency(order.totalAmount, order.currency)}
+                                                    </p>
+                                                    <p className="text-xs text-gray-300">Total Amount</p>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div className="w-full sm:w-auto lg:w-full">
+                                                    {order.status === 'PENDING' && (
+                                                        <div className="space-y-1.5">
+                                                            <Button
+                                                                size="sm"
+                                                                variant="outline"
+                                                                className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
+                                                                onClick={() => handleCancelClick(order.id)}
+                                                                disabled={isUpdating}
+                                                            >
+                                                                <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
+                                                                Cancel Order
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                    {order.status === 'DELIVERY_PENDING' &&
+                                                        (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')) && (
+                                                            <div className="space-y-1.5">
+                                                                <Button
+                                                                    size="sm"
+                                                                    className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
+                                                                    onClick={() => handleReadyForPickupClick(order.id)}
+                                                                    disabled={isUpdating}
+                                                                >
+                                                                    <Truck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
+                                                                    <span className="hidden sm:inline">Mark as Ready for Pickup</span>
+                                                                    <span className="sm:hidden">Ready for Pickup</span>
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
+                                                                    onClick={() => handleCancelClick(order.id)}
+                                                                    disabled={isUpdating}
+                                                                >
+                                                                    <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
+                                                                    Cancel Order
+                                                                </Button>
+                                                            </div>
+                                                        )}
+                                                    {order.status === 'CONFIRMED' && (
+                                                        <div className="space-y-2">
+                                                            <Badge className="w-full justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
+                                                                <Clock className="h-3 w-3 mr-1" />
+                                                                Pending Buyer Completion
+                                                            </Badge>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
+                                    </CardContent>
+                                </Card>
+                            );
+                        })
+                    )}
+                </div>
 
-                                        {/* Products Section */}
-                                        <div>
-                                            <h4 className="text-sm sm:text-base font-semibold text-white mb-3">Products:</h4>
-                                            <ul className="space-y-2">
-                                                {order.items && order.items.length > 0 ? (
-                                                    order.items.map((item) => (
-                                                        <li key={item.id} className={itemClasses}>
-                                                            <span className="font-semibold">{item.name}</span>
-                                                            <span className="text-gray-300 ml-2">× {item.quantity}</span>
-                                                        </li>
-                                                    ))
-                                                ) : (
-                                                    <li className="text-xs sm:text-sm text-gray-300 bg-white/5 rounded-lg px-3 py-2 border border-white/10">No items in this order</li>
-                                                )}
-                                            </ul>
-                                        </div>
-
-                                        {/* Service Booking Details */}
-                                        {(order.metadata?.booking_date || order.metadata?.service_location || order.metadata?.service_requirements) && (
-                                            <div className="mt-4 p-3 bg-purple-500/10 rounded-lg border border-purple-400/20 shadow-sm">
-                                                <h4 className="flex items-center text-sm font-semibold text-purple-100 mb-2">
-                                                    <Calendar className="h-4 w-4 mr-2 text-purple-300" />
-                                                    Service Booking Details
-                                                </h4>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                                    <div className="bg-white/5 p-2 rounded border border-white/10">
-                                                        <p className="text-purple-200 text-xs font-medium mb-1">Date & Time</p>
-                                                        <p className="font-semibold text-white">
-                                                            {order.metadata.booking_date ? formatDate(order.metadata.booking_date) : 'N/A'}
-                                                            {order.metadata.booking_time && <span className="text-gray-300 font-normal"> at {order.metadata.booking_time}</span>}
-                                                        </p>
-                                                    </div>
-                                                    <div className="bg-white/5 p-2 rounded border border-white/10">
-                                                        <p className="text-purple-200 text-xs font-medium mb-1">Location</p>
-                                                        <p className="font-semibold text-white break-words">
-                                                            {order.metadata.service_location || 'Not specified'}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                {order.metadata?.service_requirements && (
-                                                    <div className="mt-3 bg-white/5 p-2 rounded border border-white/10">
-                                                        <p className="text-purple-200 text-xs font-medium mb-1">Special Requirements</p>
-                                                        <p className="text-sm text-white break-words">
-                                                            {order.metadata.service_requirements}
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Price and Actions Section */}
-                                    <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
-                                        {/* Total Amount */}
-                                        <div className="flex-1 sm:flex-none">
-                                            <p className="font-bold text-lg sm:text-xl text-white">
-                                                {formatCurrency(order.totalAmount, order.currency)}
-                                            </p>
-                                            <p className="text-xs text-gray-300">Total Amount</p>
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="w-full sm:w-auto lg:w-full">
-                                            {order.status === 'PENDING' && (
-                                                <div className="space-y-1.5">
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
-                                                        onClick={() => handleCancelClick(order.id)}
-                                                        disabled={isUpdating}
-                                                    >
-                                                        <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                        Cancel Order
-                                                    </Button>
-                                                </div>
-                                            )}
-                                            {order.status === 'DELIVERY_PENDING' &&
-                                                (['success', 'completed', 'paid'].includes(order.paymentStatus?.toLowerCase() || '')) && (
-                                                    <div className="space-y-1.5">
-                                                        <Button
-                                                            size="sm"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-[10px] sm:text-xs font-semibold shadow-sm hover:shadow-md transition-all duration-200 h-6"
-                                                            onClick={() => handleReadyForPickupClick(order.id)}
-                                                            disabled={isUpdating}
-                                                        >
-                                                            <Truck className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                            <span className="hidden sm:inline">Mark as Ready for Pickup</span>
-                                                            <span className="sm:hidden">Ready for Pickup</span>
-                                                        </Button>
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="w-full sm:w-auto lg:w-full justify-center sm:justify-start text-red-200 hover:bg-red-500/10 border-red-400/20 hover:border-red-400/30 text-[10px] sm:text-xs font-semibold transition-all duration-200 h-6"
-                                                            onClick={() => handleCancelClick(order.id)}
-                                                            disabled={isUpdating}
-                                                        >
-                                                            <XCircle className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1.5" />
-                                                            Cancel Order
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            {order.status === 'CONFIRMED' && (
-                                                <div className="space-y-2">
-                                                    <Badge className="w-full justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs sm:text-sm font-semibold px-3 py-1 rounded-full shadow-sm">
-                                                        <Clock className="h-3 w-3 mr-1" />
-                                                        Pending Buyer Completion
-                                                    </Badge>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    );
-                })}
             </div >
 
             {/* Ready for Pickup Confirmation Dialog */}

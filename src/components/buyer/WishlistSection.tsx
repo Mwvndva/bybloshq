@@ -1,11 +1,14 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Heart } from 'lucide-react';
+import { Heart, Search } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { ProductCard } from '@/components/ProductCard';
+import { Input } from '@/components/ui/input';
+import { useState } from 'react';
 
 export default function WishlistSection() {
   const { wishlist } = useWishlist();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const glassStyle: React.CSSProperties = {
     background: 'rgba(17, 17, 17, 0.7)',
@@ -14,6 +17,13 @@ export default function WishlistSection() {
     border: '1px solid rgba(255, 255, 255, 0.1)',
     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
   };
+
+  const filteredWishlist = wishlist.filter(product => {
+    const query = searchQuery.toLowerCase();
+    const productName = product.name.toLowerCase();
+    const shopName = (product.seller?.shopName || '').toLowerCase();
+    return productName.includes(query) || shopName.includes(query);
+  });
 
   if (wishlist.length === 0) {
     return (
@@ -35,14 +45,32 @@ export default function WishlistSection() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-        {wishlist.map((product) => (
-          <ProductCard
-            key={product.id}
-            product={product}
-          />
-        ))}
+      <div className="relative w-full max-w-sm ml-auto mb-6">
+        <Input
+          type="text"
+          placeholder="Search wishlist..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+        />
+        <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
       </div>
+
+      {filteredWishlist.length === 0 && searchQuery ? (
+        <div className="text-center py-12 px-4 bg-white/5 rounded-2xl border border-white/10">
+          <p className="text-gray-400">No items found matching "{searchQuery}"</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          {filteredWishlist.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              forceWhiteText={true}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
