@@ -83,6 +83,14 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Sync Users Columns
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'is_active') THEN
+        ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+    END IF;
+END $$;
+
 -- RBAC tables
 CREATE TABLE IF NOT EXISTS permissions (
     id SERIAL PRIMARY KEY,
@@ -146,6 +154,17 @@ CREATE TABLE IF NOT EXISTS sellers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP WITH TIME ZONE
 );
+
+-- Sync Sellers Columns
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sellers' AND column_name = 'is_active') THEN
+        ALTER TABLE sellers ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sellers' AND column_name = 'client_count') THEN
+        ALTER TABLE sellers ADD COLUMN client_count INTEGER DEFAULT 0;
+    END IF;
+END $$;
 
 -- Organizers
 CREATE TABLE IF NOT EXISTS organizers (
@@ -229,6 +248,20 @@ CREATE TABLE IF NOT EXISTS events (
     CONSTRAINT valid_dates CHECK (end_date > start_date)
 );
 
+-- Sync Events Columns
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'withdrawal_status') THEN
+        ALTER TABLE events ADD COLUMN withdrawal_status VARCHAR(20) DEFAULT 'pending';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'withdrawal_date') THEN
+        ALTER TABLE events ADD COLUMN withdrawal_date TIMESTAMP WITH TIME ZONE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'withdrawal_amount') THEN
+        ALTER TABLE events ADD COLUMN withdrawal_amount DECIMAL(12, 2) DEFAULT 0;
+    END IF;
+END $$;
+
 -- Products
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
@@ -256,6 +289,25 @@ CREATE TABLE IF NOT EXISTS products (
     CONSTRAINT valid_price_positive CHECK (price >= 0),
     CONSTRAINT quantity_non_negative CHECK (quantity IS NULL OR quantity >= 0)
 );
+
+-- Sync Products Columns
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'track_inventory') THEN
+        ALTER TABLE products ADD COLUMN track_inventory BOOLEAN DEFAULT FALSE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'quantity') THEN
+        ALTER TABLE products ADD COLUMN quantity INTEGER DEFAULT NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'low_stock_threshold') THEN
+        ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
+    END IF;
+    
+    -- Ensure constraint exists
+    IF NOT EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name = 'products' AND constraint_name = 'quantity_non_negative') THEN
+        ALTER TABLE products ADD CONSTRAINT quantity_non_negative CHECK (quantity IS NULL OR quantity >= 0);
+    END IF;
+END $$;
 
 -- Product Orders
 CREATE TABLE IF NOT EXISTS product_orders (
@@ -287,6 +339,20 @@ CREATE TABLE IF NOT EXISTS product_orders (
     cancelled_at TIMESTAMP WITH TIME ZONE,
     payment_completed_at TIMESTAMP WITH TIME ZONE
 );
+
+-- Sync Product Orders Columns
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'client_id') THEN
+        ALTER TABLE product_orders ADD COLUMN client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'is_seller_initiated') THEN
+        ALTER TABLE product_orders ADD COLUMN is_seller_initiated BOOLEAN DEFAULT FALSE;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'service_requirements') THEN
+        ALTER TABLE product_orders ADD COLUMN service_requirements TEXT;
+    END IF;
+END $$;
 
 -- Order Items
 CREATE TABLE IF NOT EXISTS order_items (
