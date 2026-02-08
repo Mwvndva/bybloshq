@@ -291,9 +291,11 @@ const buyerApi = {
       });
 
       // Check if the response has the expected structure
-      if (!response.data?.success || !response.data.data?.items) {
+      const isSuccess = response.data?.success || (response.data as any)?.status === 'success';
+      if (!isSuccess || !response.data.data?.items) {
         console.warn('⚠️ API - Unexpected response format from wishlist endpoint:', {
           success: response.data?.success,
+          status: (response.data as any)?.status,
           hasData: !!response.data?.data,
           hasItems: !!response.data?.data?.items,
           fullResponse: response.data
@@ -337,7 +339,8 @@ const buyerApi = {
 
 
       // Check if the response indicates success
-      if (response.data?.success) {
+      const isSuccess = response.data?.success || (response.data as any)?.status === 'success';
+      if (isSuccess) {
         return true;
       }
 
@@ -374,7 +377,8 @@ const buyerApi = {
 
 
       // Check if the response indicates success
-      if (response.data?.success) {
+      const isSuccess = response.data?.success || (response.data as any)?.status === 'success';
+      if (isSuccess) {
         return true;
       }
 
@@ -710,7 +714,8 @@ const buyerApi = {
   getShops: async (): Promise<any[]> => {
     try {
       const response = await buyerApiInstance.get<ApiResponse<any[]>>('/buyers/shops');
-      if (!response.data?.success) {
+      const isSuccess = response.data?.success || (response.data as any)?.status === 'success';
+      if (!isSuccess) {
         throw new Error('Failed to fetch shops');
       }
       return response.data.data;
