@@ -367,7 +367,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalProducts: analyticsData.totalProducts,
         totalSales: analyticsData.totalSales,
         totalRevenue: analyticsData.totalRevenue,
-        totalPayout: analyticsData.totalRevenue * 0.85, // Assuming 15% platform fee
+        totalPayout: analyticsData.totalPayout,
         balance: analyticsData.balance || 0,
         pendingDebt: analyticsData.pendingDebt || 0,
         pendingDebtCount: (analyticsData as any).pendingDebtCount || 0,

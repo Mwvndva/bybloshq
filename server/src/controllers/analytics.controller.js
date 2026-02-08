@@ -134,7 +134,8 @@ export const getSellerAnalytics = async (req, res, next) => {
       const analyticsData = {
         totalProducts: parseInt(productsResult.rows[0]?.total_products || 0),
         totalSales: parseFloat(sellerStats.total_sales),
-        totalRevenue: parseFloat(sellerStats.total_sales), // Map total_sales to totalRevenue for frontend calc
+        totalRevenue: parseFloat(sellerStats.total_sales), // Map total_sales to totalRevenue for frontend Gross display
+        totalPayout: parseFloat(sellerStats.net_revenue),   // Map net_revenue to totalPayout (actual earnings)
         balance: sellerBalance,
         monthlySales: monthlySalesResult.rows.map(row => ({
           month: row.month,
