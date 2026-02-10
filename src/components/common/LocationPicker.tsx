@@ -50,6 +50,7 @@ interface LocationPickerProps {
     detailedLabel?: string;
     className?: string;
     autoPopulate?: boolean;
+    initialValue?: string;
 }
 
 export default function LocationPicker({
@@ -60,13 +61,13 @@ export default function LocationPicker({
     label = "Search Location",
     detailedLabel = "Detailed Address",
     className,
-    autoPopulate = true
+    autoPopulate = true,
+    initialValue = ''
 }: LocationPickerProps) {
     const [address, setAddress] = useState(initialAddress);
     const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(initialCoordinates ? [initialCoordinates.lat, initialCoordinates.lng] : null);
     const [center, setCenter] = useState<[number, number]>(initialCoordinates ? [initialCoordinates.lat, initialCoordinates.lng] : [-1.2921, 36.8219]); // Default Nairobi
-
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState(initialValue);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showResults, setShowResults] = useState(false);

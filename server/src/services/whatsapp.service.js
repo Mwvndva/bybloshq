@@ -144,6 +144,21 @@ class WhatsAppService {
         }
     }
 
+    /**
+     * Helper to format social links for WhatsApp messages
+     */
+    formatSocialLinks(seller) {
+        const links = [];
+        if (seller.instagram_link) links.push(`📸 *Instagram:* ${seller.instagram_link}`);
+        if (seller.tiktok_link) links.push(`🎵 *TikTok:* ${seller.tiktok_link}`);
+        if (seller.facebook_link) links.push(`📘 *Facebook:* ${seller.facebook_link}`);
+
+        if (links.length > 0) {
+            return `\n\n🔗 *CONNECT WITH US:*\n${links.join('\n')}`;
+        }
+        return '';
+    }
+
     // ==========================================
     // NOTIFICATION LOGIC (Business Logic)
     // ==========================================
@@ -409,7 +424,7 @@ Thanks for ordering, ${buyer.full_name?.split(' ')[0] || 'valued customer'}!
 📋 *Items:*
 ${itemsList}
 
-${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}
+${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}${this.formatSocialLinks(seller)}
         `.trim();
 
         logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyerWhatsApp}`);
@@ -566,6 +581,9 @@ Thank you for shopping with us!`;
         }
 
         if (notes) msg += `\nNote: ${notes}`;
+
+        msg += this.formatSocialLinks(updateData.seller || {});
+
         return this.sendMessage(buyerWhatsApp, msg);
     }
 
