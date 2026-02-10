@@ -33,6 +33,8 @@ export interface Seller {
   updatedAt?: string;
   updated_at?: string;
   instagramLink?: string;
+  tiktokLink?: string;
+  facebookLink?: string;
   clientCount?: number;
   client_count?: number;
 }
@@ -154,6 +156,8 @@ const transformSeller = (data: any): Seller => {
     bannerImage: seller.bannerImage || seller.banner_image || null,
     theme: seller.theme || 'black',
     instagramLink: seller.instagramLink || seller.instagram_link || '',
+    tiktokLink: seller.tiktokLink || seller.tiktok_link || '',
+    facebookLink: seller.facebookLink || seller.facebook_link || '',
     clientCount: seller.clientCount || seller.client_count || 0,
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
@@ -514,7 +518,7 @@ export const sellerApi = {
   },
 
   // Update seller profile
-  updateProfile: async (data: { city?: string; location?: string; theme?: Theme; physicalAddress?: string; latitude?: number; longitude?: number }): Promise<Seller> => {
+  updateProfile: async (data: { city?: string; location?: string; theme?: Theme; physicalAddress?: string; latitude?: number; longitude?: number; instagramLink?: string; tiktokLink?: string; facebookLink?: string }): Promise<Seller> => {
     try {
       const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
       return transformSeller(response.data.data);

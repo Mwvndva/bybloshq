@@ -44,6 +44,8 @@ interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
   theme?: Theme;         // New field
   city?: string;         // New field
   instagramLink?: string; // New field
+  tiktokLink?: string;    // New field
+  facebookLink?: string;  // New field
   clientCount?: number;   // New field
   // createdAt is required from Seller
   // updatedAt is optional from Seller
@@ -294,6 +296,8 @@ const ShopPage = () => {
           location: seller.location,
           theme: (seller.theme as Theme) || 'black', // Default to black when unset
           instagramLink: seller.instagramLink || '', // Map from API
+          tiktokLink: seller.tiktokLink || '',       // Map from API
+          facebookLink: seller.facebookLink || '',   // Map from API
           clientCount: seller.clientCount || seller.client_count || 0,
           // Physical shop fields
           hasPhysicalShop: !!seller.physicalAddress,
@@ -501,6 +505,64 @@ const ShopPage = () => {
                       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
                     </svg>
                     <span className="hidden sm:inline">Instagram</span>
+                  </a>
+                </>
+              )}
+
+              {sellerInfo?.tiktokLink && (
+                <>
+                  <div className="h-1 w-1 bg-white/50 rounded-full" />
+                  <a
+                    href={sellerInfo.tiktokLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
+                    title="Visit TikTok"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="group-hover:scale-110 transition-transform"
+                    >
+                      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>
+                    </svg>
+                    <span className="hidden sm:inline">TikTok</span>
+                  </a>
+                </>
+              )}
+
+              {sellerInfo?.facebookLink && (
+                <>
+                  <div className="h-1 w-1 bg-white/50 rounded-full" />
+                  <a
+                    href={sellerInfo.facebookLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
+                    title="Visit Facebook"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="group-hover:scale-110 transition-transform"
+                    >
+                      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                    </svg>
+                    <span className="hidden sm:inline">Facebook</span>
                   </a>
                 </>
               )}

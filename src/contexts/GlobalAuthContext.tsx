@@ -50,6 +50,8 @@ export interface SellerProfile extends BaseUser {
     theme?: string;
     balance?: number;
     instagramLink?: string;
+    tiktokLink?: string;
+    facebookLink?: string;
 }
 
 export interface OrganizerProfile extends BaseUser {
