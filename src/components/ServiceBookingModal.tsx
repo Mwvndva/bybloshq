@@ -428,6 +428,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                             onLocationChange={handleLocationPickerChange}
                             label="Search Address"
                             autoPopulate={false}
+                            initialValue={buyerLocation?.fullAddress || ''}
                         />
                     </div>
 

@@ -320,7 +320,8 @@ class OrderService {
                   COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
                   COALESCE(s.whatsapp_number, NULL) as seller_phone, 
                   COALESCE(s.email, u.email) as seller_email, 
-                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
+                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude,
+                  s.instagram_link, s.tiktok_link, s.facebook_link
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
@@ -343,7 +344,10 @@ class OrderService {
             email: fullOrder.seller_email,
             physicalAddress: fullOrder.seller_address,
             latitude: fullOrder.seller_latitude,
-            longitude: fullOrder.seller_longitude
+            longitude: fullOrder.seller_longitude,
+            instagram_link: fullOrder.instagram_link,
+            tiktok_link: fullOrder.tiktok_link,
+            facebook_link: fullOrder.facebook_link
           };
 
           const notificationPayload = {
@@ -739,7 +743,8 @@ class OrderService {
                   COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
                   COALESCE(s.whatsapp_number, NULL) as seller_phone, 
                   COALESCE(s.email, u.email) as seller_email, 
-                  s.physical_address as seller_address, s.shop_name, s.latitude as seller_latitude, s.longitude as seller_longitude
+                  s.physical_address as seller_address, s.shop_name, s.latitude as seller_latitude, s.longitude as seller_longitude,
+                  s.instagram_link, s.tiktok_link, s.facebook_link
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
@@ -763,7 +768,10 @@ class OrderService {
             physicalAddress: fullOrder.seller_address,
             shop_name: fullOrder.shop_name,
             latitude: fullOrder.seller_latitude,
-            longitude: fullOrder.seller_longitude
+            longitude: fullOrder.seller_longitude,
+            instagram_link: fullOrder.instagram_link,
+            tiktok_link: fullOrder.tiktok_link,
+            facebook_link: fullOrder.facebook_link
           };
 
           const notificationPayload = {
