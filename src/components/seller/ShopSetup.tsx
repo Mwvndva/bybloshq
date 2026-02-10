@@ -71,8 +71,8 @@ export default function ShopSetup() {
 
             <div className="relative z-10 w-full max-w-2xl mx-auto">
                 <div className="text-center mb-10 space-y-4">
-                    <div className="inline-flex h-16 w-16 bg-white/5 border border-white/10 rounded-3xl items-center justify-center shadow-2xl backdrop-blur-xl animate-in zoom-in duration-700">
-                        <Store className="h-8 w-8 text-yellow-400" />
+                    <div className="inline-flex items-center justify-center animate-in zoom-in duration-700">
+                        <Store className="h-10 w-10 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)]" />
                     </div>
                     <div className="space-y-2">
                         <h2 className="text-4xl font-black text-white tracking-tight sm:text-5xl">
@@ -97,26 +97,27 @@ export default function ShopSetup() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                     <Button
                                         onClick={() => handleSkip()}
-                                        variant="outline"
-                                        className="h-32 flex flex-col items-center justify-center gap-3 border-2 border-white/5 bg-white/[0.02] text-white hover:bg-white/[0.05] hover:border-white/20 rounded-[32px] transition-all group active:scale-95"
+                                        variant="ghost"
+                                        className="h-32 flex flex-col items-center justify-center gap-3 rounded-[32px] transition-all group active:scale-95 hover:bg-white/5"
                                     >
-                                        <div className="text-4xl group-hover:scale-110 transition-transform">🏠</div>
-                                        <span className="font-bold text-base">No, online only</span>
+                                        <div className="text-5xl group-hover:scale-110 transition-transform filter drop-shadow-md">🏠</div>
+                                        <span className="font-bold text-base text-gray-400 group-hover:text-white transition-colors">No, online only</span>
                                     </Button>
                                     <Button
                                         onClick={() => setHasShop(true)}
-                                        className="h-32 flex flex-col items-center justify-center gap-3 bg-yellow-400/10 border-2 border-yellow-400/20 hover:bg-yellow-400/20 hover:border-yellow-400/40 text-yellow-400 rounded-[32px] transition-all group active:scale-95 shadow-[0_0_30px_rgba(250,204,21,0.05)]"
+                                        variant="ghost"
+                                        className="h-32 flex flex-col items-center justify-center gap-3 rounded-[32px] transition-all group active:scale-95 hover:bg-yellow-400/5 hover:text-yellow-400"
                                     >
-                                        <div className="text-4xl group-hover:scale-110 transition-transform">🏪</div>
-                                        <span className="font-bold text-base">Yes, I have a shop</span>
+                                        <div className="text-5xl group-hover:scale-110 transition-transform filter drop-shadow-md">🏪</div>
+                                        <span className="font-bold text-base text-gray-400 group-hover:text-yellow-400 transition-colors">Yes, I have a shop</span>
                                     </Button>
                                 </div>
                             </div>
                         ) : (
                             <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
-                                <div className="flex items-center gap-4 py-4 px-6 bg-white/5 rounded-3xl border border-white/10 mb-2">
-                                    <div className="w-10 h-10 bg-yellow-400 rounded-2xl flex items-center justify-center shrink-0">
-                                        <MapPin className="w-6 h-6 text-black" />
+                                <div className="flex items-center gap-4 py-4 px-6 mb-2">
+                                    <div className="flex items-center justify-center shrink-0">
+                                        <MapPin className="w-8 h-8 text-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.3)]" />
                                     </div>
                                     <div>
                                         <h4 className="text-sm font-bold text-white uppercase tracking-wider">Store Location</h4>
