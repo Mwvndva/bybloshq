@@ -27,9 +27,25 @@ class BuyerService {
             }
 
             // 4. Link new buyer profile to existing user identity
-            return await Buyer.create({
+            const result = await Buyer.create({
                 fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
             });
+
+            // 4b. Add buyer role to user_roles
+            try {
+                const { pool } = await import('../config/database.js');
+                const roleResult = await pool.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
+                if (roleResult.rows[0]) {
+                    await pool.query(
+                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [existingUser.id, roleResult.rows[0].id]
+                    );
+                }
+            } catch (roleError) {
+                console.error(`Error linking buyer role to user ${existingUser.id}:`, roleError);
+            }
+
+            return result;
         }
 
         // 5. No user exists - create BOTH user and profile

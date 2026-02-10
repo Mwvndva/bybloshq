@@ -28,9 +28,25 @@ class OrganizerService {
             }
 
             // 4. Link profile to existing user identity
-            return await Organizer.create({
+            const result = await Organizer.create({
                 full_name, email, whatsapp_number, userId: existingUser.id
             });
+
+            // 4b. Add organizer role to user_roles
+            try {
+                const { query } = await import('../config/database.js');
+                const roleResult = await query('SELECT id FROM roles WHERE slug = $1', ['organizer']);
+                if (roleResult.rows[0]) {
+                    await query(
+                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [existingUser.id, roleResult.rows[0].id]
+                    );
+                }
+            } catch (roleError) {
+                console.error(`Error linking organizer role to user ${existingUser.id}:`, roleError);
+            }
+
+            return result;
         }
 
         // 5. Create BOTH user and profile

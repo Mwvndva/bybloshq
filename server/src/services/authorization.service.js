@@ -53,18 +53,20 @@ class AuthorizationService {
         // --- Fallback for standard roles if RBAC system fails to provide permissions ---
         if (!basicResult) {
             const sellerPerms = ['manage-shop', 'manage-products', 'manage-profile', 'request-payouts', 'view-orders'];
-            if (user.userType === 'seller' && sellerPerms.includes(permission)) {
+            if ((user.userType === 'seller' || user.hasSellerProfile || user.sellerProfileId) && sellerPerms.includes(permission)) {
                 console.log(`[AuthorizationService] RBAC failed for ${user.email}, but granted '${permission}' via seller-role fallback`);
                 return true;
             }
 
             const organizerPerms = ['create-events', 'verify-tickets', 'view-analytics', 'manage-profile'];
-            if (user.userType === 'organizer' && organizerPerms.includes(permission)) {
+            if ((user.userType === 'organizer' || user.hasOrganizerProfile || user.organizerProfileId) && organizerPerms.includes(permission)) {
+                console.log(`[AuthorizationService] RBAC failed for ${user.email}, but granted '${permission}' via organizer-role fallback`);
                 return true;
             }
 
             const buyerPerms = ['view-orders', 'manage-profile'];
-            if (user.userType === 'buyer' && buyerPerms.includes(permission)) {
+            if ((user.userType === 'buyer' || user.hasBuyerProfile || user.buyerProfileId) && buyerPerms.includes(permission)) {
+                console.log(`[AuthorizationService] RBAC failed for ${user.email}, but granted '${permission}' via buyer-role fallback`);
                 return true;
             }
         }
