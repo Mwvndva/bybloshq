@@ -33,9 +33,24 @@ class SellerService {
             }
 
             // 4. Link new seller profile to existing user identity
-            return await SellerModel.createSeller({
+            const result = await SellerModel.createSeller({
                 fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: existingUser.id
             });
+
+            // 4b. Add seller role to user_roles
+            try {
+                const roleResult = await query('SELECT id FROM roles WHERE slug = $1', ['seller']);
+                if (roleResult.rows[0]) {
+                    await query(
+                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [existingUser.id, roleResult.rows[0].id]
+                    );
+                }
+            } catch (roleError) {
+                logger.error(`Error linking seller role to user ${existingUser.id}:`, roleError);
+            }
+
+            return result;
         }
 
         // 5. No user exists - create BOTH user and profile
