@@ -427,6 +427,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                             initialCoordinates={buyerLocation ? { lat: buyerLocation.latitude, lng: buyerLocation.longitude } : null}
                             onLocationChange={handleLocationPickerChange}
                             label="Search Address"
+                            autoPopulate={false}
                         />
                     </div>
 
