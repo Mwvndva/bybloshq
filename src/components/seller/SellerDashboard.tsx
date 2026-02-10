@@ -76,6 +76,8 @@ interface SellerProfile {
   bannerImage?: string;
   theme?: Theme;
   instagramLink?: string;
+  tiktokLink?: string;
+  facebookLink?: string;
 }
 
 interface WithdrawalRequest {
@@ -173,6 +175,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     latitude: number | null;
     longitude: number | null;
     instagramLink: string;
+    tiktokLink: string;
+    facebookLink: string;
     whatsappNumber: string;
   }>({
     shopName: '',
@@ -182,6 +186,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     latitude: null,
     longitude: null,
     instagramLink: '',
+    tiktokLink: '',
+    facebookLink: '',
     whatsappNumber: ''
   });
 
@@ -462,6 +468,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           latitude: sellerProfile?.latitude || null,
           longitude: sellerProfile?.longitude || null,
           instagramLink: sellerProfile?.instagramLink || '',
+          tiktokLink: sellerProfile?.tiktokLink || '',
+          facebookLink: sellerProfile?.facebookLink || '',
           whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || ''
         });
         setShopNameAvailable(null);
@@ -499,6 +507,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         location: formData.location,
         physicalAddress: formData.physicalAddress,
         instagramLink: formData.instagramLink,
+        tiktokLink: formData.tiktokLink,
+        facebookLink: formData.facebookLink,
         whatsappNumber: formData.whatsappNumber
       };
 
@@ -1706,6 +1716,66 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                               <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                               <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                               <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                            </svg>
+                            View
+                          </a>
+                        ) : (
+                          <p className="text-sm sm:text-base font-semibold text-gray-300 italic">Not set</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">TikTok Link</p>
+                    {isEditing ? (
+                      <Input
+                        name="tiktokLink"
+                        value={formData.tiktokLink}
+                        onChange={(e) => setFormData(prev => ({ ...prev, tiktokLink: e.target.value }))}
+                        placeholder="https://tiktok.com/@yourshop"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {sellerProfile?.tiktokLink ? (
+                          <a
+                            href={sellerProfile.tiktokLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm sm:text-base lg:text-lg font-semibold text-blue-300 hover:underline flex items-center gap-1"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>
+                            </svg>
+                            View
+                          </a>
+                        ) : (
+                          <p className="text-sm sm:text-base font-semibold text-gray-300 italic">Not set</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Facebook Link</p>
+                    {isEditing ? (
+                      <Input
+                        name="facebookLink"
+                        value={formData.facebookLink}
+                        onChange={(e) => setFormData(prev => ({ ...prev, facebookLink: e.target.value }))}
+                        placeholder="https://facebook.com/yourshop"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        {sellerProfile?.facebookLink ? (
+                          <a
+                            href={sellerProfile.facebookLink}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm sm:text-base lg:text-lg font-semibold text-blue-300 hover:underline flex items-center gap-1"
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
                             </svg>
                             View
                           </a>

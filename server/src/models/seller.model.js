@@ -32,6 +32,8 @@ export const findSellerByEmail = async (email) => {
       net_revenue AS "netRevenue",
       balance,
       instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
       created_at AS "createdAt"
      FROM sellers 
      WHERE email = $1`,
@@ -58,6 +60,8 @@ export const findSellerByShopName = async (shopName) => {
       banner_image AS "bannerImage",
       theme,
       instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
@@ -105,6 +109,8 @@ export const findSellerById = async (id) => {
       banner_image AS "bannerImage",
       theme, 
       instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
@@ -133,7 +139,7 @@ export const updateSeller = async (id, updates) => {
     throw new Error('Seller ID is required for update');
   }
 
-  const { fullName, shopName, email, whatsappNumber, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link } = updates || {};
+  const { fullName, shopName, email, whatsappNumber, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link, tiktokLink, tiktok_link, facebookLink, facebook_link } = updates || {};
   const updatesList = [];
   const values = [id];
   let paramCount = 1;
@@ -206,6 +212,22 @@ export const updateSeller = async (id, updates) => {
     values.push(instagramLinkToUpdate);
   }
 
+  // Handle tiktok link update
+  const tiktokLinkToUpdate = tiktokLink || tiktok_link;
+  if (tiktokLinkToUpdate !== undefined) {
+    paramCount++;
+    updatesList.push(`tiktok_link = $${paramCount}`);
+    values.push(tiktokLinkToUpdate);
+  }
+
+  // Handle facebook link update
+  const facebookLinkToUpdate = facebookLink || facebook_link;
+  if (facebookLinkToUpdate !== undefined) {
+    paramCount++;
+    updatesList.push(`facebook_link = $${paramCount}`);
+    values.push(facebookLinkToUpdate);
+  }
+
   // Handle physical address update
   if (updates.physicalAddress) {
     paramCount++;
@@ -246,6 +268,8 @@ export const updateSeller = async (id, updates) => {
       location, 
       theme, 
       instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,

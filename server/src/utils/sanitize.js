@@ -61,7 +61,9 @@ export const sanitizeSeller = (seller) => {
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
         latitude: sellerObj.latitude,
         longitude: sellerObj.longitude,
-        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link
+        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
+        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
+        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link
         // Removed: createdAt, updatedAt, userId, totalSales, netRevenue, balance
         // Balance and revenue should come from analytics endpoint, not profile
     };
@@ -91,6 +93,8 @@ export const sanitizePublicSeller = (seller) => {
         latitude: sellerObj.latitude,
         longitude: sellerObj.longitude,
         instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
+        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
+        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
         clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
         // Removed: createdAt - no need to expose when shop was created
         // NO email, phone, balance, revenue, internal IDs
