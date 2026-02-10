@@ -62,18 +62,24 @@ const downloadCSV = (csvContent: string, filename: string): void => {
  * Format orders data for CSV export
  */
 export const formatOrdersForExport = (orders: Order[]) => {
-    return orders.map(order => ({
-        'Order ID': order.id,
-        'Date': format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm:ss'),
-        'Buyer Name': order.buyerName || 'N/A',
-        'Product': order.productName || 'N/A',
-        'Quantity': order.quantity,
-        'Price': `KSh ${order.price}`,
-        'Total': `KSh ${order.totalAmount}`,
-        'Status': order.status,
-        'Payment Status': order.paymentStatus || 'N/A',
-        'Delivery Method': order.deliveryMethod || 'N/A',
-    }));
+    return orders.map(order => {
+        const productNames = order.items?.map(item => item.name).join(', ') || 'N/A';
+        const totalQuantity = order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+        const firstItemPrice = order.items?.[0]?.price || 0;
+
+        return {
+            'Order ID': order.id,
+            'Date': format(new Date(order.createdAt), 'yyyy-MM-dd HH:mm:ss'),
+            'Buyer Name': order.buyerName || order.customer?.name || 'N/A',
+            'Products': productNames,
+            'Total Quantity': totalQuantity,
+            'Price (First Item)': `KSh ${firstItemPrice}`,
+            'Total Amount': `KSh ${order.totalAmount}`,
+            'Status': order.status,
+            'Payment Status': order.paymentStatus || 'N/A',
+            'Delivery Info': order.shippingAddress?.address || 'N/A',
+        };
+    });
 };
 
 /**
