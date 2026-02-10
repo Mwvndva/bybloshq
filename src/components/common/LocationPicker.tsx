@@ -49,6 +49,7 @@ interface LocationPickerProps {
     label?: string;
     detailedLabel?: string;
     className?: string;
+    autoPopulate?: boolean;
 }
 
 export default function LocationPicker({
@@ -58,7 +59,8 @@ export default function LocationPicker({
     placeholder = "Search for a location...",
     label = "Search Location",
     detailedLabel = "Detailed Address",
-    className
+    className,
+    autoPopulate = true
 }: LocationPickerProps) {
     const [address, setAddress] = useState(initialAddress);
     const [markerPosition, setMarkerPosition] = useState<[number, number] | null>(initialCoordinates ? [initialCoordinates.lat, initialCoordinates.lng] : null);
@@ -130,8 +132,8 @@ export default function LocationPicker({
         setShowResults(false);
 
         // Update detailed address if empty, and trigger change
-        const finalDetailedAddress = address.trim() !== '' ? address : result.display_name;
-        if (address.trim() === '') {
+        const finalDetailedAddress = autoPopulate && address.trim() === '' ? result.display_name : address;
+        if (autoPopulate && address.trim() === '') {
             setAddress(result.display_name);
         }
 
