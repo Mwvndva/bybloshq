@@ -64,7 +64,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             setTime('');
             setServiceRequirements('');
 
-            // Initialize buyer location from profile
+            // Initialize buyer location from profile (only on open)
             if (buyerProfile) {
                 const loc = {
                     latitude: (buyerProfile as any).latitude || 0,
@@ -92,7 +92,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 setSelectedLocationType('seller');
             }
         }
-    }, [isOpen, product, buyerProfile, isShopless, isSellerVisits]);
+    }, [isOpen]); // Only trigger when modal opens/closes, not when profile updates
 
     // Generate time slots
     useEffect(() => {
