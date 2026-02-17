@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import AppError from '../utils/appError.js';
 import AdminService from '../services/admin.service.js';
 import { pool } from '../config/database.js';
+import whatsappService from '../services/whatsapp.service.js';
+import payoutService from '../services/payout.service.js';
 
 dotenv.config();
 
@@ -652,160 +654,163 @@ const getBuyerById = async (req, res, next) => {
   }
 };
 
-// @desc    Get all withdrawal requests
-// @route   GET /api/admin/withdrawal-requests
-// @access  Private (Admin)
+// GET /api/admin/withdrawal-requests
 const getAllWithdrawalRequests = async (req, res, next) => {
   try {
-    const query = `
-      SELECT
-        wr.id,
-        wr.amount,
-        wr.mpesa_number,
-        wr.mpesa_name,
-        wr.status,
-        wr.created_at,
-        wr.processed_at,
-        wr.processed_by,
-        s.id as seller_id,
-        s.full_name as seller_name,
-        s.email as seller_email,
-        s.whatsapp_number as seller_phone
-      FROM withdrawal_requests wr
-      JOIN sellers s ON wr.seller_id = s.id
-      ORDER BY wr.created_at DESC
-    `;
+    const { status } = req.query;
+    const params = [];
+    const where = status ? `WHERE wr.status = $${params.push(status)}` : '';
 
-    const result = await pool.query(query);
-
-    const withdrawalRequests = result.rows.map(row => ({
-      id: row.id,
-      amount: parseFloat(row.amount),
-      mpesaNumber: row.mpesa_number,
-      mpesaName: row.mpesa_name,
-      status: row.status,
-      sellerId: row.seller_id,
-      sellerName: row.seller_name,
-      sellerEmail: row.seller_email,
-      sellerPhone: row.seller_phone,
-      createdAt: row.created_at,
-      processedAt: row.processed_at,
-      processedBy: row.processed_by
-    }));
+    const { rows } = await pool.query(
+      `SELECT
+                wr.id,
+                wr.amount,
+                wr.mpesa_number,
+                wr.mpesa_name,
+                wr.status,
+                wr.provider_reference,
+                wr.created_at,
+                wr.processed_at,
+                wr.processed_by,
+                wr.metadata,
+                CASE
+                    WHEN wr.seller_id    IS NOT NULL AND wr.event_id IS NULL THEN 'seller'
+                    WHEN wr.organizer_id IS NOT NULL AND wr.event_id IS NULL THEN 'organizer'
+                    WHEN wr.event_id     IS NOT NULL THEN 'event'
+                END AS entity_type,
+                COALESCE(s.full_name, o.full_name) AS entity_name,
+                COALESCE(s.email, o.email)         AS entity_email,
+                COALESCE(s.whatsapp_number, o.whatsapp_number) AS entity_phone,
+                COALESCE(s.balance, o.balance, ev.balance)     AS current_balance,
+                ev.name AS event_name,
+                wr.seller_id,
+                wr.organizer_id,
+                wr.event_id
+             FROM withdrawal_requests wr
+             LEFT JOIN sellers    s  ON wr.seller_id    = s.id
+             LEFT JOIN organizers o  ON wr.organizer_id = o.id
+             LEFT JOIN events     ev ON wr.event_id     = ev.id
+             ${where}
+             ORDER BY wr.created_at DESC
+             LIMIT 500`,
+      params
+    );
 
     res.status(200).json({
       status: 'success',
-      data: withdrawalRequests
+      count: rows.length,
+      data: rows.map(r => ({
+        id: r.id,
+        amount: parseFloat(r.amount),
+        mpesaNumber: r.mpesa_number,
+        mpesaName: r.mpesa_name,
+        status: r.status,
+        providerReference: r.provider_reference,
+        entityType: r.entity_type,
+        entityName: r.entity_name,
+        entityEmail: r.entity_email,
+        entityPhone: r.entity_phone,
+        currentBalance: parseFloat(r.current_balance || 0),
+        eventName: r.event_name,
+        sellerId: r.seller_id,
+        organizerId: r.organizer_id,
+        eventId: r.event_id,
+        failureReason: r.metadata?.api_error || r.metadata?.payd_callback?.remarks || null,
+        mpesaReceipt: r.metadata?.payd_callback?.third_party_trans_id || null,
+        reconciliationFlag: r.metadata?.reconciliation_flag || null,
+        createdAt: r.created_at,
+        processedAt: r.processed_at,
+        processedBy: r.processed_by
+      }))
     });
-
   } catch (error) {
-    console.error('Error fetching withdrawal requests:', error);
+    logger.error('getAllWithdrawalRequests error:', error);
     next(new AppError('Failed to fetch withdrawal requests', 500));
   }
 };
 
-// @desc    Update withdrawal request status
-// @route   PATCH /api/admin/withdrawal-requests/:id/status
-// @access  Private (Admin)
+// PATCH /api/admin/withdrawal-requests/:id/status
+// Admin can only override to 'completed' or 'failed' — Payd handles real processing
 const updateWithdrawalRequestStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reason } = req.body;
 
-    // Validate status
-    if (!['approved', 'rejected'].includes(status)) {
-      return next(new AppError('Invalid status. Must be approved or rejected', 400));
+    if (!['completed', 'failed'].includes(status)) {
+      return next(new AppError('Admin override status must be "completed" or "failed"', 400));
     }
 
-    // Check if withdrawal request exists
-    const checkQuery = `
-      SELECT wr.*, s.balance as seller_balance
-      FROM withdrawal_requests wr
-      JOIN sellers s ON wr.seller_id = s.id
-      WHERE wr.id = $1
-    `;
-    const checkResult = await pool.query(checkQuery, [id]);
+    const { rows: [request] } = await pool.query(
+      `SELECT wr.*, 
+                    COALESCE(s.whatsapp_number, o.whatsapp_number) AS entity_phone,
+                    COALESCE(s.balance, o.balance) AS entity_balance
+             FROM withdrawal_requests wr
+             LEFT JOIN sellers    s ON wr.seller_id    = s.id
+             LEFT JOIN organizers o ON wr.organizer_id = o.id
+             WHERE wr.id = $1`,
+      [id]
+    );
 
-    if (checkResult.rows.length === 0) {
-      return next(new AppError('Withdrawal request not found', 404));
+    if (!request) return next(new AppError('Withdrawal request not found', 404));
+
+    if (['completed', 'failed'].includes(request.status)) {
+      return next(new AppError(`Already finalized as "${request.status}" — cannot override`, 400));
     }
 
-    const withdrawalRequest = checkResult.rows[0];
-    const currentBalance = parseFloat(withdrawalRequest.seller_balance || 0);
-    const withdrawalAmount = parseFloat(withdrawalRequest.amount || 0);
-
-    // Check if already processed
-    if (withdrawalRequest.status !== 'pending') {
-      return next(new AppError('Withdrawal request has already been processed', 400));
-    }
-
-    // If approving, check if seller has sufficient balance
-    if (status === 'approved' && withdrawalAmount > currentBalance) {
-      return next(new AppError(`Insufficient balance. Seller has KSh ${currentBalance.toLocaleString()} but requested KSh ${withdrawalAmount.toLocaleString()}`, 400));
-    }
-
-    // Start transaction
     const client = await pool.connect();
-
     try {
       await client.query('BEGIN');
 
-      // Update withdrawal request status
-      const updateWithdrawalQuery = `
-        UPDATE withdrawal_requests
-        SET status = $1, processed_at = NOW(), processed_by = 'admin'
-        WHERE id = $2
-        RETURNING *
-      `;
+      await client.query(
+        `UPDATE withdrawal_requests
+                 SET status       = $1,
+                     processed_at = NOW(),
+                     processed_by = $2,
+                     metadata     = COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+                 WHERE id = $4`,
+        [
+          status,
+          `admin:${req.user.id}`,
+          JSON.stringify({ admin_override: { reason, timestamp: new Date(), admin_id: req.user.id } }),
+          id
+        ]
+      );
 
-      const updateResult = await client.query(updateWithdrawalQuery, [status, id]);
-      const updatedRequest = updateResult.rows[0];
-
-      // If approved, subtract from seller's balance
-      if (status === 'approved') {
-        const newBalance = currentBalance - withdrawalAmount;
-
-        const updateBalanceQuery = `
-          UPDATE sellers
-          SET balance = $1, updated_at = NOW()
-          WHERE id = $2
-        `;
-
-        await client.query(updateBalanceQuery, [newBalance, withdrawalRequest.seller_id]);
-
-        console.log(`Withdrawal approved: KSh ${withdrawalAmount} deducted from seller ${withdrawalRequest.seller_id}. New balance: KSh ${newBalance}`);
+      // If admin marks as failed → refund balance (it was deducted at creation)
+      let newBalance = null;
+      if (status === 'failed') {
+        newBalance = await payoutService.refundToWallet(client, request);
       }
 
       await client.query('COMMIT');
 
+      // Notify entity
+      if (request.entity_phone) {
+        whatsappService.notifySellerWithdrawalUpdate(request.entity_phone, {
+          amount: request.amount,
+          status,
+          reference: request.provider_reference || `REQ-${id}`,
+          reason: reason || (status === 'failed' ? 'Rejected by admin' : null),
+          newBalance
+        }).catch(err => logger.error('Admin override WA notify failed:', err));
+      }
+
       res.status(200).json({
         status: 'success',
-        message: `Withdrawal request ${status} successfully${status === 'approved' ? ` and balance updated` : ''}`,
-        data: {
-          id: updatedRequest.id,
-          amount: parseFloat(updatedRequest.amount),
-          mpesaNumber: updatedRequest.mpesa_number,
-          mpesaName: updatedRequest.mpesa_name,
-          status: updatedRequest.status,
-          sellerId: updatedRequest.seller_id,
-          createdAt: updatedRequest.created_at,
-          processedAt: updatedRequest.processed_at,
-          processedBy: updatedRequest.processed_by,
-          balanceDeducted: status === 'approved' ? withdrawalAmount : 0,
-          newBalance: status === 'approved' ? currentBalance - withdrawalAmount : currentBalance
-        }
+        message: `Withdrawal manually set to "${status}"`,
+        data: { id: parseInt(id), status, processedBy: `admin:${req.user.id}`, newBalance }
       });
 
-    } catch (error) {
+    } catch (err) {
       await client.query('ROLLBACK');
-      throw error;
+      throw err;
     } finally {
       client.release();
     }
 
   } catch (error) {
-    console.error('Error updating withdrawal request status:', error);
-    next(new AppError('Failed to update withdrawal request status', 500));
+    logger.error('updateWithdrawalRequestStatus error:', error);
+    next(error);
   }
 };
 

@@ -1,46 +1,24 @@
-// @ts-check
-'use strict';
-
 import cron from 'node-cron';
 import logger from '../utils/logger.js';
-import WithdrawalService from '../services/withdrawal.service.js';
+import withdrawalService from '../services/withdrawal.service.js';
 
-/**
- * @typedef {Object} CronOptions
- * @property {string} [schedule]
- * @property {number} [hoursAgo]
- */
-
-/**
- * @param {CronOptions} [options]
- */
 const schedulePayoutReconciliation = (options = {}) => {
-    const schedule = options.schedule || '0 * * * *'; // Every hour
-    const hoursAgo = options.hoursAgo || 1;
+    const schedule = options.schedule || '0 */2 * * *'; // Every 2 hours
+    const hoursAgo = options.hoursAgo || 2;
 
-    logger.info(`Scheduling payout reconciliation cron job with schedule: ${schedule}`);
+    logger.info(`[PayoutCron] Scheduling reconciliation: ${schedule}`);
 
     return cron.schedule(schedule, async () => {
-        const startTime = Date.now();
-        const jobId = `payout-cleanup-${startTime}`;
-
-        logger.info(`[${jobId}] Starting payout reconciliation job`);
-
+        const jobId = `reconcile-${Date.now()}`;
+        logger.info(`[PayoutCron] ${jobId} starting`);
+        const start = Date.now();
         try {
-            await WithdrawalService.reconcileStuckWithdrawals(hoursAgo);
-            const duration = (Date.now() - startTime) / 1000;
-            logger.info(`[${jobId}] Payout reconciliation completed in ${duration.toFixed(2)}s`);
+            await withdrawalService.reconcileStuckWithdrawals(hoursAgo);
+            logger.info(`[PayoutCron] ${jobId} completed in ${((Date.now() - start) / 1000).toFixed(2)}s`);
         } catch (err) {
-            const error = /** @type {Error} */ (err);
-            const duration = (Date.now() - startTime) / 1000;
-            logger.error(`[${jobId}] Payout reconciliation job failed after ${duration.toFixed(2)}s`, {
-                error: error.message,
-                stack: error.stack
-            });
+            logger.error(`[PayoutCron] ${jobId} failed:`, err.message);
         }
-    }, {
-        timezone: 'Africa/Nairobi'
-    });
+    }, { timezone: 'Africa/Nairobi' });
 };
 
 export { schedulePayoutReconciliation };

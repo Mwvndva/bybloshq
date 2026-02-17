@@ -1,102 +1,121 @@
-import nodemailer from 'nodemailer';
-import Organizer from '../models/organizer.model.js';
+import withdrawalService from '../services/withdrawal.service.js';
 import { AppError } from '../utils/errorHandler.js';
-
-// Email configuration for Zoho Mail
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT),
-  secure: process.env.EMAIL_SECURE === 'true',
-  auth: {
-    user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-});
+import logger from '../utils/logger.js';
+import { pool } from '../config/database.js';
 
 /**
- * Request a payout
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
+ * POST /api/organizers/request-payout
+ * Organizer or event withdrawal
  */
 export const requestPayout = async (req, res, next) => {
   try {
-    // Get organizer ID from authenticated user
-    const organizerId = req.user.id;
-    const { name, method, ...details } = req.body;
-    
-    // Find the organizer
-    const organizer = await Organizer.findById(organizerId);
-    if (!organizer) {
-      throw new AppError('Organizer not found', 404);
+    const organizerId = req.user?.id;
+    if (!organizerId) return next(new AppError('Authentication required', 401));
+
+    const { amount, mpesaNumber, mpesaName, eventId } = req.body;
+
+    if (!amount || !mpesaNumber || !mpesaName) {
+      return next(new AppError('amount, mpesaNumber, and mpesaName are required', 400));
     }
 
-    if (!name || !method) {
-      throw new AppError('Name and payment method are required', 400);
-    }
+    const request = eventId
+      ? await withdrawalService.createWithdrawalRequest({
+        entityId: parseInt(eventId),
+        entityType: 'event',
+        amount,
+        mpesaNumber,
+        mpesaName,
+        organizerId
+      })
+      : await withdrawalService.createWithdrawalRequest({
+        entityId: organizerId,
+        entityType: 'organizer',
+        amount,
+        mpesaNumber,
+        mpesaName
+      });
 
-    // Validate payment method
-    if (!['mpesa', 'bank'].includes(method)) {
-      throw new AppError('Invalid payment method. Must be either "mpesa" or "bank"', 400);
-    }
-
-    // Validate required fields based on payment method
-    if (method === 'mpesa' && (!details.mpesaNumber || !details.registeredName)) {
-      throw new AppError('M-Pesa number and registered name are required', 400);
-    }
-
-    if (method === 'bank' && (!details.bankName || !details.accountNumber)) {
-      throw new AppError('Bank name and account number are required', 400);
-    }
-
-    // Prepare email content
-    const emailContent = `
-      New Payout Request:
-      -------------------
-      Organizer ID: ${organizerId}
-      Organizer Name: ${name || organizer.name}
-      Email: ${organizer.email}
-      Payout Method: ${method.toUpperCase()}
-      
-      Payout Details:
-      ${Object.entries(details).map(([key, value]) => `${key}: ${value}`).join('\n')}
-      
-      Please process this payout request as soon as possible.
-    `;
-
-    // Send email
-    await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_EMAIL}>`,
-      to: process.env.SUPPORT_EMAIL,
-      subject: `Payout Request - ${organizer.full_name || 'Organizer'}`,
-      text: emailContent,
+    res.status(201).json({
+      status: 'success',
+      message: 'Withdrawal submitted. You will receive a WhatsApp notification once processed.',
+      data: {
+        id: request.id,
+        amount: parseFloat(request.amount),
+        mpesaNumber: request.mpesa_number,
+        status: request.status,
+        createdAt: request.created_at
+      }
     });
 
-    res.status(200).json({
-      success: true,
-      message: 'Payout request submitted successfully',
-    });
   } catch (error) {
-    console.error('Error processing payout request:', error);
-    next(error);
+    logger.error('[PayoutController] requestPayout error:', error.message);
+    const code = error.message.includes('Insufficient') ? 400
+      : error.message.includes('Minimum') || error.message.includes('Maximum') ? 400
+        : error.message.includes('not found') ? 404 : 500;
+    next(new AppError(error.message, code));
   }
 };
 
 /**
- * Get payout history for an organizer
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
+ * GET /api/organizers/payouts
+ * Payout history for the authenticated organizer
  */
 export const getPayoutHistory = async (req, res, next) => {
   try {
-    // In a real implementation, you would fetch this from your database
-    // For now, we'll return an empty array
+    const organizerId = req.user?.id;
+    if (!organizerId) return next(new AppError('Authentication required', 401));
+
+    const { rows } = await pool.query(
+      `SELECT 
+                wr.id,
+                wr.amount,
+                wr.mpesa_number,
+                wr.mpesa_name,
+                wr.status,
+                wr.provider_reference,
+                wr.created_at,
+                wr.processed_at,
+                wr.event_id,
+                e.name  AS event_name,
+                CASE 
+                    WHEN wr.status = 'failed' 
+                    THEN COALESCE(wr.metadata->>'api_error', wr.metadata->'payd_callback'->>'remarks', 'Unknown error')
+                    ELSE NULL
+                END AS failure_reason,
+                CASE 
+                    WHEN wr.status = 'completed'
+                    THEN wr.metadata->'payd_callback'->>'third_party_trans_id'
+                    ELSE NULL
+                END AS mpesa_receipt
+             FROM withdrawal_requests wr
+             LEFT JOIN events e ON wr.event_id = e.id
+             WHERE wr.organizer_id = $1
+             ORDER BY wr.created_at DESC
+             LIMIT 100`,
+      [organizerId]
+    );
+
     res.status(200).json({
-      success: true,
-      data: [],
+      status: 'success',
+      count: rows.length,
+      data: rows.map(r => ({
+        id: r.id,
+        amount: parseFloat(r.amount),
+        mpesaNumber: r.mpesa_number,
+        mpesaName: r.mpesa_name,
+        status: r.status,
+        providerReference: r.provider_reference,
+        eventId: r.event_id,
+        eventName: r.event_name,
+        failureReason: r.failure_reason,
+        mpesaReceipt: r.mpesa_receipt,
+        createdAt: r.created_at,
+        processedAt: r.processed_at
+      }))
     });
+
   } catch (error) {
-    next(error);
+    logger.error('[PayoutController] getPayoutHistory error:', error.message);
+    next(new AppError('Failed to fetch payout history', 500));
   }
 };

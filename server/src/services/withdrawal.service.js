@@ -3,167 +3,227 @@ import logger from '../utils/logger.js';
 import payoutService from './payout.service.js';
 import whatsappService from './whatsapp.service.js';
 
+/**
+ * WithdrawalService
+ * 
+ * Flow:
+ * 1. Validate inputs
+ * 2. Lock entity row, check balance
+ * 3. Deduct balance from entity wallet
+ * 4. Insert withdrawal_requests record (status: 'processing')
+ * 5. Commit DB transaction
+ * 6. Call Payd API asynchronously (non-blocking to caller)
+ *    - On API success: store correlator_id as provider_reference
+ *    - On API failure: refund balance, mark request 'failed'
+ * 7. Payd sends webhook to /api/callbacks/payd-payout
+ *    - callback.controller handles final status update
+ */
 class WithdrawalService {
+
     /**
-     * Create a withdrawal request for a specified entity (seller or organizer)
-     * 
-     * @param {Object} data 
-     * @param {number} data.entityId
-     * @param {string} data.entityType - 'seller', 'organizer', or 'event'
-     * @param {number} data.amount
-     * @param {string} data.mpesaNumber
-     * @param {string} data.mpesaName
-     * @param {number} [data.organizerId] - Required for entityType 'event'
+     * Create and initiate a withdrawal request.
+     *
+     * @param {Object} params
+     * @param {number}  params.entityId    - seller.id, organizer.id, or event.id
+     * @param {string}  params.entityType  - 'seller' | 'organizer' | 'event'
+     * @param {number}  params.amount      - KES amount requested
+     * @param {string}  params.mpesaNumber - Raw phone number (any format, will be normalized)
+     * @param {string}  params.mpesaName   - Registered M-Pesa name
+     * @param {number}  [params.organizerId] - Required when entityType is 'event'
+     * @returns {Promise<Object>} withdrawal_requests row
      */
     async createWithdrawalRequest({ entityId, entityType, amount, mpesaNumber, mpesaName, organizerId }) {
-        // 1. Validate & Normalize
-        let withdrawalAmount;
-        let normalizedPhone;
-        try {
-            withdrawalAmount = payoutService.validateWithdrawal(amount);
-            normalizedPhone = payoutService.normalizePhoneNumber(mpesaNumber);
-        } catch (validationError) {
-            throw validationError;
+
+        // --- Phase 1: Validate inputs before touching DB ---
+        const validatedAmount = payoutService.validateAmount(amount);
+        const normalizedPhone = payoutService.normalizePhoneForPayout(mpesaNumber);
+
+        if (!mpesaName?.trim()) {
+            throw new Error('M-Pesa registered name is required');
+        }
+        if (!['seller', 'organizer', 'event'].includes(entityType)) {
+            throw new Error(`Invalid entityType: ${entityType}`);
+        }
+        if (entityType === 'event' && !organizerId) {
+            throw new Error('organizerId is required for event withdrawals');
         }
 
+        // --- Phase 2: DB transaction — lock, check, deduct, insert ---
         const client = await pool.connect();
+        let request;
+        let entity;
+
         try {
             await client.query('BEGIN');
 
-            // 2. Lock & Check Balance based on Entity type
-            let table = '';
-            let checkQuery = '';
-            let checkParams = [entityId];
-
+            // Lock entity row and fetch current balance
+            let entityRow;
             if (entityType === 'seller') {
-                table = 'sellers';
-                checkQuery = 'SELECT id, balance, full_name as owner_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE';
+                const { rows } = await client.query(
+                    'SELECT id, balance, full_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE',
+                    [entityId]
+                );
+                entityRow = rows[0];
             } else if (entityType === 'organizer') {
-                table = 'organizers';
-                checkQuery = 'SELECT id, balance, full_name as owner_name, whatsapp_number FROM organizers WHERE id = $1 FOR UPDATE';
+                const { rows } = await client.query(
+                    'SELECT id, balance, full_name, whatsapp_number FROM organizers WHERE id = $1 FOR UPDATE',
+                    [entityId]
+                );
+                entityRow = rows[0];
             } else if (entityType === 'event') {
-                table = 'events';
-                checkQuery = 'SELECT id, balance, name as owner_name FROM events WHERE id = $1 AND organizer_id = $2 FOR UPDATE';
-                checkParams.push(organizerId);
+                const { rows } = await client.query(
+                    'SELECT id, balance, name AS full_name FROM events WHERE id = $1 AND organizer_id = $2 FOR UPDATE',
+                    [entityId, organizerId]
+                );
+                entityRow = rows[0];
             }
 
-            const { rows: [entity] } = await client.query(checkQuery, checkParams);
+            if (!entityRow) {
+                throw new Error(`${entityType} not found or unauthorized`);
+            }
 
-            if (!entity) throw new Error(`${entityType.charAt(0).toUpperCase() + entityType.slice(1)} not found or unauthorized`);
+            entity = entityRow;
 
-            // 3. Deduction Logic (Handling fees for events)
-            let deductionAmount = withdrawalAmount;
+            // Calculate the amount to deduct from balance
+            // For event withdrawals: gross up to cover the 6% platform fee
+            let deductionAmount = validatedAmount;
             if (entityType === 'event') {
-                const feePercentage = 0.06;
-                deductionAmount = withdrawalAmount / (1 - feePercentage);
+                deductionAmount = validatedAmount / (1 - 0.06); // e.g. withdraw 1000 → deduct 1063.83
             }
 
-            if (parseFloat(entity.balance) < deductionAmount) throw new Error('Insufficient balance');
-
-            // 4. Deduct Balance
-            await client.query(`UPDATE ${table} SET balance = balance - $1 WHERE id = $2`, [deductionAmount, entityId]);
-
-            // 5. Create Withdrawal Request Record
-            const insertCols = ['amount', 'mpesa_number', 'mpesa_name', 'status', 'created_at'];
-            const insertVals = [withdrawalAmount, normalizedPhone, mpesaName, 'processing', 'NOW()'];
-
-            if (entityType === 'seller') {
-                insertCols.unshift('seller_id');
-                insertVals.unshift(entityId);
-            } else if (entityType === 'organizer') {
-                insertCols.unshift('organizer_id');
-                insertVals.unshift(entityId);
-            } else if (entityType === 'event') {
-                insertCols.unshift('organizer_id', 'event_id');
-                insertVals.unshift(organizerId, entityId);
+            const currentBalance = parseFloat(entity.balance || 0);
+            if (currentBalance < deductionAmount) {
+                throw new Error(
+                    `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
+                    `Required: KES ${deductionAmount.toLocaleString()}`
+                );
             }
 
-            const queryText = `INSERT INTO withdrawal_requests (${insertCols.join(', ')}) 
-                         VALUES (${insertCols.map((_, i) => `$${i + 1}`).join(', ')}) 
-                         RETURNING id, amount, mpesa_number, status, created_at`;
+            // Deduct from entity balance
+            const balanceTable = entityType === 'event' ? 'events' : entityType === 'organizer' ? 'organizers' : 'sellers';
+            await client.query(
+                `UPDATE ${balanceTable} SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
+                [deductionAmount, entityId]
+            );
 
-            const { rows: [request] } = await client.query(queryText, insertVals);
+            // Insert withdrawal request record
+            const insertResult = await client.query(
+                `INSERT INTO withdrawal_requests 
+                    (seller_id, organizer_id, event_id, amount, mpesa_number, mpesa_name, status, created_at)
+                 VALUES ($1, $2, $3, $4, $5, $6, 'processing', NOW())
+                 RETURNING id, amount, mpesa_number, mpesa_name, status, created_at`,
+                [
+                    entityType === 'seller' ? entityId : null,
+                    entityType === 'organizer' ? entityId : (entityType === 'event' ? organizerId : null),
+                    entityType === 'event' ? entityId : null,
+                    validatedAmount,
+                    normalizedPhone,
+                    mpesaName.trim()
+                ]
+            );
 
-            const reference = `WR-${request.id}-${Date.now()}`;
-            await client.query('UPDATE withdrawal_requests SET provider_reference = $1 WHERE id = $2', [reference, request.id]);
+            request = insertResult.rows[0];
 
             await client.query('COMMIT');
+            logger.info(`[WithdrawalService] Request ${request.id} created. Deducted KES ${deductionAmount} from ${entityType} ${entityId}`);
 
-            // 5. Initiate External Payout (Async)
-            this._initiatePayout(request, entity, reference, withdrawalAmount, normalizedPhone, mpesaName)
-                .catch(err => logger.error(`[WithdrawalService] Async Payout Initiation Error for ID ${request.id}:`, err));
-
-            return request;
-
-        } catch (e) {
+        } catch (err) {
             await client.query('ROLLBACK');
-            throw e;
+            logger.error('[WithdrawalService] Failed to create withdrawal request:', err.message);
+            throw err;
         } finally {
             client.release();
         }
+
+        // --- Phase 3: Call Payd API asynchronously ---
+        // Do NOT await — return the request immediately to caller
+        this._callPaydAndUpdate(request, entity, validatedAmount, normalizedPhone)
+            .catch(err => logger.error(`[WithdrawalService] _callPaydAndUpdate failed for request ${request.id}:`, err));
+
+        return request;
     }
 
     /**
-     * Internal helper to initiate the payout via PayoutService
+     * Private: Call Payd, store correlator_id, or refund on failure.
+     * Runs asynchronously after the DB transaction is committed.
      */
-    async _initiatePayout(request, entity, reference, amount, phone, name) {
+    async _callPaydAndUpdate(request, entity, amount, phone) {
         try {
-            logger.info(`[WithdrawalService] Initiating Payout for ReqID ${request.id} (${reference})`);
+            logger.info(`[WithdrawalService] Calling Payd for request ${request.id}`);
 
-            const payoutResponse = await payoutService.initiateMobilePayout({
-                amount,
+            const paydResponse = await payoutService.initiatePayout({
                 phone_number: phone,
-                narration: `Withdrawal for ${entity.owner_name || entity.full_name}`,
-                account_name: name,
-                reference: reference // Pass local WR reference for idempotency
+                amount,
+                narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`
             });
 
-            // Update provider details
-            const providerId = payoutResponse.correlator_id || payoutResponse.transaction_id;
-            if (providerId) {
-                await pool.query('UPDATE withdrawal_requests SET raw_response = $1, provider_reference = $2 WHERE id = $3',
-                    [JSON.stringify(payoutResponse), providerId, request.id]
+            // Store Payd's correlator_id as our provider_reference
+            // This is what the webhook callback will reference via transaction_reference
+            const correlatorId = paydResponse.correlator_id;
+
+            if (correlatorId) {
+                await pool.query(
+                    `UPDATE withdrawal_requests 
+                     SET provider_reference = $1, raw_response = $2
+                     WHERE id = $3`,
+                    [correlatorId, JSON.stringify(paydResponse), request.id]
                 );
+                logger.info(`[WithdrawalService] Request ${request.id} → Payd correlator_id: ${correlatorId}`);
             } else {
-                await pool.query('UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
-                    [JSON.stringify(payoutResponse), request.id]
+                // Payd accepted but returned no correlator_id — log raw response
+                await pool.query(
+                    'UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
+                    [JSON.stringify(paydResponse), request.id]
                 );
+                logger.warn(`[WithdrawalService] Request ${request.id}: Payd returned no correlator_id`, paydResponse);
             }
 
-            // Notify User
+            // Notify entity: payout is processing
             if (entity.whatsapp_number) {
                 whatsappService.notifySellerWithdrawalUpdate(entity.whatsapp_number, {
                     amount,
                     status: 'processing',
-                    reference: providerId || reference,
+                    reference: correlatorId || `REQ-${request.id}`,
                     reason: null,
                     newBalance: null
-                }).catch(err => logger.error('[WithdrawalService] WA notification failed:', err));
+                }).catch(err => logger.error('[WithdrawalService] WhatsApp notify failed:', err));
             }
 
         } catch (apiError) {
-            logger.error(`[WithdrawalService] Payd API Failed for ReqID ${request.id}: ${apiError.message}`);
+            // Payd API call failed — refund the balance and mark as failed
+            logger.error(`[WithdrawalService] Payd API failed for request ${request.id}: ${apiError.message}`);
 
             const client = await pool.connect();
             try {
                 await client.query('BEGIN');
-                await payoutService.processRefund(client, { ...request, seller_id: entity.id }); // Using generic refund logic
-                await client.query('UPDATE withdrawal_requests SET status = $1, metadata = jsonb_set(COALESCE(metadata, \'{}\'::jsonb), \'{error}\', $2::jsonb) WHERE id = $3',
-                    ['failed', JSON.stringify(apiError.message), request.id]);
+
+                const newBalance = await payoutService.refundToWallet(client, request);
+
+                await client.query(
+                    `UPDATE withdrawal_requests 
+                     SET status = 'failed',
+                         metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{api_error}', $1::jsonb),
+                         processed_at = NOW()
+                     WHERE id = $2`,
+                    [JSON.stringify(apiError.message), request.id]
+                );
+
                 await client.query('COMMIT');
+                logger.info(`[WithdrawalService] Request ${request.id} marked failed. Balance refunded.`);
 
                 if (entity.whatsapp_number) {
                     whatsappService.notifySellerWithdrawalUpdate(entity.whatsapp_number, {
                         amount,
                         status: 'failed',
-                        reference,
+                        reference: `REQ-${request.id}`,
                         reason: apiError.message,
-                        newBalance: null // Could fetch but skipping for brevity
+                        newBalance
                     }).catch(() => { });
                 }
+
             } catch (refundErr) {
                 await client.query('ROLLBACK');
-                logger.error('[WithdrawalService] CRITICAL: Post-API refund failed:', refundErr);
+                logger.error(`[WithdrawalService] CRITICAL: Refund failed for request ${request.id}:`, refundErr);
             } finally {
                 client.release();
             }
@@ -171,60 +231,60 @@ class WithdrawalService {
     }
 
     /**
-     * Reconcile withdrawals stuck in 'processing' state
-     * @param {number} hoursAgo 
+     * Reconcile withdrawal requests stuck in 'processing' for over hoursAgo hours.
+     * Called by cron job hourly.
+     * Note: Payd does NOT expose a status-check endpoint in the v2 docs.
+     * This marks long-stuck requests for manual review rather than auto-resolving.
      */
-    async reconcileStuckWithdrawals(hoursAgo = 1) {
-        logger.info(`[WithdrawalService] Starting reconciliation for withdrawals older than ${hoursAgo} hours`);
+    async reconcileStuckWithdrawals(hoursAgo = 2) {
+        logger.info(`[WithdrawalService] Reconciling requests stuck > ${hoursAgo} hours`);
 
-        const { rows: stuckWithdrawals } = await pool.query(
-            `SELECT * FROM withdrawal_requests 
-       WHERE status = 'processing' 
-       AND created_at < NOW() - INTERVAL '${hoursAgo} hours'
-       AND created_at > NOW() - INTERVAL '48 hours'
-       ORDER BY created_at ASC`
+        const { rows: stuck } = await pool.query(
+            `SELECT wr.*, 
+                    s.whatsapp_number as seller_phone,
+                    o.whatsapp_number as organizer_phone
+             FROM withdrawal_requests wr
+             LEFT JOIN sellers s ON wr.seller_id = s.id
+             LEFT JOIN organizers o ON wr.organizer_id = o.id
+             WHERE wr.status = 'processing'
+               AND wr.created_at < NOW() - ($1 * INTERVAL '1 hour')
+               AND wr.created_at > NOW() - INTERVAL '48 hours'
+             ORDER BY wr.created_at ASC`,
+            [hoursAgo]  // Parameterized — no SQL injection
         );
 
-        logger.info(`[WithdrawalService] Found ${stuckWithdrawals.length} stuck withdrawals`);
+        logger.info(`[WithdrawalService] Found ${stuck.length} stuck request(s)`);
 
-        for (const request of stuckWithdrawals) {
+        for (const request of stuck) {
             try {
                 if (!request.provider_reference) {
-                    logger.warn(`[WithdrawalService] Request ${request.id} has no provider reference, skipping.`);
+                    // No correlator_id stored — Payd API may have failed silently
+                    logger.warn(`[WithdrawalService] Request ${request.id} has no provider_reference. Marking needs_review.`);
+                    await pool.query(
+                        `UPDATE withdrawal_requests 
+                         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{reconciliation_flag}', '"no_provider_reference"'::jsonb)
+                         WHERE id = $1`,
+                        [request.id]
+                    );
                     continue;
                 }
 
-                const providerData = await payoutService.checkPayoutStatus(request.provider_reference);
-                const status = (providerData.status || providerData.status_code || '').toUpperCase();
+                // Mark for manual review — Payd v2 has no status-check endpoint documented
+                await pool.query(
+                    `UPDATE withdrawal_requests 
+                     SET metadata = jsonb_set(
+                         COALESCE(metadata, '{}'::jsonb), 
+                         '{reconciliation_flag}', 
+                         '"needs_manual_review"'::jsonb
+                     )
+                     WHERE id = $1 AND metadata->>'reconciliation_flag' IS NULL`,
+                    [request.id]
+                );
 
-                if (['SUCCESS', 'COMPLETED', '0'].includes(status)) {
-                    await pool.query(
-                        'UPDATE withdrawal_requests SET status = $1, processed_at = NOW(), metadata = COALESCE(metadata, \'{}\'::jsonb) || $2 WHERE id = $3',
-                        ['completed', JSON.stringify({ reconciliation: providerData }), request.id]
-                    );
-                    logger.info(`[WithdrawalService] Reconciled ReqID ${request.id} as COMPLETED`);
-                } else if (['FAILED', 'REJECTED'].includes(status)) {
-                    const client = await pool.connect();
-                    try {
-                        await client.query('BEGIN');
-                        await payoutService.processRefund(client, request);
-                        await client.query(
-                            'UPDATE withdrawal_requests SET status = $1, processed_at = NOW(), metadata = COALESCE(metadata, \'{}\'::jsonb) || $2 WHERE id = $3',
-                            ['failed', JSON.stringify({ reconciliation: providerData }), request.id]
-                        );
-                        await client.query('COMMIT');
-                        logger.info(`[WithdrawalService] Reconciled ReqID ${request.id} as FAILED and refunded`);
-                    } catch (refundErr) {
-                        await client.query('ROLLBACK');
-                        throw refundErr;
-                    } finally {
-                        client.release();
-                    }
-                } else {
-                    logger.info(`[WithdrawalService] ReqID ${request.id} still in status: ${status}`);
-                }
+                logger.info(`[WithdrawalService] Request ${request.id} (ref: ${request.provider_reference}) flagged for manual review`);
+
             } catch (err) {
-                logger.error(`[WithdrawalService] Failed to reconcile ReqID ${request.id}:`, err.message);
+                logger.error(`[WithdrawalService] Reconcile error for request ${request.id}:`, err.message);
             }
         }
     }

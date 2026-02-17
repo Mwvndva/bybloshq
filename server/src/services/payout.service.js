@@ -1,202 +1,206 @@
 import axios from 'axios';
+import https from 'https';
 import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';
 
-import https from 'https';
-
+/**
+ * PayoutService — Payd Kenya M-Pesa Payouts
+ * 
+ * API: POST https://api.payd.money/api/v2/withdrawal
+ * Auth: HTTP Basic Auth (username:password)
+ * Docs: https://magic.payd.money/kenya-payouts
+ */
 class PayoutService {
     constructor() {
-        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v2';
+        // Separate base URL for payouts (v2) vs payments (v3)
+        this.baseUrl = process.env.PAYD_PAYOUT_BASE_URL || 'https://api.payd.money/api/v2';
         this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
-        this.networkCode = process.env.PAYD_NETWORK_CODE;
-        this.sslVerify = process.env.PAYD_SSL_VERIFY !== 'false';
 
-        // Create axios instance
         this.client = axios.create({
             baseURL: this.baseUrl,
             headers: {
                 'Content-Type': 'application/json',
-                'User-Agent': 'ByblosHQ/1.0 (Node.js)'
+                'User-Agent': 'ByblosHQ/2.0 (Node.js)'
             },
             timeout: 30000,
-            // Ensure connection stability
             httpsAgent: new https.Agent({
+                rejectUnauthorized: false, // Keep until production SSL confirmed
                 keepAlive: true,
-                family: 4, // Force IPv4
-                rejectUnauthorized: this.sslVerify
+                family: 4 // Force IPv4
             })
         });
+
+        logger.info(`[PayoutService] Initialized. Base URL: ${this.baseUrl}`);
     }
 
+    /**
+     * Build Basic Auth header
+     */
     getAuthHeader() {
         if (!this.username || !this.password) {
-            throw new Error('Payd credentials not configured');
+            throw new Error('Payd payout credentials (PAYD_USERNAME, PAYD_PASSWORD) not configured');
         }
-        const authString = `${this.username}:${this.password}`;
-        return `Basic ${Buffer.from(authString).toString('base64')}`;
-    }
-
-    async getCallbackUrl() {
-        if (process.env.PAYD_CALLBACK_URL) {
-            return process.env.PAYD_CALLBACK_URL;
-        }
-
-        if (process.env.NODE_ENV === 'development') {
-            try {
-                // Try to fetch current ngrok URL
-                const response = await axios.get('http://localhost:4040/api/tunnels');
-                const tunnel = response.data.tunnels.find(t => t.proto === 'https');
-                if (tunnel?.public_url) {
-                    logger.info(`Using dynamic ngrok URL: ${tunnel.public_url}`);
-                    return `${tunnel.public_url}/api/callbacks/payd`;
-                }
-            } catch (error) {
-                logger.warn('Failed to fetch ngrok URL:', error.message);
-            }
-        }
-
-        // Fallback for production or failed ngrok fetch
-        const baseUrl = process.env.BACKEND_URL || process.env.BASE_URL || 'https://bybloshq.space';
-        return `${baseUrl}/api/callbacks/payd`;
+        return `Basic ${Buffer.from(`${this.username}:${this.password}`).toString('base64')}`;
     }
 
     /**
-     * Normalize phone number to 254 format
-     * @param {string|number} phone 
-     * @returns {string}
+     * Get payout callback URL
+     * SEPARATE from payment callback — uses /api/callbacks/payd-payout
      */
-    normalizePhoneNumber(phone) {
-        let normalized = phone.toString().replace(/\D/g, '');
-        if (normalized.startsWith('0')) {
-            normalized = `254${normalized.substring(1)}`;
-        } else if (normalized.startsWith('+254')) {
-            normalized = normalized.substring(1);
-        } else if (normalized.length === 9) {
-            normalized = `254${normalized}`;
+    getCallbackUrl() {
+        if (process.env.PAYD_PAYOUT_CALLBACK_URL) {
+            return process.env.PAYD_PAYOUT_CALLBACK_URL;
         }
-        return normalized;
+        const base = process.env.BACKEND_URL || 'https://bybloshq.space';
+        return `${base}/api/callbacks/payd-payout`;
     }
 
     /**
-     * Validate withdrawal amount against platform limits
-     * @param {number} amount 
+     * Normalize phone number for PAYOUT API
+     * 
+     * Payd payout API requires 0XXXXXXXXX format (10 digits, starts with 0)
+     * This is DIFFERENT from the payment (STK push) API which uses 254XXXXXXXXX
+     * 
+     * @param {string|number} phone
+     * @returns {string} e.g. "0712345678"
      */
-    validateWithdrawal(amount) {
-        const withdrawalAmount = parseFloat(amount);
-        if (isNaN(withdrawalAmount) || withdrawalAmount <= 0) {
+    normalizePhoneForPayout(phone) {
+        let digits = phone.toString().replace(/\D/g, '');
+
+        // Strip country code if present
+        if (digits.startsWith('254') && digits.length === 12) {
+            digits = '0' + digits.substring(3);
+        } else if (digits.startsWith('+254')) {
+            digits = '0' + digits.substring(4);
+        } else if (digits.length === 9) {
+            // Bare 9-digit number e.g. 712345678
+            digits = '0' + digits;
+        }
+
+        if (!digits.startsWith('0') || digits.length !== 10) {
+            throw new Error(
+                `Invalid phone number format: "${phone}". ` +
+                `Payout requires a 10-digit Kenyan number starting with 0 (e.g. 0712345678)`
+            );
+        }
+
+        return digits;
+    }
+
+    /**
+     * Validate withdrawal amount against Payd limits
+     * @param {number} amount
+     * @returns {number} validated amount
+     */
+    validateAmount(amount) {
+        const parsed = parseFloat(amount);
+        if (isNaN(parsed) || parsed <= 0) {
             throw new Error('Invalid withdrawal amount');
         }
-
-        if (withdrawalAmount < Fees.MIN_WITHDRAWAL_AMOUNT) {
+        if (parsed < Fees.MIN_WITHDRAWAL_AMOUNT) {
             throw new Error(`Minimum withdrawal amount is KES ${Fees.MIN_WITHDRAWAL_AMOUNT}`);
         }
-
-        if (withdrawalAmount > Fees.MAX_WITHDRAWAL_AMOUNT) {
-            throw new Error(`Maximum withdrawal amount is KES ${Fees.MAX_WITHDRAWAL_AMOUNT}`);
+        if (parsed > Fees.MAX_WITHDRAWAL_AMOUNT) {
+            throw new Error(`Maximum withdrawal amount is KES ${Fees.MAX_WITHDRAWAL_AMOUNT.toLocaleString()}`);
         }
-
-        return withdrawalAmount;
+        return parsed;
     }
 
-    async initiateMobilePayout(payoutData) {
+    /**
+     * Initiate a Kenya M-Pesa payout via Payd
+     * 
+     * @param {Object} params
+     * @param {string} params.phone_number - Raw phone (will be normalized)
+     * @param {number} params.amount - Amount in KES
+     * @param {string} params.narration - Description shown to recipient
+     * @returns {Promise<{correlator_id: string, message: string, status: string}>}
+     */
+    async initiatePayout({ phone_number, amount, narration }) {
+        const validatedAmount = this.validateAmount(amount);
+        const normalizedPhone = this.normalizePhoneForPayout(phone_number);
+        const callbackUrl = this.getCallbackUrl();
+
+        const payload = {
+            phone_number: normalizedPhone,
+            amount: validatedAmount,
+            narration: narration || 'Withdrawal request',
+            callback_url: callbackUrl,
+            channel: 'MPESA',
+            currency: 'KES'
+        };
+
+        logger.info('[PayoutService] Initiating payout', {
+            phone: normalizedPhone,
+            amount: validatedAmount,
+            callbackUrl
+        });
+
         try {
-            let { amount, phone_number, narration } = payoutData;
-
-            // 1. Validate and Normalize
-            amount = this.validateWithdrawal(amount);
-            phone_number = this.normalizePhoneNumber(phone_number);
-
-            const callbackUrl = await this.getCallbackUrl();
-            logger.info(`Initiating Payd V2 Payout to ${phone_number}. Callback URL: ${callbackUrl}`);
-
-            // Simplified V2 payload as per documentation
-            const payload = {
-                phone_number: phone_number,
-                amount: parseFloat(amount),
-                narration: narration || "Withdrawal request",
-                callback_url: callbackUrl,
-                channel: "MPESA"
-            };
-
             const response = await this.client.post('/withdrawal', payload, {
                 headers: { Authorization: this.getAuthHeader() }
             });
 
-            logger.info(`Payd Response Status: ${response.status}`);
-            return response.data;
-        } catch (error) {
-            const errorMsg = error.response?.data?.message || error.message || 'Payout initialization failed';
-            logger.error('Payd Payout Error:', errorMsg);
-            throw new Error(errorMsg);
-        }
-    }
-
-    /**
-     * Check the status of a payout with Payd
-     * @param {string} providerRef 
-     */
-    async checkPayoutStatus(providerRef) {
-        try {
-            if (!providerRef) throw new Error('Provider reference is required');
-
-            const response = await this.client.get(`/withdrawal/${providerRef}`, {
-                headers: { Authorization: this.getAuthHeader() }
+            const data = response.data;
+            logger.info('[PayoutService] Payout accepted by Payd', {
+                correlatorId: data.correlator_id,
+                status: data.status
             });
 
-            logger.info(`Payd Status Check for ${providerRef}: ${response.status}`);
-            return response.data;
+            return data; // { success, correlator_id, message, status }
+
         } catch (error) {
-            const errorMsg = error.response?.data?.message || error.message || 'Payout status check failed';
-            logger.error(`Payd Status Check Error (${providerRef}):`, errorMsg);
-            throw new Error(errorMsg);
+            const msg = error.response?.data?.message || error.message || 'Payout initiation failed';
+            logger.error('[PayoutService] Payout initiation failed', {
+                status: error.response?.status,
+                message: msg,
+                payload
+            });
+            throw new Error(msg);
         }
     }
 
     /**
-     * Process a refund for a failed withdrawal request
-     * @param {Object} client - DB client for transaction support
-     * @param {Object} request - The withdrawal request record
-     * @returns {Promise<number>} New balance
+     * Refund a failed withdrawal back to the entity's wallet balance.
+     * Called inside a DB transaction.
+     * 
+     * @param {Object} client - Active DB transaction client
+     * @param {Object} request - withdrawal_requests row
+     * @returns {Promise<number|null>} newBalance
      */
-    async processRefund(client, request) {
-        let newBalance = null;
-        let table = '';
-        let entityId = null;
+    async refundToWallet(client, request) {
         const amount = parseFloat(request.amount);
+        let newBalance = null;
 
-        if (request.event_id) {
-            const feePercentage = 0.06;
-            const grossRefund = amount / (1 - feePercentage);
+        if (request.seller_id) {
             const { rows } = await client.query(
-                'UPDATE events SET balance = balance + $1 WHERE id = $2 RETURNING balance',
-                [grossRefund, request.event_id]
-            );
-            newBalance = rows[0]?.balance;
-            table = 'events';
-            entityId = request.event_id;
-        } else if (request.seller_id) {
-            const { rows } = await client.query(
-                'UPDATE sellers SET balance = balance + $1 WHERE id = $2 RETURNING balance',
+                'UPDATE sellers SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
                 [amount, request.seller_id]
             );
-            newBalance = rows[0]?.balance;
-            table = 'sellers';
-            entityId = request.seller_id;
+            newBalance = parseFloat(rows[0]?.balance ?? 0);
+            logger.info(`[PayoutService] Refunded KES ${amount} to seller ${request.seller_id}. New balance: ${newBalance}`);
+
+        } else if (request.event_id) {
+            // For event withdrawals: refund the gross deducted amount (amount + fee)
+            const feeRate = 0.06;
+            const grossAmount = amount / (1 - feeRate);
+            const { rows } = await client.query(
+                'UPDATE events SET balance = balance + $1 WHERE id = $2 RETURNING balance',
+                [grossAmount, request.event_id]
+            );
+            newBalance = parseFloat(rows[0]?.balance ?? 0);
+            logger.info(`[PayoutService] Refunded KES ${grossAmount} (gross) to event ${request.event_id}`);
+
         } else if (request.organizer_id) {
             const { rows } = await client.query(
-                'UPDATE organizers SET balance = balance + $1 WHERE id = $2 RETURNING balance',
+                'UPDATE organizers SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
                 [amount, request.organizer_id]
             );
-            newBalance = rows[0]?.balance;
-            table = 'organizers';
-            entityId = request.organizer_id;
-        }
+            newBalance = parseFloat(rows[0]?.balance ?? 0);
+            logger.info(`[PayoutService] Refunded KES ${amount} to organizer ${request.organizer_id}. New balance: ${newBalance}`);
 
-        if (newBalance !== null) {
-            logger.info(`[PayoutService] Refund Successful. Entity: ${table}(${entityId}), Amount: ${amount}, New Balance: ${newBalance}`);
         } else {
-            logger.warn(`[PayoutService] Refund failed or entity not recognized for request ${request.id}`);
+            logger.error('[PayoutService] Cannot refund: no entity_id on request', request);
         }
 
         return newBalance;
