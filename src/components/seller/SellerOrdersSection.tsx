@@ -316,7 +316,7 @@ export default function SellerOrdersSection() {
                             placeholder="Search by buyer name, product, or order ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-12 bg-zinc-900/50 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                            className="pl-14 bg-zinc-900/50 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                         />
                     </div>
 
