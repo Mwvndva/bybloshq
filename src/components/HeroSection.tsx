@@ -38,12 +38,12 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
           {/* Main Title Group */}
           <div className="space-y-6 max-w-4xl mx-auto">
             <h1 className="text-5xl sm:text-6xl md:text-8xl font-medium text-white leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-5 duration-1000">
-              The Operating System for <br />
-              <span className="italic font-serif text-yellow-300/90">Digital Shops.</span>
+              Beyond Commerce. <br />
+              <span className="italic font-serif text-yellow-300/90">This is Brand Identity.</span>
             </h1>
 
             <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto font-light leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
-              Welcome to the Future of Window Shopping.
+              Where aesthetic vision meets professional commerce.
             </p>
           </div>
 
@@ -53,7 +53,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
               onClick={handleStartThrifting}
               className="bg-white text-black hover:bg-yellow-300 text-black rounded-full px-12 py-7 text-lg font-medium transition-all duration-500 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-yellow-300/20"
             >
-              Get a Window
+              Launch Your Brand
             </Button>
 
             <button
