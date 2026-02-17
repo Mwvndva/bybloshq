@@ -195,7 +195,7 @@ export function BuyerInfoModal({
                   placeholder="Enter your full name"
                   value={buyerInfo.fullName}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, fullName: e.target.value }))}
-                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
+                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
@@ -217,7 +217,7 @@ export function BuyerInfoModal({
                   placeholder="Enter your email address"
                   value={buyerInfo.email}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
-                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
+                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
