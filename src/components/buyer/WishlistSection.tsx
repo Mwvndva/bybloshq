@@ -51,9 +51,9 @@ export default function WishlistSection() {
           placeholder="Search wishlist..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-12 h-10"
         />
-        <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
       </div>
 
       {filteredWishlist.length === 0 && searchQuery ? (

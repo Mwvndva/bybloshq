@@ -38,7 +38,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
           {/* Main Title Group */}
           <div className="space-y-6 max-w-4xl mx-auto">
             <h1 className="text-5xl sm:text-6xl md:text-8xl font-medium text-white leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-5 duration-1000">
-              Beyond Commerce. <br />
+              Beyond Commerce. <br/>
               <span className="italic font-serif text-yellow-300/90">This is Brand Identity.</span>
             </h1>
 
