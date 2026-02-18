@@ -85,10 +85,11 @@ interface WithdrawalRequest {
   amount: number;
   mpesaNumber: string;
   mpesaName: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed';
+  status: 'processing' | 'completed' | 'failed';
   createdAt: string;
   processedAt?: string;
   processedBy?: string;
+  providerReference?: string;
   failureReason?: string;
 }
 
@@ -1377,13 +1378,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                               </p>
                               <Badge
                                 variant="outline"
-                                className={`${request.status === 'pending'
-                                  ? 'bg-yellow-500/10 text-yellow-200 border-yellow-400/20'
-                                  : request.status === 'approved'
-                                    ? 'bg-green-500/10 text-green-200 border-green-400/20'
-                                    : request.status === 'rejected' || request.status === 'failed'
-                                      ? 'bg-red-500/10 text-red-200 border-red-400/20'
-                                      : 'bg-blue-500/10 text-blue-200 border-blue-400/20'
+                                className={`${request.status === 'processing'
+                                    ? 'bg-yellow-500/10 text-yellow-200 border-yellow-400/20'
+                                    : request.status === 'completed'
+                                      ? 'bg-green-500/10 text-green-200 border-green-400/20'
+                                      : request.status === 'failed'
+                                        ? 'bg-red-500/10 text-red-200 border-red-400/20'
+                                        : 'bg-blue-500/10 text-blue-200 border-blue-400/20'
                                   } rounded-full px-3 py-1 font-semibold`}
                               >
                                 {request.status.charAt(0).toUpperCase() + request.status.slice(1)}

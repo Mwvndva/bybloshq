@@ -648,6 +648,7 @@ export const getWithdrawalRequests = async (req, res) => {
     const result = await query(
       `SELECT wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name, wr.status,
               wr.created_at, wr.processed_at, wr.processed_by, wr.metadata,
+              wr.provider_reference,
               s.full_name as seller_name, s.email as seller_email
        FROM withdrawal_requests wr
        JOIN sellers s ON wr.seller_id = s.id
@@ -665,9 +666,13 @@ export const getWithdrawalRequests = async (req, res) => {
       createdAt: row.created_at,
       processedAt: row.processed_at,
       processedBy: row.processed_by,
+      providerReference: row.provider_reference,
       sellerName: row.seller_name,
       sellerEmail: row.email,
-      failureReason: row.status === 'failed' && row.metadata ? (row.metadata.failure_reason || row.metadata.message || row.metadata.status_description || 'Unknown error') : null
+      // remarks = from Payd webhook callback; api_error = from pre-Payd failure
+      failureReason: row.status === 'failed' && row.metadata
+        ? (row.metadata.remarks || row.metadata.api_error || 'Unknown error')
+        : null
     }));
 
     res.status(200).json({
