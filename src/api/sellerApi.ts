@@ -97,10 +97,12 @@ interface WithdrawalRequest {
   amount: number;
   mpesaNumber: string;
   mpesaName: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  status: 'processing' | 'completed' | 'failed';
   createdAt: string;
   processedAt?: string;
   processedBy?: string;
+  providerReference?: string;
+  failureReason?: string;
 }
 
 // Use the unified API client
@@ -485,11 +487,11 @@ export const sellerApi = {
   },
 
   // Reset Password
-  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+  resetPassword: async (token: string, newPassword: string, email: string): Promise<{ message: string }> => {
     try {
       const response = await axios.post<ResetPasswordResponse>(
         `/sellers/reset-password`,
-        { token, newPassword },
+        { token, newPassword, email },
         {
           headers: {
             'Content-Type': 'application/json',

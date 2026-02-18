@@ -6,7 +6,7 @@ interface WithdrawalRequest {
     amount: number;
     mpesaNumber: string;
     mpesaName: string;
-    status: 'pending' | 'approved' | 'rejected' | 'completed' | 'failed';
+    status: 'processing' | 'completed' | 'failed';
     createdAt: string;
     processedAt?: string;
     updatedAt?: string;

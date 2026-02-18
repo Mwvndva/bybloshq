@@ -11,6 +11,7 @@ import { Loader2, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+  const email = searchParams.get('email') || '';
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -37,36 +38,8 @@ export function ResetPasswordPage() {
       return;
     }
 
-    const verifyToken = async () => {
-      try {
-        // In a real app, you might want to verify the token with the server
-        // For now, we'll just check if it exists and looks like a JWT
-        const isJWT = token.split('.').length === 3;
-        // console.log('Token is JWT format:', isJWT);
-
-        setIsValidToken(isJWT);
-
-        if (!isJWT) {
-          console.error('Invalid token format');
-          toast({
-            title: 'Invalid Token',
-            description: 'The reset link is invalid. Please request a new one.',
-            variant: 'destructive',
-          });
-        } else {
-        }
-      } catch (error) {
-        console.error('Error verifying token:', error);
-        setIsValidToken(false);
-        toast({
-          title: 'Error',
-          description: 'An error occurred while verifying your reset link.',
-          variant: 'destructive',
-        });
-      }
-    };
-
-    verifyToken();
+    // Token is a hex string (not a JWT) — just check it's non-empty
+    setIsValidToken(true);
   }, [token, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,9 +63,18 @@ export function ResetPasswordPage() {
       return;
     }
 
+    if (!email) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Reset link is missing your email address. Please request a new reset link.',
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
-      await sellerApi.resetPassword(token!, password);
+      await sellerApi.resetPassword(token!, password, email);
 
       toast({
         title: 'Success',
