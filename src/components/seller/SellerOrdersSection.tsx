@@ -311,12 +311,12 @@ export default function SellerOrdersSection() {
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     {/* Search Bar */}
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
                         <Input
                             placeholder="Search by buyer name, product, or order ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-14 bg-zinc-900/50 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                            className="pl-10 bg-zinc-900/50 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                         />
                     </div>
 
