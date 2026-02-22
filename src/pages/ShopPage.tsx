@@ -467,13 +467,6 @@ const ShopPage = () => {
 
             {/* Row 1: Core info — always fits on one line */}
             <div className="flex items-center gap-2 text-white/90 font-medium text-[11px] sm:text-sm backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg whitespace-nowrap overflow-hidden max-w-full">
-              {sellerInfo?.fullName && (
-                <>
-                  <span className="opacity-70 shrink-0">By</span>
-                  <span className="font-semibold truncate max-w-[120px] sm:max-w-none">{sellerInfo.fullName}</span>
-                  <span className="opacity-40 shrink-0">·</span>
-                </>
-              )}
               <span className="shrink-0">{filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}</span>
               <span className="opacity-40 shrink-0">·</span>
               <span className="flex items-center gap-1 shrink-0">
