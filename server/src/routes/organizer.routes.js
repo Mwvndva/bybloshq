@@ -10,9 +10,9 @@ import {
 import { sendWithdrawalEmail, createWithdrawalRequest, getEventWithdrawals } from '../controllers/organizer.controller.js';
 import { forgotPassword, resetPassword } from '../controllers/organizerAuth.controller.js';
 import { protect } from '../middleware/auth.js';
-
 import { authLimiter } from '../middleware/authRateLimiter.js';
-import { validateOrganizerRegistration, validateOrganizerLogin } from '../middleware/organizerValidation.js';
+import { validateOrganizerRegistration, validateOrganizerLogin, validatePasswordUpdate } from '../middleware/organizerValidation.js';
+import { requestPayout, getPayoutHistory } from '../controllers/payout.controller.js';
 
 const router = express.Router();
 
@@ -64,7 +64,6 @@ router.get('/verify-reset-token', async (req, res) => {
   }
 });
 
-import { validatePasswordUpdate } from '../middleware/organizerValidation.js';
 
 // Protected routes (authentication required)
 router.get('/me', protect, getCurrentUser);
@@ -73,6 +72,11 @@ router.patch('/update-password', protect, validatePasswordUpdate, updatePassword
 router.post('/send-withdrawal-email', protect, sendWithdrawalEmail);
 router.post('/withdrawal-request', protect, createWithdrawalRequest);
 router.get('/events/:eventId/withdrawals', protect, getEventWithdrawals);
+
+// Payout routes (merged from protectedOrganizer.routes.js)
+router.post('/request-payout', protect, requestPayout);
+router.get('/payouts', protect, getPayoutHistory);
+
 router.post('/logout', protect, (req, res) => {
   // Clear the HTTP-only cookie
   res.cookie('token', '', {

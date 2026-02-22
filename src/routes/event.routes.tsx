@@ -1,7 +1,7 @@
-import { lazy, Suspense } from 'react';
-import { Navigate, Outlet, useParams } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { Suspense } from 'react';
+import { Navigate, useParams } from 'react-router-dom';
 import { safeLazy } from '@/utils/safeLazy';
+import { RouteFallback } from '@/components/common/RouteFallback';
 
 // Lazy load the event pages
 const EventsPage = safeLazy(() => import('@/pages/events/EventsPage'));
@@ -18,16 +18,9 @@ interface PageProps {
   isEmbed?: boolean;
 }
 
-// Create a simple loading component
-const LoadingFallback = () => (
-  <div className="flex justify-center items-center min-h-screen">
-    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-floral-600"></div>
-  </div>
-);
-
 // Create a wrapper component with Suspense
 const withSuspense = (Component: React.ComponentType) => (props: any) => (
-  <Suspense fallback={<LoadingFallback />}>
+  <Suspense fallback={<RouteFallback />}>
     <Component {...props} />
   </Suspense>
 );
