@@ -35,8 +35,6 @@ import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
 
-import { useBybx } from '@/contexts/BybxContext';
-import BybxImporter from '@/components/BybxImporter';
 import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
 
@@ -49,7 +47,6 @@ function BuyerDashboard() {
   const { user, logout } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const { toast } = useToast();
-  const { onFileLoaded } = useBybx();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
   const [activeSection, setActiveSection] = useState<'shop' | 'shops' | 'wishlist' | 'orders' | 'profile'>(() => {
     // Priority 1: Navigation state
