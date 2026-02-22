@@ -459,121 +459,79 @@ const ShopPage = () => {
 
         {/* Hero Content */}
         <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-6 sm:p-8 sm:pb-10">
-          <div className="max-w-7xl mx-auto flex flex-col items-start text-left space-y-2 sm:space-y-3 animate-fade-in-up">
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl px-1">
+          <div className="max-w-7xl mx-auto flex flex-col items-start text-left space-y-2 animate-fade-in-up">
+            {/* Shop Name */}
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl">
               {sellerInfo?.shopName || 'Shop'}
             </h1>
 
-            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-white/90 font-medium text-[10px] sm:text-sm backdrop-blur-sm bg-black/20 px-3 py-2 sm:px-4 sm:py-2 rounded-full border border-white/10 shadow-xl">
+            {/* Row 1: Core info — always fits on one line */}
+            <div className="flex items-center gap-2 text-white/90 font-medium text-[11px] sm:text-sm backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg whitespace-nowrap overflow-hidden max-w-full">
               {sellerInfo?.fullName && (
-                <span className="flex items-center gap-2">
-                  <span className="opacity-70">By</span>
-                  <span className="font-semibold tracking-wide">{sellerInfo.fullName}</span>
-                </span>
-              )}
-
-              <div className="h-1 w-1 bg-white/50 rounded-full" />
-
-              <span>
-                {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}
-              </span>
-
-              {sellerInfo?.instagramLink && (
                 <>
-                  <div className="h-1 w-1 bg-white/50 rounded-full" />
+                  <span className="opacity-70 shrink-0">By</span>
+                  <span className="font-semibold truncate max-w-[120px] sm:max-w-none">{sellerInfo.fullName}</span>
+                  <span className="opacity-40 shrink-0">·</span>
+                </>
+              )}
+              <span className="shrink-0">{filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}</span>
+              <span className="opacity-40 shrink-0">·</span>
+              <span className="flex items-center gap-1 shrink-0">
+                <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
+                <span className="hidden xs:inline">Clients</span>
+              </span>
+            </div>
+
+            {/* Row 2: Social links — only if any exist, icon-only on mobile */}
+            {(sellerInfo?.instagramLink || sellerInfo?.tiktokLink || sellerInfo?.facebookLink) && (
+              <div className="flex items-center gap-1.5">
+                {sellerInfo?.instagramLink && (
                   <a
                     href={sellerInfo.instagramLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
-                    title="Visit Instagram"
+                    title="Instagram"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[11px] sm:text-sm font-medium"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="group-hover:scale-110 transition-transform"
-                    >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
                       <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
                       <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
                     </svg>
                     <span className="hidden sm:inline">Instagram</span>
                   </a>
-                </>
-              )}
-
-              {sellerInfo?.tiktokLink && (
-                <>
-                  <div className="h-1 w-1 bg-white/50 rounded-full" />
+                )}
+                {sellerInfo?.tiktokLink && (
                   <a
                     href={sellerInfo.tiktokLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
-                    title="Visit TikTok"
+                    title="TikTok"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[11px] sm:text-sm font-medium"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="group-hover:scale-110 transition-transform"
-                    >
-                      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5" />
                     </svg>
                     <span className="hidden sm:inline">TikTok</span>
                   </a>
-                </>
-              )}
-
-              {sellerInfo?.facebookLink && (
-                <>
-                  <div className="h-1 w-1 bg-white/50 rounded-full" />
+                )}
+                {sellerInfo?.facebookLink && (
                   <a
                     href={sellerInfo.facebookLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
-                    title="Visit Facebook"
+                    title="Facebook"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-black/25 border border-white/10 text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200 text-[11px] sm:text-sm font-medium"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="group-hover:scale-110 transition-transform"
-                    >
-                      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" />
                     </svg>
                     <span className="hidden sm:inline">Facebook</span>
                   </a>
-                </>
-              )}
-
-              <div className="h-1 w-1 bg-white/50 rounded-full" />
-              <span className="flex items-center gap-1.5">
-                <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
-                <span>Clients</span>
-              </span>
-            </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
