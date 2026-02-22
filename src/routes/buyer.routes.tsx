@@ -13,6 +13,7 @@ const BuyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetP
 const BuyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
 const CheckoutPage = safeLazy(() => import('@/pages/checkout'));
 const BuyerLayout = safeLazy(() => import('@/layouts/BuyerLayout'));
+const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
 
 export const buyerRoutes = [
   // ─── Public routes ──────────────────────────────────────────────────────────
@@ -83,6 +84,17 @@ export const buyerRoutes = [
     ],
   },
 
-  // NOTE: /buyer/shop/:shopName has been removed.
-  // Shop pages are publicly accessible at /shop/:shopName (defined in routes/index.tsx).
+  // ─── Buyer shop page (protected — buyer-only with wishlist + back button) ────
+  {
+    path: '/buyer/shop/:shopName',
+    element: (
+      <BuyerProtectedRoute>
+        <WishlistProvider>
+          <Suspense fallback={<RouteFallback />}>
+            <ShopPage />
+          </Suspense>
+        </WishlistProvider>
+      </BuyerProtectedRoute>
+    ),
+  },
 ];
