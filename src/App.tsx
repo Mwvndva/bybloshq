@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
 import { AppProviders } from "./components/AppProviders";
 import { LoadingScreen } from "./components/LoadingScreen";
-import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ErrorBoundary, RootErrorElement } from "./components/common/ErrorBoundary";
 import { adminRouter } from "./routes/admin.routes";
 import { routes } from "./routes";
 import FileLaunchHandler from "./components/FileLaunchHandler";
@@ -39,7 +39,6 @@ const AppContentInner = () => {
 
 // Create the main app router with both admin and main app routes
 const router = createBrowserRouter([
-  // Main app routes
   {
     element: (
       <AppProviders>
@@ -58,15 +57,10 @@ const router = createBrowserRouter([
   },
 ]);
 
-import ChunkErrorBoundary from "./components/common/ChunkErrorBoundary";
-import RootErrorElement from "./components/common/RootErrorElement";
-
 function App() {
   return (
     <ErrorBoundary>
-      <ChunkErrorBoundary>
-        <RouterProvider router={router} fallbackElement={<LoadingScreen />} />
-      </ChunkErrorBoundary>
+      <RouterProvider router={router} fallbackElement={<LoadingScreen />} />
     </ErrorBoundary>
   );
 }
