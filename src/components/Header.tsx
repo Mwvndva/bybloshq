@@ -4,7 +4,6 @@ import { Instagram, Calendar, ShoppingBag, Shield, LayoutDashboard } from 'lucid
 import { cn } from '@/lib/utils';
 import { useBybx } from '@/contexts/BybxContext';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
-import BybxImporter from './BybxImporter';
 
 const Header = () => {
   const { onFileLoaded } = useBybx();
@@ -27,11 +26,6 @@ const Header = () => {
 
           {/* Navigation - Always visible, responsive sizing */}
           <div className="flex items-center gap-3 md:gap-6">
-            {/* BYBX Importer */}
-            {onFileLoaded && (
-              <BybxImporter onFileLoaded={onFileLoaded} />
-            )}
-
             {/* Event Organizer */}
             <Link to="/organizer/events/new">
               <Button

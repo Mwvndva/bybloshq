@@ -57,7 +57,6 @@ import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 import buyerApi from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
 import { toast } from 'sonner';
-import DirectBybxViewer from '@/components/DirectBybxViewer';
 import { getImageUrl, cn } from '@/lib/utils';
 
 const glassCardStyle: React.CSSProperties = {
@@ -244,12 +243,6 @@ export default function OrdersSection() {
   const [currentOrderId, setCurrentOrderId] = useState<string | null>(null);
   const [selectedOrderForDetails, setSelectedOrderForDetails] = useState<Order | null>(null);
 
-  // Direct View State
-  const [viewingFile, setViewingFile] = useState<{
-    orderId: string;
-    productId: string;
-    fileName: string;
-  } | null>(null);
 
   const [viewingImage, setViewingImage] = useState<string | null>(null);
 
@@ -708,17 +701,6 @@ export default function OrdersSection() {
             </Card>
           );
         })
-      )}
-
-      {/* Direct Viewer */}
-      {viewingFile && (
-        <DirectBybxViewer
-          orderId={viewingFile.orderId}
-          productId={viewingFile.productId}
-          fileName={viewingFile.fileName}
-          isOpen={true}
-          onClose={() => setViewingFile(null)}
-        />
       )}
 
       {/* Cancel Order Confirmation Dialog */}
