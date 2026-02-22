@@ -16,7 +16,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
   };
 
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden bg-black">
+    <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden bg-black">
       {/* Background with deep blur and subtle movement */}
       <div
         className="absolute inset-0 z-0 opacity-40 scale-110"
@@ -38,7 +38,7 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
           {/* Main Title Group */}
           <div className="space-y-6 max-w-4xl mx-auto">
             <h1 className="text-5xl sm:text-6xl md:text-8xl font-medium text-white leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-5 duration-1000">
-              Beyond Commerce. <br/>
+              Beyond Commerce. <br />
               <span className="italic font-serif text-yellow-300/90">This is Brand Identity.</span>
             </h1>
 
