@@ -74,17 +74,10 @@ export const sanitizePublicSeller = (seller) => {
     if (!seller) return null;
     const sellerObj = seller.toObject ? seller.toObject() : seller;
 
-    console.log('Sanitizing public seller:', {
-        id: sellerObj.id,
-        shopName: sellerObj.shopName,
-        keys: Object.keys(sellerObj),
-        clientCountOriginal: sellerObj.clientCount,
-        clientCountSnake: sellerObj.client_count
-    });
-
     return {
         id: sellerObj.id,
         shopName: sellerObj.shopName || sellerObj.shop_name,
+        fullName: sellerObj.fullName || sellerObj.full_name, // Needed for shop page "By {name}" display
         city: sellerObj.city,
         location: sellerObj.location,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
@@ -96,7 +89,6 @@ export const sanitizePublicSeller = (seller) => {
         tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
         facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
         clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
-        // Removed: createdAt - no need to expose when shop was created
         // NO email, phone, balance, revenue, internal IDs
     };
 };

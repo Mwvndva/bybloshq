@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { aestheticCategories } from '../AestheticCategories';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, X, ImagePlus } from 'lucide-react';
 
 interface ServiceOptions {
   availability_days: string[];
@@ -40,6 +40,9 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
+  // Multi-image state (up to 3 images total including the primary)
+  const [extraFiles, setExtraFiles] = useState<File[]>([]);
+  const [extraPreviews, setExtraPreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     price: '',
@@ -188,7 +191,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
     });
   };
 
-  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleImageChange = async (e: ChangeEvent<HTMLInputElement>, slot: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -213,19 +216,26 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
     }
 
     try {
-      // Process the image (resize, compress, convert to JPEG)
       const processedImage = await processImage(file);
 
-      // Set the preview
-      setImagePreview(processedImage);
-
-      // Update form data with the processed image
-      setFormData(prev => ({
-        ...prev,
-        image: file,
-        image_url: processedImage // Store the processed image data URL
-      }));
-
+      if (slot === 0) {
+        // Primary image
+        setImagePreview(processedImage);
+        setFormData(prev => ({ ...prev, image: file, image_url: processedImage }));
+      } else {
+        // Additional images (slots 1 and 2)
+        const idx = slot - 1;
+        setExtraFiles(prev => {
+          const updated = [...prev];
+          updated[idx] = file;
+          return updated;
+        });
+        setExtraPreviews(prev => {
+          const updated = [...prev];
+          updated[idx] = processedImage;
+          return updated;
+        });
+      }
     } catch (error) {
       console.error('Error processing image:', error);
       toast({
@@ -233,6 +243,17 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         description: error instanceof Error ? error.message : 'Failed to process image',
         variant: 'destructive',
       });
+    }
+  };
+
+  const removeImage = (slot: number) => {
+    if (slot === 0) {
+      setImagePreview('');
+      setFormData(prev => ({ ...prev, image: null, image_url: '' }));
+    } else {
+      const idx = slot - 1;
+      setExtraFiles(prev => prev.filter((_, i) => i !== idx));
+      setExtraPreviews(prev => prev.filter((_, i) => i !== idx));
     }
   };
 
@@ -307,9 +328,10 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         price: parseFloat(formData.price),
         description: formData.description,
         image_url: imageUrl,
+        images: extraPreviews.length > 0 ? extraPreviews : undefined, // Up to 2 extra images
         aesthetic: formData.aesthetic,
         sellerId: sellerId,
-        is_digital: formData.is_digital, // Keeps back-compat validation
+        is_digital: formData.is_digital,
         digital_file_path: formData.is_digital ? digitalFilePath : undefined,
         digital_file_name: formData.is_digital ? digitalFileName : undefined,
         product_type: formData.product_type,
@@ -348,6 +370,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         }
       });
       setImagePreview('');
+      setExtraFiles([]);
+      setExtraPreviews([]);
       onSuccess();
     } catch (error) {
       console.error('Error creating product:', error);
@@ -360,6 +384,18 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
       setIsLoading(false);
     }
   };
+
+  const resetImages = () => {
+    setImagePreview('');
+    setFormData(prev => ({ ...prev, image: null, image_url: '' }));
+    setExtraFiles([]);
+    setExtraPreviews([]);
+  };
+
+  // Build the list of all image slots [primary, extra1, extra2]
+  const allPreviews = [imagePreview, ...extraPreviews];
+  const MAX_IMAGES = 3;
+  const canAddMore = allPreviews.filter(Boolean).length < MAX_IMAGES;
 
   return (
     <div className="min-h-screen bg-black">
@@ -657,66 +693,65 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                 </div>
 
                 <div className="space-y-6">
+                  {/* Multi-Image Upload – up to 3 photos */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Image</Label>
-                    <div className="flex justify-center px-8 pt-8 pb-8 border-2 border-dashed border-white/10 rounded-2xl hover:border-yellow-400/30 transition-colors duration-200 bg-white/5">
-                      <div className="space-y-4 text-center">
-                        {imagePreview ? (
-                          <div className="relative">
-                            <img
-                              src={imagePreview}
-                              alt="Preview"
-                              className="h-48 w-48 object-cover rounded-2xl shadow-lg"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHg9IjMiIHk9IjMiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
-                                target.className = 'h-48 w-48 bg-gray-100 p-8 rounded-2xl';
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="absolute -top-2 -right-2 bg-red-500 text-white hover:bg-red-600 rounded-full h-8 w-8"
-                              onClick={() => {
-                                setImagePreview('');
-                                setFormData(prev => ({ ...prev, image: null }));
-                              }}
-                            >
-                              ×
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <div className="w-16 h-16 mx-auto bg-yellow-500/10 border border-yellow-400/20 rounded-2xl flex items-center justify-center shadow-[0_0_18px_rgba(250,204,21,0.12)]">
-                              <svg className="h-8 w-8 text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                            <div className="space-y-2">
-                              <div className="flex text-sm text-gray-300 justify-center">
-                                <label
-                                  htmlFor="image-upload"
-                                  className="relative cursor-pointer rounded-xl font-semibold text-yellow-300 hover:text-yellow-200 focus-within:outline-none"
-                                >
-                                  <span>Upload a file</span>
-                                  <input
-                                    id="image-upload"
-                                    name="image-upload"
-                                    type="file"
-                                    className="sr-only"
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                  />
-                                </label>
-                                <p className="pl-1 text-gray-300">or drag and drop</p>
-                              </div>
-                              <p className="text-xs text-gray-300">PNG, JPG, GIF up to 10MB</p>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Photos</Label>
+                      <span className="text-xs text-gray-400">{allPreviews.filter(Boolean).length} / {MAX_IMAGES} photos</span>
                     </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      {/* Render up to MAX_IMAGES slots */}
+                      {Array.from({ length: MAX_IMAGES }).map((_, slot) => {
+                        const preview = allPreviews[slot];
+                        const isFirst = slot === 0;
+                        const isDisabled = slot > 0 && !allPreviews[slot - 1]; // must fill in order
+                        return (
+                          <div key={slot} className="relative aspect-square">
+                            {preview ? (
+                              <>
+                                <img
+                                  src={preview}
+                                  alt={`Photo ${slot + 1}`}
+                                  className="w-full h-full object-cover rounded-xl border-2 border-white/10"
+                                />
+                                {isFirst && (
+                                  <span className="absolute bottom-1 left-1 text-[10px] font-bold bg-yellow-400/90 text-black px-1.5 py-0.5 rounded-md">Main</span>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => removeImage(slot)}
+                                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center shadow-md transition-colors z-10"
+                                >
+                                  <X className="h-3.5 w-3.5" />
+                                </button>
+                              </>
+                            ) : (
+                              <label
+                                className={`w-full h-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors duration-200 ${isDisabled
+                                    ? 'border-white/5 bg-white/[0.02] cursor-not-allowed opacity-40'
+                                    : 'border-white/20 bg-white/5 hover:border-yellow-400/40 hover:bg-yellow-400/5 cursor-pointer'
+                                  }`}
+                              >
+                                <ImagePlus className={`h-6 w-6 mb-1 ${isDisabled ? 'text-gray-600' : 'text-gray-400'}`} />
+                                <span className={`text-[10px] font-medium ${isDisabled ? 'text-gray-600' : 'text-gray-400'}`}>
+                                  {isFirst ? 'Main photo' : `Photo ${slot + 1}`}
+                                </span>
+                                {!isDisabled && (
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="sr-only"
+                                    onChange={(e) => handleImageChange(e, slot)}
+                                  />
+                                )}
+                              </label>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-gray-400">PNG, JPG up to 5MB each. First photo is shown as the main image.</p>
                   </div>
                 </div>
               </div>
@@ -747,7 +782,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                         end_time: '17:00'
                       }
                     });
-                    setImagePreview('');
+                    resetImages();
                   }}
                   disabled={isLoading}
                   className="w-full sm:w-auto h-12 px-8 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-200 rounded-xl font-semibold sm:mr-4"

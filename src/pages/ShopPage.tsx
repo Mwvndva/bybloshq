@@ -458,24 +458,24 @@ const ShopPage = () => {
         </div>
 
         {/* Hero Content */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-8 sm:p-8 sm:pb-16">
-          <div className="max-w-7xl mx-auto flex flex-col items-center text-center space-y-3 sm:space-y-4 animate-fade-in-up">
-            <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white tracking-tight uppercase leading-none drop-shadow-2xl px-2">
-              {sellerInfo?.shopName || 'SHOP'}
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-6 sm:p-8 sm:pb-10">
+          <div className="max-w-7xl mx-auto flex flex-col items-start text-left space-y-2 sm:space-y-3 animate-fade-in-up">
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl px-1">
+              {sellerInfo?.shopName || 'Shop'}
             </h1>
 
-            <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-6 text-white/90 font-medium text-[10px] sm:text-base backdrop-blur-sm bg-black/20 p-2 sm:p-3 rounded-full border border-white/10 shadow-xl">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-white/90 font-medium text-[10px] sm:text-sm backdrop-blur-sm bg-black/20 px-3 py-2 sm:px-4 sm:py-2 rounded-full border border-white/10 shadow-xl">
               {sellerInfo?.fullName && (
-                <span className="flex items-center gap-2 px-2">
+                <span className="flex items-center gap-2">
                   <span className="opacity-70">By</span>
-                  <span className="font-bold tracking-wide">{sellerInfo.fullName}</span>
+                  <span className="font-semibold tracking-wide">{sellerInfo.fullName}</span>
                 </span>
               )}
 
               <div className="h-1 w-1 bg-white/50 rounded-full" />
 
-              <span className="px-2">
-                {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Collection Items'}
+              <span>
+                {filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}
               </span>
 
               {sellerInfo?.instagramLink && (
@@ -485,7 +485,7 @@ const ShopPage = () => {
                     href={sellerInfo.instagramLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
+                    className="flex items-center gap-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
                     title="Visit Instagram"
                   >
                     <svg
@@ -516,7 +516,7 @@ const ShopPage = () => {
                     href={sellerInfo.tiktokLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
+                    className="flex items-center gap-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
                     title="Visit TikTok"
                   >
                     <svg
@@ -545,7 +545,7 @@ const ShopPage = () => {
                     href={sellerInfo.facebookLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
+                    className="flex items-center gap-2 hover:text-[var(--theme-accent)] transition-colors duration-200 group"
                     title="Visit Facebook"
                   >
                     <svg
@@ -568,7 +568,7 @@ const ShopPage = () => {
               )}
 
               <div className="h-1 w-1 bg-white/50 rounded-full" />
-              <span className="flex items-center gap-1.5 px-2">
+              <span className="flex items-center gap-1.5">
                 <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
                 <span>Clients</span>
@@ -576,6 +576,7 @@ const ShopPage = () => {
             </div>
           </div>
         </div>
+
       </div>
 
       {/* Products */}

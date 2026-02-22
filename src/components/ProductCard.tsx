@@ -18,6 +18,7 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import apiClient from '@/lib/apiClient';
 import { clearAllAuthData } from '@/lib/authCleanup';
+import ProductImage from '@/components/common/ProductImage';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -507,58 +508,48 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </button>
       )}
 
-      {/* Image - only render if product has an image */}
-      {product.image_url && (
-        <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
-          {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
-            <div className="absolute top-2 left-2 z-10">
-              <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
-                <FileText className="h-3 w-3 mr-1" />
-                Digital
-              </Badge>
-            </div>
-          )}
+      {/* Product Image — always renders, shows placeholder when no image */}
+      <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
+        {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
+          <div className="absolute top-2 left-2 z-10">
+            <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
+              <FileText className="h-3 w-3 mr-1" />
+              Digital
+            </Badge>
+          </div>
+        )}
 
-          {(product.product_type === 'service' || (product as any).productType === 'service') && (
-            <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-              <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
-                <Handshake className="h-3 w-3 mr-1" />
-                Service
+        {(product.product_type === 'service' || (product as any).productType === 'service') && (
+          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+            <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+              <Handshake className="h-3 w-3 mr-1" />
+              Service
+            </Badge>
+            {(product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') && (
+              <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+                Hybrid
               </Badge>
-              {(product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') && (
-                <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
-                  Hybrid
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Out of Stock Badge - High contrast red on black */}
-          {isOutOfStock && (
-            <div className="absolute top-2 right-2 z-10">
-              <Badge className="bg-[#000000] text-red-500 border-2 border-red-500 font-bold backdrop-blur-sm shadow-lg animate-pulse">
-                SOLD OUT
-              </Badge>
-            </div>
-          )}
-          {isImageLoading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
-              <ImageIcon className="h-8 w-8 text-gray-300 animate-pulse" />
-            </div>
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <img
-            src={getImageUrl(product.image_url)}
-            alt={product.name}
-            className={cn(
-              'w-full h-40 sm:h-56 md:h-64 lg:h-72 object-cover transition-transform duration-700 group-hover:scale-105',
-              isImageLoading ? 'opacity-0' : 'opacity-100'
             )}
-            onLoad={handleImageLoad}
-            onError={handleImageError}
-          />
-        </div>
-      )}
+          </div>
+        )}
+
+        {/* Out of Stock Badge */}
+        {isOutOfStock && (
+          <div className="absolute top-2 right-2 z-10">
+            <Badge className="bg-[#000000] text-red-500 border-2 border-red-500 font-bold backdrop-blur-sm shadow-lg animate-pulse">
+              SOLD OUT
+            </Badge>
+          </div>
+        )}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[1]" />
+
+        <ProductImage
+          src={product.image_url}
+          alt={product.name}
+          className="w-full h-40 sm:h-56 md:h-64 lg:h-72 transition-transform duration-700 group-hover:scale-105"
+        />
+      </div>
 
       <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
         <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg antialiased",
