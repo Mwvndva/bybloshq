@@ -1,10 +1,23 @@
-// Load environment variables first
+// ─── Environment Loading — MUST be first ────────────────────────────────────
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { existsSync } from 'fs';
 import { mkdir } from 'fs/promises';
-import { promises as fs } from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const candidateEnvPaths = [
+  path.join(__dirname, '.env'),
+  path.join(process.cwd(), '.env'),
+  process.env.NODE_ENV === 'production' ? path.join(__dirname, '.env.production') : null,
+].filter(Boolean);
+
+const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
+dotenv.config({ path: chosenEnvPath });
+
+// ─── Core Imports ────────────────────────────────────────────────────────────
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -13,102 +26,59 @@ import xss from 'express-xss-sanitizer';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+
 import logger from './utils/logger.js';
-import organizerRoutes from './routes/organizer.routes.js';
-import sellerRoutes from './routes/seller.routes.js';
-import buyerRoutes from './routes/buyer.routes.js';
-import dashboardRoutes from './routes/dashboard.routes.js';
-import publicRoutes from './routes/public.routes.js';
-import healthRoutes from './routes/health.routes.js';
-import ticketRoutes from './routes/ticket.routes.js';
-import paymentRoutes from './routes/payment.routes.js';
-import discountCodeRoutes from './routes/discountCode.routes.js';
-import adminRoutes from './routes/admin.routes.js';
-import refundRoutes from './routes/refund.routes.js';
-import callbackRoutes from './routes/callback.routes.js';
-import * as eventController from './controllers/event.controller.js';
+import routes from './routes/index.js';
 import { pool, testConnection as testDbConnection } from './config/database.js';
 import { globalErrorHandler, notFoundHandler } from './utils/errorHandler.js';
-import { protect } from './middleware/auth.js';
 import requestId from './middleware/requestId.js';
 import fixApiPrefix from './middleware/fixApiPrefix.js';
 import { schedulePaymentProcessing } from './cron/paymentCron.js';
 import { schedulePayoutReconciliation } from './cron/payoutCleanup.js';
+import whatsappService from './services/whatsapp.service.js';
 
-// Get the current directory
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables (prefer server/.env, then repo root .env, then .env.production)
-const candidateEnvPaths = [
-  path.join(__dirname, '.env'),                 // server/.env (PRIORITY)
-  path.join(process.cwd(), '.env'),             // repo root .env
-  process.env.NODE_ENV === 'production' ? path.join(__dirname, '.env.production') : null,
-].filter(Boolean);
-
-const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
-dotenv.config({ path: chosenEnvPath });
-
-// Create Express app
+// ─── App Setup ───────────────────────────────────────────────────────────────
 const app = express();
 
-// Enable trust proxy to correctly detect client IPs from proxies like Vercel or Cloudflare
+// Enable trust proxy for Vercel / Cloudflare
 app.set('trust proxy', 1);
 
-// Test routes removed
-
-// Add request ID middleware
+// Request ID must be first
 app.use(requestId);
 
-// Set security HTTP headers
+// Security headers
 app.use(helmet());
 
-// Use Morgan for logging HTTP requests
+// HTTP request logging
 app.use(morgan('combined', { stream: logger.stream }));
 
-// Limit requests from same API
-const limiter = rateLimit({
-  max: 1000,
-  windowMs: 60 * 60 * 1000,
-  message: 'Too many requests from this IP, please try again in an hour!',
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-});
-
-// Serve static files from uploads directory
+// ─── Static Files ────────────────────────────────────────────────────────────
 const uploadsDir = path.join(process.cwd(), 'uploads');
-console.log('Serving static files from:', uploadsDir);
 
-// Ensure the uploads directory exists
 const ensureUploadsDir = async () => {
   try {
     if (!existsSync(uploadsDir)) {
       await mkdir(uploadsDir, { recursive: true });
-      console.log('Uploads directory created successfully');
-    } else {
-      console.log('Uploads directory already exists');
+      logger.info('Uploads directory created');
     }
   } catch (error) {
-    console.error('Error handling uploads directory:', error);
+    logger.error('Error handling uploads directory:', error);
   }
 };
 
-// Serve static files
 app.use('/uploads', express.static(uploadsDir, {
   setHeaders: (res, filePath) => {
-    // Set proper cache control for images
-    if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg') ||
-      filePath.endsWith('.png') || filePath.endsWith('.webp')) {
-      res.setHeader('Cache-Control', 'public, max-age=86400'); // 1 day
+    if (/\.(jpg|jpeg|png|webp)$/.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400');
     }
   }
 }));
 
 ensureUploadsDir();
 
-// CORS configuration - Consolidated configuration
+// ─── CORS ─────────────────────────────────────────────────────────────────────
+// Move additional origins to ALLOWED_ORIGINS env var for production
 const whitelist = [
-  // Development
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'http://localhost:3001',
@@ -116,8 +86,6 @@ const whitelist = [
   'http://localhost:3002',
   'http://127.0.0.1:3002',
   'http://localhost:5173',
-
-  // Production domains
   'https://byblosatelier.com',
   'https://www.byblosatelier.com',
   'https://bybloshq.space',
@@ -125,418 +93,281 @@ const whitelist = [
   'https://byblosexperience.vercel.app',
   'https://www.byblosexperience.vercel.app',
   'https://byblos-backend.vercel.app',
-
-  // Development and preview domains
-  'https://*.vercel.app',  // All Vercel preview deployments
-  'https://*-git-*.vercel.app'  // Vercel branch deployments
+  'https://*.vercel.app',
+  'https://*-git-*.vercel.app',
 ];
 
-// Add any additional domains from environment variable
-const additionalOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : [];
+const additionalOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim())
+    : [];
 
-// Consolidated CORS options
 const corsOptions = {
   origin: function (origin, callback) {
-    // ========================================
-    // P1-004: TIGHTENED CORS CONFIGURATION
-    // ========================================
+    if (!origin) return callback(null, true);
 
-    // In production, reject requests with no origin for security
-    // In development, allow for testing with tools like Postman
-    // UPDATE: Allow no-origin requests in production too (same-origin requests don't send Origin)
-    if (!origin) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('CORS: Request with no origin - allowing in development');
-      }
-      // Allow requests without origin (same-origin, direct navigation, etc.)
-      return callback(null, true);
-    }
-
-    // Check if origin is in whitelist or additionalOrigins
     const isAllowed = whitelist.some(domain => {
       if (domain.includes('*')) {
-        const regex = new RegExp('^' + domain.replace(/\*/g, '.*') + '$');
-        return regex.test(origin);
+        return new RegExp('^' + domain.replace(/\*/g, '.*') + '$').test(origin);
       }
       return origin === domain;
     }) || additionalOrigins.includes(origin);
 
-    if (isAllowed) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`CORS: Allowed origin: ${origin}`);
-      }
-      return callback(null, true);
-    }
+    if (isAllowed) return callback(null, true);
 
-    // Log rejected origins for security monitoring
-    logger.warn('[CORS] Blocked unauthorized origin', {
-      origin,
-      allowedOrigins: [...whitelist, ...additionalOrigins].length
-    });
-
+    logger.warn('[CORS] Blocked unauthorized origin', { origin });
     return callback(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  // Removed duplicate entries and tightened allowed headers
   allowedHeaders: [
-    'Content-Type',
-    'Authorization',
-    'X-Requested-With',
-    'Accept',
-    'Origin',
-    'X-Access-Token',
-    'X-Refresh-Token',
-    'X-Request-ID',
-    'Cache-Control',
-    'Pragma',
-    'Expires'
+    'Content-Type', 'Authorization', 'X-Requested-With', 'Accept',
+    'Origin', 'X-Access-Token', 'X-Refresh-Token', 'X-Request-ID',
+    'Cache-Control', 'Pragma', 'Expires',
   ],
   exposedHeaders: [
-    'Authorization',
-    'Content-Length',
-    'X-Access-Token',
-    'X-Refresh-Token',
-    'Content-Range',
-    'Content-Disposition',
-    'X-Request-ID'
+    'Authorization', 'Content-Length', 'X-Access-Token', 'X-Refresh-Token',
+    'Content-Range', 'Content-Disposition', 'X-Request-ID',
   ],
-  maxAge: 86400, // 24 hours
-  optionsSuccessStatus: 200 // For legacy browser support
+  maxAge: 86400,
+  optionsSuccessStatus: 200,
 };
 
-// Apply CORS middleware with options
 app.use(cors(corsOptions));
 
-// Apply rate limiter after CORS to ensure CORS headers are sent on 429 errors
-app.use('/api', limiter);
-
-// Handle preflight requests
+// Preflight
 app.options('*', cors(corsOptions), (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin, Access-Control-Allow-Origin');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.status(200).end();
 });
-// Increase JSON and URL-encoded payload size limit to 50MB
+
+// ─── Body Parsing & Rate Limiting ─────────────────────────────────────────────
+const limiter = rateLimit({
+  max: 1000,
+  windowMs: 60 * 60 * 1000,
+  message: 'Too many requests from this IP, please try again in an hour!',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api', limiter);
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-
-// Enable cookie parsing
 app.use(cookieParser());
 
-// Test database connection
-const testConnection = async () => {
-  try {
-    console.log('Starting database connection test...');
-    await testDbConnection();
-    console.log('✅ Database connection test completed successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Database connection test failed:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    });
-    console.error('Please check your database configuration in .env and ensure the database is running');
-    throw error; // Re-throw to be handled by the caller
-  }
-};
-
-// Add request logging and fix API prefix middleware
-// Add detailed request logging in development
+// Development request logging
 if (process.env.NODE_ENV === 'development') {
-  app.use((req, res, next) => {
+  app.use((req, _res, next) => {
     logger.debug(`${req.method} ${req.originalUrl}`);
     next();
   });
 }
 
-// Fix double /api prefixes in URLs
+// Fix double /api prefixes
 app.use(fixApiPrefix);
 
-// Import remaining routes
-import eventRoutes from './routes/event.routes.js';
-import protectedOrganizerRoutes from './routes/protectedOrganizer.routes.js';
-import orderRoutes from './routes/orderRoutes.js';
-import whatsappRoutes from './routes/whatsapp.routes.js';
-import activationRoutes from './routes/activation.routes.js';
-import refreshTokenRoutes from './routes/refreshToken.routes.js';
-import whatsappService from './services/whatsapp.service.js';
-import models from './models/index.js';
-const { Payment } = models;
+// ─── API Routes ───────────────────────────────────────────────────────────────
+// All routes are aggregated in src/routes/index.js
+app.use('/api', routes);
 
-// Mount public routes (no authentication required)
-app.use('/api/sellers', sellerRoutes);
-app.use('/api/buyers', buyerRoutes);
-app.use('/api/public', publicRoutes);
-app.use('/api/health', healthRoutes);
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/payments', paymentRoutes);
-app.use('/api/discount-codes', discountCodeRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/refunds', refundRoutes);
-app.use('/api/events', eventRoutes);
-app.use('/api/auth', refreshTokenRoutes);
-app.use('/api/callbacks', callbackRoutes); // Webhook callbacks
-app.use('/api/orders', orderRoutes);
-app.use('/api/whatsapp', whatsappRoutes);
-app.use('/api/activation', activationRoutes);
-
-// Organizer protected routes
-const protectedRouter = express.Router();
-
-// Apply protect middleware to all protected routes
-protectedRouter.use(protect);
-
-// Mount protected routes (dashboard and tickets under /api/organizers)
-protectedRouter.use('/dashboard', dashboardRoutes);
-protectedRouter.use('/tickets', ticketRoutes);
-
-// Mount protected event routes under /api/organizers/events
-const protectedEventRouter = express.Router();
-protectedEventRouter.get('/', eventController.getOrganizerEvents);
-protectedEventRouter.post('/', eventController.createEvent);
-protectedEventRouter.get('/dashboard', eventController.getDashboardEvents);
-protectedEventRouter.get('/:id', eventController.getEvent);
-protectedEventRouter.put('/:id', eventController.updateEvent);
-protectedEventRouter.delete('/:id', eventController.deleteEvent);
-protectedRouter.use('/events', protectedEventRouter);
-
-// Mount protected organizer routes (payouts, etc.)
-protectedRouter.use('/', protectedOrganizerRoutes);
-
-// Mount the protected router under /api/organizers
-app.use('/api/organizers', protectedRouter);
-
-// 404 handler - must be after all other routes
+// ─── Error Handlers (must be last) ───────────────────────────────────────────
 app.all('*', notFoundHandler);
-
-// Global error handler - must be after all other middleware
 app.use(globalErrorHandler);
 
-// Start server
+// ─── Database Connection Test ─────────────────────────────────────────────────
+const testConnection = async () => {
+  try {
+    logger.info('Testing database connection...');
+    await testDbConnection();
+    logger.info('✅ Database connection test passed');
+    return true;
+  } catch (error) {
+    logger.error('❌ Database connection failed', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+    });
+    throw error;
+  }
+};
+
+// ─── Inline Debt Feature Migration ───────────────────────────────────────────
+// TODO: Move to a dedicated migration runner (e.g. db-migrate, Flyway).
+// Migration SQL is at: server/migrations/20260222_add_debt_feature.sql
+// This block runs the equivalent logic on startup for safety.
+const applyMigrations = async () => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // DEBT_PENDING order status
+    const enumCheck = await client.query(
+      `SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'order_status') AND enumlabel = 'DEBT_PENDING'`
+    );
+    if (enumCheck.rowCount === 0) {
+      await client.query('COMMIT');
+      await client.query("ALTER TYPE order_status ADD VALUE 'DEBT_PENDING'");
+      await client.query('BEGIN');
+      logger.info("Migration: Added 'DEBT_PENDING' to order_status");
+    }
+
+    // is_debt column
+    const colCheck = await client.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'is_debt'`
+    );
+    if (colCheck.rowCount === 0) {
+      await client.query("ALTER TABLE product_orders ADD COLUMN is_debt BOOLEAN DEFAULT FALSE");
+      logger.info("Migration: Added 'is_debt' column to product_orders");
+    }
+
+    // debt payment method
+    const payEnumCheck = await client.query(
+      `SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'payment_method') AND enumlabel = 'debt'`
+    );
+    if (payEnumCheck.rowCount === 0) {
+      const typeExists = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'payment_method'`);
+      if (typeExists.rowCount > 0) {
+        await client.query('COMMIT');
+        await client.query("ALTER TYPE payment_method ADD VALUE 'debt'");
+        await client.query('BEGIN');
+        logger.info("Migration: Added 'debt' to payment_method enum");
+      }
+    }
+
+    // pending_debt payment status
+    const payStatusCheck = await client.query(
+      `SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'payment_status') AND enumlabel = 'pending_debt'`
+    );
+    if (payStatusCheck.rowCount === 0) {
+      const typeExists = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'payment_status'`);
+      if (typeExists.rowCount > 0) {
+        await client.query('COMMIT');
+        await client.query("ALTER TYPE payment_status ADD VALUE 'pending_debt'");
+        await client.query('BEGIN');
+        logger.info("Migration: Added 'pending_debt' to payment_status enum");
+      }
+    }
+
+    // client_debts table
+    const debtsTableCheck = await client.query(
+      `SELECT 1 FROM information_schema.tables WHERE table_name = 'client_debts'`
+    );
+    if (debtsTableCheck.rowCount === 0) {
+      await client.query(`
+        CREATE TABLE client_debts (
+          id SERIAL PRIMARY KEY,
+          seller_id INTEGER REFERENCES sellers(id),
+          client_id INTEGER REFERENCES clients(id),
+          product_id INTEGER REFERENCES products(id),
+          amount DECIMAL(10, 2) NOT NULL,
+          quantity INTEGER DEFAULT 1,
+          is_paid BOOLEAN DEFAULT FALSE,
+          created_at TIMESTAMP DEFAULT NOW(),
+          updated_at TIMESTAMP DEFAULT NOW()
+        )
+      `);
+      logger.info("Migration: Created 'client_debts' table");
+    }
+
+    await client.query('COMMIT');
+    logger.info('Migrations applied successfully');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    logger.error('Migration failed:', err);
+  } finally {
+    client.release();
+  }
+};
+
+// ─── Server Start ─────────────────────────────────────────────────────────────
 const startServer = async () => {
   try {
-    // Test database connection before starting the server
     await testConnection();
-
-    // --- DEBT FEATURE MIGRATION ---
-    try {
-      console.log('Running Debt Feature migration...');
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
-        // Enum update
-        const enumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'order_status') AND enumlabel = 'DEBT_PENDING'`);
-        if (enumCheck.rowCount === 0) {
-          await client.query('COMMIT');
-          await client.query("ALTER TYPE order_status ADD VALUE 'DEBT_PENDING'");
-          await client.query('BEGIN');
-          console.log("Added 'DEBT_PENDING' to order_status.");
-        } else {
-          console.log("'DEBT_PENDING' already exists.");
-        }
-
-        // Column update
-        const colCheck = await client.query(`SELECT column_name FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'is_debt'`);
-        if (colCheck.rowCount === 0) {
-          await client.query("ALTER TABLE product_orders ADD COLUMN is_debt BOOLEAN DEFAULT FALSE");
-          console.log("Added 'is_debt' column.");
-        } else {
-          console.log("'is_debt' column already exists.");
-        }
-
-        // Payment Method Enum update
-        const payEnumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'payment_method') AND enumlabel = 'debt'`);
-        if (payEnumCheck.rowCount === 0) {
-          // Check if the type payment_method exists first to avoid error if it's text
-          const typeExists = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'payment_method'`);
-          if (typeExists.rowCount > 0) {
-            await client.query('COMMIT');
-            await client.query("ALTER TYPE payment_method ADD VALUE 'debt'");
-            await client.query('BEGIN');
-            console.log("Added 'debt' to payment_method enum.");
-          }
-        } else {
-          console.log("'debt' already exists in payment_method enum.");
-        }
-
-        // Payment Status Enum update
-        const payStatusEnumCheck = await client.query(`SELECT 1 FROM pg_enum WHERE enumtypid = (SELECT oid FROM pg_type WHERE typname = 'payment_status') AND enumlabel = 'pending_debt'`);
-        if (payStatusEnumCheck.rowCount === 0) {
-          const typeExists = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'payment_status'`);
-          if (typeExists.rowCount > 0) {
-            await client.query('COMMIT');
-            await client.query("ALTER TYPE payment_status ADD VALUE 'pending_debt'");
-            await client.query('BEGIN');
-            console.log("Added 'pending_debt' to payment_status enum.");
-          }
-        } else {
-          console.log("'pending_debt' already exists in payment_status enum.");
-        }
-
-        await client.query('COMMIT');
-        console.log('Debt Feature migration completed.');
-
-        // Client Debts Table Migration
-        const debtsTableCheck = await client.query(`SELECT 1 FROM information_schema.tables WHERE table_name = 'client_debts'`);
-        if (debtsTableCheck.rowCount === 0) {
-          await client.query('BEGIN');
-          await client.query(`
-            CREATE TABLE client_debts (
-              id SERIAL PRIMARY KEY,
-              seller_id INTEGER REFERENCES sellers(id),
-              client_id INTEGER REFERENCES clients(id),
-              product_id INTEGER REFERENCES products(id),
-              amount DECIMAL(10, 2) NOT NULL,
-              quantity INTEGER DEFAULT 1,
-              is_paid BOOLEAN DEFAULT FALSE,
-              created_at TIMESTAMP DEFAULT NOW(),
-              updated_at TIMESTAMP DEFAULT NOW()
-            )
-          `);
-          await client.query('COMMIT');
-          console.log('Created client_debts table.');
-        } else {
-          console.log('client_debts table already exists.');
-        }
-
-      } catch (err) {
-        await client.query('ROLLBACK');
-        console.error('Debt Feature migration failed:', err);
-      } finally {
-        client.release();
-      }
-    } catch (err) {
-      console.error('Migration wrapper failed:', err);
-    }
-    // --- END MIGRATION ---
-
-
+    await applyMigrations();
 
     const port = process.env.PORT || 3002;
     const server = app.listen(port, '0.0.0.0', () => {
       logger.info(`🚀 Server running on port ${port} in ${process.env.NODE_ENV || 'development'} mode`);
       logger.info(`📡 API available at http://localhost:${port}/api`);
-
-      // Initialize WhatsApp service (non-blocking)
       logger.info('📱 Initializing WhatsApp service...');
       whatsappService.initialize().catch(err => {
         logger.error('⚠️  WhatsApp initialization failed:', err.message);
-        logger.info('ℹ️  WhatsApp notifications will be unavailable. Use /api/whatsapp/initialize to retry.');
+        logger.info('ℹ️  Use /api/whatsapp/initialize to retry.');
       });
     });
 
-    // Handle server errors
     server.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
-        console.error(`❌ Port ${port} is already in use. Please free the port or use a different one.`);
+        logger.error(`❌ Port ${port} is already in use`);
       } else {
-        console.error('❌ Server error:', error);
+        logger.error('❌ Server error:', error);
       }
       process.exit(1);
     });
 
-    // Handle process termination
-    process.on('SIGTERM', async () => {
-      console.log('SIGTERM received. Shutting down gracefully...');
-
+    const shutdown = async (signal) => {
+      logger.info(`${signal} received. Shutting down gracefully...`);
       try {
-        console.log('Closing WhatsApp service...');
-        // We use destroy() here instead of logout() to keep session file but release lock
         if (whatsappService.client) {
           await whatsappService.client.destroy();
-          console.log('WhatsApp service closed.');
+          logger.info('WhatsApp service closed');
         }
       } catch (err) {
-        console.error('Error closing WhatsApp service:', err.message);
+        logger.error('Error closing WhatsApp service:', err.message);
       }
-
       server.close(() => {
-        console.log('Server closed');
+        logger.info('Server closed');
         process.exit(0);
       });
-    });
+    };
 
-    // Handle interrupt signal (Ctrl+C)
-    process.on('SIGINT', async () => {
-      console.log('SIGINT received. Shutting down gracefully...');
-      try {
-        if (whatsappService.client) {
-          await whatsappService.client.destroy();
-          console.log('WhatsApp service destroyed.');
-        }
-      } catch (err) { }
-      process.exit(0);
-    });
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
   } catch (error) {
-    console.error('❌ Failed to start server:', {
+    logger.error('❌ Failed to start server', {
       message: error.message,
       code: error.code,
-      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
     });
     process.exit(1);
   }
 };
 
-// Start the server and initialize cron jobs
+// ─── Start + Cron Jobs ────────────────────────────────────────────────────────
 startServer().then(async () => {
-  // Start the payment processing cron job when server starts
   if (process.env.ENABLE_PAYMENT_CRON !== 'false') {
-    console.log('🚀 Starting payment processing cron job...');
     try {
-      schedulePaymentProcessing({
-        schedule: '*/5 * * * *', // Every 5 minutes
-        hoursAgo: 24, // Process payments from the last 24 hours
-        limit: 50 // Process up to 50 payments per run
-      });
-      console.log('✅ Payment processing cron job started successfully');
+      schedulePaymentProcessing({ schedule: '*/5 * * * *', hoursAgo: 24, limit: 50 });
+      logger.info('✅ Payment processing cron started');
     } catch (error) {
-      console.error('❌ Failed to start payment processing cron job:', error.message);
+      logger.error('❌ Failed to start payment cron:', error.message);
     }
-  } else {
-    console.log('ℹ️  Payment processing cron job is disabled (ENABLE_PAYMENT_CRON=false)');
   }
 
-  // Start the order deadline cron job
   if (process.env.ENABLE_ORDER_DEADLINE_CRON !== 'false') {
-    console.log('🚀 Starting order deadline cron job...');
     try {
       const { scheduleOrderDeadlineChecks } = await import('./cron/orderDeadlineCron.js');
-      scheduleOrderDeadlineChecks({
-        schedule: '*/30 * * * *' // Every 30 minutes
-      });
-      console.log('✅ Order deadline cron job started successfully');
+      scheduleOrderDeadlineChecks({ schedule: '*/30 * * * *' });
+      logger.info('✅ Order deadline cron started');
     } catch (error) {
-      console.error('❌ Failed to start order deadline cron job:', error.message);
+      logger.error('❌ Failed to start order deadline cron:', error.message);
     }
-  } else {
-    console.log('ℹ️  Order deadline cron job is disabled (ENABLE_ORDER_DEADLINE_CRON=false)');
   }
 
-  // Start the payout reconciliation cron job
   if (process.env.ENABLE_PAYOUT_RECONCILIATION_CRON !== 'false') {
-    console.log('🚀 Starting payout reconciliation cron job...');
     try {
-      schedulePayoutReconciliation({
-        schedule: '0 * * * *', // Every hour
-        hoursAgo: 1
-      });
-      console.log('✅ Payout reconciliation cron job started successfully');
+      schedulePayoutReconciliation({ schedule: '0 * * * *', hoursAgo: 1 });
+      logger.info('✅ Payout reconciliation cron started');
     } catch (error) {
-      console.error('❌ Failed to start payout reconciliation cron job:', error.message);
+      logger.error('❌ Failed to start payout reconciliation cron:', error.message);
     }
-  } else {
-    console.log('ℹ️  Payout reconciliation cron job is disabled (ENABLE_PAYMENT_CRON=false)');
   }
 }).catch(error => {
-  console.error('❌ Failed to start server:', error);
+  logger.error('❌ Failed to start server:', error);
   process.exit(1);
 });
 
