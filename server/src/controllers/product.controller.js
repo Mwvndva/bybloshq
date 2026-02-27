@@ -39,6 +39,11 @@ export const createProduct = async (req, res) => {
       req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'product');
     }
 
+    // Convert extra images if present
+    if (req.body.images && Array.isArray(req.body.images)) {
+      req.body.images = await ImageService.convertMultiple(req.body.images, 'product_extra');
+    }
+
     const product = await ProductService.createProduct(sellerId, req.body);
 
     res.status(201).json({
@@ -131,6 +136,11 @@ export const updateProduct = async (req, res) => {
     // Convert base64 image to file if present
     if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
       req.body.image_url = await ImageService.base64ToFile(req.body.image_url, 'product');
+    }
+
+    // Convert extra images if present
+    if (req.body.images && Array.isArray(req.body.images)) {
+      req.body.images = await ImageService.convertMultiple(req.body.images, 'product_extra');
     }
 
     const updatedProduct = await ProductService.updateProduct(req.user.id, id, req.body);

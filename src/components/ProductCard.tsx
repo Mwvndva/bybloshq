@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -91,13 +91,47 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   ];
 
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  const handleNextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+  // Sync scroll position when index changes (for arrows)
+  const scrollToImage = (index: number) => {
+    if (scrollRef.current) {
+      const container = scrollRef.current;
+      const child = container.children[index] as HTMLElement;
+      if (child) {
+        container.scrollTo({
+          left: child.offsetLeft,
+          behavior: 'smooth'
+        });
+      }
+    }
   };
 
-  const handlePrevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  const handleNextImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const nextIndex = (currentImageIndex + 1) % allImages.length;
+    setCurrentImageIndex(nextIndex);
+    scrollToImage(nextIndex);
+  };
+
+  const handlePrevImage = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const prevIndex = (currentImageIndex - 1 + allImages.length) % allImages.length;
+    setCurrentImageIndex(prevIndex);
+    scrollToImage(prevIndex);
+  };
+
+  // Sync index when user swipes manually
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const scrollLeft = container.scrollLeft;
+    const width = container.offsetWidth;
+    if (width > 0) {
+      const newIndex = Math.round(scrollLeft / width);
+      if (newIndex !== currentImageIndex && newIndex >= 0 && newIndex < allImages.length) {
+        setCurrentImageIndex(newIndex);
+      }
+    }
   };
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -768,25 +802,40 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           `}</style>
 
           <div className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh] relative group/modal">
+            <style>{`
+              .hide-scrollbar::-webkit-scrollbar { display: none; }
+              .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}</style>
             <div className="flex items-center justify-center w-full p-2 sm:p-4 pb-4">
               {allImages.length > 0 && (
                 <div className="relative w-full max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                  <img
-                    src={getImageUrl(allImages[currentImageIndex])}
-                    alt={`${product.name} - Image ${currentImageIndex + 1}`}
-                    className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm transition-opacity duration-300"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
-                    }}
-                  />
+                  <div
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                    className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full items-center"
+                    style={{ scrollBehavior: 'smooth' }}
+                  >
+                    {allImages.map((img, idx) => (
+                      <div key={idx} className="relative w-full flex-none snap-center flex items-center justify-center min-h-[40vh]">
+                        <img
+                          src={getImageUrl(img)}
+                          alt={`${product.name} - Image ${idx + 1}`}
+                          className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
 
                   {allImages.length > 1 && (
                     <>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
                         onClick={handlePrevImage}
                       >
                         <ChevronLeft className="h-6 w-6" />
@@ -794,16 +843,20 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
                         onClick={handleNextImage}
                       >
                         <ChevronRight className="h-6 w-6" />
                       </Button>
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
                         {allImages.map((_, idx) => (
                           <div
                             key={idx}
-                            className={`h-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
+                            className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
+                            onClick={() => {
+                              setCurrentImageIndex(idx);
+                              scrollToImage(idx);
+                            }}
                           />
                         ))}
                       </div>
@@ -811,7 +864,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                   )}
 
                   {((product.product_type === 'digital' || (product as any).productType === 'digital') && allImages.length > 0) && (
-                    <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md">
+                    <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md z-20">
                       Page {currentImageIndex + 1} of {allImages.length}
                     </div>
                   )}

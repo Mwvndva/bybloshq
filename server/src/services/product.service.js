@@ -64,6 +64,11 @@ class ProductService {
             service_options: service_options || null
         };
 
+        // Ensure images is always stored as a stringified array
+        if (typeof productData.images !== 'string') {
+            productData.images = JSON.stringify(productData.images || []);
+        }
+
         const product = await ProductModel.create(null, productData); // Use default pool
         logger.info('Product created:', { id: product.id, sellerId });
         return product;
@@ -94,7 +99,7 @@ class ProductService {
     }
 
     static async updateProduct(sellerId, productId, data) {
-        const { name, price, description, image_url, aesthetic, status, soldAt } = data;
+        const { name, price, description, image_url, images, aesthetic, status, soldAt } = data;
         const client = await pool.connect();
 
         try {
@@ -111,6 +116,9 @@ class ProductService {
             if (price !== undefined) updateFields.price = parseFloat(price);
             if (description !== undefined) updateFields.description = description;
             if (image_url !== undefined) updateFields.image_url = image_url;
+            if (images !== undefined) {
+                updateFields.images = Array.isArray(images) ? JSON.stringify(images) : images;
+            }
             if (aesthetic !== undefined) updateFields.aesthetic = aesthetic;
 
             // Status & SoldAt logic
