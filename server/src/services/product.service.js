@@ -53,6 +53,7 @@ class ProductService {
             price: parseFloat(price),
             description: description.trim(),
             image_url: imageData,
+            images: data.images ? JSON.stringify(data.images) : '[]',
             seller_id: sellerId,
             aesthetic,
             is_digital: is_digital || false,

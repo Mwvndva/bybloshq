@@ -720,9 +720,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Image/Preview Dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="sm:max-w-4xl mx-4 max-h-[90vh] flex flex-col">
-          <DialogHeader className="pr-8">
-            <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
+        <DialogContent className="w-[95vw] sm:max-w-4xl mx-auto max-h-[90vh] flex flex-col p-2 sm:p-6 bg-[#111] sm:bg-background border-white/10 border sm:border-border rounded-xl">
+          <DialogHeader className="pr-8 px-2 sm:px-0 mt-2 sm:mt-0">
+            <DialogTitle className="text-sm sm:text-base flex items-center gap-2 text-white sm:text-foreground">
               {(product.product_type === 'digital' || (product as any).productType === 'digital') && (
                 <FileText className="h-4 w-4 text-red-500" />
               )}
@@ -742,22 +742,25 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             div[role="dialog"] button.absolute.right-4.top-4 {
               color: rgba(250, 204, 21, 1); /* text-yellow-400 */
               opacity: 1;
+              background: rgba(0,0,0,0.5);
+              padding: 4px;
+              border-radius: 50%;
             }
             div[role="dialog"] button.absolute.right-4.top-4:hover {
               color: rgba(234, 179, 8, 1); /* text-yellow-500 */
-              background-color: rgba(250, 204, 21, 0.1);
+              background-color: rgba(250, 204, 21, 0.2);
             }
           `}</style>
 
-          <div className="flex-1 overflow-y-auto min-h-0 p-1">
-            <div className="flex flex-col gap-4 items-center">
+          <div className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh]">
+            <div className="flex flex-row sm:flex-col overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto snap-x snap-mandatory gap-4 items-center min-h-0 w-full p-2 sm:p-4 pb-4">
               {/* Show main image if it exists and is not in the images array */}
               {product.image_url && (!product.images || product.images.length === 0 || product.images[0] !== product.image_url) && (
-                <div className="relative w-full max-w-2xl bg-gray-100 rounded-lg overflow-hidden shadow-sm">
+                <div className="relative w-full flex-none snap-center max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                   <img
                     src={getImageUrl(product.image_url)}
                     alt={`${product.name} - Main`}
-                    className="max-w-full w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                    className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
@@ -769,15 +772,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
               {/* Show multiple images */}
               {(product.images && product.images.length > 0) && (
                 product.images.map((img, idx) => (
-                  <div key={idx} className="relative w-full max-w-2xl bg-gray-100 rounded-lg overflow-hidden shadow-sm">
+                  <div key={idx} className="relative w-full flex-none snap-center max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                     <img
                       src={getImageUrl(img)}
                       alt={`${product.name} - Image ${idx + 1}`}
-                      className="max-w-full w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                      className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm"
                       loading="lazy"
                     />
                     {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0) && (
-                      <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 text-xs rounded-full backdrop-blur-sm">
+                      <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md">
                         Page {idx + 1}
                       </div>
                     )}
