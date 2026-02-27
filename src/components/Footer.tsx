@@ -29,11 +29,14 @@ const Footer = () => {
             <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">Contact</h3>
             <div className="space-y-3">
               <a href="mailto:official@bybloshq.com" className="block text-white/80 hover:text-white transition-colors text-sm font-light underline-offset-4 hover:underline">official@bybloshq.com</a>
-              <a href="tel:+254111548797" className="block text-white/80 hover:text-white transition-colors text-sm font-light">+254 111 548 797</a>
-              <a href="https://www.instagram.com/bybloshq" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-white/80 hover:text-pink-400 transition-all">
-                <Instagram className="h-4 w-4" />
-                <span className="text-sm">@bybloshq</span>
-              </a>
+              <div className="flex flex-wrap items-center gap-4">
+                <a href="tel:+254111548797" className="text-white/80 hover:text-white transition-colors text-sm font-light">+254 111 548 797</a>
+                <div className="w-1 h-1 bg-white/10 rounded-full" />
+                <a href="https://www.instagram.com/bybloshq" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-white/80 hover:text-pink-400 transition-all">
+                  <Instagram className="h-4 w-4" />
+                  <span className="text-sm">@bybloshq</span>
+                </a>
+              </div>
             </div>
           </div>
 
@@ -43,12 +46,15 @@ const Footer = () => {
             <div className="space-y-3">
               <button
                 onClick={() => setIsTermsModalOpen(true)}
-                className="block text-white/80 hover:text-white transition-colors text-sm font-light"
+                className="block text-left text-white/80 hover:text-white transition-colors text-sm font-light"
               >
                 Terms & Conditions
               </button>
-              <Link to="/seller" className="block text-white/80 hover:text-white transition-colors text-sm font-light">Sell on Byblos</Link>
-              <Link to="/organizer/events/new" className="block text-white/80 hover:text-white transition-colors text-sm font-light">Create an Event</Link>
+              <div className="flex flex-wrap items-center gap-4">
+                <Link to="/seller" className="text-white/80 hover:text-white transition-colors text-sm font-light">Sell on Byblos</Link>
+                <div className="w-1 h-1 bg-white/10 rounded-full" />
+                <Link to="/organizer/events/new" className="text-white/80 hover:text-white transition-colors text-sm font-light">Create an Event</Link>
+              </div>
             </div>
           </div>
 
