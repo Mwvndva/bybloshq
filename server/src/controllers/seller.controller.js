@@ -415,6 +415,7 @@ async function getSellerProductsFromDB(sellerId) {
       p.description,
       p.price,
       p.image_url AS "imageUrl",
+      p.images,
       p.aesthetic,
       p.seller_id AS "sellerId",
       p.status = 'sold' AS "isSold",
