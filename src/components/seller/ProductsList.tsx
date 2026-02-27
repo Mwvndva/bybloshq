@@ -53,10 +53,148 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
     description: '',
     aesthetic: 'afro-futuristic',
     image: null as File | null,
-    imagePreview: ''
+    imagePreview: '',
+    extraFiles: [] as File[],
+    extraPreviews: [] as string[]
   });
   const [isLoadingEdit, setIsLoadingEdit] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  const processImage = async (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        try {
+          const img = new Image();
+
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 1200;
+              const MAX_HEIGHT = 1200;
+              const MAX_SIZE_KB = 500;
+
+              let width = img.width;
+              let height = img.height;
+
+              if (width > height) {
+                if (width > MAX_WIDTH) {
+                  height = Math.round((height * MAX_WIDTH) / width);
+                  width = MAX_WIDTH;
+                }
+              } else {
+                if (height > MAX_HEIGHT) {
+                  width = Math.round((width * MAX_HEIGHT) / height);
+                  height = MAX_HEIGHT;
+                }
+              }
+
+              canvas.width = width;
+              canvas.height = height;
+
+              const ctx = canvas.getContext('2d');
+              if (!ctx) throw new Error('Could not get canvas context');
+
+              ctx.fillStyle = '#FFFFFF';
+              ctx.fillRect(0, 0, width, height);
+
+              ctx.drawImage(img, 0, 0, width, height);
+
+              let quality = 0.9;
+              let imageDataUrl: string;
+
+              do {
+                imageDataUrl = canvas.toDataURL('image/jpeg', quality);
+                const sizeKB = (imageDataUrl.length * 0.75) / 1024;
+
+                if (sizeKB <= MAX_SIZE_KB || quality <= 0.5) break;
+
+                quality -= 0.1;
+              } while (quality >= 0.5);
+
+              resolve(imageDataUrl);
+            } catch (error) {
+              reject(error);
+            }
+          };
+
+          img.onerror = () => reject(new Error('Failed to load image'));
+
+          if (event.target?.result) {
+            img.src = event.target.result as string;
+          } else {
+            reject(new Error('Failed to read file'));
+          }
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleEditImageChange = async (e: React.ChangeEvent<HTMLInputElement>, slot: number) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please upload an image file (JPEG, PNG, etc.)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: 'File too large',
+        description: 'Maximum file size is 5MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const processedImage = await processImage(file);
+
+      if (slot === 0) {
+        setEditFormData(prev => ({ ...prev, image: file, imagePreview: processedImage }));
+      } else {
+        const idx = slot - 1;
+        setEditFormData(prev => {
+          const updatedFiles = [...prev.extraFiles];
+          const updatedPreviews = [...prev.extraPreviews];
+          updatedFiles[idx] = file;
+          updatedPreviews[idx] = processedImage;
+          return { ...prev, extraFiles: updatedFiles, extraPreviews: updatedPreviews };
+        });
+      }
+    } catch (error) {
+      console.error('Error processing image:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to process image',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const removeEditImage = (slot: number) => {
+    if (slot === 0) {
+      setEditFormData(prev => ({ ...prev, image: null, imagePreview: '' }));
+    } else {
+      const idx = slot - 1;
+      setEditFormData(prev => ({
+        ...prev,
+        extraFiles: prev.extraFiles.filter((_, i) => i !== idx),
+        extraPreviews: prev.extraPreviews.filter((_, i) => i !== idx)
+      }));
+    }
+  };
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,7 +214,9 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         description: product.description || '',
         aesthetic: product.aesthetic || 'clothes-style',
         image: null,
-        imagePreview: product.image_url || ''
+        imagePreview: product.image_url || '',
+        extraFiles: [],
+        extraPreviews: product.images || []
       });
 
       // Then open the modal
@@ -123,18 +263,15 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         name: editFormData.name.trim(),
         price: priceValue,
         description: editFormData.description.trim(),
-        aesthetic: editFormData.aesthetic
+        aesthetic: editFormData.aesthetic,
+        images: editFormData.extraPreviews.length > 0 ? editFormData.extraPreviews : [] // Include array of string URLs
       };
 
-      // Process image if changed
+      // Process image if changed (this just updates the primary preview/base64 string)
       if (editFormData.image) {
-        const reader = new FileReader();
-        const imageData = await new Promise<string>((resolve, reject) => {
-          reader.onload = (e) => resolve(e.target?.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(editFormData.image!);
-        });
-        updateData.image_url = imageData;
+        updateData.image_url = editFormData.imagePreview;
+      } else if (!editFormData.imagePreview) {
+        updateData.image_url = '';
       }
 
       await sellerApi.updateProduct(editingProduct.id, updateData);
@@ -802,35 +939,66 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 </div>
 
                 <div>
-                  <Label htmlFor="edit-image" className="text-white text-xs">Product Image</Label>
-                  <div className="mt-2">
-                    {editFormData.imagePreview && (
-                      <div className="mb-2">
-                        <img
-                          src={editFormData.imagePreview}
-                          alt="Preview"
-                          className="w-full h-32 object-cover rounded-lg border border-white/10"
-                        />
-                      </div>
-                    )}
-                    <Input
-                      id="edit-image"
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setEditFormData({
-                            ...editFormData,
-                            image: file,
-                            imagePreview: URL.createObjectURL(file)
-                          });
-                        }
-                      }}
-                      className="bg-zinc-900 border-white/10 text-white text-xs file:bg-emerald-500/20 file:text-emerald-400 file:border-0 file:mr-2 file:py-1.5 file:px-3 file:text-xs"
-                    />
-                    <p className="text-[10px] text-zinc-500 mt-1">PNG, JPG, GIF up to 2MB</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-white text-xs">Product Photos</Label>
+                    <span className="text-[10px] text-zinc-400">
+                      {[editFormData.imagePreview, ...editFormData.extraPreviews].filter(Boolean).length} / 3 photos
+                    </span>
                   </div>
+
+                  <div className="grid grid-cols-3 gap-2 mt-2">
+                    {Array.from({ length: 3 }).map((_, slot) => {
+                      const allPreviews = [editFormData.imagePreview, ...editFormData.extraPreviews];
+                      const preview = allPreviews[slot];
+                      const isFirst = slot === 0;
+                      const isDisabled = slot > 0 && !allPreviews[slot - 1];
+
+                      return (
+                        <div key={slot} className="relative aspect-square">
+                          {preview ? (
+                            <>
+                              <img
+                                src={preview}
+                                alt={`Photo ${slot + 1}`}
+                                className="w-full h-full object-cover rounded-lg border border-white/10"
+                              />
+                              {isFirst && (
+                                <span className="absolute bottom-1 left-1 text-[8px] font-bold bg-emerald-500/90 text-white px-1 rounded-sm">Main</span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeEditImage(slot)}
+                                className="absolute -top-1.5 -right-1.5 bg-red-500 hover:bg-red-600 text-white rounded-full h-5 w-5 flex items-center justify-center shadow-md transition-colors z-10"
+                              >
+                                <X className="h-2.5 w-2.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <label
+                              className={`w-full h-full flex flex-col items-center justify-center rounded-lg border-2 border-dashed transition-colors duration-200 ${isDisabled
+                                ? 'border-white/5 bg-white/[0.02] cursor-not-allowed opacity-40'
+                                : 'border-white/20 bg-white/5 hover:border-emerald-400/40 hover:bg-emerald-400/5 cursor-pointer'
+                                }`}
+                            >
+                              <ImagePlus className={`h-4 w-4 mb-1 ${isDisabled ? 'text-zinc-600' : 'text-zinc-400'}`} />
+                              <span className={`text-[8px] font-medium ${isDisabled ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                                {isFirst ? 'Main photo' : `Photo ${slot + 1}`}
+                              </span>
+                              {!isDisabled && (
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="sr-only"
+                                  onChange={(e) => handleEditImageChange(e, slot)}
+                                />
+                              )}
+                            </label>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-zinc-500 mt-2">PNG, JPG up to 5MB.</p>
                 </div>
               </div>
             </div>

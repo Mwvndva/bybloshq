@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart, ExternalLink } from 'lucide-react';
+import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -84,6 +84,21 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   }, [product.id, isWishlisted]);
 
+  // Define all product images
+  const allImages = [
+    ...(product.image_url && (!product.images || product.images.length === 0 || product.images[0] !== product.image_url) ? [product.image_url] : []),
+    ...(product.images || [])
+  ];
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % allImages.length);
+  };
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + allImages.length) % allImages.length);
+  };
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isWishlistLoading || wishlistActionLoading || isSold) return;
@@ -752,40 +767,55 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             }
           `}</style>
 
-          <div className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh]">
-            <div className="flex flex-row sm:flex-col overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto snap-x snap-mandatory gap-4 items-center min-h-0 w-full p-2 sm:p-4 pb-4">
-              {/* Show main image if it exists and is not in the images array */}
-              {product.image_url && (!product.images || product.images.length === 0 || product.images[0] !== product.image_url) && (
-                <div className="relative w-full flex-none snap-center max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+          <div className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh] relative group/modal">
+            <div className="flex items-center justify-center w-full p-2 sm:p-4 pb-4">
+              {allImages.length > 0 && (
+                <div className="relative w-full max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
                   <img
-                    src={getImageUrl(product.image_url)}
-                    alt={`${product.name} - Main`}
-                    className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm"
+                    src={getImageUrl(allImages[currentImageIndex])}
+                    alt={`${product.name} - Image ${currentImageIndex + 1}`}
+                    className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm transition-opacity duration-300"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
                     }}
                   />
-                </div>
-              )}
 
-              {/* Show multiple images */}
-              {(product.images && product.images.length > 0) && (
-                product.images.map((img, idx) => (
-                  <div key={idx} className="relative w-full flex-none snap-center max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                    <img
-                      src={getImageUrl(img)}
-                      alt={`${product.name} - Image ${idx + 1}`}
-                      className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm"
-                      loading="lazy"
-                    />
-                    {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0) && (
-                      <div className="absolute bottom-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md">
-                        Page {idx + 1}
+                  {allImages.length > 1 && (
+                    <>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity"
+                        onClick={handlePrevImage}
+                      >
+                        <ChevronLeft className="h-6 w-6" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity"
+                        onClick={handleNextImage}
+                      >
+                        <ChevronRight className="h-6 w-6" />
+                      </Button>
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        {allImages.map((_, idx) => (
+                          <div
+                            key={idx}
+                            className={`h-1.5 rounded-full transition-all ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
+                          />
+                        ))}
                       </div>
-                    )}
-                  </div>
-                ))
+                    </>
+                  )}
+
+                  {((product.product_type === 'digital' || (product as any).productType === 'digital') && allImages.length > 0) && (
+                    <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md">
+                      Page {currentImageIndex + 1} of {allImages.length}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
