@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake, Package, ArrowLeft, Search } from 'lucide-react';
+import { Edit, Trash2, Loader2, MoreVertical, EyeOff, Plus, Handshake, Package, ArrowLeft, Search, ImagePlus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Product } from '@/types';
