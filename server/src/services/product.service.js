@@ -33,7 +33,7 @@ class ProductService {
 
         // Image Handling - now optional
         let imageData = image_url || image || null;
-        
+
         if (imageData) {
             // Validate image format only if image is provided
             if (!imageData.startsWith('data:image/') && !imageData.startsWith('/uploads/')) {

@@ -45,6 +45,7 @@ export interface Product {
   price: number;
   description: string;
   image_url: string;
+  images?: string[];
   aesthetic: string;
   sellerId: string;
   isSold: boolean;
