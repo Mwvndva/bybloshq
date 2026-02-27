@@ -721,46 +721,68 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       {/* Image/Preview Dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="sm:max-w-4xl mx-4 max-h-[90vh] flex flex-col">
-          <DialogHeader>
+          <DialogHeader className="pr-8">
             <DialogTitle className="text-sm sm:text-base flex items-center gap-2">
               {(product.product_type === 'digital' || (product as any).productType === 'digital') && (
                 <FileText className="h-4 w-4 text-red-500" />
               )}
-              {(product.product_type === 'digital' || (product as any).productType === 'digital')
+              {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0)
                 ? `Document Preview: ${product.name}`
                 : product.name
               }
             </DialogTitle>
           </DialogHeader>
+          <div className="absolute right-4 top-4">
+            {/* The Dialog component automatically renders a generic close button, but we can style children or use DialogPrimitive.Close if we need more control. 
+                 Since we can't easily override the internal DialogContent close button without modifying the UI library component globally, 
+                 we can use the DialogClose exported from the library. */}
+          </div>
+          {/* We'll use CSS to target the internal close button since we don't want to change the global ui/dialog.tsx component. */}
+          <style>{`
+            div[role="dialog"] button.absolute.right-4.top-4 {
+              color: rgba(250, 204, 21, 1); /* text-yellow-400 */
+              opacity: 1;
+            }
+            div[role="dialog"] button.absolute.right-4.top-4:hover {
+              color: rgba(234, 179, 8, 1); /* text-yellow-500 */
+              background-color: rgba(250, 204, 21, 0.1);
+            }
+          `}</style>
 
           <div className="flex-1 overflow-y-auto min-h-0 p-1">
             <div className="flex flex-col gap-4 items-center">
-              {/* If digital and has multiple images, show them all as "pages" */}
-              {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0) ? (
+              {/* Show main image if it exists and is not in the images array */}
+              {product.image_url && (!product.images || product.images.length === 0 || product.images[0] !== product.image_url) && (
+                <div className="relative w-full max-w-2xl bg-gray-100 rounded-lg overflow-hidden shadow-sm">
+                  <img
+                    src={getImageUrl(product.image_url)}
+                    alt={`${product.name} - Main`}
+                    className="max-w-full w-full h-auto max-h-[70vh] object-contain rounded-lg"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Show multiple images */}
+              {(product.images && product.images.length > 0) && (
                 product.images.map((img, idx) => (
                   <div key={idx} className="relative w-full max-w-2xl bg-gray-100 rounded-lg overflow-hidden shadow-sm">
                     <img
                       src={getImageUrl(img)}
-                      alt={`${product.name} - Page ${idx + 1}`}
-                      className="w-full h-auto object-contain"
+                      alt={`${product.name} - Image ${idx + 1}`}
+                      className="max-w-full w-full h-auto max-h-[70vh] object-contain rounded-lg"
                       loading="lazy"
                     />
-                    <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 text-xs rounded-full backdrop-blur-sm">
-                      Page {idx + 1}
-                    </div>
+                    {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0) && (
+                      <div className="absolute bottom-2 right-2 bg-black/50 text-white px-2 py-1 text-xs rounded-full backdrop-blur-sm">
+                        Page {idx + 1}
+                      </div>
+                    )}
                   </div>
                 ))
-              ) : (
-                /* Default single image view */
-                <img
-                  src={getImageUrl(product.image_url)}
-                  alt={product.name}
-                  className="max-w-full max-h-[50vh] sm:max-h-[60vh] lg:max-h-[70vh] object-contain rounded-lg"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
-                  }}
-                />
               )}
             </div>
           </div>
