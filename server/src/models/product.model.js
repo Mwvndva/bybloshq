@@ -3,23 +3,23 @@ import { pool } from '../config/database.js';
 class ProductModel {
     static async create(client, data) {
         const {
-            name, price, description, image_url, seller_id, aesthetic,
+            name, price, description, image_url, images, seller_id, aesthetic,
             is_digital, digital_file_path, digital_file_name,
             product_type, service_locations, service_options
         } = data;
 
         const query = `
       INSERT INTO products (
-        name, price, description, image_url, seller_id, aesthetic,
+        name, price, description, image_url, images, seller_id, aesthetic,
         status, created_at, updated_at,
         is_digital, digital_file_path, digital_file_name,
         product_type, service_locations, service_options
-      ) VALUES ($1, $2, $3, $4, $5, $6, 'available', NOW(), NOW(), $7, $8, $9, $10, $11, $12)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'available', NOW(), NOW(), $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
         const values = [
-            name, price, description, image_url, seller_id, aesthetic,
+            name, price, description, image_url, images, seller_id, aesthetic,
             is_digital, digital_file_path, digital_file_name,
             product_type, service_locations, service_options
         ];
