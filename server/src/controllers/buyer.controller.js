@@ -8,9 +8,6 @@ import { sendPasswordResetEmail } from '../utils/email.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../utils/cookie.utils.js';
 import { signToken } from '../utils/jwt.js';
-import OrderService from "../services/order.service.js";
-import OrderModel from "../models/order.model.js";
-import { OrderStatus } from "../constants/enums.js";
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res) => {
@@ -94,26 +91,22 @@ export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
 
-    // 1) Check if email and password exist
     if (!email || !password) {
       return next(new AppError('Please provide email and password', 400));
     }
 
-    // 2) Delegate to AuthService
     const data = await AuthService.login(email, password, 'buyer');
 
     if (!data) {
       return next(new AppError('Invalid email or password', 401));
     }
 
-    // 3) Update last login (optional, if not handled by Service)
-    // AuthService doesn't explicitly update last_login on User model yet, but User model has the method.
-    // We can add it to AuthService later or do it here. 
-    // Keeping it simple.
-
-    // 4) Send token
     createSendToken(data, 200, req, res);
   } catch (error) {
+    // Role mismatch throws a typed error — return 401 not 500
+    if (error.isRoleMismatch) {
+      return next(new AppError(error.message, 401));
+    }
     next(error);
   }
 };
@@ -489,7 +482,8 @@ export const saveBuyerInfo = async (req, res, next) => {
       return res.status(200).json({
         status: 'success',
         data: {
-          buyer: sanitizeBuyer(buyer)
+          buyer: sanitizeBuyer(buyer),
+          token
         }
       });
 
@@ -520,6 +514,10 @@ export const markOrderAsCollected = async (req, res, next) => {
     const { orderId } = req.params;
     const userId = req.user.id; // Buyer ID
 
+    // Import required services and models dynamically to avoid circular dependencies
+    const { default: OrderService } = await import('../services/order.service.js');
+    const { default: OrderModel } = await import('../models/order.model.js');
+    const { OrderStatus } = await import('../constants/enums.js');
 
     const orderData = await OrderModel.findById(orderId);
 
@@ -547,6 +545,3 @@ export const markOrderAsCollected = async (req, res, next) => {
     next(error);
   }
 };
-
-
-
