@@ -1,4 +1,3 @@
-
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
@@ -14,8 +13,8 @@ class AuthService {
      * Unified login method
      * @param {string} email 
      * @param {string} password 
-     * @param {string} type - Optional, enforced role check
-      */
+     * @param {string} type - Optional portal type: 'buyer' | 'seller' | 'admin'
+     */
     static async login(email, password, type = null) {
         // 1. Find user in unified users table
         const user = await User.findByEmail(email);
@@ -25,12 +24,26 @@ class AuthService {
         const isMatch = await User.verifyPassword(password, user.password_hash);
         if (!isMatch) return null;
 
-        // 3. Check role if specified
+        // 3. Role enforcement
+        // Special case: a seller logging in via the buyer portal is valid IF they
+        // also have a buyer profile (one person, two roles).
         if (type && user.role !== type) {
-            throw new Error(`Unauthorized: requested role "${type}" does not match user role "${user.role}"`);
+            if (type === 'buyer' && user.role === 'seller') {
+                const buyerProfile = await Buyer.findByEmail(email);
+                if (buyerProfile) {
+                    // Cross-role: issue a buyer-scoped token against their unified user ID
+                    const token = signToken(user.id, 'buyer');
+                    return { user, profile: buyerProfile, token, crossRole: true };
+                }
+            }
+            // Any other mismatch: typed 401 error so controllers respond correctly
+            const err = new Error(`Wrong portal. This account is registered as a ${user.role}.`);
+            err.statusCode = 401;
+            err.isRoleMismatch = true;
+            throw err;
         }
 
-        // 4. Fetch Profile based on requested type or user.role
+        // 4. Fetch profile based on resolved type
         const targetType = type || user.role;
         let profile = null;
 
@@ -45,7 +58,6 @@ class AuthService {
                 if (user.role === 'admin') profile = { id: user.id, email: user.email, role: 'admin' };
                 break;
             default:
-                // Attempt to find profile if mismatch? No, strict.
                 break;
         }
 
@@ -53,7 +65,7 @@ class AuthService {
             return null;
         }
 
-        // 5. Generate Token using Unified User ID
+        // 5. Generate token using unified user ID
         const token = signToken(user.id, targetType);
 
         return { user, profile, token };
