@@ -8,6 +8,9 @@ import { sendPasswordResetEmail } from '../utils/email.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../utils/cookie.utils.js';
 import { signToken } from '../utils/jwt.js';
+import OrderService from "../services/order.service.js";
+import OrderModel from "../models/order.model.js";
+import { OrderStatus } from "../constants/enums.js";
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res) => {
@@ -482,8 +485,7 @@ export const saveBuyerInfo = async (req, res, next) => {
       return res.status(200).json({
         status: 'success',
         data: {
-          buyer: sanitizeBuyer(buyer),
-          token
+          buyer: sanitizeBuyer(buyer)
         }
       });
 
@@ -514,10 +516,6 @@ export const markOrderAsCollected = async (req, res, next) => {
     const { orderId } = req.params;
     const userId = req.user.id; // Buyer ID
 
-    // Import required services and models dynamically to avoid circular dependencies
-    const { default: OrderService } = await import('../services/order.service.js');
-    const { default: OrderModel } = await import('../models/order.model.js');
-    const { OrderStatus } = await import('../constants/enums.js');
 
     const orderData = await OrderModel.findById(orderId);
 
