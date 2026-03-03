@@ -62,6 +62,14 @@ class CacheService {
     }
 
     /**
+     * Delete value from cache (alias)
+     * @param {string} key 
+     */
+    async delete(key) {
+        return await this.del(key);
+    }
+
+    /**
      * Clear cache with pattern
      * @param {string} pattern e.g. "products:*"
      */

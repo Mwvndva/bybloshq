@@ -48,7 +48,8 @@ export class PaymentService {
             timeout: 90000,               // ✅ Increased timeout to 90s
             scheduling: 'lifo',           // ✅ Reuse most recent socket
             family: 4,                    // ✅ FORCE IPv4 to prevent socket hang up
-            rejectUnauthorized: false     // ⚠️  Only until you get Payd's SSL cert
+            rejectUnauthorized: true,      // ✅ Enforce SSL verification
+            ca: process.env.PAYD_CA_CERT_PATH ? require("fs").readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
         });
 
         // Monitor agent health
@@ -363,7 +364,8 @@ export class PaymentService {
             timeout: 90000,
             scheduling: 'lifo',
             family: 4,        // ✅ FORCE IPv4
-            rejectUnauthorized: false
+            rejectUnauthorized: true,
+            ca: process.env.PAYD_CA_CERT_PATH ? require("fs").readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
         });
 
         // Re-mount to axios client too

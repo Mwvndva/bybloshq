@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, ReactNode, useState, useEffect, useCallback, useMemo } from 'react';
 import { Product, Aesthetic, Seller } from '@/types';
 import { useBuyerAuth } from './GlobalAuthContext';
 import buyerApi, { WishlistItem } from '@/api/buyerApi';
@@ -80,6 +80,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       fullName: (item as any).sellerName || 'Unknown Shop',
       email: '',
       phone: '',
+      whatsappNumber: '',
       bannerUrl: '',
       shopName: (item as any).sellerName || 'Unknown Shop',
       createdAt: new Date().toISOString(),
@@ -162,7 +163,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   }, [user, loadWishlist]);
 
   // Always provide the context, even if there's no user
-  const contextValue: WishlistContextType = {
+  const contextValue: WishlistContextType = useMemo(() => ({
     wishlist,
     addToWishlist: async (product: Product) => {
       if (!user) throw new Error('User must be logged in');
@@ -177,7 +178,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         // Refresh the wishlist to ensure we have the latest data
         await loadWishlist();
 
-        toast({
+        toast?.({
           title: 'Added to wishlist',
           description: `${product.name} has been added to your wishlist.`,
         });
@@ -192,14 +193,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
         if (error.code === 'DUPLICATE_WISHLIST_ITEM' || error.response?.status === 409) {
           const errorMessage = error.response?.data?.message || error.message || 'This item is already in your wishlist.';
-          toast({
+          toast?.({
             title: 'Already in wishlist',
             description: errorMessage,
             variant: 'default',
           });
         } else {
           const errorMessage = error.response?.data?.message || 'There was an error adding this item to your wishlist. Please try again.';
-          toast({
+          toast?.({
             title: 'Failed to add to wishlist',
             description: errorMessage,
             variant: 'destructive',
@@ -220,14 +221,14 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         // Refresh the wishlist to ensure we have the latest data
         await loadWishlist();
 
-        toast({
+        toast?.({
           title: 'Removed from wishlist',
           description: 'The item has been removed from your wishlist.',
         });
 
       } catch (error) {
         console.error('❌ Error removing from wishlist:', error);
-        toast({
+        toast?.({
           title: 'Failed to remove from wishlist',
           description: 'There was an error removing this item from your wishlist. Please try again.',
           variant: 'destructive',
@@ -241,7 +242,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     refreshWishlist: loadWishlist,
     isLoading,
     error,
-  };
+  }), [wishlist, user, error, isLoading, loadWishlist, toast]);
 
   return (
     <WishlistContext.Provider value={contextValue}>

@@ -27,7 +27,7 @@ class AuthService {
 
         // 3. Check role if specified
         if (type && user.role !== type) {
-            // logic for strict role check if needed
+            throw new Error(`Unauthorized: requested role "${type}" does not match user role "${user.role}"`);
         }
 
         // 4. Fetch Profile based on requested type or user.role

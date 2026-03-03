@@ -5,40 +5,56 @@ import logger from '../utils/logger.js';
 dotenv.config();
 
 const { Pool } = pg;
+let pool;
 
-// Database connection configuration
-const requiredEnvVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
-const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+if (process.env.DATABASE_URL) {
+  logger.info('Using connection string for database pool');
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL.includes('render.com') || process.env.NODE_ENV === 'production'
+      ? { rejectUnauthorized: false }
+      : false,
+    connectionTimeoutMillis: 30000,
+    idleTimeoutMillis: 10000,
+    max: 10,
+    query_timeout: 60000,
+  });
+} else {
+  const requiredEnvVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
-if (missingVars.length > 0) {
-  const errorMsg = `❌ FATAL: Missing required environment variables: ${missingVars.join(', ')}`;
-  logger.error(errorMsg);
-  logger.error('Please ensure all required database configuration is set in your .env file');
-  throw new Error(errorMsg);
+  if (missingVars.length > 0) {
+    const errorMsg = `❌ FATAL: Missing required environment variables: ${missingVars.join(', ')}`;
+    logger.error(errorMsg);
+    logger.error('Please ensure all required database configuration is set in your .env file');
+    throw new Error(errorMsg);
+  }
+
+  const dbConfig = {
+    host: process.env.DB_HOST,
+    port: parseInt(process.env.DB_PORT, 10) || 5432,
+    database: process.env.DB_NAME,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    connectionTimeoutMillis: 30000,  // 30 seconds timeout waiting for a client
+    idleTimeoutMillis: 10000,       // 10 seconds idle timeout (faster release)
+    max: 10,                        // reduced max number of clients for better headroom in dev
+    query_timeout: 60000,           // 60 seconds query timeout
+  };
+
+  // Log database connection details (without password)
+  logger.info('Database connection details:', {
+    host: dbConfig.host,
+    port: dbConfig.port,
+    database: dbConfig.database,
+    user: dbConfig.user,
+    hasPassword: !!dbConfig.password,
+  });
+
+  pool = new Pool(dbConfig);
 }
 
-const dbConfig = {
-  host: process.env.DB_HOST,
-  port: parseInt(process.env.DB_PORT, 10) || 5432,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  connectionTimeoutMillis: 30000,  // 30 seconds timeout waiting for a client
-  idleTimeoutMillis: 10000,       // 10 seconds idle timeout (faster release)
-  max: 10,                        // reduced max number of clients for better headroom in dev
-  query_timeout: 60000,           // 60 seconds query timeout
-};
-
-// Log database connection details (without password)
-logger.info('Database connection details:', {
-  host: dbConfig.host,
-  port: dbConfig.port,
-  database: dbConfig.database,
-  user: dbConfig.user,
-  hasPassword: !!dbConfig.password,
-});
-
-export const pool = new Pool(dbConfig);
+export { pool };
 
 // Event listeners for the pool
 pool.on('connect', () => {

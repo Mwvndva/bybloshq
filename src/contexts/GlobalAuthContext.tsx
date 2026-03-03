@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import buyerApi from '@/api/buyerApi';
@@ -631,7 +631,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // CONTEXT VALUE
     // ============================================================================
 
-    const value: GlobalAuthContextType = {
+    const value: GlobalAuthContextType = useMemo(() => ({
         user,
         isAuthenticated: user?.isAuthenticated || false,
         isLoading,
@@ -646,7 +646,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         getProfile,
         updateProfile,
-    };
+    }), [user, isLoading, login, loginWithToken, loginAdmin, register, logout, refreshRole, forgotPassword, resetPassword, getProfile, updateProfile]);
 
     return (
         <GlobalAuthContext.Provider value={value}>
