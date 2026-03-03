@@ -87,8 +87,12 @@ DROP TYPE IF EXISTS event_status CASCADE;
 -- -----------------------------------------------------------------------------
 
 -- If tickets created order_items, remove them
+-- Remove order items that were tickets or events
 DELETE FROM order_items 
-WHERE product_type = 'ticket' OR product_type = 'event';
+WHERE product_id IN (
+    SELECT id FROM products 
+    WHERE product_type = 'ticket' OR product_type = 'event'
+);
 
 -- Remove any orders that only had tickets (now have 0 items)
 DELETE FROM orders 
@@ -129,7 +133,11 @@ END $$;
 -- 8. Clean Up Platform Fees (if event-specific)
 -- -----------------------------------------------------------------------------
 
-DELETE FROM platform_fees 
-WHERE product_type = 'ticket' OR product_type = 'event';
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'platform_fees') THEN
+        EXECUTE 'DELETE FROM platform_fees WHERE product_type = ''ticket'' OR product_type = ''event''';
+    END IF;
+END $$;
 
 COMMIT;
