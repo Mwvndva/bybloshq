@@ -8,7 +8,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export const uploadToCloudinary = async (filePath, folder = 'events') => {
+export const uploadToCloudinary = async (filePath, folder = 'products') => {
   try {
     if (!filePath) return null;
 
@@ -37,7 +37,7 @@ export const uploadToCloudinary = async (filePath, folder = 'events') => {
 export const deleteFromCloudinary = async (publicId, resourceType = 'image') => {
   try {
     if (!publicId) return;
-    
+
     await cloudinary.uploader.destroy(publicId, {
       resource_type: resourceType,
       invalidate: true,

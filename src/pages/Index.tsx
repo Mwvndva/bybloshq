@@ -7,17 +7,12 @@ const IndexPage = () => {
     // This can be left empty or can scroll to content if needed
   };
 
-  const handleEventsClick = () => {
-    window.location.href = '/events';
-  };
-
   return (
     <div className="min-h-screen bg-black flex flex-col selection:bg-yellow-300 selection:text-black">
       <Header />
       <main className="flex-grow">
         <HeroSection
           onExploreClick={handleExploreClick}
-          onEventsClick={handleEventsClick}
         />
       </main>
 

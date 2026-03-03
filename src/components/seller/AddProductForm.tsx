@@ -729,8 +729,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                             ) : (
                               <label
                                 className={`w-full h-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors duration-200 ${isDisabled
-                                    ? 'border-white/5 bg-white/[0.02] cursor-not-allowed opacity-40'
-                                    : 'border-white/20 bg-white/5 hover:border-yellow-400/40 hover:bg-yellow-400/5 cursor-pointer'
+                                  ? 'border-white/5 bg-white/[0.02] cursor-not-allowed opacity-40'
+                                  : 'border-white/20 bg-white/5 hover:border-yellow-400/40 hover:bg-yellow-400/5 cursor-pointer'
                                   }`}
                               >
                                 <ImagePlus className={`h-6 w-6 mb-1 ${isDisabled ? 'text-gray-600' : 'text-gray-400'}`} />

@@ -14,18 +14,6 @@ const pick = (obj, keys) => {
     }, {});
 };
 
-export const sanitizeOrganizer = (organizer) => {
-    if (!organizer) return null;
-    const orgObj = organizer.toObject ? organizer.toObject() : organizer;
-
-    return pick(orgObj, [
-        'id',
-        'full_name',
-        'email',
-        'whatsapp_number',
-        'whatsappNumber'
-    ]);
-};
 
 export const sanitizeBuyer = (buyer) => {
     if (!buyer) return null;

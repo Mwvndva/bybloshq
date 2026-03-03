@@ -4,7 +4,6 @@ import { verifyToken, getTokenFromRequest } from '../utils/jwt.js';
 import AuthorizationService from '../services/authorization.service.js';
 import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
-import EventPolicy from '../policies/EventPolicy.js';
 
 // Import cookie-parser if not already imported
 import cookieParser from 'cookie-parser';
@@ -12,8 +11,7 @@ import cookieParser from 'cookie-parser';
 // Maps for easy lookup in req.user.can
 const policies = {
   product: ProductPolicy,
-  order: OrderPolicy,
-  event: EventPolicy
+  order: OrderPolicy
 };
 
 /**
@@ -96,14 +94,6 @@ export const protect = async (req, res, next) => {
             WHERE u.id = $1
           `;
         break;
-      case 'organizer':
-        userQuery = `
-            SELECT u.*, o.*, o.id as profile_id
-            FROM users u 
-            LEFT JOIN organizers o ON u.id = o.user_id 
-            WHERE u.id = $1
-          `;
-        break;
       default:
         return next(new AppError('Invalid user role', 401));
     }
@@ -125,8 +115,7 @@ export const protect = async (req, res, next) => {
       const crossRoleQuery = `
         SELECT 
           (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
-          (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id,
-          (SELECT id FROM organizers WHERE user_id = $1 LIMIT 1) as organizer_id
+          (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id
       `;
       const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
       crossRoles = crossRoleResult.rows[0];
@@ -142,18 +131,16 @@ export const protect = async (req, res, next) => {
       // Profiles IDs
       buyerProfileId: crossRoles.buyer_id,
       sellerProfileId: crossRoles.seller_id,
-      organizerProfileId: crossRoles.organizer_id,
 
       // Boolean flags (kept for backward compatibility)
       hasBuyerProfile: !!crossRoles.buyer_id,
       hasSellerProfile: !!crossRoles.seller_id,
-      hasOrganizerProfile: !!crossRoles.organizer_id,
 
       ...userData
     };
 
     if (userType !== 'admin') {
-      console.log(`[AUTH] Cross-role check for ${user.email}: buyer=${user.hasBuyerProfile}, seller=${user.hasSellerProfile}, organizer=${user.hasOrganizerProfile}`);
+      console.log(`[AUTH] Cross-role check for ${user.email}: buyer=${user.hasBuyerProfile}, seller=${user.hasSellerProfile}`);
     }
 
     // 4) Fetch permissions and attach to user

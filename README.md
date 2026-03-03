@@ -171,7 +171,7 @@ cd server && npm run dev
 
 - **Customer View**: `http://localhost:5173`
 - **Seller Dashboard**: `http://localhost:5173/seller/dashboard`
-- **API Documentation**: `http://localhost:3002/api-docs` (if Swagger/OpenAPI is set up)
+- **Admin Dashboard**: `http://localhost:5173/admin/dashboard`
 
 ## 🧪 Testing
 

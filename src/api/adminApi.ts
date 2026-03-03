@@ -1,5 +1,4 @@
 import axios from 'axios';
-import { EventTicketsResponse } from '@/types/ticket';
 
 // Type for axios instance
 type AxiosInstance = any; // Simplified type for Axios 1.12.2 compatibility
@@ -34,31 +33,6 @@ function getProductStatus(stock: number): 'In Stock' | 'Low Stock' | 'Out of Sto
   return 'In Stock';
 }
 
-// Helper function to determine event status
-function getEventStatus(
-  startDate?: string,
-  endDate?: string,
-  status?: string
-): 'Upcoming' | 'Ongoing' | 'Completed' | 'Cancelled' {
-  if (status) {
-    // If status is explicitly provided and valid, use it
-    const validStatuses = ['Upcoming', 'Ongoing', 'Completed', 'Cancelled'] as const;
-    if (validStatuses.includes(status as any)) {
-      return status as any;
-    }
-  }
-
-  // Otherwise determine status based on dates
-  if (!startDate) return 'Upcoming';
-
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = endDate ? new Date(endDate) : null;
-
-  if (now < start) return 'Upcoming';
-  if (end && now > end) return 'Completed';
-  return 'Ongoing';
-}
 
 // Create axios instance with default config
 const api: AxiosInstance = axios.create({
@@ -149,30 +123,6 @@ export const adminApi = {
     }
   },
 
-  // Events
-  async getEvents() {
-    try {
-      console.log('Fetching events from API...');
-      const response = await api.get('/admin/events');
-      console.log('Events API response:', response);
-      return response.data.data;
-    } catch (error) {
-      console.error('Error fetching events:', error);
-      return [];
-    }
-  },
-
-  async getMonthlyEvents() {
-    try {
-      console.log('Fetching monthly events from API...');
-      const response = await api.get('/admin/events/monthly');
-      return response.data.data;
-    } catch (error) {
-      console.error('Error fetching monthly events:', error);
-      return [];
-    }
-  },
-
   // Basic Stats (Legacy Dashboard)
   async getDashboardStats() {
     try {
@@ -183,7 +133,6 @@ export const adminApi = {
       return {
         totalSellers: 0,
         totalBuyers: 0,
-        totalEvents: 0,
         totalProducts: 0,
         totalOrders: 0,
         totalWishlists: 0
@@ -263,134 +212,6 @@ export const adminApi = {
     }
   },
 
-  // Organizers
-  async getOrganizers() {
-    try {
-      console.log('Fetching organizers from API...');
-      const response = await api.get('/admin/organizers');
-      console.log('Organizers API response:', response);
-
-      // Handle different response formats
-      let organizersData = [];
-      if (response.data && Array.isArray(response.data.data)) {
-        organizersData = response.data.data;
-      } else if (Array.isArray(response.data)) {
-        organizersData = response.data;
-      } else {
-        console.error('Unexpected API response format:', response);
-        return [];
-      }
-
-      const organizers = organizersData.map((organizer: any) => ({
-        id: String(organizer.id || `org-${Math.random().toString(36).substr(2, 9)}`),
-        name: String(organizer.name || organizer.full_name || 'Unnamed Organizer'),
-        email: String(organizer.email || ''),
-        phone: organizer.phone ? String(organizer.phone) : undefined,
-        status: String(organizer.status || 'Active'),
-        // Transform snake_case to camelCase for the frontend
-        createdAt: organizer.created_at || organizer.createdAt || new Date().toISOString()
-      }));
-
-      console.log(`Fetched ${organizers.length} organizers`);
-      return organizers;
-    } catch (error) {
-      console.error('Error fetching organizers:', error);
-      // Return empty array instead of throwing to prevent UI crashes
-      return [];
-    }
-  },
-
-  // Get ticket types for an event
-  async getEventTicketTypes(eventId: string | number) {
-    try {
-      const response = await api.get(`/events/public/${eventId}/ticket-types`);
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching event ticket types:', error);
-      // Return empty array instead of throwing to prevent UI crashes
-      return [];
-    }
-  },
-
-  // Get ticket buyers for an event with detailed ticket type information
-  async getEventTicketBuyers(eventId: string | number): Promise<EventTicketsResponse> {
-    try {
-      console.log(`Fetching tickets for event ${eventId} from: ${api.defaults.baseURL}/admin/events/${eventId}/tickets`);
-      const response = await api.get(`/admin/events/${eventId}/tickets`);
-      console.log('API Response:', response.data);
-      const tickets = response.data?.data?.tickets || [];
-
-      // Map the response to match the frontend's expected format
-      return {
-        data: {
-          event: response.data?.data?.event || null,
-          tickets: tickets.map((ticket: any) => ({
-            id: ticket.id,
-            ticketNumber: ticket.ticket_number,
-            customerName: ticket.customer_name,
-            customerEmail: ticket.customer_email,
-            price: parseFloat(ticket.price || 0),
-            status: ticket.status,
-            createdAt: ticket.created_at,
-            scanned: ticket.scanned,
-            scannedAt: ticket.scanned_at,
-            ticketType: ticket.ticket_type ? {
-              id: ticket.ticket_type.id,
-              name: ticket.ticket_type.name,
-              displayName: ticket.ticket_type.name, // Using name as display name if not provided
-              description: ticket.ticket_type.description || '',
-              price: parseFloat(ticket.ticket_type.price || 0),
-              quantityAvailable: parseInt(ticket.ticket_type.quantity_available || 0, 10),
-              salesStart: ticket.ticket_type.sales_start,
-              salesEnd: ticket.ticket_type.sales_end
-            } : {
-              // Fallback for tickets without type information
-              id: `temp-${Math.random().toString(36).substr(2, 9)}`,
-              name: ticket.ticket_type_name || 'General Admission',
-              displayName: ticket.ticket_type_name || 'General Admission',
-              description: '',
-              price: parseFloat(ticket.price || 0),
-              quantityAvailable: 0,
-              salesStart: null,
-              salesEnd: null
-            }
-          }))
-        }
-      };
-    } catch (error: any) {
-      const errorDetails = {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          headers: error.config?.headers
-        }
-      };
-      console.error('Error fetching event ticket buyers:', errorDetails);
-
-      // Log the error to the server if needed
-      try {
-        await api.post('/error-log', {
-          type: 'ticket_fetch_error',
-          error: errorDetails,
-          timestamp: new Date().toISOString()
-        });
-      } catch (logError) {
-        console.error('Failed to log error:', logError);
-      }
-
-      // Return empty data that matches the EventTicketsResponse type
-      return {
-        data: {
-          event: null,
-          tickets: []
-        }
-      };
-    }
-  },
-
   // Get monthly metrics for sellers, products, and products sold
   async getMonthlyMetrics() {
     try {
@@ -418,16 +239,6 @@ export const adminApi = {
     }
   },
 
-  // Mark event as paid (withdrawal processed)
-  markEventAsPaid(eventId: string, withdrawalMethod?: string, withdrawalDetails?: any) {
-    return api.patch(`/admin/events/${eventId}/mark-paid`, { withdrawalMethod, ...withdrawalDetails });
-  },
-
-  // Update organizer status
-  updateOrganizerStatus(organizerId: string, data: { status: string }) {
-    return api.patch(`/admin/organizers/${organizerId}/status`, data);
-  },
-
   // Update seller status
   updateSellerStatus(sellerId: string, data: { status: string }) {
     return api.patch(`/admin/sellers/${sellerId}/status`, data);
@@ -437,6 +248,7 @@ export const adminApi = {
   updateBuyerStatus(buyerId: string, data: { status: string }) {
     return api.patch(`/admin/buyers/${buyerId}/status`, data);
   },
+
 
   // Withdrawal requests
   async getWithdrawalRequests() {
