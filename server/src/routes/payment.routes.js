@@ -14,20 +14,6 @@ const publicRouter = express.Router();
 // Apply payment logger to all public routes
 publicRouter.use(paymentRequestLogger);
 
-// Payment initiation (public)
-publicRouter.post(
-  '/initiate',
-  [
-    body('phone').trim().notEmpty().withMessage('Phone number is required'),
-    // Use checkFalsy: true to ignore empty strings or null
-    body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail().withMessage('Valid email is required'),
-    body('amount').isNumeric().withMessage('Valid amount is required'),
-    body('ticketId').isInt().withMessage('Valid ticket ID is required'),
-    body('eventId').isInt().withMessage('Valid event ID is required'),
-    validate
-  ],
-  paymentController.initiatePayment
-);
 
 // Product payment initiation (public) — same flow as tickets, but for products
 publicRouter.post(

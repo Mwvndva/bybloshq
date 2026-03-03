@@ -685,30 +685,6 @@ export class PaymentService {
             });
             return { status: 'success', message: 'Payment processed and Order completion queued' };
 
-        } else if (updatedPayment.ticket_type_id || paymentMeta.ticket_type_id) {
-            // It's a Ticket
-            import('./ticket.service.js').then(async ({ default: TicketService }) => {
-                const client = await pool.connect();
-                try {
-                    await client.query('BEGIN');
-                    logger.info(`[PURCHASE-FLOW] 7. Creating ticket for payment ${updatedPayment.id}`);
-                    const ticket = await TicketService.createTicket(client, updatedPayment);
-                    const qr = await TicketService.generateQRCode(ticket);
-                    await TicketService.sendTicketEmail(ticket, updatedPayment, qr);
-
-                    // Update payment to fully COMPLETED (already set above, but ensure consistency)
-                    await client.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, updatedPayment.id]);
-                    await client.query('COMMIT');
-                    logger.info(`[PURCHASE-FLOW] 8. Ticket created and sent successfully`);
-                } catch (e) {
-                    await client.query('ROLLBACK');
-                    logger.error('[PURCHASE-FLOW] ERROR - Error processing ticket after payment:', e);
-                    // Don't fail the webhook response, just log.
-                } finally {
-                    client.release();
-                }
-            });
-            return { status: 'success', message: 'Payment processed and Ticket generation queued' };
         } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
             // It's a Debt Payment
             const client = await pool.connect();
@@ -937,86 +913,6 @@ export class PaymentService {
         return results;
     }
 
-    // New Orchestration Methods
-    async initiateTicketPayment(payload) {
-        // This logic is complex (price calc, discount validation).
-        // Ideally it should be here.
-        // Due to current step limitations and user request flow...
-        // I am not moving the entire validation logic from Controller to here right now 
-        // because I already deleted it from Controller without moving it! 
-        // WAIT. I deleted the Controller logic in previous step.
-        // I MUST implement it here now or it's lost.
-
-        // Re-implementing validation logic...
-        // I need to import Event, DiscountCode etc. or just query DB.
-        // I'll query DB directly for simplicity and robustness.
-
-        const { phone, email, ticketId, eventId, quantity = 1, discountCode, customerName } = payload;
-
-        // 1. Validate Event
-        const { rows: events } = await pool.query('SELECT * FROM events WHERE id = $1', [eventId]);
-        if (events.length === 0) throw new Error('Event not found');
-        const event = events[0];
-
-        // 2. Validate Ticket
-        const { rows: ticketTypes } = await pool.query('SELECT price, name FROM event_ticket_types WHERE id = $1 AND event_id = $2', [ticketId, eventId]);
-        if (ticketTypes.length === 0) throw new Error('Ticket type not found');
-        const ticketType = ticketTypes[0];
-
-        let amount = parseFloat(ticketType.price) * parseInt(quantity, 10);
-        let discountAmount = 0;
-
-        // 3. Discount
-        if (discountCode) {
-            const { rows: discounts } = await pool.query("SELECT * FROM discount_codes WHERE code = $1 AND event_id = $2 AND status = 'active'", [discountCode, eventId]);
-            if (discounts.length > 0) {
-                const d = discounts[0];
-                if (d.type === 'percentage') {
-                    // e.g. value 10 means 10% off
-                    discountAmount = (amount * parseFloat(d.value)) / 100;
-                } else {
-                    // Fixed amount
-                    discountAmount = parseFloat(d.value);
-                }
-                amount = Math.max(0, amount - discountAmount);
-            }
-        }
-
-        const paymentData = {
-            invoice_id: `INV-${Date.now()}`,
-            email,
-            phone_number: phone,
-            amount: amount,
-            status: 'pending',
-            payment_method: 'payd',
-            event_id: eventId,
-            organizer_id: event.organizer_id,
-            ticket_type_id: ticketId,
-            metadata: {
-                ticket_type_id: ticketId,
-                quantity: quantity,
-                customer_name: customerName,
-                event_name: event.name
-            }
-        };
-
-        // Insert Payment
-        // Use direct insert keys
-        const insertRes = await pool.query(
-            `INSERT INTO payments (invoice_id, email, mobile_payment, amount, status, payment_method, event_id, organizer_id, ticket_type_id, metadata, whatsapp_number)
-              VALUES ($1, $2, $3, $4, 'pending', 'payd', $5, $6, $7, $8, $9) RETURNING *`,
-            [paymentData.invoice_id, email, phone, amount, eventId, event.organizer_id, ticketId, JSON.stringify(paymentData.metadata), phone]
-        );
-        const payment = insertRes.rows[0];
-
-        // Call Payment Gateway
-        const gwResult = await this.initiatePayment({ ...paymentData, firstName: customerName?.split(' ')[0], narrative: 'Ticket Purchase' });
-
-        // Update Payment
-        await pool.query("UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2", [gwResult.reference, payment.id]);
-
-        return { ...gwResult, paymentId: payment.id };
-    }
 
     async initiateProductPayment(payload, user) {
         const { phone, email, amount, productId, sellerId, productName, customerName, narrative, city, location, quantity = 1 } = payload;
