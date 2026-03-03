@@ -91,7 +91,7 @@ DROP TYPE IF EXISTS event_status CASCADE;
 DELETE FROM order_items 
 WHERE product_id IN (
     SELECT id FROM products 
-    WHERE product_type = 'ticket' OR product_type = 'event'
+    WHERE product_type::text = 'ticket' OR product_type::text = 'event'
 );
 
 -- Remove any orders that only had tickets (now have 0 items)
@@ -118,8 +118,8 @@ BEGIN
         
         -- 2. Alter column to use new type
         ALTER TABLE products 
-            ALTER COLUMN type TYPE product_type_new 
-            USING type::text::product_type_new;
+            ALTER COLUMN product_type TYPE product_type_new 
+            USING product_type::text::product_type_new;
         
         -- 3. Drop old enum
         DROP TYPE product_type;
@@ -136,7 +136,7 @@ END $$;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'platform_fees') THEN
-        EXECUTE 'DELETE FROM platform_fees WHERE product_type = ''ticket'' OR product_type = ''event''';
+        EXECUTE 'DELETE FROM platform_fees WHERE product_type::text = ''ticket'' OR product_type::text = ''event''';
     END IF;
 END $$;
 
