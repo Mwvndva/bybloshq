@@ -1,1 +1,0 @@
-ALTER TABLE sellers ADD COLUMN IF NOT EXISTS instagram_link VARCHAR(255);

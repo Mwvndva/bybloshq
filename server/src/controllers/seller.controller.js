@@ -1,4 +1,3 @@
-import jwt from 'jsonwebtoken';
 import { query, pool } from '../config/database.js';
 import payoutService from '../services/payout.service.js';
 import whatsappService from '../services/whatsapp.service.js';
@@ -588,15 +587,11 @@ export const getSellerById = async (req, res) => {
   }
 };
 
-// @desc    Create withdrawal request
-// @route   POST /api/sellers/withdrawal-request
-// @access  Private
-// @desc    Create withdrawal request
-// @route   POST /api/sellers/withdrawal-request
-// @access  Private
-// @desc    Create withdrawal request
-// @route   POST /api/sellers/withdrawal-request
-// @access  Private
+/**
+ * @desc    Create withdrawal request
+ * @route   POST /api/sellers/withdrawal-request
+ * @access  Private
+ */
 export const createWithdrawalRequest = async (req, res) => {
   const sellerId = req.user?.id;
   const { amount, mpesaNumber, mpesaName } = req.body;

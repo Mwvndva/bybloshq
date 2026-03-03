@@ -14,10 +14,10 @@ const calculatePlatformFee = (amount, commissionRate = Fees.PLATFORM_COMMISSION_
   // Ensure commission rate is between 0 and 1
   const rate = Math.max(0, Math.min(1, commissionRate));
 
-  // Calculate fee and round to 2 decimal places
-  const fee = Math.round(amount * rate * 100) / 100;
-
-  return fee;
+  // Calculate in integer paise to avoid floating point issues
+  const amountPaise = Math.round(amount * 100);
+  const feePaise = Math.round(amountPaise * rate);
+  return feePaise / 100;
 };
 
 /**
@@ -31,10 +31,12 @@ const calculateSellerPayout = (amount, commissionRate = Fees.PLATFORM_COMMISSION
     throw new Error('Invalid amount provided for payout calculation');
   }
 
-  const fee = calculatePlatformFee(amount, commissionRate);
-  const payout = Math.round((amount - fee) * 100) / 100;
+  const rate = Math.max(0, Math.min(1, commissionRate));
+  const amountPaise = Math.round(amount * 100);
+  const feePaise = Math.round(amountPaise * rate);
+  const payoutPaise = amountPaise - feePaise;
 
-  return payout;
+  return payoutPaise / 100;
 };
 
 /**

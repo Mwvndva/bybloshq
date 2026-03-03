@@ -19,115 +19,101 @@ export const getSellerAnalytics = async (req, res, next) => {
   console.log('Seller ID:', sellerId);
 
   try {
-    // Start a transaction
-    await pool.query('BEGIN');
-    console.log('Transaction started');
+    // Execute all queries in parallel for read-only operation
+    const [
+      productsResult,
+      sellerStatsResult,
+      monthlySalesResult,
+      recentOrdersResult,
+      debtStatsResult,
+      recentDebtsResult
+    ] = await Promise.all([
+      // 1. Get total products count
+      pool.query(
+        `SELECT COUNT(*) as total_products 
+         FROM products 
+         WHERE seller_id = $1 AND status = 'available'`,
+        [sellerId]
+      ),
+      // 2. Get stats from sellers table
+      pool.query(
+        `SELECT 
+           COALESCE(total_sales, 0) as total_sales, 
+           COALESCE(net_revenue, 0) as net_revenue, 
+           COALESCE(balance, 0) as balance 
+         FROM sellers WHERE id = $1`,
+        [sellerId]
+      ),
+      // 3. Get monthly sales data
+      pool.query(
+        `SELECT 
+           TO_CHAR(o.created_at, 'YYYY-MM') as month,
+           COALESCE(SUM(o.total_amount), 0) as sales
+         FROM product_orders o
+         WHERE o.seller_id = $1 
+           AND o.status IN ('PROCESSING', 'COMPLETED', 'DELIVERY_PENDING', 'COLLECTION_PENDING', 'SERVICE_PENDING')
+           AND o.created_at >= NOW() - INTERVAL '12 months'
+         GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
+         ORDER BY month`,
+        [sellerId]
+      ),
+      // 6. Get recent orders
+      pool.query(
+        `SELECT 
+           o.id, 
+           o.order_number,
+           o.status,
+           o.total_amount,
+           o.created_at,
+           (
+             SELECT json_agg(
+               json_build_object(
+                 'id', oi.id,
+                 'product_name', oi.product_name,
+                 'quantity', oi.quantity,
+                 'price', oi.product_price
+               )
+             )
+             FROM order_items oi 
+             WHERE oi.order_id = o.id
+           ) as items
+         FROM product_orders o
+         WHERE o.seller_id = $1
+           AND o.status IN ('PENDING', 'PROCESSING', 'COMPLETED')
+         ORDER BY o.created_at DESC
+         LIMIT 5`,
+        [sellerId]
+      ),
+      // 7a. Get pending debt count and total amount
+      pool.query(
+        `SELECT 
+           COUNT(*) as count,
+           COALESCE(SUM(amount), 0) as total_amount
+         FROM client_debts 
+         WHERE seller_id = $1 AND is_paid = false`,
+        [sellerId]
+      ),
+      // 7b. Get recent debt list
+      pool.query(
+        `SELECT 
+           cd.id,
+           cd.amount,
+           cd.created_at,
+           c.full_name as client_name,
+           c.phone as client_phone,
+           p.name as product_name
+         FROM client_debts cd
+         JOIN clients c ON cd.client_id = c.id
+         JOIN products p ON cd.product_id = p.id
+         WHERE cd.seller_id = $1 AND cd.is_paid = false
+         ORDER BY cd.created_at DESC
+         LIMIT 5`,
+        [sellerId]
+      )
+    ]);
 
-    // 1. Get total products count
-    const productsResult = await pool.query(
-      `SELECT COUNT(*) as total_products 
-       FROM products 
-       WHERE seller_id = $1 AND status = 'available'`,
-      [sellerId]
-    );
-
-
-    // 2. Get stats from sellers table (Source of Truth)
-    console.log('Fetching seller stats from sellers table...');
-    const sellerStatsResult = await pool.query(
-      `SELECT 
-         COALESCE(total_sales, 0) as total_sales, 
-         COALESCE(net_revenue, 0) as net_revenue, 
-         COALESCE(balance, 0) as balance 
-       FROM sellers WHERE id = $1`,
-      [sellerId]
-    );
     const sellerStats = sellerStatsResult.rows[0] || { total_sales: 0, net_revenue: 0, balance: 0 };
 
-
-
-
-    // 3. Get monthly sales data (using product_orders directly to avoid overcounting)
-    console.log('Fetching monthly sales data...');
-    const monthlySalesResult = await pool.query(
-      `SELECT 
-         TO_CHAR(o.created_at, 'YYYY-MM') as month,
-         COALESCE(SUM(o.total_amount), 0) as sales
-       FROM product_orders o
-       WHERE o.seller_id = $1 
-         AND o.status IN ('PROCESSING', 'COMPLETED', 'DELIVERY_PENDING', 'COLLECTION_PENDING', 'SERVICE_PENDING')
-         AND o.created_at >= NOW() - INTERVAL '12 months'
-       GROUP BY TO_CHAR(o.created_at, 'YYYY-MM')
-       ORDER BY month`,
-      [sellerId]
-    );
-
-
-    const sellerBalance = parseFloat(sellerStats.balance);
-
-
-    // 6. Get recent orders
-    console.log('Fetching recent orders...');
-    const recentOrdersResult = await pool.query(
-      `SELECT 
-         o.id, 
-         o.order_number,
-         o.status,
-         o.total_amount,
-         o.created_at,
-         (
-           SELECT json_agg(
-             json_build_object(
-               'id', oi.id,
-               'product_name', oi.product_name,
-               'quantity', oi.quantity,
-               'price', oi.product_price
-             )
-           )
-           FROM order_items oi 
-           WHERE oi.order_id = o.id
-         ) as items
-       FROM product_orders o
-       WHERE o.seller_id = $1
-         AND o.status IN ('PENDING', 'PROCESSING', 'COMPLETED')
-       ORDER BY o.created_at DESC
-       LIMIT 5`,
-      [sellerId]
-    );
-
-
-    // 7. Get pending debt count, total amount, and recent debt list
-    console.log('Fetching pending debts...');
-    const debtStatsResult = await pool.query(
-      `SELECT 
-         COUNT(*) as count,
-         COALESCE(SUM(amount), 0) as total_amount
-       FROM client_debts 
-       WHERE seller_id = $1 AND is_paid = false`,
-      [sellerId]
-    );
-
-    console.log('Fetching recent debts list...');
-    const recentDebtsResult = await pool.query(
-      `SELECT 
-         cd.id,
-         cd.amount,
-         cd.created_at,
-         c.full_name as client_name,
-         c.phone as client_phone,
-         p.name as product_name
-       FROM client_debts cd
-       JOIN clients c ON cd.client_id = c.id
-       JOIN products p ON cd.product_id = p.id
-       WHERE cd.seller_id = $1 AND cd.is_paid = false
-       ORDER BY cd.created_at DESC
-       LIMIT 5`,
-      [sellerId]
-    );
-
-    // Commit the transaction
-    await pool.query('COMMIT');
-    console.log('Transaction committed successfully');
 
     try {
       // Format the response

@@ -1,6 +1,7 @@
 import ProductModel from '../models/product.model.js';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
+import cacheService from './cache.service.js';
 
 class ProductService {
     /**
@@ -71,6 +72,10 @@ class ProductService {
 
         const product = await ProductModel.create(null, productData); // Use default pool
         logger.info('Product created:', { id: product.id, sellerId });
+
+        // Invalidate cache
+        await cacheService.delete("products:*");
+
         return product;
     }
 
@@ -146,6 +151,10 @@ class ProductService {
             }
 
             await client.query('COMMIT');
+
+            // Invalidate cache
+            await cacheService.delete("products:*");
+
             return updatedProduct;
 
         } catch (error) {
@@ -226,6 +235,10 @@ class ProductService {
             if (!exists) throw new Error('Product not found');
             if (exists.seller_id !== sellerId) throw new Error('Unauthorized');
         }
+
+        // Invalidate cache
+        await cacheService.delete("products:*");
+
         return true;
     }
 }

@@ -31,8 +31,10 @@ export const BybxProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         alert(`Now playing Unlocked Audio: ${name}`);
     };
 
+    const value = React.useMemo(() => ({ onFileLoaded, decryptedFile }), [decryptedFile]);
+
     return (
-        <BybxContext.Provider value={{ onFileLoaded, decryptedFile }}>
+        <BybxContext.Provider value={value}>
             {children}
         </BybxContext.Provider>
     );
