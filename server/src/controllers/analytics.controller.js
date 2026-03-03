@@ -7,35 +7,28 @@ import { AppError } from '../utils/errorHandler.js';
  * @access  Private/Seller
  */
 export const getSellerAnalytics = async (req, res, next) => {
-  console.log('=== getSellerAnalytics called ===');
-
-
   if (!req.user || !req.user.id) {
-    console.error('Error: User not authenticated or missing user ID');
     return next(new AppError('Authentication required', 401));
   }
 
-  const sellerId = req.user.id; // Get seller ID from authenticated user
-  console.log('Seller ID:', sellerId);
+  const sellerId = req.user.id;
 
   try {
-    // Execute all queries in parallel for read-only operation
+    // Run all read-only queries in parallel — no transaction needed
     const [
       productsResult,
       sellerStatsResult,
       monthlySalesResult,
       recentOrdersResult,
-      debtStatsResult,
-      recentDebtsResult
     ] = await Promise.all([
-      // 1. Get total products count
+      // 1. Total products count
       pool.query(
         `SELECT COUNT(*) as total_products 
          FROM products 
          WHERE seller_id = $1 AND status = 'available'`,
         [sellerId]
       ),
-      // 2. Get stats from sellers table
+      // 2. Seller stats (source of truth)
       pool.query(
         `SELECT 
            COALESCE(total_sales, 0) as total_sales, 
@@ -44,7 +37,7 @@ export const getSellerAnalytics = async (req, res, next) => {
          FROM sellers WHERE id = $1`,
         [sellerId]
       ),
-      // 3. Get monthly sales data
+      // 3. Monthly sales (last 12 months)
       pool.query(
         `SELECT 
            TO_CHAR(o.created_at, 'YYYY-MM') as month,
@@ -57,7 +50,7 @@ export const getSellerAnalytics = async (req, res, next) => {
          ORDER BY month`,
         [sellerId]
       ),
-      // 6. Get recent orders
+      // 4. Recent orders
       pool.query(
         `SELECT 
            o.id, 
@@ -84,121 +77,98 @@ export const getSellerAnalytics = async (req, res, next) => {
          LIMIT 5`,
         [sellerId]
       ),
-      // 7a. Get pending debt count and total amount
-      pool.query(
-        `SELECT 
-           COUNT(*) as count,
-           COALESCE(SUM(amount), 0) as total_amount
-         FROM client_debts 
-         WHERE seller_id = $1 AND is_paid = false`,
-        [sellerId]
-      ),
-      // 7b. Get recent debt list
-      pool.query(
-        `SELECT 
-           cd.id,
-           cd.amount,
-           cd.created_at,
-           c.full_name as client_name,
-           c.phone as client_phone,
-           p.name as product_name
-         FROM client_debts cd
-         JOIN clients c ON cd.client_id = c.id
-         JOIN products p ON cd.product_id = p.id
-         WHERE cd.seller_id = $1 AND cd.is_paid = false
-         ORDER BY cd.created_at DESC
-         LIMIT 5`,
-        [sellerId]
-      )
     ]);
 
     const sellerStats = sellerStatsResult.rows[0] || { total_sales: 0, net_revenue: 0, balance: 0 };
+    const sellerBalance = parseFloat(sellerStats.balance);
 
+    // 5. Debt queries — graceful fallback if client_debts table doesn't exist
+    let debtStats = { count: 0, total_amount: 0 };
+    let recentDebts = [];
 
     try {
-      // Format the response
-      const analyticsData = {
-        totalProducts: parseInt(productsResult.rows[0]?.total_products || 0),
-        totalSales: parseFloat(sellerStats.total_sales),
-        totalRevenue: parseFloat(sellerStats.net_revenue), // Map net_revenue to totalRevenue (Revenue card)
-        totalPayout: parseFloat(sellerStats.net_revenue),   // Keep for compatibility
-        balance: sellerBalance,
-        monthlySales: monthlySalesResult.rows.map(row => ({
-          month: row.month,
-          sales: parseFloat(row.sales || 0)
-        })),
-        recentOrders: recentOrdersResult.rows.map(order => ({
-          id: order.id,
-          orderNumber: order.order_number,
-          status: order.status,
-          totalAmount: parseFloat(order.total_amount || 0),
-          createdAt: order.created_at,
-          items: order.items || []
-        })),
-        pendingDebtCount: parseInt(debtStatsResult.rows[0]?.count || 0),
-        pendingDebt: parseFloat(debtStatsResult.rows[0]?.total_amount || 0),
-        recentDebts: recentDebtsResult.rows.map(debt => ({
-          id: debt.id,
-          amount: parseFloat(debt.amount || 0),
-          clientName: debt.client_name,
-          clientPhone: debt.client_phone,
-          productName: debt.product_name,
-          createdAt: debt.created_at
-        }))
-      };
-
-
-
-      res.status(200).json({
-        status: 'success',
-        data: analyticsData
-      });
-    } catch (formatError) {
-      console.error('Error formatting response:', formatError);
-      throw new AppError('Error formatting analytics data', 500);
-    }
-  } catch (error) {
-    // Rollback in case of error
-    try {
-      await pool.query('ROLLBACK');
-      console.log('Transaction rolled back due to error');
-    } catch (rollbackError) {
-      console.error('Error rolling back transaction:', rollbackError);
+      const [debtStatsResult, recentDebtsResult] = await Promise.all([
+        pool.query(
+          `SELECT 
+             COUNT(*) as count,
+             COALESCE(SUM(amount), 0) as total_amount
+           FROM client_debts 
+           WHERE seller_id = $1 AND is_paid = false`,
+          [sellerId]
+        ),
+        pool.query(
+          `SELECT 
+             cd.id,
+             cd.amount,
+             cd.created_at,
+             c.full_name as client_name,
+             c.phone as client_phone,
+             p.name as product_name
+           FROM client_debts cd
+           JOIN clients c ON cd.client_id = c.id
+           JOIN products p ON cd.product_id = p.id
+           WHERE cd.seller_id = $1 AND cd.is_paid = false
+           ORDER BY cd.created_at DESC
+           LIMIT 5`,
+          [sellerId]
+        ),
+      ]);
+      debtStats = debtStatsResult.rows[0] || { count: 0, total_amount: 0 };
+      recentDebts = recentDebtsResult.rows.map(debt => ({
+        id: debt.id,
+        amount: parseFloat(debt.amount || 0),
+        clientName: debt.client_name,
+        clientPhone: debt.client_phone,
+        productName: debt.product_name,
+        createdAt: debt.created_at
+      }));
+    } catch (debtError) {
+      // client_debts table may not exist yet — return zeroed debt data, don't crash
+      console.warn('Debt query failed (table may not exist):', debtError.message);
     }
 
-    console.error('Error in getSellerAnalytics:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      detail: error.detail,
-      hint: error.hint,
-      query: error.query,
-      parameters: error.parameters
+    const analyticsData = {
+      totalProducts: parseInt(productsResult.rows[0]?.total_products || 0),
+      totalSales: parseFloat(sellerStats.total_sales),
+      totalRevenue: parseFloat(sellerStats.net_revenue),
+      totalPayout: parseFloat(sellerStats.net_revenue),
+      balance: sellerBalance,
+      monthlySales: monthlySalesResult.rows.map(row => ({
+        month: row.month,
+        sales: parseFloat(row.sales || 0)
+      })),
+      recentOrders: recentOrdersResult.rows.map(order => ({
+        id: order.id,
+        orderNumber: order.order_number,
+        status: order.status,
+        totalAmount: parseFloat(order.total_amount || 0),
+        createdAt: order.created_at,
+        items: order.items || []
+      })),
+      pendingDebtCount: parseInt(debtStats.count || 0),
+      pendingDebt: parseFloat(debtStats.total_amount || 0),
+      recentDebts,
+    };
+
+    return res.status(200).json({
+      status: 'success',
+      data: analyticsData
     });
 
-    // Handle specific database errors
-    if (error.code === '42P01') { // Undefined table
+  } catch (error) {
+    console.error('Error in getSellerAnalytics:', error.message);
+
+    if (error.code === '42P01') {
       const missingTable = error.message.includes('order_items') ? 'order_items' :
         error.message.includes('product_orders') ? 'product_orders' :
           error.message.includes('products') ? 'products' : 'required tables';
-      return next(new AppError(`Required database tables (${missingTable}) do not exist. Please run database migrations.`, 500));
+      return next(new AppError(`Required table (${missingTable}) missing. Run migrations.`, 500));
     }
-    if (error.code === '42P02') { // Undefined column
-      return next(new AppError('Database schema mismatch. Please check your database migrations.', 500));
+    if (error.code === '42P02') {
+      return next(new AppError('Database schema mismatch. Run migrations.', 500));
     }
-    if (error.code === '23505') { // Unique violation
-      return next(new AppError('Duplicate entry found in the database', 400));
-    }
-    if (error.code === '23503') { // Foreign key violation
-      return next(new AppError('Reference error: related data not found in the database', 400));
-    }
+    if (error instanceof AppError) return next(error);
 
-    // If it's already an AppError, pass it along
-    if (error instanceof AppError) {
-      return next(error);
-    }
-
-    // For any other error, return a generic 500 error with the actual error message
     return next(new AppError(`Error fetching analytics data: ${error.message}`, 500));
   }
 };
