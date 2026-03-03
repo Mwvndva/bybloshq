@@ -4,8 +4,6 @@ import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
 import BuyerService from './buyer.service.js';
 import SellerService from './seller.service.js';
-import OrganizerService from './organizer.service.js';
-import Organizer from '../models/organizer.model.js';
 import * as SellerModel from '../models/seller.model.js';
 import Buyer from '../models/buyer.model.js';
 import { signToken } from '../utils/jwt.js';
@@ -37,9 +35,6 @@ class AuthService {
         let profile = null;
 
         switch (targetType) {
-            case 'organizer':
-                profile = await Organizer.findByEmail(email);
-                break;
             case 'seller':
                 profile = await SellerModel.findSellerByEmail(email);
                 break;
@@ -71,8 +66,6 @@ class AuthService {
      */
     static async register(data, type) {
         switch (type) {
-            case 'organizer':
-                return await OrganizerService.register(data);
             case 'seller':
                 return await SellerService.register(data);
             case 'buyer':

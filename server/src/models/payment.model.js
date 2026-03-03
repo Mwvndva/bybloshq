@@ -25,7 +25,6 @@ class Payment {
       SELECT 
         id, invoice_id, amount, currency, status, 
         payment_method, mobile_payment, whatsapp_number, email,
-        event_id, organizer_id, ticket_type_id, ticket_id,
         metadata, created_at, updated_at
       FROM payments 
       WHERE invoice_id = $1
@@ -38,7 +37,6 @@ class Payment {
       SELECT 
         id, invoice_id, amount, currency, status, 
         payment_method, mobile_payment, whatsapp_number, email,
-        event_id, organizer_id, ticket_type_id, ticket_id,
         metadata, created_at, updated_at,
         provider_reference, api_ref
       FROM payments 
@@ -81,23 +79,6 @@ class Payment {
     return rows[0];
   }
 
-  static async findByEventId(eventId) {
-    const { rows } = await pool.query('SELECT * FROM payments WHERE event_id = $1', [eventId]);
-    return rows;
-  }
-
-  static async findByOrganizerId(organizerId) {
-    const { rows } = await pool.query('SELECT * FROM payments WHERE organizer_id = $1', [organizerId]);
-    return rows;
-  }
-
-  static async getTotalSalesByEvent(eventId) {
-    const { rows } = await pool.query(
-      'SELECT COALESCE(SUM(amount), 0) as total_sales FROM payments WHERE event_id = $1 AND status = $2',
-      [eventId, 'completed']
-    );
-    return parseFloat(rows[0].total_sales) || 0;
-  }
 
   static async update(client, id, updateData) {
     const fields = Object.keys(updateData);

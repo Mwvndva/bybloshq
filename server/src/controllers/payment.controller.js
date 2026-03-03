@@ -2,11 +2,9 @@ import { pool } from '../config/database.js';
 import paymentService from '../services/payment.service.js';
 import logger from '../utils/logger.js';
 import Payment from '../models/payment.model.js';
-import Event from '../models/event.model.js';
 import jwt from 'jsonwebtoken';
 import Order from '../models/order.model.js';
 import OrderService from '../services/order.service.js';
-import DiscountCode from '../models/discountCode.model.js';
 import Buyer from '../models/buyer.model.js';
 import Fees from '../config/fees.js';
 import { PaymentStatus, ProductType } from '../constants/enums.js';
@@ -99,33 +97,6 @@ class PaymentController {
     }
   }
 
-  /**
-   * Initiate payment
-   */
-  async initiatePayment(req, res) {
-    try {
-      logger.info('=== TICKET PAYMENT INITIATION ===', {
-        body: req.body,
-        endpoint: '/api/payments/initiate'
-      });
-      const { phone, email, ticketId, eventId, quantity = 1, discountCode } = req.body;
-      let { amount } = req.body; // Still capture for logging/matching if needed, but we recalculate
-
-      // Get event details to obtain organizer_id
-      const event = await Event.findById(eventId);
-      if (!event) {
-        return res.status(404).json({ status: 'error', message: 'Event not found' });
-      }
-
-    } catch (error) {
-      logger.error('Payment initiation failed:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Payment initiation failed',
-        error: error.message
-      });
-    }
-  }
 
   /**
    * Initiate product payment
