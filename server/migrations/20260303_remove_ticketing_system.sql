@@ -95,7 +95,7 @@ WHERE product_id IN (
 );
 
 -- Remove any orders that only had tickets (now have 0 items)
-DELETE FROM orders 
+DELETE FROM product_orders 
 WHERE id NOT IN (
     SELECT DISTINCT order_id FROM order_items
 );
