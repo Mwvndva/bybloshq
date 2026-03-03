@@ -226,9 +226,9 @@ export const sendPasswordResetEmail = async (email, token, userType = 'seller') 
 
     await sendEmail({
       to: email,
-      subject: `${appName} - ${userType === 'organizer' ? 'Organizer ' : ''}Password Reset Request`,
+      subject: `${appName} - Password Reset Request`,
       html,
-      text: `You requested a password reset for your ${userType} account. Please click on the following link to reset your password: ${resetUrl}`,
+      text: `You requested a password reset for your account. Please click on the following link to reset your password: ${resetUrl}`,
     });
 
     console.log('Password reset email sent successfully to:', email);
@@ -247,66 +247,6 @@ if (!process.env.EMAIL_HOST) {
   }
 }
 
-export const sendPaymentConfirmationEmail = async (email, paymentData) => {
-  try {
-    const templateData = {
-      // App info
-      appName: process.env.APP_NAME || 'Byblos Atelier',
-      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
-
-      // Payment & Ticket Info
-      ticketNumber: paymentData.ticketNumber || 'N/A',
-      ticketType: paymentData.ticketType || 'General Admission',
-      eventName: paymentData.eventName || paymentData.event_name || 'Event',
-      eventDate: paymentData.eventDate || paymentData.event_date || new Date().toLocaleDateString(),
-      eventLocation: paymentData.eventLocation || paymentData.event_location || 'Venue',
-      customerName: paymentData.customerName || paymentData.customer_name || 'Guest',
-      customerEmail: email,
-      price: parseFloat(paymentData.price || paymentData.amount || 0).toFixed(2),
-      quantity: paymentData.quantity || 1,
-      totalPrice: parseFloat(paymentData.totalPrice || paymentData.amount || 0).toFixed(2),
-      purchaseDate: paymentData.purchaseDate || new Date().toLocaleString(),
-      qrCode: paymentData.qrCode || '',
-      reference: paymentData.reference || paymentData.invoice_id,
-
-      // Compatibility aliases
-      event: paymentData.event_name || paymentData.eventName || 'Event',
-      formattedDate: paymentData.event_date || paymentData.eventDate || '',
-      ticket: {
-        number: paymentData.ticketNumber,
-        type: paymentData.ticketType,
-        price: paymentData.price,
-        quantity: paymentData.quantity
-      }
-    };
-
-    const html = await readTemplate('ticket-confirmation', templateData);
-
-    const mailOptions = {
-      to: email,
-      subject: `Your Ticket Confirmation - ${templateData.eventName}`,
-      html,
-      text: `Thank you for your purchase! Event: ${templateData.eventName}, Ticket: ${templateData.ticketNumber}`,
-      attachments: []
-    };
-
-    // Add QR code CID attachment if present
-    if (paymentData.qrCode && paymentData.qrCode.startsWith('data:image/')) {
-      const { qrCodeToBuffer } = await import('./qrCodeUtils.js');
-      const qrBuffer = await qrCodeToBuffer(paymentData.qrCode);
-      mailOptions.attachments.push({
-        filename: `ticket-qr.png`,
-        content: qrBuffer,
-        cid: 'qrcode'
-      });
-    }
-
-    await sendEmail(mailOptions);
-  } catch (error) {
-    console.error('Error sending payment confirmation email:', error);
-    throw error;
-  }
-};
 
 export const sendProductOrderConfirmationEmail = async (email, orderData) => {
   try {
@@ -391,7 +331,7 @@ export const sendWelcomeEmail = async (email, name) => {
       to: email,
       subject: 'Welcome to Byblos',
       html,
-      text: `Welcome to Byblos, ${name}! You can now log in to your account and start creating events.`,
+      text: `Welcome to Byblos, ${name}! You can now log in to your account and start shopping and selling uniquely.`,
     });
   } catch (error) {
     console.error('Error sending welcome email:', error);

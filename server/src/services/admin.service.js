@@ -7,8 +7,6 @@ class AdminService {
         const queries = {
             sellers: 'SELECT COUNT(*) FROM sellers',
             products: 'SELECT COUNT(*) FROM products',
-            organizers: 'SELECT COUNT(*) FROM organizers',
-            events: 'SELECT COUNT(*) FROM events',
             buyers: 'SELECT COUNT(*) FROM buyers',
             orders: 'SELECT COUNT(*) FROM product_orders', // Assuming product_orders table exists
             wishlists: 'SELECT COUNT(*) FROM wishlists' // Corrected table name
@@ -33,10 +31,8 @@ class AdminService {
             totalSellers: stats.total_sellers,
             totalBuyers: stats.total_buyers, // Total Clients
             totalShops: stats.total_sellers, // Same as sellers
-            totalEvents: stats.total_events,
             totalProducts: stats.total_products,
             totalOrders: stats.total_orders,
-            totalOrganizers: stats.total_organizers,
             totalWishlists: stats.total_wishlists
         };
     }
@@ -193,23 +189,7 @@ class AdminService {
         return res.rows[0];
     }
 
-    // Organizers
-    async getAllOrganizers() {
-        const query = `
-            SELECT o.id, o.full_name as name, o.email, o.whatsapp_number as phone, o.status, o.created_at, COUNT(e.id) as events_count
-            FROM organizers o
-            LEFT JOIN events e ON o.id = e.organizer_id
-            GROUP BY o.id
-            ORDER BY o.created_at DESC
-        `;
-        const { rows } = await pool.query(query);
-        return rows;
-    }
 
-    async updateOrganizerStatus(id, status) {
-        const res = await pool.query('UPDATE organizers SET status = $1 WHERE id = $2 RETURNING *', [status, id]);
-        return res.rows[0];
-    }
 }
 
 export default new AdminService();

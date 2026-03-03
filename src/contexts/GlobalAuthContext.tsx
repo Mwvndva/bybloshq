@@ -11,7 +11,7 @@ import { authStateManager } from '@/lib/authState';
 // TYPES
 // ============================================================================
 
-export type UserRole = 'buyer' | 'seller' | 'organizer' | 'admin';
+export type UserRole = 'buyer' | 'seller' | 'admin';
 
 // Base user interface with common fields
 interface BaseUser {
@@ -54,19 +54,12 @@ export interface SellerProfile extends BaseUser {
     facebookLink?: string;
 }
 
-export interface OrganizerProfile extends BaseUser {
-    full_name: string;
-    whatsapp_number: string;
-    is_verified?: boolean;
-    last_login?: string | null;
-}
-
 export interface AdminProfile extends BaseUser {
     // Admin has minimal profile data
 }
 
 // Union type for all profile types
-export type UserProfile = BuyerProfile | SellerProfile | OrganizerProfile | AdminProfile;
+export type UserProfile = BuyerProfile | SellerProfile | AdminProfile;
 
 // Global user type with role discrimination
 export interface GlobalUser {
@@ -98,18 +91,9 @@ export interface SellerRegistrationData {
     location?: string;
 }
 
-export interface OrganizerRegistrationData {
-    full_name: string;
-    email: string;
-    whatsapp_number: string;
-    password: string;
-    passwordConfirm: string;
-}
-
 export type RegistrationData =
     | BuyerRegistrationData
-    | SellerRegistrationData
-    | OrganizerRegistrationData;
+    | SellerRegistrationData;
 
 // ============================================================================
 // CONTEXT TYPE
@@ -167,16 +151,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 return buyerApi;
             case 'seller':
                 return sellerApi;
-            case 'organizer':
-                return {
-                    getProfile: () => apiClient.get('/organizers/me'),
-                    login: (email: string, password: string) => apiClient.post('/organizers/login', { email, password }),
-                    register: (data: OrganizerRegistrationData) => apiClient.post('/organizers/register', data),
-                    forgotPassword: (email: string) => apiClient.post('/organizers/forgot-password', { email }),
-                    resetPassword: (token: string, password: string, passwordConfirm: string) =>
-                        apiClient.post(`/organizers/reset-password/${token}`, { password, passwordConfirm }),
-                    logout: () => apiClient.post('/organizers/logout')
-                };
             case 'admin':
                 return adminApi;
             default:
@@ -212,7 +186,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         const path = location.pathname;
         if (path.startsWith('/buyer')) return 'buyer';
         if (path.startsWith('/seller')) return 'seller';
-        if (path.startsWith('/organizer')) return 'organizer';
         if (path.startsWith('/admin')) return 'admin';
         return null;
     };
@@ -261,15 +234,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 }
                 // For admin, we don't have a profile endpoint, so create minimal profile
                 profileData = { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() };
-            } else if (currentRole === 'organizer') {
-                const response = await api.getProfile();
-                profileData = response.data.data.organizer;
             } else {
                 profileData = await api.getProfile();
             }
 
-            // CROSS-ROLE FIX: Accept buyer profile even if backend returns seller userType
-            // This allows sellers who make purchases to access buyer dashboard
             setUser({
                 role: currentRole,
                 profile: profileData,
@@ -286,7 +254,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             // This prevents the "Split Identity" 404 from blocking access
             if (currentRole === 'buyer' && error.response?.status === 404) {
                 console.log('[GlobalAuth] Buyer profile not found, but may have cross-role access');
-                // Don't set user to null - let refreshRole handle it
             } else {
                 setUser(null);
                 localStorage.removeItem(sessionKey);
@@ -312,14 +279,8 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             const api = getApiForRole(role);
             let profileData;
 
-            if (role === 'organizer') {
-                await api.login(email, password);
-                const profileResponse = await api.getProfile();
-                profileData = profileResponse.data.data.organizer;
-            } else {
-                const response = await api.login({ email, password });
-                profileData = role === 'buyer' ? response.buyer : response.seller;
-            }
+            const response = await api.login({ email, password });
+            profileData = role === 'buyer' ? response.buyer : response.seller;
 
             setUser({
                 role,
@@ -368,14 +329,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
             // Fetch profile with the token
             const api = getApiForRole(role);
-            let profileData;
-
-            if (role === 'organizer') {
-                const profileResponse = await api.getProfile();
-                profileData = profileResponse.data.data.organizer;
-            } else {
-                profileData = await api.getProfile();
-            }
+            const profileData = await api.getProfile();
 
             setUser({
                 role,
@@ -395,10 +349,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             setIsLoading(false);
         }
     }, []);
-
-    // ============================================================================
-    // ADMIN LOGIN (PIN-BASED)
-    // ============================================================================
 
     // ============================================================================
     // ADMIN LOGIN (EMAIL/PASSWORD)
@@ -452,11 +402,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             const api = getApiForRole(role);
             let profileData;
 
-            if (role === 'organizer') {
-                await api.register(data as OrganizerRegistrationData);
-                const profileResponse = await api.getProfile();
-                profileData = profileResponse.data.data.organizer;
-            } else if (role === 'buyer') {
+            if (role === 'buyer') {
                 const response = await api.register(data as BuyerRegistrationData);
                 profileData = response.buyer;
             } else if (role === 'seller') {
@@ -497,7 +443,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
     const logout = useCallback(() => {
         // Clear session active flags for all roles
-        ['buyer', 'seller', 'organizer', 'admin'].forEach(role => {
+        ['buyer', 'seller', 'admin'].forEach(role => {
             localStorage.removeItem(`${role}SessionActive`);
         });
         if (!user) return;
@@ -539,10 +485,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             const api = getApiForRole(newRole);
             let profileData;
 
-            if (newRole === 'organizer') {
-                const profileResponse = await api.getProfile();
-                profileData = profileResponse.data.data.organizer;
-            } else if (newRole === 'admin') {
+            if (newRole === 'admin') {
                 profileData = { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() };
             } else {
                 profileData = await api.getProfile();
@@ -608,12 +551,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const resetPassword = useCallback(async (token: string, newPassword: string, role: UserRole) => {
         try {
             const api = getApiForRole(role);
-
-            if (role === 'organizer') {
-                await api.resetPassword(token, newPassword, newPassword);
-            } else {
-                await api.resetPassword(token, newPassword);
-            }
+            await api.resetPassword(token, newPassword);
 
             toast.success('Password updated', {
                 description: 'You can now log in with your new password.',
@@ -644,9 +582,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 const isAuth = adminApi.isAuthenticated();
                 if (!isAuth) throw new Error('Not authenticated');
                 profileData = { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() };
-            } else if (role === 'organizer') {
-                const response = await api.getProfile();
-                profileData = response.data.data.organizer;
             } else {
                 profileData = await api.getProfile();
             }
@@ -703,7 +638,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         role: user?.role || null,
         login,
         loginWithToken,
-        loginAdmin, // Now accepts (email, password)
+        loginAdmin,
         register,
         logout,
         refreshRole,
@@ -766,26 +701,6 @@ export const useSellerAuth = () => {
     };
 };
 
-export const useOrganizerAuth = () => {
-    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
-
-    return {
-        organizer: user?.role === 'organizer' ? user.profile as OrganizerProfile : null,
-        token: isAuthenticated ? 'authenticated' : null,
-        isAuthenticated: isAuthenticated && user?.role === 'organizer',
-        isLoading,
-        error: null,
-        login: (email: string, password: string) => login(email, password, 'organizer'),
-        register: (data: OrganizerRegistrationData) => register(data, 'organizer'),
-        logout,
-        forgotPassword: (email: string) => forgotPassword(email, 'organizer'),
-        resetPassword: (token: string, password: string, passwordConfirm: string) => resetPassword(token, password, 'organizer'),
-        updateOrganizer: (updates: Partial<OrganizerProfile>) => updateProfile(updates, 'organizer'),
-        clearError: () => { },
-        getToken: async () => isAuthenticated ? 'authenticated' : null,
-    };
-};
-
 export const useAdminAuth = () => {
     const { user, isAuthenticated, isLoading, loginAdmin, logout } = useGlobalAuth();
 
@@ -793,7 +708,7 @@ export const useAdminAuth = () => {
         isAuthenticated: isAuthenticated && user?.role === 'admin',
         loading: isLoading,
         error: null,
-        login: loginAdmin, // This now expects (email, password)
+        login: loginAdmin,
         logout,
     };
 };

@@ -26,20 +26,6 @@ const Header = () => {
 
           {/* Navigation - Always visible, responsive sizing */}
           <div className="flex items-center gap-3 md:gap-6">
-            {/* Event Organizer */}
-            <Link to="/organizer/events/new">
-              <Button
-                variant="ghost"
-                className="text-white hover:text-yellow-400 hover:bg-white/5 transition-all duration-300 flex items-center gap-2"
-                aria-label="Event Organizer"
-              >
-                <Calendar className="h-4 w-4" />
-                <span className="hidden sm:inline text-sm font-medium">
-                  Create Event
-                </span>
-              </Button>
-            </Link>
-
             {/* Sell / Dashboard */}
             <Link to={isSellerAuthenticated ? "/seller/dashboard" : "/seller/register"}>
               <Button

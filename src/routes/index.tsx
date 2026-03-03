@@ -1,8 +1,5 @@
 import { Suspense } from 'react';
 import { sellerRoutes } from './seller.routes';
-import { organizerRoutes } from './organizer.routes';
-import { eventRoutes } from './event.routes';
-import { ticketRoutes } from './ticket.routes';
 import { buyerRoutes } from './buyer.routes';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
@@ -40,8 +37,5 @@ export const routes = [
     ),
   },
   ...sellerRoutes,
-  ...organizerRoutes,
-  ...eventRoutes,
-  ...ticketRoutes,
   ...buyerRoutes,
 ];

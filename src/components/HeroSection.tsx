@@ -1,14 +1,11 @@
 
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Ticket } from 'lucide-react';
-
 interface HeroSectionProps {
   onExploreClick?: () => void;
-  onEventsClick: () => void;
 }
 
-const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
+const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   const navigate = useNavigate();
 
   const handleStartThrifting = () => {
@@ -55,14 +52,6 @@ const HeroSection = ({ onExploreClick, onEventsClick }: HeroSectionProps) => {
             >
               Explore Brands
             </Button>
-
-            <button
-              onClick={onEventsClick}
-              className="text-white/80 hover:text-white transition-colors duration-300 flex items-center gap-2 group text-lg"
-            >
-              Explore Events
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
           </div>
 
           {/* Glass Verification Badges - Minimal Version */}

@@ -104,201 +104,6 @@ const updateSellerStatus = async (req, res, next) => {
   }
 };
 
-const getAllOrganizers = async (req, res, next) => {
-  try {
-    const organizers = await AdminService.getAllOrganizers();
-    res.status(200).json({ status: 'success', results: organizers.length, data: organizers });
-  } catch (error) {
-    next(error);
-  }
-};
-
-const getOrganizerById = async (req, res, next) => {
-  // Re-use getAll logic or separate? Assuming specific service method or raw query for now if needed.
-  // The previous implementation had a specific query.
-  // I will implement a quick service method call logic here or inline using pool if lazy, 
-  // but better to add to service. I'll assume getOrganizerById exists or I'll just skip it for now.
-  // Wait, I didn't add getOrganizerById to AdminService.
-  // I'll skip it for this specific refactor step to stay focused or just implement it.
-  // Let's implement it in Service via a follow-up or just use the query logic here if needed? 
-  // No, I should fix the Service content. 
-  // Actually, I can just leave it for now or rely on getAll.
-  // The previous `getOrganizerById` logic was simple.
-  // I'll leave the function stub here.
-  res.status(501).json({ message: 'Not implemented yet in Refactor' });
-};
-
-const updateOrganizerStatus = async (req, res, next) => {
-  try {
-    const updated = await AdminService.updateOrganizerStatus(req.params.id, req.body.status);
-    if (!updated) return next(new AppError('Organizer not found', 404));
-    res.status(200).json({ status: 'success', data: updated });
-  } catch (error) {
-    next(error);
-  }
-};
-
-
-
-// Events management
-const getAllEvents = async (req, res, next) => {
-  try {
-    const result = await pool.query(
-      `SELECT 
-        e.id, 
-        e.name as title, 
-        e.description, 
-        e.start_date, 
-        e.end_date, 
-        e.location, 
-        e.status, 
-        e.created_at, 
-        o.full_name as organizer_name,
-        (SELECT COUNT(*) FROM tickets WHERE event_id = e.id) as attendees_count,
-        COALESCE(
-          (SELECT SUM(tt.price) 
-           FROM tickets t
-           JOIN event_ticket_types tt ON t.ticket_type_id = tt.id
-           WHERE t.event_id = e.id),
-          0
-        ) as total_revenue
-       FROM events e
-       LEFT JOIN organizers o ON e.organizer_id = o.id
-       ORDER BY e.start_date DESC`
-    );
-
-    res.status(200).json({
-      status: 'success',
-      results: result.rows.length,
-      data: result.rows.map(event => ({
-        ...event,
-        date: event.start_date,
-        status: event.status || 'upcoming',
-        attendees: parseInt(event.attendees_count, 10) || 0,
-        revenue: parseFloat(event.total_revenue) || 0,
-        createdAt: event.created_at
-      }))
-    });
-  } catch (error) {
-    console.error('Error getting events:', error);
-    // Return empty array if there's an error
-    res.status(200).json({
-      status: 'success',
-      results: 0,
-      data: []
-    });
-  }
-};
-
-const getEventById = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query(
-      `SELECT e.*, o.full_name as organizer_name
-       FROM events e
-       JOIN organizers o ON e.organizer_id = o.id
-       WHERE e.id = $1`,
-      [id]
-    );
-
-    if (result.rows.length === 0) {
-      return next(new AppError('No event found with that ID', 404));
-    }
-
-    const event = result.rows[0];
-    res.status(200).json({
-      status: 'success',
-      data: {
-        ...event,
-        title: event.name,
-        date: event.start_date,
-        status: event.status || 'upcoming',
-        createdAt: event.created_at
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-
-// Get tickets for an event
-const getEventTickets = async (req, res, next) => {
-  try {
-    const { id: eventId } = req.params;
-
-    // 1) Get event details
-    const eventResult = await pool.query(
-      'SELECT id, name, start_date, end_date, location FROM events WHERE id = $1',
-      [eventId]
-    );
-
-    if (eventResult.rows.length === 0) {
-      return next(new AppError('No event found with that ID', 404));
-    }
-
-    // 2) Get all tickets for the event with detailed ticket type information
-    const ticketsResult = await pool.query(
-      `SELECT 
-        t.id, 
-        t.ticket_number,
-        t.customer_name,
-        t.customer_email,
-        t.ticket_type_name,
-        t.price,
-        t.status,
-        t.created_at,
-        t.scanned,
-        t.scanned_at,
-        tt.id as ticket_type_id,
-        tt.name as ticket_type_name,
-        tt.description as ticket_type_description,
-        tt.quantity as ticket_type_quantity,
-        tt.sales_start_date as ticket_type_sales_start_date,
-        tt.sales_end_date as ticket_type_sales_end_date
-      FROM tickets t
-      LEFT JOIN event_ticket_types tt ON t.ticket_type_name = tt.name AND t.event_id = tt.event_id
-      WHERE t.event_id = $1
-      ORDER BY t.created_at DESC`,
-      [eventId]
-    );
-
-    // 3) Format the response with nested ticket type information
-    const tickets = ticketsResult.rows.map(ticket => ({
-      id: ticket.id,
-      ticket_number: ticket.ticket_number,
-      customer_name: ticket.customer_name,
-      customer_email: ticket.customer_email,
-      price: parseFloat(ticket.price || 0),
-      status: ticket.status,
-      created_at: ticket.created_at,
-      scanned: ticket.scanned,
-      scanned_at: ticket.scanned_at,
-      ticket_type: {
-        id: ticket.ticket_type_id,
-        name: ticket.ticket_type_name,
-        description: ticket.ticket_type_description || '',
-        price: parseFloat(ticket.price || 0),
-        quantity_available: parseInt(ticket.ticket_type_quantity || 0, 10),
-        sales_start: ticket.ticket_type_sales_start,
-        sales_end: ticket.ticket_type_sales_end
-      }
-    }));
-
-    // 4) Send response
-    res.status(200).json({
-      status: 'success',
-      results: tickets.length,
-      data: {
-        event: eventResult.rows[0],
-        tickets: tickets
-      }
-    });
-  } catch (error) {
-    console.error('Error getting event tickets:', error);
-    next(error);
-  }
-};
 
 // Products management
 const getAllProducts = async (req, res, next) => {
@@ -429,52 +234,6 @@ const getProductStatus = (stock) => {
   return 'Out of Stock';
 };
 
-// Get monthly event counts
-const getMonthlyEvents = async (req, res, next) => {
-  try {
-    console.log('Fetching monthly event counts...');
-
-    // Query to get event counts for the last 12 months
-    const query = `
-      WITH months AS (
-        SELECT 
-          DATE_TRUNC('month', CURRENT_DATE - INTERVAL '11 months' + (n || ' months')::interval) AS month
-        FROM generate_series(0, 11) n
-      )
-      SELECT 
-        TO_CHAR(m.month, 'YYYY-MM-DD') AS month,
-        COUNT(e.id) AS event_count
-      FROM months m
-      LEFT JOIN events e ON DATE_TRUNC('month', e.created_at) = m.month
-      GROUP BY m.month
-      ORDER BY m.month ASC;
-    `;
-
-    console.log('Executing events query...');
-    const result = await pool.query(query);
-    console.log('Query result rows:', result.rows);
-
-    // Format the response
-    const monthlyEvents = result.rows.map(row => ({
-      month: row.month,
-      event_count: parseInt(row.event_count) || 0
-    }));
-
-    res.status(200).json({
-      status: 'success',
-      data: monthlyEvents
-    });
-  } catch (error) {
-    console.error('Error fetching monthly events:', {
-      message: error.message,
-      code: error.code,
-      detail: error.detail,
-      hint: error.hint,
-      stack: error.stack
-    });
-    next(new AppError(`Failed to fetch monthly event data: ${error.message}`, 500));
-  }
-};
 
 // Get monthly metrics for sellers, products, and products sold
 const getMonthlyMetrics = async (req, res, next) => {
@@ -673,23 +432,14 @@ const getAllWithdrawalRequests = async (req, res, next) => {
                 wr.processed_at,
                 wr.processed_by,
                 wr.metadata,
-                CASE
-                    WHEN wr.seller_id    IS NOT NULL AND wr.event_id IS NULL THEN 'seller'
-                    WHEN wr.organizer_id IS NOT NULL AND wr.event_id IS NULL THEN 'organizer'
-                    WHEN wr.event_id     IS NOT NULL THEN 'event'
-                END AS entity_type,
-                COALESCE(s.full_name, o.full_name) AS entity_name,
-                COALESCE(s.email, o.email)         AS entity_email,
-                COALESCE(s.whatsapp_number, o.whatsapp_number) AS entity_phone,
-                COALESCE(s.balance, o.balance, ev.balance)     AS current_balance,
-                ev.name AS event_name,
-                wr.seller_id,
-                wr.organizer_id,
-                wr.event_id
+                'seller' AS entity_type,
+                s.full_name AS entity_name,
+                s.email         AS entity_email,
+                s.whatsapp_number AS entity_phone,
+                s.balance     AS current_balance,
+                wr.seller_id
              FROM withdrawal_requests wr
              LEFT JOIN sellers    s  ON wr.seller_id    = s.id
-             LEFT JOIN organizers o  ON wr.organizer_id = o.id
-             LEFT JOIN events     ev ON wr.event_id     = ev.id
              ${where}
              ORDER BY wr.created_at DESC
              LIMIT 500`,
@@ -711,10 +461,7 @@ const getAllWithdrawalRequests = async (req, res, next) => {
         entityEmail: r.entity_email,
         entityPhone: r.entity_phone,
         currentBalance: parseFloat(r.current_balance || 0),
-        eventName: r.event_name,
         sellerId: r.seller_id,
-        organizerId: r.organizer_id,
-        eventId: r.event_id,
         failureReason: r.metadata?.api_error || r.metadata?.remarks || null,
         mpesaReceipt: r.metadata?.mpesa_receipt || null,
         reconciliationFlag: r.metadata?.reconciliation_flag || null,
@@ -742,11 +489,10 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
 
     const { rows: [request] } = await pool.query(
       `SELECT wr.*, 
-                    COALESCE(s.whatsapp_number, o.whatsapp_number) AS entity_phone,
-                    COALESCE(s.balance, o.balance) AS entity_balance
+                    s.whatsapp_number AS entity_phone,
+                    s.balance AS entity_balance
              FROM withdrawal_requests wr
              LEFT JOIN sellers    s ON wr.seller_id    = s.id
-             LEFT JOIN organizers o ON wr.organizer_id = o.id
              WHERE wr.id = $1`,
       [id]
     );
@@ -817,111 +563,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
 // @desc    Mark event as paid (withdrawal processed)
 // @route   PATCH /api/admin/events/:eventId/mark-paid
 // @access  Private (Admin)
-const markEventAsPaid = async (req, res, next) => {
-  try {
-    const { eventId } = req.params;
-    const { withdrawalMethod, withdrawalDetails } = req.body;
 
-    // Validate event ID
-    if (!eventId || isNaN(parseInt(eventId))) {
-      return next(new AppError('Invalid event ID', 400));
-    }
-
-    // Check if event exists
-    // Check if event exists and withdrawal_status column is available
-    let eventQuery = 'SELECT id, name FROM events WHERE id = $1';
-    // Check if column exists (simple way: try to select it, if fails, it doesn't exist)
-    let hasWithdrawalStatus = true;
-    try {
-      await pool.query('SELECT withdrawal_status FROM events LIMIT 1');
-      eventQuery = 'SELECT id, name, withdrawal_status FROM events WHERE id = $1';
-    } catch (e) {
-      hasWithdrawalStatus = false;
-    }
-
-    const eventResult = await pool.query(eventQuery, [eventId]);
-
-    if (eventResult.rows.length === 0) {
-      return next(new AppError('Event not found', 404));
-    }
-
-    const event = eventResult.rows[0];
-
-    // Check if event is already marked as paid
-    if (hasWithdrawalStatus && event.withdrawal_status === 'paid') {
-      return next(new AppError('Event withdrawal has already been processed', 400));
-    }
-
-    if (!hasWithdrawalStatus) {
-      // If column is missing, we can't mark as paid properly in DB
-      // But we can still return successfully if the user just wants to see the financial summary
-      // However, the USER request implies they want to MARK it.
-      // For now, let's just abort with a clear message if we can't save the status.
-      return next(new AppError('Withdrawal tracking columns missing in database. Please run migrations.', 400));
-    }
-
-    // Calculate total revenue for the event
-    const revenueQuery = `
-      SELECT 
-        COALESCE(SUM(t.total_price), 0) as total_revenue
-      FROM tickets t
-      WHERE t.event_id = $1 AND t.status = 'paid'
-    `;
-    const revenueResult = await pool.query(revenueQuery, [eventId]);
-    const totalRevenue = parseFloat(revenueResult.rows[0].total_revenue || 0);
-
-    // Calculate platform fee (6%) and net payout (94%)
-    const platformFee = totalRevenue * 0.06;
-    const netPayout = totalRevenue * 0.94;
-
-    // Update event with withdrawal status
-    const updateQuery = `
-      UPDATE events 
-      SET 
-        withdrawal_status = 'paid',
-        withdrawal_date = NOW(),
-        withdrawal_amount = $1,
-        withdrawal_method = $2,
-        withdrawal_details = $3,
-        updated_at = NOW()
-      WHERE id = $4
-      RETURNING *
-    `;
-
-    const updateResult = await pool.query(updateQuery, [
-      netPayout,
-      withdrawalMethod || 'manual',
-      JSON.stringify(withdrawalDetails || {}),
-      eventId
-    ]);
-
-    const updatedEvent = updateResult.rows[0];
-
-    res.status(200).json({
-      status: 'success',
-      message: 'Event marked as paid successfully',
-      data: {
-        event: {
-          id: updatedEvent.id,
-          name: updatedEvent.name,
-          withdrawal_status: updatedEvent.withdrawal_status,
-          withdrawal_date: updatedEvent.withdrawal_date,
-          withdrawal_amount: updatedEvent.withdrawal_amount,
-          withdrawal_method: updatedEvent.withdrawal_method
-        },
-        financial_summary: {
-          total_revenue: totalRevenue,
-          platform_fee: platformFee,
-          net_payout: netPayout
-        }
-      }
-    });
-
-  } catch (error) {
-    console.error('Error marking event as paid:', error);
-    next(new AppError('Failed to mark event as paid', 500));
-  }
-};
 
 // Get financial metrics (sales, commission, refunds)
 const getFinancialMetrics = async (req, res, next) => {
@@ -1059,19 +701,11 @@ export {
   getAllSellers,
   getSellerById,
   updateSellerStatus,
-  getAllOrganizers,
-  getOrganizerById,
-  getMonthlyEvents,
-  updateOrganizerStatus,
   getAllBuyers,
   getBuyerById,
-  getAllEvents,
-  getEventById,
-  getEventTickets,
   getAllProducts,
   getSellerProducts,
   getMonthlyMetrics,
-  markEventAsPaid,
   getAllWithdrawalRequests,
   updateWithdrawalRequestStatus,
   getFinancialMetrics,
