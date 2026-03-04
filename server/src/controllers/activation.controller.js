@@ -1,4 +1,5 @@
 import { pool } from '../config/database.js';
+import crypto from 'crypto';
 
 /**
  * Bond hardware fingerprint to a digital purchase
@@ -14,9 +15,9 @@ export const bondHardware = async (req, res) => {
             });
         }
 
-        // Get the order ID from order number
+        // Get the order ID and buyer_id from order number
         const orderResult = await pool.query(
-            'SELECT id FROM product_orders WHERE order_number = $1',
+            'SELECT id, buyer_id FROM product_orders WHERE order_number = $1',
             [orderNumber]
         );
 
@@ -27,7 +28,15 @@ export const bondHardware = async (req, res) => {
             });
         }
 
-        const orderId = orderResult.rows[0].id;
+        const { id: orderId, buyer_id } = orderResult.rows[0];
+
+        // Ownership Check: The req.user.id is the buyer profile ID
+        if (buyer_id !== req.user.id) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not own this order.'
+            });
+        }
 
         // Check if activation already exists
         const result = await pool.query(
@@ -47,10 +56,17 @@ export const bondHardware = async (req, res) => {
         if (activation.hardware_binding_id) {
             // Check if it matches
             if (activation.hardware_binding_id === fingerprint) {
+                // Return session token instead of master key
+                const sessionToken = crypto.randomBytes(16).toString('hex');
+                const expiresAt = new Date(Date.now() + 60 * 1000); // 60 seconds
+                await pool.query(
+                    'UPDATE digital_activations SET session_token = $1, session_expires_at = $2 WHERE id = $3',
+                    [sessionToken, expiresAt, activation.id]
+                );
                 return res.json({
                     success: true,
                     message: 'Device already bonded.',
-                    decryptionKey: activation.master_key
+                    sessionToken
                 });
             } else {
                 return res.status(403).json({
@@ -61,15 +77,17 @@ export const bondHardware = async (req, res) => {
         }
 
         // Bond the device
+        const sessionToken = crypto.randomBytes(16).toString('hex');
+        const expiresAt = new Date(Date.now() + 60 * 1000);
         await pool.query(
-            'UPDATE digital_activations SET hardware_binding_id = $1, activated_at = NOW() WHERE id = $2',
-            [fingerprint, activation.id]
+            'UPDATE digital_activations SET hardware_binding_id = $1, activated_at = NOW(), session_token = $2, session_expires_at = $3 WHERE id = $4',
+            [fingerprint, sessionToken, expiresAt, activation.id]
         );
 
         res.json({
             success: true,
             message: 'Hardware bonded successfully.',
-            decryptionKey: activation.master_key
+            sessionToken
         });
 
     } catch (error) {
@@ -83,14 +101,14 @@ export const bondHardware = async (req, res) => {
 };
 
 /**
- * Verify hardware fingerprint and return key
+ * Verify hardware fingerprint and return session token
  */
 export const verifyHardware = async (req, res) => {
     try {
         const { orderNumber, productId, fingerprint } = req.body;
 
         const orderResult = await pool.query(
-            'SELECT id FROM product_orders WHERE order_number = $1',
+            'SELECT id, buyer_id FROM product_orders WHERE order_number = $1',
             [orderNumber]
         );
 
@@ -98,10 +116,15 @@ export const verifyHardware = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found.' });
         }
 
-        const orderId = orderResult.rows[0].id;
+        const { id: orderId, buyer_id } = orderResult.rows[0];
+
+        // Ownership Check
+        if (buyer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'You do not own this order.' });
+        }
 
         const result = await pool.query(
-            'SELECT master_key, hardware_binding_id FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+            'SELECT id, master_key, hardware_binding_id FROM digital_activations WHERE order_id = $1 AND product_id = $2',
             [orderId, productId]
         );
 
@@ -109,19 +132,27 @@ export const verifyHardware = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Activation record not found.' });
         }
 
-        const { master_key, hardware_binding_id } = result.rows[0];
+        const { id: activationId, hardware_binding_id } = result.rows[0];
 
         if (!hardware_binding_id) {
-            return res.status(400).json({ success: false, mssage: 'File not yet activated.' });
+            return res.status(400).json({ success: false, message: 'File not yet activated.' });
         }
 
         if (hardware_binding_id !== fingerprint) {
             return res.status(403).json({ success: false, message: 'Hardware mismatch. Access denied.' });
         }
 
+        // Generate session token
+        const sessionToken = crypto.randomBytes(16).toString('hex');
+        const expiresAt = new Date(Date.now() + 60 * 1000);
+        await pool.query(
+            'UPDATE digital_activations SET session_token = $1, session_expires_at = $2 WHERE id = $3',
+            [sessionToken, expiresAt, activationId]
+        );
+
         res.json({
             success: true,
-            decryptionKey: master_key
+            sessionToken
         });
 
     } catch (error) {
@@ -131,5 +162,54 @@ export const verifyHardware = async (req, res) => {
             message: 'Verification failed.',
             error: error.message
         });
+    }
+};
+
+/**
+ * Redeem session token for master key (for Service Worker only)
+ */
+export const redeemSession = async (req, res) => {
+    try {
+        const { sessionToken, orderNumber, productId } = req.body;
+
+        const result = await pool.query(
+            `SELECT da.master_key, da.session_expires_at, po.buyer_id
+             FROM digital_activations da
+             JOIN product_orders po ON da.order_id = po.id
+             WHERE da.session_token = $1 AND da.product_id = $2
+             AND po.order_number = $3`,
+            [sessionToken, productId, orderNumber]
+        );
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ success: false, message: 'Invalid session.' });
+        }
+
+        const { master_key, session_expires_at, buyer_id } = result.rows[0];
+
+        // Check expiry
+        if (new Date() > new Date(session_expires_at)) {
+            return res.status(410).json({ success: false, message: 'Session expired. Re-open file to refresh.' });
+        }
+
+        // Ownership Check (Double check)
+        if (buyer_id !== req.user.id) {
+            return res.status(403).json({ success: false, message: 'Unauthorized.' });
+        }
+
+        // Invalidate the token immediately after use
+        await pool.query(
+            'UPDATE digital_activations SET session_token = NULL, session_expires_at = NULL WHERE session_token = $1',
+            [sessionToken]
+        );
+
+        res.json({
+            success: true,
+            masterKey: master_key
+        });
+
+    } catch (error) {
+        console.error('Error redeeming session:', error);
+        res.status(500).json({ success: false, message: 'Redemption failed.' });
     }
 };

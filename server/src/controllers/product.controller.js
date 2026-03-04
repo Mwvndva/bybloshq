@@ -1,6 +1,7 @@
 import ProductService from '../services/product.service.js';
 import logger from '../utils/logger.js';
 import ImageService from '../services/image.service.js';
+import { sanitizeProduct } from '../utils/sanitize.js';
 
 // Upload digital file handler
 export const uploadDigitalFile = async (req, res) => {
@@ -48,7 +49,7 @@ export const createProduct = async (req, res) => {
 
     res.status(201).json({
       status: 'success',
-      data: { product }
+      data: { product: sanitizeProduct(product) }
     });
   } catch (error) {
     logger.error('Error creating product:', error);
@@ -65,23 +66,12 @@ export const getSellerProducts = async (req, res) => {
     const sellerId = req.user.id;
     const products = await ProductService.getSellerProducts(sellerId);
 
-    // Mapper for response format if needed (service returns snake_case keys from DB object usually)
-    // Controller logic previously mapped soldAt etc.
-    const mappedProducts = products.map(p => ({
-      ...p,
-      createdAt: p.created_at,
-      isDigital: p.is_digital,
-      digitalFileName: p.digital_file_name,
-      productType: p.product_type,
-      serviceLocations: p.service_locations,
-      serviceOptions: p.service_options,
-      soldAt: p.sold_at
-    }));
+    const sanitized = products.map(p => sanitizeProduct(p));
 
     res.status(200).json({
       status: 'success',
-      results: mappedProducts.length,
-      data: { products: mappedProducts }
+      results: sanitized.length,
+      data: { products: sanitized }
     });
   } catch (error) {
     logger.error('Error fetching products:', error);
@@ -96,21 +86,9 @@ export const getProduct = async (req, res) => {
 
     const product = await ProductService.getProduct(id, sellerId);
 
-    const mappedProduct = {
-      ...product,
-      createdAt: product.created_at,
-      isDigital: product.is_digital,
-      digitalFileName: product.digital_file_name,
-      productType: product.product_type,
-      serviceLocations: product.service_locations,
-      serviceOptions: product.service_options,
-      soldAt: product.sold_at,
-      status: product.status || 'published'
-    };
-
     res.status(200).json({
       status: 'success',
-      data: { product: mappedProduct }
+      data: { product: sanitizeProduct(product) }
     });
   } catch (error) {
     logger.error('Error fetching product:', error);
@@ -147,7 +125,7 @@ export const updateProduct = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: { product: updatedProduct }
+      data: { product: sanitizeProduct(updatedProduct) }
     });
   } catch (error) {
     logger.error('Error updating product:', error);
@@ -188,7 +166,7 @@ export const updateInventory = async (req, res) => {
 
     res.status(200).json({
       status: 'success',
-      data: { product: updatedProduct }
+      data: { product: sanitizeProduct(updatedProduct) }
     });
   } catch (error) {
     logger.error('Error updating inventory:', error);

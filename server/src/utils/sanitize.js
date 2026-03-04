@@ -17,18 +17,23 @@ const pick = (obj, keys) => {
 
 export const sanitizeBuyer = (buyer) => {
     if (!buyer) return null;
-    const buyerObj = buyer.toObject ? buyer.toObject() : buyer;
+    const b = buyer.toObject ? buyer.toObject() : buyer;
 
-    // Strict DTO (Allowed Fields Only)
     return {
-        id: buyerObj.id,
-        name: buyerObj.fullName || buyerObj.full_name || '',
-        email: buyerObj.email,
-        whatsapp_number: buyerObj.whatsappNumber || buyerObj.whatsapp_number,
-        payment_phone: buyerObj.mobilePayment || buyerObj.mobile_payment,
-        city: buyerObj.city,
-        physical_address: buyerObj.location || buyerObj.physical_address,
-        role: 'buyer'
+        id: b.id,
+        name: b.fullName || b.full_name || b.name || '',
+        email: b.email,
+        // Phone numbers shown masked — full numbers only needed in order flow, not profile display
+        whatsappNumber: b.whatsappNumber || b.whatsapp_number || null,
+        mobilePayment: b.mobilePayment || b.mobile_payment || b.payment_phone || null,
+        city: b.city || null,
+        location: b.location || b.physical_address || null,
+        // Coordinates: boolean presence only — full coords not needed by the frontend profile UI
+        hasLocation: !!(b.latitude && b.longitude),
+        role: 'buyer',
+        createdAt: b.createdAt || b.created_at || null,
+        // NEVER return: user_id, password, password_hash, refunds, full_address,
+        // latitude, longitude, userId, reset tokens, internal flags
     };
 };
 
@@ -36,24 +41,86 @@ export const sanitizeSeller = (seller) => {
     if (!seller) return null;
     const sellerObj = seller.toObject ? seller.toObject() : seller;
 
+    // Owner-facing DTO: only what the dashboard UI needs to render
+    // NO coordinates, NO phone numbers, NO contact links
     return {
         id: sellerObj.id,
         fullName: sellerObj.fullName || sellerObj.full_name,
         shopName: sellerObj.shopName || sellerObj.shop_name,
-        email: sellerObj.email, // Needed for owner
-        whatsappNumber: sellerObj.whatsappNumber || sellerObj.whatsapp_number || sellerObj.phone,
+        email: sellerObj.email,           // Needed: displayed in seller settings page
         city: sellerObj.city,
         location: sellerObj.location,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
         theme: sellerObj.theme,
-        physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
-        latitude: sellerObj.latitude,
-        longitude: sellerObj.longitude,
-        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
-        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
-        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link
-        // Removed: createdAt, updatedAt, userId, totalSales, netRevenue, balance
-        // Balance and revenue should come from analytics endpoint, not profile
+        hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address), // boolean only — not the address string
+        clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
+    };
+};
+
+/**
+ * Sanitize a product object for the seller dashboard response.
+ * The seller owns these products — they can see management fields.
+ * BUT server file paths (digital_file_path) must never leave the server.
+ */
+export const sanitizeProduct = (product) => {
+    if (!product) return null;
+    const p = product.toObject ? product.toObject() : product;
+
+    return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: parseFloat(p.price),
+        image_url: p.image_url,
+        images: (() => {
+            try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []); }
+            catch { return []; }
+        })(),
+        aesthetic: p.aesthetic,
+        status: p.status || 'available',
+        is_digital: !!(p.is_digital || p.isDigital),
+        // digital_file_path: NEVER returned — server-side path only
+        digital_file_name: p.digital_file_name || p.digitalFileName || null, // filename ok, path not ok
+        product_type: p.product_type || p.productType || 'physical',
+        service_locations: p.service_locations || p.serviceLocations || null,
+        service_options: p.service_options || p.serviceOptions || null,
+        track_inventory: !!(p.track_inventory),          // boolean, not the quantity
+        quantity: p.track_inventory ? (p.quantity ?? null) : null, // only show if tracking
+        low_stock_threshold: p.track_inventory ? (p.low_stock_threshold ?? 5) : null,
+        is_sold: !!(p.is_sold || p.isSold),
+        sold_at: p.sold_at || p.soldAt || null,
+        created_at: p.created_at || p.createdAt,
+        updated_at: p.updated_at || p.updatedAt,
+        // seller_id: NEVER returned — client already knows their own ID
+    };
+};
+
+/**
+ * Sanitize a product for public display (shop page / buyer view).
+ * Strips all internal management fields.
+ */
+export const sanitizePublicProduct = (product) => {
+    if (!product) return null;
+    const p = product.toObject ? product.toObject() : product;
+
+    return {
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        price: parseFloat(p.price),
+        image_url: p.image_url,
+        images: (() => {
+            try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []); }
+            catch { return []; }
+        })(),
+        aesthetic: p.aesthetic,
+        status: p.status || 'available',
+        is_digital: !!(p.is_digital || p.isDigital),
+        product_type: p.product_type || p.productType || 'physical',
+        service_locations: p.service_locations || p.serviceLocations || null,
+        service_options: p.service_options || p.serviceOptions || null,
+        is_sold: !!(p.is_sold || p.isSold),
+        // NO: seller_id, digital_file_path, digital_file_name, track_inventory, quantity, low_stock_threshold
     };
 };
 
@@ -85,14 +152,19 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
     if (!order) return null;
     const orderObj = order.toObject ? order.toObject() : order;
 
-    // Debug logging
-    if (orderObj.id === 63) {
-        console.log('=== SANITIZING ORDER 63 ===');
-        console.log('Raw order object keys:', Object.keys(orderObj));
-        console.log('payment_status:', orderObj.payment_status);
-        console.log('paymentStatus:', orderObj.paymentStatus);
-        console.log('status:', orderObj.status);
-    }
+    // Safe items — strip internal inventory and tracking fields
+    const safeItems = (orderObj.items || []).map(item => ({
+        id: item.id,
+        productId: item.productId || item.product_id,
+        name: item.name || item.product_name,
+        price: parseFloat(item.price || item.product_price || 0),
+        quantity: parseInt(item.quantity || 1),
+        subtotal: parseFloat(item.subtotal || 0),
+        imageUrl: item.imageUrl || item.image_url || null,
+        productType: item.productType || item.product_type || 'physical',
+        isDigital: !!(item.isDigital || item.is_digital),
+        // NEVER: trackInventory, availableQuantity, serviceLocations internals, metadata raw
+    }));
 
     const baseOrder = {
         id: orderObj.id,
@@ -100,48 +172,42 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         status: orderObj.status,
         paymentStatus: orderObj.paymentStatus || orderObj.payment_status,
         totalAmount: parseFloat(orderObj.totalAmount || orderObj.total_amount || 0),
-        shippingAddress: orderObj.shippingAddress || orderObj.shipping_address || {},
         paymentMethod: orderObj.paymentMethod || orderObj.payment_method,
-        // paymentReference: orderObj.paymentReference || orderObj.payment_reference, // Maybe sensitive? Keep for now as it's useful for support
+        shippingAddress: orderObj.shippingAddress || orderObj.shipping_address || {},
         notes: orderObj.notes || '',
         createdAt: orderObj.createdAt || orderObj.created_at,
         updatedAt: orderObj.updatedAt || orderObj.updated_at,
-        paidAt: orderObj.paidAt || orderObj.paid_at,
-        completedAt: orderObj.completedAt || orderObj.completed_at,
-        cancelledAt: orderObj.cancelledAt || orderObj.cancelled_at,
-        items: (orderObj.items || []).map(item => ({
-            id: item.id,
-            productId: item.productId || item.product_id,
-            name: item.name || item.product_name,
-            price: parseFloat(item.price || item.product_price),
-            quantity: parseInt(item.quantity),
-            imageUrl: item.imageUrl,
-            productType: item.productType || item.product_type,
-            subtotal: parseFloat(item.subtotal),
-            metadata: item.metadata || {}
-        })),
-        metadata: orderObj.metadata || {}, // Be careful what goes here
+        paidAt: orderObj.paidAt || orderObj.paid_at || null,
+        completedAt: orderObj.completedAt || orderObj.completed_at || null,
+        cancelledAt: orderObj.cancelledAt || orderObj.cancelled_at || null,
+        items: safeItems,
+        seller: orderObj.seller ? {
+            id: orderObj.seller.id,
+            shopName: orderObj.seller.shopName,
+            theme: orderObj.seller.theme,
+            city: orderObj.seller.city,
+            isClient: orderObj.seller.isClient || false,
+            // NEVER: seller email, phone, balance, revenue
+        } : null,
+        // NEVER for buyers: platformFeeAmount, sellerPayoutAmount, buyerEmail,
+        // buyerMobilePayment, buyerWhatsappNumber, metadata raw dump
     };
 
-    if (userType === 'seller') {
-        // Seller gets to see fee breakdown
+    if (userType === 'seller' || userType === 'admin') {
         return {
             ...baseOrder,
             platformFeeAmount: parseFloat(orderObj.platformFeeAmount || orderObj.platform_fee_amount || 0),
             sellerPayoutAmount: parseFloat(orderObj.sellerPayoutAmount || orderObj.seller_payout_amount || 0),
-            buyerName: orderObj.buyerName || orderObj.buyer_name,
-            buyerEmail: orderObj.buyerEmail || orderObj.buyer_email,
-            buyerMobilePayment: orderObj.buyerMobilePayment || orderObj.buyer_mobile_payment,
-            buyerWhatsAppNumber: orderObj.buyerWhatsAppNumber || orderObj.buyer_whatsapp_number || orderObj.buyerPhone || orderObj.buyer_phone,
-            customer: orderObj.customer // Full customer details if available
-        };
-    } else {
-        // Buyer views minimal info
-        return {
-            ...baseOrder,
-            // Explicitly REMOVE financial breakdown that concerns the platform/seller agreement
+            buyerName: orderObj.buyerName || orderObj.buyer_name || '',
+            buyerWhatsAppNumber: orderObj.buyerWhatsAppNumber || orderObj.buyer_whatsapp_number || '',
+            buyerMobilePayment: orderObj.buyerMobilePayment || orderObj.buyer_mobile_payment || '',
+            // buyerEmail intentionally excluded — not needed for seller order management
+            isSellerInitiated: orderObj.isSellerInitiated || orderObj.is_seller_initiated || false,
         };
     }
+
+    // Buyer sees baseOrder only
+    return baseOrder;
 };
 
 export const sanitizeWithdrawalRequest = (request) => {

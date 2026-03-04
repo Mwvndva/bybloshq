@@ -6,6 +6,7 @@ import { sellerApi } from '@/api/sellerApi';
 import adminApi from '@/api/adminApi';
 import apiClient from '@/lib/apiClient';
 import { authStateManager } from '@/lib/authState';
+import { clearAllAuthData } from '@/lib/authCleanup';
 
 // ============================================================================
 // TYPES
@@ -324,10 +325,8 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const loginWithToken = useCallback(async (token: string, role: UserRole) => {
         setIsLoading(true);
         try {
-            // Set token in localStorage for API calls
-            localStorage.setItem(`${role}Token`, token);
-
-            // Fetch profile with the token
+            // Token was sent via cookie by the server during auto-login flow.
+            // Do NOT store in localStorage. Fetch profile to confirm auth.
             const api = getApiForRole(role);
             const profileData = await api.getProfile();
 
@@ -337,13 +336,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: true
             });
 
-            // Mark session as active
             localStorage.setItem(`${role}SessionActive`, 'true');
-
             console.log(`[GlobalAuth] Auto-login successful for ${role}`);
         } catch (error: any) {
             console.error(`[GlobalAuth] Auto-login error for ${role}:`, error);
-            localStorage.removeItem(`${role}Token`);
             throw error;
         } finally {
             setIsLoading(false);
@@ -362,9 +358,14 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             const success = response?.status === 'success' || !!response?.data?.token;
 
             if (success) {
+                const adminId = response?.data?.user?.id || response?.data?.id || response?.data?.admin?.id || 1;
                 setUser({
                     role: 'admin',
-                    profile: { id: 1, email: email, createdAt: new Date().toISOString() },
+                    profile: {
+                        id: adminId,
+                        email: email,
+                        createdAt: new Date().toISOString()
+                    },
                     isAuthenticated: true
                 });
 
@@ -441,35 +442,39 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // LOGOUT
     // ============================================================================
 
-    const logout = useCallback(() => {
-        // Clear session active flags for all roles
-        ['buyer', 'seller', 'admin'].forEach(role => {
-            localStorage.removeItem(`${role}SessionActive`);
+    const logout = useCallback(async () => {
+        // 1. Clear localStorage session flags for all roles
+        ['buyer', 'seller', 'admin', 'organizer'].forEach(r => {
+            localStorage.removeItem(`${r}SessionActive`);
+            localStorage.removeItem(`${r}Token`);
         });
-        if (!user) return;
+
+        if (!user) {
+            clearAllAuthData();
+            return;
+        };
 
         const role = user.role;
 
-        // Call role-specific logout if available
+        // 2. Call server-side logout to clear httpOnly cookie
         try {
-            const api = getApiForRole(role);
-            if (api.logout) {
-                api.logout();
-            }
+            const logoutUrl = role === 'seller' ? '/sellers/logout' : '/buyers/logout';
+            await apiClient.post(logoutUrl);
         } catch (error) {
-            console.error('[GlobalAuth] Logout API call failed:', error);
+            // Fail silently — still clear local state
+            console.error('[GlobalAuth] Server logout failed:', error);
         }
 
-        // Clear user state
+        // 3. Clear all auth data from memory and storage
+        clearAllAuthData();
+
+        // 4. Clear user state
         setUser(null);
 
-        toast('Logged out', {
-            description: 'You have been successfully logged out.',
-            duration: 3000,
-        });
+        toast('Logged out', { description: 'You have been successfully logged out.' });
 
-        // Navigate to login page
-        navigate(getLoginPath(role), { replace: true });
+        // 5. Navigate to home
+        navigate('/', { replace: true });
     }, [user, navigate]);
 
     // ============================================================================

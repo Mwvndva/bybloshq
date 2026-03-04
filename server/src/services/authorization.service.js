@@ -18,7 +18,7 @@ class AuthorizationService {
             `;
             const result = await query(sql, [userId]);
             const perms = new Set(result.rows.map(row => row.slug));
-            console.log(`[AuthorizationService] Loaded ${perms.size} permissions for userId ${userId}:`, Array.from(perms));
+
             return perms;
         } catch (error) {
             logger.error(`Error fetching permissions for user ${userId}:`, error);
@@ -34,7 +34,7 @@ class AuthorizationService {
      */
     static async hasPermission(user, permission) {
         if (!user || (!user.userId && !user.id)) {
-            console.log(`[AuthorizationService] No user or IDs found:`, { email: user?.email, userId: user?.userId, id: user?.id });
+
             return false;
         }
 
@@ -44,7 +44,7 @@ class AuthorizationService {
         // Fetch permissions if not already cached on the user object for this request
         if (!user.permissions) {
             const userId = user.userId || user.id;
-            console.log(`[AuthorizationService] Permissions NOT cached for ${user.email}, loading for userId ${userId}`);
+
             user.permissions = await this.getUserPermissions(userId);
         }
 
@@ -54,27 +54,24 @@ class AuthorizationService {
         if (!basicResult) {
             const sellerPerms = ['manage-shop', 'manage-products', 'manage-profile', 'request-payouts', 'view-orders'];
             if ((user.userType === 'seller' || user.hasSellerProfile || user.sellerProfileId) && sellerPerms.includes(permission)) {
-                console.log(`[AuthorizationService] RBAC failed for ${user.email}, but granted '${permission}' via seller-role fallback`);
+
                 return true;
             }
 
             const organizerPerms = ['create-events', 'verify-tickets', 'view-analytics', 'manage-profile'];
             if ((user.userType === 'organizer' || user.hasOrganizerProfile || user.organizerProfileId) && organizerPerms.includes(permission)) {
-                console.log(`[AuthorizationService] RBAC failed for ${user.email}, but granted '${permission}' via organizer-role fallback`);
+
                 return true;
             }
 
             const buyerPerms = ['view-orders', 'manage-profile'];
             if ((user.userType === 'buyer' || user.hasBuyerProfile || user.buyerProfileId) && buyerPerms.includes(permission)) {
-                console.log(`[AuthorizationService] RBAC failed for ${user.email}, but granted '${permission}' via buyer-role fallback`);
+
                 return true;
             }
         }
 
-        console.log(`[AuthorizationService] User ${user.email} (type: ${user.userType}) check for '${permission}': ${basicResult}`);
-        if (!basicResult) {
-            console.log(`[AuthorizationService] Available permissions:`, Array.from(user.permissions));
-        }
+
         return basicResult;
     }
 

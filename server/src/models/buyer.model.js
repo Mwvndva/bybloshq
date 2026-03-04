@@ -114,21 +114,9 @@ class Buyer {
       phoneVariations.push('254' + normalized); // 712... -> 254712...
     }
 
-    // Remove duplicates
-    const uniqueVariations = [...new Set(phoneVariations)];
-
-    console.log('Searching for phone variations in mobile_payment and whatsapp_number:', uniqueVariations);
-
-    // Search for any of these variations in both columns
-    const query = `
-      SELECT *, user_id AS "userId" 
-      FROM buyers 
-      WHERE mobile_payment = ANY($1) OR whatsapp_number = ANY($1)
-    `;
-    const result = await pool.query(query, [uniqueVariations]);
-
     if (result.rows.length > 0) {
-      console.log('Found buyer with matched phone variation');
+      // Log matched without actual value
+      logger.debug('Found buyer with matched phone variation');
     }
 
     return result.rows.length ? this.createInstance(result.rows[0]) : null;

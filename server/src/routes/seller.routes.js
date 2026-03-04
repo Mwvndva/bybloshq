@@ -25,6 +25,8 @@ router.get('/search', sellerController.searchSellers);
 // Public product listing for a specific seller
 router.get('/:sellerId/products', sellerController.getSellerProducts);
 
+router.post('/logout', sellerController.logout);
+
 // Protected routes (require authentication)
 router.use(protect);
 

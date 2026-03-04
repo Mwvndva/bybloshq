@@ -1,6 +1,6 @@
 import { query } from '../config/database.js';
 import { AppError } from '../utils/errorHandler.js';
-import { verifyToken, getTokenFromRequest } from '../utils/jwt.js';
+import { verifyToken, getTokenFromRequest, changedPasswordAfter } from '../utils/jwt.js';
 import AuthorizationService from '../services/authorization.service.js';
 import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
@@ -106,7 +106,12 @@ export const protect = async (req, res, next) => {
 
     const userData = userResult.rows[0];
 
-    // CROSS-ROLE SUPPORT: Check if user has other role profiles
+    // 4) Check if password was changed after the token was issued
+    if (changedPasswordAfter(userData.password_changed_at, decoded.iat)) {
+      return next(new AppError('Your password was recently changed. Please log in again.', 401));
+    }
+
+    // 5) CROSS-ROLE SUPPORT: Check if user has other role profiles
     // This allows sellers who make purchases to access buyer endpoints
     // Skip for admin users
     let crossRoles = { buyer_id: null, seller_id: null, organizer_id: null };

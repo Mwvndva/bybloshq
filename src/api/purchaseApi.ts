@@ -11,20 +11,19 @@ const getBaseUrl = () => {
 const API_URL = getBaseUrl();
 
 // Create axios instance with base config
-const api = axios.create({
+export const purchaseAxios = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
-// Add request interceptor to add auth token to requests
-api.interceptors.request.use(
+// Add request interceptor
+purchaseAxios.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('sellerToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // Auth via httpOnly cookie (withCredentials: true).
+    // Do NOT read tokens from localStorage.
     return config;
   },
   (error) => {
@@ -70,7 +69,7 @@ export const purchaseApi: {
 } = {
   async purchaseProduct(purchaseData: PurchaseRequest): Promise<PurchaseResponse> {
     try {
-      const response = await api.post<PurchaseResponse>('/purchases', purchaseData);
+      const response = await purchaseAxios.post<PurchaseResponse>('/purchases', purchaseData);
       // Ensure the response has the required fields
       if (!response.data.id || !response.data.orderNumber || !response.data.status) {
         throw new Error('Invalid response format from server');
@@ -98,7 +97,7 @@ export const purchaseApi: {
     const requestPromise = (async () => {
       try {
         // Use POST for validation since it modifies state (marks ticket as scanned)
-        const response = await api.post<TicketValidationResponse>(
+        const response = await purchaseAxios.post<TicketValidationResponse>(
           `/tickets/validate/${encodeURIComponent(ticketNumber)}`,
           {}, // Empty body since we're just validating by ticket number
           {
@@ -143,7 +142,7 @@ export const purchaseApi: {
 
   async getPurchaseStatus(orderId: string): Promise<PurchaseResponse> {
     try {
-      const response = await api.get<PurchaseResponse>(`/purchases/${orderId}`);
+      const response = await purchaseAxios.get<PurchaseResponse>(`/purchases/${orderId}`);
 
       // Ensure the response has the required fields
       if (!response.data.id || !response.data.orderNumber || !response.data.status) {

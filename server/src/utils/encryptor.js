@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 
 /**
  * .BYBX File Structure:
@@ -66,17 +67,45 @@ export const wrapFile = async (inputPath, transactionId, productId, masterKey) =
 };
 
 /**
- * In a real scenario, this would use specific libraries for each file type
+ * Implementation for different file types
  */
 async function applyForensicWatermark(data, transactionId, filePath) {
     const ext = path.extname(filePath).toLowerCase();
 
-    // Implementation placeholder for different file types
-    // For now, we'll just prepend a small hidden block if it's not a known binary type
-    // or just return data as is for this POC.
-    console.log(`Applying forensic watermark for ${transactionId} to ${filePath}`);
+    if (ext !== '.pdf') {
+        console.log(`Applying simple forensic watermark for ${transactionId} to ${filePath}`);
+        return data; // Only watermark PDFs for now
+    }
 
-    return data;
+    try {
+        const pdfDoc = await PDFDocument.load(data, { ignoreEncryption: true });
+        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        const pages = pdfDoc.getPages();
+
+        // Add invisible metadata watermark to every page
+        for (const page of pages) {
+            const { width, height } = page.getSize();
+            // Visible diagonal watermark — light opacity
+            page.drawText(`Licensed to order: ${transactionId}`, {
+                x: width / 2 - 180,
+                y: height / 2,
+                size: 14,
+                font,
+                color: rgb(0.85, 0.85, 0.85),
+                opacity: 0.15,
+                rotate: { type: 'degrees', angle: 45 },
+            });
+        }
+
+        // Embed order ID as PDF metadata
+        pdfDoc.setSubject(`byblos-order:${transactionId}`);
+        pdfDoc.setKeywords([transactionId]);
+
+        return Buffer.from(await pdfDoc.save());
+    } catch (err) {
+        console.warn('Watermarking failed, returning original:', err.message);
+        return data; // Fail open — don't block the download
+    }
 }
 
 /**
