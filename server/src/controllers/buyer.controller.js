@@ -345,11 +345,12 @@ export const checkBuyerByPhone = async (req, res, next) => {
         data: {
           exists: true,
           buyer: {
-            // Only pre-fill fields needed for checkout form
-            name: existingBuyer.fullName || existingBuyer.full_name || '',
+            id: existingBuyer.id,
+            fullName: existingBuyer.fullName || existingBuyer.full_name || '',
             city: existingBuyer.city || '',
             location: existingBuyer.location || existingBuyer.physical_address || '',
-            // NEVER: id, email, password, user_id, phone numbers, coordinates
+            hasEmail: !!existingBuyer.email,
+            // NEVER: email string, password, user_id, phone numbers, coordinates
           }
         }
       });
