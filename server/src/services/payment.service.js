@@ -248,6 +248,8 @@ export class PaymentService {
                 amount: paydAmount,
                 phone_number: cleanPhone,
                 narration: narrative || `Payment for ${invoice_id}`,
+                reference: invoice_id, // Add explicit reference for callback matching
+                external_id: invoice_id, // Fallback for some Payd versions
                 currency: "KES",
                 callback_url: callbackUrl,
                 billing_address: billing_address || 'Nairobi, Kenya'
@@ -286,13 +288,19 @@ export class PaymentService {
                 reference: response.data.transaction_id || response.data.reference
             });
 
+            const resData = response.data.data || response.data;
+            const reference = resData.transaction_id ||
+                resData.transaction_reference ||
+                resData.reference ||
+                resData.tracking_id ||
+                response.data.transaction_id ||
+                response.data.reference ||
+                `REF-${Date.now()}`;
+
             return {
                 authorization_url: null,
                 access_code: null,
-                reference: response.data.transaction_id ||
-                    response.data.reference ||
-                    response.data.tracking_id ||
-                    `REF-${Date.now()}`,
+                reference: reference,
                 status: response.status,
                 original_response: response.data
             };
@@ -381,11 +389,20 @@ export class PaymentService {
     async handlePaydCallback(callbackData) {
         logger.info('[PURCHASE-FLOW] 3. Webhook Received - Raw Data:', callbackData);
 
-        // Map fields based on user documentation
-        // { "transaction_reference": "TX...", "result_code": 200, "remarks": "...", ... }
-        const reference = callbackData.transaction_reference || callbackData.transaction_id || callbackData.reference;
-        const resultCode = callbackData.result_code;
-        const status = callbackData.status; // Fallback if they send status
+        // Robustly extract data - might be at top level or nested in .data
+        const data = callbackData.data || callbackData;
+
+        // Map fields based on user documentation and common patterns
+        const reference = data.transaction_reference ||
+            data.transaction_id ||
+            data.reference ||
+            data.tracking_id ||
+            callbackData.transaction_reference ||
+            callbackData.transaction_id ||
+            callbackData.reference;
+
+        const resultCode = data.result_code || callbackData.result_code;
+        const status = data.status || callbackData.status;
 
         logger.info(`[PURCHASE-FLOW] 4. Processing Callback for Ref: ${reference}`, {
             resultCode,
@@ -394,9 +411,7 @@ export class PaymentService {
         });
 
         if (!reference) {
-            console.error('[PURCHASE-FLOW] ERROR: Missing reference', callbackData);
-            // Don't throw immediately, check if we can find by invoice_id in other fields?
-            // For now, throw but log visibly
+            logger.error('[PURCHASE-FLOW] ERROR: Missing reference in callback payload', callbackData);
             throw new Error('No transaction_reference provided in callback');
         }
 
@@ -509,14 +524,37 @@ export class PaymentService {
             payment = refRows[0];
             logger.info(`[PURCHASE-FLOW] 6a. Found Payment via Reference: ${payment.id}`);
         } else {
-            // 1b. Fuzzy match: Find by Status + Amount + Phone (if available)
+            // 1b. Try to find by invoice_id/order_id inside metadata
+            const meta = metadata.data || metadata;
+            const possibleInvoiceId = meta.invoice_id || meta.external_id || meta.order_id || meta.account_number;
+
+            if (possibleInvoiceId) {
+                logger.info(`Reference ${reference} not found directly, checking for invoice_id: ${possibleInvoiceId}`);
+                const { rows: invRows } = await pool.query(
+                    'SELECT * FROM payments WHERE invoice_id = $1 OR api_ref = $1 LIMIT 1',
+                    [String(possibleInvoiceId)]
+                );
+                if (invRows.length > 0) {
+                    payment = invRows[0];
+                    logger.info(`Match found via Invoice ID from metadata: ${payment.id}`);
+
+                    // Update provider_reference so subsequent hooks match directly
+                    await pool.query('UPDATE payments SET provider_reference = $1 WHERE id = $2', [reference, payment.id]);
+                }
+            }
+        }
+
+        if (!payment) {
+            // 1c. Fuzzy match: Find by Status + Amount + Phone (if available)
             // This handles cases where Payd generates a new reference we don't know
-            logger.info(`Reference ${reference} not found, attempting fuzzy match...`);
+            logger.info(`Reference ${reference} still not found, attempting fuzzy match...`);
 
-            const webhookPhone = metadata.phone_number || metadata.phone; // "254111..."
-            const webhookAmount = parseFloat(amount);
+            // Extract phone and amount from metadata (could be flat or nested in .data)
+            const meta = metadata.data || metadata;
+            const webhookPhone = meta.phone_number || meta.phone || meta.customer_phone || meta.msisdn;
+            const webhookAmount = parseFloat(amount || meta.amount);
 
-            if (webhookPhone && webhookAmount) {
+            if (webhookPhone && !isNaN(webhookAmount) && webhookAmount > 0) {
                 // Extract last 9 digits to be safe (safely ignores 0 vs 254 prefix)
                 const phoneTail = webhookPhone.slice(-9);
 
