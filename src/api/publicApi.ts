@@ -43,26 +43,23 @@ class CustomAxios {
     // Add request interceptor to include auth token
     this.instance.interceptors.request.use(
       (config: any) => {
-        // Skip auth if skipAuth flag is set
-        if (config.skipAuth) {
-          return config;
+        // Public API must NOT attach any Authorization header.
+        // It relies purely on httpOnly cookies via withCredentials: true.
+        if (config.headers) {
+          delete config.headers.Authorization;
+          delete config.headers.authorization;
         }
-
-        // Get token from localStorage (try buyer_token first, then fallback to token)
-        let token = localStorage.getItem('buyer_token') || localStorage.getItem('token');
-
-        // If token exists, add it to the Authorization header
-        if (token) {
-          config.headers = config.headers || {};
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-
         return config;
       },
       (error: any) => {
         return Promise.reject(error);
       }
     );
+  }
+
+  // Allow access to the instance for cleanup
+  public getInstance() {
+    return this.instance;
   }
 
   // Proxy axios methods with proper typing

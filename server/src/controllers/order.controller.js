@@ -1,6 +1,12 @@
 import OrderService from '../services/order.service.js';
 import Order from '../models/order.model.js';
 import logger from '../utils/logger.js';
+import { pool } from '../config/database.js';
+import crypto from 'crypto';
+import path from 'path';
+import fs from 'fs/promises';
+import { wrapFile } from '../utils/encryptor.js';
+import { sanitizeOrder } from '../utils/sanitize.js';
 
 export const getSellerOrders = async (req, res) => {
     try {
@@ -13,9 +19,12 @@ export const getSellerOrders = async (req, res) => {
             status
         });
 
+        // Sellers can see buyer contact info and fee breakdown — sanitizeOrder with 'seller' context
+        const sanitized = result.data.map(order => sanitizeOrder(order, 'seller'));
+
         res.status(200).json({
             status: 'success',
-            data: result.data,
+            data: sanitized,
             pagination: result.pagination
         });
     } catch (error) {
@@ -54,29 +63,30 @@ export const createOrder = async (req, res) => {
 export const getOrderById = async (req, res) => {
     try {
         const { id } = req.params;
-        const sellerId = req.user.id;
+        const userId = req.user.id;
+        const userType = req.user.userType || req.user.role;
 
         const order = await Order.findById(id);
-
         if (!order) {
             return res.status(404).json({ status: 'error', message: 'Order not found' });
         }
 
-        // Authorization check: Ensure the order belongs to the seller
-        if (order.seller_id !== sellerId) {
-            return res.status(403).json({ status: 'error', message: 'Unauthorized access to this order' });
+        // Allow access if requester is the seller OR the buyer on this order
+        const isSeller = userType === 'seller' && (order.seller_id === userId || order.sellerId === userId);
+        const isBuyer = userType === 'buyer' && (order.buyer_id === userId || order.buyerId === userId);
+
+        if (!isSeller && !isBuyer) {
+            return res.status(403).json({ status: 'error', message: 'Unauthorized' });
         }
 
+        // Sanitize based on who is asking — buyers don't see fee data
         res.status(200).json({
             status: 'success',
-            data: order
+            data: sanitizeOrder(order, userType)
         });
     } catch (error) {
-        logger.error('Error fetching order:', error);
-        res.status(500).json({
-            status: 'error',
-            message: 'Failed to fetch order'
-        });
+        logger.error('Error fetching order by ID:', error);
+        res.status(500).json({ status: 'error', message: 'Failed to fetch order' });
     }
 };
 
@@ -88,9 +98,10 @@ export const updateOrderStatus = async (req, res) => {
         // Pass req.user (which contains role/id) to service for auth check
         const updatedOrder = await OrderService.updateOrderStatus(id, req.user, status);
 
+        const userType = req.user.userType || req.user.role;
         res.status(200).json({
             status: 'success',
-            data: updatedOrder
+            data: sanitizeOrder(updatedOrder, userType)
         });
     } catch (error) {
         logger.error('Error updating order status:', error);
@@ -121,10 +132,12 @@ export const getUserOrders = async (req, res) => {
             status
         });
 
+        const sanitized = result.data.map(order => sanitizeOrder(order, 'buyer'));
+
         res.status(200).json({
             success: true, // Match route schema
             status: 'success',
-            data: result.data,
+            data: sanitized,
             pagination: result.pagination
         });
     } catch (error) {
@@ -143,7 +156,7 @@ export const confirmReceipt = async (req, res) => {
         res.status(200).json({
             status: 'success',
             message: 'Order receipt confirmed',
-            data: updatedOrder
+            data: sanitizeOrder(updatedOrder, 'buyer')
         });
     } catch (error) {
         logger.error('Error confirming receipt:', error);
@@ -244,48 +257,66 @@ export const downloadDigitalProduct = async (req, res) => {
         const order = await Order.findById(orderId);
         if (!order) return res.status(404).json({ status: 'error', message: 'Order not found' });
 
-        // Allow Buyer AND Seller
-        if (order.buyer_id !== userId && order.seller_id !== userId) {
-            return res.status(403).json({ status: 'error', message: 'Unauthorized' });
+        // Verify req.user.id matches order.buyer_id — sellers must NOT download buyer files
+        if (order.buyer_id !== userId) {
+            return res.status(403).json({ status: 'error', message: 'Unauthorized: Only the buyer can download this product' });
         }
 
-        // Must be paid/completed unless it's the seller
-        if (order.buyer_id === userId && order.status !== 'completed') {
+        // Must be paid/completed
+        if (order.status !== 'completed' && order.status !== 'delivery_complete') {
             return res.status(403).json({ status: 'error', message: 'Order must be completed to download products' });
         }
 
-        // 2. Find Item Logic (Since we don't have direct item fetch in model readily exported, parse from json_agg if possible or query)
-        // Order.findById returns items array.
-        const item = order.items.find(i => String(i.productId) === String(productId));
-        if (!item) return res.status(404).json({ status: 'error', message: 'Product not found in this order' });
+        // 2. Fetch Product from DB
+        const productResult = await pool.query(
+            'SELECT id, name, digital_file_path, digital_file_name, is_digital FROM products WHERE id = $1',
+            [productId]
+        );
 
-        // 3. Get File Path
-        // The item metadata should have file info OR we need to fetch product.
-        // Order.insertItems stores metadata including isDigital.
-        // BUT actual file path is usually on Product table, not OrderItem (unless snapshot).
-        // Let's query Product.
-        // We can't import pool here easily unless we stick to imported modules. 'Order' imports pool.
-        // We can use a direct query via a service or import pool. order.controller.js doesn't import pool.
-        // I'll add `import { pool } from '../config/database.js';` at top if needed, OR create a helper in Model.
-        // Let's assume metadata in Order Item has it? No, usually not secure path.
-        // I will dynamically fetch product path.
-        // I CANNOT import pool easily as I am just replacing lines.
-        // I will use `OrderService`... no method there.
-        // I will modify imports at top of file first? No, I am replacing end of file.
-        // I'll use a hack or just fail? No.
-        // I will add `import { pool } from '../config/database.js';` to the top of the file in a separate step if needed.
-        // WAIT, `order.controller.js` line 1-3 imports:
-        // import OrderService from '../services/order.service.js';
-        // import Order from '../models/order.model.js';
-        // import logger from '../utils/logger.js';
-        // I don't have pool.
-        // I can use `OrderService` to get file path? No.
-        // I'll skip download implementation deeply and just return 501 or Mock for now? No, User needs fixes.
-        // I will assume `Order` model has a method I can abuse or I'll implement it.
-        // Actually, `order.model.js` imports pool. I can add `getProductFile` to Order model.
-        // OR better: I'll Replace the WHOLE file content to include correct imports and all methods. This is safer.
+        if (productResult.rows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Product not found' });
+        }
 
-        res.status(501).json({ status: 'error', message: 'Download not implemented yet' });
+        const product = productResult.rows[0];
+        if (!product.is_digital) {
+            return res.status(400).json({ status: 'error', message: 'Product is not a digital download' });
+        }
+
+        // 3. Resolve master key
+        let masterKey;
+        const activationResult = await pool.query(
+            'SELECT master_key FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+            [orderId, productId]
+        );
+
+        if (activationResult.rows.length === 0) {
+            // Generate and save new master key
+            masterKey = crypto.randomBytes(32).toString('hex');
+            await pool.query(
+                'INSERT INTO digital_activations (order_id, product_id, master_key) VALUES ($1, $2, $3)',
+                [orderId, productId, masterKey]
+            );
+        } else {
+            masterKey = activationResult.rows[0].master_key;
+        }
+
+        // 4. Resolve and wrap file
+        const fullPath = path.join(process.cwd(), product.digital_file_path);
+        try {
+            await fs.access(fullPath);
+        } catch (e) {
+            logger.error(`File missing: ${fullPath}`);
+            return res.status(404).json({ status: 'error', message: 'Original file not found on server' });
+        }
+
+        const bybxBuffer = await wrapFile(fullPath, order.order_number, productId, masterKey);
+
+        // 5. Send response
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', `attachment; filename="${product.digital_file_name || product.name}.bybx"`);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+
+        res.send(bybxBuffer);
     } catch (error) {
         logger.error('Error downloading file:', error);
         res.status(500).json({ status: 'error', message: 'Download failed' });

@@ -7,9 +7,15 @@ import AppError from './appError.js';
  * @param {string} role - User role (buyer, seller, organizer, admin)
  * @returns {string} JWT token
  */
+const VALID_ROLES = ['buyer', 'seller', 'admin', 'organizer'];
+
 export const signToken = (id, role = 'buyer') => {
   if (!process.env.JWT_SECRET) {
     throw new Error('JWT_SECRET is not defined in environment variables');
+  }
+
+  if (!VALID_ROLES.includes(role)) {
+    throw new Error(`Invalid role: "${role}". Must be one of: ${VALID_ROLES.join(', ')}`);
   }
 
   return jwt.sign(

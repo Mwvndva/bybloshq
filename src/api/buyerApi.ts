@@ -16,7 +16,7 @@ interface Buyer {
   refunds?: number;
   createdAt: string;
   updatedAt?: string;
-  hasEmail?: boolean;
+  hasLocation?: boolean;
 }
 
 interface ApiResponse<T> {
@@ -82,19 +82,15 @@ const transformBuyer = (data: any): Buyer => {
     id: buyer.id,
     fullName: buyer.name || buyer.fullName || buyer.full_name || '',
     email: buyer.email || '',
-    // Map strict backend fields to frontend interface
-    phone: buyer.payment_phone || buyer.whatsapp_number || buyer.phone || '',
-    mobilePayment: buyer.payment_phone || buyer.mobile_payment || buyer.mobilePayment || '',
-    whatsappNumber: buyer.whatsapp_number || buyer.whatsappNumber || '',
+    phone: buyer.mobilePayment || buyer.whatsappNumber || '',
+    mobilePayment: buyer.mobilePayment || '',
+    whatsappNumber: buyer.whatsappNumber || '',
     city: buyer.city || '',
-    location: buyer.physical_address || buyer.location || '',
-    fullAddress: buyer.full_address || buyer.fullAddress || '',
-    latitude: buyer.latitude ? parseFloat(buyer.latitude) : undefined,
-    longitude: buyer.longitude ? parseFloat(buyer.longitude) : undefined,
-    refunds: buyer.refunds != null ? parseFloat(buyer.refunds) : 0,
-    // Handle missing createdAt (security restrictions)
-    createdAt: buyer.createdAt || buyer.created_at || new Date().toISOString(),
-    updatedAt: buyer.updatedAt || buyer.updated_at
+    location: buyer.location || '',
+    hasLocation: buyer.hasLocation || false,
+    refunds: 0, // Never trust server-sent refund balance in profile — fetch separately if needed
+    createdAt: buyer.createdAt || new Date().toISOString(),
+    updatedAt: buyer.updatedAt
   };
 };
 
@@ -108,16 +104,16 @@ const buyerApi = {
   login: async (credentials: { email: string; password: string }): Promise<LoginResponse> => {
     try {
       const loginUrl = '/buyers/login';
-      console.log(`Sending login request to ${loginUrl}`);
 
-      // Use apiClient directly for login
+      if (import.meta.env.DEV) {
+        console.log('=== LOGIN ATTEMPT ===');
+      }
       const response = await apiClient.post<LoginApiResponse>(
         loginUrl,
         credentials
       );
 
-      console.log('=== LOGIN RESPONSE ===');
-      console.log('Status:', response.status);
+
 
       const responseData = response.data;
 
@@ -169,8 +165,7 @@ const buyerApi = {
         };
       }>('/buyers/register', payload);
 
-      console.log('=== REGISTRATION RESPONSE ===');
-      console.log('Status:', response.status);
+
 
       const responseData = response.data;
 
@@ -301,7 +296,9 @@ const buyerApi = {
   // Wishlist methods with retry logic
   getWishlist: async (maxRetries = 2, retryCount = 0): Promise<WishlistItem[]> => {
     try {
-      console.log(`🔍 API - Fetching wishlist (attempt ${retryCount + 1}/${maxRetries + 1})...`);
+      if (import.meta.env.DEV) {
+        console.log(`🔍 API - Fetching wishlist (attempt ${retryCount + 1}/${maxRetries + 1})...`);
+      }
 
       const response = await buyerApiInstance.get<ApiResponse<{ items: WishlistItem[] }>>('/buyers/wishlist', {
         headers: {
@@ -315,19 +312,23 @@ const buyerApi = {
       // Check if the response has the expected structure
       const isSuccess = response.data?.success || (response.data as any)?.status === 'success';
       if (!isSuccess || !response.data.data?.items) {
-        console.warn('⚠️ API - Unexpected response format from wishlist endpoint:', {
-          success: response.data?.success,
-          status: (response.data as any)?.status,
-          hasData: !!response.data?.data,
-          hasItems: !!response.data?.data?.items,
-          fullResponse: response.data
-        });
+        if (import.meta.env.DEV) {
+          console.warn('⚠️ API - Unexpected response format from wishlist endpoint:', {
+            success: response.data?.success,
+            status: (response.data as any)?.status,
+            hasData: !!response.data?.data,
+            hasItems: !!response.data?.data?.items,
+            fullResponse: response.data
+          });
+        }
         throw new Error('Invalid response format from server');
       }
 
       // Return the items array
       const items = Array.isArray(response.data.data.items) ? response.data.data.items : [];
-      console.log('✅ API - Successfully fetched wishlist items:', items.length);
+      if (import.meta.env.DEV) {
+        console.log('✅ API - Successfully fetched wishlist items:', items.length);
+      }
       return items;
 
     } catch (error: any) {
@@ -353,7 +354,9 @@ const buyerApi = {
 
   addToWishlist: async (product: { id: string }): Promise<boolean> => {
     try {
-      console.log('API - Adding to wishlist:', product);
+      if (import.meta.env.DEV) {
+        console.log('API - Adding to wishlist:', product);
+      }
       const response = await buyerApiInstance.post<ApiResponse<any>>(
         '/buyers/wishlist',
         { productId: product.id }
@@ -449,41 +452,18 @@ const buyerApi = {
   // Order methods
   getOrders: async (): Promise<Order[]> => {
     try {
-      console.log('=== FETCHING ORDERS FROM API ===');
       const response = await buyerApiInstance.get<ApiResponse<any[]>>('/orders/user');
-
-      console.log('=== RAW API RESPONSE ===');
-      console.log('Response data:', response.data);
-      console.log('Total orders:', response.data.data?.length || 0);
-
-      if (response.data.data && response.data.data.length > 0) {
-        console.log('Sample raw order:', {
-          id: response.data.data[0].id,
-          orderNumber: response.data.data[0].orderNumber,
-          status: response.data.data[0].status,
-          paymentStatus: response.data.data[0].paymentStatus
-        });
-      }
 
       // Backend already sends camelCase, just ensure uppercase for status fields
       const transformedOrders = response.data.data.map(order => ({
         ...order,
-        // Ensure items is always an array
         items: order.items || [],
-        // Ensure status is in uppercase
         status: order.status?.toUpperCase() || 'PENDING',
-        // Ensure paymentStatus is in uppercase
         paymentStatus: order.paymentStatus?.toUpperCase() || 'PENDING'
       }));
 
-      console.log('=== TRANSFORMED ORDERS ===');
-      if (transformedOrders.length > 0) {
-        console.log('Sample transformed order:', {
-          id: transformedOrders[0].id,
-          orderNumber: transformedOrders[0].orderNumber,
-          status: transformedOrders[0].status,
-          paymentStatus: transformedOrders[0].paymentStatus
-        });
+      if (import.meta.env.DEV) {
+        console.log('=== TRANSFORMED ORDERS ===', transformedOrders.length);
       }
 
       return transformedOrders;
@@ -554,8 +534,9 @@ const buyerApi = {
     token?: string;
   }> => {
     try {
-
-
+      if (import.meta.env.DEV) {
+        console.log('Checking buyer by phone...');
+      }
       // Use a fresh axios instance to avoid auth interceptor
       const response = await axios.create({}).post<{
         status: string;
@@ -600,8 +581,9 @@ const buyerApi = {
     password?: string;
   }): Promise<{ buyer?: Buyer; token?: string; message?: string; requiresLogin?: boolean; exists?: boolean }> => {
     try {
-
-
+      if (import.meta.env.DEV) {
+        console.log('Saving buyer info...');
+      }
       // Use the public API endpoint that doesn't require authentication
       const response = await axios.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
         `/buyers/save-info`,
@@ -616,9 +598,9 @@ const buyerApi = {
           withCredentials: true,
           baseURL: apiClient.defaults.baseURL
         }
-      );
-
-
+      ); if (import.meta.env.DEV) {
+        console.log('Save info response:', response.data.status);
+      }
 
       if (!response.data || response.data.status !== 'success') {
         throw new Error(response.data?.data?.message || 'Failed to save buyer information');

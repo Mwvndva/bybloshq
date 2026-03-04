@@ -41,79 +41,55 @@ const FileLaunchHandler: React.FC<FileLaunchHandlerProps> = ({ onFileLoaded }) =
             setStatus('Gathering hardware fingerprint...');
             const fingerprint = await getDeviceFingerprint();
 
-            let decryptionKey: string;
+            let sessionToken: string;
 
             if (!isActivated) {
                 setStatus('Activating device...');
-                // First time activation
-                // We need to know which product this is. Usually the header would have productId too.
-                // Let's assume for PoC we can get it from metadata or order.
-                // Actually, my header creation only put orderNumber. 
-                // I should have put productId too. Let's fix encryptor later if needed.
-                // For now, let's assume one digital product per order or we find it.
-
-                // Wait, I used order_number in Header. Let's use it to fetch key.
                 const response = await axios.post('/api/activation/bond', {
                     orderNumber,
-                    // productId: we'd need this in header ideally. 
-                    // For PoC I'll search by orderNumber.
-                    productId, // Placeholder: extract from header in real app
+                    productId,
                     fingerprint
                 });
-
-                decryptionKey = (response.data as any).decryptionKey;
+                sessionToken = (response.data as any).sessionToken;
             } else {
                 setStatus('Verifying hardware lock...');
                 const response = await axios.post('/api/activation/verify', {
                     orderNumber,
-                    productId, // Placeholder
+                    productId,
                     fingerprint
                 });
-                decryptionKey = (response.data as any).decryptionKey;
+                sessionToken = (response.data as any).sessionToken;
             }
 
-            setStatus('Decrypting content into RAM...');
-            const decrypted = await decryptRaw(buffer, decryptionKey);
+            setStatus('Decrypting content into Secure Vault...');
 
-            setStatus('Content ready.');
-            onFileLoaded(decrypted, file.name.replace('.bybx', ''));
+            if (!navigator.serviceWorker.controller) {
+                throw new Error('Service Worker not ready. Please refresh.');
+            }
+
+            const channel = new MessageChannel();
+            navigator.serviceWorker.controller.postMessage({
+                type: 'ACTIVATE_SESSION',
+                sessionToken,
+                orderNumber,
+                productId,
+                fileBuffer: buffer,
+                fileName: file.name.replace('.bybx', '')
+            }, [channel.port2, buffer]); // Transfer buffer ownership to SW
+
+            channel.port1.onmessage = (event) => {
+                if (event.data.success) {
+                    setStatus('Content ready.');
+                    onFileLoaded(event.data.virtualUrl, file.name.replace('.bybx', ''));
+                } else {
+                    setError(event.data.error);
+                }
+            };
 
         } catch (err: any) {
             console.error(err);
             setError(err.response?.data?.message || err.message);
         }
-    };
-
-    const decryptRaw = async (buffer: ArrayBuffer, masterKey: string) => {
-        const iv = buffer.slice(128, 140);
-        const tag = buffer.slice(140, 156);
-        const encrypted = buffer.slice(156);
-
-        const dataWithTag = new Uint8Array(encrypted.byteLength + tag.byteLength);
-        dataWithTag.set(new Uint8Array(encrypted), 0);
-        dataWithTag.set(new Uint8Array(tag), encrypted.byteLength);
-
-        const key = await crypto.subtle.importKey(
-            'raw',
-            hexToBytes(masterKey),
-            { name: 'AES-GCM' },
-            false,
-            ['decrypt']
-        );
-
-        return await crypto.subtle.decrypt(
-            { name: 'AES-GCM', iv: new Uint8Array(iv) },
-            key,
-            dataWithTag
-        );
-    };
-
-    const hexToBytes = (hex: string) => {
-        const bytes = new Uint8Array(hex.length / 2);
-        for (let i = 0; i < bytes.length; i++) {
-            bytes[i] = parseInt(hex.substr(i * 2, 2), 16);
-        }
-        return bytes;
     };
 
     if (error) return <div className="p-4 bg-red-900/50 text-red-200 rounded border border-red-500">Error: {error}</div>;

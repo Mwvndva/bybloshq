@@ -1,34 +1,33 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+import BybxViewer from '../components/BybxViewer';
+
 interface BybxContextType {
-    onFileLoaded: (data: ArrayBuffer, name: string) => void;
-    decryptedFile: { data: ArrayBuffer, name: string } | null;
+    onFileLoaded: (url: string, name: string) => void;
+    decryptedFile: { url: string, name: string } | null;
 }
 
 const BybxContext = createContext<BybxContextType | undefined>(undefined);
 
 export const BybxProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [decryptedFile, setDecryptedFile] = useState<{ data: ArrayBuffer, name: string } | null>(null);
+    const [decryptedFile, setDecryptedFile] = useState<{ url: string, name: string } | null>(null);
 
-    const onFileLoaded = (data: ArrayBuffer, name: string) => {
-        setDecryptedFile({ data, name });
+    const onFileLoaded = (url: string, name: string) => {
+        setDecryptedFile({ url, name });
 
         const lowerName = name.toLowerCase();
 
         if (lowerName.endsWith('.pdf')) {
-            const blob = new Blob([data], { type: 'application/pdf' });
-            const url = URL.createObjectURL(blob);
-            window.open(url, '_blank');
+            // PDF will be rendered by the BybxViewer component below
             return;
         }
 
         // Default to audio for now (or check extension)
-        // PoC: play audio
-        const blob = new Blob([data], { type: 'audio/mpeg' });
-        const url = URL.createObjectURL(blob);
-        const audio = new Audio(url);
-        audio.play();
-        alert(`Now playing Unlocked Audio: ${name}`);
+        if (lowerName.endsWith('.mp3') || lowerName.endsWith('.m4a') || lowerName.endsWith('.wav')) {
+            const audio = new Audio(url);
+            audio.play().catch(console.error);
+            alert(`Now streaming Unlocked Audio: ${name}`);
+        }
     };
 
     const value = React.useMemo(() => ({ onFileLoaded, decryptedFile }), [decryptedFile]);
@@ -36,6 +35,13 @@ export const BybxProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return (
         <BybxContext.Provider value={value}>
             {children}
+            {decryptedFile && decryptedFile.name.toLowerCase().endsWith('.pdf') && (
+                <BybxViewer
+                    virtualUrl={decryptedFile.url}
+                    fileName={decryptedFile.name}
+                    onClose={() => setDecryptedFile(null)}
+                />
+            )}
         </BybxContext.Provider>
     );
 };

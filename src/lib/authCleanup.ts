@@ -1,7 +1,7 @@
 import axios from 'axios';
-import api from './api';
-import apiClient from './axios';
-import libApi from './api';
+import apiClient from './axios'; // This is likely for generic API calls if any still use it
+import { purchaseAxios } from '@/api/purchaseApi';
+import publicApiService from '@/api/publicApi';
 
 /**
  * Robustly clears all possible authentication artifacts from the frontend environment.
@@ -17,11 +17,16 @@ export const clearAllAuthData = () => {
         'sellerToken',
         'buyer_token',
         'organizerToken',
+        'adminToken',
         'authToken',
         'jwt',
         'user',
         'seller',
-        'buyer'
+        'buyer',
+        'sellerSessionActive',
+        'buyerSessionActive',
+        'adminSessionActive',
+        'organizerSessionActive'
     ];
 
     authKeys.forEach(key => {
@@ -32,7 +37,12 @@ export const clearAllAuthData = () => {
     });
 
     // 2. Clear common axios instance defaults
-    const axiosInstances = [axios, api, apiClient, libApi];
+    const axiosInstances = [
+        axios,
+        apiClient,
+        purchaseAxios,
+        (publicApiService as any).getInstance ? (publicApiService as any).getInstance() : null
+    ].filter(Boolean);
 
     axiosInstances.forEach((instance, index) => {
         try {

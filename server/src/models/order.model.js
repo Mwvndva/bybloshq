@@ -107,7 +107,7 @@ class Order {
       RETURNING *
     `;
 
-    console.log('updateOrderStatus query params:', [status, orderId]);
+
     const { rows } = await pool.query(query, [status, orderId]);
     return rows[0];
   }
@@ -131,8 +131,7 @@ class Order {
       RETURNING *
     `;
 
-    console.log('updatePaymentStatus query params:', [status, paymentReference, orderId]);
-    console.log('shouldSetPaidAt:', shouldSetPaidAt);
+
     const { rows } = await pool.query(query, [status, paymentReference, orderId]);
     return rows[0];
   }
@@ -288,13 +287,8 @@ class Order {
         o.buyer_id as "buyerId",
         o.seller_id as "sellerId",
         o.total_amount as "totalAmount",
-        o.platform_fee_amount as "platformFeeAmount",
-        o.seller_payout_amount as "sellerPayoutAmount",
         o.payment_method as "paymentMethod",
         o.buyer_name as "buyerName",
-        o.buyer_email as "buyerEmail",
-        o.buyer_mobile_payment as "buyerMobilePayment",
-        o.buyer_whatsapp_number as "buyerWhatsappNumber",
         o.shipping_address as "shippingAddress",
         o.notes,
         o.metadata,

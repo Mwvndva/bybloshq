@@ -40,6 +40,19 @@ const sendTokenResponse = (data, statusCode, res, message) => {
   });
 };
 
+export const logout = (req, res) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    expires: new Date(0), // Expire immediately
+    path: '/'
+  };
+  res.cookie('jwt', '', cookieOptions);
+  res.cookie('token', '', cookieOptions);
+  res.status(200).json({ status: 'success', message: 'Logged out successfully' });
+};
+
 export const checkShopNameAvailability = async (req, res) => {
   try {
     const { shopName } = req.query;

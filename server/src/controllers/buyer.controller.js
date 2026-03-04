@@ -45,10 +45,22 @@ const createSendToken = (data, statusCode, req, res) => {
   res.status(statusCode).json({
     status: 'success',
     data: {
-      buyer: sanitizeBuyer(buyer),
-      user: user ? { email: user.email, role: user.role } : undefined
+      buyer: sanitizeBuyer(buyer)
     },
   });
+};
+
+export const logout = (req, res) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    expires: new Date(0), // Expire immediately
+    path: '/'
+  };
+  res.cookie('jwt', '', cookieOptions);
+  res.cookie('token', '', cookieOptions);
+  res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
 export const register = async (req, res, next) => {
@@ -176,7 +188,8 @@ export const getProfile = async (req, res, next) => {
 
     // If not found and user has a buyer profile flag, try finding by user_id
     if (!buyer && req.user.hasBuyerProfile && req.user.userId) {
-      console.log(`[BuyerController] User ${req.user.email} is ${req.user.userType} but has buyer profile, fetching by user_id`);
+      // Use logger.debug instead of console.log
+      logger.debug(`[BuyerController] User ${req.user.email} is ${req.user.userType} but has buyer profile, fetching by user_id`);
       buyer = await Buyer.findByUserId(req.user.userId);
     }
 
@@ -330,14 +343,16 @@ export const checkBuyerByPhone = async (req, res, next) => {
         status: 'success',
         data: {
           exists: true,
-          buyer: sanitizedBuyer
-          // token - REMOVED for security
+          buyer: {
+            // Only pre-fill fields needed for checkout form
+            name: existingBuyer.fullName || existingBuyer.full_name || '',
+            city: existingBuyer.city || '',
+            location: existingBuyer.location || existingBuyer.physical_address || '',
+            // NEVER: id, email, password, user_id, phone numbers, coordinates
+          }
         }
       });
     } else {
-      // Buyer does not exist
-      // console.log('No buyer found with phone:', '[REDACTED]');
-
       res.status(200).json({
         status: 'success',
         data: {
@@ -535,7 +550,7 @@ export const markOrderAsCollected = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: {
-        order: updatedOrder
+        order: sanitizeOrder(updatedOrder, 'buyer')
       }
     });
 
