@@ -6,6 +6,7 @@ import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
+import Buyer from '../models/buyer.model.js';
 
 export class PaymentService {
     constructor() {
@@ -942,12 +943,12 @@ export class PaymentService {
         if (!buyerId) {
             // Logic from controller: try to find buyer by phone if not auth
             if (buyerMobilePayment) {
-                const { rows: buyers } = await pool.query('SELECT * FROM buyers WHERE mobile_payment = $1 OR whatsapp_number = $1', [buyerMobilePayment]);
-                if (buyers.length > 0) {
-                    buyerId = buyers[0].id;
+                const buyer = await Buyer.findByPhone(buyerMobilePayment);
+                if (buyer) {
+                    buyerId = buyer.id;
                     // If we found them in DB, we could prefer DB email if payload email is missing
-                    if (!buyerEmail) buyerEmail = buyers[0].email;
-                    if (!buyerWhatsApp) buyerWhatsApp = buyers[0].whatsapp_number;
+                    if (!buyerEmail) buyerEmail = buyer.email;
+                    if (!buyerWhatsApp) buyerWhatsApp = buyer.whatsapp_number || buyer.whatsappNumber;
                 }
             }
         }
