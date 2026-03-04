@@ -248,8 +248,6 @@ export class PaymentService {
                 amount: paydAmount,
                 phone_number: cleanPhone,
                 narration: narrative || `Payment for ${invoice_id}`,
-                reference: invoice_id, // Add explicit reference for callback matching
-                external_id: invoice_id, // Fallback for some Payd versions
                 currency: "KES",
                 callback_url: callbackUrl,
                 billing_address: billing_address || 'Nairobi, Kenya'
