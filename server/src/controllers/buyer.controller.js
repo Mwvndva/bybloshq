@@ -4,6 +4,7 @@ import User from '../models/user.model.js';
 import AppError from '../utils/appError.js';
 import { sanitizeBuyer } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
+import logger from '../utils/logger.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../utils/cookie.utils.js';

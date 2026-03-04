@@ -2,6 +2,7 @@ import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { pool } from '../config/database.js';
+import logger from '../utils/logger.js';
 
 // Convert snake_case to camelCase function
 const toCamelCase = (obj) => {
@@ -113,6 +114,15 @@ class Buyer {
       phoneVariations.push('+254' + normalized); // 712... -> +254712...
       phoneVariations.push('254' + normalized); // 712... -> 254712...
     }
+
+    const query = `
+      SELECT *, user_id AS "userId" 
+      FROM buyers 
+      WHERE mobile_payment = ANY($1) 
+      OR whatsapp_number = ANY($1)
+      LIMIT 1
+    `;
+    const result = await pool.query(query, [phoneVariations]);
 
     if (result.rows.length > 0) {
       // Log matched without actual value
