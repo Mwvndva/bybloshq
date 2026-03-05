@@ -975,11 +975,64 @@ class OrderService {
 
       await client.query('COMMIT');
 
-      // Notification logic (simplified)
+      // 6. Send Notifications
       try {
-        // notify seller
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
+                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
+                  COALESCE(s.email, u.email) as seller_email, 
+                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           LEFT JOIN users u ON s.user_id = u.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
+
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+          const buyerData = {
+            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
+            whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
+          };
+          const sellerData = {
+            name: fullOrder.seller_name,
+            phone: fullOrder.seller_phone,
+            email: fullOrder.seller_email,
+            physicalAddress: fullOrder.seller_address,
+            latitude: fullOrder.seller_latitude,
+            longitude: fullOrder.seller_longitude
+          };
+
+          const notificationPayload = {
+            buyer: buyerData,
+            seller: sellerData,
+            order: {
+              orderNumber: fullOrder.order_number,
+              totalAmount: fullOrder.total_amount,
+              status: OrderStatus.COMPLETED,
+              metadata: fullOrder.metadata
+            },
+            oldStatus: order.status,
+            newStatus: OrderStatus.COMPLETED,
+            notes: 'Service confirmed as done by buyer'
+          };
+
+          // Notify Seller: "Buyer confirmed the service is done, funds released."
+          whatsappService.notifySellerStatusUpdate(notificationPayload)
+            .catch(err => logger.error('Error sending confirmation notification to seller:', err));
+
+          // Notify Buyer: "Thank you for confirming. Order completed."
+          whatsappService.notifyBuyerStatusUpdate(notificationPayload)
+            .catch(err => logger.error('Error sending confirmation notification to buyer:', err));
+        }
       } catch (e) {
-        logger.error('Error sending confirmation notification:', e);
+        logger.error('Error sending confirmation notifications:', e);
       }
 
       return updatedOrder;
