@@ -962,7 +962,7 @@ const NewAdminDashboard = () => {
                                 <p className="text-xs text-gray-500">{safeFormatDate(order.createdAt, 'MMM d, yyyy h:mm a')}</p>
                               </div>
                               <div className="text-right">
-                                <p className="font-bold text-white">KSh {order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                <p className="font-bold text-white">KSh {(order.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                 <div className="flex gap-2 mt-1 justify-end">
                                   <Badge className={
                                     order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
