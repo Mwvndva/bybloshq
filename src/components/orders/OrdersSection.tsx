@@ -52,7 +52,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
   return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
-import { Search, ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Handshake, FileText, Users, UserCheck } from 'lucide-react';
+import { Search, ArrowRight, Clock, CheckCircle, XCircle, Truck, Package, RefreshCw, Handshake, FileText, Users, UserCheck, Download, Loader2 } from 'lucide-react';
 import { Order, OrderStatus, PaymentStatus } from '@/types/order';
 import buyerApi from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
@@ -195,6 +195,35 @@ export default function OrdersSection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
+
+  const isDigitalOrder = (order: Order): boolean => {
+    return !!(
+      order.isDigital ||
+      (order.metadata as any)?.product_type === 'digital' ||
+      order.items?.some((i: any) => i.isDigital || i.productType === 'digital')
+    );
+  };
+
+  const handleDownload = async (order: Order) => {
+    const digitalItem = order.items?.find(
+      (i: any) => i.isDigital || i.productType === 'digital'
+    );
+    if (!digitalItem?.productId) {
+      toast.error('Could not find digital product to download.');
+      return;
+    }
+
+    try {
+      setDownloadingOrderId(order.id);
+      await buyerApi.downloadDigitalProduct(String(order.id), String(digitalItem.productId));
+      toast.success('Download Started. Your file is downloading.');
+    } catch (err: any) {
+      toast.error(err.message || 'Could not download the file. Please try again.');
+    } finally {
+      setDownloadingOrderId(null);
+    }
+  };
 
   const fetchOrders = useCallback(async () => {
     if (!user) {
@@ -657,6 +686,28 @@ export default function OrdersSection() {
                         onClick={() => handleConfirmReceiptClick(order.id)}
                       >
                         Mark as Done
+                      </Button>
+                    )}
+
+                    {/* Digital product download — shown when order is COMPLETED and has digital items */}
+                    {order.status === 'COMPLETED' && isDigitalOrder(order) && (
+                      <Button
+                        size="sm"
+                        className="flex-1 sm:flex-none bg-yellow-500 hover:bg-yellow-600 text-black font-semibold text-xs sm:text-sm gap-1.5"
+                        onClick={() => handleDownload(order)}
+                        disabled={downloadingOrderId === order.id}
+                      >
+                        {downloadingOrderId === order.id ? (
+                          <>
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="h-3.5 w-3.5" />
+                            Download
+                          </>
+                        )}
                       </Button>
                     )}
 

@@ -184,7 +184,8 @@ class Order {
               'quantity', oi.quantity,
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
-              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
+              'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
+              'digitalFileName', p.digital_file_name,
               'metadata', oi.metadata,
               'imageUrl', p.image_url
             ) ORDER BY oi.id
@@ -249,7 +250,8 @@ class Order {
               'quantity', oi.quantity,
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
-              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
+              'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
+              'digitalFileName', p.digital_file_name,
               'metadata', oi.metadata,
               'imageUrl', p.image_url
             ) ORDER BY oi.id
@@ -321,7 +323,8 @@ class Order {
               'quantity', oi.quantity,
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
-              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false),
+              'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
+              'digitalFileName', p.digital_file_name,
               'metadata', oi.metadata,
               'imageUrl', p.image_url
             ) ORDER BY oi.id
@@ -413,13 +416,15 @@ class Order {
               'subtotal', oi.subtotal,
               'metadata', oi.metadata,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
-              'isDigital', COALESCE((oi.metadata->>'isDigital')::boolean, false)
+              'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
+              'digitalFileName', p.digital_file_name
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json
         ) as items
       FROM product_orders o
       LEFT JOIN order_items oi ON o.id = oi.order_id
+      LEFT JOIN products p ON oi.product_id = p.id
       ${whereClause}
       GROUP BY o.id
       ORDER BY o.created_at DESC
