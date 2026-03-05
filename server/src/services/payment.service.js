@@ -259,7 +259,8 @@ export class PaymentService {
 
                 logger.info('[PAYD-REQUEST] Initiating request via Axios', {
                     url,
-                    contentLength: Buffer.byteLength(payloadData)
+                    contentLength: Buffer.byteLength(payloadData),
+                    payload: payloadData
                 });
 
                 const response = await this.client.post('/payments', payloadData, {
@@ -319,7 +320,9 @@ export class PaymentService {
             logger.error('[PURCHASE-FLOW] Payment initiation failed', {
                 duration: `${duration}ms`,
                 invoice_id: paymentData.invoice_id,
-                error: errorDetails
+                status: error.response?.status,
+                errorData: error.response?.data,
+                message: error.message
             });
 
             // Enhanced error message
