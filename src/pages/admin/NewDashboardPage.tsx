@@ -450,6 +450,19 @@ const NewAdminDashboard = () => {
     return trend !== 0 || dashboardState.analytics.monthlyGrowth?.revenue !== 0;
   };
 
+  // Safe date formatting helper to prevent RangeError
+  const safeFormatDate = (dateString: string | null | undefined, formatStr: string = 'MMM d, yyyy') => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return format(date, formatStr);
+    } catch (error) {
+      console.error('Date formatting error:', error, 'for value:', dateString);
+      return 'N/A';
+    }
+  };
+
   // Stats cards data with proper type safety
   const statsCards: StatsCardProps[] = [
     {
@@ -838,7 +851,7 @@ const NewAdminDashboard = () => {
                       <div>
                         <p className="text-sm text-gray-500 font-medium">Member Since</p>
                         <p className="text-base text-gray-200">
-                          {selectedSeller.createdAt || selectedSeller.created_at ? format(new Date(selectedSeller.createdAt || selectedSeller.created_at), 'MMM d, yyyy') : 'N/A'}
+                          {safeFormatDate(selectedSeller.createdAt || selectedSeller.created_at)}
                         </p>
                       </div>
                     </CardContent>
@@ -946,7 +959,7 @@ const NewAdminDashboard = () => {
                               <div className="flex-1">
                                 <p className="font-semibold text-white">Order #{order.orderNumber || order.id}</p>
                                 <p className="text-sm text-gray-400">{order.buyerName}</p>
-                                <p className="text-xs text-gray-500">{format(new Date(order.createdAt), 'MMM d, yyyy h:mm a')}</p>
+                                <p className="text-xs text-gray-500">{safeFormatDate(order.createdAt, 'MMM d, yyyy h:mm a')}</p>
                               </div>
                               <div className="text-right">
                                 <p className="font-bold text-white">KSh {order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -1069,7 +1082,7 @@ const NewAdminDashboard = () => {
                       <div>
                         <p className="text-sm text-gray-500 font-medium">Member Since</p>
                         <p className="text-base text-gray-200">
-                          {selectedBuyer.created_at || selectedBuyer.createdAt ? format(new Date(selectedBuyer.created_at || selectedBuyer.createdAt), 'MMM d, yyyy') : 'N/A'}
+                          {safeFormatDate(selectedBuyer.created_at || selectedBuyer.createdAt)}
                         </p>
                       </div>
                     </CardContent>
@@ -1257,7 +1270,7 @@ const NewAdminDashboard = () => {
                               </Badge>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-400">
-                              {seller.createdAt ? format(new Date(seller.createdAt), 'MMM d, yyyy') : 'N/A'}
+                              {safeFormatDate(seller.createdAt)}
                             </td>
                           </tr>
                         ))}
@@ -1505,6 +1518,10 @@ const NewAdminDashboard = () => {
                                 <MapPin className="h-4 w-4 mr-1 text-gray-400" />
                                 <span className="text-gray-300">{buyer.city || 'N/A'}</span>
                               </div>
+                              <div className="flex items-center text-xs text-gray-400 mt-1">
+                                <Calendar className="h-3 w-3 mr-1" />
+                                <span>Joined: {safeFormatDate(buyer.createdAt)}</span>
+                              </div>
                               {buyer.location && (
                                 <div className="text-xs text-gray-400 truncate max-w-[200px]" title={buyer.location}>
                                   {buyer.location}
@@ -1643,8 +1660,8 @@ const NewAdminDashboard = () => {
                               </Badge>
                             </td>
                             <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden lg:table-cell">
-                              <div>{new Date(request.createdAt).toLocaleDateString()}</div>
-                              <div className="text-xs text-gray-400">{new Date(request.createdAt).toLocaleTimeString()}</div>
+                              <div>{safeFormatDate(request.createdAt)}</div>
+                              <div className="text-xs text-gray-400">{safeFormatDate(request.createdAt, 'h:mm a')}</div>
                             </td>
                             <td className="py-3 pr-3 sm:pr-4 text-right">
                               <div className="flex items-center justify-end space-x-1 sm:space-x-2">
@@ -1765,7 +1782,7 @@ const NewAdminDashboard = () => {
                               <div className="text-xs text-gray-500">{client.seller_name}</div>
                             </td>
                             <td className="py-3 px-2 sm:px-3 text-sm text-gray-400">
-                              {client.createdAt ? format(new Date(client.createdAt), 'MMM d, yyyy') : 'N/A'}
+                              {safeFormatDate(client.createdAt)}
                             </td>
                           </tr>
                         ))}

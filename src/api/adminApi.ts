@@ -183,7 +183,14 @@ export const adminApi = {
   async getBuyerById(id: string) {
     try {
       const response = await api.get(`/admin/buyers/${id}`);
-      return response.data.data;
+      const buyer = response.data.data;
+      if (!buyer) return null;
+      return {
+        ...buyer,
+        name: buyer.name || buyer.full_name || 'Unnamed Buyer',
+        phone: buyer.phone || buyer.mobile_payment || '',
+        createdAt: buyer.created_at || buyer.createdAt || new Date().toISOString()
+      };
     } catch (error) {
       console.error('Error fetching buyer details:', error);
       return null;
@@ -196,7 +203,13 @@ export const adminApi = {
       console.log('Fetching sellers from API...');
       const response = await api.get('/admin/sellers');
       console.log('Sellers API response:', response);
-      return response.data.data;
+      const sellersData = Array.isArray(response.data.data) ? response.data.data : [];
+      return sellersData.map((seller: any) => ({
+        ...seller,
+        name: seller.name || seller.full_name || 'Unnamed Seller',
+        phone: seller.phone || seller.whatsapp_number || '',
+        createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
+      }));
     } catch (error) {
       console.error('Error fetching sellers:', error);
       return [];
@@ -206,7 +219,14 @@ export const adminApi = {
   async getSellerById(id: string) {
     try {
       const response = await api.get(`/admin/sellers/${id}`);
-      return response.data.data;
+      const seller = response.data.data;
+      if (!seller) return null;
+      return {
+        ...seller,
+        name: seller.name || seller.full_name || 'Unnamed Seller',
+        phone: seller.phone || seller.whatsapp_number || '',
+        createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
+      };
     } catch (error) {
       console.error('Error fetching seller details:', error);
       return null;
@@ -255,9 +275,10 @@ export const adminApi = {
     try {
       console.log('Fetching clients from API...');
       const response = await api.get('/admin/clients');
-      return response.data.data.map((client: any) => ({
+      const clientsData = Array.isArray(response.data.data) ? response.data.data : [];
+      return clientsData.map((client: any) => ({
         ...client,
-        createdAt: client.created_at || client.createdAt
+        createdAt: client.created_at || client.createdAt || new Date().toISOString()
       }));
     } catch (error) {
       console.error('Error fetching clients:', error);
