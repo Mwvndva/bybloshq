@@ -251,40 +251,59 @@ export const createSellerClientOrder = async (req, res) => {
 export const downloadDigitalProduct = async (req, res) => {
     try {
         const { orderId, productId } = req.params;
-        const userId = req.user.id;
-        const userType = req.user.userType || req.user.role;
 
-        // 1. Fetch order with ownership check
+        // req.user.id = the users table PK (from JWT)
+        // req.user.buyerProfileId = the buyers table PK (set by auth middleware for cross-role)
+        const userTableId = req.user.userId || req.user.id;
+        const buyerProfileId = req.user.buyerProfileId || req.user.id;
+
+        // 1. Fetch order — findById returns camelCase aliases (buyerId, sellerId)
         const order = await Order.findById(orderId);
         if (!order) {
             return res.status(404).json({ status: 'error', message: 'Order not found' });
         }
 
-        // 2. Authorization — buyer or seller of this order
-        const isBuyer = order.buyer_id === userId;
-        const isSeller = order.seller_id === userId;
+        // 2. Authorization — use camelCase field names from the model
+        // For buyer: match against the buyer profile row ID stored in product_orders.buyer_id
+        // For seller: match against req.user.id (sellers table PK, same as users JWT id for sellers)
+        const isBuyer = (
+            order.buyerId === buyerProfileId ||
+            order.buyerId === req.user.id
+        );
+        const isSeller = (
+            order.sellerId === req.user.id ||
+            order.sellerId === userTableId
+        );
+
+        logger.info(`[DOWNLOAD] Auth check — order.buyerId=${order.buyerId}, order.sellerId=${order.sellerId}, req.user.id=${req.user.id}, buyerProfileId=${buyerProfileId}`);
 
         if (!isBuyer && !isSeller) {
+            logger.warn(`[DOWNLOAD] Unauthorized — user ${req.user.id} cannot access order ${orderId}`);
             return res.status(403).json({ status: 'error', message: 'Unauthorized' });
         }
 
-        // 3. Buyers must have a completed order — case-insensitive check
-        if (isBuyer && order.status?.toUpperCase() !== 'COMPLETED') {
-            return res.status(403).json({
-                status: 'error',
-                message: 'Order must be completed before downloading digital products'
-            });
+        // 3. Buyers must have a completed order — DB stores uppercase 'COMPLETED'
+        if (isBuyer && !isSeller) {
+            const orderStatus = (order.status || '').toUpperCase();
+            if (orderStatus !== 'COMPLETED') {
+                logger.warn(`[DOWNLOAD] Order ${orderId} status is '${order.status}' — not COMPLETED`);
+                return res.status(403).json({
+                    status: 'error',
+                    message: 'Order must be completed before downloading'
+                });
+            }
         }
 
-        // 4. Verify the product is in this order
-        const item = (order.items || []).find(
+        // 4. Verify the product exists in this order's items
+        const items = Array.isArray(order.items) ? order.items : [];
+        const item = items.find(
             i => String(i.productId || i.product_id) === String(productId)
         );
         if (!item) {
             return res.status(404).json({ status: 'error', message: 'Product not found in this order' });
         }
 
-        // 5. Fetch the digital file path from the products table
+        // 5. Fetch the digital file path from products table
         const { rows: productRows } = await pool.query(
             `SELECT id, name, is_digital, digital_file_path, digital_file_name
              FROM products WHERE id = $1`,
@@ -297,39 +316,36 @@ export const downloadDigitalProduct = async (req, res) => {
         }
 
         if (!product.is_digital || !product.digital_file_path) {
-            return res.status(400).json({ status: 'error', message: 'This product does not have a downloadable file' });
+            return res.status(400).json({ status: 'error', message: 'This product has no downloadable file' });
         }
 
         const filePath = product.digital_file_path;
         const fileName = product.digital_file_name || `${product.name}.zip`;
 
-        // 6. Determine how to serve the file
-        // If file is stored on Cloudinary or external URL, redirect to it
+        logger.info(`[DOWNLOAD] Serving file for order ${orderId}, product ${productId}: ${filePath}`);
+
+        // 6. External URL (Cloudinary, S3, etc.) — redirect directly
         if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-            logger.info(`[DOWNLOAD] Redirecting to external file for order ${orderId}, product ${productId}`);
-            return res.redirect(filePath);
+            return res.redirect(302, filePath);
         }
 
-        // 7. Serve local file
-        const absolutePath = path.resolve(process.cwd(), filePath);
+        // 7. Local file — stream it
+        const path = await import('path');
+        const fs = await import('fs');
+        const absolutePath = path.default.resolve(process.cwd(), filePath);
 
-        try {
-            await fs.access(absolutePath);
-        } catch (err) {
-            logger.error(`[DOWNLOAD] File not found at path: ${absolutePath}`);
+        if (!fs.default.existsSync(absolutePath)) {
+            logger.error(`[DOWNLOAD] File missing at path: ${absolutePath}`);
             return res.status(404).json({ status: 'error', message: 'File not found on server' });
         }
-
-        logger.info(`[DOWNLOAD] Serving file: ${absolutePath} for order ${orderId}`);
 
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
         res.setHeader('Content-Type', 'application/octet-stream');
         res.setHeader('X-Content-Type-Options', 'nosniff');
 
-        const { createReadStream } = await import('fs');
-        const fileStream = createReadStream(absolutePath);
+        const fileStream = fs.default.createReadStream(absolutePath);
         fileStream.on('error', (err) => {
-            logger.error(`[DOWNLOAD] File stream error: ${err.message}`);
+            logger.error(`[DOWNLOAD] Stream error: ${err.message}`);
             if (!res.headersSent) {
                 res.status(500).json({ status: 'error', message: 'Failed to stream file' });
             }
@@ -338,7 +354,9 @@ export const downloadDigitalProduct = async (req, res) => {
 
     } catch (error) {
         logger.error('Error in downloadDigitalProduct:', error);
-        res.status(500).json({ status: 'error', message: 'Download failed' });
+        if (!res.headersSent) {
+            res.status(500).json({ status: 'error', message: 'Download failed' });
+        }
     }
 };
 export const locationPreview = async (req, res) => {
