@@ -283,10 +283,22 @@ class AdminService {
         await client.query('DELETE FROM buyers WHERE user_id = $1', [userId]);
       }
 
-      // Always clean up any buyers row referencing this user (a seller user may also have one)
-      await client.query('DELETE FROM buyers WHERE user_id = $1', [userId]);
+      // --- Universal cleanup: runs for ALL roles ---
 
-      // 2. Delete from users table last
+      // This user may be a client of other sellers (seller_clients.user_id FK)
+      await client.query('DELETE FROM seller_clients WHERE user_id = $1', [userId]);
+
+      // This user may have a buyers row even if their role is 'seller'
+      const buyerRow = await client.query('SELECT id FROM buyers WHERE user_id = $1', [userId]);
+      if (buyerRow.rows.length > 0) {
+        const buyerId = buyerRow.rows[0].id;
+        await client.query('DELETE FROM wishlists WHERE buyer_id = $1', [buyerId]);
+        await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE buyer_id = $1)', [buyerId]);
+        await client.query('DELETE FROM product_orders WHERE buyer_id = $1', [buyerId]);
+        await client.query('DELETE FROM buyers WHERE id = $1', [buyerId]);
+      }
+
+      // Now safe to delete the user row
       await client.query('DELETE FROM users WHERE id = $1', [userId]);
 
       await client.query('COMMIT');
