@@ -131,25 +131,25 @@ class WithdrawalService {
                 narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`
             });
 
-            // Store Payd's correlator_id as our provider_reference
+            // Store Payd's transaction_reference as our provider_reference
             // This is what the webhook callback will reference via transaction_reference
-            const correlatorId = paydResponse.correlator_id;
+            const reference = paydResponse.transaction_reference;
 
-            if (correlatorId) {
+            if (reference) {
                 await pool.query(
                     `UPDATE withdrawal_requests 
                      SET provider_reference = $1, raw_response = $2
                      WHERE id = $3`,
-                    [correlatorId, JSON.stringify(paydResponse), request.id]
+                    [reference, JSON.stringify(paydResponse), request.id]
                 );
-                logger.info(`[WithdrawalService] Request ${request.id} → Payd correlator_id: ${correlatorId} `);
+                logger.info(`[WithdrawalService] Request ${request.id} → Payd reference: ${reference} `);
             } else {
-                // Payd accepted but returned no correlator_id — log raw response
+                // Payd accepted but returned no reference — log raw response
                 await pool.query(
                     'UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
                     [JSON.stringify(paydResponse), request.id]
                 );
-                logger.warn(`[WithdrawalService] Request ${request.id}: Payd returned no correlator_id`, paydResponse);
+                logger.warn(`[WithdrawalService] Request ${request.id}: Payd returned no transaction_reference`, paydResponse);
             }
 
             // Notify entity: payout is processing

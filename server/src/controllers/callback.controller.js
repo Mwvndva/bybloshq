@@ -45,15 +45,15 @@ export const handlePaydPayoutCallback = async (req, res) => {
         }
 
         // --- Determine outcome using BOTH result_code and status ---
-        // Per Payd docs: resultCode 0 + status "success" = paid
+        // result_code 0 is success in Payd v2 payouts
+        const isSuccess = (resultCode === 0 || resultCode === '0' || paydStatus === 'success');
+
         let finalStatus = null;
-        if (resultCode === 0 && paydStatus === 'success') {
+        if (isSuccess) {
             finalStatus = 'completed';
-        } else if (resultCode === 1 || paydStatus === 'failed') {
-            finalStatus = 'failed';
         } else {
-            logger.info(`[PAYOUT-CALLBACK] Unrecognised status — ignoring. result_code=${resultCode}, status=${paydStatus}`);
-            return res.status(200).json({ status: 'ignored' });
+            // result_code 1 or status 'failed'
+            finalStatus = 'failed';
         }
 
         await client.query('BEGIN');
@@ -77,7 +77,7 @@ export const handlePaydPayoutCallback = async (req, res) => {
         );
 
         if (!request) {
-            logger.warn(`[PAYOUT-CALLBACK] No request found for transaction_reference: ${transactionReference}`);
+            logger.warn(`[PAYOUT-CALLBACK] No request found for transaction_reference: ${transactionReference}. Payment might be from a different system or manual.`);
             await client.query('ROLLBACK');
             return res.status(200).json({ status: 'not_found' });
         }
