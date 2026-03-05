@@ -7,10 +7,11 @@ import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
 import Buyer from '../models/buyer.model.js';
+import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
 
 export class PaymentService {
     constructor() {
-        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.mypayd.app/api/v3';
+        this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.payd.money/api/v2';
         this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
@@ -201,146 +202,178 @@ export class PaymentService {
     }
 
     /**
-     * Initiate a payment with Payd (STK Push)
-     * Matches structure of: 
-     * curl --location 'https://api.mypayd.app/api/v3/payments' \
-     * --header 'Content-Type: application/json' \
-     * --header 'Authorization: Basic ...' \
-     * --data-raw '{ ... }'
+     * Initiate M-Pesa STK Push Payment
+     * 
+     * Endpoint: POST https://api.payd.money/api/v2/payments
+     * Auth: Basic Auth
+     * Docs: https://magic.payd.one/kenya-payins
+     * 
+     * @param {Object} paymentData
+     * @param {string} paymentData.phone - Phone number (254XXXXXXXXX or 0XXXXXXXXX)
+     * @param {number} paymentData.amount - Amount in KES
+     * @param {string} paymentData.invoice_id - Unique reference
+     * @param {string} paymentData.email - Buyer email
+     * @param {string} [paymentData.first_name] - Buyer first name
+     * @param {string} [paymentData.last_name] - Buyer last name
+     * @param {string} [paymentData.callback_url] - Webhook URL
+     * @returns {Promise<Object>}
      */
     async initiatePayment(paymentData) {
         const startTime = Date.now();
 
         try {
-            const { email, amount, invoice_id, phone, narrative, firstName, lastName, billing_address } = paymentData;
-
-            if (!this.networkCode || !this.channelId) {
-                throw new Error('Payd network code or channel ID not configured');
-            }
+            const {
+                email,
+                amount,
+                invoice_id,
+                phone,
+                narrative,
+                first_name,
+                last_name,
+                callback_url
+            } = paymentData;
 
             // Validate credentials
             if (!this.username || !this.password) {
-                throw new Error('Payd credentials not configured');
+                throw new PaydError('Payd credentials not configured', PaydErrorCodes.CONFIG_ERROR);
             }
 
-            const paydAmount = parseFloat(amount);
-            let cleanPhone = phone.replace(/\D/g, '');
-            if (cleanPhone.startsWith('254')) {
-                cleanPhone = '0' + cleanPhone.substring(3);
-            } else if (cleanPhone.length === 9) {
-                cleanPhone = '0' + cleanPhone;
+            // ============================================================
+            // STEP 1: CHECK PLATFORM BALANCE (Optional but recommended)
+            // ============================================================
+            try {
+                const balance = await this.checkBalance();
+                logger.info('[PAYD-PAYIN] Platform balance check', {
+                    available: balance.available_balance,
+                    required: amount
+                });
+
+                if (parseFloat(balance.available_balance) < parseFloat(amount) * 1.1) {
+                    // Alert if balance is low (less than 110% of transaction amount)
+                    logger.warn('[PAYD-PAYIN] Low platform balance', {
+                        available: balance.available_balance,
+                        required: amount
+                    });
+                }
+            } catch (balanceError) {
+                // Don't block payment if balance check fails
+                logger.error('[PAYD-PAYIN] Balance check failed (non-critical)', balanceError);
             }
 
-            const callbackUrl = process.env.PAYD_CALLBACK_URL ||
+            // ============================================================
+            // STEP 2: NORMALIZE PHONE NUMBER
+            // ============================================================
+            const normalizedPhone = this.normalizePhoneForPayment(phone);
+
+            // ============================================================
+            // STEP 3: BUILD PAYMENT REQUEST
+            // ============================================================
+            const callbackUrl = callback_url || process.env.PAYD_CALLBACK_URL ||
                 (process.env.BACKEND_URL ? `${process.env.BACKEND_URL}/api/payments/webhook/payd` :
                     "https://bybloshq.space/api/payments/webhook/payd");
 
-            logger.info(`[PURCHASE-FLOW] 1. Initiating Payd Payment for Invoice: ${invoice_id}`, {
-                amount: paydAmount,
-                phone: cleanPhone,
-                targetUrl: `${this.baseUrl}/payments`,
-                timestamp: new Date().toISOString()
-            });
-
-            const payloadData = JSON.stringify({
+            const payload = {
                 username: this.payloadUsername,
                 channel: "MPESA",
-                amount: paydAmount,
-                phone_number: cleanPhone,
+                amount: parseFloat(amount),
+                phone_number: normalizedPhone,
                 narration: narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
                 callback_url: callbackUrl,
-                billing_address: billing_address || 'Nairobi, Kenya'
+                billing_address: {
+                    email: email,
+                    first_name: first_name || 'Customer',
+                    last_name: last_name || '',
+                    city: 'Nairobi',
+                    country: 'Kenya'
+                }
+            };
+
+            logger.info('[PAYD-PAYIN] Initiating payment', {
+                invoice_id,
+                amount: payload.amount,
+                phone: normalizedPhone,
+                endpoint: `${this.baseUrl}/payments`
             });
 
-            // ✅ FIX 2: Modernized request using Axios (more stable than raw https.request)
-            const makeRequest = async () => {
-                const url = `${this.baseUrl}/payments`;
-
-                logger.info('[PAYD-REQUEST] Initiating request via Axios', {
-                    url,
-                    contentLength: Buffer.byteLength(payloadData),
-                    payload: payloadData
-                });
-
-                const response = await this.client.post('/payments', payloadData, {
+            // ============================================================
+            // STEP 4: MAKE API REQUEST
+            // ============================================================
+            const response = await this._retryRequest(async () => {
+                return await this.client.post('/payments', payload, {
                     headers: {
                         'Authorization': this.getAuthHeader(),
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }
                 });
-
-                return {
-                    data: response.data,
-                    status: response.status
-                };
-            };
-
-            // ✅ FIX 8: Enhanced retry with exponential backoff
-            const response = await this._retryRequest(() => makeRequest(), 3, 1000);
+            }, 3, 1000);
 
             const duration = Date.now() - startTime;
-            logger.info(`[PURCHASE-FLOW] Payment initiated successfully`, {
-                duration: `${duration}ms`,
-                status: response.status,
-                reference: response.data.transaction_id || response.data.reference
-            });
 
+            // ============================================================
+            // STEP 5: PARSE RESPONSE
+            // ============================================================
             const resData = response.data.data || response.data;
-            const reference = resData.transaction_id ||
-                resData.transaction_reference ||
+
+            // Extract transaction reference (Standardizing on transaction_reference)
+            const reference = resData.transaction_reference ||
+                resData.transaction_id ||
                 resData.reference ||
                 resData.tracking_id ||
-                response.data.transaction_id ||
-                response.data.reference ||
-                `REF-${Date.now()}`;
+                `PAYD-${Date.now()}`;
+
+            logger.info('[PAYD-PAYIN] Payment initiated successfully', {
+                duration: `${duration}ms`,
+                reference,
+                status: response.status,
+                invoice_id
+            });
 
             return {
-                authorization_url: null,
-                access_code: null,
-                reference: reference,
-                status: response.status,
+                success: true,
+                reference,
+                transaction_id: reference,
+                status: 'pending',
+                message: 'STK push sent to customer phone',
                 original_response: response.data
             };
 
         } catch (error) {
             const duration = Date.now() - startTime;
 
-            const errorDetails = error.response ? {
-                status: error.response.status,
-                data: error.response.data
-            } : {
-                message: error.message || 'Unknown error',
-                code: error.code,
-                errno: error.errno,
-                syscall: error.syscall
-            };
-
-            logger.error('[PURCHASE-FLOW] Payment initiation failed', {
+            logger.error('[PAYD-PAYIN] Payment initiation failed', {
                 duration: `${duration}ms`,
                 invoice_id: paymentData.invoice_id,
-                status: error.response?.status,
-                errorData: error.response?.data,
-                message: error.message
+                error: this._extractErrorDetails(error)
             });
 
-            // Enhanced error message
-            let errorMessage = 'Payment initialization failed. Please try again.';
-
-            if (error.code === 'ECONNRESET' || error.message === 'socket hang up') {
-                errorMessage = 'Connection to payment provider failed. Please try again.';
-                logger.error('[PURCHASE-FLOW] CRITICAL: Payd connection reset (socket hang up). This might be a temporary network issue or server-side termination.');
-            } else if (error.code === 'ETIMEDOUT' || error.message === 'Connection timeout' || error.message === 'Response timeout') {
-                errorMessage = 'Payment provider is taking too long to respond. Please try again.';
-            } else if (error.code === 'ENOTFOUND') {
-                errorMessage = 'Payment provider unreachable. Please check your internet connection.';
-            } else if (error.response && error.response.data && error.response.data.message) {
-                errorMessage = error.response.data.message;
-            }
-
-            throw new Error(errorMessage);
+            throw this._handlePaydError(error);
         }
+    }
+
+    /**
+     * Normalize phone number for PAYMENT (STK Push)
+     * Payd payment API accepts: 254XXXXXXXXX or 0XXXXXXXXX
+     * 
+     * @param {string|number} phone
+     * @returns {string} e.g., "254712345678" or "0712345678"
+     */
+    normalizePhoneForPayment(phone) {
+        if (digits.startsWith('254') && digits.length === 12) {
+            digits = '0' + digits.substring(3);
+        } else if (digits.length === 9) {
+            digits = '0' + digits;
+        } else if (digits.startsWith('0') && digits.length === 10) {
+            // Already correct
+        } else {
+            throw new PaydError(
+                `Invalid phone number: "${phone}". Expected 10-digit number starting with 0 (e.g. 07XXXXXXXX)`,
+                PaydErrorCodes.INVALID_PHONE
+            );
+        }
+
+        return digits;
     }
 
     /**
@@ -388,121 +421,173 @@ export class PaymentService {
      * Handle Payd Webhook/Callback
      */
     async handlePaydCallback(callbackData) {
-        logger.info('[PURCHASE-FLOW] 3. Webhook Received - Raw Data:', callbackData);
-
-        // Robustly extract data - might be at top level or nested in .data
-        const data = callbackData.data || callbackData;
-
-        // Map fields based on user documentation and common patterns
-        const reference = data.transaction_reference ||
-            data.transaction_id ||
-            data.reference ||
-            data.tracking_id ||
-            callbackData.transaction_reference ||
-            callbackData.transaction_id ||
-            callbackData.reference;
-
-        const resultCode = data.result_code || callbackData.result_code;
-        const status = data.status || callbackData.status;
-
-        logger.info(`[PURCHASE-FLOW] 4. Processing Callback for Ref: ${reference}`, {
-            resultCode,
-            status,
-            successCheck: (resultCode == 200 || resultCode === '200' || resultCode == 0 || resultCode === '0')
+        logger.info('[PAYD-WEBHOOK] Received payment callback', {
+            raw_data: callbackData
         });
 
-        if (!reference) {
-            logger.error('[PURCHASE-FLOW] ERROR: Missing reference in callback payload', callbackData);
-            throw new Error('No transaction_reference provided in callback');
-        }
+        try {
+            // ============================================================
+            // STEP 1: EXTRACT DATA
+            // ============================================================
+            const data = callbackData.data || callbackData;
 
-        // Determine Success: result_code 200 OR 0 is success
-        let isSuccess = false;
-        if (resultCode == 200 || resultCode === '200' || resultCode == 0 || resultCode === '0') {
-            isSuccess = true;
-        } else if (!resultCode && (status === 'SUCCESS' || status === 'COMPLETED')) {
-            // Fallback to old logic just in case
-            isSuccess = true;
-        }
+            const reference = data.transaction_reference ||
+                data.transaction_id ||
+                data.reference ||
+                data.tracking_id;
 
-        if (!isSuccess) {
-            logger.warn(`[PURCHASE-FLOW] 4b. Transaction Failed - Marking DB as Failed`, { reference, reason: callbackData.remarks });
-            const { rows } = await pool.query(
-                "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE provider_reference = $2 RETURNING id, metadata",
-                [JSON.stringify({ failure_reason: callbackData.remarks || callbackData.status_description || 'Failed', raw_callback: callbackData }), reference]
+            const status = data.status?.toLowerCase();
+            const amount = parseFloat(data.amount || 0);
+            const phone = data.phone_number || data.phone;
+            const resultCode = data.result_code || callbackData.result_code;
+
+            if (!reference) {
+                logger.error('[PAYD-WEBHOOK] Missing reference in callback payload', callbackData);
+                throw new Error('Webhook missing transaction reference');
+            }
+
+            // Determine Success: result_code 0 is success in v2, OR status SUCCESS/COMPLETED
+            const isSuccess = (resultCode == 0 || resultCode === '0' ||
+                status === 'success' || status === 'completed' || status === 'paid');
+
+            logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
+                reference,
+                status,
+                isSuccess,
+                amount,
+                phone
+            });
+
+            // ============================================================
+            // STEP 2: FIND PAYMENT RECORD
+            // ============================================================
+            const { rows: payments } = await pool.query(
+                'SELECT * FROM payments WHERE provider_reference = $1 OR invoice_id = $2 OR api_ref = $1',
+                [reference, reference]
             );
 
-            if (rows.length > 0) {
-                const updatedPayment = rows[0];
-                const paymentMeta = updatedPayment.metadata || {};
+            if (!payments || payments.length === 0) {
+                // If not found, try handlesuccessfulpayment for fuzzy matching
+                if (isSuccess) {
+                    return await this.handleSuccessfulPayment({
+                        reference,
+                        amount,
+                        metadata: callbackData
+                    });
+                }
 
-                // If linked to an order, mark the order as failed too
-                if (paymentMeta.order_id) {
-                    try {
-                        await pool.query(
+                logger.warn('[PAYD-WEBHOOK] Payment record not found', { reference });
+                return { success: false, message: 'Payment record not found' };
+            }
+
+            const payment = payments[0];
+
+            // ============================================================
+            // STEP 3: CHECK IDEMPOTENCY (Prevent duplicate processing)
+            // ============================================================
+            if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
+                logger.warn('[PAYD-WEBHOOK] Duplicate success webhook ignored', {
+                    payment_id: payment.id,
+                    reference
+                });
+                return {
+                    success: true,
+                    message: 'Webhook already processed',
+                    duplicate: true
+                };
+            }
+
+            // ============================================================
+            // STEP 4: UPDATE PAYMENT STATUS
+            // ============================================================
+            const client = await pool.connect();
+
+            try {
+                await client.query('BEGIN');
+
+                // Update payment record
+                await client.query(
+                    `UPDATE payments 
+                     SET status = $1,
+                         metadata = jsonb_set(
+                             COALESCE(metadata, '{}'::jsonb),
+                             '{webhook_received_at}',
+                             $2::jsonb
+                         ),
+                         updated_at = NOW()
+                     WHERE id = $3`,
+                    [isSuccess ? PaymentStatus.COMPLETED : 'failed', JSON.stringify(new Date().toISOString()), payment.id]
+                );
+
+                // ============================================================
+                // STEP 5: PROCESS BASED ON STATUS
+                // ============================================================
+                if (isSuccess) {
+                    logger.info('[PAYD-WEBHOOK] Payment successful, updating order', {
+                        payment_id: payment.id,
+                        amount
+                    });
+
+                    // Update order to COMPLETED
+                    const paymentMeta = payment.metadata || {};
+                    if (paymentMeta.order_id || paymentMeta.product_id) {
+                        await OrderService.completeOrder({
+                            ...payment,
+                            status: PaymentStatus.COMPLETED,
+                            metadata: { ...paymentMeta, payd_confirmation: callbackData }
+                        });
+                    } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
+                        await client.query(
+                            'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
+                            [paymentMeta.debt_id]
+                        );
+                    }
+
+                } else if (status === 'failed' || status === 'cancelled' || resultCode == 1) {
+                    logger.warn('[PAYD-WEBHOOK] Payment failed', {
+                        payment_id: payment.id,
+                        status
+                    });
+
+                    // Update order to FAILED if linked
+                    const paymentMeta = payment.metadata || {};
+                    if (paymentMeta.order_id) {
+                        await client.query(
                             "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
                             [paymentMeta.order_id]
                         );
-                        logger.info(`[PURCHASE-FLOW] Marked Order ${paymentMeta.order_id} as FAILED due to payment failure`);
-                    } catch (orderErr) {
-                        logger.error(`[PURCHASE-FLOW] Failed to mark order ${paymentMeta.order_id} as failed:`, orderErr);
                     }
                 }
 
-                return { status: 'failed', message: 'Payment marked as failed' };
+                await client.query('COMMIT');
+
+                logger.info('[PAYD-WEBHOOK] Webhook processed successfully', {
+                    payment_id: payment.id,
+                    status: isSuccess ? 'success' : 'failed'
+                });
+
+                return {
+                    success: true,
+                    message: 'Webhook processed',
+                    payment_id: payment.id,
+                    status: isSuccess ? 'success' : 'failed'
+                };
+
+            } catch (error) {
+                await client.query('ROLLBACK');
+                throw error;
+            } finally {
+                client.release();
             }
 
-            // Check if it's a Withdrawal Request (Payout Failure)
-            const { rows: withdrawalRows } = await pool.query(
-                'SELECT * FROM withdrawal_requests WHERE provider_reference = $1 OR id::text = $1',
-                [reference]
-            );
+        } catch (error) {
+            logger.error('[PAYD-WEBHOOK] Webhook processing failed', {
+                error: error.message,
+                stack: error.stack
+            });
 
-            if (withdrawalRows.length > 0) {
-                const withdrawal = withdrawalRows[0];
-                if (withdrawal.status === 'failed') return { status: 'success', message: 'Already marked failed' };
-
-                // Handle Failure - REFUND SELLER
-                const client = await pool.connect();
-                try {
-                    await client.query('BEGIN');
-
-                    // 1. Mark as failed
-                    await client.query(
-                        "UPDATE withdrawal_requests SET status = 'failed', raw_response = COALESCE(raw_response, '{}'::jsonb) || $1::jsonb WHERE id = $2",
-                        [JSON.stringify(callbackData), withdrawal.id]
-                    );
-
-                    // 2. Refund Balance
-                    await client.query(
-                        "UPDATE sellers SET balance = balance + $1 WHERE id = $2",
-                        [withdrawal.amount, withdrawal.seller_id]
-                    );
-
-                    await client.query('COMMIT');
-                    logger.info(`[PURCHASE-FLOW] Withdrawal ${withdrawal.id} FAILED. Computed refund of ${withdrawal.amount} to seller ${withdrawal.seller_id}`);
-                    return { status: 'success', message: 'Withdrawal failure processed and refunded' };
-
-                } catch (err) {
-                    await client.query('ROLLBACK');
-                    logger.error(`Error processing withdrawal refund for ${withdrawal.id}`, err);
-                    throw err;
-                } finally {
-                    client.release();
-                }
-            }
-
-            logger.warn(`Failed transaction not found in payments or withdrawals: ${reference}`);
-            return { status: 'failed', message: 'Transaction not found' };
+            throw error;
         }
-
-        // Handle Success
-        logger.info(`[PURCHASE-FLOW] 5. Transaction Successful - Proceeding to Completion logic`, { reference });
-        return await this.handleSuccessfulPayment({
-            reference,
-            amount: callbackData.amount,
-            metadata: callbackData
-        });
     }
 
     /**
@@ -776,6 +861,20 @@ export class PaymentService {
         const payment = rows[0];
         if (!payment) throw new Error('Payment not found');
 
+        // If payment is pending and we have a provider_reference, check Payd status
+        if (payment.status === PaymentStatus.PENDING && payment.provider_reference) {
+            try {
+                const paydStatus = await this.checkTransactionStatus(payment.provider_reference);
+                if (paydStatus.status === 'success' || paydStatus.status === 'failed') {
+                    // This will be caught by the next webhook or we could manually sync here
+                    // For now, we'll just return the updated status if it was success/failed
+                    payment.status = paydStatus.status;
+                }
+            } catch (err) {
+                logger.warn('[PaymentService] Status sync during check failed', err.message);
+            }
+        }
+
         // If payment is successful and has buyer info, generate auto-login token
         let autoLoginToken = null;
         if ((payment.status === 'completed' || payment.status === 'success') && payment.buyer_id) {
@@ -793,6 +892,331 @@ export class PaymentService {
             ...payment,
             autoLoginToken
         };
+    }
+
+    /**
+     * Check transaction status
+     * 
+     * Endpoint: GET https://api.payd.money/api/v1/status/{transaction_reference}
+     * Auth: Basic Auth
+     * Docs: https://magic.payd.one/transaction-status
+     * 
+     * @param {string} transactionId - Payd transaction reference
+     * @returns {Promise<Object>}
+     */
+    async checkTransactionStatus(transactionId) {
+        try {
+            logger.info('[PAYD-STATUS] Checking transaction status', { transaction_id: transactionId });
+
+            // Note: status endpoint is v1
+            const response = await this.client.get(`/status/${transactionId}`, {
+                baseURL: 'https://api.payd.money/api/v1',
+                headers: {
+                    'Authorization': this.getAuthHeader(),
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = response.data;
+            const details = data.transaction_details || {};
+
+            logger.info('[PAYD-STATUS] Status retrieved', {
+                transaction_id: transactionId,
+                status: details.status || data.status,
+                amount: data.amount
+            });
+
+            return {
+                success: true,
+                transaction_id: transactionId,
+                status: (details.status || data.status || 'pending').toLowerCase(),
+                amount: parseFloat(data.amount || 0),
+                phone_number: details.payer || details.recipient,
+                narration: details.reason,
+                created_at: data.created_at,
+                raw_response: data
+            };
+
+        } catch (error) {
+            logger.error('[PAYD-STATUS] Status check failed', {
+                transaction_id: transactionId,
+                error: this._extractErrorDetails(error)
+            });
+
+            throw this._handlePaydError(error);
+        }
+    }
+
+    /**
+     * Poll transaction status until completion (with timeout)
+     * 
+     * @param {string} transactionId
+     * @param {Object} options
+     * @param {number} options.maxAttempts - Max polling attempts (default: 60)
+     * @param {number} options.intervalMs - Polling interval in ms (default: 5000)
+     * @param {Array<string>} options.finalStatuses - Status values that end polling
+     * @returns {Promise<Object>}
+     */
+    async pollTransactionStatus(transactionId, options = {}) {
+        const {
+            maxAttempts = 60, // 5 minutes max (60 * 5s)
+            intervalMs = 5000,
+            finalStatuses = ['success', 'failed', 'cancelled', 'expired']
+        } = options;
+
+        logger.info('[PAYD-POLL] Starting transaction status polling', {
+            transaction_id: transactionId,
+            maxAttempts,
+            intervalMs
+        });
+
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                const status = await this.checkTransactionStatus(transactionId);
+
+                logger.info('[PAYD-POLL] Poll attempt', {
+                    attempt,
+                    status: status.status,
+                    transaction_id: transactionId
+                });
+
+                // Check if status is final
+                if (finalStatuses.includes(status.status.toLowerCase())) {
+                    logger.info('[PAYD-POLL] Final status reached', {
+                        status: status.status,
+                        attempts: attempt
+                    });
+                    return status;
+                }
+
+                // Wait before next poll
+                if (attempt < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, intervalMs));
+                }
+
+            } catch (error) {
+                logger.error('[PAYD-POLL] Poll attempt failed', {
+                    attempt,
+                    transaction_id: transactionId,
+                    error: error.message
+                });
+
+                // Don't retry if it's a 404 (transaction not found)
+                if (error.statusCode === 404) {
+                    throw error;
+                }
+
+                // Continue polling for other errors
+                if (attempt < maxAttempts) {
+                    await new Promise(resolve => setTimeout(resolve, intervalMs));
+                }
+            }
+        }
+
+        // Timeout reached
+        logger.warn('[PAYD-POLL] Polling timeout', {
+            transaction_id: transactionId,
+            attempts: maxAttempts
+        });
+
+        return {
+            success: false,
+            status: 'timeout',
+            message: `Transaction status polling timed out after ${maxAttempts} attempts`
+        };
+    }
+
+    /**
+     * Check Payd platform account balance
+     * 
+     * Endpoint: GET https://api.payd.money/api/v1/accounts/{username}/all_balances
+     * Auth: Basic Auth
+     * Docs: https://magic.payd.one/balances
+     * 
+     * @returns {Promise<Object>}
+     */
+    async checkBalance() {
+        try {
+            logger.info('[PAYD-BALANCE] Checking platform balance');
+
+            const response = await this.client.get(`/accounts/${this.username}/all_balances`, {
+                baseURL: 'https://api.payd.money/api/v1',
+                headers: {
+                    'Authorization': this.getAuthHeader(),
+                    'Accept': 'application/json'
+                }
+            });
+
+            const data = response.data;
+            const fiat = data.fiat_balance || {};
+
+            logger.info('[PAYD-BALANCE] Balance retrieved', {
+                available: fiat.balance,
+                currency: fiat.currency
+            });
+
+            return {
+                success: true,
+                available_balance: fiat.balance,
+                ledger_balance: fiat.balance, // Unified in v1
+                currency: fiat.currency || 'KES',
+                last_updated: new Date().toISOString(),
+                raw_response: data
+            };
+
+        } catch (error) {
+            logger.error('[PAYD-BALANCE] Balance check failed', {
+                error: this._extractErrorDetails(error)
+            });
+
+            throw this._handlePaydError(error);
+        }
+    }
+
+    /**
+     * Check if platform has sufficient balance for a transaction
+     * 
+     * @param {number} requiredAmount - Amount needed in KES
+     * @param {number} bufferPercent - Safety buffer % (default: 10)
+     * @returns {Promise<{sufficient: boolean, available: number, required: number}>}
+     */
+    async hasSufficientBalance(requiredAmount, bufferPercent = 10) {
+        const balance = await this.checkBalance();
+        const available = parseFloat(balance.available_balance);
+        const requiredWithBuffer = parseFloat(requiredAmount) * (1 + bufferPercent / 100);
+
+        return {
+            sufficient: available >= requiredWithBuffer,
+            available,
+            required: requiredWithBuffer,
+            buffer: bufferPercent
+        };
+    }
+
+    /**
+     * Extract error details from Axios error
+     * 
+     * @private
+     * @param {Error} error - Axios error object
+     * @returns {Object}
+     */
+    _extractErrorDetails(error) {
+        if (error.response) {
+            // HTTP error response from Payd
+            return {
+                type: 'http_error',
+                status: error.response.status,
+                statusText: error.response.statusText,
+                data: error.response.data,
+                headers: error.response.headers
+            };
+        } else if (error.request) {
+            // Request made but no response received
+            return {
+                type: 'no_response',
+                message: error.message,
+                code: error.code,
+                timeout: error.code === 'ECONNABORTED'
+            };
+        } else {
+            // Error in request setup
+            return {
+                type: 'request_setup',
+                message: error.message
+            };
+        }
+    }
+
+    /**
+     * Handle Payd API errors and convert to PaydError
+     * 
+     * @private
+     * @param {Error} error - Original error
+     * @returns {PaydError}
+     */
+    _handlePaydError(error) {
+        // Already a PaydError
+        if (error instanceof PaydError) {
+            return error;
+        }
+
+        // HTTP response errors
+        if (error.response) {
+            const status = error.response.status;
+            const data = error.response.data;
+
+            if (status === 401 || status === 403) {
+                return new PaydError(
+                    'Authentication failed. Please check Payd credentials.',
+                    PaydErrorCodes.AUTHENTICATION_FAILED,
+                    401,
+                    { original: data }
+                );
+            }
+
+            if (status === 404) {
+                return new PaydError(
+                    'Transaction not found',
+                    PaydErrorCodes.TRANSACTION_NOT_FOUND,
+                    404,
+                    { original: data }
+                );
+            }
+
+            if (status === 409) {
+                return new PaydError(
+                    'Duplicate transaction detected',
+                    PaydErrorCodes.DUPLICATE_TRANSACTION,
+                    409,
+                    { original: data }
+                );
+            }
+
+            if (status >= 400 && status < 500) {
+                return new PaydError(
+                    data.message || 'Bad request to Payd API',
+                    PaydErrorCodes.TRANSACTION_FAILED,
+                    status,
+                    { original: data }
+                );
+            }
+
+            if (status >= 500) {
+                return new PaydError(
+                    'Payd service temporarily unavailable',
+                    PaydErrorCodes.CONNECTION_FAILED,
+                    503,
+                    { original: data }
+                );
+            }
+        }
+
+        // Network/timeout errors
+        if (error.code === 'ECONNRESET' || error.message === 'socket hang up') {
+            return new PaydError(
+                'Connection to Payd failed. Please try again.',
+                PaydErrorCodes.CONNECTION_FAILED,
+                503,
+                { code: error.code }
+            );
+        }
+
+        if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+            return new PaydError(
+                'Request to Payd timed out. Please try again.',
+                PaydErrorCodes.TIMEOUT,
+                504,
+                { code: error.code }
+            );
+        }
+
+        // Unknown error
+        return new PaydError(
+            error.message || 'Unknown Payd error occurred',
+            PaydErrorCodes.UNKNOWN_ERROR,
+            500,
+            { original: error }
+        );
     }
 
     /**
@@ -1102,8 +1526,7 @@ export class PaymentService {
                 // initiatePayment expects 'phone' key for the number to charge
                 phone: buyerMobilePayment,
                 firstName: customerName?.split(' ')[0],
-                narrative: paymentData.metadata.narrative,
-                billing_address: billingAddress // Add billing_address for Payd V3 requirements
+                narrative: paymentData.metadata.narrative
             };
 
             const result = await this.initiatePayment(gwPayload);

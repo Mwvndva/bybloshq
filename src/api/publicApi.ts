@@ -597,6 +597,39 @@ export const publicApiService = {
       console.error('Error becoming client:', error);
       throw error;
     }
+  },
+
+  // Poll payment status
+  pollPaymentStatus: async (reference: string, maxAttempts: number = 30): Promise<any> => {
+    let attempts = 0;
+    const interval = 5000; // 5 seconds
+
+    return new Promise((resolve, reject) => {
+      const checkStatus = async () => {
+        try {
+          attempts++;
+          const response = await publicApi.get(`payments/status/${reference}`);
+          const status = response.data.status?.toLowerCase();
+
+          if (status === 'completed' || status === 'success' || status === 'failed' || status === 'cancelled') {
+            resolve(response.data);
+          } else if (attempts >= maxAttempts) {
+            resolve({ status: 'timeout', message: 'Polling timed out' });
+          } else {
+            setTimeout(checkStatus, interval);
+          }
+        } catch (error) {
+          console.error('[pollPaymentStatus] Error:', error);
+          if (attempts >= maxAttempts) {
+            reject(error);
+          } else {
+            setTimeout(checkStatus, interval);
+          }
+        }
+      };
+
+      checkStatus();
+    });
   }
 };
 

@@ -7,6 +7,9 @@ import AdminService from '../services/admin.service.js';
 import { pool } from '../config/database.js';
 import whatsappService from '../services/whatsapp.service.js';
 import payoutService from '../services/payout.service.js';
+import { PaymentService } from '../services/payment.service.js';
+
+const paymentService = new PaymentService();
 
 dotenv.config();
 
@@ -693,8 +696,33 @@ const getMonthlyFinancialData = async (req, res, next) => {
   }
 };
 
+/**
+ * Get Payd balances (both Pay-ins and Payouts)
+ */
+const getPaydBalances = async (req, res, next) => {
+  try {
+    const [payinBalance, payoutBalance] = await Promise.all([
+      paymentService.checkBalance().catch(err => ({ error: err.message })),
+      payoutService.checkPayoutBalance().catch(err => ({ error: err.message }))
+    ]);
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        payin: payinBalance,
+        payout: payoutBalance,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching Payd balances:', error);
+    next(new AppError('Failed to fetch Payd balances', 500));
+  }
+};
+
 export {
   adminLogin,
+  getPaydBalances,
 
   processPendingPayments,
   getDashboardStats,

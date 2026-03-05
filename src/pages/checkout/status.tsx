@@ -2,8 +2,9 @@ import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, CheckCircle2, Clock, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, Clock, XCircle, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import publicApiService from '@/api/publicApi';
 
 type QueryParams = {
   status?: string | string[];
@@ -62,7 +63,26 @@ export default function CheckoutStatus() {
           });
       }
     }
-  }, [status, message]);
+
+    // Polling logic for pending status
+    if (currentStatus === 'pending' && reference) {
+      const ref = Array.isArray(reference) ? reference[0] : reference;
+      console.log('Starting polling for reference:', ref);
+
+      publicApiService.pollPaymentStatus(ref)
+        .then((data) => {
+          const newStatus = data.status?.toLowerCase();
+          if (newStatus === 'completed' || newStatus === 'success') {
+            router.replace(`/checkout/status?status=success&reference=${ref}`);
+          } else if (newStatus === 'failed' || newStatus === 'cancelled') {
+            router.replace(`/checkout/status?status=error&reference=${ref}&message=${data.message || 'Payment failed'}`);
+          }
+        })
+        .catch((err) => {
+          console.error('Polling error:', err);
+        });
+    }
+  }, [status, message, reference, router]);
 
   // Ensure we're working with string values
   const statusValue = Array.isArray(status) ? status[0] : status || '';
