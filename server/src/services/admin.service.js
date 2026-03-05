@@ -260,10 +260,11 @@ class AdminService {
           await client.query('DELETE FROM seller_clients WHERE seller_id = $1', [sellerId]);
           await client.query('DELETE FROM clients WHERE seller_id = $1', [sellerId]);
 
-          // Nullify seller references on orders (preserve order history)
-          await client.query('UPDATE product_orders SET seller_id = NULL WHERE seller_id = $1', [sellerId]);
+          // Delete orders associated with this seller (seller_id is NOT NULL, so nullify not possible)
+          await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE seller_id = $1)', [sellerId]);
+          await client.query('DELETE FROM product_orders WHERE seller_id = $1', [sellerId]);
 
-          // Delete products owned by this seller (wishlists reference products, cascade via FK or nullify)
+          // Delete products owned by this seller (clear wishlist refs first)
           await client.query('DELETE FROM wishlists WHERE product_id IN (SELECT id FROM products WHERE seller_id = $1)', [sellerId]);
           await client.query('DELETE FROM products WHERE seller_id = $1', [sellerId]);
 
