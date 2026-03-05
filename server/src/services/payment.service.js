@@ -537,7 +537,7 @@ export class PaymentService {
                             ...payment,
                             status: PaymentStatus.COMPLETED,
                             metadata: { ...paymentMeta, payd_confirmation: callbackData }
-                        });
+                        }, client);
                     } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
                         await client.query(
                             'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',

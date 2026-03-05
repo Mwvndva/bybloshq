@@ -541,15 +541,17 @@ class OrderService {
   /**
    * Complete an order after successful payment
    */
-  static async completeOrder(payment) {
-    const client = await pool.connect();
+  static async completeOrder(payment, externalClient = null) {
+    const client = externalClient || await pool.connect();
+    const shouldManageTransaction = !externalClient;
+
     try {
       const { metadata = {} } = payment;
       const orderId = metadata.order_id;
 
       if (!orderId) throw new Error('No order_id found in payment metadata');
 
-      await client.query('BEGIN');
+      if (shouldManageTransaction) await client.query('BEGIN');
 
       // 1. Fetch Order
       const orderResult = await client.query(
@@ -561,7 +563,9 @@ class OrderService {
 
       // 2. Idempotency Check
       if (order.status === OrderStatus.COMPLETED && order.payment_status === 'completed') {
-        await client.query('ROLLBACK');
+        if (shouldManageTransaction) {
+          await client.query('ROLLBACK');
+        }
         return { success: true, message: 'Order already completed' };
       }
 
@@ -720,7 +724,6 @@ class OrderService {
         }
       }
 
-      // 4. Update Payment Metadata
       await client.query(
         `UPDATE payments 
          SET metadata = jsonb_set(
@@ -732,7 +735,7 @@ class OrderService {
         [payment.id]
       );
 
-      await client.query('COMMIT');
+      if (shouldManageTransaction) await client.query('COMMIT');
 
       // Trigger Notifications (WhatsApp/Email)
       try {
@@ -824,10 +827,10 @@ class OrderService {
       return { success: true, orderId, newStatus };
 
     } catch (error) {
-      await client.query('ROLLBACK');
+      if (shouldManageTransaction) await client.query('ROLLBACK');
       throw error;
     } finally {
-      client.release();
+      if (shouldManageTransaction) client.release();
     }
   }
   static async _processSellerPayout(client, order) {
