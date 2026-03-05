@@ -332,11 +332,18 @@ export const downloadDigitalProduct = async (req, res) => {
         // 7. Local file — stream it
         const path = await import('path');
         const fs = await import('fs');
-        const absolutePath = path.default.resolve(process.cwd(), filePath);
+        let absolutePath = path.default.resolve(process.cwd(), filePath);
 
+        // DEFENSIVE CHECK: If file not found, try prepending 'server' (common project structure quirk)
         if (!fs.default.existsSync(absolutePath)) {
-            logger.error(`[DOWNLOAD] File missing at path: ${absolutePath}`);
-            return res.status(404).json({ status: 'error', message: 'File not found on server' });
+            const fallbackPath = path.default.resolve(process.cwd(), 'server', filePath);
+            if (fs.default.existsSync(fallbackPath)) {
+                logger.info(`[DOWNLOAD] Path fallback hit: ${fallbackPath}`);
+                absolutePath = fallbackPath;
+            } else {
+                logger.error(`[DOWNLOAD] File missing at both: ${absolutePath} AND ${fallbackPath}`);
+                return res.status(404).json({ status: 'error', message: 'File not found on server' });
+            }
         }
 
         res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
