@@ -272,9 +272,19 @@ class AdminService {
           await client.query('DELETE FROM sellers WHERE id = $1', [sellerId]);
         }
       } else if (role === 'buyer') {
-        // buyers table uses user_id
+        // Buyer-specific order/wishlist cleanup before removing buyer row
+        const buyerRes = await client.query('SELECT id FROM buyers WHERE user_id = $1', [userId]);
+        if (buyerRes.rows.length > 0) {
+          const buyerId = buyerRes.rows[0].id;
+          await client.query('DELETE FROM wishlists WHERE buyer_id = $1', [buyerId]);
+          await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE buyer_id = $1)', [buyerId]);
+          await client.query('DELETE FROM product_orders WHERE buyer_id = $1', [buyerId]);
+        }
         await client.query('DELETE FROM buyers WHERE user_id = $1', [userId]);
       }
+
+      // Always clean up any buyers row referencing this user (a seller user may also have one)
+      await client.query('DELETE FROM buyers WHERE user_id = $1', [userId]);
 
       // 2. Delete from users table last
       await client.query('DELETE FROM users WHERE id = $1', [userId]);
