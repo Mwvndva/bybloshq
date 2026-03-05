@@ -131,11 +131,12 @@ export const adminApi = {
     } catch (error) {
       console.error('Error fetching stats:', error);
       return {
-        totalSellers: 0,
         totalBuyers: 0,
+        totalClients: 0,
         totalProducts: 0,
         totalOrders: 0,
-        totalWishlists: 0
+        totalWishlists: 0,
+        topShops: []
       };
     }
   },
@@ -247,6 +248,32 @@ export const adminApi = {
   // Update buyer status
   updateBuyerStatus(buyerId: string, data: { status: string }) {
     return api.patch(`/admin/buyers/${buyerId}/status`, data);
+  },
+
+  // Clients
+  async getClients() {
+    try {
+      console.log('Fetching clients from API...');
+      const response = await api.get('/admin/clients');
+      return response.data.data.map((client: any) => ({
+        ...client,
+        createdAt: client.created_at || client.createdAt
+      }));
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+      return [];
+    }
+  },
+
+  // Delete User (Block action)
+  async deleteUser(userId: string) {
+    try {
+      const response = await api.delete(`/admin/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
   },
 
 

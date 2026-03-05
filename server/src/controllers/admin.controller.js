@@ -416,6 +416,36 @@ const getBuyerById = async (req, res, next) => {
   }
 };
 
+// Get all clients
+const getAllClients = async (req, res, next) => {
+  try {
+    const clients = await AdminService.getAllClients();
+    res.status(200).json({
+      status: 'success',
+      results: clients.length,
+      data: clients
+    });
+  } catch (error) {
+    console.error('Error fetching clients:', error);
+    next(new AppError('Failed to fetch clients', 500));
+  }
+};
+
+// Delete user (Block action)
+const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    await AdminService.deleteUser(id);
+    res.status(200).json({
+      status: 'success',
+      message: 'User account and associated data deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    next(new AppError('Failed to delete user account', 500));
+  }
+};
+
 // GET /api/admin/withdrawal-requests
 const getAllWithdrawalRequests = async (req, res, next) => {
   try {
@@ -738,6 +768,8 @@ export {
   updateWithdrawalRequestStatus,
   getFinancialMetrics,
   getMonthlyFinancialData,
-  getAnalytics
+  getAnalytics,
+  getAllClients,
+  deleteUser
 };
 

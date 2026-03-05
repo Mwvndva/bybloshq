@@ -38,6 +38,12 @@ router.get('/metrics/financial/monthly', adminController.getMonthlyFinancialData
 // Payd Management
 router.get('/payd/balances', adminController.getPaydBalances);
 
+// Clients management
+router.get('/clients', adminController.getAllClients);
+
+// User management (Delete/Block)
+router.delete('/users/:id', adminController.deleteUser);
+
 // Withdrawal requests management
 router.get('/withdrawal-requests', adminController.getAllWithdrawalRequests);
 router.patch('/withdrawal-requests/:id/status', adminController.updateWithdrawalRequestStatus);
