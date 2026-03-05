@@ -360,6 +360,8 @@ export class PaymentService {
      * @returns {string} e.g., "254712345678" or "0712345678"
      */
     normalizePhoneForPayment(phone) {
+        let digits = phone.toString().replace(/\D/g, '');
+
         if (digits.startsWith('254') && digits.length === 12) {
             digits = '0' + digits.substring(3);
         } else if (digits.length === 9) {
