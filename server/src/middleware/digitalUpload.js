@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Ensure digital uploads directory exists
-const digitalUploadsDir = path.join(process.cwd(), 'server', 'uploads', 'digital_products');
+const digitalUploadsDir = path.join(process.cwd(), 'uploads', 'digital_products');
 const mkdir = promisify(fs.mkdir);
 
 const ensureDigitalDirExists = async () => {

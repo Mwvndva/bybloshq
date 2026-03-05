@@ -9,7 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Ensure upload and temp directories exist
-const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
+const uploadsDir = path.join(process.cwd(), 'uploads');
 const tempDir = path.join(process.cwd(), 'temp');
 
 const mkdir = promisify(fs.mkdir);
