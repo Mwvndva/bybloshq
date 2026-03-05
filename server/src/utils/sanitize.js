@@ -181,16 +181,17 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         completedAt: orderObj.completedAt || orderObj.completed_at || null,
         cancelledAt: orderObj.cancelledAt || orderObj.cancelled_at || null,
         items: safeItems,
+        isDigital: (orderObj.items || []).some(i => i.isDigital || i.is_digital),
+        metadata: {
+            product_type: orderObj.metadata?.product_type || null,
+        },
         seller: orderObj.seller ? {
             id: orderObj.seller.id,
             shopName: orderObj.seller.shopName,
             theme: orderObj.seller.theme,
             city: orderObj.seller.city,
             isClient: orderObj.seller.isClient || false,
-            // NEVER: seller email, phone, balance, revenue
         } : null,
-        // NEVER for buyers: platformFeeAmount, sellerPayoutAmount, buyerEmail,
-        // buyerMobilePayment, buyerWhatsappNumber, metadata raw dump
     };
 
     if (userType === 'seller' || userType === 'admin') {
@@ -201,12 +202,10 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
             buyerName: orderObj.buyerName || orderObj.buyer_name || '',
             buyerWhatsAppNumber: orderObj.buyerWhatsAppNumber || orderObj.buyer_whatsapp_number || '',
             buyerMobilePayment: orderObj.buyerMobilePayment || orderObj.buyer_mobile_payment || '',
-            // buyerEmail intentionally excluded — not needed for seller order management
             isSellerInitiated: orderObj.isSellerInitiated || orderObj.is_seller_initiated || false,
         };
     }
 
-    // Buyer sees baseOrder only
     return baseOrder;
 };
 

@@ -53,6 +53,7 @@ export interface Order {
   seller: OrderSeller;
   shippingAddress: ShippingAddress;
   metadata?: any;
+  isDigital?: boolean;
   // Flat fields returned by backend
   buyerName?: string;
   buyerEmail?: string;
