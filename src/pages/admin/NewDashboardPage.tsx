@@ -595,7 +595,7 @@ const NewAdminDashboard = () => {
     try {
       setIsLoadingSeller(true);
       const response = await adminApi.getSellerById(sellerId);
-      setSelectedSeller(response.data);
+      setSelectedSeller(response);
     } catch (error) {
       console.error('Error fetching seller details:', error);
       toast.error('Failed to load seller details');
@@ -615,7 +615,7 @@ const NewAdminDashboard = () => {
       // Call the API to update the seller status
       const response = await adminApi.updateSellerStatus(sellerId, { status: newStatus });
 
-      if (response.status === 'success') {
+      if (response.data.status === 'success') {
         // Update the UI to reflect the new status
         setDashboardState(prevState => ({
           ...prevState,
@@ -640,7 +640,7 @@ const NewAdminDashboard = () => {
     try {
       setIsLoadingBuyer(true);
       const response = await adminApi.getBuyerById(buyerId);
-      setSelectedBuyer(response.data);
+      setSelectedBuyer(response);
     } catch (error) {
       console.error('Error fetching buyer details:', error);
       toast.error('Failed to load buyer details');
@@ -682,7 +682,7 @@ const NewAdminDashboard = () => {
       // Call the API to update the buyer status
       const response = await adminApi.updateBuyerStatus(buyerId, { status: newStatus });
 
-      if (response.status === 'success') {
+      if (response.data.status === 'success') {
         // Update the UI to reflect the new status
         setDashboardState(prevState => ({
           ...prevState,
@@ -707,7 +707,7 @@ const NewAdminDashboard = () => {
     try {
       const response = await adminApi.updateWithdrawalRequestStatus(requestId, action);
 
-      if (response.status === 'success') {
+      if (response.data.status === 'success') {
         // Update the UI to reflect the new status
         setDashboardState(prevState => ({
           ...prevState,

@@ -7,7 +7,7 @@ class AdminService {
     const queries = {
       sellers: 'SELECT COUNT(*) FROM sellers',
       products: 'SELECT COUNT(*) FROM products',
-      buyers: 'SELECT COUNT(*) FROM buyers WHERE auth_user_id IS NOT NULL', // Registered buyers
+      buyers: 'SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL', // Registered buyers
       clients: 'SELECT COUNT(*) FROM clients', // New stats
       orders: 'SELECT COUNT(*) FROM product_orders',
       wishlists: 'SELECT COUNT(*) FROM wishlists'
