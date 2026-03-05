@@ -245,19 +245,30 @@ class AdminService {
     try {
       await client.query('BEGIN');
 
-      // 1. Find user to know role and cleanup sub-records
+      // 1. Identify user role
       const userRes = await client.query('SELECT role FROM users WHERE id = $1', [userId]);
       if (userRes.rows.length === 0) throw new Error('User not found');
       const role = userRes.rows[0].role;
 
-      // 2. Delete role-specific data (soft or hard depending on requirements, here hard as requested)
       if (role === 'seller') {
-        await client.query('DELETE FROM sellers WHERE user_id = $1', [userId]);
+        // Get seller id for this user
+        const sellerRes = await client.query('SELECT id FROM sellers WHERE user_id = $1', [userId]);
+        if (sellerRes.rows.length > 0) {
+          const sellerId = sellerRes.rows[0].id;
+
+          // Delete child records that reference seller id (in safe order)
+          await client.query('DELETE FROM seller_clients WHERE seller_id = $1', [sellerId]);
+          await client.query('DELETE FROM clients WHERE seller_id = $1', [sellerId]);
+          await client.query('DELETE FROM wishlists WHERE seller_id = $1', [sellerId]);
+          await client.query('DELETE FROM products WHERE seller_id = $1', [sellerId]);
+          await client.query('DELETE FROM sellers WHERE id = $1', [sellerId]);
+        }
       } else if (role === 'buyer') {
-        await client.query('DELETE FROM buyers WHERE auth_user_id = $1', [userId]);
+        // buyers table uses user_id (not auth_user_id)
+        await client.query('DELETE FROM buyers WHERE user_id = $1', [userId]);
       }
 
-      // 3. Delete from users table
+      // 2. Delete from users table last
       await client.query('DELETE FROM users WHERE id = $1', [userId]);
 
       await client.query('COMMIT');
