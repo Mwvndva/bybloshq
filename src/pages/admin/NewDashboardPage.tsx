@@ -34,6 +34,7 @@ interface DashboardAnalytics {
   totalProducts?: number;
   totalSellers?: number;
   totalBuyers?: number;
+  totalClients?: number;
   monthlyGrowth?: {
     revenue?: number;
     products?: number;
@@ -44,6 +45,7 @@ interface DashboardAnalytics {
   totalWishlists?: number;
   userGrowth?: Array<{ name: string; buyers: number; sellers: number }>;
   revenueTrends?: Array<{ name: string; revenue: number; orders: number }>;
+  salesTrends?: Array<{ name: string; sales: number }>;
   productStatus?: Array<{ name: string; value: number }>;
   geoDistribution?: Array<{ name: string; value: number }>;
 }
@@ -128,6 +130,8 @@ interface DashboardState {
   monthlyMetrics: MonthlyMetricsData[];
   financialMetrics: FinancialMetrics;
   monthlyFinancialData: MonthlyFinancialData[];
+  clients: any[];
+  topShops: any[];
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
@@ -191,7 +195,7 @@ const RevenueChart = ({ data }: { data: any[] }) => (
     <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
     <CardHeader className="relative z-10">
       <CardTitle className="text-white">Revenue Trends</CardTitle>
-      <CardDescription className="text-gray-400">Monthly revenue overview</CardDescription>
+      <CardDescription className="text-gray-400">Platform revenue (commission) over time</CardDescription>
     </CardHeader>
     <CardContent className="relative z-10">
       <div className="h-[300px] w-full">
@@ -205,7 +209,7 @@ const RevenueChart = ({ data }: { data: any[] }) => (
               contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
               itemStyle={{ color: '#e5e7eb' }}
             />
-            <Bar dataKey="revenue" fill="#8884d8" radius={[4, 4, 0, 0]} name="Revenue (KSh)">
+            <Bar dataKey="revenue" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Revenue (KSh)">
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill="url(#colorRevenue)" />
               ))}
@@ -214,6 +218,43 @@ const RevenueChart = ({ data }: { data: any[] }) => (
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
                 <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.3} />
+              </linearGradient>
+            </defs>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </CardContent>
+  </Card>
+);
+
+const SalesChart = ({ data }: { data: any[] }) => (
+  <Card className="col-span-4 lg:col-span-2 bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
+    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+    <CardHeader className="relative z-10">
+      <CardTitle className="text-white">Sales Volume</CardTitle>
+      <CardDescription className="text-gray-400">Total transaction volume over time</CardDescription>
+    </CardHeader>
+    <CardContent className="relative z-10">
+      <div className="h-[300px] w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
+            <XAxis dataKey="name" stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
+            <YAxis stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
+            <Tooltip
+              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
+              contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
+              itemStyle={{ color: '#e5e7eb' }}
+            />
+            <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} name="Sales (KSh)">
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill="url(#colorSales)" />
+              ))}
+            </Bar>
+            <defs>
+              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0.3} />
               </linearGradient>
             </defs>
           </BarChart>
@@ -271,7 +312,9 @@ const NewAdminDashboard = () => {
       pendingRefunds: 0,
       netRevenue: 0
     },
-    monthlyFinancialData: []
+    monthlyFinancialData: [],
+    clients: [],
+    topShops: []
   });
 
   // Fetch dashboard data in a separate effect
@@ -289,7 +332,8 @@ const NewAdminDashboard = () => {
           monthlyMetrics,
           financialMetrics,
           monthlyFinancialData,
-          dashboardStats
+          dashboardStats,
+          clients
         ] = await Promise.all([
           adminApi.getAnalytics().then(data => {
             console.log('Analytics data received:', data);
@@ -323,18 +367,28 @@ const NewAdminDashboard = () => {
           adminApi.getDashboardStats().then(data => {
             console.log('Dashboard stats received:', data);
             return data;
+          }),
+          adminApi.getClients().then(data => {
+            console.log('Clients data received:', data);
+            return data;
           })
         ]);
 
         // Ensure we have safe defaults if any data is missing
-        const totalSellers = Array.isArray(sellers) ? sellers.length : 0;
-        const totalBuyers = Array.isArray(buyers) ? buyers.length : 0;
+        const totalSellersCount = Array.isArray(sellers) ? sellers.length : 0;
+        const totalBuyersCount = Array.isArray(buyers) ? buyers.length : 0;
+        const totalClientsCount = dashboardStats?.totalClients || 0;
+
         const safeAnalytics: DashboardAnalytics = {
           totalRevenue: financialMetrics?.totalSales || 0,
           totalProducts: dashboardStats?.totalProducts || 0,
-          totalSellers: dashboardStats?.totalSellers || totalSellers,
-          totalBuyers: dashboardStats?.totalBuyers || totalBuyers,
+          totalSellers: dashboardStats?.totalSellers || totalSellersCount,
+          totalBuyers: dashboardStats?.totalBuyers || totalBuyersCount,
+          totalClients: dashboardStats?.totalClients || 0,
           totalWishlists: dashboardStats?.totalWishlists || 0,
+          userGrowth: analytics?.userGrowth || [],
+          revenueTrends: analytics?.revenueTrends || [],
+          salesTrends: analytics?.salesTrends || [],
           monthlyGrowth: {
             revenue: analytics?.monthlyGrowth?.revenue || 0,
             products: analytics?.monthlyGrowth?.products || 0,
@@ -343,7 +397,7 @@ const NewAdminDashboard = () => {
           }
         };
 
-        console.log('Total sellers calculated:', totalSellers);
+        console.log('Total sellers calculated:', totalSellersCount);
 
         // Extract the data properly - handle both direct array and nested data structure
         let metricsData = [];
@@ -370,7 +424,9 @@ const NewAdminDashboard = () => {
             pendingRefunds: 0,
             netRevenue: 0
           },
-          monthlyFinancialData: Array.isArray(monthlyFinancialData) ? monthlyFinancialData : []
+          monthlyFinancialData: Array.isArray(monthlyFinancialData) ? monthlyFinancialData : [],
+          clients: Array.isArray(clients) ? clients : [],
+          topShops: dashboardStats?.topShops || []
         });
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -455,6 +511,13 @@ const NewAdminDashboard = () => {
       description: 'Items in wishlists',
       trend: null
     },
+    {
+      title: 'Total Clients',
+      value: dashboardState.analytics.totalClients?.toLocaleString() || '0',
+      icon: <Users className="h-4 w-4 text-blue-400" />,
+      description: 'Purchasing customers',
+      trend: null
+    }
   ];
 
   // Format metrics data for the chart
@@ -589,6 +652,28 @@ const NewAdminDashboard = () => {
   // Close buyer details modal
   const closeBuyerModal = () => {
     setSelectedBuyer(null);
+  };
+
+  // Handle deleting/blocking user
+  const handleDeleteUser = async (userId: string, role: 'seller' | 'buyer') => {
+    if (!window.confirm(`Are you sure you want to block and delete this ${role}? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await adminApi.deleteUser(userId);
+      toast.success(`${role.charAt(0).toUpperCase() + role.slice(1)} account deleted successfully`);
+
+      // Refresh data
+      setDashboardState(prev => ({
+        ...prev,
+        sellers: role === 'seller' ? prev.sellers.filter(s => s.id !== userId) : prev.sellers,
+        buyers: role === 'buyer' ? prev.buyers.filter(b => b.id !== userId) : prev.buyers
+      }));
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user account');
+    }
   };
 
   // Handle toggling buyer status (active/inactive)
@@ -747,8 +832,14 @@ const NewAdminDashboard = () => {
                         </Badge>
                       </div>
                       <div>
+                        <p className="text-sm text-gray-500 font-medium">Wallet Balance</p>
+                        <p className="text-base text-yellow-500 font-bold">KSh {parseFloat(selectedSeller.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
+                      </div>
+                      <div>
                         <p className="text-sm text-gray-500 font-medium">Member Since</p>
-                        <p className="text-base text-gray-200">{format(new Date(selectedSeller.createdAt), 'MMM d, yyyy')}</p>
+                        <p className="text-base text-gray-200">
+                          {selectedSeller.createdAt || selectedSeller.created_at ? format(new Date(selectedSeller.createdAt || selectedSeller.created_at), 'MMM d, yyyy') : 'N/A'}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
@@ -978,7 +1069,7 @@ const NewAdminDashboard = () => {
                       <div>
                         <p className="text-sm text-gray-500 font-medium">Member Since</p>
                         <p className="text-base text-gray-200">
-                          {selectedBuyer.created_at ? format(new Date(selectedBuyer.created_at), 'MMM d, yyyy') : 'N/A'}
+                          {selectedBuyer.created_at || selectedBuyer.createdAt ? format(new Date(selectedBuyer.created_at || selectedBuyer.createdAt), 'MMM d, yyyy') : 'N/A'}
                         </p>
                       </div>
                     </CardContent>
@@ -1070,37 +1161,59 @@ const NewAdminDashboard = () => {
               >
                 Refunds
               </TabsTrigger>
+              <TabsTrigger
+                value="clients"
+                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-400 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
+              >
+                Clients
+              </TabsTrigger>
             </TabsList>
           </div>
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* User Growth Chart */}
-              <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">User Growth</CardTitle>
-                  <CardDescription className="text-gray-400">New sellers and buyers over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
-                  </div>
-                </CardContent>
-              </Card>
+            {/* User Growth Chart */}
+            <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
 
-              {/* Revenue Trends Chart */}
-              <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">Revenue Trends</CardTitle>
-                  <CardDescription className="text-gray-400">Platform revenue over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-[300px]">
-                    <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            {/* Revenue Trends Chart (Commission) */}
+            <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
+
+            {/* Total Sales Chart */}
+            <SalesChart data={dashboardState.analytics.salesTrends || []} />
+
+            {/* Top Shops Section */}
+            <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+              <CardHeader>
+                <CardTitle className="text-lg font-bold text-white">Top 3 Shops</CardTitle>
+                <CardDescription className="text-gray-400">By client count</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {dashboardState.topShops?.map((shop, index) => (
+                    <div key={shop.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500/20 text-yellow-500' :
+                          index === 1 ? 'bg-gray-300/20 text-gray-300' :
+                            'bg-orange-700/20 text-orange-700'
+                          }`}>
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-white">{shop.shopName || shop.name}</p>
+                          <p className="text-xs text-gray-500">{shop.name}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-yellow-500">{shop.clientCount}</p>
+                        <p className="text-[10px] text-gray-500 uppercase font-black">Clients</p>
+                      </div>
+                    </div>
+                  ))}
+                  {!dashboardState.topShops?.length && (
+                    <p className="text-center text-gray-500 py-4">No shop data available</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Recent Sellers */}
@@ -1144,7 +1257,7 @@ const NewAdminDashboard = () => {
                               </Badge>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-400">
-                              {new Date(seller.createdAt).toLocaleDateString()}
+                              {seller.createdAt ? format(new Date(seller.createdAt), 'MMM d, yyyy') : 'N/A'}
                             </td>
                           </tr>
                         ))}
@@ -1287,23 +1400,11 @@ const NewAdminDashboard = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${seller.status === 'active'
-                                    ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                                    : 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
-                                    }`}
-                                  onClick={() => handleToggleSellerStatus(seller.id, seller.status === 'active' ? 'inactive' : 'active')}
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                                  onClick={() => handleDeleteUser(seller.id, 'seller')}
                                 >
-                                  {seller.status === 'active' ? (
-                                    <>
-                                      <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                      <span className="hidden sm:inline">Block</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Unlock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                      <span className="hidden sm:inline">Unblock</span>
-                                    </>
-                                  )}
+                                  <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                  <span className="hidden sm:inline">Block</span>
                                 </Button>
                               </div>
                             </td>
@@ -1436,23 +1537,11 @@ const NewAdminDashboard = () => {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className={`h-8 px-2 sm:px-3 text-xs sm:text-sm ${buyer.status === 'active'
-                                    ? 'text-red-400 hover:text-red-300 hover:bg-red-500/10'
-                                    : 'text-green-400 hover:text-green-300 hover:bg-green-500/10'
-                                    }`}
-                                  onClick={() => handleToggleBuyerStatus(buyer.id, buyer.status === 'active' ? 'inactive' : 'active')}
+                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2 sm:px-3 text-xs sm:text-sm"
+                                  onClick={() => handleDeleteUser(buyer.id, 'buyer')}
                                 >
-                                  {buyer.status === 'active' ? (
-                                    <>
-                                      <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                      <span className="hidden sm:inline">Block</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Unlock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                      <span className="hidden sm:inline">Unblock</span>
-                                    </>
-                                  )}
+                                  <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
+                                  <span className="hidden sm:inline">Block</span>
                                 </Button>
                               </div>
                             </td>
@@ -1614,13 +1703,82 @@ const NewAdminDashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* Refunds Tab */}
-          <TabsContent value="refunds" className="space-y-4 sm:space-y-6">
-            <RefundRequestsPage />
+          {/* Clients Tab */}
+          <TabsContent value="clients" className="space-y-4 sm:space-y-6">
+            <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+              <CardHeader className="pb-3 sm:pb-4 relative z-10">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="text-lg sm:text-xl font-bold text-white">Clients</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-gray-400">
+                      View all clients registered via sellers
+                    </CardDescription>
+                  </div>
+                  <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                    <Input
+                      type="text"
+                      placeholder="Search clients..."
+                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0 relative z-10">
+                <div className="overflow-x-auto">
+                  <div className="inline-block min-w-full align-middle">
+                    <table className="min-w-full divide-y divide-white/10">
+                      <thead className="bg-gray-800/50">
+                        <tr className="border-b border-white/10">
+                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Client</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Contact</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Seller / Shop</th>
+                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Joined</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {(dashboardState.clients || []).filter(c =>
+                          (c.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                          (c.phone || '').includes(searchQuery) ||
+                          (c.shop_name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+                        ).map((client) => (
+                          <tr key={client.id} className="hover:bg-white/5 transition-colors">
+                            <td className="py-3 px-3 sm:px-4">
+                              <div className="flex items-center">
+                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
+                                  <User className="h-5 w-5 text-blue-400" />
+                                </div>
+                                <div className="ml-3">
+                                  <div className="text-sm font-medium text-white">{client.full_name}</div>
+                                  <div className="text-xs text-gray-500">ID: {client.id}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300">
+                              <div className="font-medium text-white">{client.phone}</div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300">
+                              <div className="font-medium text-white">{client.shop_name || 'Direct'}</div>
+                              <div className="text-xs text-gray-500">{client.seller_name}</div>
+                            </td>
+                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-400">
+                              {client.createdAt ? format(new Date(client.createdAt), 'MMM d, yyyy') : 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
-    </div >
+    </div>
   );
 };
 
