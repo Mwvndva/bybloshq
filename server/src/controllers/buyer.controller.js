@@ -38,6 +38,11 @@ const createSendToken = (data, statusCode, req, res) => {
     token = signToken(userId, 'buyer');
   }
 
+  const userId = user?.id || buyer?.user_id || buyer?.userId;
+  if (!userId) {
+    return next(new AppError('Authentication failed: Missing user identification', 401));
+  }
+
   setAuthCookie(res, token);
 
   // Remove password from output

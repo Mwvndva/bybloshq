@@ -29,7 +29,7 @@ class AuthService {
         // also have a buyer profile (one person, two roles).
         if (type && user.role !== type) {
             if (type === 'buyer' && user.role === 'seller') {
-                const buyerProfile = await Buyer.findByEmail(email);
+                const buyerProfile = await Buyer.findByUserId(user.id);
                 if (buyerProfile) {
                     // Cross-role: issue a buyer-scoped token against their unified user ID
                     const token = signToken(user.id, 'buyer');
@@ -49,10 +49,10 @@ class AuthService {
 
         switch (targetType) {
             case 'seller':
-                profile = await SellerModel.findSellerByEmail(email);
+                profile = await SellerModel.findSellerByUserId(user.id);
                 break;
             case 'buyer':
-                profile = await Buyer.findByEmail(email);
+                profile = await Buyer.findByUserId(user.id);
                 break;
             case 'admin':
                 if (user.role === 'admin') profile = { id: user.id, email: user.email, role: 'admin' };

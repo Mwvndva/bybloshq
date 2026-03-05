@@ -20,8 +20,8 @@ class BuyerService {
                 throw new Error('An account with this email already exists. Please login or use the correct password to link this profile.');
             }
 
-            // 3. Password correct - check if they already have a buyer profile
-            const existingBuyer = await Buyer.findByEmail(email);
+            // 3. Password correct - check if they already have a buyer profile by user_id
+            const existingBuyer = await Buyer.findByUserId(existingUser.id);
             if (existingBuyer) {
                 throw new Error('A buyer account with this email already exists.');
             }
@@ -81,7 +81,7 @@ class BuyerService {
             }
 
             // 3. Password correct - check/create buyer profile
-            let buyer = await Buyer.findByEmail(email);
+            let buyer = await Buyer.findByUserId(existingUser.id);
             if (!buyer) {
                 buyer = await Buyer.create({
                     fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
@@ -124,8 +124,8 @@ class BuyerService {
         const isValid = await User.verifyPassword(password, userFound.password_hash);
         if (!isValid) return null;
 
-        // 3. Fetch buyer profile linked to this email
-        const buyer = await Buyer.findByEmail(email);
+        // 3. Fetch buyer profile strictly linked to this user identity
+        const buyer = await Buyer.findByUserId(userFound.id);
         return buyer;
     }
 

@@ -26,8 +26,8 @@ class SellerService {
                 throw new Error('An account with this email already exists. Please login or use the correct password to link this profile.');
             }
 
-            // 3. Password correct - check if they already have a seller profile
-            const existingSeller = await SellerModel.findSellerByEmail(email);
+            // 3. Password correct - check if they already have a seller profile by user_id
+            const existingSeller = await SellerModel.findSellerByUserId(existingUser.id);
             if (existingSeller) {
                 throw new Error('A seller account with this email already exists.');
             }
@@ -77,8 +77,8 @@ class SellerService {
         const isValid = await User.verifyPassword(password, userFound.password_hash);
         if (!isValid) return null;
 
-        // 3. Fetch seller profile linked to this email
-        const seller = await SellerModel.findSellerByEmail(email);
+        // 3. Fetch seller profile strictly linked to this user identity
+        const seller = await SellerModel.findSellerByUserId(userFound.id);
         return seller;
     }
 
