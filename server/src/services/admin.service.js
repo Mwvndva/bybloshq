@@ -251,20 +251,27 @@ class AdminService {
       const role = userRes.rows[0].role;
 
       if (role === 'seller') {
-        // Get seller id for this user
+        // Resolve seller row
         const sellerRes = await client.query('SELECT id FROM sellers WHERE user_id = $1', [userId]);
         if (sellerRes.rows.length > 0) {
           const sellerId = sellerRes.rows[0].id;
 
-          // Delete child records that reference seller id (in safe order)
+          // Delete junction tables that directly reference seller id
           await client.query('DELETE FROM seller_clients WHERE seller_id = $1', [sellerId]);
           await client.query('DELETE FROM clients WHERE seller_id = $1', [sellerId]);
-          await client.query('DELETE FROM wishlists WHERE seller_id = $1', [sellerId]);
+
+          // Nullify seller references on orders (preserve order history)
+          await client.query('UPDATE product_orders SET seller_id = NULL WHERE seller_id = $1', [sellerId]);
+
+          // Delete products owned by this seller (wishlists reference products, cascade via FK or nullify)
+          await client.query('DELETE FROM wishlists WHERE product_id IN (SELECT id FROM products WHERE seller_id = $1)', [sellerId]);
           await client.query('DELETE FROM products WHERE seller_id = $1', [sellerId]);
+
+          // Now safe to delete the seller row
           await client.query('DELETE FROM sellers WHERE id = $1', [sellerId]);
         }
       } else if (role === 'buyer') {
-        // buyers table uses user_id (not auth_user_id)
+        // buyers table uses user_id
         await client.query('DELETE FROM buyers WHERE user_id = $1', [userId]);
       }
 
