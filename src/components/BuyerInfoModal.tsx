@@ -173,7 +173,12 @@ export function BuyerInfoModal({
             <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
               <User className="h-7 w-7 text-yellow-400" />
             </div>
-            <DialogTitle className="text-2xl font-black text-center text-white">Create Account</DialogTitle>
+            <div className="space-y-2">
+              <DialogTitle className="text-2xl font-black text-center text-white">PAYMENT DETAILS</DialogTitle>
+              <p className="text-[11px] text-center font-bold text-[#a1a1a1] uppercase tracking-wider opacity-80 leading-relaxed px-4">
+                Your payment details are safe and are only collected once
+              </p>
+            </div>
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 lg:px-8 py-2 space-y-4 overscroll-contain"
