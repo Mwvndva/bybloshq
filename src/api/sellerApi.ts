@@ -106,6 +106,32 @@ interface WithdrawalRequest {
   failureReason?: string;
 }
 
+export interface ReferredSeller {
+  id: number;
+  shopName: string;
+  referralActiveUntil: string | null;
+  isActive: boolean;
+  totalEarned: number;
+}
+
+export interface ReferralDashboard {
+  referralCode: string | null;
+  referralLink: string | null;
+  totalReferralEarnings: number;
+  referred: ReferredSeller[];
+}
+
+interface ReferralDashboardResponse {
+  data: ReferralDashboard;
+}
+
+interface ReferralCodeResponse {
+  data: {
+    referralCode: string;
+    referralLink: string;
+  };
+}
+
 // Use the unified API client
 const sellerApiInstance = apiClient;
 
@@ -677,6 +703,17 @@ export const sellerApi = {
       paymentType: data.paymentType,
       items: data.items
     });
+    return response.data.data;
+  },
+
+  // Referrals
+  async getReferralDashboard(): Promise<ReferralDashboard> {
+    const response = await sellerApiInstance.get<ReferralDashboardResponse>('/sellers/referral/dashboard');
+    return response.data.data;
+  },
+
+  async generateReferralCode(): Promise<{ referralCode: string; referralLink: string }> {
+    const response = await sellerApiInstance.post<ReferralCodeResponse>('/sellers/referral/generate-code');
     return response.data.data;
   },
 };

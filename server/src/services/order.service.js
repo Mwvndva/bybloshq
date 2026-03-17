@@ -5,6 +5,7 @@ import { OrderStatus, ProductType } from '../constants/enums.js';
 import Order from '../models/order.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
+import ReferralService from './referral.service.js';
 
 class OrderService {
   /**
@@ -737,6 +738,15 @@ class OrderService {
 
       if (shouldManageTransaction) await client.query('COMMIT');
 
+      // Trigger Referral Activation (post-commit, non-blocking)
+      try {
+        ReferralService.activateReferral(orderId).catch(err => {
+          logger.warn(`[REFERRAL] activateReferral failed for order ${orderId}: ${err.message}`);
+        });
+      } catch (e) {
+        logger.error(`[REFERRAL] Unexpected error triggering activation for order ${orderId}:`, e);
+      }
+
       // Trigger Notifications (WhatsApp/Email)
       try {
         // Fetch full order details with buyer and seller for notification
@@ -1287,14 +1297,14 @@ class OrderService {
         /*
         try {
           const waService = (await import('./whatsapp.service.js')).default;
-
+  
           // Get seller details
           const sellerQuery = await client.query(
             'SELECT id, shop_name, full_name as businessName FROM sellers WHERE id = $1',
             [sellerId]
           );
           const seller = sellerQuery.rows[0];
-
+  
           await waService.sendClientOrderNotification(
             clientPhone,
             {

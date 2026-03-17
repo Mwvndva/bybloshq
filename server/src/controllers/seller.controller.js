@@ -7,6 +7,7 @@ import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../utils/cookie.utils.js';
 
 import SellerService from '../services/seller.service.js';
+import ReferralService from '../services/referral.service.js';
 import * as SellerModel from '../models/seller.model.js';
 import {
   findSellerById,
@@ -90,6 +91,17 @@ export const register = async (req, res) => {
     const loginData = await AuthService.login(req.body.email, req.body.password, 'seller');
 
     sendTokenResponse(loginData, 201, res, 'Registration successful');
+
+    // ── Referral hook (post-response, non-blocking, never fails registration) ──
+    const refCode = req.body.referralCode || req.query.ref;
+    if (refCode) {
+      const newSellerId = loginData?.profile?.id;
+      if (newSellerId) {
+        ReferralService.applyReferral(newSellerId, refCode).catch((err) =>
+          logger.warn(`[REFERRAL] applyReferral failed (non-fatal): ${err.message}`)
+        );
+      }
+    }
   } catch (error) {
     if (error.message.includes('exists')) {
       return res.status(400).json({ status: 'error', message: error.message });

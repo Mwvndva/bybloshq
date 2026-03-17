@@ -5,6 +5,7 @@ import * as analyticsController from '../controllers/analytics.controller.js';
 import * as orderController from '../controllers/order.controller.js';
 import { upload } from '../middleware/upload.js';
 import { protect } from '../middleware/auth.js';
+import referralRoutes from './referral_routes.js';
 
 import { authLimiter } from '../middleware/authRateLimiter.js';
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
@@ -83,5 +84,8 @@ router.get('/withdrawal-requests', sellerController.getWithdrawalRequests);
 
 // Debt payment route
 router.post('/debts/:debtId/pay', sellerController.initiateDebtPayment);
+
+// Referral routes
+router.use('/referral', referralRoutes);
 
 export default router;

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -42,7 +42,13 @@ import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 
 const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { register } = useSellerAuth();
+
+  // Extract referral code from URL
+  const queryParams = new URLSearchParams(location.search);
+  const referralCode = queryParams.get('ref') || undefined;
+
   const [formData, setFormData] = useState({
     fullName: '',
     shopName: '',
@@ -239,6 +245,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     setIsLoading(true);
 
     try {
+      // Use the auth context register which now supports referralCode
       await register({
         fullName: formData.fullName,
         shopName: formData.shopName.trim(),
@@ -247,7 +254,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         city: formData.city,
-        location: formData.location
+        location: formData.location,
+        referralCode
       });
 
       // Token is handled via HttpOnly cookie, no need to store it manually
