@@ -1,14 +1,7 @@
 // @ts-nocheck
 'use strict';
 
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
-
-// @ts-ignore
+import './env-loader.js';
 import { pool } from '../server/src/config/database.js';
 import ReferralService from '../server/src/services/referral.service.js';
 import Fees from '../server/src/config/fees.js';
