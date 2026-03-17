@@ -136,13 +136,15 @@ class ReferralService {
        WHERE id = $1
          AND referred_by_seller_id IS NOT NULL
          AND referral_active_until IS NULL
-       RETURNING id, referral_active_until`,
+       RETURNING *`,
             [referredSellerId]
         );
 
         if (result.rowCount > 0) {
             logger.info(`[REFERRAL] Activated referral for seller ${referredSellerId} — expires ${result.rows[0].referral_active_until}`);
+            return result.rows[0];
         }
+        return null;
     }
 
     // ─── Dashboard Data ─────────────────────────────────────────────────────────
@@ -227,6 +229,8 @@ class ReferralService {
             return { processed: 0, totalCredited: 0 };
         }
 
+        logger.info(`[REFERRAL-CRON] Found ${activeReferrals.rowCount} active referrals to process`);
+
         let processed = 0;
         let totalCredited = 0;
 
@@ -237,18 +241,19 @@ class ReferralService {
             for (/** @type {any} */ const row of activeReferrals.rows) {
                 const { referred_seller_id, referred_shop_name, referrer_seller_id } = row;
 
-                // 1. Calculate GMV for the referred seller in the target month/year
+                // 1. Calculate GMV for the referred seller in the target month/year (Timezone aware)
                 const gmvResult = await client.query(
                     `SELECT COALESCE(SUM(total_amount), 0) AS gmv
            FROM product_orders
            WHERE seller_id = $1
              AND payment_status = 'completed'
-             AND EXTRACT(MONTH FROM paid_at) = $2
-             AND EXTRACT(YEAR FROM paid_at) = $3`,
+             AND EXTRACT(MONTH FROM paid_at AT TIME ZONE 'Africa/Nairobi') = $2
+             AND EXTRACT(YEAR FROM paid_at AT TIME ZONE 'Africa/Nairobi') = $3`,
                     [referred_seller_id, month, year]
                 );
 
                 const gmv = parseFloat(gmvResult.rows[0].gmv);
+                logger.info(`[REFERRAL-CRON] Seller ${referred_seller_id} GMV for ${year}-${month}: ${gmv}`);
                 if (gmv <= 0) continue;
 
                 // 2. Calculate reward
@@ -286,7 +291,7 @@ class ReferralService {
                 processed++;
                 totalCredited = parseFloat((totalCredited + reward).toFixed(2));
 
-                logger.info(`[REFERRAL-CRON] Credited KES ${reward} to referrer ${referrer_seller_id} from referred ${referred_seller_id} (GMV: ${gmv})`);
+                logger.info(`[REFERRAL-CRON] SUCCESS: Credited KES ${reward} to referrer ${referrer_seller_id} from referred ${referred_seller_id} (GMV: ${gmv})`);
 
                 // 6. WhatsApp notification (async, non-blocking)
                 ReferralService._notifyReferrer(referrer_seller_id, referred_shop_name, reward).catch(err =>
