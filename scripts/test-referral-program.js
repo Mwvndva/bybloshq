@@ -11,6 +11,8 @@ let passed = 0;
 let failed = 0;
 
 async function runTests() {
+    // Wait a tiny bit for env-loader to restore console if we are in production
+    await new Promise(resolve => setTimeout(resolve, 10));
     console.log('🚀 Starting Referral Program Test Suite...');
 
     try {
