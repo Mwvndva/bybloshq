@@ -90,6 +90,7 @@ export interface SellerRegistrationData {
     confirmPassword: string;
     city?: string;
     location?: string;
+    referralCode?: string;
 }
 
 export type RegistrationData =

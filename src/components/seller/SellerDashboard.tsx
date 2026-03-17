@@ -39,7 +39,8 @@ import {
   Loader2,
   Info,
   Trash2,
-  Handshake
+  Handshake,
+  Gift
 } from 'lucide-react';
 import { sellerApi, checkShopNameAvailability, debtService } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
@@ -53,6 +54,7 @@ import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
 import NewClientOrderModal from './NewClientOrderModal';
+import ReferralPanel from './ReferralPanel';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -1379,12 +1381,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                               <Badge
                                 variant="outline"
                                 className={`${request.status === 'processing'
-                                    ? 'bg-yellow-500/10 text-yellow-200 border-yellow-400/20'
-                                    : request.status === 'completed'
-                                      ? 'bg-green-500/10 text-green-200 border-green-400/20'
-                                      : request.status === 'failed'
-                                        ? 'bg-red-500/10 text-red-200 border-red-400/20'
-                                        : 'bg-blue-500/10 text-blue-200 border-blue-400/20'
+                                  ? 'bg-yellow-500/10 text-yellow-200 border-yellow-400/20'
+                                  : request.status === 'completed'
+                                    ? 'bg-green-500/10 text-green-200 border-green-400/20'
+                                    : request.status === 'failed'
+                                      ? 'bg-red-500/10 text-red-200 border-red-400/20'
+                                      : 'bg-blue-500/10 text-blue-200 border-blue-400/20'
                                   } rounded-full px-3 py-1 font-semibold`}
                               >
                                 {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
@@ -1881,6 +1883,21 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     )}
                   </div>
                 </div>
+              </div>
+
+              {/* Refer and Earn */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-yellow-400/10 border border-yellow-400/20 rounded-lg">
+                    <Gift className="h-5 w-5 text-yellow-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-black text-white">Refer & Earn</h3>
+                    <p className="text-gray-400 text-xs sm:text-sm">Build your squad and earn rewards from their sales</p>
+                  </div>
+                </div>
+
+                <ReferralPanel totalSales={sellerProfile?.total_sales || 0} />
               </div>
 
               {/* Theme Settings */}

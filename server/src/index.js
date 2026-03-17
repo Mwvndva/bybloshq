@@ -366,6 +366,16 @@ startServer().then(async () => {
       logger.error('❌ Failed to start payout reconciliation cron:', error.message);
     }
   }
+
+  if (process.env.ENABLE_REFERRAL_CRON !== 'false') {
+    try {
+      const { scheduleReferralRewards } = await import('./cron/referralCron.js');
+      scheduleReferralRewards(); // Uses default monthly schedule
+      logger.info('✅ Referral rewards cron started');
+    } catch (error) {
+      logger.error('❌ Failed to start referral cron:', error.message);
+    }
+  }
 }).catch(error => {
   logger.error('❌ Failed to start server:', error);
   process.exit(1);
