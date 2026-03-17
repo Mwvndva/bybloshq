@@ -185,8 +185,8 @@ async function runTests() {
             // Let's create a dummy order for this seller.
             const orderRes = await pool.query(`
         INSERT INTO product_orders 
-        (seller_id, order_number, total_amount, status, payment_status, platform_fee_amount, seller_payout_amount, buyer_name, buyer_email)
-        VALUES ($1, $2, 0, $3, $4, 0, 0, $5, $6) RETURNING id
+        (seller_id, order_number, total_amount, status, payment_status, platform_fee_amount, seller_payout_amount, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number)
+        VALUES ($1, $2, 0, $3, $4, 0, 0, $5, $6, '0700000000', '0700000000') RETURNING id
       `, [referred.id, `ACTIVATE${TEST_MARKER}`, OrderStatus.COMPLETED, PaymentStatus.COMPLETED, 'Test Buyer Ref', `testbuyer${TEST_MARKER}@test.com`]);
 
             await ReferralService.activateReferral(orderRes.rows[0].id);
@@ -232,8 +232,8 @@ async function runTests() {
             for (let i = 0; i < orderAmounts.length; i++) {
                 await pool.query(`
           INSERT INTO product_orders 
-          (seller_id, order_number, total_amount, status, payment_status, paid_at, buyer_name, buyer_email, platform_fee_amount, seller_payout_amount)
-          VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, 0, 0)
+          (seller_id, order_number, total_amount, status, payment_status, paid_at, buyer_name, buyer_email, platform_fee_amount, seller_payout_amount, buyer_mobile_payment, buyer_whatsapp_number)
+          VALUES ($1, $2, $3, $4, $5, NOW(), $6, $7, 0, 0, '0700000000', '0700000000')
         `, [referred.id, `ORDER-00${i + 1}${TEST_MARKER}`, orderAmounts[i], OrderStatus.COMPLETED, PaymentStatus.COMPLETED, 'Test Buyer Ref', `testbuyer${TEST_MARKER}@test.com`]);
             }
 
@@ -318,8 +318,8 @@ async function runTests() {
 
             await pool.query(`
         INSERT INTO product_orders 
-        (seller_id, order_number, total_amount, status, payment_status, paid_at, buyer_name, buyer_email, platform_fee_amount, seller_payout_amount)
-        VALUES ($1, $2, 20000, $3, $4, NOW(), $5, $6, 0, 0)
+        (seller_id, order_number, total_amount, status, payment_status, paid_at, buyer_name, buyer_email, platform_fee_amount, seller_payout_amount, buyer_mobile_payment, buyer_whatsapp_number)
+        VALUES ($1, $2, 20000, $3, $4, NOW(), $5, $6, 0, 0, '0700000000', '0700000000')
       `, [referred.id, `EXPIRED-ORDER${TEST_MARKER}`, OrderStatus.COMPLETED, PaymentStatus.COMPLETED, 'Test Buyer Ref', `testbuyer${TEST_MARKER}@test.com`]);
 
             const preCheck = await pool.query("SELECT balance FROM sellers WHERE id = $1", [referrer.id]);
