@@ -36,6 +36,7 @@ import fixApiPrefix from './middleware/fixApiPrefix.js';
 import { schedulePaymentProcessing } from './cron/paymentCron.js';
 import { schedulePayoutReconciliation } from './cron/payoutCleanup.js';
 import whatsappService from './services/whatsapp.service.js';
+import WithdrawalService from './services/withdrawal.service.js';
 
 // ─── App Setup ───────────────────────────────────────────────────────────────
 const app = express();
@@ -297,6 +298,11 @@ const startServer = async () => {
       whatsappService.initialize().catch(err => {
         logger.error('⚠️  WhatsApp initialization failed:', err.message);
         logger.info('ℹ️  Use /api/whatsapp/initialize to retry.');
+      });
+
+      // Retry any withdrawals stuck in api_call_pending state (crash recovery)
+      WithdrawalService.retryPendingApiCalls().catch(err => {
+        logger.error('⚠️  Withdrawal retry failed:', err.message);
       });
     });
 

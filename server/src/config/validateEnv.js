@@ -30,7 +30,10 @@ const REQUIRED_ENV_VARS = [
 
     // Application URLs
     'FRONTEND_URL',
-    'BACKEND_URL'
+    'BACKEND_URL',
+
+    // DRM & Security
+    'DRM_MASTER_KEY'
 ];
 
 /**

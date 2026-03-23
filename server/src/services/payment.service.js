@@ -626,16 +626,14 @@ export class PaymentService {
                 if (invRows.length > 0) {
                     payment = invRows[0];
                     logger.info(`Match found via Invoice ID from metadata: ${payment.id}`);
-
-                    // Update provider_reference so subsequent hooks match directly
-                    await pool.query('UPDATE payments SET provider_reference = $1 WHERE id = $2', [reference, payment.id]);
                 }
             }
         }
 
         if (!payment) {
-            // 1c. Fuzzy match: Find by Status + Amount + Phone (if available)
-            // This handles cases where Payd generates a new reference we don't know
+            // FUZZY MATCH: last resort only. 
+            // Susceptible to collision if same buyer submits identical amount twice within 30 minutes. 
+            // Mitigated by FOR UPDATE re-check below.
             logger.info(`Reference ${reference} still not found, attempting fuzzy match...`);
 
             // Extract phone and amount from metadata (could be flat or nested in .data)
@@ -662,14 +660,6 @@ export class PaymentService {
                 if (fuzzyRows.length > 0) {
                     payment = fuzzyRows[0];
                     logger.info(`Fuzzy match found: Payment ID ${payment.id}`);
-
-                    // Update the payment with the CORRECT reference from Payd so subsequent hooks match
-                    // We only update provider_reference, leaving api_ref as the original REF-... 
-                    // so the frontend (which polls api_ref) can still find it.
-                    await pool.query(
-                        'UPDATE payments SET provider_reference = $1 WHERE id = $2',
-                        [reference, payment.id]
-                    );
                 }
             } else {
                 logger.warn('Insufficient data for fuzzy match (missing phone or amount)');
@@ -708,13 +698,13 @@ export class PaymentService {
             return { status: 'error', message: 'Record not found' };
         }
 
-        if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
+        if (payment.status !== PaymentStatus.PENDING) {
             logger.warn(`[IDEMPOTENCY] Payment ${payment.id} already processed (status: ${payment.status}). Skipping duplicate webhook.`, {
                 paymentId: payment.id,
                 currentStatus: payment.status,
                 webhookReference: reference
             });
-            return { status: 'success', message: 'Payment already completed' };
+            return { status: 'already_processed', message: 'Payment already completed' };
         }
 
         // ========================================
@@ -743,14 +733,14 @@ export class PaymentService {
             // DOUBLE-CHECK IDEMPOTENCY AFTER LOCK (P1-002)
             // ========================================
             // Another webhook might have processed it while we were waiting for the lock
-            if (lockedPayment.status === PaymentStatus.COMPLETED || lockedPayment.status === PaymentStatus.SUCCESS) {
+            if (lockedPayment.status !== PaymentStatus.PENDING) {
                 await client.query('ROLLBACK');
                 logger.warn(`[IDEMPOTENCY] Payment ${payment.id} was processed by concurrent webhook. Skipping.`, {
                     paymentId: payment.id,
                     statusAfterLock: lockedPayment.status
                 });
                 return {
-                    status: 'success',
+                    status: 'already_processed',
                     message: 'Payment completed by concurrent webhook',
                     paymentId: payment.id
                 };
@@ -766,15 +756,17 @@ export class PaymentService {
                 }
             }
 
-            // 3. Mark as Success in DB (normalized to lowercase 'completed' per PaymentStatus enum)
-            logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed'`);
+            // 3. Mark as Success in DB
+            // We also set provider_reference here so that any subsequent webhook matches via tier-1
+            logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed' and setting provider_reference`);
             await client.query(
                 `UPDATE payments 
                  SET status = $1, 
+                     provider_reference = $4,
                      metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
                      updated_at = NOW()
                  WHERE id = $3`,
-                [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id]
+                [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id, reference]
             );
 
             // Commit the transaction to release the lock

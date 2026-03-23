@@ -85,8 +85,8 @@ class WithdrawalService {
             // Insert withdrawal request record
             const insertResult = await client.query(
                 `INSERT INTO withdrawal_requests 
-                    (seller_id, amount, mpesa_number, mpesa_name, status, created_at)
-                 VALUES ($1, $2, $3, $4, 'processing', NOW())
+                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
+                 VALUES ($1, $2, $3, $4, 'processing', TRUE, NOW())
                  RETURNING id, amount, mpesa_number, mpesa_name, status, created_at`,
                 [
                     entityId,
@@ -138,7 +138,7 @@ class WithdrawalService {
             if (reference) {
                 await pool.query(
                     `UPDATE withdrawal_requests 
-                     SET provider_reference = $1, raw_response = $2
+                     SET provider_reference = $1, raw_response = $2, api_call_pending = FALSE
                      WHERE id = $3`,
                     [reference, JSON.stringify(paydResponse), request.id]
                 );
@@ -146,7 +146,7 @@ class WithdrawalService {
             } else {
                 // Payd accepted but returned no reference — log raw response
                 await pool.query(
-                    'UPDATE withdrawal_requests SET raw_response = $1 WHERE id = $2',
+                    'UPDATE withdrawal_requests SET raw_response = $1, api_call_pending = FALSE WHERE id = $2',
                     [JSON.stringify(paydResponse), request.id]
                 );
                 logger.warn(`[WithdrawalService] Request ${request.id}: Payd returned no transaction_reference`, paydResponse);
@@ -176,8 +176,9 @@ class WithdrawalService {
                 await client.query(
                     `UPDATE withdrawal_requests 
                      SET status = 'failed',
-                metadata = jsonb_set(COALESCE(metadata, '{}':: jsonb), '{api_error}', $1:: jsonb),
-                processed_at = NOW()
+                         metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{api_error}', $1::jsonb),
+                         processed_at = NOW(),
+                         api_call_pending = FALSE
                      WHERE id = $2`,
                     [JSON.stringify(apiError.message), request.id]
                 );
@@ -201,6 +202,45 @@ class WithdrawalService {
             } finally {
                 client.release();
             }
+        }
+    }
+
+    /**
+     * Retry any withdrawals that were left in api_call_pending = TRUE state.
+     * Called on server startup.
+     */
+    async retryPendingApiCalls() {
+        try {
+            logger.info('[WithdrawalService] Checking for pending API calls to retry...');
+            const { rows: pending } = await pool.query(
+                `SELECT wr.*, s.full_name, s.whatsapp_number
+                 FROM withdrawal_requests wr
+                 JOIN sellers s ON wr.seller_id = s.id
+                 WHERE wr.status = 'processing' 
+                   AND wr.api_call_pending = TRUE 
+                   AND wr.created_at > NOW() - INTERVAL '48 hours'`
+            );
+
+            if (pending.length === 0) {
+                logger.info('[WithdrawalService] No pending API calls found.');
+                return;
+            }
+
+            logger.info(`[WithdrawalService] Found ${pending.length} pending requests to retry.`);
+
+            for (const request of pending) {
+                const entity = {
+                    id: request.seller_id,
+                    full_name: request.full_name,
+                    whatsapp_number: request.whatsapp_number
+                };
+
+                // Note: amount and phone are already in the request row
+                this._callPaydAndUpdate(request, entity, parseFloat(request.amount), request.mpesa_number)
+                    .catch(err => logger.error(`[WithdrawalService] Retry failed for request ${request.id}:`, err));
+            }
+        } catch (error) {
+            logger.error('[WithdrawalService] Error during pending API call retry:', error);
         }
     }
 
