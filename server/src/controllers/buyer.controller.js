@@ -2,7 +2,7 @@ import BuyerService from '../services/buyer.service.js';
 import Buyer from '../models/buyer.model.js';
 import User from '../models/user.model.js';
 import AppError from '../utils/appError.js';
-import { sanitizeBuyer } from '../utils/sanitize.js';
+import { sanitizeBuyer, sanitizeOrder } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
@@ -14,7 +14,7 @@ import OrderModel from "../models/order.model.js";
 import { OrderStatus } from "../constants/enums.js";
 
 // Helper to send token via cookie
-const createSendToken = (data, statusCode, req, res) => {
+const createSendToken = (data, statusCode, req, res, next) => {
   // Support both AuthService format { user, profile, token } and legacy direct user/buyer object if needed
   // But we aim to use AuthService format primarily.
 

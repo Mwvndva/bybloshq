@@ -593,46 +593,33 @@ class OrderService {
       if (skipInventory) {
         logger.info(`[INVENTORY] Skipping inventory decrement for debt payment order ${orderId}`);
       } else {
-        for (const item of items) {
-          if (item.track_inventory === true && item.product_id) {
-            const requestedQty = item.quantity || 1;
-            logger.info(`[INVENTORY-DEBUG] Product ${item.product_id} - quantity field: ${item.quantity}, type: ${typeof item.quantity}, requestedQty: ${requestedQty}`);
+        const trackedItems = items.filter(item => item.track_inventory === true && item.product_id);
+        if (trackedItems.length > 0) {
+          const values = trackedItems.map(item => `(${item.product_id}, ${item.quantity || 1})`).join(',');
+          const bulkUpdateResult = await client.query(
+            `UPDATE products AS p
+             SET quantity = p.quantity - v.qty
+             FROM (VALUES ${values}) AS v(id, qty)
+             WHERE p.id = v.id AND p.track_inventory = true AND p.quantity >= v.qty
+             RETURNING p.id, p.quantity, p.low_stock_threshold, p.name`,
+            []
+          );
 
-            // Decrement inventory atomically
-            const updateResult = await client.query(
-              `UPDATE products 
-               SET quantity = quantity - $1 
-               WHERE id = $2 AND track_inventory = true AND quantity >= $3
-               RETURNING quantity, low_stock_threshold, name`,
-              [requestedQty, item.product_id, requestedQty]
-            );
+          if (bulkUpdateResult.rows.length !== trackedItems.length) {
+            const updatedIds = bulkUpdateResult.rows.map(r => r.id);
+            const failedItem = trackedItems.find(item => !updatedIds.includes(item.product_id.toString()) && !updatedIds.includes(item.product_id));
+            throw new Error(`Failed to decrement inventory for product ${failedItem?.product_name || failedItem?.product_id || 'unknown'}. Insufficient stock.`);
+          }
 
-            if (updateResult.rows.length === 0) {
-              throw new Error(`Failed to decrement inventory for product ${item.name || item.product_id}. Insufficient stock.`);
-            }
-
-            const updatedProduct = updateResult.rows[0];
-            const newQuantity = updatedProduct.quantity;
-
-            logger.info(`[INVENTORY] Decremented stock for product ${item.product_id}: ${newQuantity + requestedQty} -> ${newQuantity}`);
-
-            // Check if low stock alert should be sent
-            if (updatedProduct.low_stock_threshold && newQuantity <= updatedProduct.low_stock_threshold && newQuantity > 0) {
-              logger.warn(`[INVENTORY] Low stock alert for product ${updatedProduct.name || item.product_name || item.product_id}: ${newQuantity} units remaining`);
-
-              // Send low stock WhatsApp alert to seller (async, don't block)
-              this._sendLowStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id, newQuantity, updatedProduct.low_stock_threshold).catch(err => {
-                logger.error('[INVENTORY] Failed to send low stock alert:', err);
-              });
-            } else if (newQuantity === 0) {
-              logger.warn(`[INVENTORY] Product ${updatedProduct.name || item.product_name || item.product_id} is now OUT OF STOCK`);
-
-              // Send out of stock alert
-              this._sendOutOfStockAlert(order.seller_id, updatedProduct.name || item.product_name || item.product_id).catch(err => {
-                logger.error('[INVENTORY] Failed to send out of stock alert:', err);
-              });
+          // Post-update alerts
+          for (const row of bulkUpdateResult.rows) {
+            if (row.low_stock_threshold && row.quantity <= row.low_stock_threshold && row.quantity > 0) {
+              this._sendLowStockAlert(order.seller_id, row.name, row.quantity, row.low_stock_threshold).catch(e => logger.error('[INVENTORY] Low stock alert failed:', e));
+            } else if (row.quantity === 0) {
+              this._sendOutOfStockAlert(order.seller_id, row.name).catch(e => logger.error('[INVENTORY] Out of stock alert failed:', e));
             }
           }
+          logger.info(`[INVENTORY] Bulk decremented stock for ${trackedItems.length} products in order ${orderId}`);
         }
       }
 

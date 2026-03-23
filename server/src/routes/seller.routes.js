@@ -4,8 +4,9 @@ import * as productController from '../controllers/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
 import * as orderController from '../controllers/order.controller.js';
 import { upload } from '../middleware/upload.js';
-import { protect } from '../middleware/auth.js';
+import { protect, auth, restrictTo } from '../middleware/auth.js';
 import referralRoutes from './referral_routes.js';
+import { createWithdrawal, getWithdrawals, getWithdrawalById } from '../controllers/withdrawal.controller.js';
 
 import { authLimiter } from '../middleware/authRateLimiter.js';
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
@@ -78,9 +79,10 @@ router.post('/products/upload-digital',
   productController.uploadDigitalFile
 );
 
-// Withdrawal request routes
-router.post('/withdrawal-request', sellerController.createWithdrawalRequest);
-router.get('/withdrawal-requests', sellerController.getWithdrawalRequests);
+// Withdrawal requests
+router.post('/withdrawal-request', createWithdrawal);
+router.get('/withdrawal-requests', getWithdrawals);
+router.get('/withdrawal-requests/:id', getWithdrawalById);
 
 // Debt payment route
 router.post('/debts/:debtId/pay', sellerController.initiateDebtPayment);

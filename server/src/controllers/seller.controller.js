@@ -352,6 +352,8 @@ export const searchSellers = async (req, res) => {
       });
     }
 
+    const sellers = await searchSellersInDB(city, location);
+
     // Sanitize results to remove sensitive info
     // searchSellersInDB returns raw rows, so we map them to sanitized public objects
     const sanitizedSellers = sellers.map(s => sanitizePublicSeller(s));

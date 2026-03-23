@@ -8,6 +8,7 @@ import { pool } from '../config/database.js';
 import whatsappService from '../services/whatsapp.service.js';
 import payoutService from '../services/payout.service.js';
 import { PaymentService } from '../services/payment.service.js';
+import logger from '../utils/logger.js';
 
 const paymentService = new PaymentService();
 
@@ -324,7 +325,7 @@ const processPendingPayments = async (req, res, next) => {
     logger.info(`Admin requested to process pending payments from last ${hours} hours, limit ${limit}`);
 
     // Process pending payments
-    const result = await PaymentCompletionService.processPendingPayments(
+    const result = await paymentService.processPendingPayments(
       parseInt(hours, 10),
       parseInt(limit, 10)
     );
