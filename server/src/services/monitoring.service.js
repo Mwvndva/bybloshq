@@ -129,15 +129,15 @@ class MonitoringService {
     async getAlertStats(hours = 24) {
         try {
             const { rows } = await pool.query(
-                `SELECT 
-                    alert_type,
-                    COUNT(*) as count,
-                    MAX(created_at) as last_occurrence
-                 FROM security_alerts 
-                 WHERE created_at > NOW() - INTERVAL '${hours} hours'
-                 GROUP BY alert_type
-                 ORDER BY count DESC`,
-                []
+                `SELECT
+    alert_type,
+    COUNT(*)        AS count,
+    MAX(created_at) AS last_occurrence
+ FROM security_alerts
+ WHERE created_at > NOW() - ($1 * INTERVAL '1 hour')
+ GROUP BY alert_type
+ ORDER BY count DESC`,
+                [hours]
             );
 
             return {
@@ -159,18 +159,18 @@ class MonitoringService {
     async getWebhookPatterns(hours = 24) {
         try {
             const { rows } = await pool.query(
-                `SELECT 
-                    client_ip,
-                    COUNT(*) as webhook_count,
-                    COUNT(DISTINCT reference) as unique_transactions,
-                    MIN(created_at) as first_seen,
-                    MAX(created_at) as last_seen
-                 FROM webhook_logs 
-                 WHERE created_at > NOW() - INTERVAL '${hours} hours'
-                 GROUP BY client_ip
-                 ORDER BY webhook_count DESC
-                 LIMIT 20`,
-                []
+                `SELECT
+    client_ip,
+    COUNT(*)                  AS webhook_count,
+    COUNT(DISTINCT reference) AS unique_transactions,
+    MIN(created_at)           AS first_seen,
+    MAX(created_at)           AS last_seen
+ FROM webhook_logs
+ WHERE created_at > NOW() - ($1 * INTERVAL '1 hour')
+ GROUP BY client_ip
+ ORDER BY webhook_count DESC
+ LIMIT 20`,
+                [hours]
             );
 
             return {
@@ -214,8 +214,9 @@ class MonitoringService {
     async cleanupOldLogs(daysToKeep = 30) {
         try {
             const { rowCount } = await pool.query(
-                `DELETE FROM webhook_logs 
-                 WHERE created_at < NOW() - INTERVAL '${daysToKeep} days'`
+                `DELETE FROM webhook_logs
+ WHERE created_at < NOW() - ($1 * INTERVAL '1 day')`,
+                [daysToKeep]
             );
 
             logger.info(`[MONITORING] Cleaned up ${rowCount} old webhook logs (older than ${daysToKeep} days)`);

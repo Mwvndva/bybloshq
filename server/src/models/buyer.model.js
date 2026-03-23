@@ -209,7 +209,13 @@ class Buyer {
     return result.rows.length ? toCamelCase(result.rows[0]) : null;
   }
 
-  // Auth methods removed
+  // Update buyer password
+  static async updatePassword(id, password) {
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const query = 'UPDATE buyers SET password = $1, updated_at = NOW() WHERE id = $2';
+    await pool.query(query, [hashedPassword, id]);
+    return true;
+  }
 
 }
 

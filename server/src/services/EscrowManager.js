@@ -12,98 +12,69 @@ class EscrowManager {
      * @param {string} source - The service or component triggering the release
      */
     async releaseFunds(client, order, source = 'System') {
-        try {
-            // 1. Lock and Check Order Metadata
-            const orderCheck = await client.query(
-                'SELECT metadata FROM product_orders WHERE id = $1 FOR UPDATE',
-                [order.id]
-            );
-            const currentMeta = orderCheck.rows[0]?.metadata || {};
+        const orderId = order.id;
 
-            if (currentMeta.payout_processed) {
-                logger.info(`[EscrowManager] Funds for Order ${order.id} already released. Skipping.`);
-                return { success: true, alreadyReleased: true };
-            }
+        // Atomic test-and-set — rowCount 0 means another concurrent call already ran
+        const markResult = await client.query(
+            `UPDATE product_orders
+         SET metadata   = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{payout_processed}', 'true'::jsonb),
+             updated_at = NOW()
+         WHERE id = $1
+           AND NOT (COALESCE(metadata, '{}'::jsonb) ? 'payout_processed')
+         RETURNING id`,
+            [orderId],
+        );
 
-            // 2. Extract/Calculate Amounts
-            const sellerPayoutAmount = parseFloat(order.seller_payout_amount || 0);
-            const totalAmount = parseFloat(order.total_amount || 0);
-            const platformFeeAmount = parseFloat(order.platform_fee_amount || (totalAmount - sellerPayoutAmount));
+        if (markResult.rowCount === 0) {
+            logger.info(`[EscrowManager] Funds for Order ${orderId} already released. Skipping.`);
+            return { success: true, alreadyReleased: true };
+        }
 
-            if (sellerPayoutAmount <= 0) {
-                logger.warn(`[EscrowManager] Non-positive payout amount for Order ${order.id}: ${sellerPayoutAmount}`);
-            }
+        const sellerPayoutAmount = parseFloat(order.seller_payout_amount ?? order.sellerPayoutAmount ?? 0);
+        const totalAmount = parseFloat(order.total_amount ?? order.totalAmount ?? 0);
+        const platformFeeAmount = parseFloat(
+            order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount),
+        );
+        const sellerId = order.seller_id ?? order.sellerId;
 
-            // 3. Update Seller Balance and Revenue
-            // Atomic increment of balance, net_revenue, and total_sales
-            await client.query(
-                `UPDATE sellers 
-         SET 
-           balance = balance + $1,
-           net_revenue = net_revenue + $1,
-           total_sales = total_sales + $2,
-           updated_at = NOW()
+        if (sellerPayoutAmount <= 0) {
+            logger.warn(`[EscrowManager] Non-positive payout (${sellerPayoutAmount}) for Order ${orderId}.`);
+            return { success: true };
+        }
+
+        await client.query(
+            `UPDATE sellers
+         SET balance     = balance     + $1,
+             net_revenue = net_revenue + $1,
+             total_sales = total_sales + $2,
+             updated_at  = NOW()
          WHERE id = $3`,
-                [sellerPayoutAmount, totalAmount, order.seller_id]
-            );
+            [sellerPayoutAmount, totalAmount, sellerId],
+        );
 
-            // 4. Handle Payout Record
-            // Check if a payout record already exists (usually created by DB trigger handle_order_completion)
-            const payoutResult = await client.query(
-                'SELECT id FROM payouts WHERE order_id = $1',
-                [order.id]
-            );
-
-            if (payoutResult.rows.length > 0) {
-                // Update existing payout record
-                await client.query(
-                    `UPDATE payouts 
-           SET status = 'completed', 
+        await client.query(
+            `INSERT INTO payouts
+           (seller_id, order_id, amount, platform_fee, status,
+            payment_method, processed_at, completed_at, metadata)
+         VALUES ($1, $2, $3, $4, 'completed', 'wallet_credit', NOW(), NOW(), $5)
+         ON CONFLICT (order_id) DO UPDATE
+           SET status       = 'completed',
                processed_at = NOW(),
                completed_at = NOW(),
-               amount = $2,
-               platform_fee = $3,
-               metadata = jsonb_set(
-                 COALESCE(metadata, '{}'::jsonb), 
-                 '{processed_by}', 
-                 $4::jsonb
-               )
-           WHERE order_id = $1`,
-                    [order.id, sellerPayoutAmount, platformFeeAmount, JSON.stringify(source)]
-                );
-            } else {
-                // Create new payout record if it doesn't exist
-                await client.query(
-                    `INSERT INTO payouts (
-            seller_id, order_id, amount, platform_fee, status, 
-            payment_method, processed_at, completed_at, metadata
-          ) VALUES ($1, $2, $3, $4, 'completed', 'wallet_credit', NOW(), NOW(), $5)`,
-                    [
-                        order.seller_id,
-                        order.id,
-                        sellerPayoutAmount,
-                        platformFeeAmount,
-                        JSON.stringify({ processed_by: source, auto_created: true })
-                    ]
-                );
-            }
+               amount       = EXCLUDED.amount,
+               platform_fee = EXCLUDED.platform_fee,
+               metadata     = jsonb_set(
+                 COALESCE(payouts.metadata, '{}'::jsonb),
+                 '{processed_by}',
+                 $5::jsonb
+               )`,
+            [sellerId, orderId, sellerPayoutAmount, platformFeeAmount, JSON.stringify({ processed_by: source })],
+        );
 
-            // 5. Mark Order as Payout Processed
-            await client.query(
-                `UPDATE product_orders 
-         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{payout_processed}', 'true'::jsonb),
-             updated_at = NOW()
-         WHERE id = $1`,
-                [order.id]
-            );
-
-            logger.info(`[EscrowManager] Successfully released KES ${sellerPayoutAmount} to Seller ${order.seller_id} for Order ${order.id} (Source: ${source})`);
-
-            return { success: true };
-        } catch (error) {
-            logger.error(`[EscrowManager] Error releasing funds for Order ${order.id}:`, error);
-            throw error;
-        }
+        logger.info(
+            `[EscrowManager] Released KES ${sellerPayoutAmount} to seller ${sellerId} for Order ${orderId} (source: ${source})`,
+        );
+        return { success: true };
     }
 }
 

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import https from 'https';
+import fs from 'fs';
 import crypto from 'crypto';
 import dns from 'dns';
 import logger from '../utils/logger.js';
@@ -51,7 +52,7 @@ export class PaymentService {
             scheduling: 'lifo',           // ✅ Reuse most recent socket
             family: 4,                    // ✅ FORCE IPv4 to prevent socket hang up
             rejectUnauthorized: true,      // ✅ Enforce SSL verification
-            ca: process.env.PAYD_CA_CERT_PATH ? require("fs").readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
+            ca: process.env.PAYD_CA_CERT_PATH ? fs.readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
         });
 
         // Monitor agent health
@@ -410,7 +411,7 @@ export class PaymentService {
             scheduling: 'lifo',
             family: 4,        // ✅ FORCE IPv4
             rejectUnauthorized: true,
-            ca: process.env.PAYD_CA_CERT_PATH ? require("fs").readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
+            ca: process.env.PAYD_CA_CERT_PATH ? fs.readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
         });
 
         // Re-mount to axios client too
@@ -1236,13 +1237,13 @@ export class PaymentService {
         try {
             // 1. Fetch pending payments within time window
             const { rows: pendingPayments } = await pool.query(
-                `SELECT * FROM payments 
-                 WHERE status = 'pending' 
-                 AND created_at > NOW() - INTERVAL '${hoursAgo} hours'
-                 AND created_at < NOW() - INTERVAL '1 minute'
-                 ORDER BY created_at ASC
-                 LIMIT $1`,
-                [limit]
+                `SELECT * FROM payments
+ WHERE status = 'pending'
+   AND created_at > NOW() - ($1 * INTERVAL '1 hour')
+   AND created_at < NOW() - INTERVAL '1 minute'
+ ORDER BY created_at ASC
+ LIMIT $2`,
+                [hoursAgo, limit]
             );
 
             results.processedCount = pendingPayments.length;

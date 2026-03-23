@@ -157,7 +157,7 @@ class WithdrawalService {
                 whatsappService.notifySellerWithdrawalUpdate(entity.whatsapp_number, {
                     amount,
                     status: 'processing',
-                    reference: correlatorId || `REQ - ${request.id} `,
+                    reference: reference || `REQ-${request.id}`,
                     reason: null,
                     newBalance: null
                 }).catch(err => logger.error('[WithdrawalService] WhatsApp notify failed:', err));
@@ -258,6 +258,81 @@ class WithdrawalService {
                 logger.error(`[WithdrawalService] Reconcile error for request ${request.id}: `, err.message);
             }
         }
+    }
+
+    /**
+     * Return paginated withdrawal history for a seller.
+     * @param {number} sellerId
+     * @param {{ limit: number, offset: number, status: string|null }} opts
+     * @returns {Promise<{ rows: Object[], total: number }>}
+     */
+    async getWithdrawalsForSeller(sellerId, { limit = 20, offset = 0, status = null } = {}) {
+        const params = [sellerId];
+        const clauses = ['wr.seller_id = $1'];
+
+        if (status) {
+            params.push(status);
+            clauses.push(`wr.status = $${params.length}`);
+        }
+
+        const where = clauses.join(' AND ');
+
+        const [dataResult, countResult] = await Promise.all([
+            pool.query(
+                `SELECT
+               wr.id,
+               wr.amount,
+               wr.mpesa_number,
+               wr.mpesa_name,
+               wr.status,
+               wr.provider_reference,
+               wr.created_at,
+               wr.processed_at,
+               CASE
+                 WHEN wr.status = 'failed'
+                 THEN COALESCE(wr.metadata->>'api_error', wr.metadata->'payd_callback'->>'remarks', 'Unknown error')
+                 ELSE NULL
+               END AS failure_reason,
+               CASE
+                 WHEN wr.status = 'completed'
+                 THEN wr.metadata->'payd_callback'->>'third_party_trans_id'
+                 ELSE NULL
+               END AS mpesa_receipt
+             FROM withdrawal_requests wr
+             WHERE ${where}
+             ORDER BY wr.created_at DESC
+             LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+                [...params, limit, offset],
+            ),
+            pool.query(
+                `SELECT COUNT(*) AS total FROM withdrawal_requests wr WHERE ${where}`,
+                params,
+            ),
+        ]);
+
+        return {
+            rows: dataResult.rows,
+            total: parseInt(countResult.rows[0].total, 10),
+        };
+    }
+
+    /**
+     * Return a single withdrawal request, enforcing seller ownership.
+     * @param {number} requestId
+     * @param {number} sellerId
+     * @returns {Promise<Object|null>}
+     */
+    async getWithdrawalById(requestId, sellerId) {
+        const { rows } = await pool.query(
+            `SELECT
+           wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name,
+           wr.status, wr.provider_reference, wr.created_at,
+           wr.processed_at, wr.metadata
+         FROM withdrawal_requests wr
+         WHERE wr.id = $1 AND wr.seller_id = $2`,
+            [requestId, sellerId],
+        );
+        return rows[0] ?? null;
     }
 }
 

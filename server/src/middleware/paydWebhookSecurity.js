@@ -1,6 +1,30 @@
 import crypto from 'crypto';
 import logger from '../utils/logger.js';
 
+function ipToInt(ip) {
+    return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+}
+
+function ipMatches(clientIP, allowedEntry) {
+    const ip = clientIP.replace(/^::ffff:/, '');
+    if (ip === allowedEntry) return true;
+
+    if (allowedEntry.includes('/')) {
+        const [network, prefixStr] = allowedEntry.split('/');
+        const prefix = parseInt(prefixStr, 10);
+        const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
+        try { return (ipToInt(ip) & mask) === (ipToInt(network) & mask); }
+        catch { return false; }
+    }
+
+    if (allowedEntry.includes('x') || allowedEntry.includes('*')) {
+        const pattern = allowedEntry.replace(/\./g, '\\.').replace(/x|\*/g, '\\d{1,3}');
+        return new RegExp(`^${pattern}$`).test(ip);
+    }
+
+    return false;
+}
+
 /**
  * Payd Webhook Security Middleware
  * 
@@ -23,11 +47,9 @@ export const verifyPaydWebhook = (req, res, next) => {
     // ========================================
 
     // Extract client IP (handle various proxy scenarios)
-    const clientIP = req.ip ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
-        req.headers['x-real-ip'];
+    // trust proxy is set in index.js — req.ip is already the correct resolved IP.
+    // Reading raw headers here would allow spoofing via X-Real-IP / X-Forwarded-For.
+    const clientIP = req.ip;
 
     logger.info(`[WEBHOOK-SECURITY] Incoming webhook from IP: ${clientIP}`, {
         url: req.originalUrl,
@@ -68,22 +90,7 @@ export const verifyPaydWebhook = (req, res, next) => {
         }
 
         // Check if client IP is whitelisted
-        const isAllowed = allowedIPs.some(allowedIP => {
-            // Exact match
-            if (clientIP === allowedIP) return true;
-
-            // IPv6 mapping (::ffff:xxx.xxx.xxx.xxx)
-            if (clientIP === `::ffff:${allowedIP}`) return true;
-
-            // Prefix match for CIDR-like patterns (e.g., 41.90.x.x matches 41.90.*)
-            if (allowedIP.includes('x') || allowedIP.includes('*')) {
-                const pattern = allowedIP.replace(/x/g, '\\d+').replace(/\*/g, '\\d+');
-                const regex = new RegExp(`^${pattern}$`);
-                return regex.test(clientIP);
-            }
-
-            return false;
-        });
+        const isAllowed = allowedIPs.some(entry => ipMatches(clientIP, entry));
 
         if (!isAllowed) {
             logger.error(`[WEBHOOK-SECURITY] ⛔ REJECTED: Unauthorized IP: ${clientIP}`, {
@@ -97,7 +104,7 @@ export const verifyPaydWebhook = (req, res, next) => {
 
             // Log to security monitoring (if available)
             setImmediate(() => {
-                import('./monitoring.service.js').then(({ default: monitoringService }) => {
+                import('../services/monitoring.service.js').then(({ default: monitoringService }) => {
                     monitoringService.alertSecurityTeam('Unauthorized webhook IP', {
                         ip: clientIP,
                         url: req.originalUrl,
