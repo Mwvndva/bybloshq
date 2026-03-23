@@ -1,10 +1,6 @@
 -- ISSUE 8: Add missing indexes for performance and integrity
 
--- 1. JSONB index for order_id lookups in handleSuccessfulPayment
-CREATE INDEX IF NOT EXISTS idx_payments_metadata_order_id 
-ON payments ((metadata->>'order_id'));
-
--- 2. Composite index for fuzzy matching pending payments
+-- 1. Composite index for fuzzy matching pending payments
 CREATE INDEX IF NOT EXISTS idx_payments_fuzzy_match 
 ON payments (status, mobile_payment) 
 WHERE status = 'pending';
