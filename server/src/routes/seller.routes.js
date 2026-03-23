@@ -4,7 +4,7 @@ import * as productController from '../controllers/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
 import * as orderController from '../controllers/order.controller.js';
 import { upload } from '../middleware/upload.js';
-import { protect, auth, restrictTo } from '../middleware/auth.js';
+import { protect } from '../middleware/auth.js';
 import referralRoutes from './referral_routes.js';
 import { createWithdrawal, getWithdrawals, getWithdrawalById } from '../controllers/withdrawal.controller.js';
 
