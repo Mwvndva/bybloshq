@@ -274,6 +274,15 @@ const applyMigrations = async () => {
       logger.info("Migration: Created 'client_debts' table");
     }
 
+    // api_call_pending column for withdrawal_requests (Issue 1 crash recovery)
+    const withdrawalColCheck = await client.query(
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'withdrawal_requests' AND column_name = 'api_call_pending'`
+    );
+    if (withdrawalColCheck.rowCount === 0) {
+      await client.query("ALTER TABLE withdrawal_requests ADD COLUMN api_call_pending BOOLEAN DEFAULT FALSE");
+      logger.info("Migration: Added 'api_call_pending' column to withdrawal_requests");
+    }
+
     await client.query('COMMIT');
     logger.info('Migrations applied successfully');
   } catch (err) {
