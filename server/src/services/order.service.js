@@ -271,7 +271,7 @@ class OrderService {
       // 3. Validate Status Transition
       const validTransitions = {
         [OrderStatus.PENDING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED],
-        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED],
+        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
         [OrderStatus.DELIVERY_PENDING]: [OrderStatus.DELIVERY_COMPLETE, OrderStatus.CANCELLED],
         [OrderStatus.COLLECTION_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
         [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
@@ -525,15 +525,11 @@ class OrderService {
     // Digital-only orders start as PENDING (will auto-complete after payment)
     // Service-only orders start as SERVICE_PENDING (requires seller confirmation)
     // Physical orders start as PENDING (will transition based on shop availability)
-    let initialStatus = OrderStatus.PENDING;
-
-    const isServiceOnly = hasService && !hasPhysical && !hasDigital;
-    if (isServiceOnly) {
-      initialStatus = OrderStatus.SERVICE_PENDING;
-      logger.info(`[OrderService] Service-only order detected -> Initial status: ${initialStatus}`);
-    } else {
-      logger.info(`[OrderService] Order type: Physical=${hasPhysical}, Digital=${hasDigital}, Service=${hasService} -> Initial status: ${initialStatus}`);
-    }
+    // ALL orders start as PENDING (unpaid).
+    // They transition to specific pending states (SERVICE_PENDING, DELIVERY_PENDING, etc.)
+    // only AFTER handleSuccessfulPayment calls completeOrder().
+    const initialStatus = OrderStatus.PENDING;
+    logger.info(`[OrderService] Initial status set to ${initialStatus} for new order`);
 
     return initialStatus;
   }
@@ -676,6 +672,28 @@ class OrderService {
         } else if (hasService) {
           newStatus = OrderStatus.SERVICE_PENDING;
           logger.info(`[PURCHASE-FLOW] Service order detected → Status: ${newStatus} (seller must confirm)`);
+        } else if (items.some(i => i.is_digital)) {
+          // Digital products - auto-complete and create activations
+          newStatus = OrderStatus.COMPLETED;
+          logger.info(`[PURCHASE-FLOW] Digital order detected → Status: ${newStatus} (auto-completing)`);
+
+          for (const item of items.filter(i => i.is_digital)) {
+            const productId = item.product_id;
+            // Check for existing activation to ensure idempotency
+            const { rows: existing } = await client.query(
+              'SELECT id FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+              [orderId, productId]
+            );
+
+            if (existing.length === 0) {
+              logger.info(`[DRM] Creating digital activation for Order ${orderId}, Product ${productId}`);
+              await client.query(
+                `INSERT INTO digital_activations (order_id, product_id, master_key)
+                     VALUES ($1, $2, $3)`,
+                [orderId, productId, process.env.DRM_MASTER_KEY]
+              );
+            }
+          }
         } else {
           // Digital or unknown - auto-complete
           logger.info(`[PURCHASE-FLOW] Digital/Auto-complete order → Status: ${newStatus}`);

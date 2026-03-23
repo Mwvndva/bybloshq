@@ -47,13 +47,8 @@ export const generateCode = async (req, res, next) => {
 
         const { referral_code, total_sales } = sellerResult.rows[0];
 
-        // Business rule: referral link is locked until the seller has at least one completed sale
-        if (!total_sales || parseFloat(total_sales) === 0) {
-            return res.status(403).json({
-                status: 'fail',
-                message: 'Complete your first sale to unlock referrals'
-            });
-        }
+        // Let the service handle the business logic (sales lock, code generation, etc.)
+        // the generateReferralCode method will throw if rules are not met.
 
         // Already has a code — no-op
         if (referral_code) {

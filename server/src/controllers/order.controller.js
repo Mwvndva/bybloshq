@@ -329,35 +329,44 @@ export const downloadDigitalProduct = async (req, res) => {
             return res.redirect(302, filePath);
         }
 
-        // 7. Local file — stream it
+        // 7. Local file — encrypt and stream it
         const path = await import('path');
         const fs = await import('fs');
         let absolutePath = path.default.resolve(process.cwd(), filePath);
 
-        // DEFENSIVE CHECK: If file not found, try prepending 'server' (common project structure quirk)
+        // DEFENSIVE CHECK: If file not found, try prepending 'server'
         if (!fs.default.existsSync(absolutePath)) {
             const fallbackPath = path.default.resolve(process.cwd(), 'server', filePath);
             if (fs.default.existsSync(fallbackPath)) {
-                logger.info(`[DOWNLOAD] Path fallback hit: ${fallbackPath}`);
                 absolutePath = fallbackPath;
             } else {
-                logger.error(`[DOWNLOAD] File missing at both: ${absolutePath} AND ${fallbackPath}`);
-                return res.status(404).json({ status: 'error', message: 'File not found on server' });
+                logger.error(`[DOWNLOAD] File missing: ${absolutePath}`);
+                return res.status(404).json({ status: 'error', message: 'File not found' });
             }
         }
 
-        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-        res.setHeader('Content-Type', 'application/octet-stream');
-        res.setHeader('X-Content-Type-Options', 'nosniff');
+        const bybxFileName = fileName.replace(path.default.extname(fileName), '') + '.bybx';
 
-        const fileStream = fs.default.createReadStream(absolutePath);
-        fileStream.on('error', (err) => {
-            logger.error(`[DOWNLOAD] Stream error: ${err.message}`);
-            if (!res.headersSent) {
-                res.status(500).json({ status: 'error', message: 'Failed to stream file' });
-            }
-        });
-        fileStream.pipe(res);
+        logger.info(`[DOWNLOAD] Wrapping file ${absolutePath} for order ${orderId} into .bybx container`);
+
+        try {
+            const bybxBuffer = await wrapFile(
+                absolutePath,
+                orderId,
+                product.id,
+                process.env.DRM_MASTER_KEY
+            );
+
+            res.setHeader('Content-Disposition', `attachment; filename="${bybxFileName}"`);
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Content-Length', bybxBuffer.length);
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+
+            return res.send(bybxBuffer);
+        } catch (wrapError) {
+            logger.error(`[DOWNLOAD] wrapFile failed: ${wrapError.message}`);
+            return res.status(500).json({ status: 'error', message: 'Encryption failed' });
+        }
 
     } catch (error) {
         logger.error('Error in downloadDigitalProduct:', error);

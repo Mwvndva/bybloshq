@@ -44,8 +44,15 @@ class AuthorizationService {
         // Fetch permissions if not already cached on the user object for this request
         if (!user.permissions) {
             const userId = user.userId || user.id;
-
             user.permissions = await this.getUserPermissions(userId);
+
+            if (user.permissions.size === 0) {
+                if (process.env.NODE_ENV !== 'production') {
+                    logger.warn(`[AUTH] Empty permissions for user ${userId} — RBAC tables may be misconfigured. Falling back to role-based defaults.`);
+                } else {
+                    logger.error(`[AUTH] No permissions found for user ${userId} (role: ${user.userType}). Check user_roles and role_permissions tables.`);
+                }
+            }
         }
 
         const basicResult = user.permissions.has(permission) || user.permissions.has('manage-all');
