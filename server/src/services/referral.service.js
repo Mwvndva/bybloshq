@@ -31,8 +31,19 @@ class ReferralService {
         }
 
         const totalSales = parseFloat(sellerCheck.rows[0].total_sales || 0);
+
         if (totalSales <= 0) {
-            throw new AppError('Complete your first sale to unlock referrals', 403);
+            // Fallback: check if there's at least one paid order (even if not yet in total_sales/escrow release)
+            const orderCheck = await pool.query(
+                `SELECT 1 FROM product_orders 
+                 WHERE seller_id = $1 AND payment_status IN ('completed', 'paid')
+                 LIMIT 1`,
+                [sellerId]
+            );
+
+            if (orderCheck.rowCount === 0) {
+                throw new AppError('Complete your first sale to unlock referrals', 403);
+            }
         }
 
         const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

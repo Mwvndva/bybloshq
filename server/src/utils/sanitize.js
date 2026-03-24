@@ -54,6 +54,7 @@ export const sanitizeSeller = (seller) => {
         theme: sellerObj.theme,
         hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address), // boolean only — not the address string
         clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
+        totalSales: parseFloat(sellerObj.totalSales || sellerObj.total_sales || 0),
     };
 };
 

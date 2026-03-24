@@ -50,6 +50,7 @@ export interface SellerProfile extends BaseUser {
     bannerImage?: string;
     theme?: string;
     balance?: number;
+    totalSales?: number;
     instagramLink?: string;
     tiktokLink?: string;
     facebookLink?: string;
