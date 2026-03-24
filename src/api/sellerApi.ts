@@ -27,6 +27,7 @@ export interface Seller {
   theme?: Theme;
   balance?: number;
   total_sales?: number;
+  totalSales?: number;
   net_revenue?: number;
   createdAt: string;
   created_at?: string;
@@ -188,6 +189,7 @@ const transformSeller = (data: any): Seller => {
     tiktokLink: seller.tiktokLink || seller.tiktok_link || '',
     facebookLink: seller.facebookLink || seller.facebook_link || '',
     clientCount: seller.clientCount || seller.client_count || 0,
+    totalSales: parseFloat(seller.totalSales || seller.total_sales || 0),
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
   };

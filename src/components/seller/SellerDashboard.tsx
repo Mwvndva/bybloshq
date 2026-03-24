@@ -80,6 +80,7 @@ interface SellerProfile {
   instagramLink?: string;
   tiktokLink?: string;
   facebookLink?: string;
+  totalSales?: number;
 }
 
 interface WithdrawalRequest {
@@ -1897,7 +1898,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   </div>
                 </div>
 
-                <ReferralPanel totalSales={sellerProfile?.total_sales || 0} />
+                <ReferralPanel totalSales={sellerProfile?.totalSales || 0} />
               </div>
 
               {/* Theme Settings */}
