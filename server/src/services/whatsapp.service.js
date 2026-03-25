@@ -99,6 +99,12 @@ class WhatsAppService {
             } catch (error) {
                 logger.error(`❌ Failed to send WhatsApp message to ${phone}:`, error.message);
                 throw error;
+            } finally {
+                // M-12 FIX: Remove map entry when this task completes to prevent unbounded growth.
+                // Only delete if we are still the head of the queue for this JID.
+                if (this.messageQueues && this.messageQueues.get(jid) === currentTask) {
+                    this.messageQueues.delete(jid);
+                }
             }
         });
 

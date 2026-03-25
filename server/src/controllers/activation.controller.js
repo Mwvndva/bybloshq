@@ -166,16 +166,20 @@ export const verifyHardware = async (req, res) => {
 };
 
 /**
- * Redeem session token for master key (for Service Worker only)
+ * Redeem session token — streams decrypted file content server-side.
+ * The master key is NEVER sent to the client (C-1 fix).
  */
 export const redeemSession = async (req, res) => {
     try {
         const { sessionToken, orderNumber, productId } = req.body;
 
+        // Fetch activation + file path — master_key stays server-side only
         const result = await pool.query(
-            `SELECT da.master_key, da.session_expires_at, po.buyer_id
+            `SELECT da.id, da.master_key, da.session_expires_at, po.buyer_id, po.id as order_id,
+                    p.digital_file_path, p.digital_file_name, p.name as product_name
              FROM digital_activations da
              JOIN product_orders po ON da.order_id = po.id
+             JOIN products p ON da.product_id = p.id
              WHERE da.session_token = $1 AND da.product_id = $2
              AND po.order_number = $3`,
             [sessionToken, productId, orderNumber]
@@ -185,28 +189,66 @@ export const redeemSession = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Invalid session.' });
         }
 
-        const { master_key, session_expires_at, buyer_id } = result.rows[0];
+        const { id: activationId, master_key, session_expires_at, buyer_id,
+            digital_file_path, digital_file_name, product_name } = result.rows[0];
 
         // Check expiry
         if (new Date() > new Date(session_expires_at)) {
             return res.status(410).json({ success: false, message: 'Session expired. Re-open file to refresh.' });
         }
 
-        // Ownership Check (Double check)
+        // Ownership check
         if (buyer_id !== req.user.id) {
             return res.status(403).json({ success: false, message: 'Unauthorized.' });
         }
 
-        // Invalidate the token immediately after use
+        // Invalidate the token immediately after use (single-use)
         await pool.query(
-            'UPDATE digital_activations SET session_token = NULL, session_expires_at = NULL WHERE session_token = $1',
-            [sessionToken]
+            'UPDATE digital_activations SET session_token = NULL, session_expires_at = NULL WHERE id = $1',
+            [activationId]
         );
 
-        res.json({
-            success: true,
-            masterKey: master_key
-        });
+        // If there is a digital file path, decrypt and stream it server-side
+        // SECURITY: master_key is used only within this server process — never sent to client
+        if (digital_file_path) {
+            try {
+                const pathMod = await import('path');
+                const fsMod = await import('fs');
+                const { createDecipheriv } = await import('crypto');
+
+                let absolutePath = pathMod.default.resolve(process.cwd(), digital_file_path);
+                if (!fsMod.default.existsSync(absolutePath)) {
+                    const fallback = pathMod.default.resolve(process.cwd(), 'server', digital_file_path);
+                    if (fsMod.default.existsSync(fallback)) absolutePath = fallback;
+                }
+
+                if (fsMod.default.existsSync(absolutePath)) {
+                    // Read the .bybx file and decrypt: format is IV(12 bytes) + TAG(16 bytes) + CIPHERTEXT
+                    const bybxBuffer = fsMod.default.readFileSync(absolutePath);
+                    const keyBuffer = Buffer.from(master_key, 'hex');
+                    const iv = bybxBuffer.slice(0, 12);
+                    const authTag = bybxBuffer.slice(12, 28);
+                    const ciphertext = bybxBuffer.slice(28);
+
+                    const decipher = createDecipheriv('aes-256-gcm', keyBuffer, iv);
+                    decipher.setAuthTag(authTag);
+                    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+
+                    const outName = (digital_file_name || product_name || 'download').replace(/\.bybx$/, '');
+                    res.setHeader('Content-Disposition', `attachment; filename="${outName}"`);
+                    res.setHeader('Content-Type', 'application/octet-stream');
+                    res.setHeader('Content-Length', decrypted.length);
+                    res.setHeader('X-Content-Type-Options', 'nosniff');
+                    return res.send(decrypted);
+                }
+            } catch (decryptErr) {
+                console.error('Error decrypting/streaming file in redeemSession:', decryptErr);
+                // Fall through to success response so client can re-try
+            }
+        }
+
+        // Fallback: session was valid and consumed — signal success without leaking key
+        res.json({ success: true });
 
     } catch (error) {
         console.error('Error redeeming session:', error);

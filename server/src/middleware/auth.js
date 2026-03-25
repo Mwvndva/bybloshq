@@ -5,8 +5,6 @@ import AuthorizationService from '../services/authorization.service.js';
 import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
 
-// Import cookie-parser if not already imported
-import cookieParser from 'cookie-parser';
 
 // Maps for easy lookup in req.user.can
 const policies = {
@@ -39,11 +37,6 @@ export const protect = async (req, res, next) => {
   try {
     // console.log('\n=== Auth Middleware ===');
     // console.log('Request URL:', req.originalUrl);
-
-    // Parse cookies if not already parsed
-    if (!req.cookies) {
-      cookieParser()(req, res, () => { });
-    }
 
     // 1) Get token and check if it exists
     const token = getTokenFromRequest(req);

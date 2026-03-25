@@ -631,39 +631,9 @@ export class PaymentService {
         }
 
         if (!payment) {
-            // FUZZY MATCH: last resort only. 
-            // Susceptible to collision if same buyer submits identical amount twice within 30 minutes. 
-            // Mitigated by FOR UPDATE re-check below.
-            logger.info(`Reference ${reference} still not found, attempting fuzzy match...`);
-
-            // Extract phone and amount from metadata (could be flat or nested in .data)
-            const meta = metadata.data || metadata;
-            const webhookPhone = meta.phone_number || meta.phone || meta.customer_phone || meta.msisdn;
-            const webhookAmount = parseFloat(amount || meta.amount);
-
-            if (webhookPhone && !isNaN(webhookAmount) && webhookAmount > 0) {
-                // Extract last 9 digits to be safe (safely ignores 0 vs 254 prefix)
-                const phoneTail = webhookPhone.slice(-9);
-
-                logger.info(`Fuzzy matching for Amount: ${webhookAmount}, Phone Tail: ${phoneTail}`);
-
-                const { rows: fuzzyRows } = await pool.query(
-                    `SELECT * FROM payments 
-                     WHERE status = $1 
-                     AND amount = $2 
-                     AND mobile_payment LIKE '%' || $3 
-                     AND created_at > NOW() - INTERVAL '30 minute'
-                     ORDER BY created_at DESC LIMIT 1`,
-                    [PaymentStatus.PENDING, webhookAmount, phoneTail]
-                );
-
-                if (fuzzyRows.length > 0) {
-                    payment = fuzzyRows[0];
-                    logger.info(`Fuzzy match found: Payment ID ${payment.id}`);
-                }
-            } else {
-                logger.warn('Insufficient data for fuzzy match (missing phone or amount)');
-            }
+            // C-2 FIX: Fuzzy matching removed — it was exploitable via crafted webhooks.
+            // All payment confirmation must go through provider_reference or invoice_id.
+            logger.warn(`[SECURITY] Payment reference not matched via any lookup. Reference: ${reference}. No fuzzy match attempted.`);
         }
 
         // If still no payment, use the rows[0] (which will be undefined) or handle normally
@@ -794,18 +764,21 @@ export class PaymentService {
         });
 
         if (paymentMeta.order_id || paymentMeta.product_id) {
-            // It's a Product Order
-            // Call OrderService to complete
-            import('./order.service.js').then(async ({ default: OrderService }) => {
-                try {
-                    logger.info(`[PURCHASE-FLOW] 7. Completing Order ${paymentMeta.order_id} via OrderService.completeOrder()`);
-                    const completionResult = await OrderService.completeOrder(updatedPayment);
-                    logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
-                } catch (e) {
-                    logger.error('[PURCHASE-FLOW] ERROR Step 7/8 - Error completing order after payment:', e);
-                }
-            });
-            return { status: 'success', message: 'Payment processed and Order completion queued' };
+            // It's a Product Order — C-4 FIX: await completeOrder so failures are captured
+            try {
+                logger.info(`[PURCHASE-FLOW] 7. Completing Order ${paymentMeta.order_id} via OrderService.completeOrder()`);
+                const OrderSvc = (await import('./order.service.js')).default;
+                const completionResult = await OrderSvc.completeOrder(updatedPayment);
+                logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
+            } catch (completionErr) {
+                logger.error('[CRITICAL] completeOrder failed after payment confirmed — flagging for retry:', completionErr);
+                // Mark payment so a cron job can retry completion
+                await pool.query(
+                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata,'{}'), '{needs_completion}', 'true') WHERE id = $1`,
+                    [updatedPayment.id]
+                );
+            }
+            return { status: 'success', message: 'Payment processed and Order completion triggered' };
 
         } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
             // It's a Debt Payment
