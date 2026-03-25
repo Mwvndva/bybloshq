@@ -39,11 +39,17 @@ export default async (app) => {
     }));
 
     // 3. CORS Hardening
-    const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+    const rawAllowedOrigins = (process.env.ALLOWED_ORIGINS || '')
         .split(',')
         .map(o => o.trim().replace(/^["']|["']$/g, ''))
         .filter(o => o !== '');
 
+    // Automatically include FRONTEND_URL if set
+    if (process.env.FRONTEND_URL) {
+        rawAllowedOrigins.push(process.env.FRONTEND_URL.replace(/\/$/, ''));
+    }
+
+    const allowedOrigins = [...new Set(rawAllowedOrigins)];
     logger.info(`🌐 Whitelisted origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'none (using defaults)'}`);
 
     const isLocal = process.env.NODE_ENV !== 'production';
@@ -63,15 +69,39 @@ export default async (app) => {
             // Allow requests with no origin (like mobile apps or curl)
             if (!origin) return callback(null, true);
 
+            // Dynamic check for allowed origins including www/non-www variants
+            const checkOrigin = (allowedList, currentOrigin) => {
+                if (allowedList.includes(currentOrigin)) return true;
+
+                // Check if adding/removing 'www.' makes it match
+                const url = new URL(currentOrigin);
+                const hostname = url.hostname;
+                const protocol = url.protocol;
+                const port = url.port ? `:${url.port}` : '';
+
+                if (hostname.startsWith('www.')) {
+                    const nonWwwOrigin = `${protocol}//${hostname.substring(4)}${port}`;
+                    if (allowedList.includes(nonWwwOrigin)) return true;
+                } else {
+                    const wwwOrigin = `${protocol}//www.${hostname}${port}`;
+                    if (allowedList.includes(wwwOrigin)) return true;
+                }
+                return false;
+            };
+
             const isAllowed =
-                allowedOrigins.includes(origin) ||
-                (isLocal && localOrigins.includes(origin)) ||
+                checkOrigin(allowedOrigins, origin) ||
+                (isLocal && checkOrigin(localOrigins, origin)) ||
                 origin.endsWith('.vercel.app');
 
             if (isAllowed) return callback(null, true);
 
-            logger.warn(`CORS blocked request from origin: ${origin} `);
-            return callback(new Error(`Not allowed by CORS: ${origin} `));
+            logger.warn(`CORS blocked request from origin: ${origin}`);
+            // Return 403 instead of 500 by marking error as operational
+            const error = new Error(`Not allowed by CORS: ${origin}`);
+            error.statusCode = 403;
+            error.isOperational = true;
+            return callback(error);
         },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
