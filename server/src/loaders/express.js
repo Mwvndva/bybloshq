@@ -39,9 +39,12 @@ export default async (app) => {
     }));
 
     // 3. CORS Hardening
-    const allowedOrigins = process.env.ALLOWED_ORIGINS
-        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-        : [];
+    const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+        .split(',')
+        .map(o => o.trim().replace(/^["']|["']$/g, ''))
+        .filter(o => o !== '');
+
+    logger.info(`🌐 Whitelisted origins: ${allowedOrigins.length > 0 ? allowedOrigins.join(', ') : 'none (using defaults)'}`);
 
     const isLocal = process.env.NODE_ENV !== 'production';
     const localOrigins = [
@@ -67,8 +70,8 @@ export default async (app) => {
 
             if (isAllowed) return callback(null, true);
 
-            logger.warn(`CORS blocked request from origin: ${origin}`);
-            return callback(new Error(`Not allowed by CORS: ${origin}`));
+            logger.warn(`CORS blocked request from origin: ${origin} `);
+            return callback(new Error(`Not allowed by CORS: ${origin} `));
         },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
