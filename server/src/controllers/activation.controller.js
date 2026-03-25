@@ -223,16 +223,12 @@ export const redeemSession = async (req, res) => {
                 }
 
                 if (fsMod.default.existsSync(absolutePath)) {
-                    // Read the .bybx file and decrypt: format is IV(12 bytes) + TAG(16 bytes) + CIPHERTEXT
+                    // Use encryptor.js unwrapFile which has the correct offsets:
+                    // header=0..128, iv=128..140, tag=140..156, ciphertext=156..end
+                    const { unwrapFile } = await import('../utils/encryptor.js');
                     const bybxBuffer = fsMod.default.readFileSync(absolutePath);
                     const keyBuffer = Buffer.from(master_key, 'hex');
-                    const iv = bybxBuffer.slice(0, 12);
-                    const authTag = bybxBuffer.slice(12, 28);
-                    const ciphertext = bybxBuffer.slice(28);
-
-                    const decipher = createDecipheriv('aes-256-gcm', keyBuffer, iv);
-                    decipher.setAuthTag(authTag);
-                    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+                    const decrypted = unwrapFile(bybxBuffer, keyBuffer.toString('hex'));
 
                     const outName = (digital_file_name || product_name || 'download').replace(/\.bybx$/, '');
                     res.setHeader('Content-Disposition', `attachment; filename="${outName}"`);

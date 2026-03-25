@@ -1,5 +1,5 @@
 import { pool } from '../config/database.js';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 import whatsappService from '../services/whatsapp.service.js';
 import Buyer from '../models/buyer.model.js';
 

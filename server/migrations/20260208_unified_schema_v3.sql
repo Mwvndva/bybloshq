@@ -660,27 +660,13 @@ BEGIN
     END IF;
 END $$;
 
--- Create Admin User
+-- 10. ROLES & PERMISSIONS
+-- (Final block: ensuring essential roles and permissions exist)
+-- Admin creation is now handled by server/scripts/seed-admin.js for security.
 DO $$
-DECLARE
-    admin_user_id INTEGER;
-    admin_role_id INTEGER := (SELECT id FROM roles WHERE slug = 'admin');
-    -- Password hash for '14253553805'
-    hashed_password TEXT := '$2b$12$ohCGGI4Os2vVagYuaU4fRucG7S9G1Z3vrXZXBV0BGGkT9qxh6IDhu';
 BEGIN
-    INSERT INTO users (email, password_hash, role, is_verified, is_active)
-    VALUES ('admin@bybloshq.space', hashed_password, 'admin', true, true)
-    ON CONFLICT (email) DO UPDATE 
-    SET password_hash = EXCLUDED.password_hash, role = 'admin', updated_at = NOW()
-    RETURNING id INTO admin_user_id;
-
-    IF admin_user_id IS NULL THEN
-        SELECT id INTO admin_user_id FROM users WHERE email = 'admin@bybloshq.space';
-    END IF;
-
-    IF admin_role_id IS NOT NULL AND admin_user_id IS NOT NULL THEN
-        INSERT INTO user_roles (user_id, role_id)
-        VALUES (admin_user_id, admin_role_id)
-        ON CONFLICT DO NOTHING;
-    END IF;
+    -- Ensure roles are mapped to permissions as defined above
+    -- (The permission mapping logic is already in section 10 above)
+    NULL; 
 END $$;
+

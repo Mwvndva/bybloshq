@@ -5,7 +5,7 @@
 import { pool } from '../config/database.js';
 import Fees from '../config/fees.js';
 import logger from '../utils/logger.js';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 
 /**
  * ReferralService — all referral business logic.
@@ -252,9 +252,9 @@ class ReferralService {
             for (/** @type {any} */ const row of activeReferrals.rows) {
                 const { referred_seller_id, referred_shop_name, referrer_seller_id } = row;
 
-                // 1. Calculate GMV for the referred seller in the target month/year (Timezone aware)
+                // 1. Calculate Seller Payout GMV for the referred seller in the target month/year (Timezone aware)
                 const gmvResult = await client.query(
-                    `SELECT COALESCE(SUM(total_amount), 0) AS gmv
+                    `SELECT COALESCE(SUM(seller_payout), 0) AS gmv
            FROM product_orders
            WHERE seller_id = $1
              AND payment_status = 'completed'
@@ -264,7 +264,7 @@ class ReferralService {
                 );
 
                 const gmv = parseFloat(gmvResult.rows[0].gmv);
-                logger.info(`[REFERRAL-CRON] Seller ${referred_seller_id} GMV for ${year}-${month}: ${gmv}`);
+                logger.info(`[REFERRAL-CRON] Seller ${referred_seller_id} GMV (Seller Payout) for ${year}-${month}: ${gmv}`);
                 if (gmv <= 0) continue;
 
                 // 2. Calculate reward

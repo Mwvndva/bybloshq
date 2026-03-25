@@ -31,6 +31,7 @@ import xss from 'express-xss-sanitizer';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import { doubleCsrf } from 'csrf-csrf';
 
 import logger from './utils/logger.js';
 import routes from './routes/index.js';
@@ -160,10 +161,50 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 
-app.use('/api', limiter);
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+// ─── CSRF Protection (Block 5) ────────────────────────────────────────────────
+const {
+  invalidCsrfTokenError,
+  generateToken,
+  doubleCsrfProtection,
+} = doubleCsrf({
+  getSecret: () => process.env.CSRF_SECRET || 'super-secret-csrf-key-change-me',
+  cookieName: 'x-csrf-token',
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: 'lax',
+    path: '/',
+    secure: process.env.NODE_ENV === 'production',
+  },
+  size: 64,
+  ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
+  getTokenFromRequest: (req) => req.headers['x-csrf-token'],
+});
+
+// ─── Middleware Stack ────────────────────────────────────────────────────────
+app.use('/api', limiter); // Apply rate limiting to /api routes
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 app.use(cookieParser());
+app.use(xss());
+app.use(hpp());
+
+// Apply CSRF Protection with Webhook Exclusions
+app.use((req, res, next) => {
+  const isWebhook =
+    req.path.includes('/api/v1/payments/callback') ||
+    req.path.includes('/api/v1/whatsapp/webhook');
+
+  if (isWebhook) {
+    return next();
+  }
+
+  return doubleCsrfProtection(req, res, next);
+});
+
+// CSRF Token Refresh Endpoint
+app.get('/api/v1/csrf-token', (req, res) => {
+  res.json({ token: generateToken(req, res) });
+});
 
 // Development request logging
 if (process.env.NODE_ENV === 'development') {
@@ -394,6 +435,17 @@ startServer().then(async () => {
       logger.info('✅ Referral rewards cron started');
     } catch (error) {
       logger.error('❌ Failed to start referral cron:', error.message);
+    }
+  }
+
+  // Block 2 fix: Retry order completion for payments marked needs_completion=true
+  if (process.env.ENABLE_COMPLETION_RETRY_CRON !== 'false') {
+    try {
+      const { scheduleCompletionRetry } = await import('./cron/completionRetryCron.js');
+      scheduleCompletionRetry();
+      logger.info('✅ Completion retry cron started (every 2 min)');
+    } catch (error) {
+      logger.error('❌ Failed to start completion retry cron:', error.message);
     }
   }
 }).catch(error => {

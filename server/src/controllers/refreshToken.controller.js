@@ -1,5 +1,5 @@
 import { refreshAccessToken } from '../utils/refreshToken.js';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 
 /**
  * Refresh access token using refresh token
