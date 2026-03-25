@@ -11,6 +11,7 @@ import ReferralService from '../services/referral.service.js';
 import * as SellerModel from '../models/seller.model.js';
 import {
   findSellerById,
+  findSellerByUserId,
   findSellerByShopName,
   isShopNameAvailable,
   findSellerByEmail,
