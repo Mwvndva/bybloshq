@@ -47,7 +47,7 @@ A modern e-commerce platform for discovering and selling unique fashion items wi
 | Node.js 18+ | JavaScript runtime |
 | Express | Web application framework |
 | PostgreSQL | Relational database |
-| Knex.js | SQL query builder |
+| node-pg-migrate | SQL migration tool |
 | JWT | Authentication with refresh tokens |
 | Express Validator | Request validation |
 | Winston | Logging |
@@ -138,12 +138,9 @@ JWT_REFRESH_EXPIRES_IN=7d
    # From the server directory
    cd server
    
-   # Install Knex CLI locally
-   npm install -D knex
-   
    # Run migrations and seeds
-   npx knex migrate:latest
-   npx knex seed:run  # Optional: for sample data
+   npm run migrate
+   npm run seed  # Optional: for sample data
    ```
 
 ### 5. Start the development servers
@@ -226,14 +223,14 @@ This will start:
 │   ├── src/
 │   │   ├── config/         # Configuration files
 │   │   ├── controllers/    # Request handlers
+│   │   ├── loaders/        # Startup loaders
 │   │   ├── middleware/     # Express middleware
 │   │   ├── models/         # Database models
 │   │   ├── routes/         # API routes
 │   │   ├── services/       # Business logic
 │   │   ├── utils/          # Utility functions
-│   │   └── app.ts          # Express app setup
-│   ├── knexfile.ts         # Knex configuration
-│   └── migrations/         # Database migrations
+│   │   └── index.js        # Server entry point
+│   ├── migrations/         # Database migrations
 │
 ├── src/                    # Frontend source
 │   ├── api/                # API service functions
@@ -286,7 +283,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 - [Vite](https://vitejs.dev/) - Next generation frontend tooling
 - [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
 - [React Query](https://tanstack.com/query) - Server state management
-- [Knex.js](https://knexjs.org/) - SQL query builder
+- [node-pg-migrate](https://salsita.github.io/node-pg-migrate/) - SQL migration tool
 - [Express](https://expressjs.com/) - Fast, unopinionated web framework
 
 ## 📚 Documentation

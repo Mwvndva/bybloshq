@@ -75,7 +75,7 @@ The payment processing system handles the complete lifecycle of payments, from i
 ## 🛠 Tech Stack
 
 - **Runtime**: Node.js 18+ with Express
-- **Database**: PostgreSQL 13+ with Knex.js
+- **Database**: PostgreSQL 13+ with node-pg-migrate
 - **Authentication**: JWT with refresh tokens
 - **Validation**: Express Validator
 - **Logging**: Winston
@@ -143,14 +143,11 @@ JWT_REFRESH_EXPIRES_IN=7d
 
 2. **Run migrations**:
    ```bash
-   # Install Knex CLI globally (if not already installed)
-   npm install -g knex
-   
    # Run all pending migrations
-   npx knex migrate:latest
+   npm run migrate
    
    # Seed the database with sample data (optional)
-   npx knex seed:run
+   npm run seed
    ```
 
 ### 5. Start the server
@@ -220,16 +217,16 @@ npm test -- tests/controllers/product.test.js
 
 ```bash
 # Create new migration file
-npx knex migrate:make migration_name
+npm run migrate:create migration_name
 
 # Run pending migrations
-npx knex migrate:latest
+npm run migrate
 
 # Rollback last migration
-npx knex migrate:rollback
+npm run migrate:down
 
 # Run seeds
-npx knex seed:run
+npm run seed
 ```
 
 ## 🔒 Security Considerations
@@ -248,7 +245,7 @@ This project is licensed under the MIT License - see the [LICENSE](../LICENSE) f
 ## 🙏 Acknowledgments
 
 - [Express.js](https://expressjs.com/) - Fast, unopinionated web framework for Node.js
-- [Knex.js](https://knexjs.org/) - SQL query builder for Node.js
+- [node-pg-migrate](https://salsita.github.io/node-pg-migrate/) - SQL migration tool for Node.js
 - [JWT](https://jwt.io/) - JSON Web Tokens for authentication
 - [Winston](https://github.com/winstonjs/winston) - Logging library
 - [Jest](https://jestjs.io/) - JavaScript Testing Framework
