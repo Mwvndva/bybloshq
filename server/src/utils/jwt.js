@@ -7,7 +7,7 @@ import { AppError } from './errorHandler.js';
  * @param {string} role - User role (buyer, seller, organizer, admin)
  * @returns {string} JWT token
  */
-const VALID_ROLES = ['buyer', 'seller', 'admin', 'organizer'];
+const VALID_ROLES = ['buyer', 'seller', 'admin'];
 
 export const signToken = (id, role = 'buyer') => {
   if (!id) {

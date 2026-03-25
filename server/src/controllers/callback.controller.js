@@ -65,12 +65,9 @@ export const handlePaydPayoutCallback = async (req, res) => {
                 wr.status,
                 wr.amount,
                 wr.seller_id,
-                wr.organizer_id,
-                wr.event_id,
-                COALESCE(s.whatsapp_number, o.whatsapp_number) AS entity_phone
+                s.whatsapp_number AS entity_phone
              FROM withdrawal_requests wr
-             LEFT JOIN sellers    s ON wr.seller_id    = s.id
-             LEFT JOIN organizers o ON wr.organizer_id = o.id
+             LEFT JOIN sellers s ON wr.seller_id = s.id
              WHERE wr.provider_reference = $1
              FOR UPDATE OF wr`,
             [transactionReference]

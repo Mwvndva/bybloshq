@@ -278,7 +278,6 @@ class AdminService {
       if (buyerRow.rows.length > 0) {
         const buyerId = buyerRow.rows[0].id;
         // Cleanup buyer specific FKs
-        await client.query('DELETE FROM product_ratings WHERE buyer_id = $1', [buyerId]);
         await client.query('DELETE FROM wishlists WHERE buyer_id = $1', [buyerId]);
         await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE buyer_id = $1)', [buyerId]);
         await client.query('DELETE FROM product_orders WHERE buyer_id = $1', [buyerId]);

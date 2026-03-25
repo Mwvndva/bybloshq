@@ -281,44 +281,30 @@ export const downloadDigitalProduct = async (req, res) => {
             logger.warn(`[DOWNLOAD] Unauthorized — user ${req.user.id} cannot access order ${orderId}`);
             return res.status(403).json({ status: 'error', message: 'Unauthorized' });
         }
-
-        // 3. Buyers must have a completed order — DB stores uppercase 'COMPLETED'
-        if (isBuyer && !isSeller) {
-            const orderStatus = (order.status || '').toUpperCase();
-            if (orderStatus !== 'COMPLETED') {
-                logger.warn(`[DOWNLOAD] Order ${orderId} status is '${order.status}' — not COMPLETED`);
-                return res.status(403).json({
-                    status: 'error',
-                    message: 'Order must be completed before downloading'
-                });
-            }
-        }
-
-        // 4. Verify the product exists in this order's items
-        const items = Array.isArray(order.items) ? order.items : [];
-        const item = items.find(
-            i => String(i.productId || i.product_id) === String(productId)
+        // 1. Verify order exists and is completed
+        const { rows: orderRows } = await pool.query(
+            'SELECT * FROM product_orders WHERE id = $1 AND buyer_id = $2 AND payment_status = \'completed\'',
+            [orderId, req.user.id]
         );
-        if (!item) {
-            return res.status(404).json({ status: 'error', message: 'Product not found in this order' });
+
+        if (orderRows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Order not found or not paid' });
         }
 
-        // 5. Fetch the digital file path from products table
+        // 2. Verify product is in this order and is digital
         const { rows: productRows } = await pool.query(
-            `SELECT id, name, is_digital, digital_file_path, digital_file_name
-             FROM products WHERE id = $1`,
-            [productId]
+            `SELECT p.*, po.quantity
+             FROM products p
+             JOIN product_orders po ON p.id = po.product_id
+             WHERE po.id = $1 AND p.id = $2 AND p.type = 'digital'`,
+            [orderId, productId]
         );
+
+        if (productRows.length === 0) {
+            return res.status(404).json({ status: 'error', message: 'Digital product not found in this order' });
+        }
 
         const product = productRows[0];
-        if (!product) {
-            return res.status(404).json({ status: 'error', message: 'Product no longer exists' });
-        }
-
-        if (!product.is_digital || !product.digital_file_path) {
-            return res.status(400).json({ status: 'error', message: 'This product has no downloadable file' });
-        }
-
         const filePath = product.digital_file_path;
         const fileName = product.digital_file_name || `${product.name}.zip`;
 
@@ -341,40 +327,88 @@ export const downloadDigitalProduct = async (req, res) => {
         }
 
         const downloadCount = updateResult.rows[0].download_count;
-        logger.info(`[DOWNLOAD] Serving file for order ${orderId}, product ${productId} (Download #${downloadCount}): ${filePath}`);
 
-        // Serve the file — watermarked if PDF, raw otherwise (Approach B)
-        const fileBuffer = await fs.default.promises.readFile(absolutePath);
-        const ext = path.default.extname(absolutePath).toLowerCase();
+        // Device fingerprint enforcement
+        const deviceFingerprint = req.headers['x-device-fingerprint'];
 
-        let outputBuffer = fileBuffer;
-        let outputName = fileName;
-
-        if (ext === '.pdf') {
-            try {
-                // Apply forensic watermark with buyer identity
-                const { applyForensicWatermark } = await import('../utils/encryptor.js');
-                outputBuffer = await applyForensicWatermark(
-                    fileBuffer,
-                    `order:${orderId} buyer:${req.user.id}`,
-                    absolutePath
-                );
-                logger.info(`[DOWNLOAD] Watermark applied for order ${orderId}`);
-            } catch (wmErr) {
-                logger.warn(`[DOWNLOAD] Watermark failed (serving original): ${wmErr.message}`);
-                outputBuffer = fileBuffer;
-            }
+        if (!deviceFingerprint) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Device fingerprint required. Please use the Byblos app to download.'
+            });
         }
 
-        res.setHeader('Content-Disposition', `attachment; filename="${outputName}"`);
-        res.setHeader('Content-Type', getMimeType(ext));
-        res.setHeader('Content-Length', outputBuffer.length);
-        res.setHeader('X-Download-Count', downloadCount);
-        res.setHeader('X-Content-Type-Options', 'nosniff');
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        res.setHeader('Pragma', 'no-cache');
+        // Check existing binding
+        const activationRow = await pool.query(
+            'SELECT hardware_binding_id, bond_window_expires_at FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+            [orderId, productId]
+        );
 
-        return res.send(outputBuffer);
+        const activation = activationRow.rows[0];
+        const now = new Date();
+
+        if (activation && activation.hardware_binding_id) {
+            if (activation.hardware_binding_id !== deviceFingerprint) {
+                const windowExpired = activation.bond_window_expires_at && new Date(activation.bond_window_expires_at) < now;
+                if (!windowExpired) {
+                    return res.status(403).json({
+                        status: 'error',
+                        message: 'This file is locked to another device. Try again after 24 hours to switch devices.'
+                    });
+                }
+                // Window expired — allow re-bind by updating fingerprint
+                await pool.query(
+                    `UPDATE digital_activations SET hardware_binding_id = $1, bond_window_expires_at = NOW() + INTERVAL '24 hours' WHERE order_id = $2 AND product_id = $3`,
+                    [deviceFingerprint, orderId, productId]
+                );
+            }
+            // Same device — proceed
+        } else {
+            // First download — bind to this device
+            await pool.query(
+                `UPDATE digital_activations SET hardware_binding_id = $1, bond_window_expires_at = NOW() + INTERVAL '24 hours', activated_at = NOW() WHERE order_id = $2 AND product_id = $3`,
+                [deviceFingerprint, orderId, productId]
+            );
+        }
+
+        const absolutePath = path.resolve(process.cwd(), filePath.replace(/^\//, ''));
+        logger.info(`[DOWNLOAD] Serving file for order ${orderId}, product ${productId} (Download #${downloadCount}): ${absolutePath}`);
+
+        try {
+            const fileBuffer = await fs.readFile(absolutePath);
+            const ext = path.extname(absolutePath).toLowerCase();
+
+            let outputBuffer = fileBuffer;
+
+            if (ext === '.pdf') {
+                try {
+                    // Apply forensic watermark with buyer identity
+                    const { applyForensicWatermark } = await import('../utils/encryptor.js');
+                    outputBuffer = await applyForensicWatermark(
+                        fileBuffer,
+                        `order:${orderId} buyer:${req.user.id}`,
+                        absolutePath
+                    );
+                    logger.info(`[DOWNLOAD] Watermark applied for order ${orderId}`);
+                } catch (wmErr) {
+                    logger.warn(`[DOWNLOAD] Watermark failed (serving original): ${wmErr.message}`);
+                    outputBuffer = fileBuffer;
+                }
+            }
+
+            res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+            res.setHeader('Content-Type', getMimeType(ext));
+            res.setHeader('Content-Length', outputBuffer.length);
+            res.setHeader('X-Download-Count', downloadCount);
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+            res.setHeader('Pragma', 'no-cache');
+
+            return res.send(outputBuffer);
+        } catch (fileErr) {
+            logger.error(`[DOWNLOAD] File read error for ${absolutePath}:`, fileErr.message);
+            return res.status(404).json({ status: 'error', message: 'File not found on server' });
+        }
     } catch (error) {
         logger.error('Error in downloadDigitalProduct:', error);
         if (!res.headersSent) {

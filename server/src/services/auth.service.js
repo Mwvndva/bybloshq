@@ -90,7 +90,7 @@ class AuthService {
     /**
      * Request Password Reset
      * @param {string} email 
-     * @param {string} type - 'buyer', 'seller', 'organizer'
+     * @param {string} type - 'buyer', 'seller'
      */
     static async forgotPassword(email, type) {
         const user = await User.findByEmail(email);

@@ -24,11 +24,11 @@ class WithdrawalService {
      * Create and initiate a withdrawal request.
      *
      * @param {Object} params
-     * @param {number}  params.entityId    - seller.id, organizer.id, or event.id
+     * @param {number}  params.entityId    - seller.id
      * @param {string}  params.entityType  - 'seller'
      * @returns {Promise<Object>} withdrawal_requests row
      */
-    async createWithdrawalRequest({ entityId, entityType, amount, mpesaNumber, mpesaName, organizerId }) {
+    async createWithdrawalRequest({ entityId, entityType, amount, mpesaNumber, mpesaName }) {
 
         // --- Phase 1: Validate inputs before touching DB ---
         const validatedAmount = payoutService.validateAmount(amount);
@@ -37,8 +37,8 @@ class WithdrawalService {
         if (!mpesaName?.trim()) {
             throw new Error('M-Pesa registered name is required');
         }
-        if (!['seller', 'organizer'].includes(entityType)) {
-            throw new Error(`Invalid entityType: ${entityType}. Must be 'seller' or 'organizer'.`);
+        if (entityType !== 'seller') {
+            throw new Error(`Invalid entityType: ${entityType}. Must be 'seller'.`);
         }
 
         // --- Phase 2: DB transaction — lock, check, deduct, insert ---
@@ -50,20 +50,11 @@ class WithdrawalService {
             await client.query('BEGIN');
 
             // Lock entity row and fetch current balance
-            let entityRow;
-            if (entityType === 'seller') {
-                const { rows } = await client.query(
-                    'SELECT id, balance, full_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE',
-                    [entityId]
-                );
-                entityRow = rows[0];
-            } else if (entityType === 'organizer') {
-                const { rows } = await client.query(
-                    'SELECT id, balance, full_name, whatsapp_number FROM organizers WHERE id = $1 FOR UPDATE',
-                    [entityId]
-                );
-                entityRow = rows[0];
-            }
+            const { rows } = await client.query(
+                'SELECT id, balance, full_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE',
+                [entityId]
+            );
+            const entityRow = rows[0];
 
             if (!entityRow) {
                 throw new Error(`${entityType} not found or unauthorized`);
@@ -82,16 +73,15 @@ class WithdrawalService {
             }
 
             // Deduct from entity balance
-            const balanceTable = entityType === 'seller' ? 'sellers' : 'organizers';
             await client.query(
-                `UPDATE ${balanceTable} SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
+                `UPDATE sellers SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
                 [deductionAmount, entityId]
             );
 
             // Insert withdrawal request record
             const insertResult = await client.query(
                 `INSERT INTO withdrawal_requests 
-                    (${entityType === 'seller' ? 'seller_id' : 'organizer_id'}, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
+                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
                  VALUES ($1, $2, $3, $4, 'processing', TRUE, NOW())
                  RETURNING id, amount, mpesa_number, mpesa_name, status, created_at`,
                 [

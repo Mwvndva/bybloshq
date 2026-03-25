@@ -186,7 +186,6 @@ export const sendEmail = async (options, retryCount = 0) => {
     }
 
     throw new Error(`Failed to send email: ${error.message}`);
-    throw error;
   }
 };
 

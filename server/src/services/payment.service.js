@@ -503,13 +503,14 @@ export class PaymentService {
             // ============================================================
             // STEP 4: UPDATE PAYMENT STATUS
             // ============================================================
-            const client = await pool.connect();
+            const dbClient = await pool.connect();
+            let transactionCommitted = false;
 
             try {
-                await client.query('BEGIN');
+                await dbClient.query('BEGIN');
 
                 // Update payment record
-                await client.query(
+                await dbClient.query(
                     `UPDATE payments 
                      SET status = $1,
                          metadata = jsonb_set(
@@ -534,66 +535,64 @@ export class PaymentService {
                     // Update order to COMPLETED
                     const paymentMeta = payment.metadata || {};
                     if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-                        await client.query(
+                        await dbClient.query(
                             'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
                             [paymentMeta.debt_id]
                         );
                     }
-
                 } else if (status === 'failed' || status === 'cancelled' || resultCode == 1) {
                     logger.warn('[PAYD-WEBHOOK] Payment failed', {
                         payment_id: payment.id,
                         status
                     });
-
                 }
 
-                // Step 4: COMMIT the transaction before side effects
-                await client.query('COMMIT');
-                client.release();
-
-                // Step 5: Post-commit side effects (notifications, order completion)
-                // These MUST NOT run inside the transaction to avoid blocking status updates
-                if (isSuccess && (paymentMeta.order_id || paymentMeta.product_id)) {
-                    try {
-                        // Use the already imported OrderService
-                        await OrderService.completeOrder({
-                            ...payment,
-                            status: PaymentStatus.COMPLETED,
-                            metadata: { ...paymentMeta, payd_confirmation: callbackData }
-                        });
-                        logger.info('[PAYD-WEBHOOK] Order completion successful after commit', { payment_id: payment.id });
-                    } catch (completionErr) {
-                        logger.error('[CRITICAL] handlePaydCallback completeOrder failed:', completionErr);
-                        // Mark for retry via cron if it fails post-commit
-                        await pool.query(
-                            `UPDATE payments 
-                             SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb)
-                             WHERE id = $1`,
-                            [payment.id]
-                        );
-                    }
-                }
-
-                logger.info('[PAYD-WEBHOOK] Webhook processed successfully', {
-                    payment_id: payment.id,
-                    status: isSuccess ? 'success' : 'failed'
-                });
-
-                return {
-                    success: true,
-                    message: 'Webhook processed',
-                    payment_id: payment.id,
-                    status: isSuccess ? 'success' : 'failed'
-                };
-
+                await dbClient.query('COMMIT');
+                transactionCommitted = true;
             } catch (error) {
-                if (client) {
-                    await client.query('ROLLBACK');
-                    client.release();
+                if (dbClient) {
+                    await dbClient.query('ROLLBACK').catch(e => logger.error('Rollback failed:', e));
                 }
                 throw error;
+            } finally {
+                dbClient.release();
             }
+
+            // Step 5: Post-commit side effects (notifications, order completion)
+            // These MUST NOT run inside the transaction to avoid blocking status updates
+            const paymentMeta = payment.metadata || {};
+            if (isSuccess && transactionCommitted && (paymentMeta.order_id || paymentMeta.product_id)) {
+                try {
+                    // Use the already imported OrderService
+                    await OrderService.completeOrder({
+                        ...payment,
+                        status: PaymentStatus.COMPLETED,
+                        metadata: { ...paymentMeta, payd_confirmation: callbackData }
+                    });
+                    logger.info('[PAYD-WEBHOOK] Order completion successful after commit', { payment_id: payment.id });
+                } catch (completionErr) {
+                    logger.error('[CRITICAL] handlePaydCallback completeOrder failed:', completionErr);
+                    // Mark for retry via cron if it fails post-commit
+                    await pool.query(
+                        `UPDATE payments 
+                         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb)
+                         WHERE id = $1`,
+                        [payment.id]
+                    );
+                }
+            }
+
+            logger.info('[PAYD-WEBHOOK] Webhook processed successfully', {
+                payment_id: payment.id,
+                status: isSuccess ? 'success' : 'failed'
+            });
+
+            return {
+                success: true,
+                message: 'Webhook processed',
+                payment_id: payment.id,
+                status: isSuccess ? 'success' : 'failed'
+            };
 
         } catch (error) {
             logger.error('[PAYD-WEBHOOK] Webhook processing failed', {
@@ -693,18 +692,18 @@ export class PaymentService {
         // TRANSACTION-LEVEL LOCKING (P1-001)
         // ========================================
         // Use FOR UPDATE to prevent race conditions when multiple webhooks arrive simultaneously
-        const client = await pool.connect();
+        const dbClient = await pool.connect();
         try {
-            await client.query('BEGIN');
+            await dbClient.query('BEGIN');
 
             // Lock the payment row for update to prevent concurrent processing
-            const { rows: lockedRows } = await client.query(
+            const { rows: lockedRows } = await dbClient.query(
                 `SELECT * FROM payments WHERE id = $1 FOR UPDATE`,
                 [payment.id]
             );
 
             if (lockedRows.length === 0) {
-                await client.query('ROLLBACK');
+                await dbClient.query('ROLLBACK');
                 logger.error(`[LOCKING] Payment ${payment.id} not found during lock attempt`);
                 throw new Error('Payment not found');
             }
@@ -716,7 +715,7 @@ export class PaymentService {
             // ========================================
             // Another webhook might have processed it while we were waiting for the lock
             if (lockedPayment.status !== PaymentStatus.PENDING) {
-                await client.query('ROLLBACK');
+                await dbClient.query('ROLLBACK');
                 logger.warn(`[IDEMPOTENCY] Payment ${payment.id} was processed by concurrent webhook. Skipping.`, {
                     paymentId: payment.id,
                     statusAfterLock: lockedPayment.status
@@ -741,7 +740,7 @@ export class PaymentService {
             // 3. Mark as Success in DB
             // We also set provider_reference here so that any subsequent webhook matches via tier-1
             logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed' and setting provider_reference`);
-            await client.query(
+            await dbClient.query(
                 `UPDATE payments 
                  SET status = $1, 
                      provider_reference = $4,
@@ -752,15 +751,15 @@ export class PaymentService {
             );
 
             // Commit the transaction to release the lock
-            await client.query('COMMIT');
+            await dbClient.query('COMMIT');
             logger.info(`[LOCKING] Transaction committed and lock released for payment ${payment.id}`);
 
         } catch (error) {
-            await client.query('ROLLBACK');
+            if (dbClient) await dbClient.query('ROLLBACK').catch(e => logger.error('Rollback failed:', e));
             logger.error(`[LOCKING] Error in locked transaction for payment ${payment.id}:`, error);
             throw error;
         } finally {
-            client.release();
+            dbClient.release();
         }
 
         // 4. Trigger Post-Payment Logic
@@ -793,27 +792,27 @@ export class PaymentService {
             return { status: 'success', message: 'Payment processed and Order completion triggered' };
 
         } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-            // It's a Debt Payment
-            const client = await pool.connect();
+            const debtClient = await pool.connect();
             try {
-                await client.query('BEGIN');
+                await debtClient.query('BEGIN');
                 logger.info(`[PURCHASE-FLOW] 7. Marking debt ${paymentMeta.debt_id} as paid`);
 
-                await client.query(
+                await debtClient.query(
                     'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
                     [paymentMeta.debt_id]
                 );
 
                 // Update payment status (already done, but good to ensure transaction consistency if needed)
-                await client.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, updatedPayment.id]);
+                await debtClient.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, updatedPayment.id]);
 
-                await client.query('COMMIT');
+                await debtClient.query('COMMIT');
                 logger.info(`[PURCHASE-FLOW] 8. Debt ${paymentMeta.debt_id} settled successfully`);
-            } catch (e) {
-                await client.query('ROLLBACK');
-                logger.error('[PURCHASE-FLOW] ERROR - Error settling debt after payment:', e);
+            } catch (debtErr) {
+                if (debtClient) await debtClient.query('ROLLBACK').catch(e => logger.error('Debt rollback failed:', e));
+                logger.error('[PURCHASE-FLOW] ERROR - Error settling debt after payment:', debtErr);
+                throw debtErr;
             } finally {
-                client.release();
+                debtClient.release();
             }
             return { status: 'success', message: 'Payment processed and Debt settled' };
         }
