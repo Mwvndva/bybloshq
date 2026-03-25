@@ -552,17 +552,34 @@ export class PaymentService {
                         status
                     });
 
-                    // Update order to FAILED if linked
-                    const paymentMeta = payment.metadata || {};
-                    if (paymentMeta.order_id) {
-                        await client.query(
-                            "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
-                            [paymentMeta.order_id]
+                }
+
+                // Step 4: COMMIT the transaction before side effects
+                await client.query('COMMIT');
+                client.release();
+
+                // Step 5: Post-commit side effects (notifications, order completion)
+                // These MUST NOT run inside the transaction to avoid blocking status updates
+                if (isSuccess && (paymentMeta.order_id || paymentMeta.product_id)) {
+                    try {
+                        // Use the already imported OrderService
+                        await OrderService.completeOrder({
+                            ...payment,
+                            status: PaymentStatus.COMPLETED,
+                            metadata: { ...paymentMeta, payd_confirmation: callbackData }
+                        });
+                        logger.info('[PAYD-WEBHOOK] Order completion successful after commit', { payment_id: payment.id });
+                    } catch (completionErr) {
+                        logger.error('[CRITICAL] handlePaydCallback completeOrder failed:', completionErr);
+                        // Mark for retry via cron if it fails post-commit
+                        await pool.query(
+                            `UPDATE payments 
+                             SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb)
+                             WHERE id = $1`,
+                            [payment.id]
                         );
                     }
                 }
-
-                await client.query('COMMIT');
 
                 logger.info('[PAYD-WEBHOOK] Webhook processed successfully', {
                     payment_id: payment.id,
@@ -577,10 +594,11 @@ export class PaymentService {
                 };
 
             } catch (error) {
-                await client.query('ROLLBACK');
+                if (client) {
+                    await client.query('ROLLBACK');
+                    client.release();
+                }
                 throw error;
-            } finally {
-                client.release();
             }
 
         } catch (error) {

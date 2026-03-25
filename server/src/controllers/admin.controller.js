@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 import dotenv from 'dotenv';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 import AdminService from '../services/admin.service.js';
 import { pool } from '../config/database.js';
 import whatsappService from '../services/whatsapp.service.js';

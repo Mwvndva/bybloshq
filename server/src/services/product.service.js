@@ -74,7 +74,7 @@ class ProductService {
         logger.info('Product created:', { id: product.id, sellerId });
 
         // Invalidate cache
-        await cacheService.delete("products:*");
+        await cacheService.clearPattern("products:*");
 
         return product;
     }
@@ -115,6 +115,7 @@ class ProductService {
             // The controller used FOR UPDATE.
             // Let's implement a concise lock check or just trust `UPDATE ... WHERE seller_id=` returns 0 rows if unauthorized.
             // ProductModel.update includes seller_id in WHERE clause.
+            // ProductModel.update includes seller_id in WHERE clause.
 
             const updateFields = {};
             if (name !== undefined) updateFields.name = name;
@@ -153,7 +154,7 @@ class ProductService {
             await client.query('COMMIT');
 
             // Invalidate cache
-            await cacheService.delete("products:*");
+            await cacheService.clearPattern("products:*");
 
             return updatedProduct;
 
@@ -237,7 +238,7 @@ class ProductService {
         }
 
         // Invalidate cache
-        await cacheService.delete("products:*");
+        await cacheService.clearPattern("products:*");
 
         return true;
     }

@@ -591,6 +591,15 @@ class OrderService {
       } else {
         const trackedItems = items.filter(item => item.track_inventory === true && item.product_id);
         if (trackedItems.length > 0) {
+          // Block 6 fix: Lock tracked inventory rows BEFORE decrementing to prevent oversell race
+          const trackedProductIds = trackedItems.map(i => i.product_id);
+          await client.query(
+            `SELECT id, quantity, name FROM products
+             WHERE id = ANY($1::int[]) AND track_inventory = true
+             FOR UPDATE`,
+            [trackedProductIds]
+          );
+
           const values = trackedItems.map(item => `(${item.product_id}, ${item.quantity || 1})`).join(',');
           const bulkUpdateResult = await client.query(
             `UPDATE products AS p

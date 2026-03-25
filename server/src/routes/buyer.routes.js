@@ -1,7 +1,7 @@
 import express from 'express';
 import * as buyerController from '../controllers/buyer.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 import wishlistRoutes from './wishlist.routes.js';
 import { validateRegistration, validateLogin } from '../middleware/authValidation.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';

@@ -5,7 +5,7 @@
 import WithdrawalService from '../services/withdrawal.service.js';
 import payoutService from '../services/payout.service.js';
 import { sanitizeWithdrawalRequest } from '../utils/sanitize.js';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 import logger from '../utils/logger.js';
 
 function validateWithdrawalBody(body) {

@@ -5,6 +5,7 @@ import logger from '../utils/logger.js';
 dotenv.config();
 
 const { Pool } = pg;
+/** @type {import('pg').Pool} */
 let pool;
 
 if (process.env.DATABASE_URL) {

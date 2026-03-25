@@ -2,13 +2,16 @@
 'use strict';
 
 import ReferralService from '../services/referral.service.js';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
 
 /**
  * GET /api/v1/sellers/referral/dashboard
  * Returns the referral dashboard for the authenticated seller.
+ * @param {any} req
+ * @param {any} res
+ * @param {any} next
  */
 export const getDashboard = async (req, res, next) => {
     try {
@@ -22,7 +25,8 @@ export const getDashboard = async (req, res, next) => {
             data: dashboard
         });
     } catch (err) {
-        logger.error(`[REFERRAL-CTRL] getDashboard error for seller ${req.user?.id}:`, err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error(`[REFERRAL-CTRL] getDashboard error for seller ${req.user?.id}:`, message);
         next(err);
     }
 };
@@ -31,6 +35,9 @@ export const getDashboard = async (req, res, next) => {
  * POST /api/v1/sellers/referral/generate-code
  * Generates (or fetches existing) referral code for the authenticated seller.
  * Locked: seller must have total_sales > 0.
+ * @param {any} req
+ * @param {any} res
+ * @param {any} next
  */
 export const generateCode = async (req, res, next) => {
     try {
@@ -73,7 +80,8 @@ export const generateCode = async (req, res, next) => {
             }
         });
     } catch (err) {
-        logger.error(`[REFERRAL-CTRL] generateCode error for seller ${req.user?.id}:`, err.message);
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error(`[REFERRAL-CTRL] generateCode error for seller ${req.user?.id}:`, message);
         next(err);
     }
 };

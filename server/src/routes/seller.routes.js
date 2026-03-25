@@ -67,9 +67,7 @@ router.route('/products/:id')
 // Update product inventory
 router.patch('/products/:id/inventory', productController.updateInventory);
 
-// Digital product upload
 router.post('/products/upload-digital',
-  protect,
   (req, res, next) => {
     // Import dynamically or use the imported middleware
     import('../middleware/digitalUpload.js').then(module => {

@@ -10,7 +10,7 @@ import { sanitizeOrder } from '../utils/sanitize.js';
 
 export const getSellerOrders = async (req, res) => {
     try {
-        const sellerId = req.user.id;
+        const sellerId = req.user.sellerProfileId || req.user.id;
         const { page, limit, status } = req.query;
 
         const result = await Order.findBySellerId(sellerId, {
@@ -42,7 +42,7 @@ export const createOrder = async (req, res) => {
         // For a seller creating an order, we enforce their ID as sellerId
         const orderData = {
             ...req.body,
-            sellerId: req.user.id
+            sellerId: req.user.sellerProfileId || req.user.id
         };
 
         const order = await OrderService.createOrder(orderData);
@@ -72,8 +72,8 @@ export const getOrderById = async (req, res) => {
         }
 
         // Allow access if requester is the seller OR the buyer on this order
-        const isSeller = userType === 'seller' && (order.seller_id === userId || order.sellerId === userId);
-        const isBuyer = userType === 'buyer' && (order.buyer_id === userId || order.buyerId === userId);
+        const isSeller = (userType === 'seller' || req.user.sellerProfileId) && (order.seller_id === (req.user.sellerProfileId || userId));
+        const isBuyer = (userType === 'buyer' || req.user.buyerProfileId) && (order.buyer_id === (req.user.buyerProfileId || userId));
 
         if (!isSeller && !isBuyer) {
             return res.status(403).json({ status: 'error', message: 'Unauthorized' });
@@ -152,7 +152,7 @@ export const getUserOrders = async (req, res) => {
 export const confirmReceipt = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedOrder = await OrderService.confirmOrderReceipt(id, req.user.id);
+        const updatedOrder = await OrderService.confirmOrderReceipt(id, req.user.buyerProfileId || req.user.id);
         res.status(200).json({
             status: 'success',
             message: 'Order receipt confirmed',
@@ -169,7 +169,7 @@ export const confirmReceipt = async (req, res) => {
 export const cancelOrder = async (req, res) => {
     try {
         const { id } = req.params;
-        const buyerId = req.user.id; // Buyer ID from token
+        const buyerId = req.user.buyerProfileId || req.user.id; // Buyer ID from token or profile
 
         // Ensure user owns the order before cancelling (Service might not check ownership explicitly if just ID passed, but cancelOrder in service uses generic update logic. Better to be safe: Service usually expects logic.
         // Actually OrderService.cancelOrder does NOT check ownership heavily except via fetch.
@@ -190,7 +190,7 @@ export const cancelOrder = async (req, res) => {
 export const sellerCancelOrder = async (req, res) => {
     try {
         const { id } = req.params;
-        const sellerId = req.user.id;
+        const sellerId = req.user.sellerProfileId || req.user.id;
 
         // Verify ownership
         const order = await Order.findById(id);
@@ -207,7 +207,7 @@ export const sellerCancelOrder = async (req, res) => {
 
 export const createSellerClientOrder = async (req, res) => {
     try {
-        const sellerId = req.user.id;
+        const sellerId = req.user.sellerProfileId || req.user.id;
         const { clientName, clientPhone, items } = req.body;
 
         // Basic validation
