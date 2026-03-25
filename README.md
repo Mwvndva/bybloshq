@@ -1,4 +1,4 @@
-# Byblos Atelier Vogue
+# BYBLOS
 
 A modern e-commerce platform for discovering and selling unique fashion items with an emphasis on aesthetic categories. Built with a modern tech stack for optimal performance and developer experience.
 
@@ -69,8 +69,8 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/byblos-atelier-vogue.git
-cd byblos-atelier-vogue
+git clone https://github.com/yourusername/byblos.git
+cd byblos
 ```
 
 ### 2. Install dependencies
@@ -103,7 +103,7 @@ NODE_ENV=development
 # Database
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=byblos_atelier
+DB_NAME=byblos
 DB_USER=your_db_user
 DB_PASSWORD=your_secure_password
 
@@ -117,7 +117,7 @@ JWT_REFRESH_EXPIRES_IN=7d
 # SMTP_PORT=587
 # SMTP_USER=your_email@example.com
 # SMTP_PASS=your_email_password
-# EMAIL_FROM=noreply@byblosatelier.com
+# EMAIL_FROM=noreply@bybloshq.space
 ```
 
 ### 4. Set up the database
@@ -128,9 +128,9 @@ JWT_REFRESH_EXPIRES_IN=7d
    psql -U postgres
    
    # Create database and user
-   CREATE DATABASE byblos_atelier;
+   CREATE DATABASE byblos;
    CREATE USER your_db_user WITH PASSWORD 'your_secure_password';
-   GRANT ALL PRIVILEGES ON DATABASE byblos_atelier TO your_db_user;
+   GRANT ALL PRIVILEGES ON DATABASE byblos TO your_db_user;
    ```
 
 2. **Run database migrations**
@@ -298,4 +298,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 🔧 Support
 
-For support, please open an issue or reach out to our team at support@byblosatelier.com
+For support, please open an issue or reach out to our team at support@bybloshq.space

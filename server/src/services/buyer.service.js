@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import Buyer from '../models/buyer.model.js';
 import { signToken } from '../utils/jwt.js';

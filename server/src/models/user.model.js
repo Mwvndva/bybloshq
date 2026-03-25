@@ -1,5 +1,5 @@
 import { pool } from '../config/database.js';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 
 class User {
     /**

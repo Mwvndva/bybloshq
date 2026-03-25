@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import User from '../models/user.model.js';
 import BuyerService from './buyer.service.js';
 import SellerService from './seller.service.js';

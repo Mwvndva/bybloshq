@@ -1,5 +1,5 @@
 import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaileysVersion } from '@whiskeysockets/baileys';
-import pino from 'pino';
+// import pino from 'pino'; // Removed in favor of winston
 import qrcode from 'qrcode-terminal';
 import path from 'path';
 import fs from 'fs';
@@ -25,7 +25,15 @@ class WhatsAppService {
                 version,
                 auth: state,
                 printQRInTerminal: false,
-                logger: pino({ level: 'silent' }),
+                logger: {
+                    level: 'silent',
+                    info: () => { },
+                    debug: () => { },
+                    warn: () => { },
+                    error: () => { },
+                    trace: () => { },
+                    child: () => this.sock.logger
+                },
                 connectTimeoutMs: 60000,
                 syncFullHistory: false, // Don't sync old history, faster startup
             });
