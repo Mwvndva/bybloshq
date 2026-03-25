@@ -21,19 +21,21 @@ class WhatsAppService {
             const { version, isLatest } = await fetchLatestBaileysVersion();
             logger.info(`ℹ️ Using WA v${version.join('.')}, isLatest: ${isLatest}`);
 
+            const mockLogger = {
+                level: 'silent',
+                info: () => { },
+                debug: () => { },
+                warn: () => { },
+                error: () => { },
+                trace: () => { },
+                child: () => mockLogger
+            };
+
             this.sock = makeWASocket({
                 version,
                 auth: state,
                 printQRInTerminal: false,
-                logger: {
-                    level: 'silent',
-                    info: () => { },
-                    debug: () => { },
-                    warn: () => { },
-                    error: () => { },
-                    trace: () => { },
-                    child: () => this.sock.logger
-                },
+                logger: mockLogger,
                 connectTimeoutMs: 60000,
                 syncFullHistory: false, // Don't sync old history, faster startup
             });
