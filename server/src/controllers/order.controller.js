@@ -10,7 +10,7 @@ import { sanitizeOrder } from '../utils/sanitize.js';
 
 export const getSellerOrders = async (req, res) => {
     try {
-        const sellerId = req.user.sellerProfileId || req.user.id;
+        const sellerId = req.user.sellerId;
         const { page, limit, status } = req.query;
 
         const result = await Order.findBySellerId(sellerId, {
@@ -42,7 +42,7 @@ export const createOrder = async (req, res) => {
         // For a seller creating an order, we enforce their ID as sellerId
         const orderData = {
             ...req.body,
-            sellerId: req.user.sellerProfileId || req.user.id
+            sellerId: req.user.sellerId
         };
 
         const order = await OrderService.createOrder(orderData);
@@ -72,8 +72,8 @@ export const getOrderById = async (req, res) => {
         }
 
         // Allow access if requester is the seller OR the buyer on this order
-        const isSeller = (userType === 'seller' || req.user.sellerProfileId) && (order.sellerId === (req.user.sellerProfileId || userId));
-        const isBuyer = (userType === 'buyer' || req.user.buyerProfileId) && (order.buyerId === (req.user.buyerProfileId || userId));
+        const isSeller = (req.user.sellerId && order.sellerId === req.user.sellerId);
+        const isBuyer = (req.user.buyerId && order.buyerId === req.user.buyerId);
 
         if (!isSeller && !isBuyer) {
             return res.status(403).json({ status: 'error', message: 'Unauthorized' });
@@ -119,7 +119,7 @@ export const updateOrderStatus = async (req, res) => {
 export const getUserOrders = async (req, res) => {
     try {
         // CROSS-ROLE FIX
-        const buyerId = req.user.buyerProfileId || (req.user.userType === 'buyer' ? req.user.id : null);
+        const buyerId = req.user.buyerId;
 
         if (!buyerId) {
             return res.status(200).json({ success: true, status: 'success', data: [], pagination: {} });
@@ -152,7 +152,7 @@ export const getUserOrders = async (req, res) => {
 export const confirmReceipt = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedOrder = await OrderService.confirmOrderReceipt(id, req.user.buyerProfileId || req.user.id);
+        const updatedOrder = await OrderService.confirmOrderReceipt(id, req.user.buyerId);
         res.status(200).json({
             status: 'success',
             message: 'Order receipt confirmed',
@@ -169,7 +169,7 @@ export const confirmReceipt = async (req, res) => {
 export const cancelOrder = async (req, res) => {
     try {
         const { id } = req.params;
-        const buyerId = req.user.buyerProfileId || req.user.id; // Buyer ID from token or profile
+        const buyerId = req.user.buyerId; // Explicit Buyer ID from standardized user object
 
         // Ensure user owns the order before cancelling (Service might not check ownership explicitly if just ID passed, but cancelOrder in service uses generic update logic. Better to be safe: Service usually expects logic.
         // Actually OrderService.cancelOrder does NOT check ownership heavily except via fetch.
@@ -190,7 +190,7 @@ export const cancelOrder = async (req, res) => {
 export const sellerCancelOrder = async (req, res) => {
     try {
         const { id } = req.params;
-        const sellerId = req.user.sellerProfileId || req.user.id;
+        const sellerId = req.user.sellerId;
 
         // Verify ownership
         const order = await Order.findById(id);
@@ -207,7 +207,7 @@ export const sellerCancelOrder = async (req, res) => {
 
 export const createSellerClientOrder = async (req, res) => {
     try {
-        const sellerId = req.user.sellerProfileId || req.user.id;
+        const sellerId = req.user.sellerId;
         const { clientName, clientPhone, items } = req.body;
 
         // Basic validation
@@ -254,8 +254,8 @@ export const downloadDigitalProduct = async (req, res) => {
 
         // req.user.id = the users table PK (from JWT)
         // req.user.buyerProfileId = the buyers table PK (set by auth middleware for cross-role)
-        const userTableId = req.user.userId || req.user.id;
-        const buyerProfileId = req.user.buyerProfileId || req.user.id;
+        const userTableId = req.user.id;
+        const buyerProfileId = req.user.buyerId;
 
         // 1. Fetch order — findById returns camelCase aliases (buyerId, sellerId)
         // 1. Single consolidated query for auth, product verification, and activation state

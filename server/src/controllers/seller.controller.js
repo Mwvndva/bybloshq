@@ -159,7 +159,7 @@ export const getSellerByShopName = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const seller = await findSellerById(req.user.id);
+    const seller = await findSellerByUserId(req.user.id);
 
     if (!seller) {
       return res.status(404).json({
@@ -212,7 +212,7 @@ export const updateProfile = async (req, res) => {
 
     // Check availability if shop name is changing
     if (req.body.shopName) {
-      const currentSeller = await findSellerById(req.user.id);
+      const currentSeller = await findSellerByUserId(req.user.id);
       if (!currentSeller) {
         return res.status(404).json({ status: 'error', message: 'Seller not found' });
       }
@@ -234,7 +234,7 @@ export const updateProfile = async (req, res) => {
       }
     }
 
-    const seller = await updateSeller(req.user.id, req.body);
+    const seller = await updateSeller(req.user.sellerId, req.body);
 
     if (!seller) {
       console.error('Failed to update seller:', req.seller?.id);
@@ -499,7 +499,7 @@ export const uploadBanner = async (req, res) => {
        SET banner_image = $1 
        WHERE id = $2 
        RETURNING id, banner_image AS "bannerImage"`,
-      [bannerValue, sellerId]
+      [bannerValue, req.user.sellerId]
     );
 
     if (!result.rows[0]) {
@@ -550,7 +550,7 @@ export const updateTheme = async (req, res) => {
     // Update the seller's theme
     const result = await query(
       'UPDATE sellers SET theme = $1 WHERE id = $2 RETURNING theme',
-      [theme, sellerId]
+      [theme, req.user.sellerId]
     );
 
     if (!result.rows[0]) {
@@ -620,7 +620,7 @@ export const getSellerById = async (req, res) => {
  * @access  Private
  */
 export const createWithdrawalRequest = async (req, res) => {
-  const sellerId = req.user?.id;
+  const sellerId = req.user.sellerId;
   const { amount, mpesaNumber, mpesaName } = req.body;
 
   try {
@@ -658,7 +658,7 @@ export const createWithdrawalRequest = async (req, res) => {
 // @access  Private
 export const getWithdrawalRequests = async (req, res) => {
   try {
-    const sellerId = req.user?.id;
+    const sellerId = req.user.sellerId;
 
     if (!sellerId) {
       return res.status(401).json({
@@ -715,7 +715,7 @@ export const getWithdrawalRequests = async (req, res) => {
 // @route   POST /api/sellers/debts/:debtId/pay
 // @access  Private
 export const initiateDebtPayment = async (req, res) => {
-  const sellerId = req.user?.id;
+  const sellerId = req.user.sellerId;
   const { debtId } = req.params;
 
   try {

@@ -189,15 +189,14 @@ export const resetPassword = async (req, res, next) => {
 
 export const getProfile = async (req, res, next) => {
   try {
-    // CROSS-ROLE SUPPORT: Try to find buyer by profile ID first, then by user_id
-    // This allows sellers who make purchases to access their buyer profile
-    let buyer = await Buyer.findById(req.user.id);
+    // CRITICAL: Use req.user.buyerId for strict profile lookup
+    let buyer = await Buyer.findById(req.user.buyerId);
 
     // If not found and user has a buyer profile flag, try finding by user_id
-    if (!buyer && req.user.hasBuyerProfile && req.user.userId) {
+    if (!buyer && req.user.buyerId) {
       // Use logger.debug instead of console.log
-      logger.debug(`[BuyerController] User ${req.user.email} is ${req.user.userType} but has buyer profile, fetching by user_id`);
-      buyer = await Buyer.findByUserId(req.user.userId);
+      logger.debug(`[BuyerController] User ${req.user.email} is ${req.user.userType} but has buyer profile, fetching by buyerId`);
+      buyer = await Buyer.findById(req.user.buyerId);
     }
 
     if (!buyer) {
@@ -245,12 +244,12 @@ export const updateProfile = async (req, res, next) => {
       if (password !== passwordConfirm) {
         return next(new AppError('Passwords do not match', 400));
       }
-      await Buyer.updatePassword(req.user.id, password);
+      await Buyer.updatePassword(req.user.buyerId, password);
     }
 
     // 4) If there's nothing else to update, return early
     if (Object.keys(updateData).length === 0 && !password) {
-      const currentUser = await Buyer.findById(req.user.id);
+      const currentUser = await Buyer.findById(req.user.buyerId);
       return res.status(200).json({
         status: 'success',
         message: 'No profile updates provided',
@@ -263,9 +262,9 @@ export const updateProfile = async (req, res, next) => {
     // 5) Update other buyer data
     let updatedBuyer = null;
     if (Object.keys(updateData).length > 0) {
-      updatedBuyer = await Buyer.update(req.user.id, updateData);
+      updatedBuyer = await Buyer.update(req.user.buyerId, updateData);
     } else {
-      updatedBuyer = await Buyer.findById(req.user.id);
+      updatedBuyer = await Buyer.findById(req.user.buyerId);
     }
 
     if (!updatedBuyer) {
@@ -379,7 +378,7 @@ export const checkBuyerByPhone = async (req, res, next) => {
  */
 export const getPendingRefundRequests = async (req, res, next) => {
   try {
-    const buyerId = req.user.id;
+    const buyerId = req.user.buyerId;
 
     const query = `
       SELECT id, amount, status, requested_at
@@ -410,7 +409,7 @@ export const getPendingRefundRequests = async (req, res, next) => {
 export const requestRefund = async (req, res, next) => {
   try {
     const { amount } = req.body;
-    const buyerId = req.user.id;
+    const buyerId = req.user.buyerId;
 
     console.log('Refund request from buyer:', buyerId, 'Amount:', amount);
 
@@ -565,7 +564,7 @@ export const saveBuyerInfo = async (req, res, next) => {
 export const markOrderAsCollected = async (req, res, next) => {
   try {
     const { orderId } = req.params;
-    const userId = req.user.id; // Buyer ID
+    const buyerId = req.user.buyerId; // Explicit Buyer ID
 
 
     const orderData = await OrderModel.findById(orderId);
@@ -576,14 +575,13 @@ export const markOrderAsCollected = async (req, res, next) => {
 
     // H-1 FIX: Direct ownership check — only the buyer who placed the order can mark it collected.
     // user.can('view-orders') was insufficient: sellers could pass it and self-trigger payout.
-    const buyerId = req.user.buyerProfileId || req.user.id;
     if (String(orderData.buyerId) !== String(buyerId)) {
       return next(new AppError('You can only mark your own orders as collected', 403));
     }
 
 
     // Call OrderService to mark order as collected (handles status update, payout, notifications)
-    const updatedOrder = await OrderService.markAsCollected(orderId, userId);
+    const updatedOrder = await OrderService.markAsCollected(orderId, buyerId);
 
 
     res.status(200).json({
