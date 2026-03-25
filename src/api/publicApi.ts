@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getFreshCsrfToken } from '@/lib/apiClient';
 
 type AxiosInstance = any;
 type AxiosRequestConfig = any;
@@ -20,6 +21,7 @@ interface CustomAxiosRequestConfig extends Record<string, any> {
 // Create a custom axios instance with our custom config
 class CustomAxios {
   private instance: any;
+  private csrfTokenCache: string | null = null;
 
   constructor() {
     // Use VITE_API_URL from environment variables or fallback to relative path for development
@@ -40,10 +42,21 @@ class CustomAxios {
       withCredentials: true, // Important for cookies if using sessions
     });
 
-    // Add request interceptor to include auth token
+    // Add request interceptor for CSRF and auth cleanup
     this.instance.interceptors.request.use(
-      (config: any) => {
-        // Public API must NOT attach any Authorization header.
+      async (config: any) => {
+        // 1. Attach CSRF token to non-GET requests
+        if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+          if (!this.csrfTokenCache) {
+            this.csrfTokenCache = await getFreshCsrfToken();
+          }
+
+          if (this.csrfTokenCache) {
+            config.headers['X-CSRF-Token'] = this.csrfTokenCache;
+          }
+        }
+
+        // 2. Public API must NOT attach any Authorization header.
         // It relies purely on httpOnly cookies via withCredentials: true.
         if (config.headers) {
           delete config.headers.Authorization;

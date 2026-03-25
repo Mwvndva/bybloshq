@@ -682,27 +682,9 @@ class OrderService {
           newStatus = OrderStatus.SERVICE_PENDING;
           logger.info(`[PURCHASE-FLOW] Service order detected → Status: ${newStatus} (seller must confirm)`);
         } else if (items.some(i => i.is_digital)) {
-          // Digital products - auto-complete and create activations
+          // Digital products - auto-complete
           newStatus = OrderStatus.COMPLETED;
           logger.info(`[PURCHASE-FLOW] Digital order detected → Status: ${newStatus} (auto-completing)`);
-
-          for (const item of items.filter(i => i.is_digital)) {
-            const productId = item.product_id;
-            // Check for existing activation to ensure idempotency
-            const { rows: existing } = await client.query(
-              'SELECT id FROM digital_activations WHERE order_id = $1 AND product_id = $2',
-              [orderId, productId]
-            );
-
-            if (existing.length === 0) {
-              logger.info(`[DRM] Creating digital activation for Order ${orderId}, Product ${productId}`);
-              await client.query(
-                `INSERT INTO digital_activations (order_id, product_id)
-                     VALUES ($1, $2)`,
-                [orderId, productId]
-              );
-            }
-          }
         } else {
           // Digital or unknown - auto-complete
           logger.info(`[PURCHASE-FLOW] Digital/Auto-complete order → Status: ${newStatus}`);

@@ -361,10 +361,8 @@ export const sellerApi = {
   // Public method to get products for a specific seller (no authentication required)
   getSellerProducts: async (sellerId: string | number): Promise<Product[]> => {
     try {
-      // Use axios directly to avoid auth interceptor
-      const response = await axios.get<ProductsResponse>(`/sellers/${sellerId}/products`, {
-        baseURL: apiClient.defaults.baseURL
-      });
+      // Use apiClient but it will work even if no auth is present
+      const response = await apiClient.get<ProductsResponse>(`/sellers/${sellerId}/products`);
       // Handle both response structures: { data: { products: [] } } or { products: [] }
       let products: any[] = [];
       if (response.data?.data?.products) {
@@ -494,16 +492,10 @@ export const sellerApi = {
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     try {
       // Use the public API endpoint directly
-      const response = await axios.post<ForgotPasswordResponse>(
+      const response = await apiClient.post<ForgotPasswordResponse>(
         `/sellers/forgot-password`,
         {
           email: email.trim().toLowerCase()
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          baseURL: apiClient.defaults.baseURL
         }
       );
 
@@ -524,16 +516,9 @@ export const sellerApi = {
   // Reset Password
   resetPassword: async (token: string, newPassword: string, email: string): Promise<{ message: string }> => {
     try {
-      const response = await axios.post<ResetPasswordResponse>(
+      const response = await apiClient.post<ResetPasswordResponse>(
         `/sellers/reset-password`,
-        { token, newPassword, email },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          baseURL: apiClient.defaults.baseURL
-        }
+        { token, newPassword, email }
       );
 
       if (!response.data?.message) {

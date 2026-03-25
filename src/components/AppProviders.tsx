@@ -17,16 +17,14 @@ const queryClient = new QueryClient({
 
 export const AppProviders = ({ children }: { children: React.ReactNode }) => (
     <QueryClientProvider client={queryClient}>
-        <BybxProvider>
-            <TooltipProvider>
-                <Toaster />
-                {/* Unified auth provider - provides all role-specific hooks */}
-                <GlobalAuthProvider>
-                    <WishlistProvider>
-                        {children}
-                    </WishlistProvider>
-                </GlobalAuthProvider>
-            </TooltipProvider>
-        </BybxProvider>
+        <TooltipProvider>
+            <Toaster />
+            {/* Unified auth provider - provides all role-specific hooks */}
+            <GlobalAuthProvider>
+                <WishlistProvider>
+                    {children}
+                </WishlistProvider>
+            </GlobalAuthProvider>
+        </TooltipProvider>
     </QueryClientProvider>
 );
