@@ -44,16 +44,27 @@ const PRODUCTION_REQUIRED_ENV_VARS = [
  */
 const OPTIONAL_ENV_VARS = [
     'REDIS_URL',
-    'JWT_REFRESH_SECRET',  // Optional until a dedicated refresh-token service uses it
+    'JWT_REFRESH_SECRET',
+    // Email — accepts either EMAIL_* (Hostinger) or SMTP_* naming
+    'EMAIL_HOST',
+    'EMAIL_PORT',
+    'EMAIL_USERNAME',
+    'EMAIL_PASSWORD',
+    'EMAIL_FROM_EMAIL',
+    'EMAIL_FROM_NAME',
+    'SUPPORT_EMAIL',
+    // Legacy SMTP_* aliases (also accepted by email.js)
     'SMTP_HOST',
     'SMTP_PORT',
     'SMTP_USER',
     'SMTP_PASS',
     'EMAIL_FROM',
+    // Extras
     'SENTRY_DSN',
     'PREVIEW_DOMAINS',
     'CORS_ORIGIN',
-    'PAYD_CA_CERT_PATH'
+    'PAYD_CA_CERT_PATH',
+    'PAYD_ALLOWED_IPS',
 ];
 
 /**
