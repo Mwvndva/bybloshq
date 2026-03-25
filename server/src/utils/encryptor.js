@@ -69,7 +69,7 @@ export const wrapFile = async (inputPath, transactionId, productId, masterKey) =
 /**
  * Implementation for different file types
  */
-async function applyForensicWatermark(data, transactionId, filePath) {
+export async function applyForensicWatermark(data, transactionId, filePath) {
     const ext = path.extname(filePath).toLowerCase();
 
     if (ext !== '.pdf') {

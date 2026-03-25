@@ -4,6 +4,7 @@ import User from '../models/user.model.js';
 import { AppError } from '../utils/errorHandler.js';
 import { sanitizeBuyer, sanitizeOrder } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
+import { getRedisClient } from '../utils/redis.js';
 import logger from '../utils/logger.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import AuthService from '../services/auth.service.js';
@@ -468,7 +469,7 @@ export const requestRefund = async (req, res, next) => {
 
 export const saveBuyerInfo = async (req, res, next) => {
   try {
-    const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password } = req.body;
+    const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password, otpCode } = req.body;
 
     // Use mobilePayment or whatsappNumber as fallback for phone if not explicitly provided
     const effectivePhone = phone || mobilePayment || whatsappNumber;
@@ -476,6 +477,34 @@ export const saveBuyerInfo = async (req, res, next) => {
     // Validate required fields
     if (!fullName || !email || !effectivePhone || !password) {
       return next(new AppError('Full name, email, phone, and password are required', 400));
+    }
+
+    const redis = getRedisClient();
+    const otpKey = `otp:buyer:${effectivePhone}`;
+
+    // If OTP provided — verify it
+    if (otpCode) {
+      const storedOtp = await redis.get(otpKey);
+      if (!storedOtp || storedOtp !== String(otpCode)) {
+        return res.status(400).json({ status: 'error', message: 'Invalid or expired OTP.' });
+      }
+      // OTP verified — clear it and proceed
+      await redis.del(otpKey);
+    } else {
+      // Generate and send OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      await redis.setex(otpKey, 300, otp);
+
+      const waService = (await import('../services/whatsapp.service.js')).default;
+      await waService.sendMessage(effectivePhone,
+        `🔐 Your Byblos verification code is: *${otp}*\n\nThis code expires in 5 minutes. Do not share it with anyone.`
+      ).catch(err => logger.error(`[OTP] WhatsApp send failed to ${effectivePhone}:`, err.message));
+
+      return res.status(200).json({
+        status: 'otp_sent',
+        message: 'Verification code sent to your WhatsApp. Enter it to complete registration.',
+        phone: effectivePhone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')
+      });
     }
 
     try {

@@ -5,15 +5,7 @@ import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 
 // Convert snake_case to camelCase function
-const toCamelCase = (obj) => {
-  if (!obj) return null;
-  const newObj = {};
-  for (const [key, value] of Object.entries(obj)) {
-    const camelKey = key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-    newObj[camelKey] = value;
-  }
-  return newObj;
-};
+import { toCamelCase } from '../utils/caseUtils.js';
 
 class Buyer {
   // Create a new buyer

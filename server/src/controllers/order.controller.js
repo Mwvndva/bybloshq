@@ -322,98 +322,59 @@ export const downloadDigitalProduct = async (req, res) => {
         const filePath = product.digital_file_path;
         const fileName = product.digital_file_name || `${product.name}.zip`;
 
-        // DRM-FIX-3: Enforce download limits and increment count
-        const { rows: activationRows } = await pool.query(
-            'SELECT id, download_count FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+        // DRM-FIX-3 & FIX-4: Enforce download limit atomically (fix race condition)
+        const updateResult = await pool.query(
+            `UPDATE digital_activations
+             SET download_count = download_count + 1,
+                 last_downloaded_at = NOW(),
+                 bond_window_expires_at = COALESCE(bond_window_expires_at, NOW() + INTERVAL '24 hours')
+             WHERE order_id = $1 AND product_id = $2 AND download_count < 5
+             RETURNING download_count`,
             [orderId, productId]
         );
 
-        if (activationRows.length > 0) {
-            const activation = activationRows[0];
-            if (activation.download_count >= 5) {
-                return res.status(403).json({
-                    status: 'error',
-                    message: 'Download limit exceeded (max 5). Please contact support if you need more.'
-                });
-            }
-
-            // Increment count and set initial binding window if not set
-            await pool.query(
-                `UPDATE digital_activations 
-                 SET download_count = download_count + 1,
-                     last_downloaded_at = NOW(),
-                     bond_window_expires_at = COALESCE(bond_window_expires_at, NOW() + INTERVAL '24 hours')
-                 WHERE id = $1`,
-                [activation.id]
-            );
+        if (updateResult.rows.length === 0) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'Download limit exceeded (max 5). Please contact support if you need more.'
+            });
         }
 
-        logger.info(`[DOWNLOAD] Serving file for order ${orderId}, product ${productId}: ${filePath}`);
+        const downloadCount = updateResult.rows[0].download_count;
+        logger.info(`[DOWNLOAD] Serving file for order ${orderId}, product ${productId} (Download #${downloadCount}): ${filePath}`);
 
-        // 6. External URL (Cloudinary, S3, etc.) — redirect directly
-        if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
-            return res.redirect(302, filePath);
-        }
+        // Serve the file — watermarked if PDF, raw otherwise (Approach B)
+        const fileBuffer = await fs.default.promises.readFile(absolutePath);
+        const ext = path.default.extname(absolutePath).toLowerCase();
 
-        // 7. Local file — encrypt and stream it
-        const path = await import('path');
-        const fs = await import('fs');
-        let absolutePath = path.default.resolve(process.cwd(), filePath);
+        let outputBuffer = fileBuffer;
+        let outputName = fileName;
 
-        // H-8 FIX: Path traversal guard — reject any path outside allowed roots
-        const ALLOWED_ROOT = path.default.resolve(process.cwd(), 'uploads', 'digital_products');
-        const SERVER_ALLOWED_ROOT = path.default.resolve(process.cwd(), 'server', 'uploads', 'digital_products');
-        const pathIsAllowed = (
-            absolutePath.startsWith(ALLOWED_ROOT + path.default.sep) ||
-            absolutePath.startsWith(ALLOWED_ROOT) && absolutePath === ALLOWED_ROOT
-        );
-        if (!pathIsAllowed) {
-            // Attempt to check server-prefixed variant before rejecting
-            const serverVariant = path.default.resolve(process.cwd(), 'server', filePath);
-            const serverIsAllowed = (
-                serverVariant.startsWith(SERVER_ALLOWED_ROOT + path.default.sep) ||
-                serverVariant.startsWith(SERVER_ALLOWED_ROOT) && serverVariant === SERVER_ALLOWED_ROOT
-            );
-            if (!serverIsAllowed) {
-                logger.error(`[SECURITY] Path traversal attempt blocked: ${absolutePath}`);
-                return res.status(403).json({ status: 'error', message: 'Access denied' });
+        if (ext === '.pdf') {
+            try {
+                // Apply forensic watermark with buyer identity
+                const { applyForensicWatermark } = await import('../utils/encryptor.js');
+                outputBuffer = await applyForensicWatermark(
+                    fileBuffer,
+                    `order:${orderId} buyer:${req.user.id}`,
+                    absolutePath
+                );
+                logger.info(`[DOWNLOAD] Watermark applied for order ${orderId}`);
+            } catch (wmErr) {
+                logger.warn(`[DOWNLOAD] Watermark failed (serving original): ${wmErr.message}`);
+                outputBuffer = fileBuffer;
             }
         }
 
-        // DEFENSIVE CHECK: If file not found, try prepending 'server'
-        if (!fs.default.existsSync(absolutePath)) {
-            const fallbackPath = path.default.resolve(process.cwd(), 'server', filePath);
-            if (fs.default.existsSync(fallbackPath)) {
-                absolutePath = fallbackPath;
-            } else {
-                logger.error(`[DOWNLOAD] File missing: ${absolutePath}`);
-                return res.status(404).json({ status: 'error', message: 'File not found' });
-            }
-        }
+        res.setHeader('Content-Disposition', `attachment; filename="${outputName}"`);
+        res.setHeader('Content-Type', getMimeType(ext));
+        res.setHeader('Content-Length', outputBuffer.length);
+        res.setHeader('X-Download-Count', downloadCount);
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
 
-        const bybxFileName = fileName.replace(path.default.extname(fileName), '') + '.bybx';
-
-        logger.info(`[DOWNLOAD] Wrapping file ${absolutePath} for order ${orderId} into .bybx container`);
-
-        try {
-            const bybxBuffer = await wrapFile(
-                absolutePath,
-                orderId,
-                product.id,
-                process.env.DRM_MASTER_KEY
-            );
-
-            res.setHeader('Content-Disposition', `attachment; filename="${bybxFileName}"`);
-            res.setHeader('Content-Type', 'application/octet-stream');
-            res.setHeader('Content-Length', bybxBuffer.length);
-            res.setHeader('X-Content-Type-Options', 'nosniff');
-
-            return res.send(bybxBuffer);
-        } catch (wrapError) {
-            logger.error(`[DOWNLOAD] wrapFile failed: ${wrapError.message}`);
-            return res.status(500).json({ status: 'error', message: 'Encryption failed' });
-        }
-
+        return res.send(outputBuffer);
     } catch (error) {
         logger.error('Error in downloadDigitalProduct:', error);
         if (!res.headersSent) {
@@ -421,6 +382,19 @@ export const downloadDigitalProduct = async (req, res) => {
         }
     }
 };
+
+/**
+ * Helper to get MIME type based on extension
+ */
+function getMimeType(ext) {
+    const types = {
+        '.pdf': 'application/pdf',
+        '.epub': 'application/epub+zip',
+        '.zip': 'application/zip',
+        '.mobi': 'application/x-mobipocket-ebook',
+    };
+    return types[ext] || 'application/octet-stream';
+}
 export const locationPreview = async (req, res) => {
     try {
         const { latitude, longitude, fullAddress } = req.body;
