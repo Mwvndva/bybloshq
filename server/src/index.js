@@ -192,8 +192,9 @@ app.use(hpp());
 // Apply CSRF Protection with Webhook and Login Exclusions
 app.use((req, res, next) => {
   const isExcluded =
-    req.path.includes('/api/v1/payments/callback') ||
-    req.path.includes('/api/v1/whatsapp/webhook') ||
+    req.path.startsWith('/payments/webhook') ||
+    req.path.startsWith('/callbacks/') ||
+    req.path.startsWith('/whatsapp/') ||
     req.path.includes('/login'); // Allow login without CSRF initially
 
   if (isExcluded) {

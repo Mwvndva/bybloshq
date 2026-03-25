@@ -37,8 +37,6 @@ export const getProducts = async (req, res) => {
              s.avatar_url as seller_avatar_url,
              s.bio as seller_bio,
              s.shop_name as seller_shop_name,
-             s.created_at as seller_created_at,
-             s.shop_name as seller_shop_name,
              s.theme as seller_theme,
              s.created_at as seller_created_at,
              s.updated_at as seller_updated_at

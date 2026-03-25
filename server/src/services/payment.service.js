@@ -533,13 +533,7 @@ export class PaymentService {
 
                     // Update order to COMPLETED
                     const paymentMeta = payment.metadata || {};
-                    if (paymentMeta.order_id || paymentMeta.product_id) {
-                        await OrderService.completeOrder({
-                            ...payment,
-                            status: PaymentStatus.COMPLETED,
-                            metadata: { ...paymentMeta, payd_confirmation: callbackData }
-                        }, client);
-                    } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
+                    if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
                         await client.query(
                             'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
                             [paymentMeta.debt_id]

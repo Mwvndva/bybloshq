@@ -697,9 +697,9 @@ class OrderService {
             if (existing.length === 0) {
               logger.info(`[DRM] Creating digital activation for Order ${orderId}, Product ${productId}`);
               await client.query(
-                `INSERT INTO digital_activations (order_id, product_id, master_key)
-                     VALUES ($1, $2, $3)`,
-                [orderId, productId, process.env.DRM_MASTER_KEY]
+                `INSERT INTO digital_activations (order_id, product_id)
+                     VALUES ($1, $2)`,
+                [orderId, productId]
               );
             }
           }
@@ -754,11 +754,19 @@ class OrderService {
 
       // Trigger Referral Activation (post-commit, non-blocking)
       try {
-        ReferralService.activateReferral(orderId).catch(err => {
-          logger.warn(`[REFERRAL] activateReferral failed for order ${orderId}: ${err.message}`);
+        ReferralService.activateReferral(order.seller_id).catch(err => {
+          logger.warn(`[REFERRAL] activateReferral failed for seller ${order.seller_id} on order ${orderId}: ${err.message}`);
         });
       } catch (e) {
-        logger.error(`[REFERRAL] Unexpected error triggering activation for order ${orderId}:`, e);
+        logger.error(`[REFERRAL] Unexpected error triggering activation for seller ${order.seller_id} on order ${orderId}:`, e);
+      }
+
+      // DRM-FIX-7: Invalidate product cache after order completion (post-commit)
+      try {
+        const cacheService = (await import('./cache.service.js')).default;
+        await cacheService.clearPattern('products:*');
+      } catch (cacheErr) {
+        logger.warn('[ORDER] Cache invalidation failed (non-critical):', cacheErr.message);
       }
 
       // Trigger Notifications (WhatsApp/Email)

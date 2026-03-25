@@ -40,7 +40,7 @@ export const bondHardware = async (req, res) => {
 
         // Check if activation already exists
         const result = await pool.query(
-            'SELECT * FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+            'SELECT id, hardware_binding_id, bond_window_expires_at FROM digital_activations WHERE order_id = $1 AND product_id = $2',
             [orderId, productId]
         );
 
@@ -53,40 +53,55 @@ export const bondHardware = async (req, res) => {
 
         const activation = result.rows[0];
 
-        if (activation.hardware_binding_id) {
-            // Check if it matches
-            if (activation.hardware_binding_id === fingerprint) {
-                // Return session token instead of master key
+        // DRM-FIX-4: Enforce 24-hour binding window
+        const now = new Date();
+        const existingBinding = activation.hardware_binding_id;
+        const windowExpires = activation.bond_window_expires_at ? new Date(activation.bond_window_expires_at) : null;
+
+        if (existingBinding) {
+            if (existingBinding === fingerprint) {
+                // Same device — refresh session
                 const sessionToken = crypto.randomBytes(16).toString('hex');
-                const expiresAt = new Date(Date.now() + 60 * 1000); // 60 seconds
+                const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
                 await pool.query(
                     'UPDATE digital_activations SET session_token = $1, session_expires_at = $2 WHERE id = $3',
                     [sessionToken, expiresAt, activation.id]
                 );
-                return res.json({
-                    success: true,
-                    message: 'Device already bonded.',
-                    sessionToken
-                });
-            } else {
+                return res.json({ success: true, message: 'Device verified.', sessionToken });
+            }
+
+            // Different device — check if binding window has expired
+            if (windowExpires && now < windowExpires) {
+                const hoursLeft = Math.ceil((windowExpires.getTime() - now.getTime()) / (1000 * 60 * 60));
                 return res.status(403).json({
                     success: false,
-                    message: 'This file is already bonded to another device.'
+                    message: `This file is bonded to another device. You can switch devices in ${hoursLeft} hours.`
                 });
             }
+
+            // Window expired — allow re-bonding to new device
+            logger.info(`[DRM] Re-bonding product ${productId} to new device ${fingerprint} (Window expired for ${existingBinding})`);
         }
 
-        // Bond the device
+        // Bond the device (Set/Reset 24h window)
         const sessionToken = crypto.randomBytes(16).toString('hex');
-        const expiresAt = new Date(Date.now() + 60 * 1000);
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+        const newWindow = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h binding
+
         await pool.query(
-            'UPDATE digital_activations SET hardware_binding_id = $1, activated_at = NOW(), session_token = $2, session_expires_at = $3 WHERE id = $4',
-            [fingerprint, sessionToken, expiresAt, activation.id]
+            `UPDATE digital_activations 
+             SET hardware_binding_id = $1, 
+                 bond_window_expires_at = $2,
+                 activated_at = NOW(), 
+                 session_token = $3, 
+                 session_expires_at = $4 
+             WHERE id = $5`,
+            [fingerprint, newWindow, sessionToken, expiresAt, activation.id]
         );
 
         res.json({
             success: true,
-            message: 'Hardware bonded successfully.',
+            message: 'Hardware bonded successfully for 24 hours.',
             sessionToken
         });
 
@@ -144,7 +159,7 @@ export const verifyHardware = async (req, res) => {
 
         // Generate session token
         const sessionToken = crypto.randomBytes(16).toString('hex');
-        const expiresAt = new Date(Date.now() + 60 * 1000);
+        const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins session
         await pool.query(
             'UPDATE digital_activations SET session_token = $1, session_expires_at = $2 WHERE id = $3',
             [sessionToken, expiresAt, activationId]
@@ -173,9 +188,9 @@ export const redeemSession = async (req, res) => {
     try {
         const { sessionToken, orderNumber, productId } = req.body;
 
-        // Fetch activation + file path — master_key stays server-side only
+        // Fetch activation + file path — DRM-FIX-1: master_key is removed from SELECT
         const result = await pool.query(
-            `SELECT da.id, da.master_key, da.session_expires_at, po.buyer_id, po.id as order_id,
+            `SELECT da.id, da.session_expires_at, da.bond_window_expires_at, po.buyer_id, po.id as order_id,
                     p.digital_file_path, p.digital_file_name, p.name as product_name
              FROM digital_activations da
              JOIN product_orders po ON da.order_id = po.id
@@ -189,12 +204,12 @@ export const redeemSession = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Invalid session.' });
         }
 
-        const { id: activationId, master_key, session_expires_at, buyer_id,
+        const { id: activationId, session_expires_at, buyer_id,
             digital_file_path, digital_file_name, product_name } = result.rows[0];
 
         // Check expiry
         if (new Date() > new Date(session_expires_at)) {
-            return res.status(410).json({ success: false, message: 'Session expired. Re-open file to refresh.' });
+            return res.status(410).json({ success: false, message: 'Session expired.' });
         }
 
         // Ownership check
@@ -208,13 +223,11 @@ export const redeemSession = async (req, res) => {
             [activationId]
         );
 
-        // If there is a digital file path, decrypt and stream it server-side
-        // SECURITY: master_key is used only within this server process — never sent to client
+        // DRM-FIX-5: Implementation of streaming decryption
         if (digital_file_path) {
             try {
                 const pathMod = await import('path');
                 const fsMod = await import('fs');
-                const { createDecipheriv } = await import('crypto');
 
                 let absolutePath = pathMod.default.resolve(process.cwd(), digital_file_path);
                 if (!fsMod.default.existsSync(absolutePath)) {
@@ -223,12 +236,11 @@ export const redeemSession = async (req, res) => {
                 }
 
                 if (fsMod.default.existsSync(absolutePath)) {
-                    // Use encryptor.js unwrapFile which has the correct offsets:
-                    // header=0..128, iv=128..140, tag=140..156, ciphertext=156..end
                     const { unwrapFile } = await import('../utils/encryptor.js');
                     const bybxBuffer = fsMod.default.readFileSync(absolutePath);
-                    const keyBuffer = Buffer.from(master_key, 'hex');
-                    const decrypted = unwrapFile(bybxBuffer, keyBuffer.toString('hex'));
+
+                    // Use master key from ENV per DRM-FIX-1
+                    const decrypted = unwrapFile(bybxBuffer, process.env.DRM_MASTER_KEY);
 
                     const outName = (digital_file_name || product_name || 'download').replace(/\.bybx$/, '');
                     res.setHeader('Content-Disposition', `attachment; filename="${outName}"`);

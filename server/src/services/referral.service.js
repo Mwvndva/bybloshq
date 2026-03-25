@@ -254,7 +254,7 @@ class ReferralService {
 
                 // 1. Calculate Seller Payout GMV for the referred seller in the target month/year (Timezone aware)
                 const gmvResult = await client.query(
-                    `SELECT COALESCE(SUM(seller_payout), 0) AS gmv
+                    `SELECT COALESCE(SUM(seller_payout_amount), 0) AS gmv
            FROM product_orders
            WHERE seller_id = $1
              AND payment_status = 'completed'
