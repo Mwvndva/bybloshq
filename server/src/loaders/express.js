@@ -39,7 +39,12 @@ export default async (app) => {
     }));
 
     // 3. CORS Hardening
-    const whitelist = [
+    const allowedOrigins = process.env.ALLOWED_ORIGINS
+        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+        : [];
+
+    const isLocal = process.env.NODE_ENV !== 'production';
+    const localOrigins = [
         'http://localhost:3000',
         'http://127.0.0.1:3000',
         'http://localhost:3001',
@@ -47,23 +52,22 @@ export default async (app) => {
         'http://localhost:3002',
         'http://127.0.0.1:3002',
         'http://localhost:5173',
-        'https://bybloshq.space',
-        'https://www.bybloshq.space',
-        'https://byblosexperience.vercel.app',
+        'http://127.0.0.1:5173'
     ];
-
-    const additionalOrigins = process.env.ALLOWED_ORIGINS
-        ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
-        : [];
 
     const corsOptions = {
         origin: function (origin, callback) {
+            // Allow requests with no origin (like mobile apps or curl)
             if (!origin) return callback(null, true);
-            const isAllowed = whitelist.includes(origin) ||
-                additionalOrigins.includes(origin) ||
+
+            const isAllowed =
+                allowedOrigins.includes(origin) ||
+                (isLocal && localOrigins.includes(origin)) ||
                 origin.endsWith('.vercel.app');
 
             if (isAllowed) return callback(null, true);
+
+            logger.warn(`CORS blocked request from origin: ${origin}`);
             return callback(new Error(`Not allowed by CORS: ${origin}`));
         },
         credentials: true,
