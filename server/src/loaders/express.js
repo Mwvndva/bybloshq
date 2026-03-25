@@ -85,7 +85,7 @@ export default async (app) => {
 
     // 4. CSRF Protection
     const { doubleCsrfProtection } = doubleCsrf({
-        getSecret: () => process.env.CSRF_SECRET,
+        getSecret: () => process.env.CSRF_SECRET || 'byblos-default-csrf-secret-change-me',
         getSessionIdentifier: (req) => req.ip || 'anonymous',
         cookieName: 'x-csrf-token',
         cookieOptions: {
@@ -121,7 +121,8 @@ export default async (app) => {
             req.path.startsWith('/api/payments/webhook') ||
             req.path.startsWith('/api/callbacks/') ||
             req.path.startsWith('/api/whatsapp/') ||
-            req.path.includes('/login');
+            req.path.includes('/login') ||
+            req.path.includes('/upload-digital');
 
         if (isExcluded) return next();
         return doubleCsrfProtection(req, res, next);
