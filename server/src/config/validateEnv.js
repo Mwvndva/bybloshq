@@ -43,28 +43,10 @@ const PRODUCTION_REQUIRED_ENV_VARS = [
  * Application will work without these but with reduced functionality
  */
 const OPTIONAL_ENV_VARS = [
+    // Redis — token blacklist falls back to in-memory if not set
     'REDIS_URL',
-    'JWT_REFRESH_SECRET',
-    // Email — accepts either EMAIL_* (Hostinger) or SMTP_* naming
-    'EMAIL_HOST',
-    'EMAIL_PORT',
-    'EMAIL_USERNAME',
-    'EMAIL_PASSWORD',
-    'EMAIL_FROM_EMAIL',
-    'EMAIL_FROM_NAME',
-    'SUPPORT_EMAIL',
-    // Legacy SMTP_* aliases (also accepted by email.js)
-    'SMTP_HOST',
-    'SMTP_PORT',
-    'SMTP_USER',
-    'SMTP_PASS',
-    'EMAIL_FROM',
-    // Extras
-    'SENTRY_DSN',
-    'PREVIEW_DOMAINS',
-    'CORS_ORIGIN',
-    'PAYD_CA_CERT_PATH',
-    'PAYD_ALLOWED_IPS',
+    // Email — warn only if NONE of the email vars are configured
+    // (checked separately below with smarter logic)
 ];
 
 /**
@@ -176,6 +158,14 @@ export function validateEnvironment() {
         console.warn('\n⚠️  WARNING: Missing optional environment variables:');
         missingOptional.forEach(v => console.warn(`   - ${v}`));
         console.warn('Some features may not work as expected.\n');
+    }
+
+    // Smarter email check — accept EMAIL_* (Hostinger) or SMTP_* naming
+    const hasEmail = !!(process.env.EMAIL_HOST || process.env.SMTP_HOST);
+    if (!hasEmail) {
+        console.warn('⚠️  Email: Not configured (EMAIL_HOST or SMTP_HOST required for email notifications)');
+    } else {
+        console.log(`✅ Email: configured via ${process.env.EMAIL_HOST ? 'EMAIL_HOST' : 'SMTP_HOST'}`);
     }
 
     // Log successful validation
