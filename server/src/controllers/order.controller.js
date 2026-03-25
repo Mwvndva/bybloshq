@@ -261,14 +261,16 @@ export const downloadDigitalProduct = async (req, res) => {
                 p.digital_file_path, 
                 p.digital_file_name
             FROM product_orders po
-            JOIN products p ON po.product_id = p.id
+            JOIN order_items oi ON po.id = oi.order_id
+            JOIN products p ON oi.product_id = p.id
             WHERE po.id = $1 
               AND po.buyer_id = $2 
+              AND oi.product_id = $3
               AND po.payment_status = 'completed'
-              AND p.type = 'digital'
+              AND (p.product_type = 'digital' OR p.is_digital = true)
         `;
 
-        const { rows } = await pool.query(verifyQuery, [orderId, buyerProfileId]);
+        const { rows } = await pool.query(verifyQuery, [orderId, buyerProfileId, productId]);
 
         if (rows.length === 0) {
             return res.status(404).json({
