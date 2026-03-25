@@ -164,10 +164,11 @@ const limiter = rateLimit({
 // ─── CSRF Protection (Block 5) ────────────────────────────────────────────────
 const {
   invalidCsrfTokenError,
-  generateToken,
+  generateCsrfToken,
   doubleCsrfProtection,
 } = doubleCsrf({
   getSecret: () => process.env.CSRF_SECRET || 'super-secret-csrf-key-change-me',
+  getSessionIdentifier: (req) => req.ip || 'anonymous',
   cookieName: 'x-csrf-token',
   cookieOptions: {
     httpOnly: true,
@@ -177,7 +178,7 @@ const {
   },
   size: 64,
   ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
-  getTokenFromRequest: (req) => req.headers['x-csrf-token'],
+  getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'],
 });
 
 // ─── Middleware Stack ────────────────────────────────────────────────────────
@@ -203,7 +204,7 @@ app.use((req, res, next) => {
 
 // CSRF Token Refresh Endpoint
 app.get('/api/v1/csrf-token', (req, res) => {
-  res.json({ token: generateToken(req, res) });
+  res.json({ token: generateCsrfToken(req, res) });
 });
 
 // Development request logging
