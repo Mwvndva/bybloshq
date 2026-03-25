@@ -24,47 +24,48 @@ const VERSION = Buffer.from([0x00, 0x01]);
  * @param {number} productId Database ID of the product
  * @param {string} masterKey AES-256 key (32 bytes)
  * @returns {Promise<Buffer>} The .bybx file buffer
+ */
 export const wrapFile = async (inputPath, transactionId, productId, masterKey) => {
     const masterKeyToUse = masterKey || process.env.DRM_MASTER_KEY;
     if (!masterKeyToUse) throw new Error('DRM_MASTER_KEY not configured');
 
-// Forensic Watermarking (Expanded)
-const watermarkedData = await applyForensicWatermark(
-    await fs.readFile(inputPath),
-    transactionId,
-    inputPath
-);
+    // Forensic Watermarking (Expanded)
+    const watermarkedData = await applyForensicWatermark(
+        await fs.readFile(inputPath),
+        transactionId,
+        inputPath
+    );
 
-const iv = crypto.randomBytes(12);
-const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(masterKeyToUse, 'hex'), iv);
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(masterKeyToUse, 'hex'), iv);
 
-const encrypted = Buffer.concat([cipher.update(watermarkedData), cipher.final()]);
-const tag = cipher.getAuthTag();
+    const encrypted = Buffer.concat([cipher.update(watermarkedData), cipher.final()]);
+    const tag = cipher.getAuthTag();
 
-const header = Buffer.alloc(128);
-MAGIC.copy(header, 0);
-VERSION.copy(header, 4);
+    const header = Buffer.alloc(128);
+    MAGIC.copy(header, 0);
+    VERSION.copy(header, 4);
 
-// Transaction ID (max 36 chars for UUID)
-header.write(transactionId, 6, 36, 'utf8');
+    // Transaction ID (max 36 chars for UUID)
+    header.write(transactionId, 6, 36, 'utf8');
 
-// Product ID (4 bytes integer at offset 42)
-header.writeInt32BE(productId, 42);
+    // Product ID (4 bytes integer at offset 42)
+    header.writeInt32BE(productId, 42);
 
-// Hardware ID (max 64 chars, initially 0, start at offset 46)
-// hardware_binding_id will be handled by the client/activation flow, 
-// but the file itself doesn't need to be RE-WRITTEN if it's stored on server.
-// Wait, the requirement says "The output should be a custom .bybx container. 
-// The header must include a transaction_id and a null field for the hardware_binding_id."
-// So 64 bytes of zeros.
-header.fill(0, 46, 46 + 64);
+    // Hardware ID (max 64 chars, initially 0, start at offset 46)
+    // hardware_binding_id will be handled by the client/activation flow, 
+    // but the file itself doesn't need to be RE-WRITTEN if it's stored on server.
+    // Wait, the requirement says "The output should be a custom .bybx container. 
+    // The header must include a transaction_id and a null field for the hardware_binding_id."
+    // So 64 bytes of zeros.
+    header.fill(0, 46, 46 + 64);
 
-return Buffer.concat([
-    header,
-    iv,
-    tag,
-    encrypted
-]);
+    return Buffer.concat([
+        header,
+        iv,
+        tag,
+        encrypted
+    ]);
 };
 
 /**
