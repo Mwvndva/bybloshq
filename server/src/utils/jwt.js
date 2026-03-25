@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import AppError from './appError.js';
+import { AppError } from './errorHandler.js';
 
 /**
  * Sign a JWT token with user ID and role
