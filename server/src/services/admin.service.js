@@ -251,47 +251,34 @@ class AdminService {
       const role = userRes.rows[0].role;
 
       if (role === 'seller') {
-        // Resolve seller row
         const sellerRes = await client.query('SELECT id FROM sellers WHERE user_id = $1', [userId]);
         if (sellerRes.rows.length > 0) {
           const sellerId = sellerRes.rows[0].id;
 
-          // Delete junction tables that directly reference seller id
+          // Delete payout and withdrawal history (FK dependencies)
+          await client.query('DELETE FROM payouts WHERE seller_id = $1', [sellerId]);
+          await client.query('DELETE FROM withdrawal_requests WHERE seller_id = $1', [sellerId]);
+
+          // Delete junction tables
           await client.query('DELETE FROM seller_clients WHERE seller_id = $1', [sellerId]);
           await client.query('DELETE FROM clients WHERE seller_id = $1', [sellerId]);
 
-          // Delete orders associated with this seller (seller_id is NOT NULL, so nullify not possible)
+          // Delete orders and products
           await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE seller_id = $1)', [sellerId]);
           await client.query('DELETE FROM product_orders WHERE seller_id = $1', [sellerId]);
-
-          // Delete products owned by this seller (clear wishlist refs first)
           await client.query('DELETE FROM wishlists WHERE product_id IN (SELECT id FROM products WHERE seller_id = $1)', [sellerId]);
           await client.query('DELETE FROM products WHERE seller_id = $1', [sellerId]);
 
-          // Now safe to delete the seller row
           await client.query('DELETE FROM sellers WHERE id = $1', [sellerId]);
         }
-      } else if (role === 'buyer') {
-        // Buyer-specific order/wishlist cleanup before removing buyer row
-        const buyerRes = await client.query('SELECT id FROM buyers WHERE user_id = $1', [userId]);
-        if (buyerRes.rows.length > 0) {
-          const buyerId = buyerRes.rows[0].id;
-          await client.query('DELETE FROM wishlists WHERE buyer_id = $1', [buyerId]);
-          await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE buyer_id = $1)', [buyerId]);
-          await client.query('DELETE FROM product_orders WHERE buyer_id = $1', [buyerId]);
-        }
-        await client.query('DELETE FROM buyers WHERE user_id = $1', [userId]);
       }
 
-      // --- Universal cleanup: runs for ALL roles ---
-
-      // This user may be a client of other sellers (seller_clients.user_id FK)
-      await client.query('DELETE FROM seller_clients WHERE user_id = $1', [userId]);
-
-      // This user may have a buyers row even if their role is 'seller'
+      // --- Universal cleanup: runs for ALL roles (Sellers can be Buyers too) ---
       const buyerRow = await client.query('SELECT id FROM buyers WHERE user_id = $1', [userId]);
       if (buyerRow.rows.length > 0) {
         const buyerId = buyerRow.rows[0].id;
+        // Cleanup buyer specific FKs
+        await client.query('DELETE FROM product_ratings WHERE buyer_id = $1', [buyerId]);
         await client.query('DELETE FROM wishlists WHERE buyer_id = $1', [buyerId]);
         await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE buyer_id = $1)', [buyerId]);
         await client.query('DELETE FROM product_orders WHERE buyer_id = $1', [buyerId]);

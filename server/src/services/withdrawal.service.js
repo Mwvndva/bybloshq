@@ -37,8 +37,8 @@ class WithdrawalService {
         if (!mpesaName?.trim()) {
             throw new Error('M-Pesa registered name is required');
         }
-        if (entityType !== 'seller') {
-            throw new Error(`Invalid entityType: ${entityType}. Only sellers can withdraw.`);
+        if (!['seller', 'organizer'].includes(entityType)) {
+            throw new Error(`Invalid entityType: ${entityType}. Must be 'seller' or 'organizer'.`);
         }
 
         // --- Phase 2: DB transaction — lock, check, deduct, insert ---
@@ -54,6 +54,12 @@ class WithdrawalService {
             if (entityType === 'seller') {
                 const { rows } = await client.query(
                     'SELECT id, balance, full_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE',
+                    [entityId]
+                );
+                entityRow = rows[0];
+            } else if (entityType === 'organizer') {
+                const { rows } = await client.query(
+                    'SELECT id, balance, full_name, whatsapp_number FROM organizers WHERE id = $1 FOR UPDATE',
                     [entityId]
                 );
                 entityRow = rows[0];
@@ -76,7 +82,7 @@ class WithdrawalService {
             }
 
             // Deduct from entity balance
-            const balanceTable = 'sellers';
+            const balanceTable = entityType === 'seller' ? 'sellers' : 'organizers';
             await client.query(
                 `UPDATE ${balanceTable} SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
                 [deductionAmount, entityId]
@@ -85,7 +91,7 @@ class WithdrawalService {
             // Insert withdrawal request record
             const insertResult = await client.query(
                 `INSERT INTO withdrawal_requests 
-                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
+                    (${entityType === 'seller' ? 'seller_id' : 'organizer_id'}, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
                  VALUES ($1, $2, $3, $4, 'processing', TRUE, NOW())
                  RETURNING id, amount, mpesa_number, mpesa_name, status, created_at`,
                 [

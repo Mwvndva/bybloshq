@@ -73,7 +73,6 @@ async function applyForensicWatermark(data, transactionId, filePath) {
     const ext = path.extname(filePath).toLowerCase();
 
     if (ext !== '.pdf') {
-        console.log(`Applying simple forensic watermark for ${transactionId} to ${filePath}`);
         return data; // Only watermark PDFs for now
     }
 

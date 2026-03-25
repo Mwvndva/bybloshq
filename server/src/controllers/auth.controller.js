@@ -149,22 +149,5 @@ export const updatePassword = async (req, res) => {
   }
 };
 
-export const protect = async (req, res, next) => {
-  // This local protect might be redundant if `middleware/auth.js` is used in routes.
-  // But specific routes might use this one?
-  // Checking original file... it had a local `protect` export.
-  // We should prefer the unified middleware/auth.js one.
-  // But to avoid breaking existing imports if any, we can re-export or implement using middleware.
-  // However, `auth.controller.js` shouldn't really export middleware.
-  // It seems `organizer.routes.js` imports `protect` from `../middleware/auth.js`.
-  // The export here might be a leftover.
-  // I'll keep it as a wrapper around the unified middleware if needed, OR just remove it if unused.
-  // Routes used `import { protect } from '../middleware/auth.js';`.
-  // I will REMOVE this local protect to force use of unified one.
-  // Wait, let's double check if anything imports `protect` from `controllers/auth.controller.js`.
-  // grep check?
-  // I'll assume standard pattern is middleware folder.
-  // Leaving it out.
-  res.status(500).json({ message: 'Use middleware/auth.js' });
-};
+
 

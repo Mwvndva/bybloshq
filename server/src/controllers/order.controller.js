@@ -72,8 +72,8 @@ export const getOrderById = async (req, res) => {
         }
 
         // Allow access if requester is the seller OR the buyer on this order
-        const isSeller = (userType === 'seller' || req.user.sellerProfileId) && (order.seller_id === (req.user.sellerProfileId || userId));
-        const isBuyer = (userType === 'buyer' || req.user.buyerProfileId) && (order.buyer_id === (req.user.buyerProfileId || userId));
+        const isSeller = (userType === 'seller' || req.user.sellerProfileId) && (order.sellerId === (req.user.sellerProfileId || userId));
+        const isBuyer = (userType === 'buyer' || req.user.buyerProfileId) && (order.buyerId === (req.user.buyerProfileId || userId));
 
         if (!isSeller && !isBuyer) {
             return res.status(403).json({ status: 'error', message: 'Unauthorized' });
@@ -321,6 +321,32 @@ export const downloadDigitalProduct = async (req, res) => {
 
         const filePath = product.digital_file_path;
         const fileName = product.digital_file_name || `${product.name}.zip`;
+
+        // DRM-FIX-3: Enforce download limits and increment count
+        const { rows: activationRows } = await pool.query(
+            'SELECT id, download_count FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+            [orderId, productId]
+        );
+
+        if (activationRows.length > 0) {
+            const activation = activationRows[0];
+            if (activation.download_count >= 5) {
+                return res.status(403).json({
+                    status: 'error',
+                    message: 'Download limit exceeded (max 5). Please contact support if you need more.'
+                });
+            }
+
+            // Increment count and set initial binding window if not set
+            await pool.query(
+                `UPDATE digital_activations 
+                 SET download_count = download_count + 1,
+                     last_downloaded_at = NOW(),
+                     bond_window_expires_at = COALESCE(bond_window_expires_at, NOW() + INTERVAL '24 hours')
+                 WHERE id = $1`,
+                [activation.id]
+            );
+        }
 
         logger.info(`[DOWNLOAD] Serving file for order ${orderId}, product ${productId}: ${filePath}`);
 

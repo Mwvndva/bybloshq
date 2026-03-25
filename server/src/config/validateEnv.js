@@ -39,6 +39,21 @@ const PRODUCTION_REQUIRED_ENV_VARS = [
 ];
 
 /**
+ * Validate DRM_MASTER_KEY format (64 hex characters = 32 bytes)
+ */
+function validateDrmKey() {
+    if (process.env.DRM_MASTER_KEY) {
+        const hexRegex = /^[0-9a-fA-F]{64}$/;
+        if (!hexRegex.test(process.env.DRM_MASTER_KEY)) {
+            console.error('❌ CRITICAL: DRM_MASTER_KEY must be a 64-character hex string (32 bytes)');
+            console.error('   Generate with: openssl rand -hex 32');
+            process.exit(1);
+        }
+        console.log('✅ DRM: Master key format validated (64 hex chars)');
+    }
+}
+
+/**
  * Optional Environment Variables
  * Application will work without these but with reduced functionality
  */
@@ -55,6 +70,7 @@ const OPTIONAL_ENV_VARS = [
  */
 export function validateEnvironment() {
     console.log('\n🔍 Validating environment configuration...\n');
+    validateDrmKey();
 
     // ── Database: accept either DATABASE_URL or individual DB_* vars ──────────
     const hasDbUrl = !!process.env.DATABASE_URL;
