@@ -49,9 +49,11 @@ export const getCsrfToken = (req, res) => {
         });
     } catch (error) {
         logger.error('Error generating CSRF token:', error);
+        if (error.stack) logger.error(error.stack);
         res.status(500).json({
             status: 'error',
-            message: 'Failed to generate CSRF token'
+            message: 'Failed to generate CSRF token',
+            details: error.message
         });
     }
 };

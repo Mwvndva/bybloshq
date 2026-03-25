@@ -8,11 +8,9 @@ import cookieParser from 'cookie-parser';
  * loaders/express.js and controllers/csrf.controller.js
  */
 
-export const {
-    generateToken,
-    doubleCsrfProtection,
-    invalidCsrfTokenError,
-} = doubleCsrf({
+console.log('🛡️ CSRF Utility: Initializing with secret length:', (process.env.CSRF_SECRET || 'default').length);
+
+const doubleCsrfResult = doubleCsrf({
     getSecret: () => process.env.CSRF_SECRET || 'byblos-default-csrf-secret-change-me',
     getSessionIdentifier: (req) => {
         // Use a persistent identifier if possible (like a session cookie)
@@ -30,3 +28,11 @@ export const {
     ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
     getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'],
 });
+
+console.log('🛡️ CSRF Utility: Successfully called doubleCsrf. Keys returned:', Object.keys(doubleCsrfResult));
+
+export const {
+    generateToken,
+    doubleCsrfProtection,
+    invalidCsrfTokenError,
+} = doubleCsrfResult;
