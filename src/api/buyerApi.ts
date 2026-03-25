@@ -1,5 +1,5 @@
 import axios from 'axios';
-import apiClient from '@/lib/apiClient';
+import apiClient, { getFreshCsrfToken } from '@/lib/apiClient';
 
 interface Buyer {
   id: number;
@@ -135,6 +135,9 @@ const buyerApi = {
       // Set the default Authorization header to empty/null just in case
       delete buyerApiInstance.defaults.headers.common['Authorization'];
 
+      // Refresh CSRF token for New Session
+      await getFreshCsrfToken();
+
       return { buyer: transformBuyer(buyer) };
     } catch (error: any) {
       console.error('Login error:', error);
@@ -175,9 +178,8 @@ const buyerApi = {
 
       const { buyer } = responseData.data;
 
-      if (!buyer) {
-        throw new Error('Invalid response from server - missing buyer');
-      }
+      // Refresh CSRF token for New Session
+      await getFreshCsrfToken();
 
       return { buyer: transformBuyer(buyer) };
     } catch (error: any) {

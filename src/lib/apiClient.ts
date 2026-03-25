@@ -36,12 +36,46 @@ const apiClient = axios.create({
     timeout: 30000, // 30 second timeout
 });
 
-// Request Interceptor: Logging in development
+// Request Interceptor: Logging & CSRF
+let csrfTokenCache: string | null = null;
+
+/**
+ * Fetch a fresh CSRF token from the backend
+ */
+export const getFreshCsrfToken = async () => {
+    try {
+        const response = await axios.get(`${baseURL}/public/csrf-token`, { withCredentials: true });
+        csrfTokenCache = (response as any).data?.data?.csrfToken || null;
+        return csrfTokenCache;
+    } catch (error) {
+        console.error('Failed to fetch CSRF token:', error);
+        return null;
+    }
+};
+
 apiClient.interceptors.request.use(
-    (config) => {
+    (config: any) => {
         if (isDevelopment) {
             console.log(`📤 [API Request] ${config.method?.toUpperCase()} ${config.url}`);
         }
+
+        // Attach CSRF token to non-GET requests
+        if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+            // If we have a token, use it
+            if (csrfTokenCache) {
+                config.headers['X-CSRF-Token'] = csrfTokenCache;
+                return config;
+            }
+
+            // If we don't have a token, fetch one and then proceed
+            return getFreshCsrfToken().then((token) => {
+                if (token) {
+                    config.headers['X-CSRF-Token'] = token;
+                }
+                return config;
+            });
+        }
+
         return config;
     },
     (error) => {
@@ -93,7 +127,7 @@ apiClient.interceptors.response.use(
             }
 
             // Check if user had an active session before this 401
-            const hadActiveSession = ['buyer', 'seller', 'organizer', 'admin'].some(role => 
+            const hadActiveSession = ['buyer', 'seller', 'organizer', 'admin'].some(role =>
                 localStorage.getItem(`${role}SessionActive`) === 'true'
             );
 

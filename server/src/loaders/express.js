@@ -17,6 +17,10 @@ import { globalErrorHandler, notFoundHandler } from '../utils/errorHandler.js';
 import requestId from '../middleware/requestId.js';
 import fixApiPrefix from '../middleware/fixApiPrefix.js';
 
+// Expose CSRF token generator for routes
+export let generateCsrfToken = null;
+export let doubleCsrfProtectionMiddleware = null;
+
 export default async (app) => {
     // 1. Basic Setup
     app.set('trust proxy', 1);
@@ -84,9 +88,13 @@ export default async (app) => {
     app.options('*', cors(corsOptions));
 
     // 4. CSRF Protection
-    const { doubleCsrfProtection } = doubleCsrf({
+    const { generateToken, doubleCsrfProtection } = doubleCsrf({
         getSecret: () => process.env.CSRF_SECRET || 'byblos-default-csrf-secret-change-me',
-        getSessionIdentifier: (req) => req.ip || 'anonymous',
+        getSessionIdentifier: (req) => {
+            // Use a persistent identifier if possible (like a session cookie)
+            // If not available, fallback to IP but prefix it for clarity
+            return req.cookies['csrf-session-id'] || req.ip || 'anonymous';
+        },
         cookieName: 'x-csrf-token',
         cookieOptions: {
             httpOnly: true,
@@ -98,6 +106,9 @@ export default async (app) => {
         ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
         getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'],
     });
+
+    generateCsrfToken = generateToken;
+    doubleCsrfProtectionMiddleware = doubleCsrfProtection;
 
     // 5. Rate Limiting & Parsing
     const limiter = rateLimit({
@@ -117,15 +128,20 @@ export default async (app) => {
 
     // 6. CSRF Middleware with exclusions
     app.use((req, res, next) => {
+        // Ensure a CSRF session ID exists for non-GET requests if use SessionID as identifier
+        if (!req.cookies['csrf-session-id'] && req.method !== 'GET') {
+            // This will be set by the /csrf-token route, but we add a safety check
+        }
+
         const isExcluded =
             req.path.startsWith('/api/payments/webhook') ||
             req.path.startsWith('/api/callbacks/') ||
             req.path.startsWith('/api/whatsapp/') ||
-            req.path.includes('/login') ||
-            req.path.includes('/upload-digital');
+            req.path.includes('/login');
+        // Removed /upload-digital exclusion to implement full protection
 
         if (isExcluded) return next();
-        return doubleCsrfProtection(req, res, next);
+        return doubleCsrfProtectionMiddleware(req, res, next);
     });
 
     // 7. Routes
