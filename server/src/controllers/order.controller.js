@@ -258,77 +258,9 @@ export const downloadDigitalProduct = async (req, res) => {
         const buyerProfileId = req.user.buyerProfileId || req.user.id;
 
         // 1. Fetch order — findById returns camelCase aliases (buyerId, sellerId)
-        const order = await Order.findById(orderId);
-        if (!order) {
-            return res.status(404).json({ status: 'error', message: 'Order not found' });
-        }
-
-        // 2. Authorization — use camelCase field names from the model
-        // For buyer: match against the buyer profile row ID stored in product_orders.buyer_id
-        // For seller: match against req.user.id (sellers table PK, same as users JWT id for sellers)
-        const isBuyer = (
-            order.buyerId === buyerProfileId ||
-            order.buyerId === req.user.id
-        );
-        const isSeller = (
-            order.sellerId === req.user.id ||
-            order.sellerId === userTableId
-        );
-
-        logger.info(`[DOWNLOAD] Auth check — order.buyerId=${order.buyerId}, order.sellerId=${order.sellerId}, req.user.id=${req.user.id}, buyerProfileId=${buyerProfileId}`);
-
-        if (!isBuyer && !isSeller) {
-            logger.warn(`[DOWNLOAD] Unauthorized — user ${req.user.id} cannot access order ${orderId}`);
-            return res.status(403).json({ status: 'error', message: 'Unauthorized' });
-        }
-        // 1. Verify order exists and is completed
-        const { rows: orderRows } = await pool.query(
-            'SELECT * FROM product_orders WHERE id = $1 AND buyer_id = $2 AND payment_status = \'completed\'',
-            [orderId, req.user.id]
-        );
-
-        if (orderRows.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'Order not found or not paid' });
-        }
-
-        // 2. Verify product is in this order and is digital
-        const { rows: productRows } = await pool.query(
-            `SELECT p.*, po.quantity
-             FROM products p
-             JOIN product_orders po ON p.id = po.product_id
-             WHERE po.id = $1 AND p.id = $2 AND p.type = 'digital'`,
-            [orderId, productId]
-        );
-
-        if (productRows.length === 0) {
-            return res.status(404).json({ status: 'error', message: 'Digital product not found in this order' });
-        }
-
-        const product = productRows[0];
-        const filePath = product.digital_file_path;
-        const fileName = product.digital_file_name || `${product.name}.zip`;
-
-        // DRM-FIX-3 & FIX-4: Enforce download limit atomically (fix race condition)
-        const updateResult = await pool.query(
-            `UPDATE digital_activations
-             SET download_count = download_count + 1,
-                 last_downloaded_at = NOW(),
-                 bond_window_expires_at = COALESCE(bond_window_expires_at, NOW() + INTERVAL '24 hours')
-             WHERE order_id = $1 AND product_id = $2 AND download_count < 5
-             RETURNING download_count`,
-            [orderId, productId]
-        );
-
-        if (updateResult.rows.length === 0) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'Download limit exceeded (max 5). Please contact support if you need more.'
-            });
-        }
-
-        const downloadCount = updateResult.rows[0].download_count;
-
-        // Device fingerprint enforcement
+        // 1. Single consolidated query for auth, product verification, and activation state
+        const maxDownloads = parseInt(process.env.MAX_DOWNLOAD_LIMIT || '5', 10);
+        const bondHours = parseInt(process.env.BOND_WINDOW_HOURS || '24', 10);
         const deviceFingerprint = req.headers['x-device-fingerprint'];
 
         if (!deviceFingerprint) {
@@ -338,37 +270,105 @@ export const downloadDigitalProduct = async (req, res) => {
             });
         }
 
-        // Check existing binding
-        const activationRow = await pool.query(
-            'SELECT hardware_binding_id, bond_window_expires_at FROM digital_activations WHERE order_id = $1 AND product_id = $2',
-            [orderId, productId]
-        );
+        // Start transaction for atomic update and file read
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        const activation = activationRow.rows[0];
-        const now = new Date();
+            const consolidatedQuery = `
+                SELECT 
+                    po.id as order_id, 
+                    p.id as product_id, 
+                    p.name as product_name,
+                    p.digital_file_path, 
+                    p.digital_file_name,
+                    da.download_count, 
+                    da.hardware_binding_id, 
+                    da.bond_window_expires_at
+                FROM product_orders po
+                JOIN products p ON po.product_id = p.id
+                LEFT JOIN digital_activations da ON po.id = da.order_id AND p.id = da.product_id
+                WHERE po.id = $1 
+                  AND po.buyer_id = $2 
+                  AND po.payment_status = 'completed'
+                  AND p.type = 'digital'
+                FOR UPDATE OF po, da
+            `;
 
-        if (activation && activation.hardware_binding_id) {
-            if (activation.hardware_binding_id !== deviceFingerprint) {
-                const windowExpired = activation.bond_window_expires_at && new Date(activation.bond_window_expires_at) < now;
+            const { rows } = await client.query(consolidatedQuery, [orderId, buyerProfileId]);
+
+            if (rows.length === 0) {
+                await client.query('ROLLBACK');
+                return res.status(404).json({ status: 'error', message: 'Digital product not found in this completed order' });
+            }
+
+            const data = rows[0];
+            const now = new Date();
+
+            // 2. Validate Download Limits & Device Binding
+            if (data.download_count >= maxDownloads) {
+                await client.query('ROLLBACK');
+                return res.status(403).json({
+                    status: 'error',
+                    message: `Download limit exceeded (max ${maxDownloads}). Please contact support.`
+                });
+            }
+
+            if (data.hardware_binding_id && data.hardware_binding_id !== deviceFingerprint) {
+                const windowExpired = data.bond_window_expires_at && new Date(data.bond_window_expires_at) < now;
                 if (!windowExpired) {
+                    await client.query('ROLLBACK');
                     return res.status(403).json({
                         status: 'error',
-                        message: 'This file is locked to another device. Try again after 24 hours to switch devices.'
+                        message: `Locked to another device. Window expires in ${bondHours}h.`
                     });
                 }
-                // Window expired — allow re-bind by updating fingerprint
-                await pool.query(
-                    `UPDATE digital_activations SET hardware_binding_id = $1, bond_window_expires_at = NOW() + INTERVAL '24 hours' WHERE order_id = $2 AND product_id = $3`,
-                    [deviceFingerprint, orderId, productId]
-                );
             }
-            // Same device — proceed
-        } else {
-            // First download — bind to this device
-            await pool.query(
-                `UPDATE digital_activations SET hardware_binding_id = $1, bond_window_expires_at = NOW() + INTERVAL '24 hours', activated_at = NOW() WHERE order_id = $2 AND product_id = $3`,
-                [deviceFingerprint, orderId, productId]
+
+            // 3. Atomically Update Activation State
+            await client.query(
+                `INSERT INTO digital_activations (order_id, product_id, download_count, last_downloaded_at, hardware_binding_id, bond_window_expires_at, activated_at)
+                 VALUES ($1, $2, 1, NOW(), $3, NOW() + $4::interval, NOW())
+                 ON CONFLICT (order_id, product_id) DO UPDATE SET
+                    download_count = digital_activations.download_count + 1,
+                    last_downloaded_at = NOW(),
+                    hardware_binding_id = $3,
+                    bond_window_expires_at = CASE 
+                        WHEN digital_activations.hardware_binding_id != $3 OR digital_activations.bond_window_expires_at < NOW() 
+                        THEN NOW() + $4::interval 
+                        ELSE digital_activations.bond_window_expires_at 
+                    END`,
+                [orderId, productId, deviceFingerprint, `${bondHours} hours`]
             );
+
+            // 4. Wrap and Serve File
+            const absolutePath = path.resolve(process.cwd(), data.digital_file_path.replace(/^\//, ''));
+            const containerBuffer = await wrapFile(
+                absolutePath,
+                orderId,
+                productId,
+                process.env.DRM_MASTER_KEY
+            );
+
+            await client.query('COMMIT');
+
+            const baseName = data.digital_file_name || `${data.product_name}.zip`;
+            const downloadName = baseName.endsWith('.bybx') ? baseName : `${baseName}.bybx`;
+
+            res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+            res.setHeader('Content-Type', 'application/octet-stream');
+            res.setHeader('Content-Length', containerBuffer.length);
+            res.setHeader('X-Download-Count', (data.download_count || 0) + 1);
+            res.setHeader('X-Content-Type-Options', 'nosniff');
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+
+            return res.send(containerBuffer);
+
+        } catch (innerError) {
+            await client.query('ROLLBACK');
+            throw innerError;
+        } finally {
+            client.release();
         }
 
         const absolutePath = path.resolve(process.cwd(), filePath.replace(/^\//, ''));

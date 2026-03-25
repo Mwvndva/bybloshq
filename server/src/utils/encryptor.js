@@ -24,46 +24,47 @@ const VERSION = Buffer.from([0x00, 0x01]);
  * @param {number} productId Database ID of the product
  * @param {string} masterKey AES-256 key (32 bytes)
  * @returns {Promise<Buffer>} The .bybx file buffer
- */
 export const wrapFile = async (inputPath, transactionId, productId, masterKey) => {
-    const fileData = await fs.readFile(inputPath);
+    const masterKeyToUse = masterKey || process.env.DRM_MASTER_KEY;
+    if (!masterKeyToUse) throw new Error('DRM_MASTER_KEY not configured');
 
-    // Forensic Watermarking (Simplified PoC)
-    // For MP3, we could add an ID3 tag. For PDFs, metadata.
-    // For this PoC, we'll just append it or log it.
-    // Real implementation would use something like 'ffmpeg' or 'pdf-lib'.
-    const watermarkedData = await applyForensicWatermark(fileData, transactionId, inputPath);
+// Forensic Watermarking (Expanded)
+const watermarkedData = await applyForensicWatermark(
+    await fs.readFile(inputPath),
+    transactionId,
+    inputPath
+);
 
-    const iv = crypto.randomBytes(12);
-    const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(masterKey, 'hex'), iv);
+const iv = crypto.randomBytes(12);
+const cipher = crypto.createCipheriv('aes-256-gcm', Buffer.from(masterKeyToUse, 'hex'), iv);
 
-    const encrypted = Buffer.concat([cipher.update(watermarkedData), cipher.final()]);
-    const tag = cipher.getAuthTag();
+const encrypted = Buffer.concat([cipher.update(watermarkedData), cipher.final()]);
+const tag = cipher.getAuthTag();
 
-    const header = Buffer.alloc(128);
-    MAGIC.copy(header, 0);
-    VERSION.copy(header, 4);
+const header = Buffer.alloc(128);
+MAGIC.copy(header, 0);
+VERSION.copy(header, 4);
 
-    // Transaction ID (max 36 chars for UUID)
-    header.write(transactionId, 6, 36, 'utf8');
+// Transaction ID (max 36 chars for UUID)
+header.write(transactionId, 6, 36, 'utf8');
 
-    // Product ID (4 bytes integer at offset 42)
-    header.writeInt32BE(productId, 42);
+// Product ID (4 bytes integer at offset 42)
+header.writeInt32BE(productId, 42);
 
-    // Hardware ID (max 64 chars, initially 0, start at offset 46)
-    // hardware_binding_id will be handled by the client/activation flow, 
-    // but the file itself doesn't need to be RE-WRITTEN if it's stored on server.
-    // Wait, the requirement says "The output should be a custom .bybx container. 
-    // The header must include a transaction_id and a null field for the hardware_binding_id."
-    // So 64 bytes of zeros.
-    header.fill(0, 46, 46 + 64);
+// Hardware ID (max 64 chars, initially 0, start at offset 46)
+// hardware_binding_id will be handled by the client/activation flow, 
+// but the file itself doesn't need to be RE-WRITTEN if it's stored on server.
+// Wait, the requirement says "The output should be a custom .bybx container. 
+// The header must include a transaction_id and a null field for the hardware_binding_id."
+// So 64 bytes of zeros.
+header.fill(0, 46, 46 + 64);
 
-    return Buffer.concat([
-        header,
-        iv,
-        tag,
-        encrypted
-    ]);
+return Buffer.concat([
+    header,
+    iv,
+    tag,
+    encrypted
+]);
 };
 
 /**
@@ -72,39 +73,54 @@ export const wrapFile = async (inputPath, transactionId, productId, masterKey) =
 export async function applyForensicWatermark(data, transactionId, filePath) {
     const ext = path.extname(filePath).toLowerCase();
 
-    if (ext !== '.pdf') {
-        return data; // Only watermark PDFs for now
-    }
+    // 1. PDF Forensic Tracking
+    if (ext === '.pdf') {
+        try {
+            const pdfDoc = await PDFDocument.load(data, { ignoreEncryption: true });
+            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+            const pages = pdfDoc.getPages();
 
-    try {
-        const pdfDoc = await PDFDocument.load(data, { ignoreEncryption: true });
-        const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-        const pages = pdfDoc.getPages();
-
-        // Add invisible metadata watermark to every page
-        for (const page of pages) {
-            const { width, height } = page.getSize();
-            // Visible diagonal watermark — light opacity
-            page.drawText(`Licensed to order: ${transactionId}`, {
-                x: width / 2 - 180,
-                y: height / 2,
-                size: 14,
-                font,
-                color: rgb(0.85, 0.85, 0.85),
-                opacity: 0.15,
-                rotate: { type: 'degrees', angle: 45 },
-            });
+            for (const page of pages) {
+                const { width, height } = page.getSize();
+                page.drawText(`Licensed to order: ${transactionId}`, {
+                    x: width / 2 - 180,
+                    y: height / 2,
+                    size: 14,
+                    font,
+                    color: rgb(0.85, 0.85, 0.85),
+                    opacity: 0.15,
+                    rotate: { type: 'degrees', angle: 45 },
+                });
+            }
+            pdfDoc.setSubject(`byblos-order:${transactionId}`);
+            pdfDoc.setKeywords([transactionId]);
+            return Buffer.from(await pdfDoc.save());
+        } catch (err) {
+            console.warn('PDF Watermarking failed:', err.message);
+            return data;
         }
-
-        // Embed order ID as PDF metadata
-        pdfDoc.setSubject(`byblos-order:${transactionId}`);
-        pdfDoc.setKeywords([transactionId]);
-
-        return Buffer.from(await pdfDoc.save());
-    } catch (err) {
-        console.warn('Watermarking failed, returning original:', err.message);
-        return data; // Fail open — don't block the download
     }
+
+    // 2. ZIP/EPUB Invisible Metadata Injection
+    if (ext === '.zip' || ext === '.epub') {
+        try {
+            const AdmZip = (await import('adm-zip')).default;
+            const zip = new AdmZip(data);
+            const licenseInfo = JSON.stringify({
+                transaction_id: transactionId,
+                timestamp: new Date().toISOString(),
+                issuer: 'BYBLOS DRM v1'
+            }, null, 2);
+
+            zip.addFile('.byblos_license', Buffer.from(licenseInfo));
+            return zip.toBuffer();
+        } catch (err) {
+            console.warn('ZIP/EPUB Injection failed:', err.message);
+            return data;
+        }
+    }
+
+    return data;
 }
 
 /**

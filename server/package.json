@@ -39,6 +39,7 @@
   "dependencies": {
     "@types/uuid": "^10.0.0",
     "@whiskeysockets/baileys": "^6.6.0",
+    "adm-zip": "^0.5.16",
     "axios": "^1.13.2",
     "bcrypt": "^6.0.0",
     "canvas": "^3.1.1",
@@ -74,15 +75,15 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.0.7",
+    "chai": "^5.2.0",
     "eslint": "^8.56.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-import": "^2.29.1",
+    "mocha": "^11.5.0",
     "nodemon": "^3.0.2",
     "prettier": "^3.2.4",
     "ts-node": "^10.9.2",
-    "typescript": "^5.8.3",
-    "mocha": "^11.5.0",
-    "chai": "^5.2.0"
+    "typescript": "^5.8.3"
   },
   "prettier": {
     "semi": true,
