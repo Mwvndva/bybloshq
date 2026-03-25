@@ -33,7 +33,7 @@ export const createProduct = async (req, res) => {
       });
     }
 
-    const sellerId = req.user.id;
+    const sellerId = req.user.sellerId;
 
     // Convert base64 image to file if present
     if (req.body.image_url && ImageService.isBase64Image(req.body.image_url)) {
@@ -63,7 +63,7 @@ export const createProduct = async (req, res) => {
 
 export const getSellerProducts = async (req, res) => {
   try {
-    const sellerId = req.user.id;
+    const sellerId = req.user.sellerId;
     const products = await ProductService.getSellerProducts(sellerId);
 
     const sanitized = products.map(p => sanitizeProduct(p));
@@ -82,7 +82,7 @@ export const getSellerProducts = async (req, res) => {
 export const getProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const sellerId = req.user.id;
+    const sellerId = req.user.sellerId;
 
     const product = await ProductService.getProduct(id, sellerId);
 
@@ -121,7 +121,7 @@ export const updateProduct = async (req, res) => {
       req.body.images = await ImageService.convertMultiple(req.body.images, 'product_extra');
     }
 
-    const updatedProduct = await ProductService.updateProduct(req.user.id, id, req.body);
+    const updatedProduct = await ProductService.updateProduct(req.user.sellerId, id, req.body);
 
     res.status(200).json({
       status: 'success',
@@ -190,7 +190,7 @@ export const deleteProduct = async (req, res) => {
       });
     }
 
-    await ProductService.deleteProduct(req.user.id, id);
+    await ProductService.deleteProduct(req.user.sellerId, id);
 
     res.status(204).json({ status: 'success', data: null });
   } catch (error) {

@@ -11,7 +11,7 @@ export const getSellerAnalytics = async (req, res, next) => {
     return next(new AppError('Authentication required', 401));
   }
 
-  const sellerId = req.user.id;
+  const sellerId = req.user.sellerId;
 
   try {
     // Run all read-only queries in parallel — no transaction needed

@@ -14,7 +14,10 @@ const require = createRequire(import.meta.url);
 const migrate = require('node-pg-migrate').default || require('node-pg-migrate');
 
 // Task 1: Absolute Path Loading & Task 2: Debugging
-const envPath = path.resolve(__dirname, '../.env');
+let envPath = path.resolve(__dirname, '../.env');
+if (!fs.existsSync(envPath)) {
+    envPath = path.resolve(__dirname, '../.env.production');
+}
 const envExists = fs.existsSync(envPath);
 
 console.log('--- Pre-flight Check ---');

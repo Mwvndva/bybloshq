@@ -137,10 +137,9 @@ class User {
         const query = `
       UPDATE users 
       SET password_hash = $1, 
-          password_changed_at = NOW(),
           updated_at = NOW()
       WHERE id = $2
-      RETURNING id, email, role, password_changed_at
+      RETURNING id, email, role
     `;
 
         const result = await pool.query(query, [hashedPassword, userId]);
@@ -160,10 +159,9 @@ class User {
       SET password_hash = $1, 
           reset_password_token = NULL, 
           reset_password_expires = NULL,
-          password_changed_at = NOW(),
           updated_at = NOW()
       WHERE email = $2
-      RETURNING id, email, role, password_changed_at
+      RETURNING id, email, role
     `;
 
         const result = await pool.query(query, [hashedPassword, email.toLowerCase()]);

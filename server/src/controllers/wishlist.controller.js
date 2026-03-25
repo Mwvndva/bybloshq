@@ -4,7 +4,7 @@ import * as wishlistRepository from '../repositories/wishlist.repository.js';
 export const getWishlist = async (req, res) => {
   try {
     // CROSS-ROLE FIX
-    const buyerId = req.user.buyerProfileId || (req.user.userType === 'buyer' ? req.user.id : null);
+    const buyerId = req.user.buyerId;
 
     if (!buyerId) {
       // If no buyer profile, return empty wishlist instead of error (optional UX choice, but error is safer for API)
@@ -35,7 +35,7 @@ export const addToWishlist = async (req, res) => {
   try {
     // CROSS-ROLE FIX: Use buyerProfileId if available (for sellers acting as buyers), 
     // otherwise use req.user.id (if explicitly logged in as buyer)
-    const buyerId = req.user.buyerProfileId || (req.user.userType === 'buyer' ? req.user.id : null);
+    const buyerId = req.user.buyerId;
 
     if (!buyerId) {
       return res.status(400).json({
@@ -80,7 +80,7 @@ export const addToWishlist = async (req, res) => {
 export const removeFromWishlist = async (req, res) => {
   try {
     // CROSS-ROLE FIX
-    const buyerId = req.user.buyerProfileId || (req.user.userType === 'buyer' ? req.user.id : null);
+    const buyerId = req.user.buyerId;
 
     if (!buyerId) {
       return res.status(400).json({

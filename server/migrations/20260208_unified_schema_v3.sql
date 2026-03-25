@@ -78,6 +78,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_active BOOLEAN DEFAULT TRUE,
     reset_password_token VARCHAR(255),
     reset_password_expires TIMESTAMP WITH TIME ZONE,
+    password_changed_at TIMESTAMP WITH TIME ZONE,
     last_login TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -88,6 +89,10 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'is_active') THEN
         ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_changed_at') THEN
+        ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP WITH TIME ZONE;
     END IF;
 END $$;
 

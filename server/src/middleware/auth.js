@@ -73,7 +73,7 @@ export const protect = async (req, res, next) => {
       case 'buyer':
         userQuery = `
             SELECT 
-                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
+                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
                 b.id as profile_id, b.full_name, b.whatsapp_number, b.status
             FROM users u 
             LEFT JOIN buyers b ON u.id = b.user_id 
@@ -84,7 +84,7 @@ export const protect = async (req, res, next) => {
       case 'seller':
         userQuery = `
             SELECT 
-                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
+                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
                 s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings
             FROM users u 
             LEFT JOIN sellers s ON u.id = s.user_id 
@@ -104,7 +104,7 @@ export const protect = async (req, res, next) => {
     const userData = userResult.rows[0];
 
     // 4) Check if password was changed after the token was issued
-    if (changedPasswordAfter(userData.password_changed_at, decoded.iat)) {
+    if (userData.password_changed_at && changedPasswordAfter(userData.password_changed_at, decoded.iat)) {
       return next(new AppError('Your password was recently changed. Please log in again.', 401));
     }
 
@@ -123,18 +123,20 @@ export const protect = async (req, res, next) => {
       crossRoles = crossRoleResult.rows[0];
     }
 
-    // Merge user and profile data
+    // Standardize user identity to prevent overlap between roles
     user = {
-      id: userData.profile_id, // Profile ID from role-specific table (aliased to avoid collision)
-      userId: userData.user_table_id || decoded.id, // User ID from users table
+      id: userData.user_table_id || decoded.id, // PRIMARY ID: Users Table ID (global)
+      userId: userData.user_table_id || decoded.id, // Alias for clarity
       email: userData.email,
       userType: userType,
+      role: userData.role,
 
-      // Profiles IDs
-      buyerProfileId: crossRoles.buyer_id,
-      sellerProfileId: crossRoles.seller_id,
+      // Profile IDs for current and cross-roles
+      profileId: userData.profile_id, // The ID of the profile used for this login
+      buyerId: crossRoles.buyer_id,
+      sellerId: crossRoles.seller_id,
 
-      // Boolean flags (kept for backward compatibility)
+      // Boolean flags
       hasBuyerProfile: !!crossRoles.buyer_id,
       hasSellerProfile: !!crossRoles.seller_id,
 
@@ -142,7 +144,7 @@ export const protect = async (req, res, next) => {
     };
 
     if (userType !== 'admin') {
-      console.log(`[AUTH] Cross-role check for ${user.email}: buyer=${user.hasBuyerProfile}, seller=${user.hasSellerProfile}`);
+      console.log(`[AUTH] Identity verified for ${user.email}: UserID=${user.id}, ProfileID=${user.profileId}, Roles: [${user.hasBuyerProfile ? 'buyer' : ''}${user.hasSellerProfile ? ', seller' : ''}]`);
     }
 
     // 4) Fetch permissions and attach to user
