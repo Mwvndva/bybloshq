@@ -116,7 +116,10 @@ export default async (app) => {
         // Removed /upload-digital exclusion to implement full protection
 
         if (isExcluded) return next();
-        if (isExcluded) return next();
+
+        // Skip CSRF check for safe methods (GET, HEAD, OPTIONS)
+        // This allows fetching the token and initial page loads
+        if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
 
         // Simple Double Submit Cookie Check
         const cookieToken = req.cookies['csrf-token-v2'];
