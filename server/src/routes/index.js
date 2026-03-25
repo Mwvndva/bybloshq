@@ -15,7 +15,6 @@ import refundRoutes from './refund.routes.js';
 import callbackRoutes from './callback.routes.js';
 import orderRoutes from './orderRoutes.js';
 import whatsappRoutes from './whatsapp.routes.js';
-import activationRoutes from './activation.routes.js';
 import refreshTokenRoutes from './refreshToken.routes.js';
 import wishlistRoutes from './wishlist.routes.js';
 import { protect } from '../middleware/auth.js';
@@ -34,7 +33,6 @@ router.use('/auth', refreshTokenRoutes);
 router.use('/callbacks', callbackRoutes);
 router.use('/orders', orderRoutes);
 router.use('/whatsapp', whatsappRoutes);
-router.use('/activation', activationRoutes);
 router.use('/wishlist', wishlistRoutes);
 
 export default router;
