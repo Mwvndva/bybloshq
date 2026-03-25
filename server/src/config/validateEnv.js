@@ -10,31 +10,32 @@ const REQUIRED_ENV_VARS = [
     // Authentication
     'JWT_SECRET',
     // NOTE: JWT_REFRESH_SECRET is intentionally NOT required here.
-    // refreshToken.js uses JWT_SECRET. If you add a true refresh-token flow
-    // that uses a separate secret, move JWT_REFRESH_SECRET back to REQUIRED.
 
-    // Payd Payment Gateway
+    // Payd Payment Gateway (core credentials — always required)
     'PAYD_USERNAME',
     'PAYD_PASSWORD',
     'PAYD_NETWORK_CODE',
     'PAYD_CHANNEL_ID',
-    'PAYD_CALLBACK_URL',
-    // NOTE: PAYD_WEBHOOK_SECRET not required (Payd doesn't provide it)
-
-    // Payd Security (IP Whitelisting - CRITICAL)
-    'PAYD_ALLOWED_IPS',
-
-    // Cloudinary
-    'CLOUDINARY_CLOUD_NAME',
-    'CLOUDINARY_API_KEY',
-    'CLOUDINARY_API_SECRET',
 
     // Application URLs
     'FRONTEND_URL',
     'BACKEND_URL',
+];
 
-    // DRM & Security
-    'DRM_MASTER_KEY'
+/**
+ * Production-only required variables.
+ * In development these emit a warning but do NOT block startup.
+ * In production (NODE_ENV=production) they are fatal.
+ */
+const PRODUCTION_REQUIRED_ENV_VARS = [
+    // Needed to receive Payd webhook callbacks
+    'PAYD_CALLBACK_URL',
+    // Needed to encrypt/decrypt .bybx digital product files
+    'DRM_MASTER_KEY',
+    // Cloudinary (image uploads)
+    'CLOUDINARY_CLOUD_NAME',
+    'CLOUDINARY_API_KEY',
+    'CLOUDINARY_API_SECRET',
 ];
 
 /**
@@ -80,7 +81,7 @@ export function validateEnvironment() {
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Check for missing required variables
+    // Check for missing always-required variables
     const missing = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
 
     if (missing.length > 0) {
@@ -89,6 +90,23 @@ export function validateEnvironment() {
         console.error('\n📝 Please check .env.example for required configuration');
         console.error('Application cannot start safely. Exiting...\n');
         process.exit(1);
+    }
+
+    // Production-only required variables
+    const isProduction = process.env.NODE_ENV === 'production';
+    const missingProd = PRODUCTION_REQUIRED_ENV_VARS.filter(v => !process.env[v]);
+
+    if (missingProd.length > 0) {
+        if (isProduction) {
+            console.error('❌ CRITICAL: Missing production-required environment variables:');
+            missingProd.forEach(v => console.error(`   - ${v}`));
+            console.error('\nApplication cannot start in production without these. Exiting...\n');
+            process.exit(1);
+        } else {
+            console.warn('⚠️  WARNING: Missing production-required variables (non-fatal in development):');
+            missingProd.forEach(v => console.warn(`   - ${v}`));
+            console.warn('   Payments, image uploads, and DRM will not work until these are set.\n');
+        }
     }
 
     // Validate JWT_SECRET strength
@@ -107,18 +125,19 @@ export function validateEnvironment() {
         process.exit(1);
     }
 
-    // Validate PAYD_ALLOWED_IPS format
+    // PAYD_ALLOWED_IPS is optional — Payd doesn't publish fixed server IPs.
+    // Set to 'skip' or '*' to explicitly bypass IP checking, or provide a
+    // comma-separated list of IPs if Payd does provide them in your region.
     if (process.env.PAYD_ALLOWED_IPS) {
-        const ips = process.env.PAYD_ALLOWED_IPS.split(',').map(ip => ip.trim());
-        if (ips.length === 0 || ips.some(ip => !ip)) {
-            console.error('❌ CRITICAL: PAYD_ALLOWED_IPS must contain valid IP addresses');
-            console.error('   Format: ip1,ip2,ip3 (comma-separated)');
-            console.error('   Example: 41.90.x.x,197.248.x.x,105.163.x.x');
-            console.error('\n⚠️  Contact Payd support to get official webhook IP addresses');
-            console.error('   Email: support@mypayd.app');
-            process.exit(1);
+        const val = process.env.PAYD_ALLOWED_IPS.trim().toLowerCase();
+        if (val === 'skip' || val === '*') {
+            console.log('ℹ️  Payd webhook IP check: DISABLED (set PAYD_ALLOWED_IPS to a comma-separated IP list to enable)');
+        } else {
+            const ips = process.env.PAYD_ALLOWED_IPS.split(',').map(ip => ip.trim()).filter(Boolean);
+            console.log(`✅ Payd webhook IP whitelist: ${ips.length} IP(s) configured`);
         }
-        console.log(`✅ Payd IP whitelist configured: ${ips.length} IP(s)`);
+    } else {
+        console.log('ℹ️  PAYD_ALLOWED_IPS not set — webhook IP filtering disabled. Set to "skip" to suppress this message.');
     }
 
     // Validate URLs
