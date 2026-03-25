@@ -38,6 +38,7 @@ export const globalErrorHandler = (err, req, res, next) => {
     if (error.name === 'ValidationError') error = handleValidationErrorDB(error);
     if (error.name === 'JsonWebTokenError') error = handleJWTError();
     if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
+    if (error.code === 'EBADCSRFTOKEN') error.isOperational = true;
 
     // Operational, trusted error: send message to client
     if (error.isOperational) {
