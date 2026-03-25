@@ -36,7 +36,15 @@ async function startServer() {
   process.on('unhandledRejection', (err) => {
     logger.error('💥 UNHANDLED REJECTION! Shutting down...');
     logger.error(err.name, err.message);
-    server.close(() => {
+    server.close(async () => {
+      try {
+        const { pool } = await import('./config/database.js');
+        await pool.end();
+        logger.info('📦 Database pool closed');
+      } catch (poolErr) {
+        logger.error('❌ Error closing pool:', poolErr);
+      }
+      logger.info('Graceful shutdown complete');
       process.exit(1);
     });
   });
@@ -44,8 +52,16 @@ async function startServer() {
   // Handle SIGTERM
   process.on('SIGTERM', () => {
     logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully');
-    server.close(() => {
-      logger.info('💥 Process terminated!');
+    server.close(async () => {
+      try {
+        const { pool } = await import('./config/database.js');
+        await pool.end();
+        logger.info('📦 Database pool closed');
+      } catch (poolErr) {
+        logger.error('❌ Error closing pool:', poolErr);
+      }
+      logger.info('Graceful shutdown complete');
+      process.exit(0);
     });
   });
 }

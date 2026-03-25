@@ -69,10 +69,9 @@ pool.on('error', (err) => {
 
 export const query = async (text, params) => {
   const start = Date.now();
-  const client = await pool.connect();
   try {
     logger.debug('Executing query:', { text, params });
-    const res = await client.query(text, params);
+    const res = await pool.query(text, params);
     const duration = Date.now() - start;
     logger.debug('Query executed successfully', {
       text,
@@ -89,8 +88,6 @@ export const query = async (text, params) => {
       params
     });
     throw error;
-  } finally {
-    client.release();
   }
 };
 
