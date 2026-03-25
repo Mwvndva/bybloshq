@@ -17,6 +17,11 @@ const candidateEnvPaths = [
 const chosenEnvPath = candidateEnvPaths.find(p => existsSync(p));
 dotenv.config({ path: chosenEnvPath });
 
+// H-11 FIX: Validate all required env vars before anything else starts.
+// Server will exit(1) if any required variable is missing.
+import { validateEnvironment } from './config/validateEnv.js';
+validateEnvironment();
+
 // ─── Core Imports ────────────────────────────────────────────────────────────
 import express from 'express';
 import cors from 'cors';
@@ -156,8 +161,8 @@ const limiter = rateLimit({
 });
 
 app.use('/api', limiter);
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cookieParser());
 
 // Development request logging

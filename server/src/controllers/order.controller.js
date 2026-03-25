@@ -334,6 +334,26 @@ export const downloadDigitalProduct = async (req, res) => {
         const fs = await import('fs');
         let absolutePath = path.default.resolve(process.cwd(), filePath);
 
+        // H-8 FIX: Path traversal guard — reject any path outside allowed roots
+        const ALLOWED_ROOT = path.default.resolve(process.cwd(), 'uploads', 'digital_products');
+        const SERVER_ALLOWED_ROOT = path.default.resolve(process.cwd(), 'server', 'uploads', 'digital_products');
+        const pathIsAllowed = (
+            absolutePath.startsWith(ALLOWED_ROOT + path.default.sep) ||
+            absolutePath.startsWith(ALLOWED_ROOT) && absolutePath === ALLOWED_ROOT
+        );
+        if (!pathIsAllowed) {
+            // Attempt to check server-prefixed variant before rejecting
+            const serverVariant = path.default.resolve(process.cwd(), 'server', filePath);
+            const serverIsAllowed = (
+                serverVariant.startsWith(SERVER_ALLOWED_ROOT + path.default.sep) ||
+                serverVariant.startsWith(SERVER_ALLOWED_ROOT) && serverVariant === SERVER_ALLOWED_ROOT
+            );
+            if (!serverIsAllowed) {
+                logger.error(`[SECURITY] Path traversal attempt blocked: ${absolutePath}`);
+                return res.status(403).json({ status: 'error', message: 'Access denied' });
+            }
+        }
+
         // DEFENSIVE CHECK: If file not found, try prepending 'server'
         if (!fs.default.existsSync(absolutePath)) {
             const fallbackPath = path.default.resolve(process.cwd(), 'server', filePath);

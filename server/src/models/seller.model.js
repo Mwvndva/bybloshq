@@ -278,7 +278,7 @@ export const updateSeller = async (id, updates) => {
 
   const queryText = `
     UPDATE sellers
-    SET ${updatesList.join(', ')}
+    SET ${updatesList.join(', ')}, updated_at = NOW()
     WHERE id = $1
     RETURNING 
       id, 

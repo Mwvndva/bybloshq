@@ -10,7 +10,9 @@ const REQUIRED_ENV_VARS = [
 
     // Authentication
     'JWT_SECRET',
-    'JWT_REFRESH_SECRET',
+    // NOTE: JWT_REFRESH_SECRET is intentionally NOT required here.
+    // refreshToken.js uses JWT_SECRET. If you add a true refresh-token flow
+    // that uses a separate secret, move JWT_REFRESH_SECRET back to REQUIRED.
 
     // Payd Payment Gateway
     'PAYD_USERNAME',
@@ -42,6 +44,7 @@ const REQUIRED_ENV_VARS = [
  */
 const OPTIONAL_ENV_VARS = [
     'REDIS_URL',
+    'JWT_REFRESH_SECRET',  // Optional until a dedicated refresh-token service uses it
     'SMTP_HOST',
     'SMTP_PORT',
     'SMTP_USER',

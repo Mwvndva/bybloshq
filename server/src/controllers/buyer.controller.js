@@ -1,7 +1,7 @@
 import BuyerService from '../services/buyer.service.js';
 import Buyer from '../models/buyer.model.js';
 import User from '../models/user.model.js';
-import AppError from '../utils/appError.js';
+import { AppError } from '../utils/errorHandler.js';
 import { sanitizeBuyer, sanitizeOrder } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
@@ -545,8 +545,11 @@ export const markOrderAsCollected = async (req, res, next) => {
       return next(new AppError('Order not found', 404));
     }
 
-    if (!(await req.user.can('view-orders', orderData, 'order', 'view'))) {
-      return next(new AppError('Unauthorized access to this order', 403));
+    // H-1 FIX: Direct ownership check — only the buyer who placed the order can mark it collected.
+    // user.can('view-orders') was insufficient: sellers could pass it and self-trigger payout.
+    const buyerId = req.user.buyerProfileId || req.user.id;
+    if (String(orderData.buyerId) !== String(buyerId)) {
+      return next(new AppError('You can only mark your own orders as collected', 403));
     }
 
 
