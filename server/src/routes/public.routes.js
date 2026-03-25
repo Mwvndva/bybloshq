@@ -1,8 +1,12 @@
 import express from 'express';
 import * as publicController from '../controllers/public.controller.js';
 import paymentController from '../controllers/payment.controller.js';
+import { getCsrfToken } from '../controllers/csrf.controller.js';
 
 const router = express.Router();
+
+// CSRF Protection
+router.get('/csrf-token', getCsrfToken);
 
 // Public product routes
 router.get('/aesthetics', publicController.getAesthetics);

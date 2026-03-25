@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getFreshCsrfToken } from '@/lib/apiClient';
 
 // Type for axios instance
 type AxiosInstance = any; // Simplified type for Axios 1.12.2 compatibility
@@ -43,6 +44,27 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+// CSRF Token Cache for admin instance
+let csrfTokenCache: string | null = null;
+
+// Request Interceptor for CSRF
+api.interceptors.request.use(
+  async (config: any) => {
+    // Attach CSRF token to non-GET requests
+    if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+      if (!csrfTokenCache) {
+        csrfTokenCache = await getFreshCsrfToken();
+      }
+
+      if (csrfTokenCache) {
+        config.headers['X-CSRF-Token'] = csrfTokenCache;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Response interceptor to handle 401 Unauthorized responses
 api.interceptors.response.use(
   (response) => response,
@@ -78,6 +100,9 @@ export const adminApi = {
         if (response.data.data?.user) {
           localStorage.setItem('admin_user', JSON.stringify(response.data.data.user));
         }
+
+        // Refresh CSRF token for New Session
+        csrfTokenCache = await getFreshCsrfToken();
       }
 
       return response.data;

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import apiClient from '@/lib/apiClient';
+import apiClient, { getFreshCsrfToken } from '@/lib/apiClient';
 import { Order, OrderStatus } from '@/types/order';
 import { ProductType } from '@/types/index';
 
@@ -271,6 +271,9 @@ export const sellerApi = {
       }
 
       // Token is handled via HttpOnly cookie
+      // Refresh CSRF token for New Session
+      await getFreshCsrfToken();
+
       return { seller: transformSeller(seller) };
     } catch (error: any) {
       console.error('Login error:', error);
@@ -317,6 +320,9 @@ export const sellerApi = {
       }
 
       // Token is handled via HttpOnly cookie
+      // Refresh CSRF token for New Session
+      await getFreshCsrfToken();
+
       return { seller: transformSeller(seller) };
     } catch (error: any) {
       console.error('Registration error:', error);
