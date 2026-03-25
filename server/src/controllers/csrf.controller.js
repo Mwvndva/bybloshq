@@ -8,22 +8,18 @@ import crypto from 'crypto';
  */
 export const getCsrfToken = (req, res) => {
     try {
-        let token = req.cookies['csrf-token'];
+        // ALWAYS generate a fresh token when this endpoint is called
+        // to ensure frontend and cookie are in absolute sync.
+        const token = crypto.randomBytes(32).toString('hex');
+        const isProduction = process.env.NODE_ENV === 'production';
 
-        // If no token exists, or if we want to ensure it's fresh for a specific reason
-        if (!token) {
-            token = crypto.randomBytes(32).toString('hex');
-
-            const isProduction = process.env.NODE_ENV === 'production';
-
-            res.cookie('csrf-token', token, {
-                httpOnly: true, // More secure, frontend gets the value from JSON response
-                secure: isProduction,
-                sameSite: 'lax',
-                path: '/',
-                maxAge: 24 * 60 * 60 * 1000 // 24 hours
-            });
-        }
+        res.cookie('csrf-token-v2', token, {
+            httpOnly: true, // More secure, frontend gets the value from JSON response
+            secure: isProduction,
+            sameSite: 'lax',
+            path: '/',
+            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        });
 
         res.status(200).json({
             status: 'success',

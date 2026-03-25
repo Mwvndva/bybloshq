@@ -119,7 +119,7 @@ export default async (app) => {
         if (isExcluded) return next();
 
         // Simple Double Submit Cookie Check
-        const cookieToken = req.cookies['csrf-token'];
+        const cookieToken = req.cookies['csrf-token-v2'];
         const headerToken = req.headers['x-csrf-token'];
 
         if (cookieToken && headerToken && cookieToken === headerToken) {
