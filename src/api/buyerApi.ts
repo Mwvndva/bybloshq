@@ -190,14 +190,9 @@ const buyerApi = {
 
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     try {
-      const response = await axios.post<{ message: string }>(
+      const response = await apiClient.post<{ message: string }>(
         `/buyers/forgot-password`,
-        { email: email.trim().toLowerCase() },
-        {
-          headers: { 'Content-Type': 'application/json' },
-          withCredentials: true,
-          baseURL: apiClient.defaults.baseURL
-        }
+        { email: email.trim().toLowerCase() }
       );
 
       // Ensure the response has a message property
@@ -217,17 +212,9 @@ const buyerApi = {
 
   resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
     try {
-      const response = await axios.post<{ message: string }>(
+      const response = await apiClient.post<{ message: string }>(
         `/buyers/reset-password`,
-        { token, newPassword },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-          },
-          withCredentials: true,
-          baseURL: apiClient.defaults.baseURL
-        }
+        { token, newPassword }
       );
 
       // Ensure the response has a message property
@@ -539,8 +526,7 @@ const buyerApi = {
       if (import.meta.env.DEV) {
         console.log('Checking buyer by phone...');
       }
-      // Use a fresh axios instance to avoid auth interceptor
-      const response = await axios.create({}).post<{
+      const response = await apiClient.post<{
         status: string;
         data: {
           exists: boolean;
@@ -549,14 +535,7 @@ const buyerApi = {
         }
       }>(
         `/buyers/check-phone`,
-        { phone },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          withCredentials: true,
-          baseURL: apiClient.defaults.baseURL
-        }
+        { phone }
       );
 
 
@@ -586,21 +565,15 @@ const buyerApi = {
       if (import.meta.env.DEV) {
         console.log('Saving buyer info...');
       }
-      // Use the public API endpoint that doesn't require authentication
-      const response = await axios.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
+      // Use the public API endpoint
+      const response = await apiClient.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
         `/buyers/save-info`,
         {
           ...buyerInfo,
           phone: buyerInfo.mobilePayment || buyerInfo.whatsappNumber
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          withCredentials: true,
-          baseURL: apiClient.defaults.baseURL
         }
-      ); if (import.meta.env.DEV) {
+      );
+      if (import.meta.env.DEV) {
         console.log('Save info response:', response.data.status);
       }
 

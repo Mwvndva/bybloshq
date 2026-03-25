@@ -36,13 +36,15 @@ function getProductStatus(stock: number): 'In Stock' | 'Low Stock' | 'Out of Sto
 
 
 // Create axios instance with default config
-const api: AxiosInstance = axios.create({
+export const adminApiInstance: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true, // Important for sending cookies with requests
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+const api = adminApiInstance;
 
 // CSRF Token Cache for admin instance
 let csrfTokenCache: string | null = null;
@@ -52,6 +54,7 @@ api.interceptors.request.use(
   async (config: any) => {
     // Attach CSRF token to non-GET requests
     if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+      // If we don't have a token cached yet, fetch it
       if (!csrfTokenCache) {
         csrfTokenCache = await getFreshCsrfToken();
       }

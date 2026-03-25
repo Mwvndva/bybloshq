@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getFreshCsrfToken } from '@/lib/apiClient';
 
 // Helper to get base URL
 const getBaseUrl = () => {
@@ -19,11 +20,21 @@ export const purchaseAxios = axios.create({
   withCredentials: true,
 });
 
-// Add request interceptor
+// Add request interceptor for CSRF tokens
+let csrfTokenCache: string | null = null;
+
 purchaseAxios.interceptors.request.use(
-  (config) => {
-    // Auth via httpOnly cookie (withCredentials: true).
-    // Do NOT read tokens from localStorage.
+  async (config: any) => {
+    // Attach CSRF token to non-GET requests
+    if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+      if (!csrfTokenCache) {
+        csrfTokenCache = await getFreshCsrfToken();
+      }
+
+      if (csrfTokenCache) {
+        config.headers['X-CSRF-Token'] = csrfTokenCache;
+      }
+    }
     return config;
   },
   (error) => {

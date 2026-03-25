@@ -2,11 +2,9 @@ import { Button } from '@/components/ui/button';
 import { Link, useLocation } from 'react-router-dom';
 import { Instagram, Calendar, ShoppingBag, Shield, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useBybx } from '@/contexts/BybxContext';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 
 const Header = () => {
-  const { onFileLoaded } = useBybx();
   const { isAuthenticated: isSellerAuthenticated } = useSellerAuth();
   const location = useLocation();
 
