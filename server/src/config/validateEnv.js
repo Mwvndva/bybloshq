@@ -5,8 +5,7 @@ import logger from '../utils/logger.js';
  * Server will refuse to start if any of these are missing
  */
 const REQUIRED_ENV_VARS = [
-    // Database
-    'DATABASE_URL',
+    // Database — checked separately below (accepts DATABASE_URL OR individual DB_* vars)
 
     // Authentication
     'JWT_SECRET',
@@ -62,6 +61,24 @@ const OPTIONAL_ENV_VARS = [
  */
 export function validateEnvironment() {
     console.log('\n🔍 Validating environment configuration...\n');
+
+    // ── Database: accept either DATABASE_URL or individual DB_* vars ──────────
+    const hasDbUrl = !!process.env.DATABASE_URL;
+    const hasDbParts = !!(process.env.DB_HOST && process.env.DB_USER &&
+        process.env.DB_PASSWORD && process.env.DB_NAME);
+
+    if (!hasDbUrl && !hasDbParts) {
+        console.error('❌ CRITICAL: No database configuration found.');
+        console.error('   Provide either DATABASE_URL, or all of: DB_HOST, DB_USER, DB_PASSWORD, DB_NAME');
+        process.exit(1);
+    }
+
+    if (hasDbUrl) {
+        console.log('✅ Database: using DATABASE_URL');
+    } else {
+        console.log(`✅ Database: using DB_HOST=${process.env.DB_HOST} DB_NAME=${process.env.DB_NAME}`);
+    }
+    // ─────────────────────────────────────────────────────────────────────────
 
     // Check for missing required variables
     const missing = REQUIRED_ENV_VARS.filter(v => !process.env[v]);
