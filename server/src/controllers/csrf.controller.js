@@ -1,4 +1,4 @@
-import { generateCsrfToken } from '../loaders/express.js';
+import { generateToken } from '../utils/csrf.js';
 import logger from '../utils/logger.js';
 import crypto from 'crypto';
 
@@ -28,8 +28,8 @@ export const getCsrfToken = (req, res) => {
         }
 
         // 2. Generate the CSRF token
-        // Use the function exposed from express loader
-        if (!generateCsrfToken) {
+        // Use the function exposed from CSRF utility
+        if (!generateToken) {
             logger.error('CSRF token generator not initialized');
             return res.status(500).json({
                 status: 'error',
@@ -37,7 +37,7 @@ export const getCsrfToken = (req, res) => {
             });
         }
 
-        const token = generateCsrfToken(req, res);
+        const token = generateToken(req, res);
 
         // 3. Return the token in the response body
         // The middleware also sets the 'x-csrf-token' cookie automatically

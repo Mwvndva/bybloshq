@@ -17,9 +17,7 @@ import { globalErrorHandler, notFoundHandler } from '../utils/errorHandler.js';
 import requestId from '../middleware/requestId.js';
 import fixApiPrefix from '../middleware/fixApiPrefix.js';
 
-// Expose CSRF token generator for routes
-export let generateCsrfToken = null;
-export let doubleCsrfProtectionMiddleware = null;
+import { doubleCsrfProtection } from '../utils/csrf.js';
 
 export default async (app) => {
     // 1. Basic Setup
@@ -87,28 +85,7 @@ export default async (app) => {
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
 
-    // 4. CSRF Protection
-    const { generateToken, doubleCsrfProtection } = doubleCsrf({
-        getSecret: () => process.env.CSRF_SECRET || 'byblos-default-csrf-secret-change-me',
-        getSessionIdentifier: (req) => {
-            // Use a persistent identifier if possible (like a session cookie)
-            // If not available, fallback to IP but prefix it for clarity
-            return req.cookies['csrf-session-id'] || req.ip || 'anonymous';
-        },
-        cookieName: 'x-csrf-token',
-        cookieOptions: {
-            httpOnly: true,
-            sameSite: 'lax',
-            path: '/',
-            secure: process.env.NODE_ENV === 'production',
-        },
-        size: 64,
-        ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
-        getCsrfTokenFromRequest: (req) => req.headers['x-csrf-token'],
-    });
-
-    generateCsrfToken = generateToken;
-    doubleCsrfProtectionMiddleware = doubleCsrfProtection;
+    // 4. CSRF Protection (initialized in src/utils/csrf.js)
 
     // 5. Rate Limiting & Parsing
     const limiter = rateLimit({
@@ -141,7 +118,7 @@ export default async (app) => {
         // Removed /upload-digital exclusion to implement full protection
 
         if (isExcluded) return next();
-        return doubleCsrfProtectionMiddleware(req, res, next);
+        return doubleCsrfProtection(req, res, next);
     });
 
     // 7. Routes
