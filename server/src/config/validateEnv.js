@@ -62,6 +62,8 @@ function validateDrmKey() {
 const OPTIONAL_ENV_VARS = [
     // Redis — token blacklist falls back to in-memory if not set
     'REDIS_URL',
+    // CORS — additional origins (FRONTEND_URL is automatically added)
+    'ALLOWED_ORIGINS',
     // Email — warn only if NONE of the email vars are configured
     // (checked separately below with smarter logic)
 ];
