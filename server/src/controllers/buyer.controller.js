@@ -4,7 +4,7 @@ import User from '../models/user.model.js';
 import { AppError } from '../utils/errorHandler.js';
 import { sanitizeBuyer, sanitizeOrder } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
-import { getRedisClient } from '../utils/redis.js';
+import { getRedisClient } from '../config/redis.js';
 import logger from '../utils/logger.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import AuthService from '../services/auth.service.js';
