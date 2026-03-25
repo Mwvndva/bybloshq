@@ -6,7 +6,6 @@ import { xss } from 'express-xss-sanitizer';
 import hpp from 'hpp';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
-import { doubleCsrf } from 'csrf-csrf';
 import path from 'path';
 import { existsSync } from 'fs';
 import { mkdir } from 'fs/promises';
@@ -17,7 +16,6 @@ import { globalErrorHandler, notFoundHandler } from '../utils/errorHandler.js';
 import requestId from '../middleware/requestId.js';
 import fixApiPrefix from '../middleware/fixApiPrefix.js';
 
-import { doubleCsrfProtection } from '../utils/csrf.js';
 
 export default async (app) => {
     // 1. Basic Setup
@@ -118,7 +116,21 @@ export default async (app) => {
         // Removed /upload-digital exclusion to implement full protection
 
         if (isExcluded) return next();
-        return doubleCsrfProtection(req, res, next);
+        if (isExcluded) return next();
+
+        // Simple Double Submit Cookie Check
+        const cookieToken = req.cookies['csrf-token'];
+        const headerToken = req.headers['x-csrf-token'];
+
+        if (cookieToken && headerToken && cookieToken === headerToken) {
+            return next();
+        }
+
+        logger.warn(`CSRF failed: ${req.method} ${req.path} - Cookie: ${!!cookieToken}, Header: ${!!headerToken}`);
+        return res.status(403).json({
+            status: 'error',
+            message: 'Security validation failed (CSRF mismatch). Please refresh the page.'
+        });
     });
 
     // 7. Routes

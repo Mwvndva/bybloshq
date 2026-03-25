@@ -1,48 +1,30 @@
-import { generateToken } from '../utils/csrf.js';
 import logger from '../utils/logger.js';
 import crypto from 'crypto';
 
-logger.info(`🛡️ CSRF Controller: Loaded. generateToken type: ${typeof generateToken}`);
-
 /**
- * Controller to provide a CSRF token to the frontend.
- * Also sets a stable session identifier cookie if one doesn't exist.
+ * Simple CSRF Alternative
+ * Implements the Double Submit Cookie pattern.
+ * A random token is stored in a cookie and must be sent back in a custom header.
  */
 export const getCsrfToken = (req, res) => {
     try {
-        // 1. Ensure a stable session identifier exists
-        let sessionId = req.cookies['csrf-session-id'];
+        let token = req.cookies['csrf-token'];
 
-        if (!sessionId) {
-            sessionId = crypto.randomBytes(32).toString('hex');
+        // If no token exists, or if we want to ensure it's fresh for a specific reason
+        if (!token) {
+            token = crypto.randomBytes(32).toString('hex');
 
-            const cookieOptions = {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
+            const isProduction = process.env.NODE_ENV === 'production';
+
+            res.cookie('csrf-token', token, {
+                httpOnly: true, // More secure, frontend gets the value from JSON response
+                secure: isProduction,
                 sameSite: 'lax',
                 path: '/',
-                maxAge: 24 * 60 * 60 * 1000, // 24 hours
-            };
-
-            res.cookie('csrf-session-id', sessionId, cookieOptions);
-            // Update req.cookies so generateCsrfToken uses the new ID if it relies on it immediately
-            req.cookies['csrf-session-id'] = sessionId;
-        }
-
-        // 2. Generate the CSRF token
-        // Use the function exposed from CSRF utility
-        if (!generateToken) {
-            logger.error('CSRF token generator not initialized');
-            return res.status(500).json({
-                status: 'error',
-                message: 'CSRF protection not properly initialized'
+                maxAge: 24 * 60 * 60 * 1000 // 24 hours
             });
         }
 
-        const token = generateToken(req, res);
-
-        // 3. Return the token in the response body
-        // The middleware also sets the 'x-csrf-token' cookie automatically
         res.status(200).json({
             status: 'success',
             data: {
@@ -50,12 +32,10 @@ export const getCsrfToken = (req, res) => {
             }
         });
     } catch (error) {
-        logger.error('Error generating CSRF token:', error);
-        if (error.stack) logger.error(error.stack);
+        logger.error('Error generating simple CSRF token:', error);
         res.status(500).json({
             status: 'error',
-            message: 'Failed to generate CSRF token',
-            details: error.message
+            message: 'Failed to generate security token'
         });
     }
 };
