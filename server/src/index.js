@@ -167,7 +167,7 @@ const {
   generateCsrfToken,
   doubleCsrfProtection,
 } = doubleCsrf({
-  getSecret: () => process.env.CSRF_SECRET || 'super-secret-csrf-key-change-me',
+  getSecret: () => process.env.CSRF_SECRET,
   getSessionIdentifier: (req) => req.ip || 'anonymous',
   cookieName: 'x-csrf-token',
   cookieOptions: {

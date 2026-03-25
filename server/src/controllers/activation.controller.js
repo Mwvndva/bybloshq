@@ -1,5 +1,6 @@
 import { pool } from '../config/database.js';
 import crypto from 'crypto';
+import logger from '../utils/logger.js';
 
 /**
  * Bond hardware fingerprint to a digital purchase
@@ -30,8 +31,9 @@ export const bondHardware = async (req, res) => {
 
         const { id: orderId, buyer_id } = orderResult.rows[0];
 
-        // Ownership Check: The req.user.id is the buyer profile ID
-        if (buyer_id !== req.user.id) {
+        // Ownership Check: Cross-role fix
+        const buyerProfileId = req.user.buyerProfileId || req.user.id;
+        if (String(buyer_id) !== String(buyerProfileId)) {
             return res.status(403).json({
                 success: false,
                 message: 'You do not own this order.'
@@ -133,13 +135,14 @@ export const verifyHardware = async (req, res) => {
 
         const { id: orderId, buyer_id } = orderResult.rows[0];
 
-        // Ownership Check
-        if (buyer_id !== req.user.id) {
+        // Ownership Check: Cross-role fix
+        const buyerProfileId = req.user.buyerProfileId || req.user.id;
+        if (String(buyer_id) !== String(buyerProfileId)) {
             return res.status(403).json({ success: false, message: 'You do not own this order.' });
         }
 
         const result = await pool.query(
-            'SELECT id, master_key, hardware_binding_id FROM digital_activations WHERE order_id = $1 AND product_id = $2',
+            'SELECT id, hardware_binding_id FROM digital_activations WHERE order_id = $1 AND product_id = $2',
             [orderId, productId]
         );
 
@@ -150,7 +153,7 @@ export const verifyHardware = async (req, res) => {
         const { id: activationId, hardware_binding_id } = result.rows[0];
 
         if (!hardware_binding_id) {
-            return res.status(400).json({ success: false, message: 'File not yet activated.' });
+            return res.status(400).json({ success: false, message: 'File not yet activated. Call /bond first.' });
         }
 
         if (hardware_binding_id !== fingerprint) {
@@ -171,7 +174,7 @@ export const verifyHardware = async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Error verifying hardware:', error);
+        logger.error('Error verifying hardware:', error);
         res.status(500).json({
             success: false,
             message: 'Verification failed.',
@@ -181,85 +184,12 @@ export const verifyHardware = async (req, res) => {
 };
 
 /**
- * Redeem session token — streams decrypted file content server-side.
- * The master key is NEVER sent to the client (C-1 fix).
+ * Redeem session token — DEPRECATED (Approach B uses direct watermarked streaming)
  */
 export const redeemSession = async (req, res) => {
-    try {
-        const { sessionToken, orderNumber, productId } = req.body;
-
-        // Fetch activation + file path — DRM-FIX-1: master_key is removed from SELECT
-        const result = await pool.query(
-            `SELECT da.id, da.session_expires_at, da.bond_window_expires_at, po.buyer_id, po.id as order_id,
-                    p.digital_file_path, p.digital_file_name, p.name as product_name
-             FROM digital_activations da
-             JOIN product_orders po ON da.order_id = po.id
-             JOIN products p ON da.product_id = p.id
-             WHERE da.session_token = $1 AND da.product_id = $2
-             AND po.order_number = $3`,
-            [sessionToken, productId, orderNumber]
-        );
-
-        if (result.rows.length === 0) {
-            return res.status(404).json({ success: false, message: 'Invalid session.' });
-        }
-
-        const { id: activationId, session_expires_at, buyer_id,
-            digital_file_path, digital_file_name, product_name } = result.rows[0];
-
-        // Check expiry
-        if (new Date() > new Date(session_expires_at)) {
-            return res.status(410).json({ success: false, message: 'Session expired.' });
-        }
-
-        // Ownership check
-        if (buyer_id !== req.user.id) {
-            return res.status(403).json({ success: false, message: 'Unauthorized.' });
-        }
-
-        // Invalidate the token immediately after use (single-use)
-        await pool.query(
-            'UPDATE digital_activations SET session_token = NULL, session_expires_at = NULL WHERE id = $1',
-            [activationId]
-        );
-
-        // DRM-FIX-5: Implementation of streaming decryption
-        if (digital_file_path) {
-            try {
-                const pathMod = await import('path');
-                const fsMod = await import('fs');
-
-                let absolutePath = pathMod.default.resolve(process.cwd(), digital_file_path);
-                if (!fsMod.default.existsSync(absolutePath)) {
-                    const fallback = pathMod.default.resolve(process.cwd(), 'server', digital_file_path);
-                    if (fsMod.default.existsSync(fallback)) absolutePath = fallback;
-                }
-
-                if (fsMod.default.existsSync(absolutePath)) {
-                    const { unwrapFile } = await import('../utils/encryptor.js');
-                    const bybxBuffer = fsMod.default.readFileSync(absolutePath);
-
-                    // Use master key from ENV per DRM-FIX-1
-                    const decrypted = unwrapFile(bybxBuffer, process.env.DRM_MASTER_KEY);
-
-                    const outName = (digital_file_name || product_name || 'download').replace(/\.bybx$/, '');
-                    res.setHeader('Content-Disposition', `attachment; filename="${outName}"`);
-                    res.setHeader('Content-Type', 'application/octet-stream');
-                    res.setHeader('Content-Length', decrypted.length);
-                    res.setHeader('X-Content-Type-Options', 'nosniff');
-                    return res.send(decrypted);
-                }
-            } catch (decryptErr) {
-                console.error('Error decrypting/streaming file in redeemSession:', decryptErr);
-                // Fall through to success response so client can re-try
-            }
-        }
-
-        // Fallback: session was valid and consumed — signal success without leaking key
-        res.json({ success: true });
-
-    } catch (error) {
-        console.error('Error redeeming session:', error);
-        res.status(500).json({ success: false, message: 'Redemption failed.' });
-    }
+    return res.status(410).json({
+        success: false,
+        message: 'This endpoint is deprecated. Use GET /api/orders/:orderId/download/:productId instead.',
+        upgradeUrl: '/api/orders'
+    });
 };

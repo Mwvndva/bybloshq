@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 import dotenv from 'dotenv';
@@ -456,24 +456,21 @@ const getAllWithdrawalRequests = async (req, res, next) => {
 
     const { rows } = await pool.query(
       `SELECT
-                wr.id,
-                wr.amount,
-                wr.mpesa_number,
-                wr.mpesa_name,
-                wr.status,
-                wr.provider_reference,
-                wr.created_at,
-                wr.processed_at,
-                wr.processed_by,
-                wr.metadata,
-                'seller' AS entity_type,
-                s.full_name AS entity_name,
-                s.email         AS entity_email,
-                s.whatsapp_number AS entity_phone,
-                s.balance     AS current_balance,
-                wr.seller_id
+                wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name, wr.status,
+                wr.provider_reference, wr.created_at, wr.processed_at,
+                wr.processed_by, wr.metadata, wr.seller_id, wr.organizer_id,
+                CASE
+                    WHEN wr.seller_id IS NOT NULL THEN 'seller'
+                    WHEN wr.organizer_id IS NOT NULL THEN 'organizer'
+                    ELSE 'unknown'
+                END AS entity_type,
+                COALESCE(s.full_name, o.full_name) AS entity_name,
+                COALESCE(s.email, o.email) AS entity_email,
+                COALESCE(s.whatsapp_number, o.whatsapp_number) AS entity_phone,
+                COALESCE(s.balance, o.balance) AS current_balance
              FROM withdrawal_requests wr
              LEFT JOIN sellers    s  ON wr.seller_id    = s.id
+             LEFT JOIN organizers o  ON wr.organizer_id  = o.id
              ${where}
              ORDER BY wr.created_at DESC
              LIMIT 500`,
@@ -523,10 +520,11 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
 
     const { rows: [request] } = await pool.query(
       `SELECT wr.*, 
-                    s.whatsapp_number AS entity_phone,
-                    s.balance AS entity_balance
+                    COALESCE(s.whatsapp_number, o.whatsapp_number) AS entity_phone,
+                    COALESCE(s.balance, o.balance) AS entity_balance
              FROM withdrawal_requests wr
              LEFT JOIN sellers    s ON wr.seller_id    = s.id
+             LEFT JOIN organizers o ON wr.organizer_id = o.id
              WHERE wr.id = $1`,
       [id]
     );

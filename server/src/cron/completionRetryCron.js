@@ -1,57 +1,59 @@
 import cron from 'node-cron';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
+import OrderService from '../services/order.service.js';
 
 /**
- * Block 2 fix: Retry cron for payments that completed (status='completed')
+ * Retry cron for payments that completed (status='completed')
  * but whose order completion failed (metadata.needs_completion = 'true').
  *
  * The cron runs every 2 minutes, picks up to 20 flagged payments,
  * calls completeOrder for each, and clears the flag on success.
- * Failures are logged but do not affect other rows in the batch.
  */
 export const scheduleCompletionRetry = (options = {}) => {
     const schedule = options.schedule || '*/2 * * * *';
-    logger.info(`[COMPLETION-RETRY] Scheduling completion retry cron: ${schedule}`);
 
-    return cron.schedule(schedule, async () => {
-        const jobId = `completion-retry-${Date.now()}`;
-        try {
-            const { rows } = await pool.query(
-                `SELECT * FROM payments
-                 WHERE status = 'completed'
-                 AND metadata->>'needs_completion' = 'true'
-                 AND updated_at > NOW() - INTERVAL '24 hours'
-                 ORDER BY updated_at ASC
-                 LIMIT 20`
-            );
+    // Stagger startup by 0-60 seconds to prevent thundering herd on multi-instance
+    const jitterMs = Math.floor(Math.random() * 60000);
 
-            if (rows.length === 0) return;
+    setTimeout(() => {
+        logger.info(`[COMPLETION-RETRY] Scheduling completion retry cron (${jitterMs}ms jitter applied): ${schedule}`);
 
-            logger.info(`[${jobId}] Found ${rows.length} payment(s) needing completion retry`);
+        cron.schedule(schedule, async () => {
+            const jobId = `completion-retry-${Date.now()}`;
+            try {
+                const { rows } = await pool.query(
+                    `SELECT * FROM payments
+                     WHERE status = 'completed'
+                     AND metadata->>'needs_completion' = 'true'
+                     AND updated_at > NOW() - INTERVAL '24 hours'
+                     ORDER BY updated_at ASC
+                     LIMIT 20`
+                );
 
-            // Lazy import to avoid circular dependency at module load time
-            const OrderService = (await import('../services/order.service.js')).default;
+                if (rows.length === 0) return;
 
-            for (const payment of rows) {
-                try {
-                    await OrderService.completeOrder(payment);
+                logger.info(`[${jobId}] Found ${rows.length} payment(s) needing completion retry`);
 
-                    // Clear the flag on success
-                    await pool.query(
-                        `UPDATE payments
-                         SET metadata = metadata - 'needs_completion'
-                         WHERE id = $1`,
-                        [payment.id]
-                    );
-                    logger.info(`[${jobId}] Successfully completed payment ${payment.id}`);
-                } catch (err) {
-                    logger.error(`[${jobId}] Retry failed for payment ${payment.id}:`, err.message);
-                    // Leave flag set — will be retried next tick
+                for (const payment of rows) {
+                    try {
+                        await OrderService.completeOrder(payment);
+
+                        // Clear the flag on success
+                        await pool.query(
+                            `UPDATE payments
+                             SET metadata = metadata - 'needs_completion'
+                             WHERE id = $1`,
+                            [payment.id]
+                        );
+                        logger.info(`[${jobId}] Successfully completed payment ${payment.id}`);
+                    } catch (err) {
+                        logger.error(`[${jobId}] Retry failed for payment ${payment.id}:`, err.message);
+                    }
                 }
+            } catch (err) {
+                logger.error(`[${jobId}] Cron query error:`, err.message);
             }
-        } catch (err) {
-            logger.error(`[${jobId}] Cron query error:`, err.message);
-        }
-    }, { timezone: 'Africa/Nairobi' });
+        }, { timezone: 'Africa/Nairobi' });
+    }, jitterMs);
 };

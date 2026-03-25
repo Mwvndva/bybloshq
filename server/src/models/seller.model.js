@@ -1,7 +1,6 @@
 // CRUD only
 import { pool } from '../config/database.js';
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import { toCamelCase } from '../utils/caseUtils.js';
 
 const SALT_ROUNDS = 10;
 
@@ -16,30 +15,15 @@ export const createSeller = async (sellerData) => {
      RETURNING *`,
     [fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId]
   );
-  return result.rows[0];
+  return toCamelCase(result.rows[0]);
 };
 
 export const findSellerByEmail = async (email) => {
   const result = await query(
-    `SELECT 
-      id, 
-      user_id AS "userId",
-      full_name AS "fullName", 
-      shop_name AS "shopName", 
-      email, 
-      whatsapp_number AS "whatsappNumber", 
-      total_sales AS "totalSales",
-      net_revenue AS "netRevenue",
-      balance,
-      instagram_link AS "instagramLink",
-      tiktok_link AS "tiktokLink",
-      facebook_link AS "facebookLink",
-      created_at AS "createdAt"
-     FROM sellers 
-     WHERE email = $1`,
+    `SELECT * FROM sellers WHERE email = $1`,
     [email]
   );
-  return result.rows[0];
+  return toCamelCase(result.rows[0]);
 };
 
 export const findSellerByUserId = async (userId) => {
