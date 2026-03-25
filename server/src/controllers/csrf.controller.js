@@ -2,6 +2,8 @@ import { generateToken } from '../utils/csrf.js';
 import logger from '../utils/logger.js';
 import crypto from 'crypto';
 
+logger.info(`🛡️ CSRF Controller: Loaded. generateToken type: ${typeof generateToken}`);
+
 /**
  * Controller to provide a CSRF token to the frontend.
  * Also sets a stable session identifier cookie if one doesn't exist.
