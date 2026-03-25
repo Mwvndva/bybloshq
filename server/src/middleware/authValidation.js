@@ -1,77 +1,37 @@
-import { body, validationResult } from 'express-validator';
-import { AppError } from '../utils/errorHandler.js';
+import { z } from 'zod';
 
-export const validate = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(400).json({
-            status: 'fail',
-            message: 'Validation failed',
-            errors: errors.array().map(err => ({
-                field: err.path,
-                message: err.msg,
-                value: err.value
-            }))
-        });
-    }
-    next();
-};
+/**
+ * Validation schemas for Buyer Authentication
+ */
 
-export const validateRegistration = [
-    body('fullName')
-        .trim()
-        .notEmpty()
-        .withMessage('Full name is required'),
+export const registrationSchema = z.object({
+    fullName: z.string().min(1, 'Full name is required').trim(),
 
-    body('email')
-        .trim()
-        .isEmail()
-        .withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+    email: z.string().email('Please provide a valid email address').trim().toLowerCase(),
 
-    body('password')
-        .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters long')
-        .matches(/\d/)
-        .withMessage('Password must contain at least one number')
-        .matches(/[a-zA-Z]/)
-        .withMessage('Password must contain at least one letter')
-        .matches(/[!@#$%^&*(),.?":{}|<>]/)
-        .withMessage('Password must contain at least one special character'),
+    password: z.string()
+        .min(8, 'Password must be at least 8 characters long')
+        .regex(/\d/, 'Password must contain at least one number')
+        .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
 
-    body('mobile_payment')
-        .trim()
-        .notEmpty()
-        .withMessage('Mobile payment number is required'),
+    mobile_payment: z.string().min(1, 'Mobile payment number is required').trim(),
 
-    body('whatsapp_number')
-        .trim()
-        .notEmpty()
-        .withMessage('WhatsApp number is required'),
+    whatsapp_number: z.string().min(1, 'WhatsApp number is required').trim(),
 
-    body('city')
-        .trim()
-        .notEmpty()
-        .withMessage('City is required'),
+    city: z.string().min(1, 'City is required').trim(),
 
-    body('location')
-        .trim()
-        .notEmpty()
-        .withMessage('Location is required'),
+    location: z.string().min(1, 'Location is required').trim(),
+});
 
-    validate,
-];
+export const loginSchema = z.object({
+    email: z.string().email('Please provide a valid email address').trim().toLowerCase(),
 
-export const validateLogin = [
-    body('email')
-        .trim()
-        .isEmail()
-        .withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+    password: z.string().min(1, 'Password is required'),
+});
 
-    body('password')
-        .notEmpty()
-        .withMessage('Password is required'),
+// For backward compatibility or direct use if needed, though we prefer the new validate middleware
+import { validate as validateMiddleware } from './validate.js';
 
-    validate,
-];
+export const validateRegistration = validateMiddleware(registrationSchema);
+export const validateLogin = validateMiddleware(loginSchema);

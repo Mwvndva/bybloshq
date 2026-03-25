@@ -1,63 +1,39 @@
-import { body } from 'express-validator';
-import { validate } from './authValidation.js';
+import { z } from 'zod';
+import { validate as validateMiddleware } from './validate.js';
 
-export const validateSellerRegistration = [
-    body('fullName')
-        .trim()
-        .notEmpty()
-        .withMessage('Full name is required'),
+/**
+ * Validation schemas for Seller Authentication
+ */
 
-    body('shopName')
-        .trim()
-        .isLength({ min: 3, max: 30 })
-        .withMessage('Shop name must be between 3 and 30 characters')
-        .matches(/^[a-zA-Z0-9_-]+$/)
-        .withMessage('Shop name can only contain letters, numbers, dashes, and underscores'),
+export const sellerRegistrationSchema = z.object({
+    fullName: z.string().min(1, 'Full name is required').trim(),
 
-    body('email')
-        .trim()
-        .isEmail()
-        .withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+    shopName: z.string()
+        .min(3, 'Shop name must be at least 3 characters')
+        .max(30, 'Shop name must be at most 30 characters')
+        .regex(/^[a-zA-Z0-9_-]+$/, 'Shop name can only contain letters, numbers, dashes, and underscores')
+        .trim(),
 
-    body('password')
-        .isLength({ min: 8 })
-        .withMessage('Password must be at least 8 characters long')
-        .matches(/\d/)
-        .withMessage('Password must contain at least one number')
-        .matches(/[a-zA-Z]/)
-        .withMessage('Password must contain at least one letter')
-        .matches(/[!@#$%^&*(),.?":{}|<>]/)
-        .withMessage('Password must contain at least one special character'),
+    email: z.string().email('Please provide a valid email address').trim().toLowerCase(),
 
-    body('whatsappNumber')
-        .trim()
-        .notEmpty()
-        .withMessage('WhatsApp number is required'),
+    password: z.string()
+        .min(8, 'Password must be at least 8 characters long')
+        .regex(/\d/, 'Password must contain at least one number')
+        .regex(/[a-zA-Z]/, 'Password must contain at least one letter')
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, 'Password must contain at least one special character'),
 
-    body('city')
-        .trim()
-        .notEmpty()
-        .withMessage('City is required'),
+    whatsappNumber: z.string().min(1, 'WhatsApp number is required').trim(),
 
-    body('location')
-        .trim()
-        .notEmpty()
-        .withMessage('Location is required'),
+    city: z.string().min(1, 'City is required').trim(),
 
-    validate,
-];
+    location: z.string().min(1, 'Location is required').trim(),
+});
 
-export const validateSellerLogin = [
-    body('email')
-        .trim()
-        .isEmail()
-        .withMessage('Please provide a valid email address')
-        .normalizeEmail(),
+export const sellerLoginSchema = z.object({
+    email: z.string().email('Please provide a valid email address').trim().toLowerCase(),
 
-    body('password')
-        .notEmpty()
-        .withMessage('Password is required'),
+    password: z.string().min(1, 'Password is required'),
+});
 
-    validate,
-];
+export const validateSellerRegistration = validateMiddleware(sellerRegistrationSchema);
+export const validateSellerLogin = validateMiddleware(sellerLoginSchema);

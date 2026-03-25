@@ -1,6 +1,4 @@
-# Byblos Atelier Vogue - Backend API
-
-RESTful API server for the Byblos Atelier Vogue marketplace, built with Node.js, Express, and PostgreSQL. This API powers both the customer-facing e-commerce platform and the seller dashboard.
+RESTful API server for the BYBLOS marketplace, built with Node.js, Express, and PostgreSQL. This API powers both the customer-facing e-commerce platform and the seller dashboard.
 
 ## 🚀 Features
 
@@ -95,8 +93,8 @@ The payment processing system handles the complete lifecycle of payments, from i
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/byblos-atelier-vogue.git
-cd byblos-atelier-vogue/server
+git clone https://github.com/yourusername/byblos.git
+cd byblos/server
 ```
 
 ### 2. Install dependencies
@@ -117,7 +115,7 @@ NODE_ENV=development
 # Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=byblos_atelier
+DB_NAME=byblos
 DB_USER=your_db_user
 DB_PASSWORD=your_secure_password
 
@@ -131,16 +129,16 @@ JWT_REFRESH_EXPIRES_IN=7d
 # SMTP_PORT=587
 # SMTP_USER=your_email@example.com
 # SMTP_PASS=your_email_password
-# EMAIL_FROM=noreply@byblosatelier.com
+# EMAIL_FROM=noreply@bybloshq.space
 ```
 
 ### 4. Set up the database
 
 1. **Create a new PostgreSQL database**:
    ```sql
-   CREATE DATABASE byblos_atelier;
+   CREATE DATABASE byblos;
    CREATE USER your_db_user WITH PASSWORD 'your_secure_password';
-   GRANT ALL PRIVILEGES ON DATABASE byblos_atelier TO your_db_user;
+   GRANT ALL PRIVILEGES ON DATABASE byblos TO your_db_user;
    ```
 
 2. **Run migrations**:

@@ -1,4 +1,4 @@
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt';
 import { signToken } from '../utils/jwt.js';
 import { query, pool } from '../config/database.js'; // Assuming query is exported
 import * as SellerModel from '../models/seller.model.js';
