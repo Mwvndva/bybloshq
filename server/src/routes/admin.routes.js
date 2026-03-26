@@ -7,6 +7,19 @@ const router = express.Router();
 // Public route for admin login
 router.post('/login', adminController.adminLogin);
 
+router.post('/logout', (req, res) => {
+    const cookieOptions = {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        expires: new Date(0),
+        path: '/'
+    };
+    res.cookie('jwt', '', cookieOptions);
+    res.cookie('token', '', cookieOptions);
+    res.status(200).json({ status: 'success', message: 'Admin logged out' });
+});
+
 // Middleware to protect subsequent admin routes
 router.use(protect);
 router.use(hasPermission('manage-all'));

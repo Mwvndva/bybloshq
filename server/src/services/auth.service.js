@@ -7,6 +7,7 @@ import * as SellerModel from '../models/seller.model.js';
 import Buyer from '../models/buyer.model.js';
 import { signToken } from '../utils/jwt.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
+import { pool } from '../config/database.js';
 
 class AuthService {
     /**
@@ -16,34 +17,45 @@ class AuthService {
      * @param {string} type - Optional portal type: 'buyer' | 'seller' | 'admin'
      */
     static async login(email, password, type = null) {
-        // 1. Find user in unified users table
         const user = await User.findByEmail(email);
         if (!user) return null;
 
-        // 2. Verify password
         const isMatch = await User.verifyPassword(password, user.password_hash);
         if (!isMatch) return null;
 
-        // 3. Role enforcement
-        // Special case: a seller logging in via the buyer portal is valid IF they
-        // also have a buyer profile (one person, two roles).
+        // ── Role mismatch handling ──────────────────────────────────────────
         if (type && user.role !== type) {
-            if (type === 'buyer' && user.role === 'seller') {
+
+            // CASE 1: A seller or admin trying to access the BUYER portal
+            // They can if they also have a buyer profile
+            if (type === 'buyer') {
                 const buyerProfile = await Buyer.findByUserId(user.id);
                 if (buyerProfile) {
-                    // Cross-role: issue a buyer-scoped token against their unified user ID
                     const token = signToken(user.id, 'buyer');
                     return { user, profile: buyerProfile, token, crossRole: true };
                 }
             }
-            // Any other mismatch: typed 401 error so controllers respond correctly
+
+            // CASE 2: A buyer or admin trying to access the SELLER portal
+            // They can if they also have a seller profile
+            if (type === 'seller') {
+                const sellerProfile = await SellerModel.findSellerByUserId(user.id);
+                if (sellerProfile) {
+                    // Issue a token scoped to 'seller' role
+                    const token = signToken(user.id, 'seller');
+                    return { user, profile: sellerProfile, token, crossRole: true };
+                }
+            }
+
+            // No cross-role profile found — typed 401 so controller can give clear message
             const err = new Error(`Wrong portal. This account is registered as a ${user.role}.`);
             err.statusCode = 401;
             err.isRoleMismatch = true;
             throw err;
         }
+        // ── End role mismatch handling ──────────────────────────────────────
 
-        // 4. Fetch profile based on resolved type
+        // Normal path: role matches type (or type is null)
         const targetType = type || user.role;
         let profile = null;
 
@@ -53,21 +65,28 @@ class AuthService {
                 break;
             case 'buyer':
                 profile = await Buyer.findByUserId(user.id);
+                // Legacy buyer: no user_id link yet — find by email and link now
+                if (!profile) {
+                    profile = await Buyer.findByEmail(user.email);
+                    if (profile && !profile.userId) {
+                        // Lazily link the legacy buyer to the unified users record
+                        await pool.query(
+                            'UPDATE buyers SET user_id = $1 WHERE id = $2 AND user_id IS NULL',
+                            [user.id, profile.id]
+                        );
+                        profile.userId = user.id;
+                        profile.user_id = user.id;
+                    }
+                }
                 break;
             case 'admin':
                 if (user.role === 'admin') profile = { id: user.id, email: user.email, role: 'admin' };
                 break;
-            default:
-                break;
         }
 
-        if (!profile && targetType !== 'admin') {
-            return null;
-        }
+        if (!profile && targetType !== 'admin') return null;
 
-        // 5. Generate token using unified user ID
         const token = signToken(user.id, targetType);
-
         return { user, profile, token };
     }
 
