@@ -1,23 +1,22 @@
 class ProductPolicy {
-    /**
-     * Check if user can manage the product
-     * @param {Object} user 
-     * @param {Object} product 
-     * @returns {boolean}
-     */
     static manage(user, product) {
         if (!user || !product) return false;
+        if (user.userType === 'admin' || user.role === 'admin') return true;
 
-        // Admin can manage everything
-        if (user.userType === 'admin') return true;
+        // product.seller_id is sellers.id (profile ID, NOT users.id)
+        const productSellerId = product.seller_id || product.sellerId;
 
-        // Only the owner can manage the product
-        // Note: product.seller_id or product.sellerId depending on how it's fetched
-        const sellerId = product.seller_id || product.sellerId;
-
-        // Match user ID. For sellers, req.user.id is usually their profile ID.
-        return String(user.id) === String(sellerId);
+        // Primary: req.user.sellerId is sellers.id set by crossRoles in auth.js
+        if (user.sellerId && String(user.sellerId) === String(productSellerId)) {
+            return true;
+        }
+        // Secondary: profileId is sellers.id for seller-type JWT
+        if (user.profileId && String(user.profileId) === String(productSellerId)) {
+            return true;
+        }
+        return false;
     }
 }
 
 export default ProductPolicy;
+

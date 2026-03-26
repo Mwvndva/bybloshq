@@ -92,15 +92,24 @@ class AuthorizationService {
      * @returns {Promise<boolean>}
      */
     static async can(user, permission, policy, action, ...args) {
-        // 1. Check basic permission first
         const hasBasePermission = await this.hasPermission(user, permission);
         if (!hasBasePermission) return false;
 
-        // 2. If a policy and action are provided, check those
         if (policy && action && typeof policy[action] === 'function') {
-            return await policy[action](user, ...args);
-        }
+            const result = await policy[action](user, ...args);
 
+            if (!result) {
+                logger.warn(`[POLICY-DENIED] ${action}() blocked ${user.email || user.id}`, {
+                    permission,
+                    userId: user.id,
+                    sellerId: user.sellerId,
+                    buyerId: user.buyerId,
+                    profileId: user.profileId,
+                });
+            }
+
+            return result;
+        }
         return true;
     }
 }

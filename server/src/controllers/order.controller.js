@@ -151,7 +151,13 @@ export const getUserOrders = async (req, res) => {
 export const confirmReceipt = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedOrder = await OrderService.confirmOrderReceipt(id, req.user.buyerId);
+        const buyerId = req.user.buyerId;  // buyers.id
+
+        if (!buyerId) {
+            return res.status(403).json({ status: 'error', message: 'No buyer profile found' });
+        }
+
+        const updatedOrder = await OrderService.confirmOrderReceipt(id, buyerId);
         res.status(200).json({
             status: 'success',
             message: 'Order receipt confirmed',
@@ -168,15 +174,13 @@ export const confirmReceipt = async (req, res) => {
 export const cancelOrder = async (req, res) => {
     try {
         const { id } = req.params;
-        const buyerId = req.user.buyerId; // Explicit Buyer ID from standardized user object
+        const buyerId = req.user.buyerId;  // must be this, not req.user.id
 
-        // Ensure user owns the order before cancelling (Service might not check ownership explicitly if just ID passed, but cancelOrder in service uses generic update logic. Better to be safe: Service usually expects logic.
-        // Actually OrderService.cancelOrder does NOT check ownership heavily except via fetch.
-        // Let's rely on Service or fetch first.
-        // Step 1: verify ownership.
         const order = await Order.findById(id);
         if (!order) return res.status(404).json({ status: 'error', message: 'Order not found' });
-        if (order.buyer_id !== buyerId) return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        if (String(order.buyer_id || order.buyerId) !== String(buyerId)) {
+            return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        }
 
         const updatedOrder = await OrderService.cancelOrder(id, 'Buyer requested cancellation');
         res.status(200).json({ status: 'success', message: 'Order cancelled', data: updatedOrder });
@@ -189,18 +193,31 @@ export const cancelOrder = async (req, res) => {
 export const sellerCancelOrder = async (req, res) => {
     try {
         const { id } = req.params;
-        const sellerId = req.user.sellerId;
+        const sellerProfileId = req.user.sellerId;  // sellers.id from crossRoles
 
-        // Verify ownership
+        if (!sellerProfileId) {
+            return res.status(403).json({ status: 'error', message: 'No seller profile found' });
+        }
+
         const order = await Order.findById(id);
-        if (!order) return res.status(404).json({ status: 'error', message: 'Order not found' });
-        if (order.seller_id !== sellerId) return res.status(401).json({ status: 'error', message: 'Unauthorized' });
+        if (!order) {
+            return res.status(404).json({ status: 'error', message: 'Order not found' });
+        }
+
+        // Compare sellers.id with sellers.id
+        if (String(order.seller_id || order.sellerId) !== String(sellerProfileId)) {
+            return res.status(403).json({ status: 'error', message: 'Unauthorized' });
+        }
 
         const updatedOrder = await OrderService.cancelOrder(id, 'Seller requested cancellation');
-        res.status(200).json({ status: 'success', message: 'Order cancelled', data: updatedOrder });
+        res.status(200).json({
+            status: 'success',
+            message: 'Order cancelled',
+            data: updatedOrder
+        });
     } catch (error) {
-        logger.error('Error cancelling order:', error);
-        res.status(400).json({ status: 'error', message: error.message });
+        logger.error('Error cancelling order (seller):', error);
+        res.status(500).json({ status: 'error', message: error.message });
     }
 };
 

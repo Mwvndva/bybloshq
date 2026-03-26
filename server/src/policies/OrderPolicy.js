@@ -1,50 +1,42 @@
 class OrderPolicy {
-    /**
-     * Check if user can view the order
-     * @param {Object} user 
-     * @param {Object} order 
-     * @returns {boolean}
-     */
     static view(user, order) {
         if (!user || !order) return false;
+        if (user.userType === 'admin' || user.role === 'admin') return true;
 
-        if (user.userType === 'admin') return true;
+        const orderSellerId = String(order.seller_id || order.sellerId || '');
+        const orderBuyerId = String(order.buyer_id || order.buyerId || '');
 
-        const userId = String(user.id);
-        const buyerId = String(order.buyer_id || order.buyerId);
-        const sellerId = String(order.seller_id || order.sellerId);
+        // Seller check: sellers.id vs sellers.id
+        const userSellerId = String(user.sellerId || user.profileId || '');
+        if (userSellerId && userSellerId === orderSellerId) return true;
 
-        return userId === buyerId || userId === sellerId;
+        // Buyer check: buyers.id vs buyers.id
+        const userBuyerId = String(user.buyerId || '');
+        if (userBuyerId && userBuyerId === orderBuyerId) return true;
+
+        return false;
     }
 
-    /**
-     * Check if user can update order status
-     * @param {Object} user 
-     * @param {Object} order 
-     * @param {string} newStatus 
-     * @returns {boolean}
-     */
     static updateStatus(user, order, newStatus) {
         if (!user || !order) return false;
+        if (user.userType === 'admin' || user.role === 'admin') return true;
 
-        if (user.userType === 'admin') return true;
+        const orderSellerId = String(order.seller_id || order.sellerId || '');
+        const orderBuyerId = String(order.buyer_id || order.buyerId || '');
+        const userSellerId = String(user.sellerId || user.profileId || '');
+        const userBuyerId = String(user.buyerId || '');
 
-        const userId = String(user.id);
-        const sellerId = String(order.seller_id || order.sellerId);
-        const buyerId = String(order.buyer_id || order.buyerId);
-
-        // Sellers can update most statuses except COMPLETED (which is confirmed by buyer)
-        if (userId === sellerId) {
+        // Sellers can update most statuses except COMPLETED
+        if (userSellerId && userSellerId === orderSellerId) {
             return newStatus !== 'COMPLETED';
         }
-
-        // Buyers can only move to COMPLETED (Confirm Receipt) or CANCELLED (if allowed)
-        if (userId === buyerId) {
+        // Buyers can only complete or cancel
+        if (userBuyerId && userBuyerId === orderBuyerId) {
             return newStatus === 'COMPLETED' || newStatus === 'CANCELLED';
         }
-
         return false;
     }
 }
 
 export default OrderPolicy;
+
