@@ -16,44 +16,31 @@ import { OrderStatus } from "../constants/enums.js";
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res, next) => {
-  // Support both AuthService format { user, profile, token } and legacy direct user/buyer object if needed
-  // But we aim to use AuthService format primarily.
-
-  let token;
-  let buyer;
-  let user;
+  let token, buyer, user;
 
   if (data.token && data.profile) {
-    // AuthService format
+    // Standard AuthService format
     token = data.token;
     buyer = data.profile;
     user = data.user;
   } else {
-    // Legacy format (if passed user object directly) - avoid this if possible
-    // Assuming 'data' is the buyer object with user_id
+    // Legacy direct buyer object
     buyer = data;
-    // We need to generate token here if not provided?
-    // Better to enforce AuthService format.
-    // But saveBuyerInfo might return just buyer.
     const userId = buyer.user_id || buyer.userId;
+    if (!userId) {
+      // Cannot issue token — buyer not linked to users table
+      console.error('[AUTH] Cannot create token: buyer has no user_id', buyer.id);
+      return next(new AppError('Authentication error. Please contact support.', 500));
+    }
     token = signToken(userId, 'buyer');
   }
 
-  const userId = user?.id || buyer?.user_id || buyer?.userId;
-  if (!userId) {
-    return next(new AppError('Authentication failed: Missing user identification', 401));
-  }
-
   setAuthCookie(res, token);
-
-  // Remove password from output
   if (buyer.password) buyer.password = undefined;
 
-  res.status(statusCode).json({
+  return res.status(statusCode).json({
     status: 'success',
-    data: {
-      buyer: sanitizeBuyer(buyer)
-    },
+    data: { buyer: sanitizeBuyer(buyer) }
   });
 };
 
@@ -62,11 +49,11 @@ export const logout = (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    expires: new Date(0), // Expire immediately
+    expires: new Date(0),
     path: '/'
   };
-  res.cookie('jwt', '', cookieOptions);
-  res.cookie('token', '', cookieOptions);
+  res.cookie('jwt', '', cookieOptions);   // seller/buyer cookie
+  res.cookie('token', '', cookieOptions);   // admin cookie
   res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
@@ -112,22 +99,23 @@ export const register = async (req, res, next) => {
 export const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
-
     if (!email || !password) {
       return next(new AppError('Please provide email and password', 400));
     }
 
     const data = await AuthService.login(email, password, 'buyer');
-
     if (!data) {
       return next(new AppError('Invalid email or password', 401));
     }
 
-    createSendToken(data, 200, req, res);
+    createSendToken(data, 200, req, res, next);
   } catch (error) {
-    // Role mismatch throws a typed error — return 401 not 500
     if (error.isRoleMismatch) {
-      return next(new AppError(error.message, 401));
+      return res.status(401).json({
+        status: 'error',
+        message: error.message,
+        code: 'WRONG_PORTAL'
+      });
     }
     next(error);
   }
@@ -189,28 +177,22 @@ export const resetPassword = async (req, res, next) => {
 
 export const getProfile = async (req, res, next) => {
   try {
-    // CRITICAL: Use req.user.buyerId for strict profile lookup
-    let buyer = await Buyer.findById(req.user.buyerId);
+    // Primary: use explicit buyerProfileId or buyerId from auth middleware
+    const buyerLookupId = req.user.buyerProfileId || req.user.buyerId;
+    let buyer = buyerLookupId ? await Buyer.findById(buyerLookupId) : null;
 
-    // If not found and user has a buyer profile flag, try finding by user_id
-    if (!buyer && req.user.buyerId) {
-      // Use logger.debug instead of console.log
-      logger.debug(`[BuyerController] User ${req.user.email} is ${req.user.userType} but has buyer profile, fetching by buyerId`);
-      buyer = await Buyer.findById(req.user.buyerId);
+    // Fallback: find by user_id (handles admin-who-is-also-buyer)
+    if (!buyer && (req.user.userId || req.user.id)) {
+      buyer = await Buyer.findByUserId(req.user.userId || req.user.id);
     }
 
     if (!buyer) {
-      return next(new AppError('No buyer found with that ID', 404));
+      return next(new AppError('No buyer profile found for this account', 404));
     }
-
-    // Use centralized Strict DTO from sanitize.js
-    const userData = sanitizeBuyer(buyer);
 
     res.status(200).json({
       status: 'success',
-      data: {
-        buyer: userData,
-      },
+      data: { buyer: sanitizeBuyer(buyer) }
     });
   } catch (error) {
     next(error);

@@ -72,14 +72,15 @@ export const protect = async (req, res, next) => {
         break;
       case 'buyer':
         userQuery = `
-            SELECT 
-                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
-                b.id as profile_id, b.full_name, b.whatsapp_number, b.status
-            FROM users u 
-            LEFT JOIN buyers b ON u.id = b.user_id 
-            WHERE u.id = $1 AND b.status = $2
-          `;
-        queryParams.push('active');
+          SELECT
+            u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
+            b.id as profile_id, b.full_name, b.whatsapp_number,
+            COALESCE(b.status, 'active') as status
+          FROM users u
+          LEFT JOIN buyers b ON u.id = b.user_id
+          WHERE u.id = $1
+            AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
+        `;
         break;
       case 'seller':
         userQuery = `

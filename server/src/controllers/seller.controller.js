@@ -47,11 +47,11 @@ export const logout = (req, res) => {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    expires: new Date(0), // Expire immediately
+    expires: new Date(0),
     path: '/'
   };
-  res.cookie('jwt', '', cookieOptions);
-  res.cookie('token', '', cookieOptions);
+  res.cookie('jwt', '', cookieOptions);   // seller/buyer cookie
+  res.cookie('token', '', cookieOptions);   // admin cookie
   res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
@@ -117,12 +117,22 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
     const data = await AuthService.login(email, password, 'seller');
 
-    if (!data) return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
+    if (!data) {
+      return res.status(401).json({ status: 'error', message: 'Invalid email or password' });
+    }
 
     sendTokenResponse(data, 200, res, 'Login successful');
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ status: 'error', message: 'Login failed' });
+    // Role mismatch — give clear, actionable message
+    if (e.isRoleMismatch) {
+      return res.status(401).json({
+        status: 'error',
+        message: e.message, // "Wrong portal. This account is registered as a buyer."
+        code: 'WRONG_PORTAL'
+      });
+    }
+    console.error('Seller login error:', e);
+    res.status(500).json({ status: 'error', message: 'Login failed. Please try again.' });
   }
 };
 
@@ -160,110 +170,71 @@ export const getSellerByShopName = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const seller = await findSellerByUserId(req.user.id);
+    // Primary lookup: by user_id (works for seller, buyer-who-is-seller, admin-who-is-seller)
+    let seller = await findSellerByUserId(req.user.userId || req.user.id);
+
+    // Fallback: auth middleware populated sellerId from cross-role query
+    if (!seller && req.user.sellerId) {
+      seller = await findSellerById(req.user.sellerId);
+    }
 
     if (!seller) {
       return res.status(404).json({
         status: 'error',
-        message: 'Seller not found'
+        message: 'Seller profile not found for this account.'
       });
     }
 
-    // Sanitize seller object - this returns ONLY safe fields
-    const sanitizedSeller = sanitizeSeller(seller);
-
-    res.status(200).json({
+    return res.status(200).json({
       status: 'success',
-      data: {
-        seller: sanitizedSeller  // Return ONLY sanitized data
-      }
+      data: { seller: sanitizeSeller(seller) }
     });
   } catch (error) {
     console.error('Get profile error:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Internal server error'
-    });
+    return res.status(500).json({ status: 'error', message: 'Internal server error' });
   }
 };
 
 export const updateProfile = async (req, res) => {
   try {
-    // Remove password field if it's included in the request body
-    if (req.body.password) {
-      delete req.body.password;
+    // Use sellerId from auth middleware (populated by crossRoles query)
+    const sellerId = req.user.sellerId;
+    if (!sellerId) {
+      return res.status(400).json({ status: 'error', message: 'No seller profile found' });
     }
 
-    // Verify the user has permission to manage shop
+    if (req.body.password) delete req.body.password;
+
     if (!(await req.user.can('manage-shop'))) {
-      console.error('Unauthorized: User does not have manage-shop permission');
-      return res.status(403).json({
-        status: 'error',
-        message: 'Only sellers can update seller profiles'
-      });
+      return res.status(403).json({ status: 'error', message: 'Only sellers can update seller profiles' });
     }
 
-    if (!req.user.id) {
-      console.error('No user ID in request');
-      return res.status(400).json({
-        status: 'error',
-        message: 'User ID is required'
-      });
-    }
-
-    // Check availability if shop name is changing
     if (req.body.shopName) {
-      const currentSeller = await findSellerByUserId(req.user.id);
+      // Use sellerId directly instead of a second lookup
+      const currentSeller = await findSellerById(sellerId);
       if (!currentSeller) {
         return res.status(404).json({ status: 'error', message: 'Seller not found' });
       }
-
-      // Only check if the name is actually different
-      if (req.body.shopName !== currentSeller.shopName) {
-        // Validate length
+      if (req.body.shopName !== currentSeller.shopName && req.body.shopName !== currentSeller.shop_name) {
         if (req.body.shopName.length < 3) {
           return res.status(400).json({ status: 'error', message: 'Shop name must be at least 3 characters' });
         }
-
         const available = await isShopNameAvailable(req.body.shopName);
         if (!available) {
-          return res.status(400).json({
-            status: 'error',
-            message: 'This shop name is already taken'
-          });
+          return res.status(400).json({ status: 'error', message: 'This shop name is already taken' });
         }
       }
     }
 
-    const seller = await updateSeller(req.user.sellerId, req.body);
-
+    const seller = await updateSeller(sellerId, req.body);
     if (!seller) {
-      console.error('Failed to update seller:', req.seller?.id);
-      return res.status(500).json({
-        status: 'error',
-        message: 'Failed to update profile: no seller returned'
-      });
+      return res.status(500).json({ status: 'error', message: 'Failed to update profile' });
     }
 
-
-    res.status(200).json({
-      status: 'success',
-      data: {
-        seller: sanitizeSeller(seller)
-      }
-    });
+    res.status(200).json({ status: 'success', data: { seller: sanitizeSeller(seller) } });
   } catch (error) {
-    console.error('Error updating profile:', {
-      message: error.message,
-      stack: error.stack,
-      code: error.code,
-      details: error.detail || 'No additional details'
-    });
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to update profile',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    console.error('Error updating profile:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to update profile' });
   }
 };
 
