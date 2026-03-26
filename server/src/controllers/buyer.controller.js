@@ -177,8 +177,8 @@ export const resetPassword = async (req, res, next) => {
 
 export const getProfile = async (req, res, next) => {
   try {
-    // Primary: use explicit buyerProfileId or buyerId from auth middleware
-    const buyerLookupId = req.user.buyerProfileId || req.user.buyerId;
+    // Primary: buyers.id, set by auth crossRoles query
+    const buyerLookupId = req.user.buyerId;
     let buyer = buyerLookupId ? await Buyer.findById(buyerLookupId) : null;
 
     // Fallback: find by user_id (handles admin-who-is-also-buyer)
@@ -546,33 +546,28 @@ export const saveBuyerInfo = async (req, res, next) => {
 export const markOrderAsCollected = async (req, res, next) => {
   try {
     const { orderId } = req.params;
-    const buyerId = req.user.buyerId; // Explicit Buyer ID
+    const buyerId = req.user.buyerId;  // buyers.id from crossRoles
 
+    if (!buyerId) {
+      return next(new AppError('No buyer profile found. Cannot collect order.', 403));
+    }
 
     const orderData = await OrderModel.findById(orderId);
-
     if (!orderData) {
       return next(new AppError('Order not found', 404));
     }
 
-    // H-1 FIX: Direct ownership check — only the buyer who placed the order can mark it collected.
-    // user.can('view-orders') was insufficient: sellers could pass it and self-trigger payout.
+    // Compare buyers.id with buyers.id
     if (String(orderData.buyerId) !== String(buyerId)) {
-      return next(new AppError('You can only mark your own orders as collected', 403));
+      return next(new AppError('You can only collect your own orders', 403));
     }
 
-
-    // Call OrderService to mark order as collected (handles status update, payout, notifications)
     const updatedOrder = await OrderService.markAsCollected(orderId, buyerId);
-
 
     res.status(200).json({
       status: 'success',
-      data: {
-        order: sanitizeOrder(updatedOrder, 'buyer')
-      }
+      data: { order: sanitizeOrder(updatedOrder, 'buyer') }
     });
-
   } catch (error) {
     next(error);
   }

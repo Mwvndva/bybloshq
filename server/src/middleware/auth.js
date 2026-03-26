@@ -144,6 +144,10 @@ export const protect = async (req, res, next) => {
       ...userData
     };
 
+    // Add explicit aliases so any code referencing the old non-existent names works
+    user.sellerProfileId = user.sellerId;
+    user.buyerProfileId = user.buyerId;
+
     if (userType !== 'admin') {
       console.log(`[AUTH] Identity verified for ${user.email}: UserID=${user.id}, ProfileID=${user.profileId}, Roles: [${user.hasBuyerProfile ? 'buyer' : ''}${user.hasSellerProfile ? ', seller' : ''}]`);
     }

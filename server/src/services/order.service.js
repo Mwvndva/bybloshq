@@ -251,21 +251,22 @@ class OrderService {
       const order = orderResult.rows[0];
 
       // 2. Permission Check
-      // Strategy 1: User is acting as Seller and matches the order's seller_id
-      const isProfileMatch = (user.userType === 'seller' || user.role === 'seller') && order.seller_id === user.id;
+      const userSellerId = String(user.sellerId || user.profileId || '');
+      const orderSellerId = String(order.seller_id || '');
+      const isAdmin = user.userType === 'admin' || user.role === 'admin';
+      const isSellerMatch = userSellerId && userSellerId === orderSellerId;
 
-      // Strategy 2: User owns the Seller Account (Unified ID check)
-      // This handles cases where user is logged in as 'buyer' but owns the seller account
-      let isUnifiedMatch = false;
-      if (!isProfileMatch) {
-        const sellerCheck = await client.query('SELECT user_id FROM sellers WHERE id = $1', [order.seller_id]);
-        if (sellerCheck.rows.length > 0 && sellerCheck.rows[0].user_id === user.userId) {
-          isUnifiedMatch = true;
+      if (!isAdmin && !isSellerMatch) {
+        // Last-resort fallback: cross-check via users table (handles old tokens)
+        const sellerCheck = await client.query(
+          'SELECT user_id FROM sellers WHERE id = $1', [order.seller_id]
+        );
+        const isUnifiedMatch = sellerCheck.rows.length > 0 &&
+          String(sellerCheck.rows[0].user_id) === String(user.userId || user.id);
+
+        if (!isUnifiedMatch) {
+          throw new Error('Unauthorized: You can only update your own orders');
         }
-      }
-
-      if (!isProfileMatch && !isUnifiedMatch) {
-        throw new Error('Unauthorized: You can only update your own orders');
       }
 
       // 3. Validate Status Transition

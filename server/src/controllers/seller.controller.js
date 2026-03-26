@@ -170,10 +170,10 @@ export const getSellerByShopName = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    // Primary lookup: by user_id (works for seller, buyer-who-is-seller, admin-who-is-seller)
+    // Find by users.id (user_id FK in sellers table)
     let seller = await findSellerByUserId(req.user.userId || req.user.id);
 
-    // Fallback: auth middleware populated sellerId from cross-role query
+    // Fallback: find by sellers.id directly (for admin or cross-role access)
     if (!seller && req.user.sellerId) {
       seller = await findSellerById(req.user.sellerId);
     }
