@@ -17,7 +17,7 @@ export class PaymentService {
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
         this.channelId = process.env.PAYD_CHANNEL_ID;
-        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || 'mwxndx';
+        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || this.username || 'mwxndx';
 
         // Validate required configs
         if (!this.username || !this.password) {
@@ -43,6 +43,7 @@ export class PaymentService {
         logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl}`);
 
         // ✅ FIX 1: Create persistent HTTPS agent with connection pooling
+
         this.httpsAgent = new https.Agent({
             keepAlive: true,              // ✅ Reuse connections
             keepAliveMsecs: 30000,        // ✅ Keep alive for 30s
@@ -234,10 +235,19 @@ export class PaymentService {
                 callback_url
             } = paymentData;
 
+            if (parseFloat(amount) < 10) {
+                logger.error(`[PAYD-PAYIN] Amount ${amount} KES is below minimum of 10 KES. This will fail or timeout.`, {
+                    invoice_id,
+                    amount
+                });
+                // We let it proceed but log the critical reason for most 'DS timeout' failures.
+            }
+
             // Validate credentials
             if (!this.username || !this.password) {
                 throw new PaydError('Payd credentials not configured', PaydErrorCodes.CONFIG_ERROR);
             }
+
 
             // ============================================================
             // STEP 1: CHECK PLATFORM BALANCE (Optional but recommended)
@@ -358,12 +368,13 @@ export class PaymentService {
     normalizePhoneForPayment(phone) {
         let digits = phone.toString().replace(/\D/g, '');
 
+        // Payd V2 Doc Requirement: Kenyan phone number starting with 0 (must be exactly 10 digits)
         if (digits.startsWith('254') && digits.length === 12) {
             digits = '0' + digits.substring(3);
         } else if (digits.length === 9) {
             digits = '0' + digits;
         } else if (digits.startsWith('0') && digits.length === 10) {
-            // Already correct
+            // Already correct as per documentation
         } else {
             throw new PaydError(
                 `Invalid phone number: "${phone}". Expected 10-digit number starting with 0 (e.g. 07XXXXXXXX)`,
@@ -372,6 +383,8 @@ export class PaymentService {
         }
 
         return digits;
+
+
     }
 
     /**
