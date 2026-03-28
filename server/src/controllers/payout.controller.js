@@ -9,7 +9,7 @@ import { pool } from '../config/database.js';
  */
 export const requestPayout = async (req, res, next) => {
   try {
-    const organizerId = req.user?.profileId || req.user?.id;
+    const organizerId = req.user?.id;
     if (!organizerId) return next(new AppError('Authentication required', 401));
 
     const { amount, mpesaNumber, mpesaName, eventId } = req.body;
@@ -62,7 +62,7 @@ export const requestPayout = async (req, res, next) => {
  */
 export const getPayoutHistory = async (req, res, next) => {
   try {
-    const organizerId = req.user?.profileId || req.user?.id;
+    const organizerId = req.user?.id;
     if (!organizerId) return next(new AppError('Authentication required', 401));
 
     const { rows } = await pool.query(

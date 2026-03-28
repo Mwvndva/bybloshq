@@ -6,10 +6,6 @@ import Order from '../models/order.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
 import ReferralService from './referral.service.js';
-import Buyer from '../models/buyer.model.js';
-import ClientModel from '../models/client.model.js';
-import cacheService from './cache.service.js';
-import Product from '../models/product.model.js';
 
 class OrderService {
   /**
@@ -155,6 +151,7 @@ class OrderService {
       // 4c. Update Buyer Location if provided
       if (buyerId && buyerLocation) {
         try {
+          const Buyer = (await import('../models/buyer.model.js')).default;
           await Buyer.updateLocation(buyerId, {
             latitude: buyerLocation.latitude,
             longitude: buyerLocation.longitude,
@@ -749,6 +746,7 @@ class OrderService {
 
       // DRM-FIX-7: Invalidate product cache after order completion (post-commit)
       try {
+        const cacheService = (await import('./cache.service.js')).default;
         await cacheService.clearPattern('products:*');
       } catch (cacheErr) {
         logger.warn('[ORDER] Cache invalidation failed (non-critical):', cacheErr.message);
@@ -1145,8 +1143,8 @@ class OrderService {
       await client.query('BEGIN');
 
       // 1. Upsert Client
+      const ClientModel = (await import('../models/client.model.js')).default;
       const clientRecord = await ClientModel.upsertClient(client, sellerId, clientName, clientPhone);
-
       logger.info(`[ClientOrder] Client upserted: ID ${clientRecord.id}`);
 
       // 2. Validate items
@@ -1385,7 +1383,7 @@ class OrderService {
    * Helper to decrement inventory for sold items
    */
   static async _decrementInventory(client, items) {
-
+    const Product = (await import('../models/product.model.js')).default;
 
     for (const item of items) {
       // Skip digital products or services if they don't track stock

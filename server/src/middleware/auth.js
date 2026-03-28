@@ -4,18 +4,6 @@ import { verifyToken, getTokenFromRequest, changedPasswordAfter } from '../utils
 import AuthorizationService from '../services/authorization.service.js';
 import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
-import logger from '../utils/logger.js';
-
-const authCache = new Map();
-const AUTH_CACHE_TTL = 30 * 1000; // 30 seconds
-
-// Cleanup interval for authCache
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, value] of authCache.entries()) {
-    if (value.expiresAt < now) authCache.delete(key);
-  }
-}, 60 * 1000); // clean every minute
 
 
 // Maps for easy lookup in req.user.can
@@ -59,21 +47,10 @@ export const protect = async (req, res, next) => {
 
     // 2) Verify token
     const decoded = verifyToken(token);
-    const userType = decoded.role || decoded.type;
-
-    // Fix 9: Auth token caching for performance
-    if (userType !== 'admin') {
-      const cachedEntry = authCache.get(token);
-      if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
-        req.user = cachedEntry.user;
-        res.locals.user = cachedEntry.user;
-        return next();
-      }
-    }
 
     // 3) Find user in unified users table
     let user = null;
-    // const userType = decoded.role || decoded.type; // already extracted above
+    const userType = decoded.role || decoded.type; // backward compatibility
 
     if (!userType) {
       return next(new AppError('Invalid token: missing user type/role', 401));
@@ -95,22 +72,21 @@ export const protect = async (req, res, next) => {
         break;
       case 'buyer':
         userQuery = `
-            SELECT
-              u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
-              b.id as profile_id, b.full_name, b.whatsapp_number, b.city, b.location, b.mobile_payment, b.refunds, b.full_address,
-              COALESCE(b.status, 'active') as status
-            FROM users u
-            LEFT JOIN buyers b ON u.id = b.user_id
-            WHERE u.id = $1
-              AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
+          SELECT
+            u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
+            b.id as profile_id, b.full_name, b.whatsapp_number,
+            COALESCE(b.status, 'active') as status
+          FROM users u
+          LEFT JOIN buyers b ON u.id = b.user_id
+          WHERE u.id = $1
+            AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
         `;
         break;
       case 'seller':
         userQuery = `
             SELECT 
                 u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
-                s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings,
-                s.banner_image, s.theme, s.physical_address, s.latitude, s.longitude, s.instagram_link, s.tiktok_link, s.facebook_link, s.slug, s.net_revenue
+                s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings
             FROM users u 
             LEFT JOIN sellers s ON u.id = s.user_id 
             WHERE u.id = $1
@@ -146,11 +122,6 @@ export const protect = async (req, res, next) => {
       `;
       const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
       crossRoles = crossRoleResult.rows[0];
-
-      // Fix 8: Add sellerId null guard
-      if (userType === 'seller' && !crossRoles.seller_id) {
-        logger.warn(`[AUTH] Seller user ${decoded.id} has no linked sellers row. sellerId will be null.`);
-      }
     }
 
     // Standardize user identity to prevent overlap between roles
@@ -186,16 +157,8 @@ export const protect = async (req, res, next) => {
     user.permissions = await AuthorizationService.getUserPermissions(lookupId);
 
     // DEBUG: Log permissions and IDs
-    logger.info(`[AUTH] User ${user.email} (type: ${userType}) IDs: userId=${user.userId}, sellerId=${user.sellerId}, buyerId=${user.buyerId}, lookupId=${lookupId}`);
-    // logger.info(`[AUTH] Permissions for ${user.email}:`, Array.from(user.permissions));
-
-    // Fix 9: Cache the result
-    if (userType !== 'admin') {
-      authCache.set(token, {
-        user,
-        expiresAt: Date.now() + AUTH_CACHE_TTL
-      });
-    }
+    console.log(`[AUTH] User ${user.email} (type: ${userType}) IDs: userId=${user.userId}, id=${user.id}, lookupId=${lookupId}`);
+    console.log(`[AUTH] Permissions for ${user.email}:`, Array.from(user.permissions));
 
 
     // 5) Attach helper method for easier checks in controllers

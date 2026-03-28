@@ -53,13 +53,8 @@ export const sanitizeSeller = (seller) => {
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
         theme: sellerObj.theme,
         hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address), // boolean only — not the address string
-        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
-        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
-        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
-        slug: sellerObj.slug,
         clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
         totalSales: parseFloat(sellerObj.totalSales || sellerObj.total_sales || 0),
-        netRevenue: parseFloat(sellerObj.netRevenue || sellerObj.net_revenue || 0),
     };
 };
 
