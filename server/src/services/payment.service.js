@@ -276,32 +276,43 @@ export class PaymentService {
             // ============================================================
             // STEP 4: MAKE API REQUEST
             // ============================================================
-            const response = await this._retryRequest(async () => {
-                return await this.client.post('/payments', payload, {
-                    headers: {
-                        'Authorization': this.getAuthHeader(),
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
+            // C-1b: Wrap external API call in try/catch to prevent pool leaks
+            let response;
+            try {
+                response = await this._retryRequest(async () => {
+                    return await this.client.post('/payments', payload, {
+                        headers: {
+                            'Authorization': this.getAuthHeader(),
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        }
+                    });
+                }, 3, 1000);
+            } catch (error) {
+                logger.error('[PAYD-PAYIN] API Request Failed', {
+                    error: error.message,
+                    code: error.response?.status,
+                    data: error.response?.data
                 });
-            }, 3, 1000);
+                throw error;
+            }
 
             const duration = Date.now() - startTime;
 
             // ============================================================
             // STEP 5: PARSE RESPONSE
             // ============================================================
-            const resData = response.data.data || response.data;
+            // Payd v2 returns reference at root level, not nested
+            const resData = response.data
+            const reference = resData.transaction_reference
 
-            // Extract transaction reference (Standardizing on transaction_reference)
-            const reference = resData.transaction_reference;
             if (!reference) {
-                logger.error('[PAYD-PAYIN] No transaction_reference in response', { invoice_id, raw: resData });
+                logger.error('[PAYD-PAYIN] No transaction_reference in response', { invoice_id, raw: resData })
                 throw new PaydError(
-                    'Payd did not return a transaction_reference. Cannot track this payment.',
+                    'Payd did not return a transaction_reference. Payment request may still be processing — check webhook.',
                     PaydErrorCodes.TRANSACTION_FAILED,
                     500
-                );
+                )
             }
 
             logger.info('[PAYD-PAYIN] Payment initiated successfully', {
@@ -341,22 +352,39 @@ export class PaymentService {
      * @returns {string} e.g., "254712345678" or "0712345678"
      */
     normalizePhoneForPayment(phone) {
-        let digits = phone.toString().replace(/\D/g, '');
+        if (!phone) throw new PaydError('Phone number is required', PaydErrorCodes.INVALID_PHONE, 400)
+        let digits = phone.toString().replace(/\D/g, '')
 
+        // Handle +254XXXXXXXXX or 254XXXXXXXXX → 0XXXXXXXXX
         if (digits.startsWith('254') && digits.length === 12) {
-            digits = '0' + digits.substring(3);
-        } else if (digits.length === 9) {
-            digits = '0' + digits;
-        } else if (digits.startsWith('0') && digits.length === 10) {
-            // Already correct
-        } else {
+            digits = '0' + digits.substring(3)
+        }
+        // Handle 9-digit bare number → 0XXXXXXXXX
+        else if (digits.length === 9) {
+            digits = '0' + digits
+        }
+        // Handle 0XXXXXXXXX — already correct
+        else if (digits.startsWith('0') && digits.length === 10) {
+            // good
+        }
+        else {
             throw new PaydError(
-                `Invalid phone number: "${phone}". Expected 10-digit number starting with 0 (e.g. 07XXXXXXXX)`,
-                PaydErrorCodes.INVALID_PHONE
-            );
+                `Invalid phone number: "${phone}". Must be a valid Kenyan number (e.g. 0712345678)`,
+                PaydErrorCodes.INVALID_PHONE,
+                400
+            )
         }
 
-        return digits;
+        // Final validation: must be 0[17]\d{8}
+        if (!/^0[17]\d{8}$/.test(digits)) {
+            throw new PaydError(
+                `Phone number "${digits}" is not a valid Kenyan mobile number`,
+                PaydErrorCodes.INVALID_PHONE,
+                400
+            )
+        }
+
+        return digits
     }
 
     /**
@@ -644,12 +672,8 @@ export class PaymentService {
             return { status: 'error', message: 'Record not found' };
         }
 
-        if (payment.status !== PaymentStatus.PENDING) {
-            logger.warn(`[IDEMPOTENCY] Payment ${payment.id} already processed (status: ${payment.status}). Skipping duplicate webhook.`, {
-                paymentId: payment.id,
-                currentStatus: payment.status,
-                webhookReference: reference
-            });
+        if (payment.status === 'completed') {
+            logger.info('[PAYD-PAYIN] Payment already marked completed. Skipping side effects.', { reference });
             return { status: 'already_processed', message: 'Payment already completed' };
         }
 
@@ -750,12 +774,13 @@ export class PaymentService {
                 const completionResult = await OrderSvc.completeOrder(updatedPayment);
                 logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
             } catch (completionErr) {
-                logger.error('[CRITICAL] completeOrder failed after payment confirmed — flagging for retry:', completionErr);
-                // Mark payment so a cron job can retry completion
+                // P-4: Robustness - ensure payment is marked failed if order completion fails
+                logger.error('[PAYD-PAYIN] Critical failure in order completion logic:', completionErr);
                 await pool.query(
-                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata,'{}'), '{needs_completion}', 'true') WHERE id = $1`,
-                    [updatedPayment.id]
+                    'UPDATE payments SET status = $1, metadata = metadata || $2::jsonb WHERE id = $3',
+                    ['failed', JSON.stringify({ completion_error: completionErr.message }), updatedPayment.id]
                 );
+                throw completionErr;
             }
             return { status: 'success', message: 'Payment processed and Order completion triggered' };
 

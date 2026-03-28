@@ -15,8 +15,11 @@ import { pool } from '../config/database.js';
  */
 export const getDashboard = async (req, res, next) => {
     try {
-        const sellerId = req.user?.id;
-        if (!sellerId) return next(new AppError('Authentication required', 401));
+        const sellerId = req.user?.sellerId;
+        if (!sellerId) {
+            return next(new AppError('No seller profile linked to this account', 400));
+        }
+
 
         const dashboard = await ReferralService.getReferralDashboard(sellerId);
 
@@ -41,8 +44,11 @@ export const getDashboard = async (req, res, next) => {
  */
 export const generateCode = async (req, res, next) => {
     try {
-        const sellerId = req.user?.id;
-        if (!sellerId) return next(new AppError('Authentication required', 401));
+        const sellerId = req.user?.sellerId;
+        if (!sellerId) {
+            return next(new AppError('No seller profile linked to this account', 400));
+        }
+
 
         // Check if seller already has a code — if so, return it directly
         const sellerResult = await pool.query(

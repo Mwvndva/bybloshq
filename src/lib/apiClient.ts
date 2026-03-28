@@ -18,13 +18,6 @@ if (isDevelopment && !envApiUrl) {
 }
 
 // Log API configuration in development
-if (isDevelopment) {
-    console.log('🔧 [API Client] Configuration:', {
-        baseURL,
-        environment: import.meta.env.MODE,
-        withCredentials: true
-    });
-}
 
 const apiClient = axios.create({
     baseURL,
@@ -56,7 +49,6 @@ export const getFreshCsrfToken = async () => {
 apiClient.interceptors.request.use(
     (config: any) => {
         if (isDevelopment) {
-            console.log(`📤 [API Request] ${config.method?.toUpperCase()} ${config.url}`);
         }
 
         // Attach CSRF token to non-GET requests
@@ -90,7 +82,6 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
     (response) => {
         if (isDevelopment) {
-            console.log(`📥 [API Response] ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
         }
         return response;
     },
@@ -121,7 +112,6 @@ apiClient.interceptors.response.use(
 
             // REHYDRATION CHECK: If app is currently checking auth, queue the error
             if (authStateManager.isCurrentlyRehydrating()) {
-                console.log('[API Client] 401 during rehydration - queuing error');
                 authStateManager.queueError(error);
                 return Promise.reject(error);
             }

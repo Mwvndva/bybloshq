@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, Clock, Users, Ticket, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -273,6 +273,7 @@ const NewAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [searchQuery, setSearchQuery] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Initialize state for dashboard data with proper typing
   // State for ticket buyers modal
@@ -317,12 +318,11 @@ const NewAdminDashboard = () => {
     topShops: []
   });
 
-  // Fetch dashboard data in a separate effect
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
 
-    const fetchData = async () => {
-      console.log('Starting to fetch dashboard data...');
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
       try {
         const [
           analytics,
@@ -335,49 +335,19 @@ const NewAdminDashboard = () => {
           dashboardStats,
           clients
         ] = await Promise.all([
-          adminApi.getAnalytics().then(data => {
-            console.log('Analytics data received:', data);
-            return data;
-          }),
-          adminApi.getSellers().then(data => {
-            console.log('Sellers data received:', data);
-            return data;
-          }),
-          adminApi.getBuyers().then(data => {
-            console.log('Buyers data received:', data);
-            return data;
-          }),
-          adminApi.getWithdrawalRequests().then(data => {
-            console.log('Withdrawal requests data received:', data);
-            return data;
-          }),
-          adminApi.getMonthlyMetrics().then(data => {
-            console.log('Monthly metrics data received:', data);
-            console.log('Monthly metrics data.data:', data?.data);
-            return data;
-          }),
-          adminApi.getFinancialMetrics().then(data => {
-            console.log('Financial metrics data received:', data);
-            return data;
-          }),
-          adminApi.getMonthlyFinancialData().then(data => {
-            console.log('Monthly financial data received:', data);
-            return data;
-          }),
-          adminApi.getDashboardStats().then(data => {
-            console.log('Dashboard stats received:', data);
-            return data;
-          }),
-          adminApi.getClients().then(data => {
-            console.log('Clients data received:', data);
-            return data;
-          })
+          adminApi.getAnalytics(),
+          adminApi.getSellers(),
+          adminApi.getBuyers(),
+          adminApi.getWithdrawalRequests(),
+          adminApi.getMonthlyMetrics(),
+          adminApi.getFinancialMetrics(),
+          adminApi.getMonthlyFinancialData(),
+          adminApi.getDashboardStats(),
+          adminApi.getClients()
         ]);
 
-        // Ensure we have safe defaults if any data is missing
         const totalSellersCount = Array.isArray(sellers) ? sellers.length : 0;
         const totalBuyersCount = Array.isArray(buyers) ? buyers.length : 0;
-        const totalClientsCount = dashboardStats?.totalClients || 0;
 
         const safeAnalytics: DashboardAnalytics = {
           totalRevenue: financialMetrics?.totalSales || 0,
@@ -397,9 +367,7 @@ const NewAdminDashboard = () => {
           }
         };
 
-        console.log('Total sellers calculated:', totalSellersCount);
-
-        // Extract the data properly - handle both direct array and nested data structure
+        setDashboardState(prev => ({ ...prev, analytics: { ...prev.analytics, totalSellers: totalSellersCount } }));
         let metricsData = [];
         if (Array.isArray(monthlyMetrics)) {
           metricsData = monthlyMetrics;
@@ -432,25 +400,23 @@ const NewAdminDashboard = () => {
         console.error('Error fetching dashboard data:', err);
       } finally {
         setIsInitialized(true);
+        setIsLoading(false);
       }
     };
 
-    fetchData();
+    fetchDashboardData();
   }, [authLoading, isAuthenticated]);
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate('/admin/login', { replace: true });
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Helper function to determine if trend should be shown
   const shouldShowTrend = (trend: number) => {
     return trend !== 0 || dashboardState.analytics.monthlyGrowth?.revenue !== 0;
   };
 
-  // Safe date formatting helper to prevent RangeError
   const safeFormatDate = (dateString: string | null | undefined, formatStr: string = 'MMM d, yyyy') => {
     if (!dateString) return 'N/A';
     try {
@@ -458,12 +424,10 @@ const NewAdminDashboard = () => {
       if (isNaN(date.getTime())) return 'N/A';
       return format(date, formatStr);
     } catch (error) {
-      console.error('Date formatting error:', error, 'for value:', dateString);
       return 'N/A';
     }
   };
 
-  // Stats cards data with proper type safety
   const statsCards: StatsCardProps[] = [
     {
       title: 'Total Products',
@@ -515,7 +479,7 @@ const NewAdminDashboard = () => {
       value: `KSh ${dashboardState.financialMetrics.totalRefunds.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       icon: <DollarSign className="h-4 w-4 text-red-600" />,
       description: `${dashboardState.financialMetrics.totalRefundRequests} completed`,
-      trend: null // Refunds don't have growth tracking
+      trend: null
     },
     {
       title: 'Total Wishlists',
@@ -533,7 +497,6 @@ const NewAdminDashboard = () => {
     }
   ];
 
-  // Format metrics data for the chart
   const metricsData = useMemo(() => {
     if (!dashboardState.monthlyMetrics?.length) {
       return [];
@@ -543,7 +506,6 @@ const NewAdminDashboard = () => {
       return dashboardState.monthlyMetrics.map(metric => {
         const date = new Date(metric.month);
         if (isNaN(date.getTime())) {
-          console.warn('Invalid date in metric:', metric);
           return null;
         }
 
@@ -556,12 +518,10 @@ const NewAdminDashboard = () => {
         };
       }).filter(Boolean);
     } catch (error) {
-      console.error('Error processing metrics data:', error);
       return [];
     }
   }, [dashboardState.monthlyMetrics]);
 
-  // Custom tooltip for metrics chart
   const MetricsTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
@@ -590,7 +550,6 @@ const NewAdminDashboard = () => {
   };
 
 
-  // Show loading state while checking auth or loading data
   if (authLoading || !isAuthenticated || !isInitialized) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -599,37 +558,27 @@ const NewAdminDashboard = () => {
     );
   }
 
-  // Loading and error states are already handled at the top of the component
-
-
-
-  // Handle viewing seller details
   const handleViewSeller = async (sellerId: string) => {
     try {
       setIsLoadingSeller(true);
       const response = await adminApi.getSellerById(sellerId);
       setSelectedSeller(response);
     } catch (error) {
-      console.error('Error fetching seller details:', error);
       toast.error('Failed to load seller details');
     } finally {
       setIsLoadingSeller(false);
     }
   };
 
-  // Close seller details modal
   const closeSellerModal = () => {
     setSelectedSeller(null);
   };
 
-  // Handle toggling seller status (active/inactive)
   const handleToggleSellerStatus = async (sellerId: string, newStatus: 'active' | 'inactive') => {
     try {
-      // Call the API to update the seller status
       const response = await adminApi.updateSellerStatus(sellerId, { status: newStatus });
 
       if (response.data.status === 'success') {
-        // Update the UI to reflect the new status
         setDashboardState(prevState => ({
           ...prevState,
           sellers: prevState.sellers.map(seller =>
@@ -1058,10 +1007,6 @@ const NewAdminDashboard = () => {
                       <div>
                         <p className="text-sm text-gray-500 font-medium">Phone (Mobile Payment)</p>
                         <p className="text-base text-gray-200">{selectedBuyer.phone || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">WhatsApp Number</p>
-                        <p className="text-base text-gray-200">{selectedBuyer.whatsapp_number || 'N/A'}</p>
                       </div>
                       <div>
                         <p className="text-sm text-gray-500 font-medium">City</p>

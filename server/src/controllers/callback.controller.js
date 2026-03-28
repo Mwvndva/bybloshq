@@ -35,6 +35,7 @@ export const handlePaydPayoutCallback = async (req, res) => {
         const client = await pool.connect();
         try {
             const transactionReference = payload.transaction_reference;
+            logger.info(`[PAYOUT-CALLBACK] Matching webhook transaction_reference: ${transactionReference}`);
             const resultCode = payload.result_code;
             const paydStatus = payload.status;
             const mpesaReceipt = payload.third_party_trans_id || null;

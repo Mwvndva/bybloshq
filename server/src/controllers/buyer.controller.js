@@ -29,7 +29,7 @@ const createSendToken = (data, statusCode, req, res, next) => {
     const userId = buyer.user_id || buyer.userId;
     if (!userId) {
       // Cannot issue token — buyer not linked to users table
-      console.error('[AUTH] Cannot create token: buyer has no user_id', buyer.id);
+      logger.error('[AUTH] Cannot create token: buyer has no user_id', buyer.id);
       return next(new AppError('Authentication error. Please contact support.', 500));
     }
     token = signToken(userId, 'buyer');
@@ -139,7 +139,7 @@ export const forgotPassword = async (req, res, next) => {
       message: 'If an account exists with this email, you will receive a password reset link.'
     });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error:', error);
     return res.status(500).json({
       status: 'error',
       message: 'An error occurred while processing your request'
@@ -226,7 +226,8 @@ export const updateProfile = async (req, res, next) => {
       if (password !== passwordConfirm) {
         return next(new AppError('Passwords do not match', 400));
       }
-      await Buyer.updatePassword(req.user.buyerId, password);
+      // B-2 FIX: Use unified User model for password updates
+      await User.updatePassword(req.user.id, password);
     }
 
     // 4) If there's nothing else to update, return early
@@ -250,7 +251,7 @@ export const updateProfile = async (req, res, next) => {
     }
 
     if (!updatedBuyer) {
-      console.error('Failed to update buyer profile');
+      logger.error('Failed to update buyer profile');
       return next(new AppError('Error updating profile', 500));
     }
 
@@ -262,7 +263,7 @@ export const updateProfile = async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error('Error in updateProfile:', error);
+    logger.error('Error in updateProfile:', error);
     next(error);
   }
 };
@@ -311,7 +312,7 @@ export const checkBuyerByPhone = async (req, res, next) => {
 
     if (existingBuyer) {
       // Buyer exists - return buyer info BUT NO TOKEN
-      // console.log('Buyer found with phone');
+      // logger.info('Buyer found with phone');
 
       // SECURITY FIX: Do not generate token here
       // const token = signToken(existingBuyer.id, 'buyer');
@@ -350,7 +351,7 @@ export const checkBuyerByPhone = async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.error('Error in checkBuyerByPhone:', error);
+    logger.error('Error in checkBuyerByPhone:', error);
     next(error);
   }
 };
@@ -379,7 +380,7 @@ export const getPendingRefundRequests = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching pending refund requests:', error);
+    logger.error('Error fetching pending refund requests:', error);
     next(error);
   }
 };
@@ -393,7 +394,7 @@ export const requestRefund = async (req, res, next) => {
     const { amount } = req.body;
     const buyerId = req.user.buyerId;
 
-    console.log('Refund request from buyer:', buyerId, 'Amount:', amount);
+    logger.info('Refund request from buyer:', buyerId, 'Amount:', amount);
 
     if (!amount || amount <= 0) {
       return next(new AppError('Invalid refund amount', 400));
@@ -433,7 +434,7 @@ export const requestRefund = async (req, res, next) => {
       paymentDetailsJson
     ]);
 
-    console.log('Refund request created:', result.rows[0].id);
+    logger.info('Refund request created:', result.rows[0].id);
 
     res.status(201).json({
       status: 'success',
@@ -443,7 +444,7 @@ export const requestRefund = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Error in requestRefund:', error);
+    logger.error('Error in requestRefund:', error);
     next(error);
   }
 };
@@ -538,7 +539,7 @@ export const saveBuyerInfo = async (req, res, next) => {
     }
 
   } catch (error) {
-    console.error('Error in saveBuyerInfo:', error);
+    logger.error('Error in saveBuyerInfo:', error);
     next(error);
   }
 };

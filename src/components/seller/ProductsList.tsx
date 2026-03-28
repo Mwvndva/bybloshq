@@ -794,7 +794,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     placeholder="5"
                   />
                   <p className="text-xs text-zinc-400">
-                    You'll receive a WhatsApp alert when stock falls to or below this level
+                    You'll receive an email alert when stock falls to or below this level
                   </p>
                 </div>
               </>

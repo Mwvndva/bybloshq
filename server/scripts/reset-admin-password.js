@@ -17,7 +17,12 @@ import { pool } from '../src/config/database.js';
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bybloshq.space';
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '14253553805';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+    console.error('❌ ERROR: ADMIN_PASSWORD environment variable is required');
+    console.error('   Usage: ADMIN_PASSWORD=your_secure_password node scripts/reset-admin-password.js');
+    process.exit(1);
+}
 const SALT_ROUNDS = 12;
 // ─────────────────────────────────────────────────────────────────────────────
 

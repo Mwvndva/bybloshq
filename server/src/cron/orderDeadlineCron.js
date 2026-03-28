@@ -19,6 +19,18 @@ const scheduleOrderDeadlineChecks = (options = {}) => {
 
     logger.info(`Scheduling order deadline checks with schedule: ${schedule}`);
 
+    // C-5: Add health check for stale pending orders
+    const checkExpiredPendingOrders = async () => {
+        const { pool } = await import('../config/database.js');
+        await pool.query(`
+            UPDATE product_orders 
+            SET status = 'FAILED', 
+                metadata = (COALESCE(metadata::jsonb, '{}'::jsonb) || '{"reason": "Payd STK push expired or never completed"}'::jsonb)::text
+            WHERE status = 'PENDING' 
+              AND created_at < NOW() - INTERVAL '30 minutes'
+        `);
+    };
+
     return cron.schedule(schedule, async () => {
         const startTime = Date.now();
         const jobId = `order-deadline-${startTime}`;
@@ -26,6 +38,7 @@ const scheduleOrderDeadlineChecks = (options = {}) => {
         logger.info(`[${jobId}] Starting order deadline checks`);
 
         try {
+            await checkExpiredPendingOrders();
             const results = await OrderDeadlineService.runAllChecks();
             const duration = (Date.now() - startTime) / 1000;
 

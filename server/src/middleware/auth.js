@@ -14,6 +14,21 @@ const policies = {
   order: OrderPolicy
 };
 
+// Short-lived in-memory cache for auth results to reduce DB load under concurrent requests
+// Key: JWT token, Value: { user, expiresAt }
+// 30 seconds is safe — permissions don't change frequently, and logout
+// invalidates the token in the blacklist (still checked before cache)
+const _authCache = new Map();
+const AUTH_CACHE_TTL_MS = 30 * 1000;
+
+// Cleanup stale entries every 2 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, val] of _authCache.entries()) {
+    if (val.expiresAt < now) _authCache.delete(key);
+  }
+}, 2 * 60 * 1000).unref(); // .unref() so this doesn't prevent process exit
+
 /**
  * Middleware to restrict access based on permissions
  * @param  {...string} permissions 
@@ -56,6 +71,16 @@ export const protect = async (req, res, next) => {
 
     if (!userType) {
       return next(new AppError('Invalid token: missing user type/role', 401));
+    }
+
+    // Cache lookup (skip for admin — always verify fresh)
+    if (userType !== 'admin') {
+      const cached = _authCache.get(token);
+      if (cached && cached.expiresAt > Date.now()) {
+        req.user = cached.user;
+        res.locals.user = cached.user;
+        return next();
+      }
     }
 
     // Admin users authenticate via database (no special hardcoded bypass)
@@ -183,6 +208,14 @@ export const protect = async (req, res, next) => {
 
     req.user = user;
     res.locals.user = user;
+
+    // Cache the auth result (not for admin)
+    if (userType !== 'admin') {
+      _authCache.set(token, {
+        user,
+        expiresAt: Date.now() + AUTH_CACHE_TTL_MS
+      });
+    }
 
     next();
 

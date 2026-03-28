@@ -15,10 +15,11 @@ if (process.env.DATABASE_URL) {
     ssl: process.env.DATABASE_URL.includes('render.com') || process.env.NODE_ENV === 'production'
       ? { rejectUnauthorized: false }
       : false,
-    connectionTimeoutMillis: 30000,
-    idleTimeoutMillis: 10000,
-    max: 10,
-    query_timeout: 60000,
+    connectionTimeoutMillis: 10000, // Fail fast if no connection available after 10s
+    idleTimeoutMillis: 30000,       // Keep idle connections open 30s to reduce reconnect overhead
+    max: 25,                        // 25 connections for application use
+    query_timeout: 30000,           // 30s query timeout
+    allowExitOnIdle: false,         // Keep pool alive between requests
   });
 } else {
   const requiredEnvVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
@@ -37,10 +38,11 @@ if (process.env.DATABASE_URL) {
     database: process.env.DB_NAME,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    connectionTimeoutMillis: 30000,  // 30 seconds timeout waiting for a client
-    idleTimeoutMillis: 10000,       // 10 seconds idle timeout (faster release)
-    max: 10,                        // reduced max number of clients for better headroom in dev
-    query_timeout: 60000,           // 60 seconds query timeout
+    connectionTimeoutMillis: 10000, // Fail fast if no connection available after 10s
+    idleTimeoutMillis: 30000,       // Keep idle connections open 30s to reduce reconnect overhead
+    max: 25,                        // 25 connections for application use
+    query_timeout: 30000,           // 30s query timeout
+    allowExitOnIdle: false,         // Keep pool alive between requests
   };
 
   // Log database connection details (without password)
