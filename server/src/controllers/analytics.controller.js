@@ -12,6 +12,9 @@ export const getSellerAnalytics = async (req, res, next) => {
   }
 
   const sellerId = req.user.sellerId;
+  if (!sellerId) {
+    return next(new AppError('No seller profile linked to this account. Please contact support.', 400));
+  }
 
   try {
     // Run all read-only queries in parallel — no transaction needed
