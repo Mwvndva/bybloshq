@@ -1,10 +1,10 @@
 import { Suspense } from 'react';
-import { RouteObject, Outlet } from 'react-router-dom';
+import { RouteObject, createBrowserRouter, RouterProvider, Outlet } from 'react-router-dom';
 import { AdminProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { Toaster } from '@/components/ui/toaster';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { safeLazy } from '@/utils/safeLazy';
-import { RouteFallback } from '@/components/common/RouteFallback';
+import { Loader2 } from 'lucide-react';
 
 const NewAdminDashboard = safeLazy(() => import('@/pages/admin/NewDashboardPage'));
 const AdminLoginPage = safeLazy(() => import('@/pages/admin/AdminLoginPage').then(m => m.AdminLoginPage));
@@ -14,7 +14,7 @@ export const adminRoutes: RouteObject[] = [
   {
     path: 'login',
     element: (
-      <Suspense fallback={<RouteFallback />}>
+      <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
         <AdminLoginPage />
       </Suspense>
     ),
@@ -23,7 +23,7 @@ export const adminRoutes: RouteObject[] = [
     path: 'dashboard',
     element: (
       <AdminProtectedRoute>
-        <Suspense fallback={<RouteFallback />}>
+        <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
           <NewAdminDashboard />
         </Suspense>
       </AdminProtectedRoute>
@@ -33,7 +33,7 @@ export const adminRoutes: RouteObject[] = [
     path: '',
     element: (
       <AdminProtectedRoute>
-        <Suspense fallback={<RouteFallback />}>
+        <Suspense fallback={<Loader2 className="h-8 w-8 animate-spin" />}>
           <NewAdminDashboard />
         </Suspense>
       </AdminProtectedRoute>
@@ -61,4 +61,5 @@ const adminRoutesWithLayout: RouteObject[] = [
 // Create and export the admin router
 export const adminRouter = {
   routes: adminRoutesWithLayout,
+  router: createBrowserRouter(adminRoutesWithLayout),
 };

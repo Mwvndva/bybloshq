@@ -4,10 +4,12 @@ import { Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGlobalAuth } from '@/contexts/GlobalAuthContext';
 import apiClient from '@/lib/apiClient';
+import { ApiResponse } from '@/types';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { logout } = useGlobalAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Processing your payment...');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -26,8 +28,8 @@ export default function PaymentSuccess() {
 
       try {
         // Verify payment with backend
-        const response = await apiClient.get(`/payments/status/${reference}`);
-        const paymentData = (response as any).data.data;
+        const response = await apiClient.get<ApiResponse<{ status: string }>>(`/payments/status/${reference}`);
+        const paymentData = response.data.data;
 
         if (paymentData.status === 'completed' || paymentData.status === 'success') {
           setStatus('success');
@@ -92,10 +94,15 @@ export default function PaymentSuccess() {
 
             {/* Close Button */}
             <button
-              onClick={() => {
+              onClick={async () => {
                 setShowSuccessModal(false);
-                navigate('/buyer/dashboard', {
-                  state: { activeSection: 'orders' }
+                // Clear any existing session to ensure fresh login
+                await logout();
+                navigate('/buyer/login', {
+                  state: {
+                    message: 'Payment successful! Please log in to view your order.',
+                    paymentReference: orderReference
+                  }
                 });
               }}
               className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10"
@@ -130,26 +137,35 @@ export default function PaymentSuccess() {
               {/* Divider */}
               <div className="h-px bg-gradient-to-r from-transparent via-emerald-500/30 to-transparent" />
 
-              <p className="text-base text-gray-300">
-                Click below to view your orders and track your purchase.
-              </p>
+              {/* Login Instruction */}
+              <div className="space-y-4">
+                <p className="text-base text-gray-300">
+                  Please log in to your buyer account to track this order.
+                </p>
 
-              <button
-                onClick={() => {
-                  navigate('/buyer/dashboard', {
-                    state: { activeSection: 'orders' }
-                  });
-                }}
-                className="group relative w-full px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-lg rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:scale-[1.02] active:scale-[0.98]"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                <span className="relative flex items-center justify-center gap-2">
-                  View My Orders
-                  <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </span>
-              </button>
+                {/* Go to Login Button */}
+                <button
+                  onClick={async () => {
+                    // Clear any existing session to ensure fresh login
+                    await logout();
+                    navigate('/buyer/login', {
+                      state: {
+                        message: 'Payment successful! Please log in to view your order.',
+                        paymentReference: orderReference
+                      }
+                    });
+                  }}
+                  className="group relative w-full px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-lg rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                  <span className="relative flex items-center justify-center gap-2">
+                    Go to Login
+                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                    </svg>
+                  </span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

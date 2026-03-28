@@ -1,65 +1,11 @@
 
-import { useEffect, useState, useCallback, useMemo, memo } from 'react';
-import ProductCard from './ProductCard';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { ProductCard } from './ProductCard';
 import { Aesthetic, Seller, Product } from '@/types';
 import { publicApiService } from '@/api/publicApi';
 import { AestheticWithNone, ProductGridProps } from '@/types/components';
 
-// Transform product data to ensure it matches our Product interface
-const transformProduct = (product: any): Product | null => {
-  // Relaxed validation: Allow missing images (will use placeholder)
-  if (!product.id || !product.name || product.price === undefined) {
-    console.error('Product is missing required fields:', product);
-    return null; // Skip invalid products instead of crashing
-  }
-
-  const transformedProduct: any = {
-    id: String(product.id || ''),
-    name: String(product.name || 'Unnamed Product'),
-    description: String(product.description || ''),
-    price: Number(product.price) || 0,
-    image_url: product.image_url || product.imageUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80',
-    sellerId: String(product.sellerId || product.seller_id || ''),
-    isSold: Boolean(product.isSold || product.status === 'sold'),
-    status: product.status || (product.isSold ? 'sold' : 'available'),
-    soldAt: product.soldAt || product.sold_at || null,
-    createdAt: product.createdAt || product.created_at || new Date().toISOString(),
-    updatedAt: product.updatedAt || product.updated_at || new Date().toISOString(),
-    aesthetic: (product.aesthetic || 'noir') as Aesthetic,
-    is_digital: product.is_digital || product.isDigital,
-    product_type: product.product_type || product.productType || 'physical',
-    service_options: product.service_options || product.serviceOptions,
-    service_locations: product.service_locations || product.serviceLocations,
-  };
-
-  // Add seller information if available
-  if (product.seller) {
-    transformedProduct.seller = {
-      id: String(product.seller.id || ''),
-      fullName: product.seller.fullName || product.seller.full_name || 'Unknown Seller',
-      email: product.seller.email || '',
-      phone: product.seller.phone || '',
-      location: product.seller.location || null,
-      city: product.seller.city || null,
-      // New physical shop fields
-      hasPhysicalShop: product.seller.hasPhysicalShop || false,
-      physicalAddress: product.seller.physicalAddress || null,
-      latitude: product.seller.latitude || null,
-      longitude: product.seller.longitude || null,
-
-      createdAt: product.seller.createdAt || product.seller.created_at || new Date().toISOString(),
-      updatedAt: product.seller.updatedAt || product.seller.updated_at,
-      ...(product.seller.bio && { bio: product.seller.bio }),
-      ...(product.seller.avatarUrl && { avatarUrl: product.seller.avatarUrl }),
-      ...(product.seller.website && { website: product.seller.website }),
-      ...(product.seller.socialMedia && { socialMedia: product.seller.socialMedia })
-    };
-  }
-
-  return transformedProduct;
-};
-
-const ProductGrid = memo(({ selectedAesthetic, searchQuery = '', locationCity, locationArea, priceMin, priceMax }: ProductGridProps) => {
+const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locationArea, priceMin, priceMax }: ProductGridProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -71,6 +17,60 @@ const ProductGrid = memo(({ selectedAesthetic, searchQuery = '', locationCity, l
   const getCacheKey = useCallback((params: any) => {
     return JSON.stringify(params);
   }, []);
+
+  // Transform product data to ensure it matches our Product interface
+  const transformProduct = (product: any): Product | null => {
+    // Relaxed validation: Allow missing images (will use placeholder)
+    if (!product.id || !product.name || product.price === undefined) {
+      console.error('Product is missing required fields:', product);
+      return null; // Skip invalid products instead of crashing
+    }
+
+    const transformedProduct: any = {
+      id: String(product.id || ''),
+      name: String(product.name || 'Unnamed Product'),
+      description: String(product.description || ''),
+      price: Number(product.price) || 0,
+      image_url: product.image_url || product.imageUrl || 'https://images.unsplash.com/photo-1557683316-973673baf926?auto=format&fit=crop&w=800&q=80',
+      sellerId: String(product.sellerId || product.seller_id || ''),
+      isSold: Boolean(product.isSold || product.status === 'sold'),
+      status: product.status || (product.isSold ? 'sold' : 'available'),
+      soldAt: product.soldAt || product.sold_at || null,
+      createdAt: product.createdAt || product.created_at || new Date().toISOString(),
+      updatedAt: product.updatedAt || product.updated_at || new Date().toISOString(),
+      aesthetic: (product.aesthetic || 'noir') as Aesthetic,
+      is_digital: product.is_digital || product.isDigital,
+      product_type: product.product_type || product.productType || 'physical',
+      service_options: product.service_options || product.serviceOptions,
+      service_locations: product.service_locations || product.serviceLocations,
+    };
+
+    // Add seller information if available
+    if (product.seller) {
+      transformedProduct.seller = {
+        id: String(product.seller.id || ''),
+        fullName: product.seller.fullName || product.seller.full_name || 'Unknown Seller',
+        email: product.seller.email || '',
+        phone: product.seller.phone || '',
+        location: product.seller.location || null,
+        city: product.seller.city || null,
+        // New physical shop fields
+        hasPhysicalShop: product.seller.hasPhysicalShop || false,
+        physicalAddress: product.seller.physicalAddress || null,
+        latitude: product.seller.latitude || null,
+        longitude: product.seller.longitude || null,
+
+        createdAt: product.seller.createdAt || product.seller.created_at || new Date().toISOString(),
+        updatedAt: product.seller.updatedAt || product.seller.updated_at,
+        ...(product.seller.bio && { bio: product.seller.bio }),
+        ...(product.seller.avatarUrl && { avatarUrl: product.seller.avatarUrl }),
+        ...(product.seller.website && { website: product.seller.website }),
+        ...(product.seller.socialMedia && { socialMedia: product.seller.socialMedia })
+      };
+    }
+
+    return transformedProduct;
+  };
 
   // Optimized product fetching logic with caching
   const fetchProducts = useCallback(async () => {
@@ -196,13 +196,13 @@ const ProductGrid = memo(({ selectedAesthetic, searchQuery = '', locationCity, l
     target.className = 'w-full h-64 object-contain bg-gray-50 p-4';
   };
 
-  const glassStyle: React.CSSProperties = useMemo(() => ({
+  const glassStyle: React.CSSProperties = {
     background: 'rgba(17, 17, 17, 0.7)',
     backdropFilter: 'blur(12px)',
     WebkitBackdropFilter: 'blur(12px)',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
-  }), []);
+  };
 
   if (loading) {
     return (
@@ -277,23 +277,23 @@ const ProductGrid = memo(({ selectedAesthetic, searchQuery = '', locationCity, l
   }
 
   // Group filtered products by aesthetic
-  const productsByAesthetic = useMemo(() => filteredProducts.reduce<Record<string, Product[]>>((acc, product) => {
+  const productsByAesthetic = filteredProducts.reduce<Record<string, Product[]>>((acc, product) => {
     const aesthetic = product.aesthetic || 'uncategorized';
     if (!acc[aesthetic]) {
       acc[aesthetic] = [];
     }
     acc[aesthetic].push(product);
     return acc;
-  }, {}), [filteredProducts]);
+  }, {});
 
   // Get sorted list of aesthetics with product counts
-  const aesthetics = useMemo(() => Object.entries(productsByAesthetic)
+  const aesthetics = Object.entries(productsByAesthetic)
     .map(([aesthetic, products]) => ({
       id: aesthetic,
       name: aesthetic.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
       count: products.length
     }))
-    .sort((a, b) => b.count - a.count), [productsByAesthetic]); // Sort by product count
+    .sort((a, b) => b.count - a.count); // Sort by product count
 
   // If a specific aesthetic is selected, only show that section
   if (selectedAesthetic !== 'all') {
@@ -315,6 +315,17 @@ const ProductGrid = memo(({ selectedAesthetic, searchQuery = '', locationCity, l
           {filteredProducts.map((product) => {
             // Use the seller from the product if available, otherwise try to get it from the sellers map
             const productSeller = product.seller || sellers[product.sellerId];
+
+            // Debug log to check seller information
+            if (!productSeller) {
+              console.warn(`No seller found for product ${product.id} (${product.name})`);
+            } else {
+              console.log(`Product ${product.id} (${product.name}) has seller:`, {
+                sellerId: productSeller.id,
+                sellerName: productSeller.fullName,
+                sellerLocation: productSeller.location
+              });
+            }
 
             return (
               <ProductCard
@@ -362,6 +373,17 @@ const ProductGrid = memo(({ selectedAesthetic, searchQuery = '', locationCity, l
               // Use the seller from the product if available, otherwise try to get it from the sellers map
               const productSeller = product.seller || sellers[product.sellerId];
 
+              // Debug log to check seller information
+              if (!productSeller) {
+                console.warn(`No seller found for product ${product.id} (${product.name}) in aesthetic ${id}`);
+              } else {
+                console.log(`Product ${product.id} (${product.name}) in aesthetic ${id} has seller:`, {
+                  sellerId: productSeller.id,
+                  sellerName: productSeller.fullName,
+                  sellerLocation: productSeller.location
+                });
+              }
+
               return (
                 <ProductCard
                   key={product.id}
@@ -386,6 +408,6 @@ const ProductGrid = memo(({ selectedAesthetic, searchQuery = '', locationCity, l
       ))}
     </div>
   );
-});
+};
 
 export default ProductGrid;

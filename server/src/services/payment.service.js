@@ -251,7 +251,10 @@ export class PaymentService {
 
                 if (parseFloat(balance.available_balance) < parseFloat(amount) * 1.1) {
                     // Alert if balance is low (less than 110% of transaction amount)
-                    logger.warn(`[PAYD-PAYIN] Low platform balance: ${balance.available_balance} ${balance.currency} available, ${amount} required. Transaction might fail if merchant pays fees.`);
+                    logger.warn('[PAYD-PAYIN] Low platform balance', {
+                        available: balance.available_balance,
+                        required: amount
+                    });
                 }
             } catch (balanceError) {
                 // Don't block payment if balance check fails
@@ -291,8 +294,7 @@ export class PaymentService {
                 invoice_id,
                 amount: payload.amount,
                 phone: normalizedPhone,
-                endpoint: `${this.baseUrl}/payments`,
-                payload: JSON.stringify(payload)
+                endpoint: `${this.baseUrl}/payments`
             });
 
             // ============================================================
@@ -361,15 +363,15 @@ export class PaymentService {
     normalizePhoneForPayment(phone) {
         let digits = phone.toString().replace(/\D/g, '');
 
-        if (digits.startsWith('0') && digits.length === 10) {
-            digits = '254' + digits.substring(1);
+        if (digits.startsWith('254') && digits.length === 12) {
+            digits = '0' + digits.substring(3);
         } else if (digits.length === 9) {
-            digits = '254' + digits;
-        } else if (digits.startsWith('254') && digits.length === 12) {
+            digits = '0' + digits;
+        } else if (digits.startsWith('0') && digits.length === 10) {
             // Already correct
         } else {
             throw new PaydError(
-                `Invalid phone number: "${phone}". Expected Kenayn number (e.g. 07XXXXXXXX or 2547XXXXXXXX)`,
+                `Invalid phone number: "${phone}". Expected 10-digit number starting with 0 (e.g. 07XXXXXXXX)`,
                 PaydErrorCodes.INVALID_PHONE
             );
         }
@@ -451,13 +453,13 @@ export class PaymentService {
             const isSuccess = (resultCode == 0 || resultCode === '0' ||
                 status === 'success' || status === 'completed' || status === 'paid');
 
-            logger.info(`[PAYD-WEBHOOK] Parsed webhook data: ${JSON.stringify({
+            logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
                 reference,
                 status,
                 isSuccess,
                 amount,
                 phone
-            })}`);
+            });
 
             // ============================================================
             // STEP 2: FIND PAYMENT RECORD
@@ -539,7 +541,10 @@ export class PaymentService {
                         );
                     }
                 } else if (status === 'failed' || status === 'cancelled' || resultCode == 1) {
-                    logger.warn(`[PAYD-WEBHOOK] Payment failed for payment_id: ${payment.id}, reference: ${reference}, status: ${status}, raw: ${JSON.stringify(data)}`);
+                    logger.warn('[PAYD-WEBHOOK] Payment failed', {
+                        payment_id: payment.id,
+                        status
+                    });
                 }
 
                 await dbClient.query('COMMIT');

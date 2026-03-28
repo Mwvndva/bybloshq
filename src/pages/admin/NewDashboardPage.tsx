@@ -15,7 +15,6 @@ import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { Lock, Unlock } from 'lucide-react';
-import { formatDate, formatDateTime } from '@/lib/utils';
 import RefundRequestsPage from './RefundRequestsPage';
 
 // Custom tooltip for the events chart
@@ -323,6 +322,7 @@ const NewAdminDashboard = () => {
     if (authLoading || !isAuthenticated) return;
 
     const fetchData = async () => {
+      console.log('Starting to fetch dashboard data...');
       try {
         const [
           analytics,
@@ -336,30 +336,40 @@ const NewAdminDashboard = () => {
           clients
         ] = await Promise.all([
           adminApi.getAnalytics().then(data => {
+            console.log('Analytics data received:', data);
             return data;
           }),
           adminApi.getSellers().then(data => {
+            console.log('Sellers data received:', data);
             return data;
           }),
           adminApi.getBuyers().then(data => {
+            console.log('Buyers data received:', data);
             return data;
           }),
           adminApi.getWithdrawalRequests().then(data => {
+            console.log('Withdrawal requests data received:', data);
             return data;
           }),
           adminApi.getMonthlyMetrics().then(data => {
+            console.log('Monthly metrics data received:', data);
+            console.log('Monthly metrics data.data:', data?.data);
             return data;
           }),
           adminApi.getFinancialMetrics().then(data => {
+            console.log('Financial metrics data received:', data);
             return data;
           }),
           adminApi.getMonthlyFinancialData().then(data => {
+            console.log('Monthly financial data received:', data);
             return data;
           }),
           adminApi.getDashboardStats().then(data => {
+            console.log('Dashboard stats received:', data);
             return data;
           }),
           adminApi.getClients().then(data => {
+            console.log('Clients data received:', data);
             return data;
           })
         ]);
@@ -387,6 +397,7 @@ const NewAdminDashboard = () => {
           }
         };
 
+        console.log('Total sellers calculated:', totalSellersCount);
 
         // Extract the data properly - handle both direct array and nested data structure
         let metricsData = [];
@@ -427,12 +438,30 @@ const NewAdminDashboard = () => {
     fetchData();
   }, [authLoading, isAuthenticated]);
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate('/admin/login', { replace: true });
+    }
+  }, [isAuthenticated, authLoading, navigate]);
 
   // Helper function to determine if trend should be shown
   const shouldShowTrend = (trend: number) => {
     return trend !== 0 || dashboardState.analytics.monthlyGrowth?.revenue !== 0;
   };
 
+  // Safe date formatting helper to prevent RangeError
+  const safeFormatDate = (dateString: string | null | undefined, formatStr: string = 'MMM d, yyyy') => {
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'N/A';
+      return format(date, formatStr);
+    } catch (error) {
+      console.error('Date formatting error:', error, 'for value:', dateString);
+      return 'N/A';
+    }
+  };
 
   // Stats cards data with proper type safety
   const statsCards: StatsCardProps[] = [
@@ -718,6 +747,18 @@ const NewAdminDashboard = () => {
 
   // Loading and error states are now handled at the top of the component
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <Spinner className="h-8 w-8 text-yellow-500" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    navigate('/admin/login');
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-black relative overflow-hidden p-4 md:p-8">
@@ -810,7 +851,7 @@ const NewAdminDashboard = () => {
                       <div>
                         <p className="text-sm text-gray-500 font-medium">Member Since</p>
                         <p className="text-base text-gray-200">
-                          {formatDate(selectedSeller.createdAt || selectedSeller.created_at)}
+                          {safeFormatDate(selectedSeller.createdAt || selectedSeller.created_at)}
                         </p>
                       </div>
                     </CardContent>
@@ -918,7 +959,7 @@ const NewAdminDashboard = () => {
                               <div className="flex-1">
                                 <p className="font-semibold text-white">Order #{order.orderNumber || order.id}</p>
                                 <p className="text-sm text-gray-400">{order.buyerName}</p>
-                                <p className="text-xs text-gray-500">{formatDateTime(order.createdAt)}</p>
+                                <p className="text-xs text-gray-500">{safeFormatDate(order.createdAt, 'MMM d, yyyy h:mm a')}</p>
                               </div>
                               <div className="text-right">
                                 <p className="font-bold text-white">KSh {(order.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
@@ -959,111 +1000,109 @@ const NewAdminDashboard = () => {
               </Button>
             </div>
           </div>
-        </div >
+        </div>
       )}
 
       {/* Buyer Details Modal */}
-      {
-        selectedBuyer && (
-          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-gray-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-              {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <div className="flex items-center space-x-3">
-                  <div className="h-10 w-10 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
-                    <UserCircle className="h-5 w-5 text-cyan-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">
-                      Buyer Details
-                    </h3>
-                    <p className="text-sm text-gray-400">
-                      {selectedBuyer.name || 'N/A'}
-                    </p>
-                  </div>
+      {selectedBuyer && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-gray-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div className="flex items-center space-x-3">
+                <div className="h-10 w-10 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
+                  <UserCircle className="h-5 w-5 text-cyan-500" />
                 </div>
-                <button
-                  onClick={closeBuyerModal}
-                  className="h-10 w-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors duration-200 border border-white/5"
-                >
-                  <X className="h-5 w-5 text-gray-400" />
-                </button>
+                <div>
+                  <h3 className="text-xl font-bold text-white">
+                    Buyer Details
+                  </h3>
+                  <p className="text-sm text-gray-400">
+                    {selectedBuyer.name || 'N/A'}
+                  </p>
+                </div>
               </div>
+              <button
+                onClick={closeBuyerModal}
+                className="h-10 w-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors duration-200 border border-white/5"
+              >
+                <X className="h-5 w-5 text-gray-400" />
+              </button>
+            </div>
 
-              {/* Content */}
-              <div className="overflow-auto flex-1 p-6 custom-scrollbar">
-                {isLoadingBuyer ? (
-                  <div className="flex flex-col items-center justify-center h-40 space-y-4">
-                    <div className="h-12 w-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 animate-pulse">
-                      <Loader2 className="h-6 w-6 text-cyan-500 animate-spin" />
-                    </div>
-                    <p className="text-gray-400 font-medium">Loading buyer details...</p>
+            {/* Content */}
+            <div className="overflow-auto flex-1 p-6 custom-scrollbar">
+              {isLoadingBuyer ? (
+                <div className="flex flex-col items-center justify-center h-40 space-y-4">
+                  <div className="h-12 w-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 animate-pulse">
+                    <Loader2 className="h-6 w-6 text-cyan-500 animate-spin" />
                   </div>
-                ) : (
-                  <div className="space-y-6">
-                    {/* Basic Info */}
-                    <Card className="bg-gray-800/40 border border-white/10 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-white">Basic Information</CardTitle>
-                      </CardHeader>
-                      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">Full Name</p>
-                          <p className="text-base text-gray-200">{selectedBuyer.name || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">Email</p>
-                          <p className="text-base text-gray-200">{selectedBuyer.email || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">Phone (Mobile Payment)</p>
-                          <p className="text-base text-gray-200">{selectedBuyer.phone || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">WhatsApp Number</p>
-                          <p className="text-base text-gray-200">{selectedBuyer.whatsapp_number || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">City</p>
-                          <p className="text-base text-gray-200">{selectedBuyer.city || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">Location</p>
-                          <p className="text-base text-gray-200">{selectedBuyer.location || 'N/A'}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">Status</p>
-                          <Badge className={selectedBuyer.status === 'Active' || selectedBuyer.status === 'active'
-                            ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                            : 'bg-gray-500/10 text-gray-400 border border-white/10'}>
-                            {selectedBuyer.status}
-                          </Badge>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-500 font-medium">Member Since</p>
-                          <p className="text-base text-gray-200">
-                            {formatDate(selectedBuyer.created_at || selectedBuyer.createdAt)}
-                          </p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
-              </div>
+                  <p className="text-gray-400 font-medium">Loading buyer details...</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Basic Info */}
+                  <Card className="bg-gray-800/40 border border-white/10 backdrop-blur-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-bold text-white">Basic Information</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Full Name</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.name || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Email</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.email || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Phone (Mobile Payment)</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.phone || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">WhatsApp Number</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.whatsapp_number || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">City</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.city || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Location</p>
+                        <p className="text-base text-gray-200">{selectedBuyer.location || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Status</p>
+                        <Badge className={selectedBuyer.status === 'Active' || selectedBuyer.status === 'active'
+                          ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                          : 'bg-gray-500/10 text-gray-400 border border-white/10'}>
+                          {selectedBuyer.status}
+                        </Badge>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 font-medium">Member Since</p>
+                        <p className="text-base text-gray-200">
+                          {safeFormatDate(selectedBuyer.created_at || selectedBuyer.createdAt)}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
 
-              {/* Footer */}
-              <div className="p-6 border-t border-white/10 flex justify-end">
-                <Button
-                  onClick={closeBuyerModal}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-2xl shadow-lg shadow-yellow-500/20 transition-all duration-200"
-                >
-                  Close
-                </Button>
-              </div>
+            {/* Footer */}
+            <div className="p-6 border-t border-white/10 flex justify-end">
+              <Button
+                onClick={closeBuyerModal}
+                className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-2xl shadow-lg shadow-yellow-500/20 transition-all duration-200"
+              >
+                Close
+              </Button>
             </div>
           </div>
-        )
-      }
+        </div>
+      )}
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Modern Header */}
@@ -1231,7 +1270,7 @@ const NewAdminDashboard = () => {
                               </Badge>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-400">
-                              {formatDate(seller.createdAt)}
+                              {safeFormatDate(seller.createdAt)}
                             </td>
                           </tr>
                         ))}
@@ -1481,7 +1520,7 @@ const NewAdminDashboard = () => {
                               </div>
                               <div className="flex items-center text-xs text-gray-400 mt-1">
                                 <Calendar className="h-3 w-3 mr-1" />
-                                <span>Joined: {formatDate(buyer.createdAt)}</span>
+                                <span>Joined: {safeFormatDate(buyer.createdAt)}</span>
                               </div>
                               {buyer.location && (
                                 <div className="text-xs text-gray-400 truncate max-w-[200px]" title={buyer.location}>
@@ -1621,8 +1660,8 @@ const NewAdminDashboard = () => {
                               </Badge>
                             </td>
                             <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden lg:table-cell">
-                              <div>{formatDate(request.createdAt)}</div>
-                              <div className="text-xs text-gray-400">{formatDateTime(request.createdAt)}</div>
+                              <div>{safeFormatDate(request.createdAt)}</div>
+                              <div className="text-xs text-gray-400">{safeFormatDate(request.createdAt, 'h:mm a')}</div>
                             </td>
                             <td className="py-3 pr-3 sm:pr-4 text-right">
                               <div className="flex items-center justify-end space-x-1 sm:space-x-2">
@@ -1743,7 +1782,7 @@ const NewAdminDashboard = () => {
                               <div className="text-xs text-gray-500">{client.seller_name}</div>
                             </td>
                             <td className="py-3 px-2 sm:px-3 text-sm text-gray-400">
-                              {formatDate(client.createdAt)}
+                              {safeFormatDate(client.createdAt)}
                             </td>
                           </tr>
                         ))}
@@ -1756,7 +1795,7 @@ const NewAdminDashboard = () => {
           </TabsContent>
         </Tabs>
       </div>
-    </div >
+    </div>
   );
 };
 

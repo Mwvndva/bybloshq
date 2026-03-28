@@ -1,6 +1,100 @@
-import apiClient from '@/lib/apiClient';
+import axios from 'axios';
+import { getFreshCsrfToken } from '@/lib/apiClient';
 
-const publicApi = apiClient;
+type AxiosInstance = any;
+type AxiosRequestConfig = any;
+import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+
+// Extend the AxiosRequestConfig interface to include our custom options
+interface CustomAxiosRequestConfig extends AxiosRequestConfig {
+  skipAuth?: boolean;
+}
+
+// Define a type for our custom config
+interface CustomAxiosRequestConfig extends Record<string, any> {
+  skipAuth?: boolean;
+  headers?: Record<string, string>;
+  params?: Record<string, any>;
+  [key: string]: any;
+}
+
+// Create a custom axios instance with our custom config
+class CustomAxios {
+  private instance: any;
+  private csrfTokenCache: string | null = null;
+
+  constructor() {
+    // Use VITE_API_URL from environment variables or fallback to relative path for development
+    let baseURL = import.meta.env.VITE_API_URL || '/api';
+
+    // Ensure baseURL ends with /api
+    if (!baseURL.endsWith('/api')) {
+      baseURL = baseURL.endsWith('/') ? `${baseURL}api` : `${baseURL}/api`;
+    }
+
+    console.log('API Base URL:', baseURL); // Debug log
+
+    this.instance = axios.create({
+      baseURL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      withCredentials: true, // Important for cookies if using sessions
+    });
+
+    // Add request interceptor for CSRF and auth cleanup
+    this.instance.interceptors.request.use(
+      async (config: any) => {
+        // 1. Attach CSRF token to non-GET requests
+        if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+          if (!this.csrfTokenCache) {
+            this.csrfTokenCache = await getFreshCsrfToken();
+          }
+
+          if (this.csrfTokenCache) {
+            config.headers['X-CSRF-Token'] = this.csrfTokenCache;
+          }
+        }
+
+        // 2. Public API must NOT attach any Authorization header.
+        // It relies purely on httpOnly cookies via withCredentials: true.
+        if (config.headers) {
+          delete config.headers.Authorization;
+          delete config.headers.authorization;
+        }
+        return config;
+      },
+      (error: any) => {
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  // Allow access to the instance for cleanup
+  public getInstance() {
+    return this.instance;
+  }
+
+  // Proxy axios methods with proper typing
+  public get(url: string, config?: CustomAxiosRequestConfig) {
+    return this.instance.get(url, config);
+  }
+
+  public post(url: string, data?: any, config?: CustomAxiosRequestConfig) {
+    return this.instance.post(url, data, config);
+  }
+
+  public put(url: string, data?: any, config?: CustomAxiosRequestConfig) {
+    return this.instance.put(url, data, config);
+  }
+
+  public delete(url: string, config?: CustomAxiosRequestConfig) {
+    return this.instance.delete(url, config);
+  }
+}
+
+// Create a single instance of our custom axios
+const publicApi = new CustomAxios();
 
 interface ApiResponse<T> {
   data?: T;
@@ -147,9 +241,10 @@ export const publicApiService = {
         params.append('location', filters.location);
       }
 
+      console.log('Searching for sellers with params:', { city: filters.city, location: filters.location });
 
       // This endpoint needs to be implemented on your backend
-      const response = await publicApi.get<any>(`sellers/search?${params.toString()}`);
+      const response = await publicApi.get(`sellers/search?${params.toString()}`);
 
       // Handle response - expect an array of sellers
       let sellersData: any[] = [];
@@ -162,6 +257,8 @@ export const publicApiService = {
       } else if (responseData && 'sellers' in responseData && Array.isArray(responseData.sellers)) {
         sellersData = responseData.sellers;
       }
+
+      console.log(`Found ${sellersData.length} sellers for city: ${filters.city}${filters.location ? `, location: ${filters.location}` : ''}`);
 
       return sellersData.map(transformSeller).filter((seller): seller is Seller => seller !== null);
     } catch (error: any) {
@@ -181,7 +278,7 @@ export const publicApiService = {
   // Get all active sellers with wishlist count
   getSellers: async (): Promise<Seller[]> => {
     try {
-      const response = await publicApi.get<any>('public/sellers/active');
+      const response = await publicApi.get('public/sellers/active');
       let sellersData: any[] = [];
       const responseData = response.data;
 
@@ -218,10 +315,12 @@ export const publicApiService = {
   // Get all products with city and location filters
   getProducts: async (filters: { city?: string; location?: string } = {}): Promise<Product[]> => {
     try {
+      console.log('Starting getProducts with filters:', filters);
 
       // If no city filter is provided, fetch all products directly from the backend
       if (!filters.city) {
-        const response = await publicApi.get<any>('public/products', {
+        console.log('No city filter - fetching all products directly from backend');
+        const response = await publicApi.get('public/products', {
           params: filters
         });
 
@@ -240,6 +339,7 @@ export const publicApiService = {
           productsData = responseData.products;
         }
 
+        console.log(`Fetched ${productsData.length} products from backend (no city filter)`);
 
         // Transform products and ensure seller info is included
         const transformedProducts = productsData.map(product => {
@@ -266,14 +366,23 @@ export const publicApiService = {
       }
 
       // If city filter is provided, search for sellers first
+      console.log('Searching for sellers with filters:', filters);
       const sellers = await publicApiService.searchSellers(filters as { city: string; location?: string });
 
+      console.log(`Found ${sellers.length} sellers for city: ${filters.city}${filters.location ? `, location: ${filters.location}` : ''}`);
 
       if (sellers.length === 0) {
+        console.log('No sellers found for the specified location');
         return [];
       }
 
       // Log seller information
+      console.log('Sellers found:', sellers.map(seller => ({
+        id: seller.id,
+        name: seller.fullName,
+        location: seller.location,
+        city: seller.city
+      })));
 
       // Create a map of sellerId to seller for quick lookup
       const sellerMap = sellers.reduce<Record<string, Seller>>((acc, seller) => {
@@ -284,10 +393,12 @@ export const publicApiService = {
       // Get unique seller IDs
       const sellerIds = Object.keys(sellerMap);
 
+      console.log('Fetching products for sellers:', sellerIds);
 
       // Fetch products for these sellers
       const productsPromises = sellerIds.map(sellerId =>
-        publicApi.get<any>(`sellers/${sellerId}/products`).then(response => {
+        publicApi.get(`sellers/${sellerId}/products`).then(response => {
+          console.log(`Received products for seller ${sellerId}:`, response.data);
 
           const responseData = response.data;
           let products: any[] = [];
@@ -300,6 +411,7 @@ export const publicApiService = {
             products = responseData.products;
           }
 
+          console.log(`Found ${products.length} products for seller ${sellerId}`);
 
           // Add seller info to each product
           const productsWithSeller = products.map(product => {
@@ -308,6 +420,11 @@ export const publicApiService = {
               seller: sellerMap[sellerId]
             };
 
+            console.log(`Product ${product.id} (${product.name}) has seller:`, {
+              sellerId: sellerId,
+              sellerName: sellerMap[sellerId]?.fullName,
+              sellerLocation: sellerMap[sellerId]?.location
+            });
 
             return productWithSeller;
           });
@@ -322,14 +439,32 @@ export const publicApiService = {
       const productsArrays = await Promise.all(productsPromises);
       const productsData = productsArrays.flat();
 
+      console.log(`Found ${productsData.length} products across ${sellers.length} sellers in ${filters.city}${filters.location ? `, ${filters.location}` : ''}`);
 
       // Log the first few products for debugging
       if (productsData.length > 0) {
+        console.log('Sample products:', productsData.slice(0, 3).map(p => ({
+          id: p.id,
+          name: p.name,
+          sellerId: p.sellerId,
+          seller: p.seller ? {
+            id: p.seller.id,
+            name: p.seller.fullName,
+            location: p.seller.location
+          } : 'No seller info'
+        })));
       }
 
       const transformedProducts = productsData.map(transformProduct);
 
       // Log transformed products
+      console.log('Transformed products:', transformedProducts.map(p => ({
+        id: p.id,
+        name: p.name,
+        sellerId: p.sellerId,
+        hasSeller: !!p.seller,
+        sellerLocation: p.seller?.location
+      })));
 
       return transformedProducts;
     } catch (error: any) {
@@ -349,7 +484,7 @@ export const publicApiService = {
   // Get a single product by ID
   getProduct: async (id: string): Promise<Product | null> => {
     try {
-      const response = await publicApi.get<any>(`public/products/${id}`);
+      const response = await publicApi.get(`public/products/${id}`);
       const productData = response.data.product || response.data;
       return productData ? transformProduct(productData) : null;
     } catch (error) {
@@ -363,11 +498,13 @@ export const publicApiService = {
     try {
       // First try to get the seller info with authentication
       const token = localStorage.getItem('buyer_token') || localStorage.getItem('token');
+      console.log('Auth token from localStorage:', token ? 'Found' : 'Not found');
 
-      const response = await publicApi.get<any>(`sellers/${sellerId}`, {
+      const response = await publicApi.get(`sellers/${sellerId}`, {
         headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
 
+      console.log('Seller info response:', response.data);
       const sellerData = response.data.seller || response.data;
       return sellerData ? transformSeller(sellerData) : null;
     } catch (error: any) {
@@ -383,7 +520,7 @@ export const publicApiService = {
   // Get featured products
   getFeaturedProducts: async (limit: number = 8): Promise<Product[]> => {
     try {
-      const response = await publicApi.get<any>(`public/products/featured?limit=${limit}`);
+      const response = await publicApi.get(`public/products/featured?limit=${limit}`);
       let productsData: Product[] = [];
       const responseData = response.data; // No need for type assertion
 
@@ -407,7 +544,7 @@ export const publicApiService = {
   // Search products
   searchProducts: async (query: string, filters: Record<string, any> = {}): Promise<Product[]> => {
     try {
-      const response = await publicApi.get<any>('public/products/search', {
+      const response = await publicApi.get('public/products/search', {
         params: { q: query, ...filters }
       });
 
@@ -437,7 +574,7 @@ export const publicApiService = {
   getProductsByLocation: async (location: string): Promise<Product[]> => {
     try {
       // Use the main products endpoint with location filter
-      const response = await publicApi.get<any>('public/products', {
+      const response = await publicApi.get('public/products', {
         params: { location }
       });
 
@@ -467,7 +604,7 @@ export const publicApiService = {
   becomeClient: async (sellerId: string): Promise<any> => {
     try {
       // Use the buyers/sellers/... endpoint we created in buyer.routes.js
-      const response = await publicApi.post<any>(`buyers/sellers/${sellerId}/become-client`);
+      const response = await publicApi.post(`buyers/sellers/${sellerId}/become-client`);
       return response.data;
     } catch (error: any) {
       console.error('Error becoming client:', error);
@@ -484,25 +621,14 @@ export const publicApiService = {
       const checkStatus = async () => {
         try {
           attempts++;
-          const response = await publicApi.get<any>(`payments/status/${reference}`);
-          const domainData = response.data.data;
-          const domainStatus = domainData?.status?.toLowerCase();
-          const apiStatus = response.data.status?.toLowerCase();
+          const response = await publicApi.get(`payments/status/${reference}`);
+          const status = response.data.status?.toLowerCase();
 
-          // Exit condition: Domain status reached a terminal state
-          if (domainStatus === 'completed' || domainStatus === 'success' || domainStatus === 'failed' || domainStatus === 'cancelled') {
-            resolve(domainData || response.data);
-          }
-          // Error condition: API reported an error
-          else if (apiStatus === 'error') {
-            resolve({ status: 'failed', message: response.data.message || 'API error' });
-          }
-          // Timeout condition
-          else if (attempts >= maxAttempts) {
+          if (status === 'completed' || status === 'success' || status === 'failed' || status === 'cancelled') {
+            resolve(response.data);
+          } else if (attempts >= maxAttempts) {
             resolve({ status: 'timeout', message: 'Polling timed out' });
-          }
-          // Loop condition: Transaction is still pending/processing
-          else {
+          } else {
             setTimeout(checkStatus, interval);
           }
         } catch (error) {

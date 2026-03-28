@@ -12,7 +12,7 @@ const BuyerForgotPassword = safeLazy(() => import('@/components/buyer/BuyerForgo
 const BuyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetPassword').then(m => m.BuyerResetPassword));
 const BuyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
 const CheckoutPage = safeLazy(() => import('@/pages/checkout'));
-import BuyerLayout from '@/layouts/BuyerLayout';
+const BuyerLayout = safeLazy(() => import('@/layouts/BuyerLayout'));
 const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
 
 export const buyerRoutes = [
