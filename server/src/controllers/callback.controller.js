@@ -44,11 +44,9 @@ export const handlePaydPayoutCallback = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Missing transaction_reference' });
         }
 
-        // result_code 0 AND status success is success in Payd v2 payouts. Case-insensitive.
-        const isSuccess = (resultCode === 0 || resultCode === '0') &&
-            (paydStatus?.toLowerCase() === 'success' || paydStatus?.toLowerCase() === 'completed');
-
-
+        // --- Determine outcome using BOTH result_code and status ---
+        // result_code 0 is success in Payd v2 payouts
+        const isSuccess = (resultCode === 0 || resultCode === '0' || paydStatus === 'success');
 
         let finalStatus = null;
         if (isSuccess) {
@@ -75,14 +73,8 @@ export const handlePaydPayoutCallback = async (req, res) => {
             [transactionReference]
         );
 
-        if (request) {
-            logger.info(`[PAYOUT-CALLBACK] Found withdrawal request ${request.id} for ref ${transactionReference}. Current status: ${request.status}`);
-        }
-
-
-
         if (!request) {
-            logger.warn(`[PAYOUT - CALLBACK] No request found for transaction_reference: ${transactionReference}. Payment might be from a different system or manual.`);
+            logger.warn(`[PAYOUT-CALLBACK] No request found for transaction_reference: ${transactionReference}. Payment might be from a different system or manual.`);
             await client.query('ROLLBACK');
             return res.status(200).json({ status: 'not_found' });
         }
@@ -90,16 +82,16 @@ export const handlePaydPayoutCallback = async (req, res) => {
         // --- Idempotency: skip if already finalized ---
         if (['completed', 'failed'].includes(request.status)) {
             await client.query('ROLLBACK');
-            logger.info(`[PAYOUT - CALLBACK] Request ${request.id} already ${request.status} — skipping`);
+            logger.info(`[PAYOUT-CALLBACK] Request ${request.id} already ${request.status} — skipping`);
             return res.status(200).json({ status: 'already_processed' });
         }
 
         // --- Update withdrawal request status ---
         await client.query(
             `UPDATE withdrawal_requests
-             SET status = $1,
-            processed_at = NOW(),
-            metadata = COALESCE(metadata, '{}':: jsonb) || $2:: jsonb
+             SET status       = $1,
+                 processed_at = NOW(),
+                 metadata     = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
              WHERE id = $3`,
             [
                 finalStatus,
@@ -117,9 +109,9 @@ export const handlePaydPayoutCallback = async (req, res) => {
         let newBalance = null;
         if (finalStatus === 'failed') {
             newBalance = await payoutService.refundToWallet(client, request);
-            logger.info(`[PAYOUT - CALLBACK] Request ${request.id} FAILED — refunded KES ${request.amount} `);
+            logger.info(`[PAYOUT-CALLBACK] Request ${request.id} FAILED — refunded KES ${request.amount}`);
         } else {
-            logger.info(`[PAYOUT - CALLBACK] Request ${request.id} COMPLETED — M - Pesa receipt: ${mpesaReceipt} `);
+            logger.info(`[PAYOUT-CALLBACK] Request ${request.id} COMPLETED — M-Pesa receipt: ${mpesaReceipt}`);
         }
 
         await client.query('COMMIT');
@@ -134,7 +126,7 @@ export const handlePaydPayoutCallback = async (req, res) => {
                 newBalance
             }).catch(err => logger.error('[PAYOUT-CALLBACK] WhatsApp notify failed:', err));
         } else {
-            logger.warn(`[PAYOUT - CALLBACK] No entity_phone for request ${request.id} — WhatsApp skipped`);
+            logger.warn(`[PAYOUT-CALLBACK] No entity_phone for request ${request.id} — WhatsApp skipped`);
         }
 
         return res.status(200).json({ status: 'success' });

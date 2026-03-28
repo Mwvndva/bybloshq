@@ -39,7 +39,7 @@ function statusFromError(message) {
 }
 
 export const createWithdrawal = async (req, res, next) => {
-    const sellerId = req.user?.sellerId;
+    const sellerId = req.user?.id;
     if (!sellerId) return next(new AppError('Authentication required', 401));
 
     const validationError = validateWithdrawalBody(req.body);
@@ -67,7 +67,7 @@ export const createWithdrawal = async (req, res, next) => {
 };
 
 export const getWithdrawals = async (req, res, next) => {
-    const sellerId = req.user?.sellerId;
+    const sellerId = req.user?.id;
     if (!sellerId) return next(new AppError('Authentication required', 401));
 
     const page = Math.max(1, parseInt(req.query.page ?? '1', 10) || 1);
@@ -93,7 +93,7 @@ export const getWithdrawals = async (req, res, next) => {
 };
 
 export const getWithdrawalById = async (req, res, next) => {
-    const sellerId = req.user?.sellerId;
+    const sellerId = req.user?.id;
     const requestId = parseInt(req.params.id, 10);
     if (!sellerId) return next(new AppError('Authentication required', 401));
     if (isNaN(requestId)) return next(new AppError('Invalid request ID', 400));

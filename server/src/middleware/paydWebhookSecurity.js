@@ -102,12 +102,16 @@ export const verifyPaydWebhook = (req, res, next) => {
                 }
             });
 
-            // Security alert logic
-            logger.error(`[PAYD-SECURITY] Unauthorized webhook IP: ${clientIP}`, {
-                url: req.originalUrl,
-                userAgent: req.headers['user-agent']
+            // Log to security monitoring (if available)
+            setImmediate(() => {
+                import('../services/monitoring.service.js').then(({ default: monitoringService }) => {
+                    monitoringService.alertSecurityTeam('Unauthorized webhook IP', {
+                        ip: clientIP,
+                        url: req.originalUrl,
+                        userAgent: req.headers['user-agent']
+                    }).catch(err => logger.error('Failed to send security alert:', err));
+                });
             });
-
 
             return res.status(403).json({
                 status: 'error',
@@ -117,25 +121,6 @@ export const verifyPaydWebhook = (req, res, next) => {
 
         logger.info(`[WEBHOOK-SECURITY] ✅ IP ${clientIP} is whitelisted`);
     }
-
-    // ========================================
-    // LAYER 1.5: SECRET VERIFICATION (OPTIONAL LAYER)
-    // ========================================
-    const configuredSecret = process.env.PAYD_API_SECRET;
-    if (configuredSecret && configuredSecret !== 'skip') {
-        const incomingSecret = req.headers['x-payd-secret'] || req.headers['authorization'];
-
-        if (incomingSecret) {
-            const isValid = incomingSecret === configuredSecret ||
-                incomingSecret === `Basic ${Buffer.from(configuredSecret).toString('base64')}`;
-            if (isValid) {
-                logger.info('[WEBHOOK-SECURITY] ✅ Secret verification passed');
-            } else {
-                logger.warn('[WEBHOOK-SECURITY] ⚠️  PAYD_API_SECRET mismatch');
-            }
-        }
-    }
-
 
     // ========================================
     // LAYER 2: REQUEST VALIDATION

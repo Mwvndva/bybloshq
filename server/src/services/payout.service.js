@@ -15,12 +15,8 @@ class PayoutService {
     constructor() {
         // Separate base URL for payouts (v2) vs payments (v3)
         this.baseUrl = process.env.PAYD_PAYOUT_BASE_URL || 'https://api.payd.money/api/v2';
-        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || process.env.PAYD_USERNAME || 'mwxndx';
-        this.accountUsername = this.payloadUsername;
-        this.username = process.env.PAYD_USERNAME || this.payloadUsername;
+        this.username = process.env.PAYD_USERNAME;
         this.password = process.env.PAYD_PASSWORD;
-        this.apiSecret = process.env.PAYD_API_SECRET;
-
 
         this.client = axios.create({
             baseURL: this.baseUrl,
@@ -175,7 +171,7 @@ class PayoutService {
                 if (balanceError.code === PaydErrorCodes.INSUFFICIENT_BALANCE) {
                     throw balanceError;
                 }
-                logger.debug('[PAYD-PAYOUT] Balance check failed (non-critical)', balanceError.message);
+                logger.warn('[PAYD-PAYOUT] Balance check failed (non-critical)', balanceError.message);
             }
 
             // ============================================================
@@ -197,12 +193,10 @@ class PayoutService {
                 return await this.client.post('/withdrawal', payload, {
                     headers: {
                         'Authorization': this.getAuthHeader(),
-                        'X-Payd-Secret': this.apiSecret,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }
                 });
-
             }, 3, 2000); // 3 retries with 2s delay
 
             const duration = Date.now() - startTime;
@@ -211,10 +205,11 @@ class PayoutService {
             // STEP 5: PARSE RESPONSE
             // ============================================================
             const data = response.data;
-            const reference = data.correlator_id;
+
+            const reference = data.transaction_reference || data.correlator_id || data.transaction_id || data.reference;
 
             if (!reference) {
-                logger.warn('[PAYD-PAYOUT] No correlator_id in response', { data });
+                logger.warn('[PAYD-PAYOUT] No transaction_reference in response', { data });
             }
 
             logger.info('[PAYD-PAYOUT] Payout initiated successfully', {
@@ -245,7 +240,6 @@ class PayoutService {
 
             throw this._handlePaydError(error);
         }
-
     }
 
     /**
@@ -464,13 +458,31 @@ class PayoutService {
             newBalance = parseFloat(rows[0]?.balance ?? 0);
             logger.info(`[PayoutService] Refunded KES ${amount} to seller ${request.seller_id}. New balance: ${newBalance}`);
 
+        } else if (request.event_id) {
+            // For event withdrawals: refund the gross deducted amount (amount + fee)
+            const feeRate = 0.06;
+            const grossAmount = amount / (1 - feeRate);
+            const { rows } = await client.query(
+                'UPDATE events SET balance = balance + $1 WHERE id = $2 RETURNING balance',
+                [grossAmount, request.event_id]
+            );
+            newBalance = parseFloat(rows[0]?.balance ?? 0);
+            logger.info(`[PayoutService] Refunded KES ${grossAmount} (gross) to event ${request.event_id}`);
+
+        } else if (request.organizer_id) {
+            const { rows } = await client.query(
+                'UPDATE organizers SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
+                [amount, request.organizer_id]
+            );
+            newBalance = parseFloat(rows[0]?.balance ?? 0);
+            logger.info(`[PayoutService] Refunded KES ${amount} to organizer ${request.organizer_id}. New balance: ${newBalance}`);
+
         } else {
-            logger.error('[PayoutService] Cannot refund: no seller_id on request', request);
+            logger.error('[PayoutService] Cannot refund: no entity_id on request', request);
         }
 
         return newBalance;
     }
 }
-
 
 export default new PayoutService();

@@ -94,7 +94,7 @@ class CustomAxios {
 }
 
 // Create a single instance of our custom axios
-export const publicApi = new CustomAxios();
+const publicApi = new CustomAxios();
 
 interface ApiResponse<T> {
   data?: T;

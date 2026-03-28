@@ -4,7 +4,6 @@ import { Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useGlobalAuth } from '@/contexts/GlobalAuthContext';
 import apiClient from '@/lib/apiClient';
-import { ApiResponse } from '@/types';
 
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
@@ -28,7 +27,7 @@ export default function PaymentSuccess() {
 
       try {
         // Verify payment with backend
-        const response = await apiClient.get<ApiResponse<{ status: string }>>(`/payments/status/${reference}`);
+        const response = await apiClient.get(`/payments/status/${reference}`);
         const paymentData = response.data.data;
 
         if (paymentData.status === 'completed' || paymentData.status === 'success') {

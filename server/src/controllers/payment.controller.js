@@ -16,38 +16,43 @@ class PaymentController {
   async handlePaydWebhook(req, res) {
     try {
       const webhookData = req.body;
+      const headers = req.headers;
 
-      logger.info('[PAYD-WEBHOOK] Received webhook request', {
-        ip: req.ip,
-        reference: (webhookData.data || webhookData).transaction_reference || (webhookData.data || webhookData).reference
+      logger.info('Payd webhook received', {
+        event: webhookData.event,
+        reference: webhookData.data?.reference
       });
 
-      // 1. Respond 200 immediately to acknowledge receipt (Payd Best Practice)
-      res.status(200).json({ received: true, status: 'success' });
+      // Process the webhook
+      // Process the webhook
+      // Payd webhook handling
+      const result = await paymentService.handlePaydCallback(webhookData);
 
-      // 2. Process asynchronously in the background
-      (async () => {
-        try {
-          const result = await paymentService.handlePaydCallback(webhookData);
-          logger.info('[PAYD-WEBHOOK] Background processing completed', {
-            reference: result.reference || result.payment_id,
-            status: result.status
-          });
-        } catch (error) {
-          logger.error('[PAYD-WEBHOOK] Background processing failed:', error);
-        }
-      })();
+      // Return appropriate response
+      if (result.status === 'ignored') {
+        return res.status(200).json({
+          status: 'success',
+          message: result.message
+        });
+      }
+
+      res.status(200).json({
+        status: 'success',
+        message: 'Webhook processed successfully',
+        data: result
+      });
 
     } catch (error) {
-      logger.error('[PAYD-WEBHOOK] Critical controller error:', error);
-      if (!res.headersSent) {
-        res.status(200).json({ status: 'error', message: 'Accepted with processing error' });
-      }
+      logger.error('Payd webhook processing failed:', error);
+
+      // Still return 200 to acknowledge receipt (Payd expects this)
+      res.status(200).json({
+        status: 'error',
+        message: 'Webhook processing failed',
+        error: error.message
+      });
     }
-
   }
-
-
 
   /**
    * Test webhook endpoint
