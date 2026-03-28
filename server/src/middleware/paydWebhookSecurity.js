@@ -102,16 +102,12 @@ export const verifyPaydWebhook = (req, res, next) => {
                 }
             });
 
-            // Log to security monitoring (if available)
-            setImmediate(() => {
-                import('../services/monitoring.service.js').then(({ default: monitoringService }) => {
-                    monitoringService.alertSecurityTeam('Unauthorized webhook IP', {
-                        ip: clientIP,
-                        url: req.originalUrl,
-                        userAgent: req.headers['user-agent']
-                    }).catch(err => logger.error('Failed to send security alert:', err));
-                });
+            // Security alert logic
+            logger.error(`[PAYD-SECURITY] Unauthorized webhook IP: ${clientIP}`, {
+                url: req.originalUrl,
+                userAgent: req.headers['user-agent']
             });
+
 
             return res.status(403).json({
                 status: 'error',

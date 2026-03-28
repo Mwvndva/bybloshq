@@ -281,14 +281,8 @@ export class PaymentService {
                 narration: narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
                 callback_url: callbackUrl,
-                billing_address: {
-                    email: email,
-                    first_name: first_name || 'Customer',
-                    last_name: last_name || '',
-                    city: 'Nairobi',
-                    country: 'Kenya'
-                }
             };
+
 
             logger.info('[PAYD-PAYIN] Initiating payment', {
                 invoice_id,
@@ -315,14 +309,14 @@ export class PaymentService {
             // ============================================================
             // STEP 5: PARSE RESPONSE
             // ============================================================
-            const resData = response.data.data || response.data;
+            const resData = response.data;
+            const reference = resData.transaction_reference;
 
-            // Extract transaction reference (Standardizing on transaction_reference)
-            const reference = resData.transaction_reference ||
-                resData.transaction_id ||
-                resData.reference ||
-                resData.tracking_id ||
-                `PAYD-${Date.now()}`;
+            if (!reference) {
+                logger.error('[PAYD-INIT] ERROR: No transaction reference returned from Payd', resData);
+                throw new Error('Payment initiation failed: No reference returned');
+            }
+
 
             logger.info('[PAYD-PAYIN] Payment initiated successfully', {
                 duration: `${duration}ms`,
@@ -450,8 +444,9 @@ export class PaymentService {
             }
 
             // Determine Success: result_code 0 is success in v2, OR status SUCCESS/COMPLETED
-            const isSuccess = (resultCode == 0 || resultCode === '0' ||
-                status === 'success' || status === 'completed' || status === 'paid');
+            // FIX 6: Payd Docs success is result_code 0 AND success: true
+            const isSuccess = (resultCode == 0 || resultCode === '0') && (data.success === true || data.status === 'SUCCESS');
+
 
             logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
                 reference,
@@ -778,47 +773,38 @@ export class PaymentService {
             // It's a Product Order — C-4 FIX: await completeOrder so failures are captured
             try {
                 logger.info(`[PURCHASE-FLOW] 7. Completing Order ${paymentMeta.order_id} via OrderService.completeOrder()`);
-                const OrderSvc = (await import('./order.service.js')).default;
-                const completionResult = await OrderSvc.completeOrder(updatedPayment);
-                logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
+                await OrderService.completeOrder(updatedPayment);
             } catch (completionErr) {
                 logger.error('[CRITICAL] completeOrder failed after payment confirmed — flagging for retry:', completionErr);
                 // Mark payment so a cron job can retry completion
                 await pool.query(
-                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata,'{}'), '{needs_completion}', 'true') WHERE id = $1`,
+                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata,'{}'::jsonb), '{needs_completion}', 'true'::jsonb) WHERE id = $1`,
                     [updatedPayment.id]
                 );
             }
             return { status: 'success', message: 'Payment processed and Order completion triggered' };
 
         } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-            const debtClient = await pool.connect();
             try {
-                await debtClient.query('BEGIN');
                 logger.info(`[PURCHASE-FLOW] 7. Marking debt ${paymentMeta.debt_id} as paid`);
 
-                await debtClient.query(
+                await pool.query(
                     'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
                     [paymentMeta.debt_id]
                 );
 
-                // Update payment status (already done, but good to ensure transaction consistency if needed)
-                await debtClient.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, updatedPayment.id]);
-
-                await debtClient.query('COMMIT');
                 logger.info(`[PURCHASE-FLOW] 8. Debt ${paymentMeta.debt_id} settled successfully`);
             } catch (debtErr) {
-                if (debtClient) await debtClient.query('ROLLBACK').catch(e => logger.error('Debt rollback failed:', e));
                 logger.error('[PURCHASE-FLOW] ERROR - Error settling debt after payment:', debtErr);
                 throw debtErr;
-            } finally {
-                debtClient.release();
             }
             return { status: 'success', message: 'Payment processed and Debt settled' };
         }
+
         logger.warn(`[PURCHASE-FLOW] Payment ${payment.id} completed but no downstream action defined (no order_id or ticket_type_id)`);
         return { status: 'success', message: 'Payment received but no downstream action defined' };
     }
+
 
     async checkPaymentStatus(identifier) {
         let rows;
@@ -840,19 +826,7 @@ export class PaymentService {
         const payment = rows[0];
         if (!payment) throw new Error('Payment not found');
 
-        // If payment is pending and we have a provider_reference, check Payd status
-        if (payment.status === PaymentStatus.PENDING && payment.provider_reference) {
-            try {
-                const paydStatus = await this.checkTransactionStatus(payment.provider_reference);
-                if (paydStatus.status === 'success' || paydStatus.status === 'failed') {
-                    // This will be caught by the next webhook or we could manually sync here
-                    // For now, we'll just return the updated status if it was success/failed
-                    payment.status = paydStatus.status;
-                }
-            } catch (err) {
-                logger.warn('[PaymentService] Status sync during check failed', err.message);
-            }
-        }
+
 
         // If payment is successful and has buyer info, generate auto-login token
         let autoLoginToken = null;
@@ -883,127 +857,7 @@ export class PaymentService {
      * @param {string} transactionId - Payd transaction reference
      * @returns {Promise<Object>}
      */
-    async checkTransactionStatus(transactionId) {
-        try {
-            logger.info('[PAYD-STATUS] Checking transaction status', { transaction_id: transactionId });
 
-            // Note: status endpoint is v1
-            const response = await this.client.get(`/status/${transactionId}`, {
-                baseURL: 'https://api.payd.money/api/v1',
-                headers: {
-                    'Authorization': this.getAuthHeader(),
-                    'Accept': 'application/json'
-                }
-            });
-
-            const data = response.data;
-            const details = data.transaction_details || {};
-
-            logger.info('[PAYD-STATUS] Status retrieved', {
-                transaction_id: transactionId,
-                status: details.status || data.status,
-                amount: data.amount
-            });
-
-            return {
-                success: true,
-                transaction_id: transactionId,
-                status: (details.status || data.status || 'pending').toLowerCase(),
-                amount: parseFloat(data.amount || 0),
-                phone_number: details.payer || details.recipient,
-                narration: details.reason,
-                created_at: data.created_at,
-                raw_response: data
-            };
-
-        } catch (error) {
-            logger.error('[PAYD-STATUS] Status check failed', {
-                transaction_id: transactionId,
-                error: this._extractErrorDetails(error)
-            });
-
-            throw this._handlePaydError(error);
-        }
-    }
-
-    /**
-     * Poll transaction status until completion (with timeout)
-     * 
-     * @param {string} transactionId
-     * @param {Object} options
-     * @param {number} options.maxAttempts - Max polling attempts (default: 60)
-     * @param {number} options.intervalMs - Polling interval in ms (default: 5000)
-     * @param {Array<string>} options.finalStatuses - Status values that end polling
-     * @returns {Promise<Object>}
-     */
-    async pollTransactionStatus(transactionId, options = {}) {
-        const {
-            maxAttempts = 60, // 5 minutes max (60 * 5s)
-            intervalMs = 5000,
-            finalStatuses = ['success', 'failed', 'cancelled', 'expired']
-        } = options;
-
-        logger.info('[PAYD-POLL] Starting transaction status polling', {
-            transaction_id: transactionId,
-            maxAttempts,
-            intervalMs
-        });
-
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-                const status = await this.checkTransactionStatus(transactionId);
-
-                logger.info('[PAYD-POLL] Poll attempt', {
-                    attempt,
-                    status: status.status,
-                    transaction_id: transactionId
-                });
-
-                // Check if status is final
-                if (finalStatuses.includes(status.status.toLowerCase())) {
-                    logger.info('[PAYD-POLL] Final status reached', {
-                        status: status.status,
-                        attempts: attempt
-                    });
-                    return status;
-                }
-
-                // Wait before next poll
-                if (attempt < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, intervalMs));
-                }
-
-            } catch (error) {
-                logger.error('[PAYD-POLL] Poll attempt failed', {
-                    attempt,
-                    transaction_id: transactionId,
-                    error: error.message
-                });
-
-                // Don't retry if it's a 404 (transaction not found)
-                if (error.statusCode === 404) {
-                    throw error;
-                }
-
-                // Continue polling for other errors
-                if (attempt < maxAttempts) {
-                    await new Promise(resolve => setTimeout(resolve, intervalMs));
-                }
-            }
-        }
-
-        // Timeout reached
-        logger.warn('[PAYD-POLL] Polling timeout', {
-            transaction_id: transactionId,
-            attempts: maxAttempts
-        });
-
-        return {
-            success: false,
-            status: 'timeout',
-            message: `Transaction status polling timed out after ${maxAttempts} attempts`
-        };
-    }
 
     /**
      * Check Payd platform account balance
@@ -1254,84 +1108,30 @@ export class PaymentService {
                         continue;
                     }
 
-                    // Attempt retrieval from Provider
-                    let providerStatus = null;
-                    let providerData = null;
-                    let is404Error = false;
-
-                    try {
-                        const response = await this.client.get(`/payments/${payment.provider_reference}`, {
-                            headers: { Authorization: this.getAuthHeader() }
-                        });
-                        providerData = response.data;
-
-                        // Map provider status
-                        // Payd v3 usually returns { status: 'SUCCESS' | 'FAILED' | ... }
-                        if (providerData.status === 'SUCCESS' || providerData.result_code == 200) {
-                            providerStatus = 'success';
-                        } else if (providerData.status === 'FAILED') {
-                            providerStatus = 'failed';
-                        }
-                    } catch (netErr) {
-                        // Check if it's a 404 error
-                        if (netErr.response?.status === 404) {
-                            is404Error = true;
-
-                            // If payment is older than 30 minutes and returns 404,
-                            // it's likely the payment doesn't exist in Payd's system
-                            if (ageMinutes > 30) {
-                                logger.warn(`Payment ${payment.id} not found in Payd (404) after ${ageMinutes} minutes - marking as failed`);
-                                providerStatus = 'failed';
-                            } else {
-                                // For newer payments, just log and skip (might still be processing)
-                                logger.info(`Payment ${payment.id} returned 404 but is only ${ageMinutes}m old - will retry later`);
-                            }
-                        } else {
-                            // For other errors (network issues, timeouts, etc.), just log
-                            logger.warn(`Failed to check status for ${payment.id}: ${netErr.message}`);
-                        }
-                    }
-
-                    // Process based on determined status
-                    if (providerStatus === 'success') {
-                        logger.info(`Payment ${payment.id} verified as SUCCESS via Cron`);
-                        await this.handleSuccessfulPayment({
-                            reference: payment.provider_reference,
-                            amount: payment.amount,
-                            metadata: providerData || {}
-                        });
-                        results.successCount++;
-                    } else if (providerStatus === 'failed') {
-                        const failureReason = is404Error
-                            ? 'Payment not found in provider system (404)'
-                            : (providerData?.remarks || providerData?.status_description || 'Payment failed');
-
-                        logger.info(`Payment ${payment.id} verified as FAILED via Cron - Reason: ${failureReason}`);
+                    // FIX 4: Remove status polling. Implement timeout-based failure.
+                    if (ageMinutes > 30) {
+                        logger.warn(`Marking pending payment ${payment.id} as expired after 30 minutes`);
                         await pool.query(
                             "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2",
                             [JSON.stringify({
-                                failure_reason: failureReason,
-                                failed_by: 'cron_job',
-                                failed_at: new Date().toISOString(),
-                                provider_data: providerData || { error_code: 404 }
+                                failure_reason: 'Transaction timed out after 30 minutes',
+                                failed_at: new Date().toISOString()
                             }), payment.id]
                         );
 
-                        // If linked to an order, mark the order as failed too
                         if (payment.metadata?.order_id) {
-                            try {
-                                await pool.query(
-                                    "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
-                                    [payment.metadata.order_id]
-                                );
-                                logger.info(`[Cron] Marked Order ${payment.metadata.order_id} as FAILED due to payment failure`);
-                            } catch (orderErr) {
-                                logger.error(`[Cron] Failed to mark order ${payment.metadata.order_id} as failed:`, orderErr);
-                            }
+                            await pool.query(
+                                "UPDATE product_orders SET status = 'FAILED' WHERE id = $1 AND status = 'PENDING'",
+                                [payment.metadata.order_id]
+                            );
                         }
-
                         results.failedCount++;
+                        continue;
                     }
+
+                    // No provider check here as per Payd's push-only architecture
+                    logger.info(`Payment ${payment.id} still pending (${ageMinutes}m old) - awaiting webhook`);
+
 
                 } catch (innerErr) {
                     logger.error(`Error processing pending payment ${payment.id}:`, innerErr);

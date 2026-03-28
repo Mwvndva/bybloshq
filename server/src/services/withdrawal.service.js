@@ -107,8 +107,10 @@ class WithdrawalService {
 
         // --- Phase 3: Call Payd API asynchronously ---
         // Do NOT await — return the request immediately to caller
-        this._callPaydAndUpdate(request, entity, validatedAmount, normalizedPhone)
+        Promise.resolve()
+            .then(() => this._callPaydAndUpdate(request, entity, validatedAmount, normalizedPhone))
             .catch(err => logger.error(`[WithdrawalService] _callPaydAndUpdate failed for request ${request.id}: `, err));
+
 
         return request;
     }

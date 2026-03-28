@@ -16,7 +16,7 @@ class PaymentController {
   async handlePaydWebhook(req, res) {
     try {
       const webhookData = req.body;
-      const headers = req.headers;
+
 
       logger.info('Payd webhook received', {
         event: webhookData.event,

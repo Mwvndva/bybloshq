@@ -12,7 +12,10 @@ const router = express.Router();
 const publicRouter = express.Router();
 
 // Apply payment logger to all public routes
-publicRouter.use(paymentRequestLogger);
+if (process.env.NODE_ENV !== 'production') {
+  publicRouter.use(paymentRequestLogger);
+}
+
 
 
 // Product payment initiation (public) — same flow as tickets, but for products
