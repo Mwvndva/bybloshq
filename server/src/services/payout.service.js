@@ -15,8 +15,12 @@ class PayoutService {
     constructor() {
         // Separate base URL for payouts (v2) vs payments (v3)
         this.baseUrl = process.env.PAYD_PAYOUT_BASE_URL || 'https://api.payd.money/api/v2';
-        this.username = process.env.PAYD_USERNAME;
+        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || process.env.PAYD_USERNAME || 'mwxndx';
+        this.accountUsername = this.payloadUsername;
+        this.username = process.env.PAYD_USERNAME || this.payloadUsername;
         this.password = process.env.PAYD_PASSWORD;
+        this.apiSecret = process.env.PAYD_API_SECRET;
+
 
         this.client = axios.create({
             baseURL: this.baseUrl,
@@ -193,10 +197,12 @@ class PayoutService {
                 return await this.client.post('/withdrawal', payload, {
                     headers: {
                         'Authorization': this.getAuthHeader(),
+                        'X-Payd-Secret': this.apiSecret,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }
                 });
+
             }, 3, 2000); // 3 retries with 2s delay
 
             const duration = Date.now() - startTime;

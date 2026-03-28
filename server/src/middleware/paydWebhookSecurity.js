@@ -119,6 +119,25 @@ export const verifyPaydWebhook = (req, res, next) => {
     }
 
     // ========================================
+    // LAYER 1.5: SECRET VERIFICATION (OPTIONAL LAYER)
+    // ========================================
+    const configuredSecret = process.env.PAYD_API_SECRET;
+    if (configuredSecret && configuredSecret !== 'skip') {
+        const incomingSecret = req.headers['x-payd-secret'] || req.headers['authorization'];
+
+        if (incomingSecret) {
+            const isValid = incomingSecret === configuredSecret ||
+                incomingSecret === `Basic ${Buffer.from(configuredSecret).toString('base64')}`;
+            if (isValid) {
+                logger.info('[WEBHOOK-SECURITY] ✅ Secret verification passed');
+            } else {
+                logger.warn('[WEBHOOK-SECURITY] ⚠️  PAYD_API_SECRET mismatch');
+            }
+        }
+    }
+
+
+    // ========================================
     // LAYER 2: REQUEST VALIDATION
     // ========================================
 
