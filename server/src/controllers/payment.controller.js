@@ -14,87 +14,34 @@ class PaymentController {
    * Handle Payd webhook
    */
   async handlePaydWebhook(req, res) {
-    try {
-      const webhookData = req.body;
-      const headers = req.headers;
+    const webhookData = req.body;
 
-      logger.info('Payd webhook received', {
-        event: webhookData.event,
-        reference: webhookData.data?.reference
-      });
+    logger.info('Payd collection webhook received', {
+      transaction_reference: webhookData.transaction_reference,
+      result_code: webhookData.result_code,
+      success: webhookData.success,
+    });
 
-      // Process the webhook
-      // Process the webhook
-      // Payd webhook handling
-      const result = await paymentService.handlePaydCallback(webhookData);
+    // RESPOND 200 IMMEDIATELY as required by Payd docs
+    // Must happen before any async processing
+    res.status(200).json({ received: true });
 
-      // Return appropriate response
-      if (result.status === 'ignored') {
-        return res.status(200).json({
-          status: 'success',
-          message: result.message
+    // Process asynchronously — webhook is already acknowledged above
+    setImmediate(async () => {
+      try {
+        await paymentService.handlePaydCallback(webhookData);
+        logger.info('Payd webhook processed successfully', {
+          transaction_reference: webhookData.transaction_reference
         });
+      } catch (error) {
+        logger.error('Payd webhook processing failed (async):', {
+          transaction_reference: webhookData.transaction_reference,
+          error: error.message
+        });
+        // Cannot respond with error at this point — 200 already sent
+        // Ensure the payment record is updated to needs_completion if applicable
       }
-
-      res.status(200).json({
-        status: 'success',
-        message: 'Webhook processed successfully',
-        data: result
-      });
-
-    } catch (error) {
-      logger.error('Payd webhook processing failed:', error);
-
-      // Still return 200 to acknowledge receipt (Payd expects this)
-      res.status(200).json({
-        status: 'error',
-        message: 'Webhook processing failed',
-        error: error.message
-      });
-    }
-  }
-
-  /**
-   * Test webhook endpoint
-   */
-  async testWebhook(req, res) {
-    try {
-      const testPayload = {
-        event: 'charge.success',
-        data: {
-          reference: 'TEST-' + Date.now(),
-          amount: 10000,
-          customer: {
-            email: 'test@example.com'
-          },
-          paid_at: new Date().toISOString(),
-          metadata: {
-            invoice_id: 'test-invoice'
-          }
-        }
-      };
-
-      const testHeaders = {
-        'x-paystack-signature': 'test-signature'
-      };
-
-      // For testing, skip signature verification
-      const result = await paymentService.handleSuccessfulPayment(testPayload.data);
-
-      res.status(200).json({
-        status: 'success',
-        message: 'Test webhook processed successfully',
-        data: result
-      });
-
-    } catch (error) {
-      logger.error('Test webhook failed:', error);
-      res.status(500).json({
-        status: 'error',
-        message: 'Test webhook failed',
-        error: error.message
-      });
-    }
+    });
   }
 
 

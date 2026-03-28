@@ -4,6 +4,8 @@ import { verifyToken, getTokenFromRequest, changedPasswordAfter } from '../utils
 import AuthorizationService from '../services/authorization.service.js';
 import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
+import CacheService from '../services/cache.service.js';
+import logger from '../utils/logger.js';
 
 
 // Maps for easy lookup in req.user.can
@@ -112,16 +114,26 @@ export const protect = async (req, res, next) => {
     // 5) CROSS-ROLE SUPPORT: Check if user has other role profiles
     // This allows sellers who make purchases to access buyer endpoints
     // Skip for admin users
-    let crossRoles = { buyer_id: null, seller_id: null, organizer_id: null };
+    let crossRoles = { buyer_id: null, seller_id: null };
 
     if (userType !== 'admin') {
-      const crossRoleQuery = `
-        SELECT 
-          (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
-          (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id
-      `;
-      const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
-      crossRoles = crossRoleResult.rows[0];
+      const cacheKey = `user:${decoded.id}:cross-roles`;
+      const cachedRoles = await CacheService.get(cacheKey);
+
+      if (cachedRoles) {
+        crossRoles = cachedRoles;
+      } else {
+        const crossRoleQuery = `
+          SELECT 
+            (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
+            (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id
+        `;
+        const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
+        crossRoles = crossRoleResult.rows[0];
+
+        // Cache result for 5 minutes (300 seconds)
+        await CacheService.set(cacheKey, crossRoles, 300);
+      }
     }
 
     // Standardize user identity to prevent overlap between roles
@@ -176,13 +188,23 @@ export const protect = async (req, res, next) => {
 
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
+      logger.warn('[SECURITY-ALERT] Invalid JWT attempt', {
+        error: error.message,
+        ip: req.ip,
+        userAgent: req.headers['user-agent'],
+        url: req.originalUrl
+      });
       return next(new AppError('Invalid token. Please log in again!', 401));
     }
     if (error.name === 'TokenExpiredError') {
       return next(new AppError('Your token has expired! Please log in again.', 401));
     }
 
-    console.error('Authentication error:', error);
-    return next(new AppError('Authentication failed', 500));
+    logger.error('[AUTH-ERROR] Authentication failed:', {
+      error: error.message,
+      ip: req.ip,
+      url: req.originalUrl
+    });
+    return next(new AppError('Authentication failed', 401));
   }
 };

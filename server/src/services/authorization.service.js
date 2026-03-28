@@ -65,11 +65,6 @@ class AuthorizationService {
                 return true;
             }
 
-            const organizerPerms = ['create-events', 'verify-tickets', 'view-analytics', 'manage-profile'];
-            if ((user.userType === 'organizer' || user.hasOrganizerProfile || user.organizerProfileId) && organizerPerms.includes(permission)) {
-
-                return true;
-            }
 
             const buyerPerms = ['view-orders', 'manage-profile'];
             if ((user.userType === 'buyer' || user.hasBuyerProfile || user.buyerProfileId) && buyerPerms.includes(permission)) {

@@ -153,25 +153,18 @@ class PayoutService {
             // ============================================================
             try {
                 const balance = await this.checkPayoutBalance();
-
-                if (parseFloat(balance.available_balance) < validatedAmount) {
-                    throw new PaydError(
-                        `Insufficient payout balance. Available: ${balance.available_balance}, Required: ${validatedAmount}`,
-                        PaydErrorCodes.INSUFFICIENT_BALANCE
-                    );
+                const available = parseFloat(balance.available_balance || 0);
+                if (available < validatedAmount) {
+                    logger.warn('[PAYD-PAYOUT] Balance may be insufficient', {
+                        available,
+                        required: validatedAmount,
+                        note: 'Balance endpoint is undocumented — Payd will confirm at withdrawal time'
+                    });
+                    // Do NOT throw here — let Payd validate at withdrawal time
                 }
-
-                logger.info('[PAYD-PAYOUT] Balance check passed', {
-                    available: balance.available_balance,
-                    required: validatedAmount
-                });
-
             } catch (balanceError) {
-                // Don't block if balance check fails (might be network issue)
-                if (balanceError.code === PaydErrorCodes.INSUFFICIENT_BALANCE) {
-                    throw balanceError;
-                }
-                logger.warn('[PAYD-PAYOUT] Balance check failed (non-critical)', balanceError.message);
+                // Balance check uses undocumented endpoint — failure is non-critical
+                logger.warn('[PAYD-PAYOUT] Balance check skipped (undocumented endpoint):', balanceError.message);
             }
 
             // ============================================================
@@ -206,10 +199,10 @@ class PayoutService {
             // ============================================================
             const data = response.data;
 
-            const reference = data.transaction_reference || data.correlator_id || data.transaction_id || data.reference;
+            const reference = data.correlator_id || data.transaction_reference;
 
             if (!reference) {
-                logger.warn('[PAYD-PAYOUT] No transaction_reference in response', { data });
+                logger.warn('[PAYD-PAYOUT] No correlator_id in response', { data });
             }
 
             logger.info('[PAYD-PAYOUT] Payout initiated successfully', {
@@ -457,28 +450,10 @@ class PayoutService {
             );
             newBalance = parseFloat(rows[0]?.balance ?? 0);
             logger.info(`[PayoutService] Refunded KES ${amount} to seller ${request.seller_id}. New balance: ${newBalance}`);
-
-        } else if (request.event_id) {
-            // For event withdrawals: refund the gross deducted amount (amount + fee)
-            const feeRate = 0.06;
-            const grossAmount = amount / (1 - feeRate);
-            const { rows } = await client.query(
-                'UPDATE events SET balance = balance + $1 WHERE id = $2 RETURNING balance',
-                [grossAmount, request.event_id]
-            );
-            newBalance = parseFloat(rows[0]?.balance ?? 0);
-            logger.info(`[PayoutService] Refunded KES ${grossAmount} (gross) to event ${request.event_id}`);
-
-        } else if (request.organizer_id) {
-            const { rows } = await client.query(
-                'UPDATE organizers SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
-                [amount, request.organizer_id]
-            );
-            newBalance = parseFloat(rows[0]?.balance ?? 0);
-            logger.info(`[PayoutService] Refunded KES ${amount} to organizer ${request.organizer_id}. New balance: ${newBalance}`);
-
         } else {
-            logger.error('[PayoutService] Cannot refund: no entity_id on request', request);
+            logger.error('[PayoutService] Cannot refund: withdrawal has no seller_id', {
+                requestId: request.id
+            });
         }
 
         return newBalance;

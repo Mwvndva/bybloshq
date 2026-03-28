@@ -76,26 +76,8 @@ export class PaymentService {
             timeout: 60000,
             httpsAgent: this.httpsAgent
         });
-
-        // Validate base URL is reachable
-        this._validateBaseUrl().catch(err => {
-            logger.warn('[PAYD-INIT] Base URL validation failed:', err.message);
-        });
     }
 
-    async _validateBaseUrl() {
-        try {
-            // Using a simple HEAD request via Axios for consistency
-            await this.client.head('/', { timeout: 10000 });
-            logger.info('[PAYD-INIT] Base URL validated successfully');
-        } catch (error) {
-            // Log but don't throw to avoid crashing the whole service
-            logger.warn('[PAYD-INIT] Base URL validation probe failed (non-critical)', {
-                error: error.message,
-                baseUrl: this.baseUrl
-            });
-        }
-    }
 
     /**
      * Helper to retry requests with exponential backoff
@@ -228,6 +210,7 @@ export class PaymentService {
                 amount,
                 invoice_id,
                 phone,
+                narration,
                 narrative,
                 first_name,
                 last_name,
@@ -278,16 +261,9 @@ export class PaymentService {
                 channel: "MPESA",
                 amount: parseFloat(amount),
                 phone_number: normalizedPhone,
-                narration: narrative || `Payment for ${invoice_id}`,
+                narration: narration || narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
                 callback_url: callbackUrl,
-                billing_address: {
-                    email: email,
-                    first_name: first_name || 'Customer',
-                    last_name: last_name || '',
-                    city: 'Nairobi',
-                    country: 'Kenya'
-                }
             };
 
             logger.info('[PAYD-PAYIN] Initiating payment', {
@@ -318,11 +294,15 @@ export class PaymentService {
             const resData = response.data.data || response.data;
 
             // Extract transaction reference (Standardizing on transaction_reference)
-            const reference = resData.transaction_reference ||
-                resData.transaction_id ||
-                resData.reference ||
-                resData.tracking_id ||
-                `PAYD-${Date.now()}`;
+            const reference = resData.transaction_reference;
+            if (!reference) {
+                logger.error('[PAYD-PAYIN] No transaction_reference in response', { invoice_id, raw: resData });
+                throw new PaydError(
+                    'Payd did not return a transaction_reference. Cannot track this payment.',
+                    PaydErrorCodes.TRANSACTION_FAILED,
+                    500
+                );
+            }
 
             logger.info('[PAYD-PAYIN] Payment initiated successfully', {
                 duration: `${duration}ms`,
@@ -434,14 +414,11 @@ export class PaymentService {
             // ============================================================
             const data = callbackData.data || callbackData;
 
-            const reference = data.transaction_reference ||
-                data.transaction_id ||
-                data.reference ||
-                data.tracking_id;
+            const reference = data.transaction_reference;
 
             const status = data.status?.toLowerCase();
             const amount = parseFloat(data.amount || 0);
-            const phone = data.phone_number || data.phone;
+            const phone = data.phone_number;
             const resultCode = data.result_code || callbackData.result_code;
 
             if (!reference) {
@@ -449,9 +426,9 @@ export class PaymentService {
                 throw new Error('Webhook missing transaction reference');
             }
 
-            // Determine Success: result_code 0 is success in v2, OR status SUCCESS/COMPLETED
-            const isSuccess = (resultCode == 0 || resultCode === '0' ||
-                status === 'success' || status === 'completed' || status === 'paid');
+            // Payd docs: SUCCESS requires result_code=0 AND success=true
+            const resultCodeNum = parseInt(resultCode, 10);
+            const isSuccess = resultCodeNum === 0 && data.success === true;
 
             logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
                 reference,
@@ -465,8 +442,8 @@ export class PaymentService {
             // STEP 2: FIND PAYMENT RECORD
             // ============================================================
             const { rows: payments } = await pool.query(
-                'SELECT * FROM payments WHERE provider_reference = $1 OR invoice_id = $2 OR api_ref = $1',
-                [reference, reference]
+                'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1',
+                [reference]
             );
 
             if (!payments || payments.length === 0) {
@@ -509,18 +486,26 @@ export class PaymentService {
             try {
                 await dbClient.query('BEGIN');
 
+                const mpesaReceipt = data.third_party_trans_id || null;
+
                 // Update payment record
                 await dbClient.query(
                     `UPDATE payments 
                      SET status = $1,
+                         mpesa_receipt = $2,
                          metadata = jsonb_set(
                              COALESCE(metadata, '{}'::jsonb),
                              '{webhook_received_at}',
-                             $2::jsonb
+                             $3::jsonb
                          ),
                          updated_at = NOW()
-                     WHERE id = $3`,
-                    [isSuccess ? PaymentStatus.COMPLETED : 'failed', JSON.stringify(new Date().toISOString()), payment.id]
+                     WHERE id = $4`,
+                    [
+                        isSuccess ? PaymentStatus.COMPLETED : 'failed',
+                        mpesaReceipt,
+                        JSON.stringify(new Date().toISOString()),
+                        payment.id
+                    ]
                 );
 
                 // ============================================================
@@ -615,36 +600,16 @@ export class PaymentService {
         let payment = null;
 
         // 1. Find payment by reference OR invoice_id
-        const { rows: refRows } = await pool.query(
-            'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 OR invoice_id = $1 LIMIT 1',
+        // 1. Find payment by provider_reference or api_ref (Fuzzy matching removed - C-2 FIX)
+        const { rows } = await pool.query(
+            `SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 LIMIT 1`,
             [reference]
         );
-
-        if (refRows.length > 0) {
-            payment = refRows[0];
-            logger.info(`[PURCHASE-FLOW] 6a. Found Payment via Reference: ${payment.id}`);
-        } else {
-            // 1b. Try to find by invoice_id/order_id inside metadata
-            const meta = metadata.data || metadata;
-            const possibleInvoiceId = meta.invoice_id || meta.external_id || meta.order_id || meta.account_number;
-
-            if (possibleInvoiceId) {
-                logger.info(`Reference ${reference} not found directly, checking for invoice_id: ${possibleInvoiceId}`);
-                const { rows: invRows } = await pool.query(
-                    'SELECT * FROM payments WHERE invoice_id = $1 OR api_ref = $1 LIMIT 1',
-                    [String(possibleInvoiceId)]
-                );
-                if (invRows.length > 0) {
-                    payment = invRows[0];
-                    logger.info(`Match found via Invoice ID from metadata: ${payment.id}`);
-                }
-            }
-        }
+        payment = rows[0];
 
         if (!payment) {
-            // C-2 FIX: Fuzzy matching removed — it was exploitable via crafted webhooks.
-            // All payment confirmation must go through provider_reference or invoice_id.
-            logger.warn(`[SECURITY] Payment reference not matched via any lookup. Reference: ${reference}. No fuzzy match attempted.`);
+            logger.warn(`[PAYMENT] No payment found for reference: ${reference}`);
+            return { status: 'not_found', message: 'Payment record not found' };
         }
 
         // If still no payment, use the rows[0] (which will be undefined) or handle normally
@@ -740,14 +705,18 @@ export class PaymentService {
             // 3. Mark as Success in DB
             // We also set provider_reference here so that any subsequent webhook matches via tier-1
             logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed' and setting provider_reference`);
+
+            const mpesaReceipt = metadata?.data?.third_party_trans_id || metadata?.third_party_trans_id || null;
+
             await dbClient.query(
                 `UPDATE payments 
                  SET status = $1, 
                      provider_reference = $4,
+                     mpesa_receipt = $5,
                      metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
                      updated_at = NOW()
                  WHERE id = $3`,
-                [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id, reference]
+                [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id, reference, mpesaReceipt]
             );
 
             // Commit the transaction to release the lock
@@ -770,8 +739,7 @@ export class PaymentService {
 
         logger.info(`[PURCHASE-FLOW] 6c. Payment updated, determining downstream action`, {
             hasOrderId: !!paymentMeta.order_id,
-            hasProductId: !!paymentMeta.product_id,
-            hasTicketTypeId: !!(updatedPayment.ticket_type_id || paymentMeta.ticket_type_id)
+            hasProductId: !!paymentMeta.product_id
         });
 
         if (paymentMeta.order_id || paymentMeta.product_id) {
@@ -816,7 +784,7 @@ export class PaymentService {
             }
             return { status: 'success', message: 'Payment processed and Debt settled' };
         }
-        logger.warn(`[PURCHASE-FLOW] Payment ${payment.id} completed but no downstream action defined (no order_id or ticket_type_id)`);
+        logger.warn(`[PURCHASE-FLOW] Payment ${payment.id} completed but no downstream action defined (no order_id)`);
         return { status: 'success', message: 'Payment received but no downstream action defined' };
     }
 
@@ -1237,20 +1205,6 @@ export class PaymentService {
                     // Skip payments without provider reference
                     if (!payment.provider_reference) {
                         // If payment is older than 30 minutes and has no provider reference,
-                        // it's likely orphaned (initiation failed but wasn't marked as failed)
-                        if (ageMinutes > 30) {
-                            logger.warn(`Marking orphaned payment ${payment.id} as failed (age: ${ageMinutes}m, no provider_reference)`);
-                            await pool.query(
-                                "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2",
-                                [JSON.stringify({
-                                    failure_reason: 'Orphaned payment - no provider reference after 30 minutes',
-                                    failed_by: 'cron_job',
-                                    failed_at: new Date().toISOString()
-                                }), payment.id]
-                            );
-                            results.orphanedCount++;
-                            results.failedCount++;
-                        }
                         continue;
                     }
 
@@ -1275,17 +1229,16 @@ export class PaymentService {
                     } catch (netErr) {
                         // Check if it's a 404 error
                         if (netErr.response?.status === 404) {
-                            is404Error = true;
-
-                            // If payment is older than 30 minutes and returns 404,
-                            // it's likely the payment doesn't exist in Payd's system
-                            if (ageMinutes > 30) {
-                                logger.warn(`Payment ${payment.id} not found in Payd (404) after ${ageMinutes} minutes - marking as failed`);
-                                providerStatus = 'failed';
-                            } else {
-                                // For newer payments, just log and skip (might still be processing)
-                                logger.info(`Payment ${payment.id} returned 404 but is only ${ageMinutes}m old - will retry later`);
+                            // 404 from undocumented endpoint — this is NOT a payment failure.
+                            // Flag for manual review after 2 hours, but do NOT auto-fail.
+                            if (ageMinutes > 120) {
+                                logger.warn(`[CRON] Payment ${payment.id} pending >2hr with no webhook received. Flag for manual review.`);
+                                await pool.query(
+                                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata,'{}'), '{needs_manual_review}', 'true') WHERE id = $1`,
+                                    [payment.id]
+                                );
                             }
+                            continue;
                         } else {
                             // For other errors (network issues, timeouts, etc.), just log
                             logger.warn(`Failed to check status for ${payment.id}: ${netErr.message}`);
@@ -1360,7 +1313,7 @@ export class PaymentService {
 
 
     async initiateProductPayment(payload, user) {
-        const { phone, email, amount, productId, sellerId, productName, customerName, narrative, city, location, quantity = 1 } = payload;
+        const { phone, email, amount, productId, sellerId, productName, customerName, narration, narrative, city, location, quantity = 1 } = payload;
 
         // 1. Resolve Buyer Info
         let buyerId = user?.id || null;
@@ -1475,16 +1428,13 @@ export class PaymentService {
             payment_method: 'payd',
             phone_number: phone,
             email,
-            event_id: null,
-            organizer_id: null,
-            ticket_type_id: null,
             metadata: {
                 order_id: order.id,
                 order_number: order.order_number,
                 product_id: productId,
                 seller_id: sellerId,
                 product_type: product.product_type,
-                narrative: narrative || `Payment for ${productName}`
+                narration: narration || narrative || `Payment for ${productName}`
             }
         };
 
@@ -1505,7 +1455,7 @@ export class PaymentService {
                 // initiatePayment expects 'phone' key for the number to charge
                 phone: buyerMobilePayment,
                 firstName: customerName?.split(' ')[0],
-                narrative: paymentData.metadata.narrative
+                narration: narration || narrative || `Payment for ${product.name} from ${product.shopName || 'Byblos'}`
             };
 
             const result = await this.initiatePayment(gwPayload);

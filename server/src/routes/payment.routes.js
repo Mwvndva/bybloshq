@@ -45,12 +45,6 @@ publicRouter.post(
   paymentController.handlePaydWebhook // Updated method name
 );
 
-// Test webhook endpoint (for development)
-publicRouter.post(
-  '/webhook/test',
-  express.json(),
-  paymentController.testWebhook
-);
 
 // Paystack callback endpoint (public) - Legacy support
 // Paystack callback endpoint (public) - Legacy support
