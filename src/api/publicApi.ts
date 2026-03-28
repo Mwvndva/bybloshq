@@ -485,10 +485,10 @@ export const publicApiService = {
         try {
           attempts++;
           const response = await publicApi.get<any>(`payments/status/${reference}`);
-          const status = response.data.status?.toLowerCase();
+          const status = (response.data.data?.status || response.data.status)?.toLowerCase();
 
           if (status === 'completed' || status === 'success' || status === 'failed' || status === 'cancelled') {
-            resolve(response.data);
+            resolve(response.data.data || response.data);
           } else if (attempts >= maxAttempts) {
             resolve({ status: 'timeout', message: 'Polling timed out' });
           } else {

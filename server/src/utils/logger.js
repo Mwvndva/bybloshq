@@ -20,7 +20,11 @@ const logger = winston.createLogger({
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
     winston.format.colorize({ all: true }),
     winston.format.printf(
-      (info) => `${info.timestamp} ${info.level}: ${info.message}`
+      (info) => {
+        const { timestamp, level, message, ...meta } = info;
+        const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+        return `${timestamp} ${level}: ${message}${metaStr}`;
+      }
     )
   ),
   transports: [

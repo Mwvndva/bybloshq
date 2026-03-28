@@ -251,10 +251,7 @@ export class PaymentService {
 
                 if (parseFloat(balance.available_balance) < parseFloat(amount) * 1.1) {
                     // Alert if balance is low (less than 110% of transaction amount)
-                    logger.warn('[PAYD-PAYIN] Low platform balance', {
-                        available: balance.available_balance,
-                        required: amount
-                    });
+                    logger.warn(`[PAYD-PAYIN] Low platform balance: ${balance.available_balance} ${balance.currency} available, ${amount} required. Transaction might fail if merchant pays fees.`);
                 }
             } catch (balanceError) {
                 // Don't block payment if balance check fails
@@ -294,7 +291,8 @@ export class PaymentService {
                 invoice_id,
                 amount: payload.amount,
                 phone: normalizedPhone,
-                endpoint: `${this.baseUrl}/payments`
+                endpoint: `${this.baseUrl}/payments`,
+                payload: JSON.stringify(payload)
             });
 
             // ============================================================
@@ -453,13 +451,13 @@ export class PaymentService {
             const isSuccess = (resultCode == 0 || resultCode === '0' ||
                 status === 'success' || status === 'completed' || status === 'paid');
 
-            logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
+            logger.info(`[PAYD-WEBHOOK] Parsed webhook data: ${JSON.stringify({
                 reference,
                 status,
                 isSuccess,
                 amount,
                 phone
-            });
+            })}`);
 
             // ============================================================
             // STEP 2: FIND PAYMENT RECORD
@@ -541,10 +539,7 @@ export class PaymentService {
                         );
                     }
                 } else if (status === 'failed' || status === 'cancelled' || resultCode == 1) {
-                    logger.warn('[PAYD-WEBHOOK] Payment failed', {
-                        payment_id: payment.id,
-                        status
-                    });
+                    logger.warn(`[PAYD-WEBHOOK] Payment failed for payment_id: ${payment.id}, reference: ${reference}, status: ${status}, raw: ${JSON.stringify(data)}`);
                 }
 
                 await dbClient.query('COMMIT');
