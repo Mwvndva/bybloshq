@@ -71,7 +71,9 @@ export const getOrderById = async (req, res) => {
         }
 
         // Allow access if requester is the seller OR the buyer on this order
-        const isSeller = (req.user.sellerId && order.sellerId === req.user.sellerId);
+        const isSeller = (req.user.sellerId) &&
+            (String(order.sellerId) === String(req.user.sellerId) ||
+                String(order.sellerId) === String(req.user.profileId));
         const isBuyer = (req.user.buyerId && order.buyerId === req.user.buyerId);
 
         if (!isSeller && !isBuyer) {

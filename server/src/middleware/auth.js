@@ -4,6 +4,18 @@ import { verifyToken, getTokenFromRequest, changedPasswordAfter } from '../utils
 import AuthorizationService from '../services/authorization.service.js';
 import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
+import logger from '../utils/logger.js';
+
+const authCache = new Map();
+const AUTH_CACHE_TTL = 30 * 1000; // 30 seconds
+
+// Cleanup interval for authCache
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of authCache.entries()) {
+    if (value.expiresAt < now) authCache.delete(key);
+  }
+}, 60 * 1000); // clean every minute
 
 
 // Maps for easy lookup in req.user.can
@@ -47,10 +59,21 @@ export const protect = async (req, res, next) => {
 
     // 2) Verify token
     const decoded = verifyToken(token);
+    const userType = decoded.role || decoded.type;
+
+    // Fix 9: Auth token caching for performance
+    if (userType !== 'admin') {
+      const cachedEntry = authCache.get(token);
+      if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+        req.user = cachedEntry.user;
+        res.locals.user = cachedEntry.user;
+        return next();
+      }
+    }
 
     // 3) Find user in unified users table
     let user = null;
-    const userType = decoded.role || decoded.type; // backward compatibility
+    // const userType = decoded.role || decoded.type; // already extracted above
 
     if (!userType) {
       return next(new AppError('Invalid token: missing user type/role', 401));
@@ -122,6 +145,11 @@ export const protect = async (req, res, next) => {
       `;
       const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
       crossRoles = crossRoleResult.rows[0];
+
+      // Fix 8: Add sellerId null guard
+      if (userType === 'seller' && !crossRoles.seller_id) {
+        logger.warn(`[AUTH] Seller user ${decoded.id} has no linked sellers row. sellerId will be null.`);
+      }
     }
 
     // Standardize user identity to prevent overlap between roles
@@ -157,8 +185,16 @@ export const protect = async (req, res, next) => {
     user.permissions = await AuthorizationService.getUserPermissions(lookupId);
 
     // DEBUG: Log permissions and IDs
-    console.log(`[AUTH] User ${user.email} (type: ${userType}) IDs: userId=${user.userId}, id=${user.id}, lookupId=${lookupId}`);
-    console.log(`[AUTH] Permissions for ${user.email}:`, Array.from(user.permissions));
+    logger.info(`[AUTH] User ${user.email} (type: ${userType}) IDs: userId=${user.userId}, sellerId=${user.sellerId}, buyerId=${user.buyerId}, lookupId=${lookupId}`);
+    // logger.info(`[AUTH] Permissions for ${user.email}:`, Array.from(user.permissions));
+
+    // Fix 9: Cache the result
+    if (userType !== 'admin') {
+      authCache.set(token, {
+        user,
+        expiresAt: Date.now() + AUTH_CACHE_TTL
+      });
+    }
 
 
     // 5) Attach helper method for easier checks in controllers

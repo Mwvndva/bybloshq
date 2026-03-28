@@ -438,7 +438,7 @@ async function getSellerProductsFromDB(sellerId) {
 // @access  Private
 export const uploadBanner = async (req, res) => {
   try {
-    const sellerId = req.user?.id;
+    const sellerId = req.user?.sellerId;
 
     if (!sellerId) {
       return res.status(401).json({
@@ -503,7 +503,7 @@ export const uploadBanner = async (req, res) => {
 export const updateTheme = async (req, res) => {
   try {
     const { theme } = req.body;
-    const sellerId = req.user?.id;
+    const sellerId = req.user?.sellerId;
 
     if (!sellerId) {
       return res.status(401).json({
