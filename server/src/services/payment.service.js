@@ -13,11 +13,14 @@ import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
 export class PaymentService {
     constructor() {
         this.baseUrl = process.env.PAYD_BASE_URL || 'https://api.payd.money/api/v2';
-        this.username = process.env.PAYD_USERNAME;
+        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || process.env.PAYD_USERNAME || 'mwxndx';
+        this.accountUsername = this.payloadUsername;
+        this.username = process.env.PAYD_USERNAME || this.payloadUsername;
         this.password = process.env.PAYD_PASSWORD;
         this.networkCode = process.env.PAYD_NETWORK_CODE;
         this.channelId = process.env.PAYD_CHANNEL_ID;
-        this.payloadUsername = process.env.PAYD_PAYLOAD_USERNAME || this.username || 'mwxndx';
+        this.apiSecret = process.env.PAYD_API_SECRET;
+
 
         // Validate required configs
         if (!this.username || !this.password) {
@@ -41,6 +44,7 @@ export class PaymentService {
         }
 
         logger.info(`PaymentService initialized with BaseURL: ${this.baseUrl}`);
+
 
         // ✅ FIX 1: Create persistent HTTPS agent with connection pooling
 
@@ -309,10 +313,12 @@ export class PaymentService {
                 return await this.client.post('/payments', payload, {
                     headers: {
                         'Authorization': this.getAuthHeader(),
+                        'X-Payd-Secret': this.apiSecret,
                         'Content-Type': 'application/json',
                         'Accept': 'application/json'
                     }
                 });
+
             }, 3, 1000);
 
             const duration = Date.now() - startTime;
@@ -457,9 +463,10 @@ export class PaymentService {
                 throw new Error('Webhook missing transaction reference');
             }
 
-            // FIX 6: Payd Docs success is result_code 0. Relaxed to handle case-sensitivity.
-            const isSuccess = (resultCode == 0 || resultCode === '0' || data.success === true || data.success === 'true')
-                && (data.status?.toUpperCase() !== 'FAILED' && data.status?.toUpperCase() !== 'CANCELLED');
+            // Webhook Success Criteria: result_code 0 AND (success: true OR status: success)
+            // Failed criteria: result_code 1 (M-Pesa) or 3000 (Pan-African)
+            const isSuccess = (resultCode == 0 || resultCode === '0') &&
+                (data.success === true || data.success === 'true' || data.status?.toLowerCase() === 'success');
 
 
 
@@ -891,9 +898,10 @@ export class PaymentService {
      */
     async checkBalance() {
         try {
-            logger.info('[PAYD-BALANCE] Checking platform balance');
+            logger.info(`[PAYD-BALANCE] Checking platform balance for user: ${this.accountUsername}`);
 
-            const response = await this.client.get(`/accounts/${this.username}/all_balances`, {
+            const response = await this.client.get(`/accounts/${this.accountUsername}/all_balances`, {
+
                 baseURL: 'https://api.payd.money/api/v1',
                 headers: {
                     'Authorization': this.getAuthHeader(),
@@ -902,6 +910,8 @@ export class PaymentService {
             });
 
             const data = response.data;
+            logger.debug('[PAYD-BALANCE] Raw balance response:', JSON.stringify(data));
+
             const fiat = data.fiat_balance || {};
 
             logger.info('[PAYD-BALANCE] Balance retrieved', {

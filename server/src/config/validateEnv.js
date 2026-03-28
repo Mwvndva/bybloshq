@@ -14,8 +14,11 @@ const REQUIRED_ENV_VARS = [
     // Payd Payment Gateway (core credentials — always required)
     'PAYD_USERNAME',
     'PAYD_PASSWORD',
+    'PAYD_PAYLOAD_USERNAME',
     'PAYD_NETWORK_CODE',
     'PAYD_CHANNEL_ID',
+    'PAYD_API_SECRET',
+
 
     // Application URLs
     'FRONTEND_URL',
