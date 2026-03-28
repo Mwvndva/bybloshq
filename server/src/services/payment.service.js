@@ -291,14 +291,20 @@ export class PaymentService {
             const payload = {
                 username: this.payloadUsername,
                 channel: "MPESA",
-                amount: parseFloat(amount),
+                amount: Math.round(parseFloat(amount)), // Use integer for safety
                 phone_number: normalizedPhone,
-                narration: narrative || `Payment for ${invoice_id}`,
+                narration: (narrative || `Payment for ${invoice_id}`).substring(0, 50),
                 currency: "KES",
                 callback_url: callbackUrl,
             };
 
-            logger.info('[PAYD-PAYIN] Initiating payment with payload:', JSON.stringify(payload, null, 2));
+            // Add optional network code if present
+            if (process.env.PAYD_NETWORK_CODE) {
+                payload.network_code = process.env.PAYD_NETWORK_CODE;
+                logger.info('[PAYD-PAYIN] Adding network_code to payload:', process.env.PAYD_NETWORK_CODE);
+            }
+
+            logger.info('[PAYD-PAYIN] Full Initiation Payload:', JSON.stringify(payload, null, 2));
 
             // ============================================================
             // STEP 4: MAKE API REQUEST
@@ -904,7 +910,7 @@ export class PaymentService {
             });
 
             const data = response.data;
-            logger.debug('[PAYD-BALANCE] Raw balance response:', JSON.stringify(data));
+            logger.info('[PAYD-BALANCE] Balance response received:', JSON.stringify(data));
 
             const fiat = data.fiat_balance || {};
 
