@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Heart, Search } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { ProductCard } from '@/components/ProductCard';
+import ProductCard from '@/components/ProductCard';
 import { Input } from '@/components/ui/input';
 import { useState } from 'react';
 
@@ -66,7 +66,6 @@ export default function WishlistSection() {
             <ProductCard
               key={product.id}
               product={product}
-              forceWhiteText={true}
             />
           ))}
         </div>

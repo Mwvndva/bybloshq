@@ -132,6 +132,57 @@ interface GlobalAuthContextType {
 const GlobalAuthContext = createContext<GlobalAuthContextType | undefined>(undefined);
 
 // ============================================================================
+// HELPER FUNCTIONS (Outside component for stability)
+// ============================================================================
+
+/**
+ * Get the appropriate API module for a given role
+ */
+const getApiForRole = (role: UserRole): any => {
+    switch (role) {
+        case 'buyer':
+            return buyerApi;
+        case 'seller':
+            return sellerApi;
+        case 'admin':
+            return adminApi;
+        default:
+            throw new Error(`Unknown role: ${role}`);
+    }
+};
+
+/**
+ * Get the login redirect path for a role
+ */
+const getLoginPath = (role: UserRole): string => {
+    return `/${role}/login`;
+};
+
+/**
+ * Get the dashboard path for a role
+ */
+const getDashboardPath = (role: UserRole): string => {
+    return `/${role}/dashboard`;
+};
+
+/**
+ * Check if current route matches a specific role
+ */
+const isRoleRoute = (pathname: string, role: UserRole): boolean => {
+    return pathname.startsWith(`/${role}`);
+};
+
+/**
+ * Determine which role to check auth for based on current route
+ */
+const getRoleFromPath = (pathname: string): UserRole | null => {
+    if (pathname.startsWith('/buyer')) return 'buyer';
+    if (pathname.startsWith('/seller')) return 'seller';
+    if (pathname.startsWith('/admin')) return 'admin';
+    return null;
+};
+
+// ============================================================================
 // PROVIDER COMPONENT
 // ============================================================================
 
@@ -142,63 +193,11 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const location = useLocation();
 
     // ============================================================================
-    // HELPER FUNCTIONS
-    // ============================================================================
-
-    /**
-     * Get the appropriate API module for a given role
-     */
-    const getApiForRole = (role: UserRole): any => {
-        switch (role) {
-            case 'buyer':
-                return buyerApi;
-            case 'seller':
-                return sellerApi;
-            case 'admin':
-                return adminApi;
-            default:
-                throw new Error(`Unknown role: ${role}`);
-        }
-    };
-
-    /**
-     * Get the login redirect path for a role
-     */
-    const getLoginPath = (role: UserRole): string => {
-        return `/${role}/login`;
-    };
-
-    /**
-     * Get the dashboard path for a role
-     */
-    const getDashboardPath = (role: UserRole): string => {
-        return `/${role}/dashboard`;
-    };
-
-    /**
-     * Check if current route matches a specific role
-     */
-    const isRoleRoute = (role: UserRole): boolean => {
-        return location.pathname.startsWith(`/${role}`);
-    };
-
-    /**
-     * Determine which role to check auth for based on current route
-     */
-    const getRoleFromRoute = (): UserRole | null => {
-        const path = location.pathname;
-        if (path.startsWith('/buyer')) return 'buyer';
-        if (path.startsWith('/seller')) return 'seller';
-        if (path.startsWith('/admin')) return 'admin';
-        return null;
-    };
-
-    // ============================================================================
     // AUTH CHECK ON MOUNT
     // ============================================================================
 
     const checkAuth = useCallback(async () => {
-        const currentRole = getRoleFromRoute();
+        const currentRole = getRoleFromPath(location.pathname);
 
         // Skip auth check if we're on a public route or homepage
         if (!currentRole || location.pathname === '/') {
@@ -249,14 +248,12 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
             // Mark session as active
             localStorage.setItem(sessionKey, 'true');
-            console.log(`[GlobalAuth] Auth successful for ${currentRole}, profile:`, profileData);
         } catch (error: any) {
-            console.log(`[GlobalAuth] Auth check failed for ${currentRole}:`, error.message);
+            console.error(`[GlobalAuth] Auth check failed for ${currentRole}:`, error.message);
 
             // CROSS-ROLE FIX: Don't fail if we're trying buyer access and user has seller session
             // This prevents the "Split Identity" 404 from blocking access
             if (currentRole === 'buyer' && error.response?.status === 404) {
-                console.log('[GlobalAuth] Buyer profile not found, but may have cross-role access');
             } else {
                 setUser(null);
                 localStorage.removeItem(sessionKey);
@@ -339,7 +336,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             });
 
             localStorage.setItem(`${role}SessionActive`, 'true');
-            console.log(`[GlobalAuth] Auto-login successful for ${role}`);
         } catch (error: any) {
             console.error(`[GlobalAuth] Auto-login error for ${role}:`, error);
             throw error;
@@ -486,7 +482,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const refreshRole = useCallback(async (newRole: UserRole) => {
         setIsLoading(true);
         try {
-            console.log(`[GlobalAuth] Refreshing role to ${newRole}`);
 
             // Fetch profile for the new role
             const api = getApiForRole(newRole);
@@ -508,7 +503,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             // Mark new role session as active
             localStorage.setItem(`${newRole}SessionActive`, 'true');
 
-            console.log(`[GlobalAuth] Role refreshed successfully to ${newRole}`);
 
             toast.success('Role Switched', {
                 description: `Switched to ${newRole} dashboard`,
@@ -681,7 +675,7 @@ export const useGlobalAuth = (): GlobalAuthContextType => {
 export const useBuyerAuth = () => {
     const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword } = useGlobalAuth();
 
-    return {
+    return useMemo(() => ({
         user: user?.role === 'buyer' ? user.profile as BuyerProfile : null,
         isAuthenticated: isAuthenticated && user?.role === 'buyer',
         isLoading,
@@ -690,13 +684,13 @@ export const useBuyerAuth = () => {
         logout,
         forgotPassword: (email: string) => forgotPassword(email, 'buyer'),
         resetPassword: (token: string, newPassword: string) => resetPassword(token, newPassword, 'buyer'),
-    };
+    }), [user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword]);
 };
 
 export const useSellerAuth = () => {
     const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword } = useGlobalAuth();
 
-    return {
+    return useMemo(() => ({
         seller: user?.role === 'seller' ? user.profile as SellerProfile : null,
         isAuthenticated: isAuthenticated && user?.role === 'seller',
         isLoading,
@@ -705,17 +699,17 @@ export const useSellerAuth = () => {
         logout,
         forgotPassword: (email: string) => forgotPassword(email, 'seller'),
         resetPassword: (token: string, newPassword: string) => resetPassword(token, newPassword, 'seller'),
-    };
+    }), [user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword]);
 };
 
 export const useAdminAuth = () => {
     const { user, isAuthenticated, isLoading, loginAdmin, logout } = useGlobalAuth();
 
-    return {
+    return useMemo(() => ({
         isAuthenticated: isAuthenticated && user?.role === 'admin',
         loading: isLoading,
         error: null,
         login: loginAdmin,
         logout,
-    };
+    }), [user, isAuthenticated, isLoading, loginAdmin, logout]);
 };

@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2, Shield, Lock, Mail } from 'lucide-react';
 
 export const AdminLoginPage = () => {
-  console.log('Rendering AdminLoginPage');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [localError, setLocalError] = useState('');
