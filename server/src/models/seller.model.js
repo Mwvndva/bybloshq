@@ -38,9 +38,18 @@ export const findSellerByUserId = async (userId) => {
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
+      banner_image AS "bannerImage",
+      theme,
+      city,
+      location,
+      physical_address AS "physicalAddress",
+      latitude,
+      longitude,
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
+      client_count AS "clientCount",
+      slug,
       created_at AS "createdAt"
      FROM sellers 
      WHERE user_id = $1`,
@@ -274,12 +283,15 @@ export const updateSeller = async (id, updates) => {
       city, 
       location, 
       theme, 
+      banner_image AS "bannerImage",
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
       balance,
+      client_count AS "clientCount",
+      slug,
       created_at AS "createdAt"
   `;
 

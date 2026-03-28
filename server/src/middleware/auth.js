@@ -95,21 +95,22 @@ export const protect = async (req, res, next) => {
         break;
       case 'buyer':
         userQuery = `
-          SELECT
-            u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
-            b.id as profile_id, b.full_name, b.whatsapp_number,
-            COALESCE(b.status, 'active') as status
-          FROM users u
-          LEFT JOIN buyers b ON u.id = b.user_id
-          WHERE u.id = $1
-            AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
+            SELECT
+              u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
+              b.id as profile_id, b.full_name, b.whatsapp_number, b.city, b.location, b.mobile_payment, b.refunds, b.full_address,
+              COALESCE(b.status, 'active') as status
+            FROM users u
+            LEFT JOIN buyers b ON u.id = b.user_id
+            WHERE u.id = $1
+              AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
         `;
         break;
       case 'seller':
         userQuery = `
             SELECT 
                 u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
-                s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings
+                s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings,
+                s.banner_image, s.theme, s.physical_address, s.latitude, s.longitude, s.instagram_link, s.tiktok_link, s.facebook_link, s.slug, s.net_revenue
             FROM users u 
             LEFT JOIN sellers s ON u.id = s.user_id 
             WHERE u.id = $1
