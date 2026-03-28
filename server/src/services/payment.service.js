@@ -251,10 +251,11 @@ export class PaymentService {
 
                 if (parseFloat(balance.available_balance) < parseFloat(amount) * 1.1) {
                     // Alert if balance is low (less than 110% of transaction amount)
-                    logger.warn('[PAYD-PAYIN] Low platform balance', {
+                    logger.warn(`[PAYD-PAYIN] Low platform balance. Available: ${balance.available_balance}, Required: ${amount}`, {
                         available: balance.available_balance,
                         required: amount
                     });
+
                 }
             } catch (balanceError) {
                 // Don't block payment if balance check fails
@@ -509,6 +510,7 @@ export class PaymentService {
                 await dbClient.query(
                     `UPDATE payments 
                      SET status = $1,
+                         raw_response = $4,
                          metadata = jsonb_set(
                              COALESCE(metadata, '{}'::jsonb),
                              '{webhook_received_at}',
@@ -516,8 +518,9 @@ export class PaymentService {
                          ),
                          updated_at = NOW()
                      WHERE id = $3`,
-                    [isSuccess ? PaymentStatus.COMPLETED : 'failed', JSON.stringify(new Date().toISOString()), payment.id]
+                    [isSuccess ? PaymentStatus.COMPLETED : 'failed', JSON.stringify(new Date().toISOString()), payment.id, JSON.stringify(callbackData)]
                 );
+
 
                 // ============================================================
                 // STEP 5: PROCESS BASED ON STATUS
@@ -537,13 +540,14 @@ export class PaymentService {
                         );
                     }
                 } else if (status === 'failed' || status === 'cancelled' || resultCode == 1) {
-                    logger.warn('[PAYD-WEBHOOK] Payment explicitly failed in webhook', {
+                    logger.warn(`[PAYD-WEBHOOK] Payment explicitly failed. Code: ${resultCode}, Status: ${status}, Ref: ${reference}`, {
                         payment_id: payment.id,
                         reference,
                         status,
                         resultCode
                     });
                 }
+
 
 
                 await dbClient.query('COMMIT');
