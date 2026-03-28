@@ -1,8 +1,6 @@
-import axios from 'axios';
-import { getFreshCsrfToken } from '@/lib/apiClient';
+import apiClient from '@/lib/apiClient';
 
-// Type for axios instance
-type AxiosInstance = any; // Simplified type for Axios 1.12.2 compatibility
+const api = apiClient;
 
 // Type definitions for error handling
 interface ApiError {
@@ -19,83 +17,18 @@ interface ApiError {
   request?: any;
 }
 
-// Default API configuration
-// Include /api in the base URL since our routes are prefixed with /api
-// Default API configuration
-// Get the base URL from environment variables
-const API_BASE_URL = (import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '');
-
-console.log('Using VITE_API_URL:', API_BASE_URL);
-
-// Helper function to determine product status based on stock
-function getProductStatus(stock: number): 'In Stock' | 'Low Stock' | 'Out of Stock' {
-  if (stock <= 0) return 'Out of Stock';
-  if (stock <= 10) return 'Low Stock';
-  return 'In Stock';
-}
-
-
-// Create axios instance with default config
-export const adminApiInstance: AxiosInstance = axios.create({
-  baseURL: API_BASE_URL,
-  withCredentials: true, // Important for sending cookies with requests
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
-
-const api = adminApiInstance;
-
-// CSRF Token Cache for admin instance
-let csrfTokenCache: string | null = null;
-
-// Request Interceptor for CSRF
-api.interceptors.request.use(
-  async (config: any) => {
-    // Attach CSRF token to non-GET requests
-    if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-      // If we don't have a token cached yet, fetch it
-      if (!csrfTokenCache) {
-        csrfTokenCache = await getFreshCsrfToken();
-      }
-
-      if (csrfTokenCache) {
-        config.headers['X-CSRF-Token'] = csrfTokenCache;
-      }
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor to handle 401 Unauthorized responses
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response && error.response.status === 401) {
-      // Clear client-side auth state marker if used
-      localStorage.removeItem('admin_authenticated');
-      // Let global apiClient interceptor handle redirect with proper auth state checks
-      console.log('Admin 401 - global interceptor will handle redirect');
-    }
-    return Promise.reject(error);
-  }
-);
-
 // Admin API methods
 export const adminApi = {
   // Admin login
   // Admin login
   async login(credentials: { email?: string; password?: string; pin?: string }) {
     try {
-      console.log('Starting admin login...');
       // Specific payload based on what's provided, favouring email/password
       const payload = credentials.email && credentials.password
         ? { email: credentials.email, password: credentials.password }
         : { pin: credentials.pin };
 
-      const response = await api.post('/admin/login', payload);
-      console.log('Login response:', response.data);
+      const response = await api.post<any>('/admin/login', payload);
 
       if (response.data?.status === 'success') {
         localStorage.setItem('admin_authenticated', 'true');
@@ -103,9 +36,6 @@ export const adminApi = {
         if (response.data.data?.user) {
           localStorage.setItem('admin_user', JSON.stringify(response.data.data.user));
         }
-
-        // Refresh CSRF token for New Session
-        csrfTokenCache = await getFreshCsrfToken();
       }
 
       return response.data;
@@ -129,9 +59,7 @@ export const adminApi = {
   // Dashboard Analytics
   async getAnalytics() {
     try {
-      console.log('Fetching dashboard analytics...');
-      const { data } = await api.get('/admin/analytics');
-      console.log('Dashboard analytics response:', data);
+      const { data } = await api.get<any>('/admin/analytics');
 
       return {
         ...data.data,
@@ -154,7 +82,7 @@ export const adminApi = {
   // Basic Stats (Legacy Dashboard)
   async getDashboardStats() {
     try {
-      const { data } = await api.get('/admin/stats');
+      const { data } = await api.get<any>('/admin/stats');
       return data.data;
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -172,9 +100,7 @@ export const adminApi = {
   // Buyers
   async getBuyers() {
     try {
-      console.log('Fetching buyers from API...');
-      const response = await api.get('/admin/buyers');
-      console.log('Buyers API response:', response);
+      const response = await api.get<any>('/admin/buyers');
 
       // Handle different response formats
       let buyersData = [];
@@ -199,7 +125,6 @@ export const adminApi = {
         createdAt: buyer.created_at || buyer.createdAt || new Date().toISOString()
       }));
 
-      console.log(`Fetched ${buyers.length} buyers with location data`);
       return buyers;
     } catch (error) {
       console.error('Error fetching buyers:', error);
@@ -210,7 +135,7 @@ export const adminApi = {
 
   async getBuyerById(id: string) {
     try {
-      const response = await api.get(`/admin/buyers/${id}`);
+      const response = await api.get<any>(`/admin/buyers/${id}`);
       const buyer = response.data.data;
       if (!buyer) return null;
       return {
@@ -228,9 +153,7 @@ export const adminApi = {
   // Sellers
   async getSellers() {
     try {
-      console.log('Fetching sellers from API...');
-      const response = await api.get('/admin/sellers');
-      console.log('Sellers API response:', response);
+      const response = await api.get<any>('/admin/sellers');
       const sellersData = Array.isArray(response.data.data) ? response.data.data : [];
       return sellersData.map((seller: any) => ({
         ...seller,
@@ -246,7 +169,7 @@ export const adminApi = {
 
   async getSellerById(id: string) {
     try {
-      const response = await api.get(`/admin/sellers/${id}`);
+      const response = await api.get<any>(`/admin/sellers/${id}`);
       const seller = response.data.data;
       if (!seller) return null;
       return {
@@ -264,9 +187,7 @@ export const adminApi = {
   // Get monthly metrics for sellers, products, and products sold
   async getMonthlyMetrics() {
     try {
-      console.log('Fetching monthly metrics...');
-      const response = await api.get('/admin/metrics/monthly');
-      console.log('Monthly metrics response:', response.data);
+      const response = await api.get<any>('/admin/metrics/monthly');
 
       // Transform the data to match the expected format
       if (response.data && response.data.data) {
@@ -301,8 +222,7 @@ export const adminApi = {
   // Clients
   async getClients() {
     try {
-      console.log('Fetching clients from API...');
-      const response = await api.get('/admin/clients');
+      const response = await api.get<any>('/admin/clients');
       const clientsData = Array.isArray(response.data.data) ? response.data.data : [];
       return clientsData.map((client: any) => ({
         ...client,
@@ -317,7 +237,7 @@ export const adminApi = {
   // Delete User (Block action)
   async deleteUser(userId: string) {
     try {
-      const response = await api.delete(`/admin/users/${userId}`);
+      const response = await api.delete<any>(`/admin/users/${userId}`);
       return response.data;
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -329,9 +249,7 @@ export const adminApi = {
   // Withdrawal requests
   async getWithdrawalRequests() {
     try {
-      console.log('Fetching withdrawal requests from API...');
-      const response = await api.get('/admin/withdrawal-requests');
-      console.log('Withdrawal requests API response:', response);
+      const response = await api.get<any>('/admin/withdrawal-requests');
 
       // Handle different response formats
       let withdrawalRequests = [];
@@ -359,7 +277,6 @@ export const adminApi = {
         processedBy: request.processed_by || request.processedBy || null
       }));
 
-      console.log(`Fetched ${requests.length} withdrawal requests`);
       return requests;
     } catch (error) {
       console.error('Error fetching withdrawal requests:', error);
@@ -375,9 +292,7 @@ export const adminApi = {
   // Financial metrics
   async getFinancialMetrics() {
     try {
-      console.log('Fetching financial metrics from API...');
-      const response = await api.get('/admin/metrics/financial');
-      console.log('Financial metrics API response:', response);
+      const response = await api.get<any>('/admin/metrics/financial');
       return response.data.data || {
         totalSales: 0,
         totalOrders: 0,
@@ -403,9 +318,7 @@ export const adminApi = {
 
   async getMonthlyFinancialData() {
     try {
-      console.log('Fetching monthly financial data from API...');
-      const response = await api.get('/admin/metrics/financial/monthly');
-      console.log('Monthly financial data API response:', response);
+      const response = await api.get<any>('/admin/metrics/financial/monthly');
       return response.data.data || [];
     } catch (error) {
       console.error('Error fetching monthly financial data:', error);

@@ -1,5 +1,5 @@
-
 export type ProductType = 'physical' | 'digital' | 'service';
+export type Theme = 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown' | 'default';
 
 export type Aesthetic =
   | 'all'
@@ -12,13 +12,14 @@ export type Aesthetic =
   | 'health-wellness';
 
 export interface Seller {
-  bannerUrl: any;
-  shopName: string;
   id: string;
+  shopName: string;
   fullName: string;
   email: string;
   phone: string;
   whatsappNumber: string;
+  bannerUrl?: string;
+  bannerImage?: string; // Standardize on bannerUrl later, but keep for now
   createdAt: string;
   updatedAt?: string;
   bio?: string;
@@ -30,13 +31,16 @@ export interface Seller {
   latitude?: number;
   longitude?: number;
   hasPhysicalShop?: boolean;
+  instagramLink?: string;
+  tiktokLink?: string;
+  facebookLink?: string;
+  clientCount?: number;
   website?: string;
   socialMedia?: {
     instagram?: string;
     twitter?: string;
     facebook?: string;
   };
-  instagramLink?: string;
 }
 
 export interface Product {
@@ -45,6 +49,7 @@ export interface Product {
   description: string;
   price: number;
   image_url: string;
+  imageUrl?: string; // For consistency
   sellerId: string;
   seller?: Seller;
   isSold: boolean;
@@ -82,46 +87,17 @@ export interface Product {
   };
 }
 
-export interface OrderItem {
-  id: string;
+// Re-export Order types from order.ts to avoid duplication
+export type { Order, OrderItem, OrderStatus, PaymentStatus } from './order';
+
+export interface CartItem {
+  id?: string;
   productId: string;
   productName: string;
   quantity: number;
   price: number;
   imageUrl: string;
   sellerId: string;
-}
-
-export interface Order {
-  id: string;
-  orderNumber: string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'collection_pending' | 'completed';
-  items: OrderItem[];
-  subtotal: number;
-  shipping: number;
-  tax: number;
-  total: number;
-  customerId: string;
-  customerName: string;
-  customerEmail: string;
-  shippingAddress: {
-    street: string;
-    city: string;
-    state: string;
-    postalCode: string;
-    country: string;
-  };
-  paymentMethod: string;
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  createdAt: string;
-  updatedAt: string;
-  estimatedDelivery?: string;
-  trackingNumber?: string;
-  notes?: string;
-}
-
-export interface CartItem extends Omit<OrderItem, 'id'> {
-  id?: string;
   inStock: boolean;
 }
 

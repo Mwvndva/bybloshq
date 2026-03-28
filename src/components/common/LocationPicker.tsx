@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,7 +20,7 @@ if (typeof window !== 'undefined') {
 }
 
 // Component to handle map clicks
-function LocationMarker({ position, setPosition }: { position: [number, number] | null, setPosition: (pos: [number, number]) => void }) {
+const LocationMarker = memo(({ position, setPosition }: { position: [number, number] | null, setPosition: (pos: [number, number]) => void }) => {
     useMapEvents({
         click(e) {
             setPosition([e.latlng.lat, e.latlng.lng]);
@@ -28,10 +28,10 @@ function LocationMarker({ position, setPosition }: { position: [number, number] 
     });
 
     return position ? <Marker position={position} /> : null;
-}
+});
 
 // Component to fly to location
-function MapFlyTo({ position }: { position: [number, number] | null }) {
+const MapFlyTo = memo(({ position }: { position: [number, number] | null }) => {
     const map = useMapEvents({});
     useEffect(() => {
         if (position) {
@@ -39,7 +39,7 @@ function MapFlyTo({ position }: { position: [number, number] | null }) {
         }
     }, [position, map]);
     return null;
-}
+});
 
 interface LocationPickerProps {
     initialAddress?: string;
@@ -86,7 +86,7 @@ export default function LocationPicker({
         }
     }, [initialAddress, initialCoordinates]);
 
-    const searchAddress = async (query: string) => {
+    const searchAddress = useCallback(async (query: string) => {
         if (!query.trim()) {
             setSearchResults([]);
             return;
@@ -102,9 +102,9 @@ export default function LocationPicker({
         } finally {
             setIsSearching(false);
         }
-    };
+    }, []);
 
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setSearchQuery(value);
 
@@ -120,9 +120,9 @@ export default function LocationPicker({
             setSearchResults([]);
             setShowResults(false);
         }
-    };
+    }, [searchAddress]);
 
-    const selectLocation = (result: any) => {
+    const selectLocation = useCallback((result: any) => {
         const lat = parseFloat(result.lat);
         const lon = parseFloat(result.lon);
 
@@ -139,20 +139,20 @@ export default function LocationPicker({
         }
 
         onLocationChange(finalDetailedAddress, { lat, lng: lon });
-    };
+    }, [address, autoPopulate, onLocationChange]);
 
-    const handleManualAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleManualAddressChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const newAddress = e.target.value;
         setAddress(newAddress);
         const coords = markerPosition ? { lat: markerPosition[0], lng: markerPosition[1] } : null;
         onLocationChange(newAddress, coords);
-    };
+    }, [markerPosition, onLocationChange]);
 
-    const handleMapClick = (lat: number, lng: number) => {
+    const handleMapClick = useCallback((lat: number, lng: number) => {
         const newPos: [number, number] = [lat, lng];
         setMarkerPosition(newPos);
         onLocationChange(address, { lat, lng });
-    }
+    }, [address, onLocationChange]);
 
     return (
         <div className={cn("space-y-4", className)}>

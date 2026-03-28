@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 import { publicApiService, Seller } from '@/api/publicApi';
 import SellerBrandCard from '@/components/SellerBrandCard';
 
@@ -9,7 +9,7 @@ interface SellersGridProps {
     isBuyer?: boolean;
 }
 
-const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGridProps) => {
+const SellersGrid = memo(({ filterCity, filterArea, searchQuery, isBuyer }: SellersGridProps) => {
     const [sellers, setSellers] = useState<Seller[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -29,7 +29,7 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
         fetchSellers();
     }, []);
 
-    const filteredSellers = sellers.filter(seller => {
+    const filteredSellers = useMemo(() => sellers.filter(seller => {
         // City filter
         if (filterCity && seller.city !== filterCity) return false;
         // Area filter
@@ -43,7 +43,7 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
             );
         }
         return true;
-    });
+    }), [sellers, filterCity, filterArea, searchQuery]);
 
     if (loading) {
         return <div className="text-white text-center py-10">Loading shops...</div>;
@@ -60,6 +60,6 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
             ))}
         </div>
     );
-};
+});
 
 export default SellersGrid;
