@@ -2,8 +2,10 @@ import { Suspense } from 'react';
 import { Navigate } from 'react-router-dom';
 import { BuyerProtectedRoute } from '@/components/auth/AppProtectedRoute';
 import { WishlistProvider } from '@/contexts/WishlistContext';
+import { BybxProvider } from '@/contexts/BybxContext';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
+import BuyerLayout from '@/layouts/BuyerLayout';
 
 // Lazy load components
 const BuyerLogin = safeLazy(() => import('@/components/buyer/BuyerLogin').then(m => m.BuyerLogin));
@@ -12,7 +14,6 @@ const BuyerForgotPassword = safeLazy(() => import('@/components/buyer/BuyerForgo
 const BuyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetPassword').then(m => m.BuyerResetPassword));
 const BuyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
 const CheckoutPage = safeLazy(() => import('@/pages/checkout'));
-const BuyerLayout = safeLazy(() => import('@/layouts/BuyerLayout'));
 const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
 
 export const buyerRoutes = [
@@ -63,9 +64,9 @@ export const buyerRoutes = [
     path: '/buyer',
     element: (
       <BuyerProtectedRoute>
-        <Suspense fallback={<RouteFallback />}>
+        <BybxProvider>
           <BuyerLayout />
-        </Suspense>
+        </BybxProvider>
       </BuyerProtectedRoute>
     ),
     children: [

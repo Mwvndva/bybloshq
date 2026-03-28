@@ -210,7 +210,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         fullName: userData.fullName,
         email: userData.email,
         mobilePayment: userData.mobilePayment,
-        whatsappNumber: userData.whatsappNumber,
         city: userData.city,
         location: userData.location
       });
@@ -236,7 +235,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         fullName: userData.fullName,
         email: userData.email,
         mobilePayment: userData.mobilePayment,
-        whatsappNumber: userData.whatsappNumber,
         city: userData.city,
         location: userData.location
       }, data);
@@ -265,7 +263,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             fullName: result.buyer.fullName || '',
             email: result.buyer.email || '', // Can be empty if we have hasEmail=true
             mobilePayment: result.buyer.mobilePayment || phone,
-            whatsappNumber: result.buyer.whatsappNumber || phone,
             city: result.buyer.city,
             location: result.buyer.location
           }, null, result.buyer.id);
@@ -307,7 +304,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       fullName: string;
       email: string;
       mobilePayment: string;
-      whatsappNumber: string;
       city?: string;
       location?: string;
       password?: string
@@ -329,7 +325,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
 
         // Proceed with new ID (or let backend infer from cookie)
-        await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
+        await executePayment(buyerInfo, explicitBookingData, saveResult.user?.id || saveResult.buyer?.id);
       } else {
         // Existing user (skipped save) -> Proceed using backend lookup
         await executePayment(buyerInfo, explicitBookingData);
@@ -346,7 +342,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       fullName: string;
       email: string;
       mobilePayment: string;
-      whatsappNumber: string;
       city?: string;
       location?: string
     },
@@ -359,7 +354,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
         mobilePayment: buyerDetails.mobilePayment,
-        whatsappNumber: buyerDetails.whatsappNumber,
         email: buyerDetails.email,
         amount: product.price,
         productId: product.id,
@@ -654,9 +648,22 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           (theme === 'black' || forceWhiteText) ? 'border-gray-800' : 'border-gray-100'
         )}>
           <Store className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
-          <span className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90",
-            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-800'
-          )}>{displaySellerName}</span>
+          <span
+            className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90 cursor-pointer hover:underline",
+              (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-800'
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (displaySeller?.shopName) {
+                navigate(`/shop/${displaySeller.shopName}`);
+              } else if (displaySeller?.id) {
+                // Fallback to ID if shopName is missing
+                navigate(`/shop/${displaySeller.id}`);
+              }
+            }}
+          >
+            {displaySellerName}
+          </span>
           {displaySeller?.physicalAddress && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>

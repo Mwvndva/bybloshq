@@ -27,7 +27,6 @@ export interface BuyerProfile extends BaseUser {
     fullName: string;
     phone: string;
     mobilePayment: string;
-    whatsappNumber: string;
     city?: string;
     location?: string;
     fullAddress?: string;
@@ -76,7 +75,6 @@ export interface BuyerRegistrationData {
     fullName: string;
     email: string;
     mobilePayment: string;
-    whatsappNumber: string;
     password: string;
     confirmPassword: string;
     city: string;
@@ -250,14 +248,11 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
             // Mark session as active
             localStorage.setItem(sessionKey, 'true');
-            console.log(`[GlobalAuth] Auth successful for ${currentRole}, profile:`, profileData);
         } catch (error: any) {
-            console.log(`[GlobalAuth] Auth check failed for ${currentRole}:`, error.message);
 
             // CROSS-ROLE FIX: Don't fail if we're trying buyer access and user has seller session
             // This prevents the "Split Identity" 404 from blocking access
             if (currentRole === 'buyer' && error.response?.status === 404) {
-                console.log('[GlobalAuth] Buyer profile not found, but may have cross-role access');
             } else {
                 setUser(null);
                 localStorage.removeItem(sessionKey);
@@ -310,7 +305,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 navigate(getDashboardPath(role), { replace: true });
             }
         } catch (error: any) {
-            console.error(`[GlobalAuth] Login error for ${role}:`, error);
 
             const message = error.response?.data?.message || error.message || 'Login failed';
             toast.error('Login Failed', { description: message });
@@ -340,9 +334,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             });
 
             localStorage.setItem(`${role}SessionActive`, 'true');
-            console.log(`[GlobalAuth] Auto-login successful for ${role}`);
         } catch (error: any) {
-            console.error(`[GlobalAuth] Auto-login error for ${role}:`, error);
             throw error;
         } finally {
             setIsLoading(false);
@@ -385,7 +377,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 throw new Error('Invalid credentials');
             }
         } catch (error: any) {
-            console.error('[GlobalAuth] Admin login error:', error);
 
             const message = error.response?.data?.message || 'Invalid email or password. Please try again.';
             toast.error('Login Failed', { description: message });
@@ -430,7 +421,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
             navigate(getDashboardPath(role), { replace: true });
         } catch (error: any) {
-            console.error(`[GlobalAuth] Registration error for ${role}:`, error);
 
             const message = error.response?.data?.message || error.message || 'Registration failed';
             toast.error('Registration Failed', { description: message });
@@ -447,7 +437,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
     const logout = useCallback(async () => {
         // 1. Clear localStorage session flags for all roles
-        ['buyer', 'seller', 'admin', 'organizer'].forEach(r => {
+        ['buyer', 'seller', 'admin'].forEach(r => {
             localStorage.removeItem(`${r}SessionActive`);
             localStorage.removeItem(`${r}Token`);
         });
@@ -465,7 +455,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             await apiClient.post(logoutUrl);
         } catch (error) {
             // Fail silently — still clear local state
-            console.error('[GlobalAuth] Server logout failed:', error);
         }
 
         // 3. Clear all auth data from memory and storage
@@ -487,7 +476,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const refreshRole = useCallback(async (newRole: UserRole) => {
         setIsLoading(true);
         try {
-            console.log(`[GlobalAuth] Refreshing role to ${newRole}`);
 
             // Fetch profile for the new role
             const api = getApiForRole(newRole);
@@ -509,14 +497,12 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             // Mark new role session as active
             localStorage.setItem(`${newRole}SessionActive`, 'true');
 
-            console.log(`[GlobalAuth] Role refreshed successfully to ${newRole}`);
 
             toast.success('Role Switched', {
                 description: `Switched to ${newRole} dashboard`,
                 duration: 2000,
             });
         } catch (error: any) {
-            console.error(`[GlobalAuth] Role refresh error for ${newRole}:`, error);
 
             const message = error.response?.data?.message || 'Failed to switch role';
             toast.error('Role Switch Failed', { description: message });
@@ -543,7 +529,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
             return true;
         } catch (error: any) {
-            console.error(`[GlobalAuth] Forgot password error for ${role}:`, error);
 
             const message = error.response?.data?.message || 'Failed to send reset email';
             toast.error('Request Failed', { description: message });
@@ -568,7 +553,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
             navigate(getLoginPath(role), { replace: true });
         } catch (error: any) {
-            console.error(`[GlobalAuth] Reset password error for ${role}:`, error);
 
             const message = error.response?.data?.message || 'Failed to reset password';
             toast.error('Reset Failed', { description: message });
@@ -600,7 +584,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: true
             });
         } catch (error: any) {
-            console.error(`[GlobalAuth] Get profile error for ${role}:`, error);
             throw error;
         }
     }, []);
@@ -626,7 +609,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 duration: 2000,
             });
         } catch (error: any) {
-            console.error(`[GlobalAuth] Update profile error for ${role}:`, error);
 
             const message = error.response?.data?.message || 'Failed to update profile';
             toast.error('Update Failed', { description: message });

@@ -9,7 +9,7 @@ const REQUIRED_ENV_VARS = [
 
     // Authentication
     'JWT_SECRET',
-    // NOTE: JWT_REFRESH_SECRET is intentionally NOT required here.
+    'JWT_REFRESH_SECRET',
 
     // Payd Payment Gateway (core credentials — always required)
     'PAYD_USERNAME',

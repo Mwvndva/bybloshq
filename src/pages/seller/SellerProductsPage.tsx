@@ -97,7 +97,6 @@ export default function SellerProductsPage() {
             ...p,
             status,
             isSold,
-            soldAt: newSoldAt,
             updatedAt: new Date().toISOString()
           };
         }
@@ -164,11 +163,7 @@ export default function SellerProductsPage() {
             <h2 className="text-xl font-semibold text-white">Product List</h2>
           </div>
           <div className="p-6">
-            {isLoading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-              </div>
-            ) : products.length > 0 ? (
+            {products.length > 0 ? (
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold text-white">Your Products</h2>

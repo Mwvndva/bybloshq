@@ -67,26 +67,37 @@ class PayoutService {
      * @returns {string} e.g. "0712345678"
      */
     normalizePhoneForPayout(phone) {
-        let digits = phone.toString().replace(/\D/g, '');
+        if (!phone) throw new Error('Phone number is required for payout')
+        // Strip all non-digit characters (handles +, spaces, dashes, parentheses)
+        let digits = phone.toString().replace(/\D/g, '')
 
-        // Strip country code if present
+        // 254XXXXXXXXX (12 digits) → 0XXXXXXXXX
         if (digits.startsWith('254') && digits.length === 12) {
-            digits = '0' + digits.substring(3);
-        } else if (digits.startsWith('+254')) {
-            digits = '0' + digits.substring(4);
-        } else if (digits.length === 9) {
-            // Bare 9-digit number e.g. 712345678
-            digits = '0' + digits;
+            digits = '0' + digits.substring(3)
         }
-
-        if (!digits.startsWith('0') || digits.length !== 10) {
+        // 9-digit bare number → 0XXXXXXXXX
+        else if (digits.length === 9) {
+            digits = '0' + digits
+        }
+        // 0XXXXXXXXX — already in correct format
+        else if (digits.startsWith('0') && digits.length === 10) {
+            // good
+        }
+        else {
             throw new Error(
                 `Invalid phone number format: "${phone}". ` +
-                `Payout requires a 10-digit Kenyan number starting with 0 (e.g. 0712345678)`
-            );
+                `Payout requires a valid Kenyan number (e.g. 0712345678)`
+            )
         }
 
-        return digits;
+        // Validate it's an actual Kenyan mobile number
+        if (!/^0[17]\d{8}$/.test(digits)) {
+            throw new Error(
+                `"${digits}" is not a valid Kenyan mobile number. Must start with 07 or 01.`
+            )
+        }
+
+        return digits
     }
 
     /**
@@ -214,8 +225,8 @@ class PayoutService {
 
             return {
                 success: true,
-                transaction_reference: reference,
-                transaction_id: reference,
+                correlator_id: reference,
+                transaction_reference: reference,  // alias for backwards compat
                 status: data.status || 'processing',
                 message: data.message || 'Payout initiated',
                 original_response: data

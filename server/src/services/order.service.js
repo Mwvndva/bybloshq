@@ -559,12 +559,12 @@ class OrderService {
       if (orderResult.rows.length === 0) throw new Error('Order not found');
       const order = orderResult.rows[0];
 
-      // 2. Idempotency Check
-      if (order.status === OrderStatus.COMPLETED && order.payment_status === 'completed') {
-        if (shouldManageTransaction) {
-          await client.query('ROLLBACK');
-        }
-        return { success: true, message: 'Order already completed' };
+      // 2. Atomic idempotency check AFTER acquiring the lock
+      if (['COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status) &&
+        order.payment_status === 'completed') {
+        if (shouldManageTransaction) await client.query('ROLLBACK')
+        logger.info(`[ORDER] Order ${orderId} already in terminal state ${order.status}. Skipping.`)
+        return { success: true, message: 'Order already in terminal state', alreadyProcessed: true }
       }
 
       // 3. Mark as Paid & Completed
@@ -611,10 +611,15 @@ class OrderService {
             []
           );
 
+          const updatedProductIds = new Set(bulkUpdateResult.rows.map(r => String(r.id)))
           if (bulkUpdateResult.rows.length !== trackedItems.length) {
-            const updatedIds = bulkUpdateResult.rows.map(r => r.id);
-            const failedItem = trackedItems.find(item => !updatedIds.includes(item.product_id.toString()) && !updatedIds.includes(item.product_id));
-            throw new Error(`Failed to decrement inventory for product ${failedItem?.product_name || failedItem?.product_id || 'unknown'}. Insufficient stock.`);
+            const failedItem = trackedItems.find(item =>
+              !updatedProductIds.has(String(item.product_id))
+            )
+            throw new Error(
+              `Insufficient stock for "${failedItem?.product_name || failedItem?.product_id}". ` +
+              `Cannot complete order ${orderId}.`
+            )
           }
 
           // Post-update alerts

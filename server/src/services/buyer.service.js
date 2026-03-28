@@ -41,6 +41,11 @@ class BuyerService {
                         [existingUser.id, roleResult.rows[0].id]
                     );
                 }
+                // Also update the role in the users table if it's the primary role?
+                // The current auth middleware relies on u.role.
+                // If they are a seller, we might want to keep 'seller' as primary but allow 'buyer' actions.
+                // However, many parts of the app check u.role.
+                // For now, let's just ensure the role is in user_roles for AuthorizationService.
             } catch (roleError) {
                 console.error(`Error linking buyer role to user ${existingUser.id}:`, roleError);
             }
@@ -86,6 +91,20 @@ class BuyerService {
                 buyer = await Buyer.create({
                     fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
                 });
+            }
+
+            // 3b. LINK ROLE (B-1 FIX)
+            try {
+                const { pool } = await import('../config/database.js');
+                const roleResult = await pool.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
+                if (roleResult.rows[0]) {
+                    await pool.query(
+                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [existingUser.id, roleResult.rows[0].id]
+                    );
+                }
+            } catch (roleError) {
+                console.error(`Error linking buyer role to user ${existingUser.id}:`, roleError);
             }
 
             return { buyer };

@@ -33,7 +33,6 @@ export function AppProtectedRoute({
             const path = location.pathname;
             if (path.startsWith('/buyer')) return '/buyer/login';
             if (path.startsWith('/seller')) return '/seller/login';
-            if (path.startsWith('/organizer')) return '/organizer/login';
             if (path.startsWith('/admin')) return '/admin/login';
             return '/buyer/login';
         };
@@ -58,7 +57,7 @@ export function AppProtectedRoute({
     if (role && !allowedRoles.includes(role)) {
         // Explicit cross-role check: a seller with a buyerProfile may access buyer routes
         const sellerAccessingBuyerRoute =
-            role === 'seller' && allowedRoles.includes('buyer') && user.profile != null;
+            role === 'seller' && allowedRoles.includes('buyer');
 
         if (sellerAccessingBuyerRoute) {
             return <>{children}</>;
@@ -77,10 +76,6 @@ export function BuyerProtectedRoute({ children }: { children: React.ReactNode })
 
 export function SellerProtectedRoute({ children }: { children: React.ReactNode }) {
     return <AppProtectedRoute allowedRoles={['seller']}>{children}</AppProtectedRoute>;
-}
-
-export function OrganizerProtectedRoute({ children }: { children: React.ReactNode }) {
-    return <AppProtectedRoute allowedRoles={['organizer']}>{children}</AppProtectedRoute>;
 }
 
 export function AdminProtectedRoute({ children }: { children: React.ReactNode }) {

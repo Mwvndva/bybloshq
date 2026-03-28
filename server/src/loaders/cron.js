@@ -6,7 +6,7 @@ export default async () => {
     // 1. Payment Processing (every 5 min)
     if (process.env.ENABLE_PAYMENT_CRON !== 'false') {
         try {
-            schedulePaymentProcessing({ schedule: '*/5 * * * *', hoursAgo: 24, limit: 50 });
+            schedulePaymentProcessing({ schedule: '1-56/5 * * * *', hoursAgo: 24, limit: 50 });
             logger.info('✅ Payment processing cron started');
         } catch (err) {
             logger.error('❌ Failed to start payment cron:', err.message);
@@ -17,7 +17,7 @@ export default async () => {
     if (process.env.ENABLE_ORDER_DEADLINE_CRON !== 'false') {
         try {
             const { scheduleOrderDeadlineChecks } = await import('../cron/orderDeadlineCron.js');
-            scheduleOrderDeadlineChecks({ schedule: '*/30 * * * *' });
+            scheduleOrderDeadlineChecks({ schedule: '7,37 * * * *' });
             logger.info('✅ Order deadline cron started');
         } catch (err) {
             logger.error('❌ Failed to start order deadline cron:', err.message);
@@ -27,7 +27,7 @@ export default async () => {
     // 3. Payout Reconciliation (every hour)
     if (process.env.ENABLE_PAYOUT_RECONCILIATION_CRON !== 'false') {
         try {
-            schedulePayoutReconciliation({ schedule: '0 * * * *', hoursAgo: 1 });
+            schedulePayoutReconciliation({ schedule: '3 * * * *', hoursAgo: 1 });
             logger.info('✅ Payout reconciliation cron started');
         } catch (err) {
             logger.error('❌ Failed to start payout reconciliation cron:', err.message);

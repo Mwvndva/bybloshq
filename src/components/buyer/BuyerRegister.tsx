@@ -55,7 +55,6 @@ export function BuyerRegister() {
     fullName: '',
     email: '',
     mobilePayment: '',
-    whatsappNumber: '',
     password: '',
     confirmPassword: '',
     city: '',
@@ -135,7 +134,7 @@ export function BuyerRegister() {
     e.preventDefault();
     setErrors({}); // Clear previous errors
 
-    if (!formData.fullName || !formData.email || !formData.mobilePayment || !formData.whatsappNumber || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
+    if (!formData.fullName || !formData.email || !formData.mobilePayment || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields including location and phone numbers",
@@ -153,7 +152,6 @@ export function BuyerRegister() {
         fullName: formData.fullName,
         email: formData.email,
         mobilePayment: formData.mobilePayment,
-        whatsappNumber: formData.whatsappNumber,
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         city: formData.city,
@@ -327,29 +325,6 @@ export function BuyerRegister() {
                       />
                     </div>
                     {errors.mobilePayment && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.mobilePayment}</p>}
-                  </div>
-
-                  <div className="space-y-0.5 sm:space-y-2">
-                    <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-medium text-gray-200 flex items-center justify-between">
-                      WhatsApp Number
-                      <span className="text-[8px] sm:text-[10px] text-yellow-400 font-medium">For Order Notifications</span>
-                    </Label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                        <Phone className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                      </div>
-                      <Input
-                        id="whatsappNumber"
-                        name="whatsappNumber"
-                        type="tel"
-                        placeholder="e.g. 0712345678"
-                        value={formData.whatsappNumber}
-                        onChange={handleInputChange}
-                        required
-                        className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.whatsappNumber ? 'border-red-500' : ''}`}
-                      />
-                    </div>
-                    {errors.whatsappNumber && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.whatsappNumber}</p>}
                   </div>
                 </>
               )}
@@ -540,7 +515,7 @@ export function BuyerRegister() {
                     onClick={() => {
                       // Validate current step before proceeding
                       if (currentStep === 1) {
-                        if (!formData.fullName || !formData.email || !formData.mobilePayment || !formData.whatsappNumber) {
+                        if (!formData.fullName || !formData.email || !formData.mobilePayment) {
                           toast({
                             title: "Missing Information",
                             description: "Please fill in all personal details",
@@ -595,6 +570,6 @@ export function BuyerRegister() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

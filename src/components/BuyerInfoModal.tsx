@@ -10,8 +10,7 @@ interface BuyerInfo {
   fullName: string;
   email: string;
   mobilePayment: string;
-  whatsappNumber: string;
-  city: string;
+  city?: string;
   location: string;
   password?: string;
   confirmPassword?: string;
@@ -42,7 +41,6 @@ export function BuyerInfoModal({
     fullName: initialData?.fullName || '',
     email: initialData?.email || '',
     mobilePayment: initialData?.mobilePayment || phoneNumber || '',
-    whatsappNumber: initialData?.whatsappNumber || phoneNumber || '',
     city: initialData?.city || '',
     location: initialData?.location || '',
     password: '',
@@ -121,7 +119,6 @@ export function BuyerInfoModal({
         fullName: '',
         email: '',
         mobilePayment: '',
-        whatsappNumber: '',
         city: '',
         location: '',
         password: '',
@@ -145,7 +142,6 @@ export function BuyerInfoModal({
         fullName: '',
         email: '',
         mobilePayment: '',
-        whatsappNumber: '',
         city: '',
         location: '',
         password: '',
@@ -231,34 +227,22 @@ export function BuyerInfoModal({
               )}
             </div>
 
-            {/* Phone numbers row */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="mobilePayment" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
-                  M-Pesa
-                </Label>
+            {/* Phone numbers row - Now single column since WhatsApp is removed */}
+            <div className="space-y-1.5">
+              <Label htmlFor="mobilePayment" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
+                M-Pesa Number *
+              </Label>
+              <div className="relative">
+                <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#555555]`} />
                 <Input
                   id="mobilePayment"
                   type="tel"
                   placeholder="07..."
                   value={buyerInfo.mobilePayment}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, mobilePayment: e.target.value }))}
-                  className={`h-11 text-sm rounded-xl ${themeClasses.input}`}
+                  className={`pl-14 h-11 text-sm rounded-xl ${themeClasses.input}`}
                   disabled={isLoading}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="whatsappNumber" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
-                  WhatsApp
-                </Label>
-                <Input
-                  id="whatsappNumber"
-                  type="tel"
-                  placeholder="07..."
-                  value={buyerInfo.whatsappNumber}
-                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, whatsappNumber: e.target.value }))}
-                  className={`h-11 text-sm rounded-xl ${themeClasses.input}`}
-                  disabled={isLoading}
+                  required
                 />
               </div>
             </div>
@@ -404,3 +388,4 @@ export function BuyerInfoModal({
     </Dialog>
   );
 }
+

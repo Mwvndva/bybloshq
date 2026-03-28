@@ -3,6 +3,7 @@ import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
 import { AppProviders } from "./components/AppProviders";
 import { LoadingScreen } from "./components/LoadingScreen";
 import { ErrorBoundary, RootErrorElement } from "./components/common/ErrorBoundary";
+import NotFound from '@/pages/NotFound';
 import { adminRouter } from "./routes/admin.routes";
 import { routes } from "./routes";
 
@@ -20,7 +21,7 @@ const router = createBrowserRouter([
       ...adminRouter.routes,
       {
         path: '*',
-        element: <div>Page not found</div>,
+        element: <NotFound />,
       }
     ],
   },

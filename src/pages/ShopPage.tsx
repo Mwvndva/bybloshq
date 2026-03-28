@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package, Users } from 'lucide-react';
@@ -8,8 +8,7 @@ import { ProductCard } from '@/components/ProductCard';
 import type { Product as ProductType, Seller, Aesthetic } from '@/types';
 import type { Product as SellerApiProduct } from '@/api/sellerApi';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
-
-type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+import { useShopTheme, type Theme } from '@/hooks/useShopTheme';
 
 // Type guard to check if a string is a valid Aesthetic
 function isAesthetic(value: string): value is Aesthetic {
@@ -40,29 +39,13 @@ interface ShopProduct extends Omit<BaseProduct, 'seller'> {
 
 // Shop-specific seller type that extends the base Seller type
 interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
-  bannerImage?: string;  // New field
-  theme?: Theme;         // New field
-  city?: string;         // New field
-  instagramLink?: string; // New field
-  tiktokLink?: string;    // New field
-  facebookLink?: string;  // New field
-  clientCount?: number;   // New field
-  // createdAt is required from Seller
-  // updatedAt is optional from Seller
-  // All required fields from Seller remain required:
-  // - id: string
-  // - shopName: string
-  // - fullName: string
-  // - email: string
-  // - phone: string
-  // - createdAt: string
-  // Other optional fields from Seller remain optional:
-  // - updatedAt?: string
-  // - bio?: string
-  // - avatarUrl?: string
-  // - location?: string
-  // - website?: string
-  // - socialMedia?: { ... }
+  bannerImage?: string;
+  theme?: Theme;
+  city?: string;
+  instagramLink?: string;
+  tiktokLink?: string;
+  facebookLink?: string;
+  clientCount?: number;
 }
 
 const ShopPage = () => {
@@ -75,193 +58,8 @@ const ShopPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const defaultBanner = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
 
-  // Get buyer authentication status
   const { isAuthenticated } = useBuyerAuth();
-
-  // Get theme classes based on seller's theme
-  const getThemeClasses = useCallback(() => {
-    const theme = (sellerInfo?.theme as Theme) || 'black';
-
-    switch (theme) {
-      case 'black':
-        return {
-          bgGradient: 'from-black to-[#0a0a0a]',
-          textColor: 'text-white',
-          buttonGradient: 'bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600',
-          cardBg: 'bg-[#0a0a0a]/80',
-          accentColor: 'text-yellow-400',
-          borderColor: 'border-white/10'
-        };
-      case 'pink':
-        return {
-          bgGradient: 'from-pink-50 to-white',
-          textColor: 'text-pink-900',
-          buttonGradient: 'from-pink-500 to-pink-600',
-          cardBg: 'bg-white/60',
-          accentColor: 'text-pink-600',
-          borderColor: 'border-pink-200'
-        };
-      case 'orange':
-        return {
-          bgGradient: 'from-orange-50 to-white',
-          textColor: 'text-orange-900',
-          buttonGradient: 'from-orange-500 to-orange-600',
-          cardBg: 'bg-white/60',
-          accentColor: 'text-orange-600',
-          borderColor: 'border-orange-200'
-        };
-      case 'green':
-        return {
-          bgGradient: 'from-green-50 to-white',
-          textColor: 'text-green-900',
-          buttonGradient: 'from-green-500 to-green-600',
-          cardBg: 'bg-white/60',
-          accentColor: 'text-green-600',
-          borderColor: 'border-green-200'
-        };
-      case 'red':
-        return {
-          bgGradient: 'from-red-50 to-white',
-          textColor: 'text-red-900',
-          buttonGradient: 'from-red-500 to-red-600',
-          cardBg: 'bg-white/60',
-          accentColor: 'text-red-600',
-          borderColor: 'border-red-200'
-        };
-      case 'yellow':
-        return {
-          bgGradient: 'from-yellow-50 to-white',
-          textColor: 'text-yellow-900',
-          buttonGradient: 'from-yellow-400 to-yellow-500',
-          cardBg: 'bg-white/60',
-          accentColor: 'text-yellow-600',
-          borderColor: 'border-yellow-200'
-        };
-      case 'brown':
-        return {
-          bgGradient: 'from-[#fdf8f6] to-white',
-          textColor: 'text-[#451a03]',
-          buttonGradient: 'from-[#78350f] to-[#92400e]',
-          cardBg: 'bg-white/60',
-          accentColor: 'text-[#92400e]',
-          borderColor: 'border-[#f3e3d3]'
-        };
-      default: // default theme
-        return {
-          bgGradient: 'from-gray-50 to-white',
-          textColor: 'text-gray-900',
-          buttonGradient: 'from-yellow-400 to-yellow-500',
-          cardBg: 'bg-white/60',
-          accentColor: 'text-yellow-600',
-          borderColor: 'border-gray-200'
-        };
-    }
-  }, [sellerInfo?.theme]);
-
-  const themeClasses = getThemeClasses();
-
-  // Apply theme to the page
-  useEffect(() => {
-    const theme = ((sellerInfo?.theme as Theme) || 'black');
-    const root = document.documentElement;
-
-    // Set CSS custom properties based on theme
-    const setThemeVariables = () => {
-      switch (theme) {
-        case 'black':
-          root.style.setProperty('--theme-bg-color', '#000000');
-          root.style.setProperty('--theme-text', '#ffffff');
-          root.style.setProperty('--theme-card-bg', 'rgba(10, 10, 10, 0.98)');
-          root.style.setProperty('--theme-accent', '#f59e0b');
-          root.style.setProperty('--theme-accent-rgb', '245, 158, 11');
-          root.style.setProperty('--theme-border', 'rgba(255, 255, 255, 0.1)');
-          root.style.setProperty('--theme-button-bg', '#f59e0b');
-          root.style.setProperty('--theme-button-text', '#000000');
-          break;
-        case 'pink':
-          root.style.setProperty('--theme-bg-color', '#fdf2f8');
-          root.style.setProperty('--theme-text', '#831843');
-          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#db2777');
-          root.style.setProperty('--theme-accent-rgb', '219, 39, 119');
-          root.style.setProperty('--theme-border', 'rgba(251, 207, 232, 0.5)');
-          root.style.setProperty('--theme-button-bg', '#db2777');
-          root.style.setProperty('--theme-button-text', '#ffffff');
-          break;
-        case 'orange':
-          root.style.setProperty('--theme-bg-color', '#fff7ed');
-          root.style.setProperty('--theme-text', '#7c2d12');
-          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#ea580c');
-          root.style.setProperty('--theme-accent-rgb', '234, 88, 12');
-          root.style.setProperty('--theme-border', 'rgba(254, 215, 170, 0.5)');
-          root.style.setProperty('--theme-button-bg', '#ea580c');
-          root.style.setProperty('--theme-button-text', '#ffffff');
-          break;
-        case 'green':
-          root.style.setProperty('--theme-bg-color', '#f0fdf4');
-          root.style.setProperty('--theme-text', '#166534');
-          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#16a34a');
-          root.style.setProperty('--theme-accent-rgb', '22, 163, 74');
-          root.style.setProperty('--theme-border', 'rgba(187, 247, 208, 0.5)');
-          root.style.setProperty('--theme-button-bg', '#16a34a');
-          root.style.setProperty('--theme-button-text', '#ffffff');
-          break;
-        case 'red':
-          root.style.setProperty('--theme-bg-color', '#fef2f2');
-          root.style.setProperty('--theme-text', '#991b1b');
-          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#dc2626');
-          root.style.setProperty('--theme-accent-rgb', '220, 38, 38');
-          root.style.setProperty('--theme-border', 'rgba(254, 202, 202, 0.5)');
-          root.style.setProperty('--theme-button-bg', '#dc2626');
-          root.style.setProperty('--theme-button-text', '#ffffff');
-          break;
-        case 'yellow':
-          root.style.setProperty('--theme-bg-color', '#fefce8');
-          root.style.setProperty('--theme-text', '#713f12');
-          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#ca8a04');
-          root.style.setProperty('--theme-accent-rgb', '202, 138, 4');
-          root.style.setProperty('--theme-border', 'rgba(254, 240, 138, 0.5)');
-          root.style.setProperty('--theme-button-bg', '#ca8a04');
-          root.style.setProperty('--theme-button-text', '#ffffff');
-          break;
-        case 'brown':
-          root.style.setProperty('--theme-bg-color', '#fffbeb');
-          root.style.setProperty('--theme-text', '#451a03');
-          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#92400e');
-          root.style.setProperty('--theme-accent-rgb', '146, 64, 14');
-          root.style.setProperty('--theme-border', 'rgba(251, 235, 198, 0.5)');
-          root.style.setProperty('--theme-button-bg', '#92400e');
-          root.style.setProperty('--theme-button-text', '#ffffff');
-          break;
-        default: // default theme
-          root.style.setProperty('--theme-bg-color', '#f9fafb');
-          root.style.setProperty('--theme-text', '#111827');
-          root.style.setProperty('--theme-card-bg', 'rgba(255, 255, 255, 0.95)');
-          root.style.setProperty('--theme-accent', '#f59e0b');
-          root.style.setProperty('--theme-accent-rgb', '245, 158, 11');
-          root.style.setProperty('--theme-border', 'rgba(229, 231, 235, 0.5)');
-          root.style.setProperty('--theme-button-bg', '#f59e0b');
-          root.style.setProperty('--theme-button-text', '#ffffff');
-      }
-    };
-
-    setThemeVariables();
-
-    // Clean up
-    return () => {
-      // Reset all theme variables
-      root.style.removeProperty('--theme-bg-color');
-      root.style.removeProperty('--theme-text');
-      root.style.removeProperty('--theme-card-bg');
-      root.style.removeProperty('--theme-accent');
-      root.style.removeProperty('--theme-border');
-    };
-  }, [sellerInfo?.theme]);
+  const themeClasses = useShopTheme((sellerInfo?.theme as Theme) || 'black');
 
   useEffect(() => {
     const fetchShopData = async () => {
@@ -273,61 +71,38 @@ const ShopPage = () => {
           throw new Error('Shop name is required');
         }
 
-        console.log('Fetching seller with shop name:', shopName);
-        // First, get the seller by shop name
         const seller = await sellerApi.getSellerByShopName(shopName);
 
         if (!seller) {
           throw new Error('Shop not found');
         }
 
-        console.log('Found seller:', seller);
-        console.log('Seller banner image from API:', seller.bannerImage || seller.banner_image || 'No banner image');
-
         const sellerData: ShopSeller = {
-          id: String(seller.id),  // Convert ID to string
+          id: String(seller.id),
           fullName: seller.fullName || seller.full_name || '',
           shopName: seller.shopName || seller.shop_name || '',
           phone: seller.phone || '',
           whatsappNumber: seller.whatsappNumber || seller.phone || '',
           email: seller.email || '',
-          bannerImage: seller.bannerImage || seller.banner_image, // Handle both cases
+          bannerImage: seller.bannerImage || seller.banner_image || seller.banner_url || '',
           city: seller.city,
           location: seller.location,
-          theme: (seller.theme as Theme) || 'black', // Default to black when unset
-          instagramLink: seller.instagramLink || '', // Map from API
-          tiktokLink: seller.tiktokLink || '',       // Map from API
-          facebookLink: seller.facebookLink || '',   // Map from API
+          theme: (seller.theme as Theme) || 'black',
+          instagramLink: seller.instagramLink || '',
+          tiktokLink: seller.tiktokLink || '',
+          facebookLink: seller.facebookLink || '',
           clientCount: seller.clientCount || seller.client_count || 0,
-          // Physical shop fields
           hasPhysicalShop: !!seller.physicalAddress,
           physicalAddress: seller.physicalAddress,
           latitude: seller.latitude,
           longitude: seller.longitude,
-
-          // Required fields from Seller interface
           createdAt: seller.createdAt || new Date().toISOString()
         };
 
-        // Log the banner image data for debugging
-        console.log('Raw seller data:', seller);
-        console.log('Processed seller data:', sellerData);
-        console.log('Banner image exists:', !!sellerData.bannerImage);
-
-        if (sellerData.bannerImage) {
-          console.log('Banner image type:', typeof sellerData.bannerImage);
-          console.log('Banner image length:', sellerData.bannerImage.length);
-          console.log('Banner image preview:', sellerData.bannerImage.substring(0, 50) + '...');
-        }
-
         setSellerInfo(sellerData);
 
-        // Then fetch products for this seller using the public endpoint
-        console.log('Fetching products for seller:', seller.id);
         const sellerProducts = await sellerApi.getSellerProducts(seller.id);
-        console.log('Fetched products:', sellerProducts);
 
-        // Map seller API products to our ProductType and filter available ones
         const availableProducts = (sellerProducts as SellerApiProduct[])
           .map(p => ({
             ...p,
@@ -426,8 +201,7 @@ const ShopPage = () => {
           <img
             src={getImageUrl(sellerInfo.bannerImage)}
             alt={`${sellerInfo.shopName || 'Shop'} Banner`}
-            className="w-full h-full object-cover transform scale-105 animate-slow-zoom"
-            style={{ animation: 'scale 20s linear infinite alternate' }}
+            className="w-full h-full object-cover animate-slow-zoom"
             onError={(e) => {
               console.error('Error loading banner image:', e);
               e.currentTarget.src = defaultBanner;
