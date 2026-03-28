@@ -18,124 +18,110 @@ import payoutService from '../services/payout.service.js';
  *   third_party_trans_id   — Safaricom M-Pesa receipt (on success)
  */
 export const handlePaydPayoutCallback = async (req, res) => {
-    // Acknowledge immediately — Payd will retry if we return 5xx
-    const client = await pool.connect();
+    const payload = req.body;
 
-    try {
-        const payload = req.body;
+    logger.info('[PAYOUT-CALLBACK] Received', {
+        transaction_reference: payload.transaction_reference,
+        result_code: payload.result_code,
+        status: payload.status,
+        success: payload.success,
+    });
 
-        logger.info('[PAYOUT-CALLBACK] Received', {
-            body: JSON.stringify(payload, null, 2),
-            headers: req.headers
-        });
+    // RESPOND 200 IMMEDIATELY as required by Payd docs
+    res.status(200).json({ received: true });
 
-        // --- Extract fields from Payd v2 webhook ---
-        const transactionReference = payload.transaction_reference;
-        const resultCode = payload.result_code;       // 0 = success, 1 = failed
-        const paydStatus = payload.status;            // "success" | "failed"
-        const remarks = payload.remarks || '';
-        const mpesaReceipt = payload.third_party_trans_id || null;
-        const callbackAmount = parseFloat(payload.amount || 0);
+    // Process asynchronously
+    setImmediate(async () => {
+        const client = await pool.connect();
+        try {
+            const transactionReference = payload.transaction_reference;
+            const resultCode = payload.result_code;
+            const paydStatus = payload.status;
+            const mpesaReceipt = payload.third_party_trans_id || null;
 
-        logger.info(`[PAYOUT-CALLBACK] transaction_reference=${transactionReference}, result_code=${resultCode}, status=${paydStatus}`);
+            if (!transactionReference) {
+                logger.warn('[PAYOUT-CALLBACK] Missing transaction_reference');
+                return;
+            }
 
-        if (!transactionReference) {
-            logger.warn('[PAYOUT-CALLBACK] Missing transaction_reference in payload');
-            return res.status(400).json({ status: 'error', message: 'Missing transaction_reference' });
+            // Payd docs: SUCCESS = result_code===0 AND (status==="success" OR success===true)
+            // Both result_code AND status/success must confirm success
+            const resultCodeNum = parseInt(resultCode, 10);
+            const isSuccess = resultCodeNum === 0 &&
+                (paydStatus === 'success' || payload.success === true);
+
+            let finalStatus = isSuccess ? 'completed' : 'failed';
+
+            await client.query('BEGIN');
+
+            const { rows: [request] } = await client.query(
+                `SELECT wr.id, wr.status, wr.amount, wr.seller_id,
+                  s.whatsapp_number AS entity_phone
+           FROM withdrawal_requests wr
+           LEFT JOIN sellers s ON wr.seller_id = s.id
+           WHERE wr.provider_reference = $1
+           FOR UPDATE OF wr`,
+                [transactionReference]
+            );
+
+            if (!request) {
+                logger.warn(`[PAYOUT-CALLBACK] No request found for: ${transactionReference}`);
+                await client.query('ROLLBACK');
+                return;
+            }
+
+            if (['completed', 'failed'].includes(request.status)) {
+                await client.query('ROLLBACK');
+                logger.info(`[PAYOUT-CALLBACK] Already processed: ${request.id}`);
+                return;
+            }
+
+            await client.query(
+                `UPDATE withdrawal_requests
+           SET status = $1,
+               processed_at = NOW(),
+               metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
+           WHERE id = $3`,
+                [
+                    finalStatus,
+                    JSON.stringify({
+                        payd_callback: payload,
+                        mpesa_receipt: mpesaReceipt,
+                        remarks: payload.remarks,
+                    }),
+                    request.id
+                ]
+            );
+
+            let newBalance = null;
+            if (!isSuccess) {
+                newBalance = await payoutService.refundToWallet(client, request);
+                logger.info(`[PAYOUT-CALLBACK] Failed — refunded KES ${request.amount}`);
+            } else {
+                logger.info(`[PAYOUT-CALLBACK] Completed — receipt: ${mpesaReceipt}`);
+            }
+
+            await client.query('COMMIT');
+
+            // WhatsApp notification (fire-and-forget)
+            if (request.entity_phone) {
+                payoutService.refundToWallet && whatsappService.notifySellerWithdrawalUpdate(
+                    request.entity_phone,
+                    {
+                        amount: request.amount,
+                        status: finalStatus,
+                        reference: mpesaReceipt || transactionReference,
+                        reason: !isSuccess ? payload.remarks : null,
+                        newBalance
+                    }
+                ).catch(err => logger.error('[PAYOUT-CALLBACK] WhatsApp notify failed:', err));
+            }
+
+        } catch (error) {
+            await client.query('ROLLBACK').catch(() => { });
+            logger.error('[PAYOUT-CALLBACK] Processing error:', error);
+        } finally {
+            client.release();
         }
-
-        // --- Determine outcome using BOTH result_code and status ---
-        // result_code 0 is success in Payd v2 payouts
-        const isSuccess = (resultCode === 0 || resultCode === '0' || paydStatus === 'success');
-
-        let finalStatus = null;
-        if (isSuccess) {
-            finalStatus = 'completed';
-        } else {
-            // result_code 1 or status 'failed'
-            finalStatus = 'failed';
-        }
-
-        await client.query('BEGIN');
-
-        // --- Find the withdrawal request by provider_reference (= Payd correlator_id) ---
-        const { rows: [request] } = await client.query(
-            `SELECT 
-                wr.id,
-                wr.status,
-                wr.amount,
-                wr.seller_id,
-                s.whatsapp_number AS entity_phone
-             FROM withdrawal_requests wr
-             LEFT JOIN sellers s ON wr.seller_id = s.id
-             WHERE wr.provider_reference = $1
-             FOR UPDATE OF wr`,
-            [transactionReference]
-        );
-
-        if (!request) {
-            logger.warn(`[PAYOUT-CALLBACK] No request found for transaction_reference: ${transactionReference}. Payment might be from a different system or manual.`);
-            await client.query('ROLLBACK');
-            return res.status(200).json({ status: 'not_found' });
-        }
-
-        // --- Idempotency: skip if already finalized ---
-        if (['completed', 'failed'].includes(request.status)) {
-            await client.query('ROLLBACK');
-            logger.info(`[PAYOUT-CALLBACK] Request ${request.id} already ${request.status} — skipping`);
-            return res.status(200).json({ status: 'already_processed' });
-        }
-
-        // --- Update withdrawal request status ---
-        await client.query(
-            `UPDATE withdrawal_requests
-             SET status       = $1,
-                 processed_at = NOW(),
-                 metadata     = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
-             WHERE id = $3`,
-            [
-                finalStatus,
-                JSON.stringify({
-                    payd_callback: payload,
-                    mpesa_receipt: mpesaReceipt,
-                    remarks,
-                    callback_amount: callbackAmount
-                }),
-                request.id
-            ]
-        );
-
-        // --- On failure: refund the seller/organizer/event balance ---
-        let newBalance = null;
-        if (finalStatus === 'failed') {
-            newBalance = await payoutService.refundToWallet(client, request);
-            logger.info(`[PAYOUT-CALLBACK] Request ${request.id} FAILED — refunded KES ${request.amount}`);
-        } else {
-            logger.info(`[PAYOUT-CALLBACK] Request ${request.id} COMPLETED — M-Pesa receipt: ${mpesaReceipt}`);
-        }
-
-        await client.query('COMMIT');
-
-        // --- WhatsApp notification ---
-        if (request.entity_phone) {
-            whatsappService.notifySellerWithdrawalUpdate(request.entity_phone, {
-                amount: request.amount,
-                status: finalStatus,
-                reference: mpesaReceipt || transactionReference,
-                reason: finalStatus === 'failed' ? remarks : null,
-                newBalance
-            }).catch(err => logger.error('[PAYOUT-CALLBACK] WhatsApp notify failed:', err));
-        } else {
-            logger.warn(`[PAYOUT-CALLBACK] No entity_phone for request ${request.id} — WhatsApp skipped`);
-        }
-
-        return res.status(200).json({ status: 'success' });
-
-    } catch (error) {
-        await client.query('ROLLBACK');
-        logger.error('[PAYOUT-CALLBACK] Unhandled error:', error);
-        return res.status(500).json({ status: 'error', message: 'Internal server error' });
-    } finally {
-        client.release();
-    }
+    });
 };
