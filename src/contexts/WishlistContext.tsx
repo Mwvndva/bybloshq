@@ -22,12 +22,57 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
-  const { user } = useBuyerAuth();
-  const { toast } = useToast();
+  // Safely use the buyer auth context
+  let user = null;
+  let buyerAuthAvailable = true;
 
+  try {
+    const buyerAuth = useBuyerAuth?.();
+    user = buyerAuth?.user || null;
+  } catch (error) {
+    // If useBuyerAuth throws an error, it means we're not in a BuyerAuthProvider
+    buyerAuthAvailable = false;
+    console.warn('WishlistProvider: BuyerAuth not available');
+  }
+
+  const { toast } = useToast?.() || {};
+
+  console.log('🔄 WishlistProvider render:', {
+    user: user ? { id: user.id, email: user.email } : null,
+    wishlistLength: wishlist.length,
+    isLoading,
+    hasError: !!error,
+    buyerAuthAvailable
+  });
+
+  // If buyer auth is not available, provide a default context value
+  if (!buyerAuthAvailable) {
+    return (
+      <WishlistContext.Provider
+        value={{
+          wishlist: [],
+          addToWishlist: async () => { },
+          removeFromWishlist: async () => { },
+          isInWishlist: () => false,
+          isLoading: false,
+          error: null,
+          refreshWishlist: async () => { },
+        }}
+      >
+        {children}
+      </WishlistContext.Provider>
+    );
+  }
 
   // Convert WishlistItem to Product with seller information
   const mapWishlistItemToProduct = async (item: WishlistItem): Promise<Product> => {
+    console.log('📝 Mapping wishlist item:', {
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      priceType: typeof item.price,
+      sellerName: (item as any).sellerName
+    });
 
     // Create a seller object with shop name from the wishlist item
     const seller: Seller = {
@@ -62,6 +107,13 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       images: item.images,
     };
 
+    console.log('✅ Mapped product:', {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      priceType: typeof product.price,
+      shopName: product.seller.shopName
+    });
 
     return product;
   };
@@ -73,17 +125,21 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    console.log('🔄 Loading wishlist');
     setIsLoading(true);
     try {
       const serverWishlist = await buyerApi.getWishlist();
+      console.log('📦 Server wishlist response:', serverWishlist);
 
       const products = Array.isArray(serverWishlist)
         ? await Promise.all(serverWishlist.map(mapWishlistItemToProduct))
         : [];
 
+      console.log('✅ Mapped products:', products.map(p => ({ id: p.id, name: p.name, hasSeller: !!p.seller })));
       setWishlist(products);
+      console.log('🎯 Wishlist state updated, length:', products.length);
     } catch (error) {
-      console.error('Error loading wishlist:', error);
+      console.error('❌ Error loading wishlist:', error);
       setWishlist([]);
     } finally {
       setIsLoading(false);
@@ -92,10 +148,16 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   // Load wishlist when user changes
   useEffect(() => {
+    console.log('🔄 Wishlist useEffect triggered:', {
+      user: user ? { id: user.id, email: user.email } : null,
+      hasUser: !!user
+    });
 
     if (user) {
+      console.log('👤 User found, loading wishlist...');
       loadWishlist();
     } else {
+      console.log('🚫 No user, clearing wishlist');
       setWishlist([]);
     }
   }, [user, loadWishlist]);
@@ -107,6 +169,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
       if (!user) throw new Error('User must be logged in');
       if (!product?.id) throw new Error('Invalid product data');
 
+      console.log('➕ Adding to wishlist:', { productId: product.id, productName: product.name });
 
       try {
         setError(null);
@@ -121,7 +184,12 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         });
 
       } catch (error: any) {
-        console.error('Error adding to wishlist:', error);
+        console.error('❌ Error adding to wishlist:', {
+          error,
+          message: error.message,
+          code: error.code,
+          response: error.response?.data
+        });
 
         if (error.code === 'DUPLICATE_WISHLIST_ITEM' || error.response?.status === 409) {
           const errorMessage = error.response?.data?.message || error.message || 'This item is already in your wishlist.';
@@ -144,6 +212,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     removeFromWishlist: async (productId: string) => {
       if (!user) throw new Error('User must be logged in');
 
+      console.log('➖ Removing from wishlist:', productId);
 
       try {
         setError(null);
@@ -158,7 +227,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         });
 
       } catch (error) {
-        console.error('Error removing from wishlist:', error);
+        console.error('❌ Error removing from wishlist:', error);
         toast?.({
           title: 'Failed to remove from wishlist',
           description: 'There was an error removing this item from your wishlist. Please try again.',

@@ -17,6 +17,7 @@ interface Buyer {
   createdAt: string;
   updatedAt?: string;
   hasLocation?: boolean;
+  hasEmail?: boolean;
 }
 
 interface ApiResponse<T> {
@@ -88,6 +89,7 @@ const transformBuyer = (data: any): Buyer => {
     city: buyer.city || '',
     location: buyer.location || '',
     hasLocation: buyer.hasLocation || false,
+    hasEmail: buyer.hasEmail || false,
     refunds: 0, // Never trust server-sent refund balance in profile — fetch separately if needed
     createdAt: buyer.createdAt || new Date().toISOString(),
     updatedAt: buyer.updatedAt
@@ -105,6 +107,9 @@ const buyerApi = {
     try {
       const loginUrl = '/buyers/login';
 
+      if (import.meta.env.DEV) {
+        console.log('=== LOGIN ATTEMPT ===');
+      }
       const response = await apiClient.post<LoginApiResponse>(
         loginUrl,
         credentials
@@ -282,6 +287,9 @@ const buyerApi = {
   // Wishlist methods with retry logic
   getWishlist: async (maxRetries = 2, retryCount = 0): Promise<WishlistItem[]> => {
     try {
+      if (import.meta.env.DEV) {
+        console.log(`🔍 API - Fetching wishlist (attempt ${retryCount + 1}/${maxRetries + 1})...`);
+      }
 
       const response = await buyerApiInstance.get<ApiResponse<{ items: WishlistItem[] }>>('/buyers/wishlist', {
         headers: {
@@ -295,11 +303,23 @@ const buyerApi = {
       // Check if the response has the expected structure
       const isSuccess = response.data?.success || (response.data as any)?.status === 'success';
       if (!isSuccess || !response.data.data?.items) {
+        if (import.meta.env.DEV) {
+          console.warn('⚠️ API - Unexpected response format from wishlist endpoint:', {
+            success: response.data?.success,
+            status: (response.data as any)?.status,
+            hasData: !!response.data?.data,
+            hasItems: !!response.data?.data?.items,
+            fullResponse: response.data
+          });
+        }
         throw new Error('Invalid response format from server');
       }
 
       // Return the items array
       const items = Array.isArray(response.data.data.items) ? response.data.data.items : [];
+      if (import.meta.env.DEV) {
+        console.log('✅ API - Successfully fetched wishlist items:', items.length);
+      }
       return items;
 
     } catch (error: any) {
@@ -307,11 +327,15 @@ const buyerApi = {
 
       // Handle timeout specifically
       if ((error.code === 'ECONNABORTED' || error.message.includes('timeout')) && retryCount < maxRetries) {
+        console.log(`🔄 Retrying... (${retryCount + 1}/${maxRetries})`);
+        // Wait a bit before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         return buyerApi.getWishlist(maxRetries, retryCount + 1);
       }
 
       // Handle 401 Unauthorized - let global interceptor handle redirect
       if (error.response?.status === 401) {
+        console.log('🔒 Authentication failed - global interceptor will handle redirect');
       }
 
       // For other errors, return empty array but don't retry
@@ -321,6 +345,9 @@ const buyerApi = {
 
   addToWishlist: async (product: { id: string }): Promise<boolean> => {
     try {
+      if (import.meta.env.DEV) {
+        console.log('API - Adding to wishlist:', product);
+      }
       const response = await buyerApiInstance.post<ApiResponse<any>>(
         '/buyers/wishlist',
         { productId: product.id }
@@ -340,6 +367,9 @@ const buyerApi = {
         status: error.response?.status
       });
 
+      if (error.response?.status === 401) {
+        console.log('Authentication failed - global interceptor will handle redirect');
+      }
 
       // Handle duplicate entry (409) - throw error to be caught by frontend
       if (error.response?.status === 409) {
@@ -355,6 +385,7 @@ const buyerApi = {
 
   removeFromWishlist: async (productId: string): Promise<boolean> => {
     try {
+      console.log('Removing from wishlist:', productId);
       const response = await buyerApiInstance.delete<ApiResponse<void>>(
         `/buyers/wishlist/${productId}`
       );
@@ -373,11 +404,15 @@ const buyerApi = {
 
       if (error.response) {
         console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+
         if (error.response.status === 401) {
+          console.log('Authentication failed - global interceptor will handle redirect');
         }
 
         // Handle 404 as success since item is not in wishlist (already removed)
         if (error.response.status === 404) {
+          console.log('Product not found in wishlist (already removed)');
           return true;
         }
       }
@@ -388,6 +423,7 @@ const buyerApi = {
 
   syncWishlist: async (items: WishlistItem[]): Promise<boolean> => {
     try {
+      console.log('Syncing wishlist with server:', items);
       await buyerApiInstance.put<ApiResponse<void>>(
         '/buyers/wishlist/sync',
         { items }
@@ -397,6 +433,7 @@ const buyerApi = {
       console.error('Error syncing wishlist:', error);
 
       if ((error as any).response?.status === 401) {
+        console.log('Authentication failed - global interceptor will handle redirect');
       }
 
       return false;
@@ -416,6 +453,9 @@ const buyerApi = {
         paymentStatus: order.paymentStatus?.toUpperCase() || 'PENDING'
       }));
 
+      if (import.meta.env.DEV) {
+        console.log('=== TRANSFORMED ORDERS ===', transformedOrders.length);
+      }
 
       return transformedOrders;
     } catch (error) {
@@ -449,6 +489,7 @@ const buyerApi = {
 
   confirmOrderReceipt: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
     try {
+      console.log(`Sending confirm receipt request for order ${orderId}...`);
       const response = await buyerApiInstance.patch(`/orders/${orderId}/confirm-receipt`, {}, {
         timeout: 30000 // 30 seconds timeout for this specific request
       });
@@ -484,6 +525,9 @@ const buyerApi = {
     token?: string;
   }> => {
     try {
+      if (import.meta.env.DEV) {
+        console.log('Checking buyer by phone...');
+      }
       const response = await apiClient.post<{
         status: string;
         data: {
@@ -520,6 +564,9 @@ const buyerApi = {
     password?: string;
   }): Promise<{ buyer?: Buyer; token?: string; message?: string; requiresLogin?: boolean; exists?: boolean }> => {
     try {
+      if (import.meta.env.DEV) {
+        console.log('Saving buyer info...');
+      }
       // Use the public API endpoint
       const response = await apiClient.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
         `/buyers/save-info`,
@@ -528,6 +575,9 @@ const buyerApi = {
           phone: buyerInfo.mobilePayment || buyerInfo.whatsappNumber
         }
       );
+      if (import.meta.env.DEV) {
+        console.log('Save info response:', response.data.status);
+      }
 
       if (!response.data || response.data.status !== 'success') {
         throw new Error(response.data?.data?.message || 'Failed to save buyer information');
@@ -613,6 +663,7 @@ const buyerApi = {
 
   markOrderAsCollected: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
     try {
+      console.log(`Sending mark as collected request for order ${orderId}...`);
       await buyerApiInstance.post(`/buyers/orders/${orderId}/collected`);
       return { success: true };
     } catch (error: any) {

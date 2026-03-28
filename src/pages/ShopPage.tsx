@@ -1,21 +1,19 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, Link, useLocation, useNavigate } from 'react-router-dom';
-import { RouteFallback } from '@/components/common/RouteFallback';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Loader2, ArrowLeft, Store, Package, Users } from 'lucide-react';
 import { sellerApi } from '@/api/sellerApi';
 import { formatCurrency, getImageUrl, cn } from '@/lib/utils';
-import ProductCard from '@/components/ProductCard';
-import type { Product, ProductType, Seller, Aesthetic } from '@/types';
+import { ProductCard } from '@/components/ProductCard';
+import type { Product as ProductType, Seller, Aesthetic } from '@/types';
 import type { Product as SellerApiProduct } from '@/api/sellerApi';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 
-// Themes for the shop
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 // Type guard to check if a string is a valid Aesthetic
-function isAesthetic(value: any): value is Aesthetic {
-  const validAesthetics = [
+function isAesthetic(value: string): value is Aesthetic {
+  return [
     'all',
     'clothes-style',
     'sneakers-shoes',
@@ -24,25 +22,64 @@ function isAesthetic(value: any): value is Aesthetic {
     'electronics-accessories',
     'home-living',
     'health-wellness'
-  ];
-  return typeof value === 'string' && validAesthetics.includes(value);
+  ].includes(value);
+}
+
+// Base product type that matches the Product interface but makes some fields optional
+interface BaseProduct extends Omit<ProductType, 'seller' | 'aesthetic' | 'isSold' | 'status'> {
+  seller?: Seller;
+  isSold: boolean;
+  status: 'available' | 'sold';
+  aesthetic: Aesthetic | string;
+}
+
+// Shop-specific product type that extends the base product
+interface ShopProduct extends Omit<BaseProduct, 'seller'> {
+  seller?: ShopSeller;
+}
+
+// Shop-specific seller type that extends the base Seller type
+interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
+  bannerImage?: string;  // New field
+  theme?: Theme;         // New field
+  city?: string;         // New field
+  instagramLink?: string; // New field
+  tiktokLink?: string;    // New field
+  facebookLink?: string;  // New field
+  clientCount?: number;   // New field
+  // createdAt is required from Seller
+  // updatedAt is optional from Seller
+  // All required fields from Seller remain required:
+  // - id: string
+  // - shopName: string
+  // - fullName: string
+  // - email: string
+  // - phone: string
+  // - createdAt: string
+  // Other optional fields from Seller remain optional:
+  // - updatedAt?: string
+  // - bio?: string
+  // - avatarUrl?: string
+  // - location?: string
+  // - website?: string
+  // - socialMedia?: { ... }
 }
 
 const ShopPage = () => {
   const { shopName } = useParams<{ shopName: string }>();
   const location = useLocation();
-  const navigate = useNavigate();
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ShopProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sellerInfo, setSellerInfo] = useState<Seller | null>(null);
+  const [sellerInfo, setSellerInfo] = useState<ShopSeller | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const defaultBanner = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
 
   // Get buyer authentication status
   const { isAuthenticated } = useBuyerAuth();
 
-  const themeClasses = useMemo(() => {
+  // Get theme classes based on seller's theme
+  const getThemeClasses = useCallback(() => {
     const theme = (sellerInfo?.theme as Theme) || 'black';
 
     switch (theme) {
@@ -120,6 +157,8 @@ const ShopPage = () => {
         };
     }
   }, [sellerInfo?.theme]);
+
+  const themeClasses = getThemeClasses();
 
   // Apply theme to the page
   useEffect(() => {
@@ -234,6 +273,7 @@ const ShopPage = () => {
           throw new Error('Shop name is required');
         }
 
+        console.log('Fetching seller with shop name:', shopName);
         // First, get the seller by shop name
         const seller = await sellerApi.getSellerByShopName(shopName);
 
@@ -241,35 +281,51 @@ const ShopPage = () => {
           throw new Error('Shop not found');
         }
 
+        console.log('Found seller:', seller);
+        console.log('Seller banner image from API:', seller.bannerImage || seller.banner_image || 'No banner image');
 
-        const sellerData: Seller = {
-          id: String(seller.id),
+        const sellerData: ShopSeller = {
+          id: String(seller.id),  // Convert ID to string
           fullName: seller.fullName || seller.full_name || '',
           shopName: seller.shopName || seller.shop_name || '',
           phone: seller.phone || '',
           whatsappNumber: seller.whatsappNumber || seller.phone || '',
           email: seller.email || '',
-          bannerImage: seller.bannerImage || seller.banner_image,
-          bannerUrl: seller.bannerImage || seller.banner_image,
+          bannerImage: seller.bannerImage || seller.banner_image, // Handle both cases
           city: seller.city,
           location: seller.location,
-          theme: (seller.theme as string) || 'black',
-          instagramLink: seller.instagramLink || '',
-          tiktokLink: seller.tiktokLink || '',
-          facebookLink: seller.facebookLink || '',
+          theme: (seller.theme as Theme) || 'black', // Default to black when unset
+          instagramLink: seller.instagramLink || '', // Map from API
+          tiktokLink: seller.tiktokLink || '',       // Map from API
+          facebookLink: seller.facebookLink || '',   // Map from API
           clientCount: seller.clientCount || seller.client_count || 0,
+          // Physical shop fields
           hasPhysicalShop: !!seller.physicalAddress,
           physicalAddress: seller.physicalAddress,
           latitude: seller.latitude,
           longitude: seller.longitude,
+
+          // Required fields from Seller interface
           createdAt: seller.createdAt || new Date().toISOString()
         };
 
+        // Log the banner image data for debugging
+        console.log('Raw seller data:', seller);
+        console.log('Processed seller data:', sellerData);
+        console.log('Banner image exists:', !!sellerData.bannerImage);
+
+        if (sellerData.bannerImage) {
+          console.log('Banner image type:', typeof sellerData.bannerImage);
+          console.log('Banner image length:', sellerData.bannerImage.length);
+          console.log('Banner image preview:', sellerData.bannerImage.substring(0, 50) + '...');
+        }
 
         setSellerInfo(sellerData);
 
         // Then fetch products for this seller using the public endpoint
+        console.log('Fetching products for seller:', seller.id);
         const sellerProducts = await sellerApi.getSellerProducts(seller.id);
+        console.log('Fetched products:', sellerProducts);
 
         // Map seller API products to our ProductType and filter available ones
         const availableProducts = (sellerProducts as SellerApiProduct[])
@@ -282,7 +338,7 @@ const ShopPage = () => {
             updatedAt: p.updatedAt || new Date().toISOString(),
             aesthetic: isAesthetic((p as any).aesthetic) ? (p as any).aesthetic : 'all',
             seller: sellerData
-          } as unknown as Product))
+          } as unknown as ShopProduct))
           .filter(p => !p.isSold && p.status !== 'sold');
 
         setProducts(availableProducts);
@@ -300,57 +356,44 @@ const ShopPage = () => {
       setError('Shop name is required');
       setIsLoading(false);
     }
-
-    return () => {
-      setProducts([]);
-      setSellerInfo(null);
-    };
   }, [shopName]);
 
+  // Log when banner image is rendered
+  useEffect(() => {
+    if (sellerInfo) {
+      console.log('Current seller info in state:', {
+        ...sellerInfo,
+        bannerImage: sellerInfo.bannerImage || 'No banner image'
+      });
+    }
+  }, [sellerInfo]);
 
-  // Memoize the seller object for the ProductCard
-  const sellerForCard: Seller | undefined = useMemo(() => sellerInfo ? {
-    id: sellerInfo.id,
-    fullName: sellerInfo.fullName || '',
-    email: sellerInfo.email || '',
-    phone: sellerInfo.phone || '',
-    whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
-    shopName: sellerInfo.shopName || '',
-    bannerUrl: sellerInfo.bannerImage || '',
-    location: sellerInfo.location || '',
-    city: sellerInfo.city || '',
-    hasPhysicalShop: !!sellerInfo.physicalAddress,
-    physicalAddress: sellerInfo.physicalAddress,
-    latitude: sellerInfo.latitude,
-    longitude: sellerInfo.longitude,
-    createdAt: sellerInfo.createdAt || new Date().toISOString(),
-    updatedAt: sellerInfo.updatedAt || new Date().toISOString(),
-    bio: sellerInfo.bio,
-    avatarUrl: sellerInfo.avatarUrl,
-    website: sellerInfo.website,
-    socialMedia: sellerInfo.socialMedia
-  } : undefined, [sellerInfo]);
+  // Filter products based on search query
+  const filteredProducts = products.filter(product => {
+    if (!searchQuery.trim()) return true;
 
-  // Filter products based on search query and memoize the final list with seller info
-  const filteredProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    const searchTerms = query.split(' ').filter(term => term.length > 0);
+    const searchTerms = searchQuery.toLowerCase().split(' ').filter(term => term.length > 0);
+    const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
 
-    return products
-      .filter(product => {
-        if (!query) return true;
-        const productText = `${product.name.toLowerCase()} ${product.description.toLowerCase()}`;
-        return searchTerms.every(term => productText.includes(term));
-      })
-      .map(product => ({
-        ...product,
-        aesthetic: isAesthetic(product.aesthetic) ? product.aesthetic : 'all',
-        seller: sellerForCard
-      } as Product));
-  }, [products, searchQuery, sellerForCard]);
+    return searchTerms.every(term =>
+      productText.includes(term)
+    );
+  });
 
   if (isLoading) {
-    return <RouteFallback />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+        <div className="text-center space-y-6 p-8">
+          <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-3xl flex items-center justify-center shadow-lg">
+            <Loader2 className="h-12 w-12 text-yellow-600 animate-spin" />
+          </div>
+          <div>
+            <h3 className="text-2xl font-black text-black mb-3">Loading Shop</h3>
+            <p className="text-gray-600 text-lg font-medium">Please wait while we fetch the shop details...</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
@@ -536,16 +579,67 @@ const ShopPage = () => {
               </div>
             </div>
             <div className="grid gap-3 sm:gap-6 grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {filteredProducts.map((product) => (
-                <div key={product.id}>
-                  <ProductCard
-                    product={product}
-                    seller={sellerForCard}
-                    hideWishlist={!isAuthenticated}
-                    theme={sellerInfo?.theme as Theme}
-                  />
-                </div>
-              ))}
+              {filteredProducts.map((product) => {
+                // Ensure the product has the seller info from the shop
+                const productWithSeller: ProductType & { seller?: Seller; isSold?: boolean; } = {
+                  ...product,
+                  aesthetic: isAesthetic(product.aesthetic) ? product.aesthetic : 'all',
+                  seller: sellerInfo ? {
+                    id: sellerInfo.id,
+                    fullName: sellerInfo.fullName || '',
+                    email: sellerInfo.email || '',
+                    phone: sellerInfo.phone || '',
+                    whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
+                    shopName: sellerInfo.shopName || '',
+                    bannerUrl: sellerInfo.bannerImage || '',
+                    location: sellerInfo.location || '',
+                    // New physical shop fields
+                    hasPhysicalShop: !!sellerInfo.physicalAddress,
+                    physicalAddress: sellerInfo.physicalAddress,
+                    latitude: sellerInfo.latitude,
+                    longitude: sellerInfo.longitude,
+                    // Add any other required fields from Seller interface with defaults
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString()
+                  } : undefined
+                };
+
+                // Create a properly typed seller object that matches the Seller interface
+                const sellerForCard: Seller | undefined = sellerInfo ? {
+                  id: sellerInfo.id,
+                  fullName: sellerInfo.fullName || '',
+                  email: sellerInfo.email || '',
+                  phone: sellerInfo.phone || '',
+                  whatsappNumber: sellerInfo.whatsappNumber || sellerInfo.phone || '',
+                  shopName: sellerInfo.shopName || '',
+                  bannerUrl: sellerInfo.bannerImage || '',
+                  location: sellerInfo.location || '',
+                  city: sellerInfo.city || '',
+                  // New physical shop fields
+                  hasPhysicalShop: !!sellerInfo.physicalAddress,
+                  physicalAddress: sellerInfo.physicalAddress,
+                  latitude: sellerInfo.latitude,
+                  longitude: sellerInfo.longitude,
+                  createdAt: sellerInfo.createdAt || new Date().toISOString(),
+                  updatedAt: sellerInfo.updatedAt || new Date().toISOString(),
+                  // Optional fields with defaults
+                  bio: sellerInfo.bio,
+                  avatarUrl: sellerInfo.avatarUrl,
+                  website: sellerInfo.website,
+                  socialMedia: sellerInfo.socialMedia
+                } : undefined;
+
+                return (
+                  <div key={product.id}>
+                    <ProductCard
+                      product={productWithSeller}
+                      seller={sellerForCard}
+                      hideWishlist={!isAuthenticated}
+                      theme={sellerInfo?.theme as Theme}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : (

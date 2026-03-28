@@ -159,6 +159,7 @@ function BuyerDashboard() {
 
   // Log when filter values change
   useEffect(() => {
+    console.log('Filters updated:', { filterCity, filterArea });
   }, [filterCity, filterArea]);
 
   // Check for order updates

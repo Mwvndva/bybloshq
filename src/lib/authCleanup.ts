@@ -1,4 +1,6 @@
-import apiClient from './apiClient';
+import axios from 'axios';
+import apiClient from './axios'; // This is likely for generic API calls if any still use it
+import { purchaseAxios } from '@/api/purchaseApi';
 import publicApiService from '@/api/publicApi';
 
 /**
@@ -7,6 +9,7 @@ import publicApiService from '@/api/publicApi';
  * starts with a completely clean slate, preventing "Authorization" header leaks.
  */
 export const clearAllAuthData = () => {
+    console.log('🧹 [AuthCleanup] Initiating comprehensive auth data wipe...');
 
     // 1. Clear all known localStorage keys
     const authKeys = [
@@ -28,24 +31,28 @@ export const clearAllAuthData = () => {
 
     authKeys.forEach(key => {
         if (localStorage.getItem(key)) {
+            console.log(`🗑️ [AuthCleanup] Removing ${key} from localStorage`);
             localStorage.removeItem(key);
         }
     });
 
     // 2. Clear common axios instance defaults
     const axiosInstances = [
+        axios,
         apiClient,
+        purchaseAxios,
         (publicApiService as any).getInstance ? (publicApiService as any).getInstance() : null
     ].filter(Boolean);
 
     axiosInstances.forEach((instance, index) => {
         try {
             if (instance.defaults?.headers?.common) {
+                console.log(`🔌 [AuthCleanup] Clearing Authorization header from instance ${index}`);
                 delete instance.defaults.headers.common['Authorization'];
                 delete instance.defaults.headers.common['authorization'];
             }
         } catch (e) {
-            console.warn(`[AuthCleanup] Failed to clear headers for instance ${index}`, e);
+            console.warn(`⚠️ [AuthCleanup] Failed to clear headers for instance ${index}`, e);
         }
     });
 
@@ -56,4 +63,5 @@ export const clearAllAuthData = () => {
         console.error('[AuthCleanup] Could not clear sessionStorage', e);
     }
 
+    console.log('✅ [AuthCleanup] All frontend auth pointers have been purged.');
 };

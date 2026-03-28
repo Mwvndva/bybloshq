@@ -18,6 +18,13 @@ if (isDevelopment && !envApiUrl) {
 }
 
 // Log API configuration in development
+if (isDevelopment) {
+    console.log('🔧 [API Client] Configuration:', {
+        baseURL,
+        environment: import.meta.env.MODE,
+        withCredentials: true
+    });
+}
 
 const apiClient = axios.create({
     baseURL,
@@ -48,6 +55,9 @@ export const getFreshCsrfToken = async () => {
 
 apiClient.interceptors.request.use(
     (config: any) => {
+        if (isDevelopment) {
+            console.log(`📤 [API Request] ${config.method?.toUpperCase()} ${config.url}`);
+        }
 
         // Attach CSRF token to non-GET requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
@@ -79,6 +89,9 @@ apiClient.interceptors.request.use(
 // Response Interceptor: Global Error Handling
 apiClient.interceptors.response.use(
     (response) => {
+        if (isDevelopment) {
+            console.log(`📥 [API Response] ${response.config.method?.toUpperCase()} ${response.config.url} - ${response.status}`);
+        }
         return response;
     },
     (error) => {
@@ -106,7 +119,9 @@ apiClient.interceptors.response.use(
             const isPaymentSuccessPage = window.location.pathname.includes('/payment/success') ||
                 window.location.pathname.includes('/checkout/success');
 
+            // REHYDRATION CHECK: If app is currently checking auth, queue the error
             if (authStateManager.isCurrentlyRehydrating()) {
+                console.log('[API Client] 401 during rehydration - queuing error');
                 authStateManager.queueError(error);
                 return Promise.reject(error);
             }

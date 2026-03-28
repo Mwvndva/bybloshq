@@ -53,28 +53,63 @@ export function formatCurrency(amount: number | string | null | undefined): stri
   }
 }
 
-export function formatDate(date: string | Date | number | null | undefined): string {
-  if (!date) return 'N/A';
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return 'Invalid Date';
-  return d.toLocaleDateString('en-KE', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+export function formatDate(dateInput: string | Date, format: 'full' | 'date' | 'time' = 'full'): string {
+  try {
+    // Handle different date input types
+    let date: Date;
 
-export function formatDateTime(date: string | Date | number | null | undefined): string {
-  if (!date) return 'N/A';
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return 'Invalid Date';
-  return d.toLocaleString('en-KE', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+    // If it's already a Date object
+    if (dateInput instanceof Date) {
+      date = dateInput;
+    }
+    // If it's a string that can be parsed by Date constructor
+    else if (typeof dateInput === 'string') {
+      // Try parsing the date string
+      const parsedDate = new Date(dateInput);
+
+      // If the date is invalid, try parsing with Date.parse
+      if (isNaN(parsedDate.getTime())) {
+        const timestamp = Date.parse(dateInput);
+        if (!isNaN(timestamp)) {
+          date = new Date(timestamp);
+        } else {
+          throw new Error(`Invalid date string: ${dateInput}`);
+        }
+      } else {
+        date = parsedDate;
+      }
+    } else {
+      throw new Error(`Invalid date format: ${typeof dateInput}`);
+    }
+
+    // Format based on requested format
+    switch (format) {
+      case 'date':
+        return date.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+      case 'time':
+        return date.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+      case 'full':
+      default:
+        return date.toLocaleString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+        });
+    }
+  } catch (error) {
+    console.error('Error formatting date:', error, 'Input:', dateInput);
+    return 'Date not available';
+  }
 }
 
 export function decodeJwt(token: string): any {

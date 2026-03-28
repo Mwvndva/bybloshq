@@ -24,6 +24,7 @@ export function BuyerResetPassword() {
 
     // Verify token on component mount
     useEffect(() => {
+        console.log('Token from URL:', token);
 
         if (!token) {
             console.error('No token found in URL');
@@ -38,6 +39,7 @@ export function BuyerResetPassword() {
 
         // For buyer tokens, we'll check if it looks like a valid hex token (not JWT)
         const isValidHexToken = /^[a-f0-9]{64}$/.test(token);
+        console.log('Token is valid hex format:', isValidHexToken);
 
         setIsValidToken(isValidHexToken);
 

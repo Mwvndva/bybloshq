@@ -21,11 +21,9 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
             <Toaster />
             {/* Unified auth provider - provides all role-specific hooks */}
             <GlobalAuthProvider>
-                <BybxProvider>
-                    <WishlistProvider>
-                        {children}
-                    </WishlistProvider>
-                </BybxProvider>
+                <WishlistProvider>
+                    {children}
+                </WishlistProvider>
             </GlobalAuthProvider>
         </TooltipProvider>
     </QueryClientProvider>

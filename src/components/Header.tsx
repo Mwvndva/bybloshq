@@ -1,12 +1,12 @@
-import { memo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
-import { ShoppingBag, LayoutDashboard } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Instagram, Calendar, ShoppingBag, Shield, LayoutDashboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 
-const Header = memo(() => {
+const Header = () => {
   const { isAuthenticated: isSellerAuthenticated } = useSellerAuth();
+  const location = useLocation();
 
   return (
     <header className={cn(
@@ -45,6 +45,6 @@ const Header = memo(() => {
       </div>
     </header>
   );
-});
+};
 
 export default Header;
