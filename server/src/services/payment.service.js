@@ -374,16 +374,17 @@ export class PaymentService {
     normalizePhoneForPayment(phone) {
         let digits = phone.toString().replace(/\D/g, '');
 
-        // Payd V2 Doc Requirement: Kenyan phone number starting with 0 (must be exactly 10 digits)
-        if (digits.startsWith('254') && digits.length === 12) {
-            digits = '0' + digits.substring(3);
+        // Trying 254 format (12 digits) to resolve "DS timeout" reported by user
+        if (digits.startsWith('0') && digits.length === 10) {
+            digits = '254' + digits.substring(1);
         } else if (digits.length === 9) {
-            digits = '0' + digits;
-        } else if (digits.startsWith('0') && digits.length === 10) {
-            // Already correct as per documentation
-        } else {
+            digits = '254' + digits;
+        } else if (digits.startsWith('254') && digits.length === 12) {
+            // Already 12-digit format
+        }
+        else {
             throw new PaydError(
-                `Invalid phone number: "${phone}". Expected 10-digit number starting with 0 (e.g. 07XXXXXXXX)`,
+                `Invalid phone number: "${phone}". Expected 12-digit format (254XXXXXXXXX) or 10-digit format (0XXXXXXXXX)`,
                 PaydErrorCodes.INVALID_PHONE
             );
         }
