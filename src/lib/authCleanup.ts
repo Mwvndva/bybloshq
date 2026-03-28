@@ -1,7 +1,6 @@
 import axios from 'axios';
-import apiClient from './axios'; // This is likely for generic API calls if any still use it
-import { purchaseAxios } from '@/api/purchaseApi';
-import publicApiService from '@/api/publicApi';
+import apiClient from './apiClient'; // This is for generic API calls
+import { publicApi } from '@/api/publicApi';
 
 /**
  * Robustly clears all possible authentication artifacts from the frontend environment.
@@ -40,8 +39,7 @@ export const clearAllAuthData = () => {
     const axiosInstances = [
         axios,
         apiClient,
-        purchaseAxios,
-        (publicApiService as any).getInstance ? (publicApiService as any).getInstance() : null
+        publicApi.getInstance()
     ].filter(Boolean);
 
     axiosInstances.forEach((instance, index) => {
