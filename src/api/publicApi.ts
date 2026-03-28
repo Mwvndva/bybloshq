@@ -485,13 +485,24 @@ export const publicApiService = {
         try {
           attempts++;
           const response = await publicApi.get<any>(`payments/status/${reference}`);
-          const status = (response.data.data?.status || response.data.status)?.toLowerCase();
+          const domainData = response.data.data;
+          const domainStatus = domainData?.status?.toLowerCase();
+          const apiStatus = response.data.status?.toLowerCase();
 
-          if (status === 'completed' || status === 'success' || status === 'failed' || status === 'cancelled') {
-            resolve(response.data.data || response.data);
-          } else if (attempts >= maxAttempts) {
+          // Exit condition: Domain status reached a terminal state
+          if (domainStatus === 'completed' || domainStatus === 'success' || domainStatus === 'failed' || domainStatus === 'cancelled') {
+            resolve(domainData || response.data);
+          }
+          // Error condition: API reported an error
+          else if (apiStatus === 'error') {
+            resolve({ status: 'failed', message: response.data.message || 'API error' });
+          }
+          // Timeout condition
+          else if (attempts >= maxAttempts) {
             resolve({ status: 'timeout', message: 'Polling timed out' });
-          } else {
+          }
+          // Loop condition: Transaction is still pending/processing
+          else {
             setTimeout(checkStatus, interval);
           }
         } catch (error) {

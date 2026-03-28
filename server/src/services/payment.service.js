@@ -361,15 +361,15 @@ export class PaymentService {
     normalizePhoneForPayment(phone) {
         let digits = phone.toString().replace(/\D/g, '');
 
-        if (digits.startsWith('254') && digits.length === 12) {
-            digits = '0' + digits.substring(3);
+        if (digits.startsWith('0') && digits.length === 10) {
+            digits = '254' + digits.substring(1);
         } else if (digits.length === 9) {
-            digits = '0' + digits;
-        } else if (digits.startsWith('0') && digits.length === 10) {
+            digits = '254' + digits;
+        } else if (digits.startsWith('254') && digits.length === 12) {
             // Already correct
         } else {
             throw new PaydError(
-                `Invalid phone number: "${phone}". Expected 10-digit number starting with 0 (e.g. 07XXXXXXXX)`,
+                `Invalid phone number: "${phone}". Expected Kenayn number (e.g. 07XXXXXXXX or 2547XXXXXXXX)`,
                 PaydErrorCodes.INVALID_PHONE
             );
         }
