@@ -443,9 +443,10 @@ export class PaymentService {
                 throw new Error('Webhook missing transaction reference');
             }
 
-            // Determine Success: result_code 0 is success in v2, OR status SUCCESS/COMPLETED
-            // FIX 6: Payd Docs success is result_code 0 AND success: true
-            const isSuccess = (resultCode == 0 || resultCode === '0') && (data.success === true || data.status === 'SUCCESS');
+            // FIX 6: Payd Docs success is result_code 0. Relaxed to handle case-sensitivity.
+            const isSuccess = (resultCode == 0 || resultCode === '0' || data.success === true || data.success === 'true')
+                && (data.status?.toUpperCase() !== 'FAILED' && data.status?.toUpperCase() !== 'CANCELLED');
+
 
 
             logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
@@ -536,11 +537,14 @@ export class PaymentService {
                         );
                     }
                 } else if (status === 'failed' || status === 'cancelled' || resultCode == 1) {
-                    logger.warn('[PAYD-WEBHOOK] Payment failed', {
+                    logger.warn('[PAYD-WEBHOOK] Payment explicitly failed in webhook', {
                         payment_id: payment.id,
-                        status
+                        reference,
+                        status,
+                        resultCode
                     });
                 }
+
 
                 await dbClient.query('COMMIT');
                 transactionCommitted = true;

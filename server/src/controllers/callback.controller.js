@@ -44,8 +44,10 @@ export const handlePaydPayoutCallback = async (req, res) => {
             return res.status(400).json({ status: 'error', message: 'Missing transaction_reference' });
         }
 
-        // result_code 0 AND status success is success in Payd v2 payouts
-        const isSuccess = (resultCode === 0 || resultCode === '0') && paydStatus === 'success';
+        // result_code 0 AND status success is success in Payd v2 payouts. Case-insensitive.
+        const isSuccess = (resultCode === 0 || resultCode === '0') &&
+            (paydStatus?.toLowerCase() === 'success' || paydStatus?.toLowerCase() === 'completed');
+
 
 
         let finalStatus = null;
