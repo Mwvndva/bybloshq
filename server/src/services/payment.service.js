@@ -298,13 +298,7 @@ export class PaymentService {
                 callback_url: callbackUrl,
             };
 
-
-            logger.info('[PAYD-PAYIN] Initiating payment', {
-                invoice_id,
-                amount: payload.amount,
-                phone: normalizedPhone,
-                endpoint: `${this.baseUrl}/payments`
-            });
+            logger.info('[PAYD-PAYIN] Initiating payment with payload:', JSON.stringify(payload, null, 2));
 
             // ============================================================
             // STEP 4: MAKE API REQUEST
