@@ -28,6 +28,7 @@ router.use('/buyers', buyerRoutes);
 router.use('/public', publicRoutes);
 router.use('/health', healthRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/admin/marketing', marketingRoutes);
 router.use('/admin', adminRoutes);
 router.use('/refunds', refundRoutes);
 router.use('/auth', refreshTokenRoutes);
@@ -35,6 +36,5 @@ router.use('/callbacks', callbackRoutes);
 router.use('/orders', orderRoutes);
 router.use('/whatsapp', whatsappRoutes);
 router.use('/wishlist', wishlistRoutes);
-router.use('/admin/marketing', marketingRoutes);
 
 export default router;
