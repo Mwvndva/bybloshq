@@ -8,6 +8,8 @@ import { RouteFallback } from '@/components/common/RouteFallback';
 const IndexPage = safeLazy(() => import('@/pages/Index'));
 const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
 const PaymentSuccessPage = safeLazy(() => import('@/pages/PaymentSuccess'));
+const MarketingLogin = safeLazy(() => import('@/pages/marketing/MarketingLogin'));
+const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
 
 // Main routes configuration
 export const routes = [
@@ -33,6 +35,22 @@ export const routes = [
     element: (
       <Suspense fallback={<RouteFallback />}>
         <PaymentSuccessPage />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/marketing/login',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MarketingLogin />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/marketing/dashboard',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MarketingDashboard />
       </Suspense>
     ),
   },

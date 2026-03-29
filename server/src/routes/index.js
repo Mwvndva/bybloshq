@@ -17,6 +17,7 @@ import orderRoutes from './orderRoutes.js';
 import whatsappRoutes from './whatsapp.routes.js';
 import refreshTokenRoutes from './refreshToken.routes.js';
 import wishlistRoutes from './wishlist.routes.js';
+import marketingRoutes from './marketing.routes.js';
 import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -34,5 +35,6 @@ router.use('/callbacks', callbackRoutes);
 router.use('/orders', orderRoutes);
 router.use('/whatsapp', whatsappRoutes);
 router.use('/wishlist', wishlistRoutes);
+router.use('/admin/marketing', marketingRoutes);
 
 export default router;
