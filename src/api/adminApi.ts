@@ -226,6 +226,7 @@ export const adminApi = {
       if (!buyer) return null;
       return {
         ...buyer,
+        id: String(buyer.id || ''),
         name: buyer.name || buyer.full_name || 'Unnamed Buyer',
         phone: buyer.phone || buyer.mobile_payment || '',
         createdAt: buyer.created_at || buyer.createdAt || new Date().toISOString()
@@ -245,6 +246,7 @@ export const adminApi = {
       const sellersData = Array.isArray(response.data.data) ? response.data.data : [];
       return sellersData.map((seller: any) => ({
         ...seller,
+        id: String(seller.id || ''),
         name: seller.name || seller.full_name || 'Unnamed Seller',
         phone: seller.phone || seller.whatsapp_number || '',
         createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
@@ -262,9 +264,14 @@ export const adminApi = {
       if (!seller) return null;
       return {
         ...seller,
+        id: String(seller.id || ''),
         name: seller.name || seller.full_name || 'Unnamed Seller',
         phone: seller.phone || seller.whatsapp_number || '',
-        createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
+        createdAt: seller.created_at || seller.createdAt || new Date().toISOString(),
+        recentOrders: (seller.recentOrders || []).map((o: any) => ({
+          ...o,
+          id: String(o.id || '')
+        }))
       };
     } catch (error) {
       console.error('Error fetching seller details:', error);
@@ -317,6 +324,7 @@ export const adminApi = {
       const clientsData = Array.isArray(response.data.data) ? response.data.data : [];
       return clientsData.map((client: any) => ({
         ...client,
+        id: String(client.id || ''),
         createdAt: client.created_at || client.createdAt || new Date().toISOString()
       }));
     } catch (error) {

@@ -62,23 +62,23 @@ export const AdminLoginPage = () => {
 
       <div className="relative w-full max-w-md z-10 animate-in fade-in zoom-in-95 duration-1000">
         {/* Superior Glassmorphism Card */}
-        <Card className="bg-[#0A0A0A]/40 backdrop-blur-3xl border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-[3rem] overflow-hidden relative group">
+        <Card className="bg-[#0A0A0A]/40 backdrop-blur-3xl border border-white/10 shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-2xl md:rounded-[3rem] overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
 
-          <CardHeader className="relative text-center pb-10 pt-16 px-10">
-            <div className="mx-auto w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mb-8 border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
-              <Shield className="h-10 w-10 text-yellow-500" />
+          <CardHeader className="relative text-center pb-8 md:pb-10 pt-12 md:pt-16 px-6 md:px-10">
+            <div className="mx-auto w-16 h-16 md:w-20 md:h-20 bg-white/5 rounded-2xl md:rounded-[2rem] flex items-center justify-center mb-6 md:mb-8 border border-white/10 shadow-inner group-hover:scale-110 transition-transform duration-700">
+              <Shield className="h-8 w-8 md:h-10 md:h-10 text-yellow-500" />
             </div>
-            <CardTitle className="text-4xl font-black text-white mb-3 tracking-tighter italic">ADMIN<span className="text-yellow-500">.</span></CardTitle>
-            <CardDescription className="text-gray-500 font-bold uppercase tracking-[0.2em] text-[10px]">
+            <CardTitle className="text-3xl md:text-4xl font-black text-white mb-2 md:mb-3 tracking-tighter italic uppercase">ADMIN<span className="text-yellow-500">.</span></CardTitle>
+            <CardDescription className="text-gray-500 font-bold uppercase tracking-[0.2em] text-[9px] md:text-[10px]">
               Secure Protocol Access
             </CardDescription>
           </CardHeader>
 
           <form onSubmit={handleSubmit}>
-            <CardContent className="relative space-y-6 px-10">
+            <CardContent className="relative space-y-5 md:space-y-6 px-6 md:px-10">
               {localError && (
-                <div className="p-5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-[11px] font-black uppercase tracking-widest backdrop-blur-sm animate-in fade-in slide-in-from-top-4 duration-500">
+                <div className="p-4 md:p-5 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl md:rounded-2xl text-[10px] md:text-[11px] font-black uppercase tracking-widest backdrop-blur-sm animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="flex items-center gap-3">
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                     {localError}
@@ -86,9 +86,9 @@ export const AdminLoginPage = () => {
                 </div>
               )}
 
-              <div className="space-y-5">
+              <div className="space-y-4 md:space-y-5">
                 <div className="space-y-2">
-                  <label htmlFor="email" className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 opacity-60">
+                  <label htmlFor="email" className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 opacity-60">
                     Identification
                   </label>
                   <div className="relative">
@@ -99,13 +99,13 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="ACCESS_ID@BYBLOS.HQ"
                       required
-                      className="w-full h-14 px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-base"
+                      className="w-full h-12 md:h-14 px-5 md:px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-xl md:rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-sm md:text-base"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="password" className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 opacity-60">
+                  <label htmlFor="password" className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 opacity-60">
                     Secret Key
                   </label>
                   <div className="relative">
@@ -116,23 +116,23 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       required
-                      className="w-full h-14 px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-base"
+                      className="w-full h-12 md:h-14 px-5 md:px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-xl md:rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-sm md:text-base"
                     />
                   </div>
                 </div>
               </div>
             </CardContent>
 
-            <CardFooter className="relative px-10 pb-16 pt-8">
+            <CardFooter className="relative px-6 md:px-10 pb-12 md:pb-16 pt-6 md:pt-8">
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full h-14 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl shadow-[0_20px_40px_rgba(234,179,8,0.15)] hover:shadow-[0_20px_60px_rgba(234,179,8,0.25)] transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed group-hover:translate-y-[-2px]"
+                className="w-full h-12 md:h-14 bg-yellow-500 hover:bg-yellow-400 text-black font-black text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-xl md:rounded-2xl shadow-[0_20px_40px_rgba(234,179,8,0.15)] hover:shadow-[0_20px_60px_rgba(234,179,8,0.25)] transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed group-hover:translate-y-[-2px]"
               >
                 {loading ? (
                   <>
-                    <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                    AUTENTICATING...
+                    <Loader2 className="mr-3 h-4 w-4 md:h-5 md:w-5 animate-spin" />
+                    AUTHENTICATING...
                   </>
                 ) : (
                   'Establish Connection'
