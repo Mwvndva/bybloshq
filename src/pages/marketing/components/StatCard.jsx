@@ -15,14 +15,17 @@ export function StatCard({ title, value, subtitle, trend, color = 'yellow', pref
     }
 
     return (
-        <div className={`border rounded-xl p-5 ${colors[color]}`}>
-            <p className="text-gray-400 text-xs font-medium uppercase tracking-wider mb-1">{title}</p>
-            <p className="text-2xl font-bold text-white">{formatValue(value)}</p>
-            {subtitle && <p className="text-gray-500 text-xs mt-1">{subtitle}</p>}
+        <div className={`backdrop-blur-md border rounded-xl p-5 shadow-xl transition-all hover:bg-black/20 ${colors[color]}`}>
+            <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-2 opacity-80">{title}</p>
+            <p className="text-2xl font-bold text-white tracking-tight">{formatValue(value)}</p>
+            {subtitle && <p className="text-gray-400/60 text-xs mt-1 font-medium">{subtitle}</p>}
             {trend !== undefined && (
-                <p className={`text-xs mt-2 font-medium ${trend >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                    {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}% vs last month
-                </p>
+                <div className="flex items-center gap-1.5 mt-3">
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${trend >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                        {trend >= 0 ? '↑' : '↓'} {Math.abs(trend)}%
+                    </span>
+                    <span className="text-gray-500 text-[10px] uppercase font-bold tracking-tighter">vs last month</span>
+                </div>
             )}
         </div>
     )
