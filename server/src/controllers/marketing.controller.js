@@ -17,52 +17,52 @@ import logger from '../utils/logger.js'
  * Returns a JWT in the response body (marketing dashboard reads it from localStorage).
  */
 export const marketingLogin = async (req, res, next) => {
-    try {
-        const { email, password } = req.body
+  try {
+    const { email, password } = req.body
 
-        if (!email || !password) {
-            return next(new AppError('Email and password are required', 400))
-        }
-
-        const MARKETING_EMAIL = 'adminmarketing@bybloshq.space'
-        if (email.toLowerCase().trim() !== MARKETING_EMAIL) {
-            return next(new AppError('Invalid credentials', 401))
-        }
-
-        const { rows } = await pool.query(
-            'SELECT id, email, password_hash, role, is_active FROM users WHERE email = $1',
-            [email.toLowerCase().trim()]
-        )
-
-        const user = rows[0]
-        if (!user || !user.is_active) {
-            return next(new AppError('Invalid credentials', 401))
-        }
-
-        const passwordMatch = await bcrypt.compare(password, user.password_hash)
-        if (!passwordMatch) {
-            return next(new AppError('Invalid credentials', 401))
-        }
-
-        // Issue a short-lived token specifically for the marketing dashboard
-        const token = jwt.sign(
-            { id: user.id, role: 'marketing', email: user.email },
-            process.env.JWT_SECRET,
-            { expiresIn: '8h' }  // 8-hour session — a working day
-        )
-
-        logger.info(`[MARKETING-AUTH] Login successful: ${user.email}`)
-
-        res.status(200).json({
-            status: 'success',
-            data: {
-                token,
-                user: { id: user.id, email: user.email, role: 'marketing' }
-            }
-        })
-    } catch (err) {
-        next(err)
+    if (!email || !password) {
+      return next(new AppError('Email and password are required', 400))
     }
+
+    const MARKETING_EMAIL = 'adminmarketing@bybloshq.space'
+    if (email.toLowerCase().trim() !== MARKETING_EMAIL) {
+      return next(new AppError('Invalid credentials', 401))
+    }
+
+    const { rows } = await pool.query(
+      'SELECT id, email, password_hash, role, is_active FROM users WHERE email = $1',
+      [email.toLowerCase().trim()]
+    )
+
+    const user = rows[0]
+    if (!user || !user.is_active) {
+      return next(new AppError('Invalid credentials', 401))
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password_hash)
+    if (!passwordMatch) {
+      return next(new AppError('Invalid credentials', 401))
+    }
+
+    // Issue a short-lived token specifically for the marketing dashboard
+    const token = jwt.sign(
+      { id: user.id, role: 'marketing', email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }  // 8-hour session — a working day
+    )
+
+    logger.info(`[MARKETING-AUTH] Login successful: ${user.email}`)
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        token,
+        user: { id: user.id, email: user.email, role: 'marketing' }
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── OVERVIEW STATS ──────────────────────────────────────────────────────────
@@ -72,8 +72,8 @@ export const marketingLogin = async (req, res, next) => {
  * Top-level KPIs for the dashboard header cards.
  */
 export const getOverview = async (req, res, next) => {
-    try {
-        const { rows } = await pool.query(`
+  try {
+    const { rows } = await pool.query(`
       SELECT
         -- Platform totals
         (SELECT COUNT(*)  FROM sellers WHERE is_active = true)                          AS total_sellers,
@@ -110,41 +110,41 @@ export const getOverview = async (req, res, next) => {
         (SELECT COALESCE(SUM(reward_amount), 0) FROM referral_earnings_log)            AS total_referral_rewards
     `)
 
-        const d = rows[0]
+    const d = rows[0]
 
-        // Calculate derived metrics
-        const cancellationRate = d.total_orders > 0
-            ? ((d.cancelled_orders / d.total_orders) * 100).toFixed(1)
-            : '0.0'
+    // Calculate derived metrics
+    const cancellationRate = d.total_orders > 0
+      ? ((d.cancelled_orders / d.total_orders) * 100).toFixed(1)
+      : '0.0'
 
-        const avgOrderValue = d.completed_orders > 0
-            ? (d.total_gmv / d.completed_orders).toFixed(2)
-            : '0.00'
+    const avgOrderValue = d.completed_orders > 0
+      ? (d.total_gmv / d.completed_orders).toFixed(2)
+      : '0.00'
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                totalSellers: parseInt(d.total_sellers),
-                totalBuyers: parseInt(d.total_buyers),
-                activeProducts: parseInt(d.active_products),
-                totalGmv: parseFloat(d.total_gmv),
-                totalRevenue: parseFloat(d.total_revenue),
-                completedOrders: parseInt(d.completed_orders),
-                cancelledOrders: parseInt(d.cancelled_orders),
-                totalOrders: parseInt(d.total_orders),
-                cancellationRate: parseFloat(cancellationRate),
-                avgOrderValue: parseFloat(avgOrderValue),
-                newSellersThisMonth: parseInt(d.new_sellers_this_month),
-                newBuyersThisMonth: parseInt(d.new_buyers_this_month),
-                gmvThisMonth: parseFloat(d.gmv_this_month),
-                totalWishlists: parseInt(d.total_wishlists),
-                totalRefunded: parseFloat(d.total_refunded),
-                totalReferralRewards: parseFloat(d.total_referral_rewards),
-            }
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        totalSellers: parseInt(d.total_sellers),
+        totalBuyers: parseInt(d.total_buyers),
+        activeProducts: parseInt(d.active_products),
+        totalGmv: parseFloat(d.total_gmv),
+        totalRevenue: parseFloat(d.total_revenue),
+        completedOrders: parseInt(d.completed_orders),
+        cancelledOrders: parseInt(d.cancelled_orders),
+        totalOrders: parseInt(d.total_orders),
+        cancellationRate: parseFloat(cancellationRate),
+        avgOrderValue: parseFloat(avgOrderValue),
+        newSellersThisMonth: parseInt(d.new_sellers_this_month),
+        newBuyersThisMonth: parseInt(d.new_buyers_this_month),
+        gmvThisMonth: parseFloat(d.gmv_this_month),
+        totalWishlists: parseInt(d.total_wishlists),
+        totalRefunded: parseFloat(d.total_refunded),
+        totalReferralRewards: parseFloat(d.total_referral_rewards),
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── GMV & REVENUE TRENDS ────────────────────────────────────────────────────
@@ -154,10 +154,10 @@ export const getOverview = async (req, res, next) => {
  * Monthly GMV, revenue, and order volume for the line chart.
  */
 export const getGmvTrend = async (req, res, next) => {
-    try {
-        const months = Math.min(parseInt(req.query.months) || 12, 24)
+  try {
+    const months = Math.min(parseInt(req.query.months) || 12, 24)
 
-        const { rows } = await pool.query(`
+    const { rows } = await pool.query(`
       WITH month_series AS (
         SELECT generate_series(
           date_trunc('month', CURRENT_DATE) - (($1 - 1) || ' months')::interval,
@@ -181,21 +181,21 @@ export const getGmvTrend = async (req, res, next) => {
       ORDER BY ms.month ASC
     `, [months])
 
-        res.status(200).json({
-            status: 'success',
-            data: rows.map(r => ({
-                month: r.month,
-                label: r.label,
-                gmv: parseFloat(r.gmv),
-                revenue: parseFloat(r.revenue),
-                sellerPayouts: parseFloat(r.seller_payouts),
-                orderCount: parseInt(r.order_count),
-                avgOrderValue: parseFloat(r.avg_order_value)
-            }))
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: rows.map(r => ({
+        month: r.month,
+        label: r.label,
+        gmv: parseFloat(r.gmv),
+        revenue: parseFloat(r.revenue),
+        sellerPayouts: parseFloat(r.seller_payouts),
+        orderCount: parseInt(r.order_count),
+        avgOrderValue: parseFloat(r.avg_order_value)
+      }))
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── USER GROWTH ─────────────────────────────────────────────────────────────
@@ -205,10 +205,10 @@ export const getGmvTrend = async (req, res, next) => {
  * Monthly new seller + buyer registrations for the area chart.
  */
 export const getUserGrowth = async (req, res, next) => {
-    try {
-        const months = Math.min(parseInt(req.query.months) || 12, 24)
+  try {
+    const months = Math.min(parseInt(req.query.months) || 12, 24)
 
-        const { rows } = await pool.query(`
+    const { rows } = await pool.query(`
       WITH month_series AS (
         SELECT generate_series(
           date_trunc('month', CURRENT_DATE) - (($1 - 1) || ' months')::interval,
@@ -228,18 +228,18 @@ export const getUserGrowth = async (req, res, next) => {
       ORDER BY ms.month ASC
     `, [months])
 
-        res.status(200).json({
-            status: 'success',
-            data: rows.map(r => ({
-                month: r.month,
-                label: r.label,
-                newSellers: parseInt(r.new_sellers),
-                newBuyers: parseInt(r.new_buyers)
-            }))
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: rows.map(r => ({
+        month: r.month,
+        label: r.label,
+        newSellers: parseInt(r.new_sellers),
+        newBuyers: parseInt(r.new_buyers)
+      }))
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── PRODUCT MIX ─────────────────────────────────────────────────────────────
@@ -250,9 +250,9 @@ export const getUserGrowth = async (req, res, next) => {
  * Also returns aesthetic distribution.
  */
 export const getProductMix = async (req, res, next) => {
-    try {
-        const [typeRows, aestheticRows] = await Promise.all([
-            pool.query(`
+  try {
+    const [typeRows, aestheticRows] = await Promise.all([
+      pool.query(`
         SELECT
           product_type,
           COUNT(*) AS count,
@@ -264,7 +264,7 @@ export const getProductMix = async (req, res, next) => {
         GROUP BY product_type
         ORDER BY count DESC
       `),
-            pool.query(`
+      pool.query(`
         SELECT
           COALESCE(aesthetic, 'uncategorised') AS aesthetic,
           COUNT(*) AS product_count
@@ -273,25 +273,25 @@ export const getProductMix = async (req, res, next) => {
         ORDER BY product_count DESC
         LIMIT 8
       `)
-        ])
+    ])
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                productTypes: typeRows.rows.map(r => ({
-                    type: r.product_type,
-                    count: parseInt(r.count),
-                    totalRevenue: parseFloat(r.total_revenue)
-                })),
-                aesthetics: aestheticRows.rows.map(r => ({
-                    aesthetic: r.aesthetic,
-                    productCount: parseInt(r.product_count)
-                }))
-            }
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        productTypes: typeRows.rows.map(r => ({
+          type: r.product_type,
+          count: parseInt(r.count),
+          totalRevenue: parseFloat(r.total_revenue)
+        })),
+        aesthetics: aestheticRows.rows.map(r => ({
+          aesthetic: r.aesthetic,
+          productCount: parseInt(r.product_count)
+        }))
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── ORDER FUNNEL ─────────────────────────────────────────────────────────────
@@ -301,8 +301,8 @@ export const getProductMix = async (req, res, next) => {
  * Order status breakdown — for the funnel / bar chart.
  */
 export const getOrderFunnel = async (req, res, next) => {
-    try {
-        const { rows } = await pool.query(`
+  try {
+    const { rows } = await pool.query(`
       SELECT
         status,
         COUNT(*) AS count,
@@ -312,8 +312,8 @@ export const getOrderFunnel = async (req, res, next) => {
       ORDER BY count DESC
     `)
 
-        // Also get payment status breakdown
-        const { rows: paymentRows } = await pool.query(`
+    // Also get payment status breakdown
+    const { rows: paymentRows } = await pool.query(`
       SELECT
         payment_status,
         COUNT(*) AS count,
@@ -322,24 +322,24 @@ export const getOrderFunnel = async (req, res, next) => {
       GROUP BY payment_status
     `)
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                orderStatuses: rows.map(r => ({
-                    status: r.status,
-                    count: parseInt(r.count),
-                    totalValue: parseFloat(r.total_value)
-                })),
-                paymentStatuses: paymentRows.map(r => ({
-                    status: r.payment_status,
-                    count: parseInt(r.count),
-                    totalValue: parseFloat(r.total_value)
-                }))
-            }
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        orderStatuses: rows.map(r => ({
+          status: r.status,
+          count: parseInt(r.count),
+          totalValue: parseFloat(r.total_value)
+        })),
+        paymentStatuses: paymentRows.map(r => ({
+          status: r.payment_status,
+          count: parseInt(r.count),
+          totalValue: parseFloat(r.total_value)
+        }))
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── GEOGRAPHIC DISTRIBUTION ─────────────────────────────────────────────────
@@ -349,9 +349,9 @@ export const getOrderFunnel = async (req, res, next) => {
  * City-level breakdown of buyers, sellers, and GMV.
  */
 export const getGeography = async (req, res, next) => {
-    try {
-        const [buyerCities, sellerCities, gmvCities] = await Promise.all([
-            pool.query(`
+  try {
+    const [buyerCities, sellerCities, gmvCities] = await Promise.all([
+      pool.query(`
         SELECT
           COALESCE(NULLIF(TRIM(city), ''), 'Unknown') AS city,
           COUNT(*) AS buyer_count
@@ -360,7 +360,7 @@ export const getGeography = async (req, res, next) => {
         ORDER BY buyer_count DESC
         LIMIT 10
       `),
-            pool.query(`
+      pool.query(`
         SELECT
           COALESCE(NULLIF(TRIM(city), ''), 'Unknown') AS city,
           COUNT(*) AS seller_count,
@@ -371,7 +371,7 @@ export const getGeography = async (req, res, next) => {
         ORDER BY seller_count DESC
         LIMIT 10
       `),
-            pool.query(`
+      pool.query(`
         SELECT
           COALESCE(NULLIF(TRIM(s.city), ''), 'Unknown') AS city,
           COALESCE(SUM(o.total_amount), 0) AS gmv,
@@ -383,19 +383,19 @@ export const getGeography = async (req, res, next) => {
         ORDER BY gmv DESC
         LIMIT 10
       `)
-        ])
+    ])
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                topBuyerCities: buyerCities.rows.map(r => ({ city: r.city, count: parseInt(r.buyer_count) })),
-                topSellerCities: sellerCities.rows.map(r => ({ city: r.city, count: parseInt(r.seller_count), gmv: parseFloat(r.city_gmv) })),
-                topGmvCities: gmvCities.rows.map(r => ({ city: r.city, gmv: parseFloat(r.gmv), orderCount: parseInt(r.order_count) }))
-            }
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        topBuyerCities: buyerCities.rows.map(r => ({ city: r.city, count: parseInt(r.buyer_count) })),
+        topSellerCities: sellerCities.rows.map(r => ({ city: r.city, count: parseInt(r.seller_count), gmv: parseFloat(r.city_gmv) })),
+        topGmvCities: gmvCities.rows.map(r => ({ city: r.city, gmv: parseFloat(r.gmv), orderCount: parseInt(r.order_count) }))
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── TOP PERFORMERS ──────────────────────────────────────────────────────────
@@ -405,9 +405,9 @@ export const getGeography = async (req, res, next) => {
  * Top sellers by GMV and top products by revenue — for the leaderboard tables.
  */
 export const getTopPerformers = async (req, res, next) => {
-    try {
-        const [topSellers, topProducts, topWishlisted] = await Promise.all([
-            pool.query(`
+  try {
+    const [topSellers, topProducts, topWishlisted] = await Promise.all([
+      pool.query(`
         SELECT
           s.id,
           s.shop_name,
@@ -422,7 +422,7 @@ export const getTopPerformers = async (req, res, next) => {
         ORDER BY s.total_sales DESC
         LIMIT 10
       `),
-            pool.query(`
+      pool.query(`
         SELECT
           p.id,
           p.name,
@@ -437,7 +437,7 @@ export const getTopPerformers = async (req, res, next) => {
         ORDER BY total_revenue DESC
         LIMIT 10
       `),
-            pool.query(`
+      pool.query(`
         SELECT
           p.id,
           p.name,
@@ -450,39 +450,39 @@ export const getTopPerformers = async (req, res, next) => {
         ORDER BY wishlist_count DESC
         LIMIT 10
       `)
-        ])
+    ])
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                topSellers: topSellers.rows.map(r => ({
-                    id: r.id,
-                    shopName: r.shop_name,
-                    city: r.city,
-                    totalSales: parseFloat(r.total_sales),
-                    clientCount: parseInt(r.client_count),
-                    orderCount: parseInt(r.order_count)
-                })),
-                topProducts: topProducts.rows.map(r => ({
-                    id: r.id,
-                    name: r.name,
-                    productType: r.product_type,
-                    aesthetic: r.aesthetic,
-                    totalRevenue: parseFloat(r.total_revenue),
-                    unitsSold: parseInt(r.units_sold)
-                })),
-                topWishlisted: topWishlisted.rows.map(r => ({
-                    id: r.id,
-                    name: r.name,
-                    productType: r.product_type,
-                    price: parseFloat(r.price),
-                    wishlistCount: parseInt(r.wishlist_count)
-                }))
-            }
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        topSellers: topSellers.rows.map(r => ({
+          id: r.id,
+          shopName: r.shop_name,
+          city: r.city,
+          totalSales: parseFloat(r.total_sales),
+          clientCount: parseInt(r.client_count),
+          orderCount: parseInt(r.order_count)
+        })),
+        topProducts: topProducts.rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          productType: r.product_type,
+          aesthetic: r.aesthetic,
+          totalRevenue: parseFloat(r.total_revenue),
+          unitsSold: parseInt(r.units_sold)
+        })),
+        topWishlisted: topWishlisted.rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          productType: r.product_type,
+          price: parseFloat(r.price),
+          wishlistCount: parseInt(r.wishlist_count)
+        }))
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── REFERRAL PERFORMANCE ────────────────────────────────────────────────────
@@ -492,9 +492,9 @@ export const getTopPerformers = async (req, res, next) => {
  * Referral program performance — rewards paid out by month, top referrers.
  */
 export const getReferralPerformance = async (req, res, next) => {
-    try {
-        const [monthlyRewards, topReferrers] = await Promise.all([
-            pool.query(`
+  try {
+    const [monthlyRewards, topReferrers] = await Promise.all([
+      pool.query(`
         SELECT
           period_year,
           period_month,
@@ -508,7 +508,7 @@ export const getReferralPerformance = async (req, res, next) => {
         ORDER BY period_year DESC, period_month DESC
         LIMIT 12
       `),
-            pool.query(`
+      pool.query(`
         SELECT
           s.shop_name,
           s.city,
@@ -520,41 +520,41 @@ export const getReferralPerformance = async (req, res, next) => {
         ORDER BY total_earned DESC
         LIMIT 10
       `)
-        ])
+    ])
 
-        // Total active sellers with referral codes
-        const { rows: referralStats } = await pool.query(`
+    // Total active sellers with referral codes
+    const { rows: referralStats } = await pool.query(`
       SELECT
         COUNT(*) FILTER (WHERE referral_code IS NOT NULL) AS sellers_with_codes,
         COUNT(*) FILTER (WHERE referred_by_seller_id IS NOT NULL) AS referred_sellers
       FROM sellers
     `)
 
-        res.status(200).json({
-            status: 'success',
-            data: {
-                monthlyRewards: monthlyRewards.rows.map(r => ({
-                    label: r.label,
-                    year: r.period_year,
-                    month: r.period_month,
-                    activeReferrers: parseInt(r.active_referrers),
-                    referralPairs: parseInt(r.referral_pairs),
-                    totalRewards: parseFloat(r.total_rewards),
-                    referredGmv: parseFloat(r.referred_gmv)
-                })).reverse(),
-                topReferrers: topReferrers.rows.map(r => ({
-                    shopName: r.shop_name,
-                    city: r.city,
-                    referralsMade: parseInt(r.referrals_made),
-                    totalEarned: parseFloat(r.total_earned)
-                })),
-                sellersWithCodes: parseInt(referralStats.rows[0]?.sellers_with_codes || 0),
-                referredSellers: parseInt(referralStats.rows[0]?.referred_sellers || 0)
-            }
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: {
+        monthlyRewards: monthlyRewards.rows.map(r => ({
+          label: r.label,
+          year: r.period_year,
+          month: r.period_month,
+          activeReferrers: parseInt(r.active_referrers),
+          referralPairs: parseInt(r.referral_pairs),
+          totalRewards: parseFloat(r.total_rewards),
+          referredGmv: parseFloat(r.referred_gmv)
+        })).reverse(),
+        topReferrers: topReferrers.rows.map(r => ({
+          shopName: r.shop_name,
+          city: r.city,
+          referralsMade: parseInt(r.referrals_made),
+          totalEarned: parseFloat(r.total_earned)
+        })),
+        sellersWithCodes: parseInt(referralStats[0]?.sellers_with_codes || 0),
+        referredSellers: parseInt(referralStats[0]?.referred_sellers || 0)
+      }
+    })
+  } catch (err) {
+    next(err)
+  }
 }
 
 // ─── RECENT ACTIVITY FEED ────────────────────────────────────────────────────
@@ -564,10 +564,10 @@ export const getReferralPerformance = async (req, res, next) => {
  * Recent orders + registrations for the live activity feed.
  */
 export const getRecentActivity = async (req, res, next) => {
-    try {
-        const limit = Math.min(parseInt(req.query.limit) || 20, 50)
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 50)
 
-        const { rows } = await pool.query(`
+    const { rows } = await pool.query(`
       (
         SELECT
           'order' AS type,
@@ -607,16 +607,16 @@ export const getRecentActivity = async (req, res, next) => {
       LIMIT $1
     `, [limit])
 
-        res.status(200).json({
-            status: 'success',
-            data: rows.map(r => ({
-                type: r.type,
-                timestamp: r.timestamp,
-                description: r.description,
-                value: r.value ? parseFloat(r.value) : null
-            }))
-        })
-    } catch (err) {
-        next(err)
-    }
+    res.status(200).json({
+      status: 'success',
+      data: rows.map(r => ({
+        type: r.type,
+        timestamp: r.timestamp,
+        description: r.description,
+        value: r.value ? parseFloat(r.value) : null
+      }))
+    })
+  } catch (err) {
+    next(err)
+  }
 }
