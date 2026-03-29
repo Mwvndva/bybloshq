@@ -47,7 +47,7 @@ export default function RefundRequestsPage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('admin_token');
-      const response = await axios.get<{ data: { requests: RefundRequest[] } }>(`${API_URL}/refunds?status=${statusFilter}`, {
+      const response = await axios.get(`${API_URL}/refunds?status=${statusFilter}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRequests(response.data.data.requests);
@@ -153,19 +153,22 @@ export default function RefundRequestsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-white">Refund Requests</h1>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div>
+          <h1 className="text-4xl font-black text-white tracking-tighter italic">REFUND<span className="text-red-500">.</span>PROTOCOL</h1>
+          <p className="text-gray-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-2 ml-1">Capital Reclamation Management</p>
+        </div>
 
-        <div className="flex gap-2">
+        <div className="flex bg-white/5 p-1.5 rounded-2xl border border-white/10 backdrop-blur-md">
           {['pending', 'completed', 'rejected'].map((status) => (
             <Button
               key={status}
-              variant={statusFilter === status ? 'default' : 'outline'}
+              variant="ghost"
               onClick={() => setStatusFilter(status)}
-              className={`capitalize ${statusFilter === status
-                ? 'bg-yellow-500 text-black hover:bg-yellow-400'
-                : 'bg-transparent text-gray-400 border-white/10 hover:bg-white/5 hover:text-white'
+              className={`capitalize px-6 h-10 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${statusFilter === status
+                ? 'bg-white/10 text-white shadow-inner'
+                : 'text-gray-500 hover:text-white hover:bg-white/5'
                 }`}
             >
               {status}
@@ -175,67 +178,76 @@ export default function RefundRequestsPage() {
       </div>
 
       {requests.length === 0 ? (
-        <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <DollarSign className="h-12 w-12 text-gray-500 mb-4" />
-            <p className="text-gray-400">No {statusFilter} refund requests found</p>
+        <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+          <CardContent className="flex flex-col items-center justify-center py-24 opacity-40">
+            <div className="w-20 h-20 bg-white/5 rounded-[2rem] flex items-center justify-center mb-6 border border-white/5">
+              <DollarSign className="h-10 w-10 text-gray-400" />
+            </div>
+            <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">No {statusFilter} signals detected</p>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {requests.map((request) => (
-            <Card key={request.id} className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-xl">
-              <CardHeader className="bg-white/5 border-b border-white/10">
+            <Card key={request.id} className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl group hover:border-white/20 transition-all duration-500">
+              <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01]">
                 <div className="flex justify-between items-start">
                   <div>
-                    <CardTitle className="text-xl text-white">Request #{request.id}</CardTitle>
-                    <p className="text-sm text-gray-400 mt-1">
-                      Requested: {format(new Date(request.requested_at), 'MMM d, yyyy h:mm a')}
+                    <div className="flex items-center gap-3 mb-2">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-60">Sequence</p>
+                      <div className="px-3 py-1 bg-white/5 rounded-full border border-white/10 text-[10px] font-black text-white">#{request.id}</div>
+                    </div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                      Captured: {format(new Date(request.requested_at), 'MMM d, yyyy • h:mm a')}
                     </p>
                   </div>
                   {getStatusBadge(request.status)}
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-3">
-                    <div className="flex items-center text-sm">
-                      <User className="h-4 w-4 mr-2 text-gray-400" />
-                      <span className="font-medium text-gray-300">Buyer:</span>
-                      <span className="ml-2 text-white">{request.buyer_name}</span>
+              <CardContent className="p-8 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-40">Subject Identification</p>
+                    <div className="flex items-center gap-4 bg-white/[0.02] p-4 rounded-2xl border border-white/5">
+                      <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
+                        <User className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <div>
+                        <p className="text-base font-black text-white tracking-tight">{request.buyer_name}</p>
+                        <p className="text-[10px] font-bold text-gray-500 lowercase opacity-60">{request.buyer_email}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center text-sm">
-                      <Mail className="h-4 w-4 mr-2 text-gray-400" />
-                      <span className="text-gray-300">{request.buyer_email}</span>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <Phone className="h-4 w-4 mr-2 text-gray-400" />
-                      <span className="text-gray-300">{request.buyer_phone}</span>
+                    <div className="flex items-center gap-3 text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">
+                      <Phone className="h-3 w-3" />
+                      {request.buyer_phone}
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-3">
-                      <p className="text-sm text-green-400 font-medium">Refund Amount</p>
-                      <p className="text-2xl font-bold text-green-400">
+                  <div className="space-y-4">
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-40">Capital Breakdown</p>
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-2xl p-5 shadow-inner">
+                      <p className="text-[10px] text-green-400/60 font-black uppercase tracking-widest mb-1">Requested Reclamation</p>
+                      <p className="text-3xl font-black text-green-400 tracking-tighter tabular-nums">
                         {formatCurrency(request.amount)}
                       </p>
                     </div>
-                    <div className="text-sm text-gray-400">
-                      Current Refund Balance: <span className="text-white">{formatCurrency(request.buyer_current_refunds)}</span>
-                    </div>
+                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 opacity-60">
+                      Total Allocation: <span className="text-white ml-2 tabular-nums">{formatCurrency(request.buyer_current_refunds)}</span>
+                    </p>
                   </div>
                 </div>
 
-                <div className="border-t border-white/10 pt-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="pt-6 border-t border-white/5 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <p className="text-sm font-medium mb-1 text-gray-300">Payment Method</p>
-                      <p className="text-sm text-gray-400">{request.payment_method}</p>
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-40 mb-3">Protocol</p>
+                      <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 text-xs font-bold text-white tracking-tight">
+                        {request.payment_method}
+                      </div>
                     </div>
                     <div>
-                      <p className="text-sm font-medium mb-1 text-gray-300">Payment Details</p>
-                      <div className="text-sm text-gray-400 space-y-1">
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-40 mb-3">Endpoint Meta</p>
+                      <div className="p-4 bg-white/[0.02] rounded-2xl border border-white/5 space-y-2">
                         {(() => {
                           try {
                             const details = typeof request.payment_details === 'string'
@@ -243,13 +255,12 @@ export default function RefundRequestsPage() {
                               : request.payment_details;
                             return (
                               <>
-                                {details.phone && <p>📱 {details.phone}</p>}
-                                {details.name && <p>👤 {details.name}</p>}
-                                {details.email && <p>✉️ {details.email}</p>}
+                                {details.phone && <p className="text-xs font-bold text-gray-300">📱 {details.phone}</p>}
+                                {details.name && <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{details.name}</p>}
                               </>
                             );
                           } catch (e) {
-                            return <p>N/A</p>;
+                            return <p className="text-xs font-bold text-gray-600">NULL</p>;
                           }
                         })()}
                       </div>
@@ -257,31 +268,31 @@ export default function RefundRequestsPage() {
                   </div>
 
                   {request.notes && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium mb-1 text-gray-300">Buyer Notes</p>
-                      <p className="text-sm text-gray-400 bg-black/20 p-3 rounded-xl border border-white/5">{request.notes}</p>
+                    <div>
+                      <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-40 mb-3">Subject Manifest</p>
+                      <p className="text-xs font-medium text-gray-400 bg-white/[0.02] p-5 rounded-2xl border border-white/5 leading-relaxed">{request.notes}</p>
                     </div>
                   )}
 
                   {request.admin_notes && (
-                    <div className="mt-4">
-                      <p className="text-sm font-medium mb-1 text-gray-300">Admin Notes</p>
-                      <p className="text-sm text-blue-400 bg-blue-500/10 p-3 rounded-xl border border-blue-500/20">{request.admin_notes}</p>
+                    <div>
+                      <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-3">Operator Annotation</p>
+                      <p className="text-xs font-bold text-blue-400 bg-blue-500/10 p-5 rounded-2xl border border-blue-500/20">{request.admin_notes}</p>
                     </div>
                   )}
                 </div>
 
                 {request.status === 'pending' && (
-                  <div className="flex gap-3 pt-4">
+                  <div className="flex gap-4 pt-6">
                     <Button
                       onClick={() => {
                         setSelectedRequest(request);
                         setIsConfirmDialogOpen(true);
                       }}
-                      className="flex-1 bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl"
+                      className="flex-1 h-14 bg-green-500 hover:bg-green-400 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl transition-all duration-300 shadow-lg shadow-green-500/10"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Confirm & Process
+                      Authorize Payout
                     </Button>
                     <Button
                       variant="outline"
@@ -289,10 +300,10 @@ export default function RefundRequestsPage() {
                         setSelectedRequest(request);
                         setIsRejectDialogOpen(true);
                       }}
-                      className="flex-1 border-red-500/30 text-red-500 hover:bg-red-500/10 rounded-xl bg-transparent"
+                      className="flex-1 h-14 border-white/10 text-red-400 hover:bg-red-500 hover:text-white rounded-2xl bg-transparent font-black text-[10px] uppercase tracking-widest transition-all duration-300"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      Reject
+                      Veto Request
                     </Button>
                   </div>
                 )}
@@ -304,43 +315,39 @@ export default function RefundRequestsPage() {
 
       {/* Confirm Dialog */}
       <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent className="bg-gray-900 border border-white/10 text-white sm:rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-white">Confirm Refund Request</DialogTitle>
+        <DialogContent className="bg-[#0A0A0A] border border-white/10 text-white sm:rounded-[2.5rem] p-10 max-w-md shadow-[0_0_100px_rgba(34,197,94,0.1)]">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-3xl font-black text-white tracking-tighter italic">AUTHORIZE<span className="text-green-500">.</span></DialogTitle>
           </DialogHeader>
 
           {selectedRequest && (
-            <div className="space-y-4 py-4">
-              <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-                <p className="text-sm text-green-400">
-                  You are about to process a refund of:
-                </p>
-                <p className="text-2xl font-bold text-green-400">
+            <div className="space-y-8">
+              <div className="bg-green-500/10 border border-green-500/20 rounded-3xl p-8 text-center shadow-inner">
+                <p className="text-[10px] font-black text-green-500 uppercase tracking-widest mb-4 opacity-60">Pending Settlement</p>
+                <p className="text-5xl font-black text-green-400 tracking-tighter tabular-nums mb-4">
                   {formatCurrency(selectedRequest.amount)}
                 </p>
-                <p className="text-sm text-green-300 mt-2">
-                  To: {selectedRequest.buyer_name}
-                </p>
-                <p className="text-xs text-green-500/70 mt-1">
-                  This will deduct the amount from buyer's refund balance
+                <div className="h-px bg-green-500/20 w-12 mx-auto mb-4"></div>
+                <p className="text-xs font-bold text-green-300">
+                  Beneficiary: {selectedRequest.buyer_name}
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="confirmNotes" className="text-gray-300">Admin Notes (Optional)</Label>
+              <div className="space-y-4">
+                <Label htmlFor="confirmNotes" className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 opacity-60">Operator Log (Optional)</Label>
                 <Textarea
                   id="confirmNotes"
-                  placeholder="Add any notes about this refund..."
+                  placeholder="Record transmission details..."
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  rows={3}
-                  className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-green-500/50"
+                  rows={4}
+                  className="bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-[1.5rem] focus:border-green-500/50 p-6 font-medium"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="mt-10 gap-4 flex-col sm:flex-row">
             <Button
               variant="outline"
               onClick={() => {
@@ -348,17 +355,16 @@ export default function RefundRequestsPage() {
                 setAdminNotes('');
               }}
               disabled={isProcessing}
-              className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white bg-transparent rounded-xl"
+              className="flex-1 h-12 border-white/10 text-gray-500 hover:bg-white/5 hover:text-white bg-transparent rounded-2xl font-black text-[10px] uppercase tracking-widest"
             >
-              Cancel
+              Abort
             </Button>
             <Button
               onClick={handleConfirmRefund}
               disabled={isProcessing}
-              className="bg-green-500 hover:bg-green-600 text-black font-semibold rounded-xl"
+              className="flex-1 h-12 bg-green-500 hover:bg-green-400 text-black font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-lg shadow-green-500/10"
             >
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm & Process
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Release'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -366,40 +372,39 @@ export default function RefundRequestsPage() {
 
       {/* Reject Dialog */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <DialogContent className="bg-gray-900 border border-white/10 text-white sm:rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-white">Reject Refund Request</DialogTitle>
+        <DialogContent className="bg-[#0A0A0A] border border-white/10 text-white sm:rounded-[2.5rem] p-10 max-w-md shadow-[0_0_100px_rgba(239,68,68,0.1)]">
+          <DialogHeader className="mb-6">
+            <DialogTitle className="text-3xl font-black text-white tracking-tighter italic">VETO<span className="text-red-500">.</span></DialogTitle>
           </DialogHeader>
 
           {selectedRequest && (
-            <div className="space-y-4 py-4">
-              <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                <p className="text-sm text-red-400">
-                  You are about to reject a refund request for:
-                </p>
-                <p className="text-2xl font-bold text-red-400">
+            <div className="space-y-8">
+              <div className="bg-red-500/10 border border-red-500/20 rounded-3xl p-8 text-center shadow-inner">
+                <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-4 opacity-60">Reclamation Void</p>
+                <p className="text-5xl font-black text-red-400 tracking-tighter tabular-nums mb-4">
                   {formatCurrency(selectedRequest.amount)}
                 </p>
-                <p className="text-sm text-red-300 mt-2">
-                  From: {selectedRequest.buyer_name}
+                <div className="h-px bg-red-500/20 w-12 mx-auto mb-4"></div>
+                <p className="text-xs font-bold text-red-300">
+                  Subject: {selectedRequest.buyer_name}
                 </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="rejectNotes" className="text-gray-300">Reason for Rejection *</Label>
+              <div className="space-y-4">
+                <Label htmlFor="rejectNotes" className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-2 opacity-60">Veto Rationale *</Label>
                 <Textarea
                   id="rejectNotes"
-                  placeholder="Please provide a reason for rejecting this request..."
+                  placeholder="Record rejection cause..."
                   value={adminNotes}
                   onChange={(e) => setAdminNotes(e.target.value)}
-                  rows={3}
-                  className="bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-red-500/50"
+                  rows={4}
+                  className="bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-[1.5rem] focus:border-red-500/50 p-6 font-medium"
                 />
               </div>
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="mt-10 gap-4 flex-col sm:flex-row">
             <Button
               variant="outline"
               onClick={() => {
@@ -407,17 +412,16 @@ export default function RefundRequestsPage() {
                 setAdminNotes('');
               }}
               disabled={isProcessing}
-              className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white bg-transparent rounded-xl"
+              className="flex-1 h-12 border-white/10 text-gray-500 hover:bg-white/5 hover:text-white bg-transparent rounded-2xl font-black text-[10px] uppercase tracking-widest"
             >
-              Cancel
+              Abort
             </Button>
             <Button
               onClick={handleRejectRefund}
               disabled={isProcessing || !adminNotes.trim()}
-              className="bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl"
+              className="flex-1 h-12 bg-red-500 hover:bg-red-400 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl shadow-lg shadow-red-500/10"
             >
-              {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Reject Request
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Execute Veto'}
             </Button>
           </DialogFooter>
         </DialogContent>

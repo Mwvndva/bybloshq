@@ -116,6 +116,17 @@ export const adminApi = {
     }
   },
 
+  // Get current admin profile
+  async getMe() {
+    try {
+      const { data } = await api.get('/admin/me');
+      return data.data?.user;
+    } catch (error) {
+      console.error('Error fetching admin profile:', error);
+      throw error;
+    }
+  },
+
   // Auth Helper
   isAuthenticated() {
     return localStorage.getItem('admin_authenticated') === 'true';

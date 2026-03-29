@@ -25,6 +25,7 @@ router.use(protect);
 router.use(hasPermission('manage-all'));
 
 // Protected admin routes
+router.get('/me', adminController.getMe);
 router.get('/stats', adminController.getDashboardStats);
 router.get('/dashboard', adminController.getDashboardStats);
 router.get('/analytics', adminController.getAnalytics);

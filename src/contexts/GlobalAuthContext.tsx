@@ -234,8 +234,13 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                     localStorage.removeItem(sessionKey);
                     return;
                 }
-                // For admin, we don't have a profile endpoint, so create minimal profile
-                profileData = { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() };
+                // Fetch actual admin profile
+                profileData = await adminApi.getMe();
+                if (!profileData) {
+                    setUser(null);
+                    localStorage.removeItem(sessionKey);
+                    return;
+                }
             } else {
                 profileData = await api.getProfile();
             }
@@ -573,7 +578,8 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             if (role === 'admin') {
                 const isAuth = adminApi.isAuthenticated();
                 if (!isAuth) throw new Error('Not authenticated');
-                profileData = { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() };
+                profileData = await adminApi.getMe();
+                if (!profileData) throw new Error('Failed to fetch admin profile');
             } else {
                 profileData = await api.getProfile();
             }
