@@ -10,11 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Calendar, Clock, Users, User, ShoppingCart, DollarSign, Activity, Store, UserPlus, Eye, MoreHorizontal, Loader2, Plus, Package, X, ShoppingBag, UserCheck, Box, Shield, UserCircle, MapPin, CheckCircle, XCircle, ArrowUpRight, ArrowDownRight, Percent, TrendingUp, Lock, Unlock } from 'lucide-react';
 import { adminApi } from '@/api/adminApi';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { Lock, Unlock } from 'lucide-react';
 import RefundRequestsPage from './RefundRequestsPage';
 
 // Custom tooltip for the events chart
@@ -138,130 +137,180 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 // Chart Components
 const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
-  <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden hover:shadow-yellow-500/10 transition-all duration-300 group">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-      <CardTitle className="text-sm font-medium text-gray-400">
-        {title}
-      </CardTitle>
-      <div className="h-10 w-10 rounded-2xl bg-gray-800 flex items-center justify-center text-yellow-500 group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-black/20">
-        {icon}
-      </div>
+  <div className="relative group">
+    {/* Glow pulse on hover */}
+    <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/0 to-yellow-500/0 rounded-[2rem] blur opacity-0 group-hover:opacity-30 group-hover:from-yellow-500/50 group-hover:to-orange-500/50 transition duration-500"></div>
+
+    <Card className="relative bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden transition-all duration-500 group-hover:bg-[#0A0A0A]/60 group-hover:scale-[1.02] group-hover:border-white/20">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none"></div>
+
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+        <CardTitle className="text-sm font-semibold text-gray-400 tracking-wide uppercase">
+          {title}
+        </CardTitle>
+        <div className="h-12 w-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-yellow-500 group-hover:scale-110 group-hover:text-yellow-400 transition-all duration-500 shadow-inner">
+          {icon}
+        </div>
+      </CardHeader>
+
+      <CardContent className="relative z-10 pt-0">
+        <div className="text-3xl font-black text-white tracking-tight tabular-nums group-hover:text-yellow-50 transition-colors duration-500">
+          {value}
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          {trend !== null && trend !== undefined && (
+            <div className={`flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${trend >= 0 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+              {trend >= 0 ? <ArrowUpRight className="h-2.5 w-2.5 mr-0.5" /> : <ArrowDownRight className="h-2.5 w-2.5 mr-0.5" />}
+              {Math.abs(trend)}%
+            </div>
+          )}
+          <span className="text-xs text-gray-500 font-medium truncate">{description}</span>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);
+
+const ChartContainer = ({ title, description, children, className = "" }: { title: string, description: string, children: React.ReactNode, className?: string }) => (
+  <Card className={`${className} bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden group hover:border-white/20 transition-all duration-500`}>
+    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
+    <CardHeader className="relative z-10 pb-2">
+      <CardTitle className="text-xl font-bold text-white group-hover:text-yellow-50 transition-colors">{title}</CardTitle>
+      <CardDescription className="text-gray-400 font-medium">{description}</CardDescription>
     </CardHeader>
-    <CardContent className="relative z-10">
-      <div className="text-2xl font-bold text-white">{value}</div>
-      <p className="text-xs text-gray-500 mt-1 flex items-center">
-        {trend !== null && trend !== undefined && (
-          <span className={`flex items-center ${trend >= 0 ? 'text-green-400' : 'text-red-400'} mr-1`}>
-            {trend >= 0 ? <ArrowUpRight className="h-3 w-3 mr-0.5" /> : <ArrowDownRight className="h-3 w-3 mr-0.5" />}
-            {Math.abs(trend)}%
-          </span>
-        )}
-        <span className="truncate">{description}</span>
-      </p>
+    <CardContent className="relative z-10 h-[350px] w-full pt-4">
+      {children}
     </CardContent>
   </Card>
 );
+
 const UserGrowthChart = ({ data }: { data: any[] }) => (
-  <Card className="col-span-4 lg:col-span-2 bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-    <CardHeader className="relative z-10">
-      <CardTitle className="text-white">User Growth</CardTitle>
-      <CardDescription className="text-gray-400">New buyers and sellers over time</CardDescription>
-    </CardHeader>
-    <CardContent className="relative z-10">
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-            <XAxis dataKey="name" stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
-            <YAxis stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
-            <Tooltip
-              contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
-              itemStyle={{ color: '#e5e7eb' }}
-            />
-            <Legend wrapperStyle={{ paddingTop: '20px' }} />
-            <Line type="monotone" dataKey="buyers" stroke="#06b6d4" strokeWidth={3} dot={false} activeDot={{ r: 6 }} name="Buyers" />
-            <Line type="monotone" dataKey="sellers" stroke="#f59e0b" strokeWidth={3} dot={false} activeDot={{ r: 6 }} name="Sellers" />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    </CardContent>
-  </Card>
+  <ChartContainer title="User Growth" description="New buyers and sellers growth trend" className="col-span-4 lg:col-span-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data}>
+        <defs>
+          <linearGradient id="colorBuyers" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#06b6d4" stopOpacity={0} />
+          </linearGradient>
+          <linearGradient id="colorSellers" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
+        <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
+        <Tooltip
+          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)', color: '#fff' }}
+          itemStyle={{ color: '#e5e7eb', fontSize: '12px' }}
+        />
+        <Legend verticalAlign="top" align="right" height={36} iconType="circle" />
+        <Line type="monotone" dataKey="buyers" stroke="#06b6d4" strokeWidth={4} dot={{ r: 4, fill: '#06b6d4', strokeWidth: 2, stroke: '#0A0A0A' }} activeDot={{ r: 6, strokeWidth: 0 }} name="Buyers" />
+        <Line type="monotone" dataKey="sellers" stroke="#f59e0b" strokeWidth={4} dot={{ r: 4, fill: '#f59e0b', strokeWidth: 2, stroke: '#0A0A0A' }} activeDot={{ r: 6, strokeWidth: 0 }} name="Sellers" />
+      </LineChart>
+    </ResponsiveContainer>
+  </ChartContainer>
 );
 
 const RevenueChart = ({ data }: { data: any[] }) => (
-  <Card className="col-span-4 lg:col-span-2 bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-    <CardHeader className="relative z-10">
-      <CardTitle className="text-white">Revenue Trends</CardTitle>
-      <CardDescription className="text-gray-400">Platform revenue (commission) over time</CardDescription>
-    </CardHeader>
-    <CardContent className="relative z-10">
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-            <XAxis dataKey="name" stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
-            <YAxis stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
-            <Tooltip
-              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
-              itemStyle={{ color: '#e5e7eb' }}
-            />
-            <Bar dataKey="revenue" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Revenue (KSh)">
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill="url(#colorRevenue)" />
-              ))}
-            </Bar>
-            <defs>
-              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.3} />
-              </linearGradient>
-            </defs>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </CardContent>
-  </Card>
+  <ChartContainer title="Revenue Trends" description="Monthly platform earnings (KSh)" className="col-span-4 lg:col-span-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data}>
+        <defs>
+          <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1} />
+            <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.4} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
+        <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
+        <Tooltip
+          cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
+          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
+          itemStyle={{ color: '#e5e7eb' }}
+        />
+        <Bar dataKey="revenue" fill="url(#colorRevenue)" radius={[8, 8, 0, 0]} name="Revenue (KSh)" barSize={40} />
+      </BarChart>
+    </ResponsiveContainer>
+  </ChartContainer>
 );
 
 const SalesChart = ({ data }: { data: any[] }) => (
-  <Card className="col-span-4 lg:col-span-2 bg-gray-900/60 backdrop-blur-xl border border-white/10 shadow-2xl rounded-3xl overflow-hidden">
-    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-    <CardHeader className="relative z-10">
-      <CardTitle className="text-white">Sales Volume</CardTitle>
-      <CardDescription className="text-gray-400">Total transaction volume over time</CardDescription>
-    </CardHeader>
-    <CardContent className="relative z-10">
-      <div className="h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" vertical={false} />
-            <XAxis dataKey="name" stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
-            <YAxis stroke="#9ca3af" axisLine={false} tickLine={false} tickMargin={10} />
-            <Tooltip
-              cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
-              contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px', color: '#f3f4f6' }}
-              itemStyle={{ color: '#e5e7eb' }}
-            />
-            <Bar dataKey="sales" fill="#10b981" radius={[4, 4, 0, 0]} name="Sales (KSh)">
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill="url(#colorSales)" />
-              ))}
-            </Bar>
-            <defs>
-              <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.3} />
-              </linearGradient>
-            </defs>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-    </CardContent>
-  </Card>
+  <ChartContainer title="Sales Volume" description="Total marketplace transaction volume" className="col-span-4 lg:col-span-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data}>
+        <defs>
+          <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#10b981" stopOpacity={1} />
+            <stop offset="100%" stopColor="#10b981" stopOpacity={0.4} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="name" stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
+        <YAxis stroke="#6b7280" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} fontWeight={500} />
+        <Tooltip
+          cursor={{ fill: 'rgba(255, 255, 255, 0.03)' }}
+          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
+          itemStyle={{ color: '#e5e7eb' }}
+        />
+        <Bar dataKey="sales" fill="url(#colorSales)" radius={[8, 8, 0, 0]} name="Sales (KSh)" barSize={40} />
+      </BarChart>
+    </ResponsiveContainer>
+  </ChartContainer>
+);
+
+const ProductStatusChart = ({ data }: { data: any[] }) => (
+  <ChartContainer title="Product Distribution" description="Inventory breakdown by status" className="col-span-4 lg:col-span-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          innerRadius={80}
+          outerRadius={110}
+          paddingAngle={8}
+          dataKey="value"
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+          ))}
+        </Pie>
+        <Tooltip
+          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
+        />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  </ChartContainer>
+);
+
+const GeoDistributionChart = ({ data }: { data: any[] }) => (
+  <ChartContainer title="Geographic Reach" description="Top 5 cities by user density" className="col-span-4 lg:col-span-2">
+    <ResponsiveContainer width="100%" height="100%">
+      <PieChart>
+        <Pie
+          data={data}
+          cx="50%"
+          cy="50%"
+          innerRadius={80}
+          outerRadius={110}
+          paddingAngle={5}
+          dataKey="value"
+        >
+          {data.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} stroke="none" />
+          ))}
+        </Pie>
+        <Tooltip
+          contentStyle={{ backgroundColor: 'rgba(10, 10, 10, 0.9)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '1rem', backdropFilter: 'blur(10px)' }}
+        />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  </ChartContainer>
 );
 
 
@@ -710,511 +759,324 @@ const NewAdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden p-4 md:p-8">
-      {/* Background Gradients */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-yellow-500/10 blur-[120px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-orange-500/10 blur-[120px]" />
+    <div className="min-h-screen bg-[#050505] text-white relative overflow-hidden font-sans">
+      {/* Dynamic Background Elements */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-yellow-500/10 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-orange-500/10 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-blue-500/5 blur-[100px]" />
       </div>
 
-      {/* Seller Details Modal */}
-      {selectedSeller && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-6xl max-h-[90vh] flex flex-col shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/10">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-2xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30">
-                  <Store className="h-5 w-5 text-yellow-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">
-                    Seller Details
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {selectedSeller.name || 'N/A'}
-                  </p>
+      <div className="relative z-10 max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
+        {/* Premium Header */}
+        <header className="relative group">
+          <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-[2.5rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-1000"></div>
+          <div className="relative bg-[#0A0A0A]/60 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] p-6 md:p-10 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="flex items-center gap-6">
+              <div className="relative">
+                <div className="absolute -inset-2 bg-yellow-500/20 rounded-2xl blur opacity-50 animate-pulse"></div>
+                <div className="relative w-16 h-16 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl flex items-center justify-center border border-white/10 shadow-2xl">
+                  <Shield className="h-8 w-8 text-yellow-500" />
                 </div>
               </div>
-              <button
-                onClick={closeSellerModal}
-                className="h-10 w-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors duration-200 border border-white/5"
-              >
-                <X className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="overflow-auto flex-1 p-6 custom-scrollbar">
-              {isLoadingSeller ? (
-                <div className="flex flex-col items-center justify-center h-40 space-y-4">
-                  <div className="h-12 w-12 rounded-2xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30 animate-pulse">
-                    <Loader2 className="h-6 w-6 text-yellow-500 animate-spin" />
-                  </div>
-                  <p className="text-gray-400 font-medium">Loading seller details...</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Basic Info */}
-                  <Card className="bg-gray-800/40 border border-white/10 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-white">Basic Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Full Name</p>
-                        <p className="text-base text-gray-200">{selectedSeller.name || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Email</p>
-                        <p className="text-base text-gray-200">{selectedSeller.email || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Phone</p>
-                        <p className="text-base text-gray-200">{selectedSeller.phone || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Shop Name</p>
-                        <p className="text-base text-gray-200">{selectedSeller.shop_name || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">City</p>
-                        <p className="text-base text-gray-200">{selectedSeller.city || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Location</p>
-                        <p className="text-base text-gray-200">{selectedSeller.location || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Status</p>
-                        <Badge className={selectedSeller.status === 'active'
-                          ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                          : 'bg-gray-500/10 text-gray-400 border border-white/10'}>
-                          {selectedSeller.status}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Wallet Balance</p>
-                        <p className="text-base text-yellow-500 font-bold">KSh {parseFloat(selectedSeller.balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Member Since</p>
-                        <p className="text-base text-gray-200">
-                          {safeFormatDate(selectedSeller.createdAt || selectedSeller.created_at)}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Sales Metrics */}
-                  <Card className="bg-gray-800/40 border border-white/10 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-white">Sales Metrics</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-                        <div className="bg-green-500/10 rounded-2xl p-4 border border-green-500/20 hover:bg-green-500/15 transition-colors">
-                          <div className="flex items-center space-x-3">
-                            <div className="h-8 w-8 rounded-xl bg-green-500/20 flex items-center justify-center">
-                              <DollarSign className="h-4 w-4 text-green-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-green-400 font-medium">Total Sales</p>
-                              <p className="text-lg font-bold text-green-200">
-                                KSh {selectedSeller.metrics?.totalSales?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-blue-500/10 rounded-2xl p-4 border border-blue-500/20 hover:bg-blue-500/15 transition-colors">
-                          <div className="flex items-center space-x-3">
-                            <div className="h-8 w-8 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                              <DollarSign className="h-4 w-4 text-blue-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-blue-400 font-medium">Net Sales</p>
-                              <p className="text-lg font-bold text-blue-200">
-                                KSh {selectedSeller.metrics?.netSales?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-yellow-500/10 rounded-2xl p-4 border border-yellow-500/20 hover:bg-yellow-500/15 transition-colors">
-                          <div className="flex items-center space-x-3">
-                            <div className="h-8 w-8 rounded-xl bg-yellow-500/20 flex items-center justify-center">
-                              <DollarSign className="h-4 w-4 text-yellow-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-yellow-400 font-medium">Commission</p>
-                              <p className="text-lg font-bold text-yellow-200">
-                                KSh {selectedSeller.metrics?.totalCommission?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="bg-purple-500/10 rounded-2xl p-4 border border-purple-500/20 hover:bg-purple-500/15 transition-colors">
-                          <div className="flex items-center space-x-3">
-                            <div className="h-8 w-8 rounded-xl bg-purple-500/20 flex items-center justify-center">
-                              <ShoppingCart className="h-4 w-4 text-purple-500" />
-                            </div>
-                            <div>
-                              <p className="text-sm text-purple-400 font-medium">Total Orders</p>
-                              <p className="text-lg font-bold text-purple-200">
-                                {selectedSeller.metrics?.totalOrders || 0}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                        <div className="text-center p-3 bg-white/5 rounded-xl border border-white/10">
-                          <p className="text-2xl font-bold text-white">{selectedSeller.metrics?.totalProducts || 0}</p>
-                          <p className="text-xs text-gray-500 mt-1">Products</p>
-                        </div>
-                        <div className="text-center p-3 bg-orange-500/10 rounded-xl border border-orange-500/20">
-                          <p className="text-2xl font-bold text-orange-400">{selectedSeller.metrics?.pendingOrders || 0}</p>
-                          <p className="text-xs text-orange-400/80 mt-1">Pending</p>
-                        </div>
-                        <div className="text-center p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
-                          <p className="text-2xl font-bold text-blue-400">{selectedSeller.metrics?.readyForPickup || 0}</p>
-                          <p className="text-xs text-blue-400/80 mt-1">Ready</p>
-                        </div>
-                        <div className="text-center p-3 bg-green-500/10 rounded-xl border border-green-500/20">
-                          <p className="text-2xl font-bold text-green-400">{selectedSeller.metrics?.completedOrders || 0}</p>
-                          <p className="text-xs text-green-400/80 mt-1">Completed</p>
-                        </div>
-                        <div className="text-center p-3 bg-red-500/10 rounded-xl border border-red-500/20">
-                          <p className="text-2xl font-bold text-red-400">{selectedSeller.metrics?.cancelledOrders || 0}</p>
-                          <p className="text-xs text-red-400/80 mt-1">Cancelled</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Recent Orders */}
-                  {selectedSeller.recentOrders && selectedSeller.recentOrders.length > 0 && (
-                    <Card className="bg-gray-800/40 border border-white/10 backdrop-blur-sm">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-white">Recent Orders</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {selectedSeller.recentOrders.map((order: any) => (
-                            <div key={order.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors border border-white/5">
-                              <div className="flex-1">
-                                <p className="font-semibold text-white">Order #{order.orderNumber || order.id}</p>
-                                <p className="text-sm text-gray-400">{order.buyerName}</p>
-                                <p className="text-xs text-gray-500">{safeFormatDate(order.createdAt, 'MMM d, yyyy h:mm a')}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-white">KSh {(order.totalAmount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                                <div className="flex gap-2 mt-1 justify-end">
-                                  <Badge className={
-                                    order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
-                                      order.status === 'PENDING' ? 'bg-orange-500/10 text-orange-500 border border-orange-500/20' :
-                                        order.status === 'READY_FOR_PICKUP' ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20' :
-                                          'bg-red-500/10 text-red-500 border border-red-500/20'
-                                  }>
-                                    {order.status}
-                                  </Badge>
-                                  <Badge className={
-                                    order.paymentStatus === 'completed' ? 'bg-green-500/10 text-green-500 border border-green-500/20' :
-                                      'bg-gray-500/10 text-gray-400 border border-white/10'
-                                  }>
-                                    {order.paymentStatus}
-                                  </Badge>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-white/10 flex justify-end">
-              <Button
-                onClick={closeSellerModal}
-                className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-2xl shadow-lg shadow-yellow-500/20 transition-all duration-200"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Buyer Details Modal */}
-      {selectedBuyer && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-gray-900/90 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-white/10">
-              <div className="flex items-center space-x-3">
-                <div className="h-10 w-10 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30">
-                  <UserCircle className="h-5 w-5 text-cyan-500" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-white">
-                    Buyer Details
-                  </h3>
-                  <p className="text-sm text-gray-400">
-                    {selectedBuyer.name || 'N/A'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={closeBuyerModal}
-                className="h-10 w-10 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors duration-200 border border-white/5"
-              >
-                <X className="h-5 w-5 text-gray-400" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="overflow-auto flex-1 p-6 custom-scrollbar">
-              {isLoadingBuyer ? (
-                <div className="flex flex-col items-center justify-center h-40 space-y-4">
-                  <div className="h-12 w-12 rounded-2xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 animate-pulse">
-                    <Loader2 className="h-6 w-6 text-cyan-500 animate-spin" />
-                  </div>
-                  <p className="text-gray-400 font-medium">Loading buyer details...</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Basic Info */}
-                  <Card className="bg-gray-800/40 border border-white/10 backdrop-blur-sm">
-                    <CardHeader>
-                      <CardTitle className="text-lg font-bold text-white">Basic Information</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Full Name</p>
-                        <p className="text-base text-gray-200">{selectedBuyer.name || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Email</p>
-                        <p className="text-base text-gray-200">{selectedBuyer.email || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Phone (Mobile Payment)</p>
-                        <p className="text-base text-gray-200">{selectedBuyer.phone || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">City</p>
-                        <p className="text-base text-gray-200">{selectedBuyer.city || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Location</p>
-                        <p className="text-base text-gray-200">{selectedBuyer.location || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Status</p>
-                        <Badge className={selectedBuyer.status === 'Active' || selectedBuyer.status === 'active'
-                          ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                          : 'bg-gray-500/10 text-gray-400 border border-white/10'}>
-                          {selectedBuyer.status}
-                        </Badge>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500 font-medium">Member Since</p>
-                        <p className="text-base text-gray-200">
-                          {safeFormatDate(selectedBuyer.created_at || selectedBuyer.createdAt)}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-6 border-t border-white/10 flex justify-end">
-              <Button
-                onClick={closeBuyerModal}
-                className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold px-6 py-2 rounded-2xl shadow-lg shadow-yellow-500/20 transition-all duration-200"
-              >
-                Close
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Modern Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl relative z-10">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-3xl"></div>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between relative z-10">
               <div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-3 sm:mb-0">
-                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-800 rounded-2xl flex items-center justify-center shadow-lg shadow-black/20 flex-shrink-0 border border-white/10">
-                    <Shield className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-500" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-1 sm:mb-2">Admin Dashboard</h1>
-                    <p className="text-sm sm:text-base text-gray-400 font-medium">Welcome back, Administrator</p>
-                  </div>
-                </div>
+                <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white bg-clip-text text-transparent bg-gradient-to-b from-white to-gray-400">
+                  Admin <span className="text-yellow-500">Dashboard</span>
+                </h1>
+                <p className="text-gray-400 font-medium mt-1 flex items-center gap-2">
+                  <span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span>
+                  System Operational • Welcome back, Administrator
+                </p>
               </div>
-              <div className="mt-4 sm:mt-0 flex items-center gap-3">
-                <div className="px-3 py-1.5 sm:px-4 sm:py-2 bg-yellow-100 text-yellow-800 rounded-full text-xs sm:text-sm font-semibold">
-                  System Admin
-                </div>
-                <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-green-400 rounded-full animate-pulse"></div>
+            </div>
+
+            <div className="flex items-center gap-4 bg-white/5 p-2 rounded-2xl border border-white/5">
+              <div className="px-4 py-2 bg-yellow-500/10 text-yellow-500 rounded-xl text-sm font-black border border-yellow-500/20 tracking-wider">
+                ROOT ACCESS
+              </div>
+              <div className="px-4 py-2 bg-white/5 text-gray-400 rounded-xl text-sm font-bold border border-white/10 italic">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
               </div>
             </div>
           </div>
-        </div>
+        </header>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {statsCards.map((stat, index) => (
-            <div key={index} className="w-full">
-              <StatsCard {...stat} />
-            </div>
+            <StatsCard key={index} {...stat} />
           ))}
         </div>
 
-        {/* Main Content */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <div className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl p-1 sm:p-2 shadow-xl overflow-x-auto">
-            <TabsList className="bg-transparent border-0 p-0 h-auto w-max min-w-full">
-              <TabsTrigger
-                value="overview"
-                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="sellers"
-                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
-              >
-                Sellers
-              </TabsTrigger>
-              <TabsTrigger
-                value="buyers"
-                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
-              >
-                Buyers
-              </TabsTrigger>
-              <TabsTrigger
-                value="withdrawals"
-                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-400 data-[state=active]:to-yellow-600 data-[state=active]:text-black data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
-              >
-                Withdrawals
-              </TabsTrigger>
-              <TabsTrigger
-                value="refunds"
-                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-green-400 data-[state=active]:to-green-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
-              >
-                Refunds
-              </TabsTrigger>
-              <TabsTrigger
-                value="clients"
-                className="rounded-2xl px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 text-xs sm:text-sm md:text-base data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-400 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-gray-600 hover:text-black hover:bg-white/50 transition-all duration-300 font-semibold whitespace-nowrap"
-              >
-                Clients
-              </TabsTrigger>
+        {/* Navigation & Content */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <div className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-2 shadow-2xl sticky top-4 z-40">
+            <TabsList className="bg-transparent border-0 p-0 h-auto flex flex-wrap gap-2">
+              {[
+                { id: 'overview', label: 'Overview', color: 'from-yellow-400 to-orange-500' },
+                { id: 'sellers', label: 'Sellers', color: 'from-blue-400 to-cyan-500' },
+                { id: 'buyers', label: 'Buyers', color: 'from-purple-400 to-indigo-500' },
+                { id: 'withdrawals', label: 'Withdrawals', color: 'from-green-400 to-emerald-500' },
+                { id: 'refunds', label: 'Refunds', color: 'from-red-400 to-rose-500' },
+                { id: 'clients', label: 'Clients', color: 'from-pink-400 to-fuchsia-500' }
+              ].map((tab) => (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className={`flex-1 rounded-2xl px-6 py-3.5 text-sm font-black transition-all duration-500
+                    data-[state=active]:bg-gradient-to-r ${tab.color} data-[state=active]:text-black data-[state=active]:shadow-[0_0_20px_rgba(245,158,11,0.3)]
+                    data-[state=inactive]:text-gray-500 data-[state=inactive]:hover:text-white data-[state=inactive]:hover:bg-white/5
+                    uppercase tracking-widest`}
+                >
+                  {tab.label}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* User Growth Chart */}
-            <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
 
-            {/* Revenue Trends Chart (Commission) */}
-            <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
+          {/* Modals Layer */}
+          <div className="z-[100]">
+            {/* Seller Details Modal */}
+            {selectedSeller && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-hidden">
+                <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] w-full max-w-6xl max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(245,158,11,0.1)] scale-in-95 duration-300">
+                  <div className="flex items-center justify-between p-8 border-b border-white/10 bg-white/[0.02]">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-inner">
+                        <Store className="h-7 w-7 text-yellow-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-white tracking-tight">{selectedSeller.shop_name || selectedSeller.name}</h3>
+                        <p className="text-gray-400 font-medium">Verified Merchant Profile</p>
+                      </div>
+                    </div>
+                    <button onClick={closeSellerModal} className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/10 group">
+                      <X className="h-6 w-6 text-gray-400 group-hover:text-white group-hover:rotate-90 transition-all" />
+                    </button>
+                  </div>
+                  <div className="overflow-auto flex-1 p-8 custom-scrollbar space-y-8">
+                    {isLoadingSeller ? (
+                      <div className="flex flex-col items-center justify-center h-60 space-y-4">
+                        <Loader2 className="h-12 w-12 text-yellow-500 animate-spin" />
+                        <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Accessing Encrypted Data...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                          <Card className="bg-white/[0.02] border border-white/10 rounded-[2rem] p-6">
+                            <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6">Core Identity</h4>
+                            <div className="space-y-4">
+                              {[
+                                { label: 'Merchant Name', value: selectedSeller.name },
+                                { label: 'Email Protocol', value: selectedSeller.email },
+                                { label: 'Secure Line', value: selectedSeller.phone },
+                                { label: 'Operating Hub', value: selectedSeller.city },
+                                { label: 'Credit Reserve', value: `KSh ${parseFloat(selectedSeller.balance || 0).toLocaleString()}`, highlight: true }
+                              ].map((item, i) => (
+                                <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
+                                  <span className="text-gray-500 text-sm font-medium">{item.label}</span>
+                                  <span className={`text-sm font-bold ${item.highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </Card>
+                          <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                              { label: 'Total Volume', value: selectedSeller.metrics?.totalSales, color: 'text-green-400', icon: <DollarSign className="h-4 w-4" /> },
+                              { label: 'Platform Cut', value: selectedSeller.metrics?.totalCommission, color: 'text-yellow-400', icon: <Percent className="h-4 w-4" /> },
+                              { label: 'Merchant Net', value: selectedSeller.metrics?.netSales, color: 'text-blue-400', icon: <TrendingUp className="h-4 w-4" /> },
+                              { label: 'Order Chain', value: selectedSeller.metrics?.totalOrders, color: 'text-purple-400', icon: <ShoppingCart className="h-4 w-4" />, noCurrency: true }
+                            ].map((met, i) => (
+                              <div key={i} className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 hover:bg-white/[0.05] transition-all">
+                                <div className={`h-8 w-8 rounded-xl bg-white/5 flex items-center justify-center ${met.color} mb-3 shadow-inner`}>{met.icon}</div>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">{met.label}</p>
+                                <p className={`text-xl font-black mt-1 ${met.color}`}>
+                                  {met.noCurrency ? met.value || 0 : `KSh ${(met.value || 0).toLocaleString()}`}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <Card className="bg-white/[0.02] border border-white/10 rounded-[2rem] overflow-hidden">
+                          <div className="p-6 border-b border-white/5 flex justify-between items-center">
+                            <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest">Marketplace Stream</h4>
+                            <Badge className="bg-yellow-500/10 text-yellow-500 border-none px-4 py-1">REAL-TIME</Badge>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                              <thead className="bg-white/[0.03] text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                <tr>
+                                  <th className="px-8 py-5">TXID</th>
+                                  <th className="px-8 py-5">End User</th>
+                                  <th className="px-8 py-5">Value</th>
+                                  <th className="px-8 py-5">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-white/5">
+                                {selectedSeller.recentOrders?.map((order: any) => (
+                                  <tr key={order.id} className="text-sm hover:bg-white/[0.02] transition-colors">
+                                    <td className="px-8 py-5 font-bold text-gray-400 text-xs tracking-tighter">#{order.orderNumber || order.id.slice(0, 12).toUpperCase()}</td>
+                                    <td className="px-8 py-5 text-white font-medium">{order.buyerName}</td>
+                                    <td className="px-8 py-5 text-white font-black italic">KSh {order.totalAmount?.toLocaleString()}</td>
+                                    <td className="px-8 py-5">
+                                      <Badge className={`${order.status === 'COMPLETED' ? 'bg-green-500/10 text-green-400' : 'bg-blue-500/10 text-blue-400'} border-none`}>
+                                        {order.status}
+                                      </Badge>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </Card>
+                      </>
+                    )}
+                  </div>
+                  <div className="p-8 border-t border-white/10 bg-white/[0.02] flex justify-end">
+                    <Button onClick={closeSellerModal} className="bg-white text-black font-black uppercase tracking-widest px-10 py-4 rounded-2xl hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                      Flush Data
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
-            {/* Total Sales Chart */}
-            <SalesChart data={dashboardState.analytics.salesTrends || []} />
+            {/* Buyer Details Modal */}
+            {selectedBuyer && (
+              <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300 overflow-hidden">
+                <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] w-full max-w-4xl max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(6,182,212,0.1)] scale-in-95 duration-300">
+                  <div className="flex items-center justify-between p-8 border-b border-white/10 bg-white/[0.02]">
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 shadow-inner">
+                        <UserCircle className="h-7 w-7 text-cyan-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-black text-white tracking-tight">{selectedBuyer.name}</h3>
+                        <p className="text-gray-400 font-medium">Customer Intelligence Report</p>
+                      </div>
+                    </div>
+                    <button onClick={closeBuyerModal} className="h-12 w-12 rounded-2xl bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all border border-white/10 group">
+                      <X className="h-6 w-6 text-gray-400 group-hover:text-white group-hover:rotate-90 transition-all" />
+                    </button>
+                  </div>
+                  <div className="overflow-auto flex-1 p-8 custom-scrollbar space-y-8">
+                    {isLoadingBuyer ? (
+                      <div className="flex flex-col items-center justify-center h-60 space-y-4">
+                        <Loader2 className="h-12 w-12 text-cyan-500 animate-spin" />
+                        <p className="text-gray-400 font-black uppercase tracking-widest text-xs">Analyzing User Patterns...</p>
+                      </div>
+                    ) : (
+                      <>
+                        <Card className="bg-white/[0.02] border border-white/10 rounded-[2rem] p-8">
+                          <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-8">Identity Protocol</h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                            {[
+                              { label: 'Full Legal Name', value: selectedBuyer.name },
+                              { label: 'Primary Communications', value: selectedBuyer.email },
+                              { label: 'Mobile Link', value: selectedBuyer.phone },
+                              { label: 'Primary City', value: selectedBuyer.city },
+                              { label: 'Last Known Location', value: selectedBuyer.location },
+                              { label: 'Account Status', value: selectedBuyer.status, isBadge: true },
+                              { label: 'Joined Network', value: safeFormatDate(selectedBuyer.createdAt) }
+                            ].map((info, i) => (
+                              <div key={i} className="flex justify-between items-center py-2 border-b border-white/5">
+                                <span className="text-gray-500 text-sm font-medium">{info.label}</span>
+                                {info.isBadge ? (
+                                  <Badge className="bg-green-500/10 text-green-400 border-none">{info.value}</Badge>
+                                ) : (
+                                  <span className="text-sm font-bold text-gray-200">{info.value || 'N/A'}</span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
+                      </>
+                    )}
+                  </div>
+                  <div className="p-8 border-t border-white/10 bg-white/[0.02] flex justify-end">
+                    <Button onClick={closeBuyerModal} className="bg-white text-black font-black uppercase tracking-widest px-10 py-4 rounded-2xl hover:bg-gray-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                      Close Report
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
-            {/* Top Shops Section */}
-            <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-              <CardHeader>
-                <CardTitle className="text-lg font-bold text-white">Top 3 Shops</CardTitle>
-                <CardDescription className="text-gray-400">By client count</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {dashboardState.topShops?.map((shop, index) => (
-                    <div key={shop.id} className="flex items-center justify-between p-3 bg-white/5 rounded-2xl border border-white/5">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500/20 text-yellow-500' :
-                          index === 1 ? 'bg-gray-300/20 text-gray-300' :
-                            'bg-orange-700/20 text-orange-700'
+          <TabsContent value="overview" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            {/* Visual Analytics Layer */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              <UserGrowthChart data={dashboardState.analytics.userGrowth || []} />
+              <RevenueChart data={dashboardState.analytics.revenueTrends || []} />
+              <SalesChart data={dashboardState.analytics.salesTrends || []} />
+              <ProductStatusChart data={dashboardState.analytics.productStatus || []} />
+              <GeoDistributionChart data={dashboardState.analytics.geoDistribution || []} />
+
+              <ChartContainer title="Premium Entities" description="Top shops by client conversion" className="col-span-4 lg:col-span-2">
+                <div className="space-y-4 h-full flex flex-col justify-center">
+                  {dashboardState.topShops?.slice(0, 3).map((shop, index) => (
+                    <div key={shop.id} className="flex items-center justify-between p-5 bg-white/[0.03] rounded-[1.5rem] border border-white/5 hover:bg-white/10 transition-all duration-500 group/shop">
+                      <div className="flex items-center gap-5">
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-black italic shadow-inner transition-transform group-hover/shop:scale-110 ${index === 0 ? 'bg-yellow-500/20 text-yellow-500 border border-yellow-500/30' :
+                          index === 1 ? 'bg-gray-400/20 text-gray-400 border border-gray-400/30' :
+                            'bg-orange-800/20 text-orange-600 border border-orange-800/30'
                           }`}>
                           {index + 1}
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-white">{shop.shopName || shop.name}</p>
-                          <p className="text-xs text-gray-500">{shop.name}</p>
+                          <p className="text-lg font-bold text-white tracking-tight">{shop.shopName || shop.name}</p>
+                          <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mt-1 opacity-50">{shop.name}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-yellow-500">{shop.clientCount}</p>
-                        <p className="text-[10px] text-gray-500 uppercase font-black">Clients</p>
+                        <p className="text-3xl font-black text-white tracking-tighter tabular-nums group-hover/shop:text-yellow-500 transition-colors">{shop.clientCount}</p>
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest opacity-50">Pulse</p>
                       </div>
                     </div>
                   ))}
-                  {!dashboardState.topShops?.length && (
-                    <p className="text-center text-gray-500 py-4">No shop data available</p>
-                  )}
                 </div>
-              </CardContent>
-            </Card>
+              </ChartContainer>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Recent Sellers */}
-              <Card className="lg:col-span-2 bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                <CardHeader className="flex flex-row items-center justify-between">
+              <Card className="lg:col-span-4 bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2rem] overflow-hidden shadow-2xl">
+                <CardHeader className="flex flex-row items-center justify-between p-8 border-b border-white/5 bg-white/[0.01]">
                   <div>
-                    <CardTitle className="text-lg font-bold text-white">Recent Sellers</CardTitle>
-                    <CardDescription className="text-gray-400">Latest shops to join the platform</CardDescription>
+                    <CardTitle className="text-2xl font-black text-white tracking-tighter">Velocity Stream</CardTitle>
+                    <CardDescription className="text-gray-400 font-medium">Recently authenticated merchants</CardDescription>
                   </div>
-                  <Button variant="ghost" className="text-yellow-500 hover:bg-yellow-500/10" onClick={() => setActiveTab('sellers')}>
-                    View All
+                  <Button variant="outline" className="border-white/10 text-yellow-500 hover:bg-yellow-500 hover:text-black rounded-xl font-black uppercase tracking-widest h-12 px-8 transition-all" onClick={() => setActiveTab('sellers')}>
+                    Archive
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left">
-                      <thead className="bg-white/5 text-gray-400 text-xs uppercase tracking-wider font-medium">
+                      <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
                         <tr>
-                          <th className="px-6 py-3">Seller</th>
-                          <th className="px-6 py-3">Status</th>
-                          <th className="px-6 py-3">Joined</th>
+                          <th className="px-10 py-6">Operator</th>
+                          <th className="px-10 py-6 text-center">Protocol Status</th>
+                          <th className="px-10 py-6 text-right">Entry Timestamp</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
                         {dashboardState.sellers.slice(0, 5).map((seller) => (
-                          <tr key={seller.id} className="hover:bg-white/5 transition-all">
-                            <td className="px-6 py-4">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                                  <Store className="w-4 h-4 text-yellow-500" />
+                          <tr key={seller.id} className="hover:bg-white/[0.02] transition-all group">
+                            <td className="px-10 py-6">
+                              <div className="flex items-center gap-5">
+                                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-yellow-500/30 transition-all">
+                                  <Store className="w-5 h-5 text-gray-500 group-hover:text-yellow-500 transition-all" />
                                 </div>
                                 <div>
-                                  <p className="text-sm font-semibold text-white">{seller.name}</p>
-                                  <p className="text-xs text-gray-500">{seller.email}</p>
+                                  <p className="text-base font-bold text-white tracking-tight">{seller.name}</p>
+                                  <p className="text-xs text-gray-500 font-medium italic opacity-60">{seller.email}</p>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm capitalize">
-                              <Badge variant="outline" className={seller.status === 'active' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-gray-500/10 text-gray-400 border-gray-500/20'}>
+                            <td className="px-10 py-6 text-center">
+                              <Badge className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none ${seller.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
                                 {seller.status}
                               </Badge>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-400">
+                            <td className="px-10 py-6 text-right text-sm font-bold text-gray-400 tabular-nums">
                               {safeFormatDate(seller.createdAt)}
                             </td>
                           </tr>
@@ -1224,516 +1086,410 @@ const NewAdminDashboard = () => {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Quick Actions / Summary */}
-              <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-                <CardHeader>
-                  <CardTitle className="text-lg font-bold text-white">Platform Health</CardTitle>
-                  <CardDescription className="text-gray-400">Current status overview</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-gray-400">Active Sellers</p>
-                      <span className="text-xs font-bold text-green-400">Healthy</span>
-                    </div>
-                    <p className="text-2xl font-black text-white">{dashboardState.analytics.totalSellers || 0}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                    <div className="flex items-center justify-between mb-2">
-                      <p className="text-sm text-gray-400">Total Products</p>
-                      <span className="text-xs font-bold text-blue-400">Growing</span>
-                    </div>
-                    <p className="text-2xl font-black text-white">{dashboardState.analytics.totalProducts || 0}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/10">
-                    <p className="text-sm text-gray-400 mb-2">Total Revenue</p>
-                    <p className="text-2xl font-black text-white">KSh {(dashboardState.analytics.totalRevenue || 0).toLocaleString()}</p>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
 
           {/* Sellers Tab */}
-          <TabsContent value="sellers" className="space-y-4 sm:space-y-6">
-            <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-              <CardHeader className="pb-3 sm:pb-4 relative z-10">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl font-bold text-white">Sellers</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm text-gray-400">
-                      Manage all sellers in the platform
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Search sellers..."
-                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+          <TabsContent value="sellers" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <CardTitle className="text-3xl font-black text-white tracking-tighter">Marketplace Merchants</CardTitle>
+                  <CardDescription className="text-gray-400 font-medium">Full directory of active and pending operators</CardDescription>
+                </div>
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-yellow-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-yellow-500 transition-colors" />
+                  <Input
+                    type="text"
+                    placeholder="Filter merchants..."
+                    className="pl-12 w-full md:w-[350px] h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-medium"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
               </CardHeader>
-              <CardContent className="p-0 relative z-10">
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <div className="inline-block min-w-full align-middle">
-                    <table className="min-w-full divide-y divide-white/10">
-                      <thead className="bg-gray-800/50">
-                        <tr className="border-b border-white/10">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Seller</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Contact</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Location</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10">
-                        {dashboardState.sellers?.map((seller) => (
-                          <tr key={seller.id} className="hover:bg-white/5 transition-colors">
-                            <td className="py-3 px-3 sm:px-4">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
-                                  <User className="h-5 w-5 text-yellow-500" />
-                                </div>
-                                <div className="ml-3">
-                                  <div className="text-sm font-medium text-white">{seller.name}</div>
-                                  <div className="text-xs text-gray-500">ID: {seller.id}</div>
-                                  <div className="sm:hidden text-xs text-gray-400 mt-1">
-                                    <div>{seller.email}</div>
-                                    {seller.phone && <div>{seller.phone}</div>}
-                                    <div className="flex items-center mt-1">
-                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-500" />
-                                      <span>{seller.city || 'N/A'}</span>
-                                    </div>
-                                    {seller.location && (
-                                      <div className="text-xs text-gray-400 truncate">{seller.location}</div>
-                                    )}
-                                  </div>
-                                </div>
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                      <tr>
+                        <th className="px-8 py-6">Merchant Identity</th>
+                        <th className="px-8 py-6 hidden lg:table-cell">Communications</th>
+                        <th className="px-8 py-6 hidden xl:table-cell">Geographic Hub</th>
+                        <th className="px-8 py-6 text-center">Protocol Status</th>
+                        <th className="px-8 py-6 text-right">Operational Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {dashboardState.sellers?.filter(s =>
+                        s.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        s.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).map((seller) => (
+                        <tr key={seller.id} className="hover:bg-white/[0.02] transition-all group">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-yellow-500/30 transition-all shadow-inner">
+                                <Store className="w-6 h-6 text-gray-500 group-hover:text-yellow-500 transition-all" />
                               </div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden sm:table-cell">
-                              <div className="font-medium text-white">{seller.email}</div>
-                              <div className="text-xs text-gray-400">{seller.phone || 'N/A'}</div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden md:table-cell">
-                              <div className="flex items-center">
-                                <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                                <span className="text-gray-300">{seller.city || 'N/A'}</span>
+                              <div>
+                                <p className="text-base font-black text-white tracking-tight">{seller.name}</p>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">ID: {seller.id.slice(0, 12)}</p>
                               </div>
-                              {seller.location && (
-                                <div className="text-xs text-gray-400 truncate max-w-[200px]" title={seller.location}>
-                                  {seller.location}
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-3 px-2 sm:px-3">
-                              <Badge
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 hidden lg:table-cell">
+                            <div className="space-y-1">
+                              <p className="text-sm font-bold text-gray-300">{seller.email}</p>
+                              <p className="text-xs text-gray-500 font-medium tabular-nums">{seller.phone || 'NO SECURE LINE'}</p>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 hidden xl:table-cell">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                                <MapPin className="h-4 w-4 text-gray-400" />
+                              </div>
+                              <span className="text-sm font-bold text-gray-300 tracking-tight">{seller.city || 'Global Hub'}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 text-center">
+                            <Badge className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none ${seller.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
+                              {seller.status}
+                            </Badge>
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                            <div className="flex items-center justify-end gap-3">
+                              <Button
                                 variant="outline"
-                                className={
-                                  seller.status === 'active'
-                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                    : 'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                                }
+                                size="sm"
+                                className="h-10 px-4 rounded-xl border-white/10 bg-white/5 text-yellow-500 hover:bg-yellow-500 hover:text-black font-black uppercase tracking-widest text-[10px] border transition-all"
+                                onClick={() => handleViewSeller(seller.id)}
                               >
-                                {seller.status}
-                              </Badge>
-                            </td>
-                            <td className="py-3 pr-3 sm:pr-4 text-right">
-                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 h-8 px-2 sm:px-3 text-xs sm:text-sm"
-                                  onClick={() => handleViewSeller(seller.id)}
-                                >
-                                  <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                  <span className="hidden sm:inline">View</span>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2 sm:px-3 text-xs sm:text-sm"
-                                  onClick={() => handleDeleteUser(seller.id, 'seller')}
-                                >
-                                  <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                  <span className="hidden sm:inline">Block</span>
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                <Eye className="h-3.5 w-3.5 mr-2" />
+                                Inspect
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-10 px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[10px] border transition-all"
+                                onClick={() => handleDeleteUser(seller.id, 'seller')}
+                              >
+                                <Lock className="h-3.5 w-3.5 mr-2" />
+                                Terminate
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-white/10 px-4 sm:px-6 py-3 sm:py-4 relative z-10">
-                <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-400">
-                    Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.sellers?.length || 0}</span> of{' '}
-                    <span className="font-medium">{dashboardState.sellers?.length || 0}</span> sellers
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" disabled={true} className="border-white/10 text-gray-400 hover:bg-white/5 bg-transparent">
-                      Previous
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={true} className="border-white/10 text-gray-400 hover:bg-white/5 bg-transparent">
-                      Next
-                    </Button>
-                  </div>
+              <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                  Active Operators: <span className="text-white ml-2 tabular-nums">{dashboardState.sellers?.length || 0}</span>
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Prev</Button>
+                  <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Next</Button>
                 </div>
               </CardFooter>
             </Card>
           </TabsContent>
 
           {/* Buyers Tab */}
-          <TabsContent value="buyers" className="space-y-4 sm:space-y-6">
-            <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-              <CardHeader className="pb-3 sm:pb-4 relative z-10">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl font-bold text-white">Buyers</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm text-gray-400">
-                      Manage all buyers in the platform
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Search buyers..."
-                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+          <TabsContent value="buyers" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <CardTitle className="text-3xl font-black text-white tracking-tighter">Engagement Database</CardTitle>
+                  <CardDescription className="text-gray-400 font-medium">Customer behavioral records and identity tracking</CardDescription>
+                </div>
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-cyan-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-cyan-500 transition-colors" />
+                  <Input
+                    type="text"
+                    placeholder="Search intelligence..."
+                    className="pl-12 w-full md:w-[350px] h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-cyan-500/50 focus:ring-cyan-500/10 transition-all font-medium"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
               </CardHeader>
-              <CardContent className="p-0 relative z-10">
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <div className="inline-block min-w-full align-middle">
-                    <table className="min-w-full divide-y divide-white/10">
-                      <thead className="bg-gray-800/50">
-                        <tr className="border-b border-white/10">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Buyer</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Contact</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">Location</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10">
-                        {dashboardState.buyers?.map((buyer) => (
-                          <tr key={buyer.id} className="hover:bg-white/5 transition-colors">
-                            <td className="py-3 px-3 sm:px-4">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
-                                  <User className="h-5 w-5 text-blue-500" />
-                                </div>
-                                <div className="ml-3">
-                                  <div className="text-sm font-medium text-white">{buyer.name}</div>
-                                  <div className="text-xs text-gray-500">ID: {buyer.id}</div>
-                                  <div className="sm:hidden text-xs text-gray-400 mt-1">
-                                    <div>{buyer.email}</div>
-                                    {buyer.phone && <div>{buyer.phone}</div>}
-                                    <div className="flex items-center mt-1">
-                                      <MapPin className="h-3.5 w-3.5 mr-1 text-gray-500" />
-                                      <span>{buyer.city || 'N/A'}</span>
-                                    </div>
-                                    {buyer.location && (
-                                      <div className="text-xs text-gray-400 truncate">{buyer.location}</div>
-                                    )}
-                                  </div>
-                                </div>
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                      <tr>
+                        <th className="px-8 py-6">Customer Profile</th>
+                        <th className="px-8 py-6 hidden lg:table-cell">Contact Protocol</th>
+                        <th className="px-8 py-6 hidden xl:table-cell">Activation Point</th>
+                        <th className="px-8 py-6 text-center">Security Status</th>
+                        <th className="px-8 py-6 text-right">Override Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {dashboardState.buyers?.filter(b =>
+                        b.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        b.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                      ).map((buyer) => (
+                        <tr key={buyer.id} className="hover:bg-white/[0.02] transition-all group">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-5">
+                              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-cyan-500/30 transition-all shadow-inner">
+                                <User className="w-6 h-6 text-gray-500 group-hover:text-cyan-500 transition-all" />
                               </div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden sm:table-cell">
-                              <div className="font-medium text-white">{buyer.email}</div>
-                              <div className="text-xs text-gray-400">{buyer.phone || 'N/A'}</div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden md:table-cell">
-                              <div className="flex items-center">
-                                <MapPin className="h-4 w-4 mr-1 text-gray-400" />
-                                <span className="text-gray-300">{buyer.city || 'N/A'}</span>
+                              <div>
+                                <p className="text-base font-black text-white tracking-tight">{buyer.name}</p>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">UID: {buyer.id.slice(0, 12)}</p>
                               </div>
-                              <div className="flex items-center text-xs text-gray-400 mt-1">
-                                <Calendar className="h-3 w-3 mr-1" />
-                                <span>Joined: {safeFormatDate(buyer.createdAt)}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 hidden lg:table-cell">
+                            <div className="space-y-1">
+                              <p className="text-sm font-bold text-gray-300">{buyer.email}</p>
+                              <p className="text-xs text-gray-500 font-medium tabular-nums">{buyer.phone || 'DATA MISSING'}</p>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 hidden xl:table-cell">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                                <Calendar className="h-4 w-4 text-gray-400" />
                               </div>
-                              {buyer.location && (
-                                <div className="text-xs text-gray-400 truncate max-w-[200px]" title={buyer.location}>
-                                  {buyer.location}
-                                </div>
-                              )}
-                            </td>
-                            <td className="py-3 px-2 sm:px-3">
-                              <Badge
+                              <span className="text-sm font-bold text-gray-300 tracking-tight">{safeFormatDate(buyer.createdAt)}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 text-center">
+                            <Badge className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none ${buyer.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
+                              {buyer.status}
+                            </Badge>
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                            <div className="flex items-center justify-end gap-3">
+                              <Button
                                 variant="outline"
-                                className={
-                                  buyer.status === 'active'
-                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                    : 'bg-gray-500/10 text-gray-400 border-gray-500/20'
-                                }
+                                size="sm"
+                                className="h-10 px-4 rounded-xl border-white/10 bg-white/5 text-cyan-500 hover:bg-cyan-500 hover:text-black font-black uppercase tracking-widest text-[10px] border transition-all"
+                                onClick={() => handleViewBuyer(buyer.id)}
                               >
-                                {buyer.status}
-                              </Badge>
-                            </td>
-                            <td className="py-3 pr-3 sm:pr-4 text-right">
-                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-yellow-500 hover:text-yellow-400 hover:bg-yellow-500/10 h-8 px-2 sm:px-3 text-xs sm:text-sm"
-                                  onClick={() => handleViewBuyer(buyer.id)}
-                                >
-                                  <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                  <span className="hidden sm:inline">View</span>
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2 sm:px-3 text-xs sm:text-sm"
-                                  onClick={() => handleDeleteUser(buyer.id, 'buyer')}
-                                >
-                                  <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                  <span className="hidden sm:inline">Block</span>
-                                </Button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                <Eye className="h-3.5 w-3.5 mr-2" />
+                                Insights
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-10 px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[10px] border transition-all"
+                                onClick={() => handleDeleteUser(buyer.id, 'buyer')}
+                              >
+                                <Lock className="h-3.5 w-3.5 mr-2" />
+                                Suspend
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-white/10 px-4 sm:px-6 py-3 sm:py-4 relative z-10">
-                <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-400">
-                    Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.buyers?.length || 0}</span> of{' '}
-                    <span className="font-medium">{dashboardState.buyers?.length || 0}</span> buyers
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" disabled={true} className="border-white/10 text-gray-400 hover:bg-white/5 bg-transparent">
-                      Previous
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={true} className="border-white/10 text-gray-400 hover:bg-white/5 bg-transparent">
-                      Next
-                    </Button>
-                  </div>
+              <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                  Total Users: <span className="text-white ml-2 tabular-nums">{dashboardState.buyers?.length || 0}</span>
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Prev</Button>
+                  <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Next</Button>
                 </div>
               </CardFooter>
             </Card>
           </TabsContent>
 
           {/* Withdrawals Tab */}
-          <TabsContent value="withdrawals" className="space-y-4 sm:space-y-6">
-            <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-              <CardHeader className="pb-3 sm:pb-4 relative z-10">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl font-bold text-white">Withdrawal Requests</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm text-gray-400">
-                      Manage seller withdrawal requests
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Search requests..."
-                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+          <TabsContent value="withdrawals" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <CardTitle className="text-3xl font-black text-white tracking-tighter">Liquidity Requests</CardTitle>
+                  <CardDescription className="text-gray-400 font-medium">Outbound capital movements and merchant payouts</CardDescription>
+                </div>
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-green-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-green-500 transition-colors" />
+                  <Input
+                    type="text"
+                    placeholder="Filter transactions..."
+                    className="pl-12 w-full md:w-[350px] h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-green-500/50 focus:ring-green-500/10 transition-all font-medium"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
               </CardHeader>
-              <CardContent className="p-0 relative z-10">
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <div className="inline-block min-w-full align-middle">
-                    <table className="min-w-full divide-y divide-white/10">
-                      <thead className="bg-gray-800/50">
-                        <tr className="border-b border-white/10">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Seller</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider hidden sm:table-cell">Amount</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider hidden md:table-cell">M-Pesa Details</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider hidden lg:table-cell">Date</th>
-                          <th className="py-3 pr-3 sm:pr-4 text-right text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                      <tr>
+                        <th className="px-8 py-6">Merchant Beneficiary</th>
+                        <th className="px-8 py-6 hidden lg:table-cell">Capital Amount</th>
+                        <th className="px-8 py-6 hidden xl:table-cell">Payout Endpoint (M-Pesa)</th>
+                        <th className="px-8 py-6 text-center">Protocol Status</th>
+                        <th className="px-8 py-6 text-right">Settlement Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {dashboardState.withdrawalRequests?.map((request) => (
+                        <tr key={request.id} className="hover:bg-white/[0.02] transition-all group">
+                          <td className="px-8 py-6">
+                            <div className="space-y-1">
+                              <p className="text-base font-black text-white tracking-tight">{request.sellerName}</p>
+                              <p className="text-xs text-gray-500 font-medium italic opacity-60">{request.sellerEmail}</p>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 hidden lg:table-cell">
+                            <p className="text-lg font-black text-white tracking-tighter tabular-nums">KSh {request.amount.toLocaleString()}</p>
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">{safeFormatDate(request.createdAt)}</p>
+                          </td>
+                          <td className="px-8 py-6 hidden xl:table-cell">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-xl bg-white/5 flex items-center justify-center border border-white/10">
+                                <DollarSign className="h-4 w-4 text-green-500" />
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-gray-300 font-mono">{request.mpesaNumber}</p>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">{request.mpesaName}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 text-center">
+                            <Badge className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border-none 
+                              ${request.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' :
+                                request.status === 'approved' ? 'bg-green-500/10 text-green-400' :
+                                  request.status === 'rejected' ? 'bg-red-500/10 text-red-500' :
+                                    'bg-blue-500/10 text-blue-400'}`}>
+                              {request.status}
+                            </Badge>
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                            <div className="flex items-center justify-end gap-3">
+                              {request.status === 'pending' ? (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-10 px-4 rounded-xl border-white/10 bg-white/5 text-green-500 hover:bg-green-500 hover:text-black font-black uppercase tracking-widest text-[10px] border transition-all"
+                                    onClick={() => handleWithdrawalRequestAction(request.id, 'approved')}
+                                  >
+                                    <CheckCircle className="h-3.5 w-3.5 mr-2" />
+                                    Validate
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-10 px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[10px] border transition-all"
+                                    onClick={() => handleWithdrawalRequestAction(request.id, 'rejected')}
+                                  >
+                                    <XCircle className="h-3.5 w-3.5 mr-2" />
+                                    Veto
+                                  </Button>
+                                </>
+                              ) : (
+                                <span className="text-[10px] font-black text-gray-600 uppercase tracking-widest italic">
+                                  Resolved by {request.processedBy || 'SYSTEM'}
+                                </span>
+                              )}
+                            </div>
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10">
-                        {dashboardState.withdrawalRequests?.map((request) => (
-                          <tr key={request.id} className="hover:bg-white/5 transition-colors">
-                            <td className="py-3 px-3 sm:px-4">
-                              <div className="font-medium text-white">{request.sellerName}</div>
-                              <div className="text-xs text-gray-400">{request.sellerEmail}</div>
-                              <div className="sm:hidden text-xs text-gray-400 mt-1">
-                                <div>KSh {request.amount.toLocaleString()}</div>
-                                <div>{request.mpesaNumber} ({request.mpesaName})</div>
-                              </div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden sm:table-cell">
-                              <span className="font-semibold text-white">KSh {request.amount.toLocaleString()}</span>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden md:table-cell">
-                              <div className="font-medium text-white">{request.mpesaNumber}</div>
-                              <div className="text-xs text-gray-400">{request.mpesaName}</div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3">
-                              <Badge
-                                variant="outline"
-                                className={`${request.status === 'pending'
-                                  ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
-                                  : request.status === 'approved'
-                                    ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                                    : request.status === 'rejected'
-                                      ? 'bg-red-500/10 text-red-400 border-red-500/20'
-                                      : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                                  } rounded-full px-3 py-1 font-semibold`}
-                              >
-                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                              </Badge>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300 hidden lg:table-cell">
-                              <div>{safeFormatDate(request.createdAt)}</div>
-                              <div className="text-xs text-gray-400">{safeFormatDate(request.createdAt, 'h:mm a')}</div>
-                            </td>
-                            <td className="py-3 pr-3 sm:pr-4 text-right">
-                              <div className="flex items-center justify-end space-x-1 sm:space-x-2">
-                                {request.status === 'pending' && (
-                                  <>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-green-500 hover:bg-green-500/10 hover:text-green-400 h-8 px-2 sm:px-3 text-xs sm:text-sm"
-                                      onClick={() => handleWithdrawalRequestAction(request.id, 'approved')}
-                                    >
-                                      <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                      <span className="hidden sm:inline">Approve</span>
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="text-red-500 hover:bg-red-500/10 hover:text-red-400 h-8 px-2 sm:px-3 text-xs sm:text-sm"
-                                      onClick={() => handleWithdrawalRequestAction(request.id, 'rejected')}
-                                    >
-                                      <XCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
-                                      <span className="hidden sm:inline">Reject</span>
-                                    </Button>
-                                  </>
-                                )}
-                                {request.status !== 'pending' && (
-                                  <span className="text-xs text-gray-400">
-                                    Processed by {request.processedBy || 'Admin'}
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
-              <CardFooter className="border-t border-white/10 px-4 sm:px-6 py-3 sm:py-4 relative z-10">
-                <div className="flex items-center justify-between w-full">
-                  <div className="text-sm text-gray-400">
-                    Showing <span className="font-medium">1</span> to <span className="font-medium">{dashboardState.withdrawalRequests?.length || 0}</span> of{' '}
-                    <span className="font-medium">{dashboardState.withdrawalRequests?.length || 0}</span> withdrawal requests
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm" disabled={true} className="border-white/10 text-gray-400 hover:bg-white/5 bg-transparent">
-                      Previous
-                    </Button>
-                    <Button variant="outline" size="sm" disabled={true} className="border-white/10 text-gray-400 hover:bg-white/5 bg-transparent">
-                      Next
-                    </Button>
-                  </div>
+              <CardFooter className="p-8 border-t border-white/5 bg-white/[0.01] flex items-center justify-between">
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest">
+                  Total Liquidity Flow: <span className="text-white ml-2 tabular-nums">{dashboardState.withdrawalRequests?.length || 0} Entries</span>
+                </p>
+                <div className="flex gap-2">
+                  <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Prev</Button>
+                  <Button variant="ghost" disabled className="text-gray-600 hover:bg-white/5 rounded-xl font-bold uppercase tracking-widest text-[10px]">Next</Button>
                 </div>
               </CardFooter>
             </Card>
           </TabsContent>
 
+          {/* Refunds Tab */}
+          <TabsContent value="refunds" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <div className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
+              <RefundRequestsPage />
+            </div>
+          </TabsContent>
+
           {/* Clients Tab */}
-          <TabsContent value="clients" className="space-y-4 sm:space-y-6">
-            <Card className="bg-gray-900/60 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
-              <CardHeader className="pb-3 sm:pb-4 relative z-10">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <CardTitle className="text-lg sm:text-xl font-bold text-white">Clients</CardTitle>
-                    <CardDescription className="text-xs sm:text-sm text-gray-400">
-                      View all clients registered via sellers
-                    </CardDescription>
-                  </div>
-                  <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <Input
-                      type="text"
-                      placeholder="Search clients..."
-                      className="pl-12 w-full text-sm sm:text-base sm:w-[250px] md:w-[300px] h-10 sm:h-11 bg-black/20 border-white/10 text-white placeholder:text-gray-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
+          <TabsContent value="clients" className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <Card className="bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+              <CardHeader className="p-8 border-b border-white/5 bg-white/[0.01] flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                  <CardTitle className="text-3xl font-black text-white tracking-tighter">Client Network</CardTitle>
+                  <CardDescription className="text-gray-400 font-medium">Global mapping of customers and their associated merchants</CardDescription>
+                </div>
+                <div className="relative group">
+                  <div className="absolute -inset-0.5 bg-pink-500/20 rounded-2xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 group-hover:text-pink-500 transition-colors" />
+                  <Input
+                    type="text"
+                    placeholder="Search relations..."
+                    className="pl-12 w-full md:w-[350px] h-12 bg-white/5 border-white/10 text-white placeholder:text-gray-500 rounded-2xl focus:border-pink-500/50 focus:ring-pink-500/10 transition-all font-medium"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
                 </div>
               </CardHeader>
-              <CardContent className="p-0 relative z-10">
+              <CardContent className="p-0">
                 <div className="overflow-x-auto">
-                  <div className="inline-block min-w-full align-middle">
-                    <table className="min-w-full divide-y divide-white/10">
-                      <thead className="bg-gray-800/50">
-                        <tr className="border-b border-white/10">
-                          <th className="py-3 px-3 sm:px-4 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Client</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Contact</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider">Seller / Shop</th>
-                          <th className="py-3 px-2 sm:px-3 text-left text-xs sm:text-sm font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap">Joined</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-white/10">
-                        {(dashboardState.clients || []).filter(c =>
-                          (c.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-                          (c.phone || '').includes(searchQuery) ||
-                          (c.shop_name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-                        ).map((client) => (
-                          <tr key={client.id} className="hover:bg-white/5 transition-colors">
-                            <td className="py-3 px-3 sm:px-4">
-                              <div className="flex items-center">
-                                <div className="flex-shrink-0 h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
-                                  <User className="h-5 w-5 text-blue-400" />
-                                </div>
-                                <div className="ml-3">
-                                  <div className="text-sm font-medium text-white">{client.full_name}</div>
-                                  <div className="text-xs text-gray-500">ID: {client.id}</div>
-                                </div>
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-white/5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                      <tr>
+                        <th className="px-8 py-6">Client Identity</th>
+                        <th className="px-8 py-6 hidden lg:table-cell">Secure Line</th>
+                        <th className="px-8 py-6 hidden xl:table-cell">Associated Merchant</th>
+                        <th className="px-8 py-6 text-right">Registration Hub</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {(dashboardState.clients || []).filter(c =>
+                        (c.full_name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+                        (c.phone || '').includes(searchQuery) ||
+                        (c.shop_name?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+                      ).map((client) => (
+                        <tr key={client.id} className="hover:bg-white/[0.02] transition-all group">
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-5">
+                              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 group-hover:border-pink-500/30 transition-all shadow-inner">
+                                <User className="w-5 h-5 text-gray-500 group-hover:text-pink-500 transition-all" />
                               </div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300">
-                              <div className="font-medium text-white">{client.phone}</div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-300">
-                              <div className="font-medium text-white">{client.shop_name || 'Direct'}</div>
-                              <div className="text-xs text-gray-500">{client.seller_name}</div>
-                            </td>
-                            <td className="py-3 px-2 sm:px-3 text-sm text-gray-400">
-                              {safeFormatDate(client.createdAt)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                              <div>
+                                <p className="text-sm font-black text-white tracking-tight">{client.full_name}</p>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">REL: {client.id.slice(0, 8)}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 hidden lg:table-cell">
+                            <p className="text-sm font-bold text-gray-300 font-mono tracking-widest">{client.phone}</p>
+                          </td>
+                          <td className="px-8 py-6 hidden xl:table-cell">
+                            <div className="space-y-1">
+                              <p className="text-sm font-bold text-white tracking-tight">{client.shop_name || 'NEUTRAL SOURCE'}</p>
+                              <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest opacity-50">VIA: {client.seller_name}</p>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-widest tabular-nums">{safeFormatDate(client.createdAt)}</p>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </CardContent>
             </Card>

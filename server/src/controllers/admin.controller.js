@@ -68,6 +68,32 @@ const adminLogin = async (req, res, next) => {
   }
 };
 
+const getMe = async (req, res, next) => {
+  try {
+    // req.user is set by the protect middleware
+    const result = await pool.query('SELECT id, email, role, created_at FROM users WHERE id = $1', [req.user.id]);
+    const user = result.rows[0];
+
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          createdAt: user.created_at
+        }
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getAnalytics = async (req, res, next) => {
   try {
     const analytics = await AdminService.getAnalytics();
@@ -775,6 +801,7 @@ export {
   getMonthlyFinancialData,
   getAnalytics,
   getAllClients,
-  deleteUser
+  deleteUser,
+  getMe
 };
 
