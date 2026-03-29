@@ -5,7 +5,7 @@
  */
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://bybloshq.space/api'
+const BASE_URL = '/api'
 
 const marketingClient = axios.create({ baseURL: BASE_URL })
 
@@ -16,18 +16,20 @@ marketingClient.interceptors.request.use((config) => {
     return config
 })
 
-// On 401, clear token and redirect to login
 marketingClient.interceptors.response.use(
     (res) => res,
     (err) => {
-        if (err.response?.status === 401) {
-            sessionStorage.removeItem('marketing_token')
-            sessionStorage.removeItem('marketing_user')
-            window.location.href = '/marketing/login'
+        // Only redirect to login if NOT already trying to login/logout
+        const isAuthRequest = err.config?.url?.includes('/admin/marketing/login');
+
+        if (err.response?.status === 401 && !isAuthRequest) {
+            sessionStorage.removeItem('marketing_token');
+            sessionStorage.removeItem('marketing_user');
+            window.location.href = '/marketing/login';
         }
-        return Promise.reject(err)
+        return Promise.reject(err);
     }
-)
+);
 
 export const marketingApi = {
     login: (email, password) =>
