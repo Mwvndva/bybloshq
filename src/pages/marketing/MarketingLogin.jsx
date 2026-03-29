@@ -20,7 +20,7 @@ export default function MarketingLogin() {
 
             sessionStorage.setItem('marketing_token', token)
             sessionStorage.setItem('marketing_user', JSON.stringify(user))
-            navigate('/marketing/dashboard')
+            navigate('/admin/marketing')
         } catch (err) {
             setError(err.response?.data?.message || 'Invalid email or password')
         } finally {
