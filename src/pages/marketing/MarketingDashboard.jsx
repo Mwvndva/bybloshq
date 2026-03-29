@@ -113,43 +113,53 @@ export default function MarketingDashboard() {
     )
 
     return (
-        <div className="min-h-screen bg-gray-950 text-white">
-
-            {/* ── NAV ── */}
-            <nav className="border-b border-gray-800 bg-gray-900/80 backdrop-blur sticky top-0 z-10">
-                <div className="max-w-screen-2xl mx-auto px-6 h-14 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="font-bold text-lg tracking-tight">Byblos</span>
-                        <span className="text-gray-500 text-sm hidden sm:block">/ Marketing Intelligence</span>
+        <div className="min-h-screen bg-[#050505] text-white selection:bg-yellow-500/30">
+            {/* Glossy Header Background */}
+            <header className="sticky top-0 z-50 bg-black/60 backdrop-blur-xl border-b border-white/5">
+                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
+                            <span className="text-black font-black text-xl">B</span>
+                        </div>
+                        <h1 className="text-lg font-bold tracking-tight">Marketing Intelligence</h1>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <span className="text-gray-400 text-sm hidden md:block">{user.email}</span>
-                        <button onClick={fetchAll} className="text-gray-400 hover:text-white text-sm transition-colors">
-                            ↻ Refresh
+                    <div className="flex items-center gap-6">
+                        <span className="text-gray-400 text-xs font-medium">{user?.email}</span>
+                        <button
+                            onClick={() => fetchAll()}
+                            disabled={loading}
+                            className="text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+                        >
+                            <svg className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
                         </button>
-                        <button onClick={logout} className="text-gray-400 hover:text-red-400 text-sm transition-colors">
+                        <button
+                            onClick={logout}
+                            className="bg-white/5 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-white/10"
+                        >
                             Sign out
                         </button>
                     </div>
                 </div>
-            </nav>
+            </header>
 
-            <div className="max-w-screen-2xl mx-auto px-6 py-8 space-y-10">
-
-                {/* ── PERIOD SELECTOR ── */}
-                <div className="flex items-center justify-between">
+            <main className="max-w-7xl mx-auto px-6 py-8">
+                {/* Dashboard Subheader */}
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
                     <div>
-                        <h1 className="text-2xl font-bold text-white">Marketing Dashboard</h1>
-                        <p className="text-gray-500 text-sm mt-0.5">Platform performance overview</p>
+                        <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.2em] mb-1">Platform performance overview</p>
+                        <h2 className="text-3xl font-black text-white tracking-tighter">Growth Dashboard</h2>
                     </div>
-                    <div className="flex gap-2">
+
+                    <div className="flex p-1 bg-white/5 rounded-xl border border-white/5 backdrop-blur-md">
                         {[3, 6, 12].map(m => (
                             <button
                                 key={m}
                                 onClick={() => setPeriod(m)}
-                                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === m
-                                    ? 'bg-yellow-400 text-gray-900'
-                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${period === m
+                                    ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/20'
+                                    : 'text-gray-400 hover:text-white'
                                     }`}
                             >
                                 {m}M
@@ -480,14 +490,14 @@ export default function MarketingDashboard() {
                         </div>
                     </ChartCard>
                 </section>
-
-            </div>
+            </main>
 
             {/* ── FOOTER ── */}
-            <footer className="border-t border-gray-800 mt-12 py-4 text-center text-gray-600 text-xs">
-                Byblos Marketing Intelligence • Read-only • {new Date().getFullYear()}
+            <footer className="border-t border-white/5 py-8 text-center bg-black/40 backdrop-blur-md mt-12">
+                <p className="text-gray-600 text-[10px] font-bold uppercase tracking-widest">
+                    Byblos Marketing Intelligence • Read-only • {new Date().getFullYear()}
+                </p>
             </footer>
-
         </div>
     )
 }
