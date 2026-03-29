@@ -57,7 +57,7 @@ export default function MarketingDashboard() {
     const logout = () => {
         sessionStorage.removeItem('marketing_token')
         sessionStorage.removeItem('marketing_user')
-        navigate('/marketing/login')
+        navigate('/admin/marketing/login')
     }
 
     const fetchAll = useCallback(async () => {
@@ -93,7 +93,7 @@ export default function MarketingDashboard() {
 
     useEffect(() => {
         const token = sessionStorage.getItem('marketing_token')
-        if (!token) { navigate('/marketing/login'); return }
+        if (!token) { navigate('/admin/marketing/login'); return }
         fetchAll()
     }, [fetchAll, navigate])
 
@@ -148,8 +148,8 @@ export default function MarketingDashboard() {
                                 key={m}
                                 onClick={() => setPeriod(m)}
                                 className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${period === m
-                                        ? 'bg-yellow-400 text-gray-900'
-                                        : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
+                                    ? 'bg-yellow-400 text-gray-900'
+                                    : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
                                     }`}
                             >
                                 {m}M

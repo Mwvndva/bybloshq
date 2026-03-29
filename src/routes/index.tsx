@@ -39,7 +39,7 @@ export const routes = [
     ),
   },
   {
-    path: '/marketing/login',
+    path: '/admin/marketing/login',
     element: (
       <Suspense fallback={<RouteFallback />}>
         <MarketingLogin />
@@ -47,7 +47,7 @@ export const routes = [
     ),
   },
   {
-    path: '/marketing/dashboard',
+    path: '/admin/marketing',
     element: (
       <Suspense fallback={<RouteFallback />}>
         <MarketingDashboard />
