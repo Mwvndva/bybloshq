@@ -478,6 +478,35 @@ class OrderService {
           // Notify Seller "Buyer cancelled"
           whatsappService.sendSellerOrderCancellationNotification(orderData, seller, 'Buyer')
             .catch(err => logger.error('Error sending seller cancellation notification:', err));
+
+          // Notify courier if this was a logistics (delivery) order
+          // Courier needs to know to NOT collect or to return items if already picked up
+          const cancelledProductType = fullOrder.metadata?.product_type
+          const wasDeliveryOrder = cancelledProductType !== 'service' &&
+            cancelledProductType !== 'digital' &&
+            !fullOrder.seller_address  // no physical shop = was using logistics
+
+          if (wasDeliveryOrder) {
+            const buyerForCancel = {
+              fullName: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+              whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+              phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual
+            }
+            const sellerForCancel = {
+              shop_name: fullOrder.seller_name,
+              whatsapp_number: fullOrder.seller_phone,
+              physicalAddress: fullOrder.seller_address || null
+            }
+            const orderForCancel = {
+              id: fullOrder.id,
+              orderNumber: fullOrder.order_number || fullOrder.id,
+              total_amount: fullOrder.total_amount,
+              items: itemsResult.rows  // already fetched above in the notification block
+            }
+            whatsappService.sendLogisticsCancellationNotification(
+              orderForCancel, buyerForCancel, sellerForCancel, 'Buyer'
+            ).catch(err => logger.error('Error sending logistics cancellation notification:', err))
+          }
         }
       } catch (e) {
         logger.error('Error sending cancellation notifications:', e);
@@ -762,16 +791,27 @@ class OrderService {
         // Fetch full order details with buyer and seller for notification
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
-                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
-                  COALESCE(s.email, u.email) as seller_email, 
-                  s.physical_address as seller_address, s.shop_name, s.latitude as seller_latitude, s.longitude as seller_longitude,
-                  s.instagram_link, s.tiktok_link, s.facebook_link
+                  b.full_name          AS buyer_name_actual,
+                  b.mobile_payment     AS buyer_phone_actual,
+                  b.whatsapp_number    AS buyer_whatsapp_actual,
+                  b.email              AS buyer_email_actual,
+                  b.city               AS buyer_city,
+                  b.location           AS buyer_location_text,
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
+                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
+                  COALESCE(s.email, u.email)                       AS seller_email, 
+                  s.physical_address   AS seller_address,
+                  s.shop_name,
+                  s.city               AS seller_city,
+                  s.latitude           AS seller_latitude,
+                  s.longitude          AS seller_longitude,
+                  s.instagram_link,
+                  s.tiktok_link,
+                  s.facebook_link
            FROM product_orders o
-           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN buyers  b ON o.buyer_id  = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
-           LEFT JOIN users u ON s.user_id = u.id
+           LEFT JOIN users   u ON s.user_id   = u.id
            WHERE o.id = $1`,
           [orderId]
         );
@@ -833,11 +873,46 @@ class OrderService {
               order: notificationPayload.order,
               items: items
             })
-              .then(() => logger.info(`[PURCHASE-FLOW] 9e. ✅ Seller notification sent successfully to ${sellerData.phone}`))
-              .catch(err => {
-                logger.error(`[PURCHASE-FLOW] 9e. ❌ Error sending seller new order notification to ${sellerData.phone}:`, err);
-                logger.error(`[PURCHASE-FLOW] 9e. Error stack:`, err.stack);
-              });
+              .then(() => logger.info(`[PURCHASE-FLOW] 9e. ✅ Seller notification sent...`))
+              .catch(err => logger.error(`[PURCHASE-FLOW] 9e. ❌ Seller notification failed:`, err.message))
+
+            // ── COURIER NOTIFICATION (logistics orders only) ──────────────────────────
+            // Fire for physical products where seller has NO physicalAddress.
+            // sendLogisticsNotification() internally checks and skips for:
+            //   - service orders
+            //   - digital orders
+            //   - orders where seller has a physical shop (buyer collects directly)
+            // Only NO-SHOP physical orders trigger the courier message.
+            const orderForCourier = {
+              id: fullOrder.id,
+              orderNumber: fullOrder.order_number,
+              totalAmount: fullOrder.total_amount,
+              items: items,           // already fetched order_items rows — contains product_name, quantity, price
+              metadata: fullOrder.metadata
+            }
+            const buyerForCourier = {
+              fullName: fullOrder.buyer_name || buyerData.name,
+              full_name: fullOrder.buyer_name || buyerData.name,
+              whatsapp_number: fullOrder.buyer_whatsapp_number || buyerData.whatsapp_number,
+              phone: fullOrder.buyer_mobile_payment || buyerData.phone,
+              city: fullOrder.buyer_city || '',
+              location: fullOrder.buyer_location_text || ''
+            }
+            const sellerForCourier = {
+              shop_name: sellerData.shop_name || sellerData.name,
+              full_name: sellerData.name,
+              whatsapp_number: sellerData.phone,
+              physicalAddress: sellerData.physicalAddress || null,
+              city: fullOrder.seller_city || ''
+            }
+
+            whatsappService.sendLogisticsNotification(orderForCourier, buyerForCourier, sellerForCourier)
+              .then(sent => {
+                if (sent) logger.info(`[PURCHASE-FLOW] 9f. ✅ Courier notification sent for order ${fullOrder.order_number}`)
+                else logger.info(`[PURCHASE-FLOW] 9f. Courier notification skipped (shop/service/digital order)`)
+              })
+              .catch(err => logger.error(`[PURCHASE-FLOW] 9f. ❌ Courier notification failed:`, err.message))
+            // ── END COURIER NOTIFICATION ──────────────────────────────────────────────
           }
         }
       } catch (e) {

@@ -64,7 +64,7 @@ class OrderDeadlineService {
             const result = await pool.query(
                 `SELECT po.*, 
                         b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name
+                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.physical_address as physical_address
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -101,7 +101,7 @@ class OrderDeadlineService {
             const result = await pool.query(
                 `SELECT po.*, 
                         b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name
+                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.physical_address as physical_address
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -138,7 +138,7 @@ class OrderDeadlineService {
             const result = await pool.query(
                 `SELECT po.*, 
                         b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.balance as seller_balance
+                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.balance as seller_balance, s.physical_address as physical_address
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -342,6 +342,38 @@ Order #${order.order_number} has been automatically cancelled.
                 if (sellerMsg) {
                     await whatsappService.sendMessage(order.seller_phone, sellerMsg);
                 }
+            }
+
+            // Notify courier if this was a logistics delivery order
+            // (physical product, seller had no shop address)
+            const isDeliveryOrder = !order.physical_address &&
+                order.metadata?.product_type !== 'service' &&
+                order.metadata?.product_type !== 'digital'
+
+            if (isDeliveryOrder) {
+                const COURIER_NUMBER = process.env.COURIER_WHATSAPP_NUMBER || '0748137819'
+                const cancelMsg = `
+❌ *ORDER CANCELLED — DELIVERY CANCELLED*
+
+📦 *Order #${order.order_number}*
+💰 *Amount:* KSh ${parseFloat(order.total_amount || 0).toLocaleString()}
+
+📝 *Reason:* ${reason}
+
+⚠️ *ACTION REQUIRED:*
+Please do NOT collect this order from the seller.
+If already collected, please contact the seller to arrange return.
+
+👤 *Buyer:* ${order.buyer_name || 'N/A'}
+📞 *Buyer Phone:* ${order.buyer_phone || 'N/A'}
+🏪 *Seller:* ${order.seller_name || 'N/A'}
+📞 *Seller Phone:* ${order.seller_phone || 'N/A'}
+      `.trim()
+
+                await whatsappService.sendMessage(COURIER_NUMBER, cancelMsg)
+                    .catch(err => logger.error(`[DEADLINE] Courier cancellation notification failed for order ${order.order_number}:`, err.message))
+
+                logger.info(`[DEADLINE] Courier cancellation notification sent for order ${order.order_number}`)
             }
 
             logger.info(`Sent cancellation notifications for order ${order.order_number}`);

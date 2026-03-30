@@ -11,6 +11,14 @@ class WhatsAppService {
         this.isReady = false;
         this.qrCode = null;
         this.authFolder = path.join(process.cwd(), 'baileys_auth_info');
+        this.messageQueues = new Map();
+        this.MAX_QUEUE_SIZE = 500;
+
+        // Configuration (override via env)
+        this.DROPOFF_LOCATION = process.env.DROPOFF_LOCATION || 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32';
+        this.COURIER_NUMBER = process.env.COURIER_WHATSAPP_NUMBER || '0748137819';
+        this.SELLER_DEADLINE_HRS = 48;
+        this.BUYER_PICKUP_HRS = 24;
     }
 
     async initialize() {
@@ -278,7 +286,7 @@ class WhatsAppService {
 `.trim();
         }
 
-        let instructionText = `⚠️ *ACTION REQUIRED:*\nPlease drop off items at Dynamic Mall, Shop SL 32 within 48 hours.\n\n⏰ *DEADLINE:* Order will be auto-cancelled if not delivered by deadline.\n💰 Payment will be released 24 hours after buyer pickup.`;
+        let instructionText = `⚠️ *ACTION REQUIRED:*\nPlease drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.\n\n⏰ *DEADLINE:* Order will be auto-cancelled if not delivered by deadline.\n💰 Payment will be released 24 hours after buyer pickup.`;
 
         if (isService) {
             instructionText = `⏰ *ACTION REQUIRED:*\nPlease visit the *Orders* tab in your seller dashboard to *Confirm* or *Cancel* this booking.\n\n🔒 Payment (KSh ${total.toLocaleString()}) is secured and will be released 24 hours after the booking date ends.`;
@@ -287,12 +295,12 @@ class WhatsAppService {
         } else {
             // Physical Product Logic
             if (seller?.physicalAddress) {
-                // Shop Collection Logic - No instruction needed, just notification
-                instructionText = ``;
+                // Shop Collection — buyer will come to seller's shop directly
+                instructionText = `✅ *ACTION:* Prepare the items for collection.\n\nThe buyer will visit your shop to pick up the order.\nYou will receive a notification once they collect it.`;
             } else {
                 // Logistics / Drop-off Logic
                 instructionText = `⚠️ *ACTION REQUIRED:*
-Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.
+Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.
 
 ⏰ *DEADLINE:* Order will be auto-cancelled if not delivered by deadline.
 💰 Payment will be released 24 hours after buyer pickup.`;
@@ -301,6 +309,12 @@ Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.
 
         const header = isDigital ? '🎉 *NEW DIGITAL ORDER!*' : '🎉 *NEW ORDER RECEIVED!*';
         const serviceReqs = order.service_requirements ? `\n\n📝 *REQUIREMENTS:*\n${order.service_requirements}` : '';
+
+        // Build sections — only include non-empty ones
+        const sections = [];
+        if (bookingInfo) sections.push(bookingInfo);
+        if (serviceReqs) sections.push(`📝 *REQUIREMENTS:*\n${order.service_requirements}`);
+        if (instructionText) sections.push(instructionText);
 
         const msg = `
 ${header}
@@ -313,9 +327,7 @@ ${header}
 
 📋 *Items:*
 ${itemsList}
-${serviceReqs}
-
-${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
+${sections.length > 0 ? '\n' + sections.join('\n\n') : ''}
         `.trim();
 
         logger.info(`[WHATSAPP-SERVICE] Message prepared, length: ${msg.length} chars`);
@@ -384,7 +396,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${instructionText}
 
         if (isService) {
             const serviceType = this.getServiceProviderType(order);
-            nextSteps = `⏰ * WHAT'S NEXT:*\n\n📍 *PROVIDER ADDRESS:*\n${seller?.shop_name || 'Service Provider'}\n${seller?.physicalAddress || 'Contact for location'}\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
+            nextSteps = `⏰ *WHAT'S NEXT:*\n\n📍 *PROVIDER ADDRESS:*\n${seller?.shop_name || 'Service Provider'}\n${seller?.physicalAddress || 'Contact for location'}\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
             nextSteps = `✅ *YOUR DOWNLOAD IS READY!*\n🔗 Access it here: ${dashboardUrl}`;
@@ -421,9 +433,9 @@ ${pickupInstructions}`;
             } else {
                 // Logistics/Drop-off Logic
                 nextSteps = `📍 *NEXT STEPS:*
-We'll notify you when it's ready for pickup at Dynamic Mall, Shop SL 32.
+We'll notify you when it's ready for pickup at ${this.DROPOFF_LOCATION}.
 
-⏰ *SELLER DEADLINE:* Seller has 48 hours to drop off your order.`;
+⏰ *SELLER DEADLINE:* Seller has ${this.SELLER_DEADLINE_HRS} hours to drop off your order.`;
             }
         }
 
@@ -523,7 +535,7 @@ Order #${order.orderNumber}`;
 📦 Order #${order.orderNumber} is confirmed.
 
 ⏰ *NEXT STEPS:*
-We are preparing your order for pickup. You'll be notified when it's ready at Dynamic Mall, Shop SL 32.`;
+We are preparing your order for pickup. You'll be notified when it's ready at ${this.DROPOFF_LOCATION}.`;
             }
         } else if (newStatus === 'DELIVERY_COMPLETE') {
             if (isService) {
@@ -542,7 +554,7 @@ Your ${serviceType} has marked the job as DONE.
                 msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
             } else {
                 const amount = parseFloat(order.totalAmount || 0);
-                const sellerAddr = updateData.seller?.physicalAddress || 'Dynamic Mall, Tom Mboya St, Shop SL 32';
+                const sellerAddr = updateData.seller?.physicalAddress || this.DROPOFF_LOCATION;
                 // Improve address formatting if it doesn't clearly state city/country
                 const locationText = sellerAddr.includes('Nairobi') ? sellerAddr : `${sellerAddr}\nNairobi, Kenya`;
 
@@ -555,7 +567,7 @@ Your ${serviceType} has marked the job as DONE.
 ${locationText}
 
 ⏰ *PICKUP DEADLINE:* 
-🚨 You have 24 hours to pick up or order will be auto-cancelled and refunded.
+🚨 You have ${this.BUYER_PICKUP_HRS} hours to pick up or order will be auto-cancelled and refunded.
 
 *IMPORTANT:* 
 • Inspect items BEFORE accepting
@@ -629,7 +641,7 @@ Funds will be held for 24 hours after job completion to ensure customer satisfac
 ✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
 
 📦 *ACTION REQUIRED:*
-Please drop off items at Dynamic Mall, Shop SL 32 within 48 hours.`;
+Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.`;
             }
         } else if (newStatus === 'COLLECTION_PENDING') {
             const amount = parseFloat(order.totalAmount || 0);
@@ -753,62 +765,114 @@ Your refund balance remains available for future withdrawal requests.
     }
 
     async sendLogisticsNotification(order, buyer, seller) {
-        // Skip logistics notification for Digital and Service orders
-        const productType = order.metadata?.product_type;
-        const isService = productType === 'service';
-        const isDigital = productType === 'digital';
+        // Skip for service, digital, and shop-pickup orders
+        const productType = order.metadata?.product_type
+        const isService = productType === 'service'
+        const isDigital = productType === 'digital'
 
         if (isService || isDigital) {
-            logger.info(`Skipping logistics notification for ${productType} order #${order.order_number}`);
-            return true; // Return success (skipped)
+            logger.info(`[LOGISTICS] Skipping courier notification — ${productType} order #${order.orderNumber || order.id}`)
+            return false
         }
 
-        // Skip logistics notification for products with physical shop address (Seller handles logistics/pickup)
+        // Skip if seller has their own shop (buyer collects directly)
         if (seller?.physicalAddress) {
-            logger.info(`Skipping logistics notification for order #${order.order_number} (Seller has physical shop)`);
-            return true; // Return success (skipped)
+            logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop, order #${order.orderNumber || order.id}`)
+            return false
         }
 
-        const logisticsNumber = '+254748137819';
+        const COURIER_NUMBER = this.COURIER_NUMBER
+        const DROPOFF_LOCATION = this.DROPOFF_LOCATION
 
-        let itemsList = '';
+        // Build items list from order.items (pre-fetched order_items rows)
+        let itemsList = 'No items listed'
         if (order.items && order.items.length > 0) {
-            itemsList = order.items.map((item, index) =>
-                `${index + 1}. ${item.name || item.product_name || 'Product'} - KSh ${parseFloat(item.price || item.product_price || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} x ${item.quantity}`
-            ).join('\n');
+            itemsList = order.items.map((item, i) => {
+                const name = item.product_name || item.name || 'Product'
+                const price = parseFloat(item.product_price || item.product_price_actual || item.price || 0)
+                const qty = parseInt(item.quantity || 1, 10)
+                return `${i + 1}. ${name} × ${qty} — KSh ${price.toLocaleString()}`
+            }).join('\n')
         }
 
-        const total = parseFloat(order.totalAmount || order.total_amount || 0);
+        const total = parseFloat(order.totalAmount || order.total_amount || 0)
+        const orderNum = order.orderNumber || order.order_number || order.id
+        const buyerName = buyer.fullName || buyer.full_name || 'N/A'
+        const buyerPhone = buyer.whatsapp_number || buyer.phone || 'N/A'
+        const buyerCity = buyer.city || buyer.location || 'N/A'
+        const shopName = seller.shop_name || seller.full_name || 'N/A'
+        const sellerPhone = seller.whatsapp_number || 'N/A'
 
         const message = `
-🚚 *NEW ORDER FOR LOGISTICS*
+🚚 *NEW DELIVERY ORDER*
 
-📦 *Order #${order.id || order.orderNumber}*
+📦 *Order #${orderNum}*
 💰 *Amount:* KSh ${total.toLocaleString()}
 
----
+━━━━━━━━━━━━━━━━━━━━
 👤 *BUYER DETAILS*
-Name: ${buyer.fullName || buyer.full_name || 'N/A'}
-Phone: ${buyer.whatsapp_number || buyer.whatsappNumber || buyer.phone || 'N/A'}
-Location: ${buyer.city ? `${buyer.city}, ${buyer.location || ''}` : 'N/A'}
+• Name:     ${buyerName}
+• Phone:    ${buyerPhone}
+• Location: ${buyerCity}
 
----
+━━━━━━━━━━━━━━━━━━━━
 🏪 *SELLER DETAILS*
-Name: ${seller.shop_name || seller.businessName || seller.full_name || 'N/A'}
-Phone: ${seller.whatsapp_number || seller.whatsappNumber || seller.phone || 'N/A'}
+• Shop:     ${shopName}
+• Phone:    ${sellerPhone}
 
----
-📦 *ORDER ITEMS*
-${itemsList || 'No items listed'}
+━━━━━━━━━━━━━━━━━━━━
+📋 *ORDER ITEMS*
+${itemsList}
 
----
-📍 *PICKUP/DROP-OFF LOCATION*
-Dynamic Mall, Tom Mboya St, Nairobi, Kenya | SL 32
+━━━━━━━━━━━━━━━━━━━━
+📍 *PICKUP / DROP-OFF POINT*
+${DROPOFF_LOCATION}
 
-Please coordinate pickup/delivery within 48 hours.
-        `.trim();
+⏰ Seller has ${this.SELLER_DEADLINE_HRS} hours to drop off.
+Please coordinate pickup and delivery to buyer within this window.
+    `.trim()
 
-        return this.sendMessage(logisticsNumber, message);
+        logger.info(`[LOGISTICS] Sending courier notification for order #${orderNum} to ${COURIER_NUMBER}`)
+        return this.sendMessage(COURIER_NUMBER, message)
+    }
+
+    async sendLogisticsCancellationNotification(order, buyer, seller, cancelledBy) {
+        const COURIER_NUMBER = this.COURIER_NUMBER
+
+        // Skip if this was a shop-pickup order (no logistics involved)
+        if (seller?.physicalAddress) return false
+
+        const orderNum = order.orderNumber || order.order_number || order.id
+        const buyerName = buyer?.fullName || buyer?.full_name || 'N/A'
+        const buyerPhone = buyer?.whatsapp_number || buyer?.phone || 'N/A'
+        const shopName = seller?.shop_name || seller?.full_name || 'N/A'
+        const sellerPhone = seller?.whatsapp_number || 'N/A'
+        const total = parseFloat(order.total_amount || order.totalAmount || 0)
+
+        const message = `
+❌ *ORDER CANCELLED — DELIVERY CANCELLED*
+
+📦 *Order #${orderNum}*
+💰 *Amount:* KSh ${total.toLocaleString()}
+🚫 *Cancelled by:* ${cancelledBy || 'System'}
+
+━━━━━━━━━━━━━━━━━━━━
+👤 *BUYER*
+• Name:  ${buyerName}
+• Phone: ${buyerPhone}
+
+🏪 *SELLER*
+• Shop:  ${shopName}
+• Phone: ${sellerPhone}
+
+━━━━━━━━━━━━━━━━━━━━
+⚠️ *ACTION REQUIRED:*
+Do NOT collect this order from the seller.
+If already collected, contact the seller to arrange return.
+    `.trim()
+
+        logger.info(`[LOGISTICS] Sending cancellation to courier for order #${orderNum}`)
+        return this.sendMessage(COURIER_NUMBER, message)
     }
 
     async sendBuyerOrderCancellationNotification(order, cancelledBy) {
