@@ -8,54 +8,36 @@ const { Pool } = pg;
 /** @type {import('pg').Pool} */
 let pool;
 
-if (process.env.DATABASE_URL) {
-  logger.info('Using connection string for database pool');
-  pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL.includes('render.com') || process.env.NODE_ENV === 'production'
-      ? { rejectUnauthorized: false }
-      : false,
-    connectionTimeoutMillis: 10000, // Fail fast if no connection available after 10s
-    idleTimeoutMillis: 30000,       // Keep idle connections open 30s to reduce reconnect overhead
-    max: process.env.NODE_ENV === 'production' ? 100 : 25, // Increased for production (300 concurrent users)
-    query_timeout: 30000,           // 30s query timeout
-    allowExitOnIdle: false,         // Keep pool alive between requests
-  });
-} else {
-  const requiredEnvVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+// Required environment variables for database
+const requiredEnvVars = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASSWORD'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 
-  if (missingVars.length > 0) {
-    const errorMsg = `❌ FATAL: Missing required environment variables: ${missingVars.join(', ')}`;
-    logger.error(errorMsg);
-    logger.error('Please ensure all required database configuration is set in your .env file');
-    throw new Error(errorMsg);
-  }
-
-  const dbConfig = {
-    host: process.env.DB_HOST,
-    port: parseInt(process.env.DB_PORT, 10) || 5432,
-    database: process.env.DB_NAME,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    connectionTimeoutMillis: 10000, // Fail fast if no connection available after 10s
-    idleTimeoutMillis: 30000,       // Keep idle connections open 30s to reduce reconnect overhead
-    max: process.env.NODE_ENV === 'production' ? 100 : 25,
-    query_timeout: 30000,           // 30s query timeout
-    allowExitOnIdle: false,         // Keep pool alive between requests
-  };
-
-  // Log database connection details (without password)
-  logger.info('Database connection details:', {
-    host: dbConfig.host,
-    port: dbConfig.port,
-    database: dbConfig.database,
-    user: dbConfig.user,
-    hasPassword: !!dbConfig.password,
-  });
-
-  pool = new Pool(dbConfig);
+if (missingVars.length > 0) {
+  const errorMsg = `❌ FATAL: Missing required environment variables: ${missingVars.join(', ')}`;
+  logger.error(errorMsg);
+  logger.error('In production, you must use individual DB_* variables.');
+  throw new Error(errorMsg);
 }
+
+const dbConfig = {
+  host: process.env.DB_HOST,
+  port: parseInt(process.env.DB_PORT, 10) || 5432,
+  database: process.env.DB_NAME,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  // SSL is required in production and for Render/Heroku Postgres
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 25,
+  query_timeout: 30000,
+  allowExitOnIdle: false,
+};
+
+// Log connection attempt details (masking password)
+logger.info(`Initializing database pool: ${dbConfig.user}@${dbConfig.host}:${dbConfig.port}/${dbConfig.database} (SSL: ${!!dbConfig.ssl})`);
+
+pool = new Pool(dbConfig);
 
 export { pool };
 
