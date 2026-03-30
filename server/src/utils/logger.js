@@ -13,7 +13,7 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
-import 'winston-daily-rotate-file';
+import DailyRotateFile from 'winston-daily-rotate-file';
 
 // Create a simple console logger
 const logger = winston.createLogger({
@@ -37,7 +37,7 @@ const logger = winston.createLogger({
     ] : []),
 
     // Daily Rotate File for errors
-    new winston.transports.DailyRotateFile({
+    new DailyRotateFile({
       filename: path.join(logsDir, 'error-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
@@ -46,7 +46,7 @@ const logger = winston.createLogger({
       level: 'error',
     }),
     // Daily Rotate File for all logs
-    new winston.transports.DailyRotateFile({
+    new DailyRotateFile({
       filename: path.join(logsDir, 'combined-%DATE%.log'),
       datePattern: 'YYYY-MM-DD',
       zippedArchive: true,
