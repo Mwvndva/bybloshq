@@ -66,6 +66,8 @@ const OPTIONAL_ENV_VARS = [
     'ALLOWED_ORIGINS',
     // Email — warn only if NONE of the email vars are configured
     // (checked separately below with smarter logic)
+    'COURIER_WHATSAPP_NUMBER',  // defaults to '0748137819'
+    'DROPOFF_LOCATION',         // defaults to 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32'
 ];
 
 /**
@@ -194,6 +196,9 @@ export function validateEnvironment() {
     console.log(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
     console.log(`🔗 Backend URL: ${process.env.BACKEND_URL}`);
     console.log(`💳 Payment Provider: Payd (M-Pesa)`);
+
+    const courierNum = process.env.COURIER_WHATSAPP_NUMBER || '0748137819'
+    console.log(`🚚 Courier WhatsApp: ${courierNum}`)
 
     if (process.env.REDIS_URL) {
         console.log('🔴 Redis: Configured (token blacklist enabled)');
