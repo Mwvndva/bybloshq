@@ -66,12 +66,34 @@ export const checkShopNameAvailability = async (req, res) => {
       });
     }
 
+    // Validation format rules (must match Zod schema in sellerValidation.js)
+    const shopNameRegex = /^[a-zA-Z0-9._-]+$/;
+    const isAllowedFormat = shopNameRegex.test(shopName) && shopName.length >= 3 && shopName.length <= 30;
+
+    if (!isAllowedFormat) {
+      let formatMessage = 'Invalid format';
+      if (shopName.length < 3) formatMessage = 'Shop name must be at least 3 characters';
+      if (shopName.length > 30) formatMessage = 'Shop name must be at most 30 characters';
+      if (!shopNameRegex.test(shopName)) formatMessage = 'Shop name can only contain letters, numbers, dots, dashes, and underscores';
+
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          available: false,
+          allowed: false,
+          message: formatMessage
+        }
+      });
+    }
+
     const isAvailable = await isShopNameAvailable(shopName);
 
     res.status(200).json({
       status: 'success',
       data: {
-        available: isAvailable
+        available: isAvailable,
+        allowed: true,
+        message: isAvailable ? 'Shop name is available' : 'Shop name is already taken'
       }
     });
   } catch (error) {
