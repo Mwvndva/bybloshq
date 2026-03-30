@@ -351,8 +351,6 @@ async function searchSellersInDB(city, location = null) {
       id, 
       full_name AS "fullName", 
       shop_name AS "shopName", 
-      email, 
-      whatsapp_number AS "whatsappNumber", 
       city, 
       location,
       theme,
@@ -586,103 +584,8 @@ export const getSellerById = async (req, res) => {
   }
 };
 
-/**
- * @desc    Create withdrawal request
- * @route   POST /api/sellers/withdrawal-request
- * @access  Private
- */
-export const createWithdrawalRequest = async (req, res) => {
-  const sellerId = req.user.sellerId;
-  const { amount, mpesaNumber, mpesaName } = req.body;
+// --- Withdrawal functions removed (centralized in withdrawal.controller.js) ---
 
-  try {
-    if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
-    if (!amount || !mpesaNumber || !mpesaName) return res.status(400).json({ status: 'error', message: 'Missing required fields' });
-
-    // Delegate to SellerService which now uses the centralized WithdrawalService
-    const request = await SellerService.createWithdrawalRequest(sellerId, amount, mpesaNumber, mpesaName);
-
-    res.status(201).json({
-      status: 'success',
-      data: sanitizeWithdrawalRequest({
-        ...request,
-        status: 'processing',
-        message: 'Withdrawal request submitted successfully. You will be notified once it is processed.'
-      })
-    });
-  } catch (serviceError) {
-    logger.error(`Withdrawal: SellerService failed for seller ${sellerId}: ${serviceError.message}`);
-
-    // Map service errors to appropriate responses
-    const status = serviceError.message.includes('Insufficient') ? 400 :
-      serviceError.message.includes('not found') ? 404 :
-        serviceError.message.includes('Minimum') || serviceError.message.includes('Maximum') ? 400 : 500;
-
-    res.status(status).json({
-      status: 'error',
-      message: serviceError.message
-    });
-  }
-};
-
-// @desc    Get seller's withdrawal requests
-// @route   GET /api/sellers/withdrawal-requests
-// @access  Private
-export const getWithdrawalRequests = async (req, res) => {
-  try {
-    const sellerId = req.user.sellerId;
-
-    if (!sellerId) {
-      return res.status(401).json({
-        status: 'error',
-        message: 'Authentication required'
-      });
-    }
-
-    // Get withdrawal requests for the seller
-    const result = await query(
-      `SELECT wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name, wr.status,
-              wr.created_at, wr.processed_at, wr.processed_by, wr.metadata,
-              wr.provider_reference,
-              s.full_name as seller_name, s.email as seller_email
-       FROM withdrawal_requests wr
-       JOIN sellers s ON wr.seller_id = s.id
-       WHERE wr.seller_id = $1
-       ORDER BY wr.created_at DESC`,
-      [sellerId]
-    );
-
-    const withdrawalRequests = result.rows.map(row => ({
-      id: row.id,
-      amount: row.amount,
-      mpesaNumber: row.mpesa_number,
-      mpesaName: row.mpesa_name,
-      status: row.status,
-      createdAt: row.created_at,
-      processedAt: row.processed_at,
-      processedBy: row.processed_by,
-      providerReference: row.provider_reference,
-      sellerName: row.seller_name,
-      sellerEmail: row.email,
-      // remarks = from Payd webhook callback; api_error = from pre-Payd failure
-      failureReason: row.status === 'failed' && row.metadata
-        ? (row.metadata.remarks || row.metadata.api_error || 'Unknown error')
-        : null
-    }));
-
-    res.status(200).json({
-      status: 'success',
-      data: withdrawalRequests
-    });
-  } catch (error) {
-    console.error('Error fetching withdrawal requests:', error);
-    res.status(500).json({
-      status: 'error',
-      message: 'Failed to fetch withdrawal requests',
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
-  }
-};
 // @desc    Initiate debt payment (STK Push)
 // @route   POST /api/sellers/debts/:debtId/pay
 // @access  Private

@@ -1,11 +1,12 @@
 import express from 'express';
 import * as adminController from '../controllers/admin.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
+import { authLimiter } from '../middleware/authRateLimiter.js';
 
 const router = express.Router();
 
 // Public route for admin login
-router.post('/login', adminController.adminLogin);
+router.post('/login', authLimiter, adminController.adminLogin);
 
 router.post('/logout', (req, res) => {
     const cookieOptions = {

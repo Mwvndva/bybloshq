@@ -70,7 +70,10 @@ class WhatsAppService {
                     this.isReady = false;
                     // Auto-reconnect if not strictly logged out
                     if (shouldReconnect) {
-                        this.initialize();
+                        logger.info('Reconnecting to WhatsApp...');
+                        this.initialize().catch(err => {
+                            logger.error('WhatsApp reconnection failed:', err.message);
+                        });
                     } else {
                         logger.error('❌ Logged out. Delete baileys_auth_info and restart to scan again.');
                     }

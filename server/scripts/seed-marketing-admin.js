@@ -12,6 +12,13 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
+import logger from '../src/utils/logger.js';
+
+if (process.env.NODE_ENV === 'production') {
+    logger.warn('⚠️ WARNING: Running seed-marketing-admin in PRODUCTION environment! This is NOT RECOMMENDED.');
+    // We don't exit here as there might be legitimate reasons, but we MUST warn.
+}
+
 dotenv.config({ path: path.join(__dirname, '../.env') })
 
 const MARKETING_EMAIL = 'adminmarketing@bybloshq.space'

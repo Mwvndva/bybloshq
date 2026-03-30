@@ -25,7 +25,7 @@ export const signToken = (id, role = 'buyer') => {
   return jwt.sign(
     { id, role },
     process.env.JWT_SECRET,
-    { expiresIn: '24h' } // 24 hours expiration instead of 5 minutes
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
 };
 

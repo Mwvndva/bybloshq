@@ -40,7 +40,8 @@ class Order {
       data.is_seller_initiated || false
     ];
 
-    const result = await client.query(query, values);
+    const executor = client || pool;
+    const result = await executor.query(query, values);
     return result.rows[0];
   }
 
@@ -59,7 +60,8 @@ class Order {
         FROM products
         WHERE id = ANY($1)
       `;
-      const productsResult = await client.query(productsQuery, [productIds]);
+      const executor = client || pool;
+      const productsResult = await executor.query(productsQuery, [productIds]);
       productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
     }
 
@@ -94,8 +96,9 @@ class Order {
       RETURNING *
     `;
 
+    const executor = client || pool;
     const flattenedValues = itemValues.flat();
-    const result = await client.query(itemQuery, flattenedValues);
+    const result = await executor.query(itemQuery, flattenedValues);
     return result.rows;
   }
 
@@ -504,7 +507,8 @@ class Order {
       WHERE id = $4
       RETURNING *
     `;
-    const { rows } = await client.query(query, [status, paymentStatus, paymentReference, orderId]);
+    const executor = client || pool;
+    const { rows } = await executor.query(query, [status, paymentStatus, paymentReference, orderId]);
     return rows[0];
   }
 
@@ -524,7 +528,8 @@ class Order {
       WHERE id = $3
       RETURNING *
     `;
-    const { rows } = await client.query(updateOrderQuery, [status, JSON.stringify(reason), orderId]);
+    const executor = client || pool;
+    const { rows } = await executor.query(updateOrderQuery, [status, JSON.stringify(reason), orderId]);
     return rows[0];
   }
 

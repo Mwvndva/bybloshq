@@ -1,3 +1,4 @@
+import fs from 'fs';
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import os from 'os';
@@ -94,15 +95,23 @@ class HealthCheckService {
      */
     async checkDisk() {
         try {
-            // Note: This is a simplified check
-            // For production, consider using a library like 'check-disk-space'
+            // Node 18+ support for statfs
+            const stats = await fs.promises.statfs(process.cwd());
+            const freeGB = (stats.bavail * stats.bsize) / (1024 * 1024 * 1024);
+            const totalGB = (stats.blocks * stats.bsize) / (1024 * 1024 * 1024);
+            const usagePercent = ((totalGB - freeGB) / totalGB * 100).toFixed(2);
+
             return {
-                status: 'healthy',
-                note: 'Disk monitoring not implemented (requires additional dependencies)'
+                status: usagePercent > 90 ? 'warning' : 'healthy',
+                free: `${freeGB.toFixed(2)}GB`,
+                total: `${totalGB.toFixed(2)}GB`,
+                usage: `${usagePercent}%`
             };
         } catch (error) {
+            logger.error('Disk check failed:', error);
             return {
-                status: 'unknown',
+                status: 'error',
+                message: 'Disk check failed',
                 error: error.message
             };
         }
