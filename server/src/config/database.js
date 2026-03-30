@@ -17,7 +17,7 @@ if (process.env.DATABASE_URL) {
       : false,
     connectionTimeoutMillis: 10000, // Fail fast if no connection available after 10s
     idleTimeoutMillis: 30000,       // Keep idle connections open 30s to reduce reconnect overhead
-    max: 25,                        // 25 connections for application use
+    max: process.env.NODE_ENV === 'production' ? 100 : 25, // Increased for production (300 concurrent users)
     query_timeout: 30000,           // 30s query timeout
     allowExitOnIdle: false,         // Keep pool alive between requests
   });
@@ -40,7 +40,7 @@ if (process.env.DATABASE_URL) {
     password: process.env.DB_PASSWORD,
     connectionTimeoutMillis: 10000, // Fail fast if no connection available after 10s
     idleTimeoutMillis: 30000,       // Keep idle connections open 30s to reduce reconnect overhead
-    max: 25,                        // 25 connections for application use
+    max: process.env.NODE_ENV === 'production' ? 100 : 25,
     query_timeout: 30000,           // 30s query timeout
     allowExitOnIdle: false,         // Keep pool alive between requests
   };

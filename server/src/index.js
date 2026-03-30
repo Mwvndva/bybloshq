@@ -5,6 +5,18 @@ import logger from './utils/logger.js';
 import { validateEnvironment } from './config/validateEnv.js';
 import loaders from './loaders/index.js';
 
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+  logger.error('UNCAUGHT EXCEPTION! 💥 Shutting down...', err);
+  process.exit(1);
+});
+
+// Handle unhandled rejections
+process.on('unhandledRejection', (err) => {
+  logger.error('UNHANDLED REJECTION! 💥 Shutting down...', err);
+  process.exit(1);
+});
+
 // Load environment variables
 dotenv.config();
 

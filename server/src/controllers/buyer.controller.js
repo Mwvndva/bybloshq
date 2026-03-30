@@ -449,17 +449,31 @@ export const requestRefund = async (req, res, next) => {
   }
 };
 
+import { z } from 'zod';
+
+const buyerInfoSchema = z.object({
+  fullName: z.string().min(2, 'Full name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  phone: z.string().optional(),
+  mobilePayment: z.string().optional(),
+  whatsappNumber: z.string().optional(),
+  city: z.string().min(2, 'City is required'),
+  location: z.string().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+  otpCode: z.union([z.string(), z.number()]).optional(),
+}).refine(data => data.phone || data.mobilePayment || data.whatsappNumber, {
+  message: "At least one contact method (phone, mobilePayment, or whatsappNumber) is required",
+  path: ["phone"]
+});
+
 export const saveBuyerInfo = async (req, res, next) => {
   try {
-    const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password, otpCode } = req.body;
+    // 1. Zod Validation
+    const validatedData = buyerInfoSchema.parse(req.body);
+    const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password, otpCode } = validatedData;
 
     // Use mobilePayment or whatsappNumber as fallback for phone if not explicitly provided
     const effectivePhone = phone || mobilePayment || whatsappNumber;
-
-    // Validate required fields
-    if (!fullName || !email || !effectivePhone || !password) {
-      return next(new AppError('Full name, email, phone, and password are required', 400));
-    }
 
     const redis = getRedisClient();
     const otpKey = `otp:buyer:${effectivePhone}`;

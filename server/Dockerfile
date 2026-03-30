@@ -31,14 +31,13 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
+# Install production dependencies
+RUN npm ci --only=production
 
 # Copy source code
 COPY . .
 
-# Build and migrate database
-RUN npm run build
+# Run migrations at runtime, not build time (optional, but build-time npm install is redundant)
 
 # Expose port
 EXPOSE 3002

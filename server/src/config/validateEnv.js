@@ -20,6 +20,8 @@ const REQUIRED_ENV_VARS = [
     // Application URLs
     'FRONTEND_URL',
     'BACKEND_URL',
+    'NODE_ENV',
+    'EMAIL_FROM_EMAIL',
 ];
 
 /**
@@ -30,30 +32,12 @@ const REQUIRED_ENV_VARS = [
 const PRODUCTION_REQUIRED_ENV_VARS = [
     // Needed to receive Payd webhook callbacks
     'PAYD_CALLBACK_URL',
-    // Needed to encrypt/decrypt .bybx digital product files
-    'DRM_MASTER_KEY',
     // Cloudinary (image uploads)
     'CLOUDINARY_CLOUD_NAME',
     'CLOUDINARY_API_KEY',
     'CLOUDINARY_API_SECRET',
-    // CSRF Protection
-    'CSRF_SECRET',
 ];
 
-/**
- * Validate DRM_MASTER_KEY format (64 hex characters = 32 bytes)
- */
-function validateDrmKey() {
-    if (process.env.DRM_MASTER_KEY) {
-        const hexRegex = /^[0-9a-fA-F]{64}$/;
-        if (!hexRegex.test(process.env.DRM_MASTER_KEY)) {
-            console.error('❌ CRITICAL: DRM_MASTER_KEY must be a 64-character hex string (32 bytes)');
-            console.error('   Generate with: openssl rand -hex 32');
-            process.exit(1);
-        }
-        console.log('✅ DRM: Master key format validated (64 hex chars)');
-    }
-}
 
 /**
  * Optional Environment Variables
@@ -76,7 +60,6 @@ const OPTIONAL_ENV_VARS = [
  */
 export function validateEnvironment() {
     console.log('\n🔍 Validating environment configuration...\n');
-    validateDrmKey();
 
     // ── Database: accept either DATABASE_URL or individual DB_* vars ──────────
     const hasDbUrl = !!process.env.DATABASE_URL;
@@ -120,7 +103,7 @@ export function validateEnvironment() {
         } else {
             console.warn('⚠️  WARNING: Missing production-required variables (non-fatal in development):');
             missingProd.forEach(v => console.warn(`   - ${v}`));
-            console.warn('   Payments, image uploads, and DRM will not work until these are set.\n');
+            console.warn('   Payments and image uploads will not work until these are set.\n');
         }
     }
 

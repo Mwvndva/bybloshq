@@ -471,45 +471,57 @@ class OrderService {
             shop_name: fullOrder.seller_name // fallback
           };
 
-          // Notify Buyer "You cancelled"
-          whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Buyer')
-            .catch(err => logger.error('Error sending buyer cancellation notification:', err));
+          // Prepare notification calls
+          const notificationPromises = [];
 
-          // Notify Seller "Buyer cancelled"
-          whatsappService.sendSellerOrderCancellationNotification(orderData, seller, 'Buyer')
-            .catch(err => logger.error('Error sending seller cancellation notification:', err));
+          // 1. Notify Buyer "You cancelled"
+          try {
+            await whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Buyer');
+          } catch (err) {
+            logger.error('Error sending buyer cancellation notification:', err);
+          }
 
-          // Notify courier if this was a logistics (delivery) order
-          // Courier needs to know to NOT collect or to return items if already picked up
-          const cancelledProductType = fullOrder.metadata?.product_type
+          // 2. Notify Seller "Buyer cancelled"
+          try {
+            await whatsappService.sendSellerOrderCancellationNotification(orderData, seller, 'Buyer');
+          } catch (err) {
+            logger.error('Error sending seller cancellation notification:', err);
+          }
+
+          // 3. Notify courier if this was a logistics (delivery) order
+          const cancelledProductType = fullOrder.metadata?.product_type;
           const wasDeliveryOrder = cancelledProductType !== 'service' &&
             cancelledProductType !== 'digital' &&
-            !fullOrder.seller_address  // no physical shop = was using logistics
+            !fullOrder.seller_address;
 
           if (wasDeliveryOrder) {
-            const buyerForCancel = {
-              fullName: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-              whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-              phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual
+            try {
+              const buyerForCancel = {
+                fullName: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+                whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+                phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual
+              };
+              const sellerForCancel = {
+                shop_name: fullOrder.seller_name,
+                whatsapp_number: fullOrder.seller_phone,
+                physicalAddress: fullOrder.seller_address || null
+              };
+              const orderForCancel = {
+                id: fullOrder.id,
+                orderNumber: fullOrder.order_number || fullOrder.id,
+                total_amount: fullOrder.total_amount,
+                items: itemsResult.rows
+              };
+              await whatsappService.sendLogisticsCancellationNotification(
+                orderForCancel, buyerForCancel, sellerForCancel, 'Buyer'
+              );
+            } catch (err) {
+              logger.error('Error sending logistics cancellation notification:', err);
             }
-            const sellerForCancel = {
-              shop_name: fullOrder.seller_name,
-              whatsapp_number: fullOrder.seller_phone,
-              physicalAddress: fullOrder.seller_address || null
-            }
-            const orderForCancel = {
-              id: fullOrder.id,
-              orderNumber: fullOrder.order_number || fullOrder.id,
-              total_amount: fullOrder.total_amount,
-              items: itemsResult.rows  // already fetched above in the notification block
-            }
-            whatsappService.sendLogisticsCancellationNotification(
-              orderForCancel, buyerForCancel, sellerForCancel, 'Buyer'
-            ).catch(err => logger.error('Error sending logistics cancellation notification:', err))
           }
         }
       } catch (e) {
-        logger.error('Error sending cancellation notifications:', e);
+        logger.error('Critical error in cancellation notification block:', e);
       }
 
       return updatedOrder;

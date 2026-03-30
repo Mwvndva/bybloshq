@@ -185,15 +185,23 @@ export const getProduct = async (req, res) => {
 // Get all unique aesthetics
 export const getAesthetics = async (req, res) => {
   try {
+    const cacheKey = 'products:aesthetics';
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
+
     const result = await pool.query('SELECT DISTINCT aesthetic FROM products WHERE status = $1', ['available']);
     const aesthetics = result.rows.map(row => row.aesthetic).filter(Boolean);
 
-    res.status(200).json({
+    const responseData = {
       status: 'success',
       data: {
         aesthetics
       }
-    });
+    };
+
+    await cacheService.set(cacheKey, responseData, 600); // 10 mins cache
+
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching aesthetics:', error);
     res.status(500).json({
@@ -245,6 +253,10 @@ export const getSellerPublicInfo = async (req, res) => {
 // Get all active sellers with wishlist count
 export const getSellers = async (req, res) => {
   try {
+    const cacheKey = 'public:sellers:list';
+    const cachedData = await cacheService.get(cacheKey);
+    if (cachedData) return res.status(200).json(cachedData);
+
     const query = `
       SELECT 
         s.id, 
@@ -277,13 +289,17 @@ export const getSellers = async (req, res) => {
       createdAt: row.created_at
     }));
 
-    res.status(200).json({
+    const responseData = {
       status: 'success',
       results: sellers.length,
       data: {
         sellers
       }
-    });
+    };
+
+    await cacheService.set(cacheKey, responseData, 300); // 5 mins cache
+
+    res.status(200).json(responseData);
   } catch (error) {
     console.error('Error fetching sellers:', error);
     res.status(500).json({

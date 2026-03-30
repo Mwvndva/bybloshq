@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import { xss } from 'express-xss-sanitizer';
 import hpp from 'hpp';
@@ -22,7 +23,9 @@ export default async (app) => {
     app.set('trust proxy', 1);
     app.use(requestId);
     app.use(helmet());
-    app.use(morgan('combined', { stream: logger.stream }));
+    app.use(compression());
+    const morganFormat = process.env.NODE_ENV === 'production' ? 'short' : 'combined';
+    app.use(morgan(morganFormat, { stream: logger.stream }));
 
     // 2. Static Files & Uploads Dir
     const uploadsDir = path.join(process.cwd(), 'uploads');
@@ -91,8 +94,7 @@ export default async (app) => {
 
             const isAllowed =
                 checkOrigin(allowedOrigins, origin) ||
-                (isLocal && checkOrigin(localOrigins, origin)) ||
-                origin.endsWith('.vercel.app');
+                (isLocal && checkOrigin(localOrigins, origin));
 
             if (isAllowed) return callback(null, true);
 
@@ -112,6 +114,22 @@ export default async (app) => {
 
     app.use(cors(corsOptions));
     app.options('*', cors(corsOptions));
+
+    // Update Helmet for CSP
+    app.use(
+        helmet({
+            contentSecurityPolicy: {
+                directives: {
+                    defaultSrc: ["'self'"],
+                    scriptSrc: ["'self'", "'unsafe-inline'"],
+                    styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+                    imgSrc: ["'self'", "data:", "https://res.cloudinary.com", "https://wa.me", "https://*.whatsapp.net"],
+                    fontSrc: ["'self'", "https://fonts.gstatic.com"],
+                    connectSrc: ["'self'"],
+                },
+            },
+        })
+    );
 
     // 4. CSRF Protection (initialized in src/utils/csrf.js)
 

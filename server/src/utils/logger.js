@@ -13,28 +13,45 @@ if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
+import 'winston-daily-rotate-file';
+
 // Create a simple console logger
 const logger = winston.createLogger({
   level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    winston.format.colorize({ all: true }),
-    winston.format.printf(
-      (info) => `${info.timestamp} ${info.level}: ${info.message}`
-    )
+    winston.format.errors({ stack: true }), // Include stack trace
+    winston.format.json() // Production logs should be JSON
   ),
   transports: [
     // Console transport - ONLY if NOT in production or if explicitly enabled
-    ...(process.env.NODE_ENV !== 'production' ? [new winston.transports.Console()] : []),
+    ...(process.env.NODE_ENV !== 'production' ? [
+      new winston.transports.Console({
+        format: winston.format.combine(
+          winston.format.colorize(),
+          winston.format.printf(({ timestamp, level, message, stack }) => {
+            return `${timestamp} ${level}: ${message}${stack ? `\n${stack}` : ''}`;
+          })
+        )
+      })
+    ] : []),
 
-    // Simple file transport for errors
-    new winston.transports.File({
-      filename: path.join(logsDir, 'error.log'),
+    // Daily Rotate File for errors
+    new winston.transports.DailyRotateFile({
+      filename: path.join(logsDir, 'error-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '14d',
       level: 'error',
     }),
-    // Combined log file
-    new winston.transports.File({
-      filename: path.join(logsDir, 'combined.log'),
+    // Daily Rotate File for all logs
+    new winston.transports.DailyRotateFile({
+      filename: path.join(logsDir, 'combined-%DATE%.log'),
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '14d',
     }),
   ],
   exitOnError: false, // Don't exit on handled exceptions

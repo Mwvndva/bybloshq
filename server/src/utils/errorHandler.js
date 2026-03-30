@@ -1,3 +1,5 @@
+import logger from './logger.js';
+
 // Custom error class for application errors
 export class AppError extends Error {
   constructor(message, statusCode) {
@@ -14,20 +16,21 @@ export class AppError extends Error {
 export const globalErrorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
+  const requestId = req.id || req.headers['x-request-id'] || 'N/A';
 
   if (process.env.NODE_ENV === 'development') {
-    console.error('ERROR 💥', err);
+    logger.error(`[Request ID: ${requestId}] ERROR 💥`, err);
 
     res.status(err.statusCode).json({
       status: err.status,
       error: err,
       message: err.message,
       stack: err.stack,
+      requestId
     });
   } else {
     // Production error handling
     let error = { ...err };
-    // Copy name and message as they might not enumerable
     error.message = err.message;
     error.name = err.name;
     error.stack = err.stack;
@@ -39,20 +42,28 @@ export const globalErrorHandler = (err, req, res, next) => {
     if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
     if (error.code === 'EBADCSRFTOKEN') error.isOperational = true;
 
+    // Log the error with Request ID
+    logger.error(`[Request ID: ${requestId}] ERROR 💥`, {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+      statusCode: error.statusCode
+    });
+
     // Operational, trusted error: send message to client
     if (error.isOperational) {
       res.status(error.statusCode).json({
         status: error.status,
         message: error.message,
+        requestId
       });
     } else {
       // Programming or other unknown error: don't leak error details
-      console.error('ERROR 💥', err); // Log original error
-
       // Send generic message
       res.status(500).json({
         status: 'error',
         message: 'Something went wrong!',
+        requestId
       });
     }
   }
