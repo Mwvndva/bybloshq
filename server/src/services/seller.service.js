@@ -16,56 +16,56 @@ class SellerService {
         const { fullName, shopName, email, phone, whatsappNumber, password, city, location, physicalAddress, latitude, longitude } = data;
         const whatsapp_number = whatsappNumber || phone;
 
-        // 1. Check if user already exists in unified users table
-        const existingUser = await User.findByEmail(email);
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        if (existingUser) {
-            // 2. User exists - verify password matches
-            const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
-            if (!isPasswordCorrect) {
-                throw new Error('An account with this email already exists. Please login or use the correct password to link this profile.');
-            }
+            // 1. Check if user already exists
+            const existingUserResult = await client.query('SELECT * FROM users WHERE email = $1 FOR UPDATE', [email.toLowerCase()]);
+            const existingUser = existingUserResult.rows[0];
 
-            // 3. Password correct - check if they already have a seller profile by user_id
-            const existingSeller = await SellerModel.findSellerByUserId(existingUser.id);
-            if (existingSeller) {
-                throw new Error('A seller account with this email already exists.');
-            }
+            if (existingUser) {
+                const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
+                if (!isPasswordCorrect) {
+                    throw new Error('An account with this email already exists. Please login or use the correct password.');
+                }
 
-            // 4. Link new seller profile to existing user identity
-            const result = await SellerModel.createSeller({
-                fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: existingUser.id
-            });
+                const existingSeller = await SellerModel.findSellerByUserId(existingUser.id);
+                if (existingSeller) {
+                    throw new Error('A seller account with this email already exists.');
+                }
 
-            // 4b. Add seller role to user_roles
-            try {
-                const roleResult = await query('SELECT id FROM roles WHERE slug = $1', ['seller']);
+                const seller = await SellerModel.createSeller({
+                    fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: existingUser.id
+                }, client);
+
+                // Add seller role
+                const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', ['seller']);
                 if (roleResult.rows[0]) {
-                    await query(
+                    await client.query(
                         'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                         [existingUser.id, roleResult.rows[0].id]
                     );
                 }
-            } catch (roleError) {
-                logger.error(`Error linking seller role to user ${existingUser.id}:`, roleError);
+
+                await client.query('COMMIT');
+                return seller;
             }
 
-            return result;
+            // 2. Create new User + Profile atomically
+            const newUser = await User.create({ email, password, role: 'seller', is_verified: true }, client);
+            const seller = await SellerModel.createSeller({
+                fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: newUser.id
+            }, client);
+
+            await client.query('COMMIT');
+            return seller;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
         }
-
-        // 5. No user exists - create BOTH user and profile
-        // Create user first
-        const newUser = await User.create({
-            email,
-            password,
-            role: 'seller',
-            is_verified: true
-        });
-
-        // Create seller profile linked to new user
-        return await SellerModel.createSeller({
-            fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: newUser.id
-        });
     }
 
     static async login(email, password) {

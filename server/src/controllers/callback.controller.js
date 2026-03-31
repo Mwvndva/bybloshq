@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import whatsappService from '../services/whatsapp.service.js';
 import payoutService from '../services/payout.service.js';
+import WithdrawalService from '../services/withdrawal.service.js';
 
 /**
  * handlePaydPayoutCallback
@@ -77,46 +78,14 @@ export const handlePaydPayoutCallback = async (req, res) => {
                 return;
             }
 
-            await client.query(
-                `UPDATE withdrawal_requests
-           SET status = $1,
-               processed_at = NOW(),
-               metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb
-           WHERE id = $3`,
-                [
-                    finalStatus,
-                    JSON.stringify({
-                        payd_callback: payload,
-                        mpesa_receipt: mpesaReceipt,
-                        remarks: payload.remarks,
-                    }),
-                    request.id
-                ]
-            );
+            const updated = await WithdrawalService.updateStatusWithSideEffects(request.id, finalStatus, {
+                remarks: payload.remarks,
+                mpesa_receipt: mpesaReceipt,
+                provider_reference: transactionReference
+            });
 
-            let newBalance = null;
-            if (!isSuccess) {
-                newBalance = await payoutService.refundToWallet(client, request);
-                logger.info(`[PAYOUT-CALLBACK] Failed — refunded KES ${request.amount}`);
-            } else {
-                logger.info(`[PAYOUT-CALLBACK] Completed — receipt: ${mpesaReceipt}`);
-            }
+            logger.info(`[PAYOUT-CALLBACK] Processed request ${request.id} using WithdrawalService. Status: ${finalStatus}`);
 
-            await client.query('COMMIT');
-
-            // WhatsApp notification (fire-and-forget)
-            if (request.entity_phone) {
-                payoutService.refundToWallet && whatsappService.notifySellerWithdrawalUpdate(
-                    request.entity_phone,
-                    {
-                        amount: request.amount,
-                        status: finalStatus,
-                        reference: mpesaReceipt || transactionReference,
-                        reason: !isSuccess ? payload.remarks : null,
-                        newBalance
-                    }
-                ).catch(err => logger.error('[PAYOUT-CALLBACK] WhatsApp notify failed:', err));
-            }
 
         } catch (error) {
             await client.query('ROLLBACK').catch(() => { });

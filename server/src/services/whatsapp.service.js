@@ -24,6 +24,17 @@ class WhatsAppService {
     async initialize() {
         logger.info('🔄 Initializing WhatsApp Client (Baileys)...');
 
+        // Block 14 Fix: Clean up existing socket before re-initializing to prevent leaks
+        if (this.sock) {
+            try {
+                this.sock.ev.removeAllListeners('connection.update');
+                this.sock.ev.removeAllListeners('creds.update');
+                this.sock.end(undefined);
+            } catch (e) {
+                logger.warn('Error closing existing socket during re-init:', e.message);
+            }
+        }
+
         try {
             const { state, saveCreds } = await useMultiFileAuthState(this.authFolder);
             const { version, isLatest } = await fetchLatestBaileysVersion();
@@ -71,9 +82,12 @@ class WhatsAppService {
                     // Auto-reconnect if not strictly logged out
                     if (shouldReconnect) {
                         logger.info('Reconnecting to WhatsApp...');
-                        this.initialize().catch(err => {
-                            logger.error('WhatsApp reconnection failed:', err.message);
-                        });
+                        // Delay reconnection to prevent rapid spinning
+                        setTimeout(() => {
+                            this.initialize().catch(err => {
+                                logger.error('WhatsApp reconnection failed:', err.message);
+                            });
+                        }, 5000);
                     } else {
                         logger.error('❌ Logged out. Delete baileys_auth_info and restart to scan again.');
                     }
@@ -944,11 +958,12 @@ Please disregard instructions for this order. If picked up, please return to sel
     async notifySellerWithdrawalUpdate(phone, withdrawalData) {
         if (!phone) return false;
 
-        const { amount, status, reference, reason, newBalance } = withdrawalData;
+        const { amount, status, reference, reason, newBalance, mpesaNumber, request_id } = withdrawalData;
 
         let header = '';
         let message = '';
         const fmtAmount = parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const idSuffix = request_id ? ` #${request_id}` : '';
 
         if (status === 'completed') {
             header = '✅ *WITHDRAWAL SUCCESSFUL*';
@@ -956,7 +971,8 @@ Please disregard instructions for this order. If picked up, please return to sel
 ${header}
 
 💰 *Amount:* KSh ${fmtAmount}
-🏦 *Ref:* ${reference}
+🏦 *M-Pesa:* ${mpesaNumber || 'Registered Number'}
+🏦 *Ref:* ${reference || 'N/A'}${idSuffix}
 
 Your funds have been successfully sent to your M-Pesa.
             `.trim();
@@ -966,7 +982,7 @@ Your funds have been successfully sent to your M-Pesa.
 ${header}
 
 💰 *Amount:* KSh ${fmtAmount}
-🏦 *Ref:* ${reference}
+🏦 *Ref:* ${reference || 'N/A'}${idSuffix}
 ⚠️ *Reason:* ${reason || 'Transaction failed'}
 
 The amount has been returned to your wallet.
@@ -978,7 +994,7 @@ The amount has been returned to your wallet.
 ${header}
 
 💰 *Amount:* KSh ${fmtAmount}
-🏦 *Ref:* ${reference}
+🏦 *M-Pesa:* ${mpesaNumber || 'Registered Number'}${idSuffix}
 
 Your request has been received and is being processed. You will be notified once completed.
             `.trim();

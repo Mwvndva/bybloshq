@@ -10,62 +10,56 @@ class BuyerService {
         const mobile_payment = mobilePayment || phone;
         const whatsapp_number = whatsappNumber || phone;
 
-        // 1. Check if user already exists in unified users table
-        const existingUser = await User.findByEmail(email);
+        const client = await (await import('../config/database.js')).pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        if (existingUser) {
-            // 2. User exists - verify password matches
-            const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
-            if (!isPasswordCorrect) {
-                throw new Error('An account with this email already exists. Please login or use the correct password to link this profile.');
-            }
+            // 1. Check if user already exists
+            const existingUserResult = await client.query('SELECT * FROM users WHERE email = $1 FOR UPDATE', [email.toLowerCase()]);
+            const existingUser = existingUserResult.rows[0];
 
-            // 3. Password correct - check if they already have a buyer profile by user_id
-            const existingBuyer = await Buyer.findByUserId(existingUser.id);
-            if (existingBuyer) {
-                throw new Error('A buyer account with this email already exists.');
-            }
+            if (existingUser) {
+                const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
+                if (!isPasswordCorrect) {
+                    throw new Error('An account with this email already exists. Please login or use the correct password.');
+                }
 
-            // 4. Link new buyer profile to existing user identity
-            const result = await Buyer.create({
-                fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
-            });
+                let buyer = await Buyer.findByUserId(existingUser.id);
+                if (buyer) {
+                    throw new Error('A buyer account with this email already exists.');
+                }
 
-            // 4b. Add buyer role to user_roles
-            try {
-                const { pool } = await import('../config/database.js');
-                const roleResult = await pool.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
+                buyer = await Buyer.create({
+                    fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
+                }, client);
+
+                // Ensure role exists in user_roles
+                const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
                 if (roleResult.rows[0]) {
-                    await pool.query(
+                    await client.query(
                         'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                         [existingUser.id, roleResult.rows[0].id]
                     );
                 }
-                // Also update the role in the users table if it's the primary role?
-                // The current auth middleware relies on u.role.
-                // If they are a seller, we might want to keep 'seller' as primary but allow 'buyer' actions.
-                // However, many parts of the app check u.role.
-                // For now, let's just ensure the role is in user_roles for AuthorizationService.
-            } catch (roleError) {
-                console.error(`Error linking buyer role to user ${existingUser.id}:`, roleError);
+
+                await client.query('COMMIT');
+                return buyer;
             }
 
-            return result;
+            // 2. Create new User + Profile atomically
+            const newUser = await User.create({ email, password, role: 'buyer', is_verified: true }, client);
+            const buyer = await Buyer.create({
+                fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id
+            }, client);
+
+            await client.query('COMMIT');
+            return buyer;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
         }
-
-        // 5. No user exists - create BOTH user and profile
-        // Create user first
-        const newUser = await User.create({
-            email,
-            password,
-            role: 'buyer',
-            is_verified: true
-        });
-
-        // Create buyer profile linked to new user
-        return await Buyer.create({
-            fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id
-        });
     }
 
     static async registerGuest(data) {
@@ -73,65 +67,53 @@ class BuyerService {
         const mobile_payment = mobilePayment || phone;
         const whatsapp_number = whatsappNumber || phone;
 
-        // 1. Check if user already exists
-        const existingUser = await User.findByEmail(email);
+        const client = await (await import('../config/database.js')).pool.connect();
+        try {
+            await client.query('BEGIN');
 
-        if (existingUser) {
-            // 2. verify password matches so we can auto-link/login
-            const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
-            if (!isPasswordCorrect) {
-                const error = new Error('An account with this email already exists. Please login or use the correct password.');
-                error.requiresLogin = true;
-                throw error;
-            }
+            const existingUserResult = await client.query('SELECT * FROM users WHERE email = $1 FOR UPDATE', [email.toLowerCase()]);
+            const existingUser = existingUserResult.rows[0];
 
-            // 3. Password correct - check/create buyer profile
-            let buyer = await Buyer.findByUserId(existingUser.id);
-            if (!buyer) {
-                buyer = await Buyer.create({
-                    fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
-                });
-            }
+            if (existingUser) {
+                const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
+                if (!isPasswordCorrect) {
+                    const error = new Error('An account with this email already exists. Please login or use the correct password.');
+                    error.requiresLogin = true;
+                    throw error;
+                }
 
-            // 3b. LINK ROLE (B-1 FIX)
-            try {
-                const { pool } = await import('../config/database.js');
-                const roleResult = await pool.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
+                let buyer = await Buyer.findByUserId(existingUser.id);
+                if (!buyer) {
+                    buyer = await Buyer.create({
+                        fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: existingUser.id
+                    }, client);
+                }
+
+                const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', ['buyer']);
                 if (roleResult.rows[0]) {
-                    await pool.query(
+                    await client.query(
                         'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
                         [existingUser.id, roleResult.rows[0].id]
                     );
                 }
-            } catch (roleError) {
-                console.error(`Error linking buyer role to user ${existingUser.id}:`, roleError);
+
+                await client.query('COMMIT');
+                return { buyer };
             }
 
+            const newUser = await User.create({ email, password, role: 'buyer', is_verified: true }, client);
+            const buyer = await Buyer.create({
+                fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id
+            }, client);
+
+            await client.query('COMMIT');
             return { buyer };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
         }
-
-        // 4. Create User record (New user)
-        const newUser = await User.create({
-            email,
-            password: password,
-            role: 'buyer',
-            is_verified: true
-        });
-
-        // 5. Create Buyer record
-        const buyer = await Buyer.create({
-            fullName,
-            email,
-            mobilePayment: mobile_payment,
-            whatsappNumber: whatsapp_number,
-            city,
-            location,
-            userId: newUser.id
-        });
-
-        return {
-            buyer
-        };
     }
 
     static async login(email, password) {

@@ -21,6 +21,77 @@ import whatsappService from './whatsapp.service.js';
 class WithdrawalService {
 
     /**
+     * Update withdrawal status with side effects (refunds, notifications)
+     */
+    async updateStatusWithSideEffects(requestId, newStatus, { remarks = null, provider_reference = null, mpesa_receipt = null } = {}) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const { rows: [request] } = await client.query(
+                `SELECT wr.*, s.whatsapp_number as entity_phone 
+                 FROM withdrawal_requests wr 
+                 LEFT JOIN sellers s ON wr.seller_id = s.id
+                 WHERE wr.id = $1 FOR UPDATE OF wr`,
+                [requestId]
+            );
+
+            if (!request) throw new Error('Withdrawal request not found');
+
+            // Prevent re-processing terminal states
+            if (['completed', 'failed'].includes(request.status)) {
+                await client.query('ROLLBACK');
+                return request;
+            }
+
+            const metadataUpdate = {
+                payd_callback: { remarks, third_party_trans_id: mpesa_receipt },
+                mpesa_receipt,
+                remarks
+            };
+
+            await client.query(
+                `UPDATE withdrawal_requests 
+                 SET status = $1, 
+                     processed_at = NOW(),
+                     provider_reference = COALESCE($2, provider_reference),
+                     metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb
+                 WHERE id = $4`,
+                [newStatus, provider_reference, JSON.stringify(metadataUpdate), requestId]
+            );
+
+            let newBalance = null;
+            if (newStatus === 'failed') {
+                newBalance = await payoutService.refundToWallet(client, request);
+                logger.info(`[WithdrawalService] Request ${requestId} failed. Refunded KES ${request.amount} to seller ${request.seller_id}`);
+            }
+
+            await client.query('COMMIT');
+
+            // Notify via WhatsApp
+            if (request.entity_phone) {
+                whatsappService.notifySellerWithdrawalUpdate(request.entity_phone, {
+                    amount: request.amount,
+                    status: newStatus,
+                    reference: mpesa_receipt || provider_reference || request.provider_reference || `REQ-${request.id}`,
+                    reason: remarks,
+                    newBalance,
+                    mpesaNumber: request.mpesa_number,
+                    request_id: request.id
+                }).catch(err => logger.error(`[WithdrawalService] WhatsApp notification failed for request ${requestId}:`, err));
+            }
+
+            return { ...request, status: newStatus };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            logger.error(`[WithdrawalService] updateStatusWithSideEffects failed for ${requestId}:`, error.message);
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
      * Create and initiate a withdrawal request.
      *
      * @param {Object} params

@@ -849,14 +849,27 @@ export class PaymentService {
 
         // If payment is successful and has buyer info, generate auto-login token
         let autoLoginToken = null;
-        if ((payment.status === 'completed' || payment.status === 'success') && payment.buyer_id) {
+        const paymentMeta = payment.metadata || {};
+        const buyerProfileId = paymentMeta.buyer_id; // buyers.id stored in metadata
+
+        if ((payment.status === 'completed' || payment.status === 'success') && buyerProfileId) {
             try {
-                const { signAutoLoginToken } = await import('../utils/jwt.js');
-                autoLoginToken = signAutoLoginToken(payment.buyer_id, 'buyer', 'payment_success');
-                logger.info(`[PaymentService] Generated auto-login token for buyer ${payment.buyer_id}`);
+                // Look up the users.id from buyers.id (signAutoLoginToken needs users.id)
+                const { rows: buyerRows } = await pool.query(
+                    'SELECT user_id FROM buyers WHERE id = $1',
+                    [buyerProfileId]
+                );
+                const userId = buyerRows[0]?.user_id;
+
+                if (userId) {
+                    const { signAutoLoginToken } = await import('../utils/jwt.js');
+                    autoLoginToken = signAutoLoginToken(userId, 'buyer', 'payment_success');
+                    logger.info(`[PaymentService] Generated auto-login token for buyer ${buyerProfileId} (user ${userId})`);
+                } else {
+                    logger.warn(`[PaymentService] Buyer ${buyerProfileId} has no user_id — cannot generate auto-login token`);
+                }
             } catch (error) {
                 logger.error('[PaymentService] Failed to generate auto-login token:', error);
-                // Don't fail the request if token generation fails
             }
         }
 
@@ -1425,9 +1438,12 @@ export class PaymentService {
             shippingAddress, // Pass the resolved address
             buyerLocation: payload.metadata?.buyer_location, // Extract from metadata if provided by frontend
             metadata: {
-                ...(payload.metadata || {}),
                 product_type: product.product_type,
                 is_digital: product.is_digital,
+                product_id: productId,
+                product_name: product.name,
+                customer_name: customerName,
+                buyer_location: payload.metadata?.buyer_location,
                 items: [{
                     productId: productId,
                     name: product.name,
@@ -1459,6 +1475,7 @@ export class PaymentService {
                 product_id: productId,
                 seller_id: sellerId,
                 product_type: product.product_type,
+                buyer_id: buyerId, // buyers.id, may be null for anonymous
                 narration: narration || narrative || `Payment for ${productName}`
             }
         };

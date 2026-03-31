@@ -23,10 +23,21 @@ function validateWithdrawalBody(body) {
     if (typeof mpesaName !== 'string' || !mpesaName.trim()) {
         return 'mpesaName must be a non-empty string';
     }
+
+    // Validate proper Kenyan mobile number format (0XXXXXXXXX — 10 digits, 07XX or 01XX)
     const digits = String(mpesaNumber).replace(/\D/g, '');
-    if (digits.length < 9 || digits.length > 12) {
-        return 'mpesaNumber does not look like a valid Kenyan phone number';
+    let normalized = digits;
+
+    // Normalize: 254XXXXXXXXX → 0XXXXXXXXX
+    if (normalized.startsWith('254') && normalized.length === 12) {
+        normalized = '0' + normalized.substring(3);
     }
+
+    // Must be 10 digits starting with 07 or 01
+    if (!/^0[17]\d{8}$/.test(normalized)) {
+        return 'mpesaNumber must be a valid Kenyan mobile number (e.g. 0712345678 or 0112345678)';
+    }
+
     return null;
 }
 

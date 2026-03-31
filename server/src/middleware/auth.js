@@ -62,6 +62,18 @@ export const protect = async (req, res, next) => {
       return next(new AppError('You are not logged in! Please log in to get access.', 401));
     }
 
+    // Check token blacklist BEFORE verifying (fast path — Redis lookup)
+    try {
+      const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
+      const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
+      if (isBlacklisted) {
+        return next(new AppError('Your session has been invalidated. Please log in again.', 401));
+      }
+    } catch (blacklistErr) {
+      // Redis unavailable — fall through (fail open, log the issue)
+      logger.warn('[AUTH] Token blacklist check failed (Redis unavailable):', blacklistErr.message);
+    }
+
     // 2) Verify token
     const decoded = verifyToken(token);
 
@@ -94,7 +106,7 @@ export const protect = async (req, res, next) => {
         userQuery = `
           SELECT u.*, u.id as profile_id
           FROM users u 
-          WHERE u.id = $1 AND u.role = 'admin'
+          WHERE u.id = $1 AND u.role = 'admin' AND u.is_active = true
         `;
         break;
       case 'buyer':

@@ -4,12 +4,11 @@ import User from '../models/user.model.js';
 import { AppError } from '../utils/errorHandler.js';
 import { sanitizeBuyer, sanitizeOrder } from '../utils/sanitize.js';
 import { pool } from '../config/database.js';
-import { getRedisClient } from '../config/redis.js';
 import logger from '../utils/logger.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../utils/cookie.utils.js';
-import { signToken } from '../utils/jwt.js';
+import { signToken, verifyToken, getTokenFromRequest } from '../utils/jwt.js';
 import OrderService from "../services/order.service.js";
 import OrderModel from "../models/order.model.js";
 import { OrderStatus } from "../constants/enums.js";
@@ -44,7 +43,20 @@ const createSendToken = (data, statusCode, req, res, next) => {
   });
 };
 
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
+  // Blacklist the current token so it can't be reused
+  const token = getTokenFromRequest(req);
+  if (token) {
+    try {
+      const decoded = verifyToken(token);
+      const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
+      await tokenBlacklist.addToken(token, decoded.exp);
+    } catch (err) {
+      // Token may be invalid/expired — that's fine, just clear cookies
+      logger.debug('[LOGOUT] Could not blacklist token:', err.message);
+    }
+  }
+
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -52,8 +64,8 @@ export const logout = (req, res) => {
     expires: new Date(0),
     path: '/'
   };
-  res.cookie('jwt', '', cookieOptions);   // seller/buyer cookie
-  res.cookie('token', '', cookieOptions);   // admin cookie
+  res.cookie('jwt', '', cookieOptions);
+  res.cookie('token', '', cookieOptions);
   res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
@@ -460,7 +472,6 @@ const buyerInfoSchema = z.object({
   city: z.string().min(2, 'City is required'),
   location: z.string().optional(),
   password: z.string().min(6, 'Password must be at least 6 characters'),
-  otpCode: z.union([z.string(), z.number()]).optional(),
 }).refine(data => data.phone || data.mobilePayment || data.whatsappNumber, {
   message: "At least one contact method (phone, mobilePayment, or whatsappNumber) is required",
   path: ["phone"]
@@ -468,44 +479,19 @@ const buyerInfoSchema = z.object({
 
 export const saveBuyerInfo = async (req, res, next) => {
   try {
-    // 1. Zod Validation
+    // 1. Validate body
     const validatedData = buyerInfoSchema.parse(req.body);
-    const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password, otpCode } = validatedData;
+    const {
+      fullName, email, phone, mobilePayment, whatsappNumber,
+      city, location, password
+    } = validatedData;
 
-    // Use mobilePayment or whatsappNumber as fallback for phone if not explicitly provided
     const effectivePhone = phone || mobilePayment || whatsappNumber;
 
-    const redis = getRedisClient();
-    const otpKey = `otp:buyer:${effectivePhone}`;
-
-    // If OTP provided — verify it
-    if (otpCode) {
-      const storedOtp = await redis.get(otpKey);
-      if (!storedOtp || storedOtp !== String(otpCode)) {
-        return res.status(400).json({ status: 'error', message: 'Invalid or expired OTP.' });
-      }
-      // OTP verified — clear it and proceed
-      await redis.del(otpKey);
-    } else {
-      // Generate and send OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      await redis.setex(otpKey, 300, otp);
-
-      const waService = (await import('../services/whatsapp.service.js')).default;
-      await waService.sendMessage(effectivePhone,
-        `🔐 Your Byblos verification code is: *${otp}*\n\nThis code expires in 5 minutes. Do not share it with anyone.`
-      ).catch(err => logger.error(`[OTP] WhatsApp send failed to ${effectivePhone}:`, err.message));
-
-      return res.status(200).json({
-        status: 'otp_sent',
-        message: 'Verification code sent to your WhatsApp. Enter it to complete registration.',
-        phone: effectivePhone.replace(/(\d{3})\d{4}(\d{3})/, '$1****$2')
-      });
-    }
-
+    // 2. Register buyer immediately (no OTP step)
+    let result;
     try {
-      // Delegate to service (now handles both registration and auto-link for existing users)
-      const result = await BuyerService.registerGuest({
+      result = await BuyerService.registerGuest({
         fullName,
         email,
         phone: normalizePhoneNumber(effectivePhone),
@@ -515,45 +501,86 @@ export const saveBuyerInfo = async (req, res, next) => {
         location,
         password
       });
-
-      const buyer = result.buyer;
-      const token = BuyerService.signToken(buyer);
-
-      const cookieOptions = {
-        expires: new Date(Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000),
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/'
-      };
-
-      res.cookie('jwt', token, cookieOptions);
-
-      return res.status(200).json({
-        status: 'success',
-        data: {
-          buyer: sanitizeBuyer(buyer)
-        }
-      });
-
     } catch (err) {
-      // If the service flagged that we definitely need login (e.g. password mismatch)
+      // If the service flagged that we need login (password mismatch on existing account)
       if (err.requiresLogin) {
         return res.status(200).json({
           status: 'success',
           message: err.message,
-          data: {
-            requiresLogin: true,
-            exists: true,
-            buyer: { email }
-          }
+          data: { requiresLogin: true, exists: true, buyer: { email } }
         });
       }
-      throw err; // Pass to outer catch
+      throw err;
     }
+
+    const buyer = result.buyer;
+    const token = BuyerService.signToken(buyer);
+
+    // 3. Set auth cookie immediately
+    const cookieOptions = {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/'
+    };
+    res.cookie('jwt', token, cookieOptions);
+
+    // 4. Return buyer data — frontend can now immediately call initiate-product
+    return res.status(200).json({
+      status: 'success',
+      data: { buyer: sanitizeBuyer(buyer) }
+    });
 
   } catch (error) {
     logger.error('Error in saveBuyerInfo:', error);
+    next(error);
+  }
+};
+
+export const autoLogin = async (req, res, next) => {
+  try {
+    const { autoLoginToken } = req.body;
+
+    if (!autoLoginToken) {
+      return next(new AppError('Auto-login token is required', 400));
+    }
+
+    // Verify the token
+    let decoded;
+    try {
+      decoded = verifyToken(autoLoginToken);
+    } catch (err) {
+      return next(new AppError('Invalid or expired auto-login token', 401));
+    }
+
+    // Verify it's actually an auto-login token (not a regular JWT)
+    if (!decoded.autoLogin || decoded.purpose !== 'payment_success') {
+      return next(new AppError('Invalid token type', 401));
+    }
+
+    // Fetch the buyer profile
+    const buyer = await Buyer.findByUserId(decoded.id);
+    if (!buyer) {
+      return next(new AppError('Buyer profile not found', 404));
+    }
+
+    // Set the JWT as an HTTP-only cookie (same as regular login)
+    setAuthCookie(res, autoLoginToken);
+
+    logger.info(`[AUTO-LOGIN] Buyer ${buyer.id} auto-logged in after payment success`);
+
+    return res.status(200).json({
+      status: 'success',
+      message: 'Logged in successfully',
+      data: {
+        buyer: sanitizeBuyer(buyer),
+        redirectTo: '/buyer/orders' // tells frontend where to go
+      }
+    });
+
+  } catch (error) {
+    logger.error('Error in autoLogin:', error);
     next(error);
   }
 };

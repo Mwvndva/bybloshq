@@ -17,15 +17,29 @@ const store = new RedisStore({
 
 export const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 10, // Limit each IP to 10 requests per `window` (here, per 15 minutes)
-    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-    store: store, // Use Redis store
+    max: 5, // Reduced from 10 to match rateLimiting.js
+    standardHeaders: true,
+    legacyHeaders: false,
+    store: store,
     message: {
         status: 'fail',
         message: 'Too many login attempts, please try again in 15 minutes',
     },
     keyGenerator: (req) => {
-        return req.ip;
+        // Use IP + email for precise tracking
+        const email = req.body?.email || '';
+        return `auth:${req.ip}:${email}`;
     },
+    handler: (req, res) => {
+        logger.warn('[RATE-LIMIT] Auth rate limit exceeded', {
+            ip: req.ip,
+            email: req.body?.email,
+            path: req.path
+        });
+        res.status(429).json({
+            status: 'fail',
+            message: 'Too many login attempts, please try again in 15 minutes',
+            retryAfter: 900
+        });
+    }
 });

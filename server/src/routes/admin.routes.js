@@ -2,13 +2,28 @@ import express from 'express';
 import * as adminController from '../controllers/admin.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
+import { getTokenFromRequest, verifyToken } from '../utils/jwt.js';
+import logger from '../utils/logger.js';
 
 const router = express.Router();
 
 // Public route for admin login
 router.post('/login', authLimiter, adminController.adminLogin);
 
-router.post('/logout', (req, res) => {
+router.post('/logout', async (req, res) => {
+    // Blacklist the current token so it can't be reused
+    const token = getTokenFromRequest(req);
+    if (token) {
+        try {
+            const decoded = verifyToken(token);
+            const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
+            await tokenBlacklist.addToken(token, decoded.exp);
+        } catch (err) {
+            // Token may be invalid/expired — that's fine, just clear cookies
+            logger.debug('[LOGOUT] Could not blacklist admin token:', err.message);
+        }
+    }
+
     const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
