@@ -21,6 +21,8 @@ export const getCsrfToken = (req, res) => {
             maxAge: 24 * 60 * 60 * 1000 // 24 hours
         });
 
+        logger.info(`[CSRF] Issued new token: ${token.substring(0, 8)}...`);
+
         res.status(200).json({
             status: 'success',
             data: {
