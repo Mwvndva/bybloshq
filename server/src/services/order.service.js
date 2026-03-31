@@ -286,10 +286,11 @@ class OrderService {
 
       // 3. Validate Status Transition
       const validTransitions = {
-        [OrderStatus.PENDING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED],
-        [OrderStatus.SERVICE_PENDING]: [OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
-        [OrderStatus.DELIVERY_PENDING]: [OrderStatus.DELIVERY_COMPLETE, OrderStatus.CANCELLED],
-        [OrderStatus.COLLECTION_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
+        [OrderStatus.PENDING]: [OrderStatus.PROCESSING, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.CANCELLED],
+        [OrderStatus.PROCESSING]: [OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.CONFIRMED, OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+        [OrderStatus.SERVICE_PENDING]: [OrderStatus.PROCESSING, OrderStatus.CONFIRMED, OrderStatus.CANCELLED, OrderStatus.COMPLETED],
+        [OrderStatus.DELIVERY_PENDING]: [OrderStatus.PROCESSING, OrderStatus.DELIVERY_COMPLETE, OrderStatus.CANCELLED],
+        [OrderStatus.COLLECTION_PENDING]: [OrderStatus.PROCESSING, OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
         [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.CLIENT_PAYMENT_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Client orders can only complete or cancel
@@ -1068,15 +1069,12 @@ class OrderService {
 
       // Allow if shipped, delivered, pending, or confirmed (for services)
       const allowedStatuses = [
-        OrderStatus.SHIPPED,
-        OrderStatus.DELIVERED,
         OrderStatus.PENDING,
         OrderStatus.DELIVERY_PENDING,
-        OrderStatus.DELIVERY_COMPLETE, // Added to fix Problem 3
-        OrderStatus.CONFIRMED,        // Service orders that seller confirmed
-        OrderStatus.SERVICE_PENDING,  // Service orders awaiting confirmation
-        OrderStatus.COLLECTION_PENDING, // Physical orders awaiting pickup
-        'delivery_pending'
+        OrderStatus.DELIVERY_COMPLETE,
+        OrderStatus.CONFIRMED,
+        OrderStatus.SERVICE_PENDING,
+        OrderStatus.COLLECTION_PENDING
       ];
       if (!allowedStatuses.includes(order.status)) {
         throw new Error(`Cannot confirm receipt for order in ${order.status} status`);

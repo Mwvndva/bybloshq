@@ -5,6 +5,7 @@
  */
 export const OrderStatus = {
     PENDING: 'PENDING',
+    PROCESSING: 'PROCESSING', // Added to match DB
     SERVICE_PENDING: 'SERVICE_PENDING',
     DELIVERY_PENDING: 'DELIVERY_PENDING',
     COLLECTION_PENDING: 'COLLECTION_PENDING', // Waiting for buyer pickup at shop
