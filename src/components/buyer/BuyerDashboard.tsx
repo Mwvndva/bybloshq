@@ -26,7 +26,7 @@ import {
   Search
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import buyerApi, { updateBuyerProfile } from '@/api/buyerApi';
+import buyerApi from '@/api/buyerApi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
@@ -44,7 +44,7 @@ import SellersGrid from '@/components/SellersGrid';
 function BuyerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useBuyerAuth();
+  const { user, logout, updateBuyerProfile } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const { toast } = useToast();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
@@ -68,6 +68,7 @@ function BuyerDashboard() {
   const [priceMin, setPriceMin] = useState<string>('');
   const [priceMax, setPriceMax] = useState<string>('');
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [fullName, setFullName] = useState<string>(user?.fullName || '');
   const [city, setCity] = useState<string>(user?.city || '');
   const [locationArea, setLocationArea] = useState<string>(user?.location || '');
   const [mobilePayment, setMobilePayment] = useState<string>(user?.mobilePayment || '');
@@ -112,10 +113,10 @@ function BuyerDashboard() {
   };
 
   const handleSaveProfile = async () => {
-    if (!city || !locationArea) {
+    if (!fullName || !city || !locationArea) {
       toast({
         title: "Missing Information",
-        description: "Please select both a city and a location area.",
+        description: "Full name, city, and location are required.",
         variant: "destructive"
       });
       return;
@@ -124,6 +125,7 @@ function BuyerDashboard() {
     setIsSavingProfile(true);
     try {
       await updateBuyerProfile({
+        fullName,
         city,
         location: locationArea,
         mobilePayment,
@@ -137,13 +139,9 @@ function BuyerDashboard() {
 
       // Update the filter city when profile is updated
       setFilterCity(city);
-
-      // Delay reload to allow toast to be seen and data to propagate
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
-    } catch (e) {
-      console.error('Failed to update profile', e);
+      setIsEditingProfile(false);
+    } catch (error) {
+      console.error('Failed to update profile', error);
       toast({
         title: "Update Failed",
         description: "There was a problem saving your profile. Please try again.",
@@ -518,7 +516,19 @@ function BuyerDashboard() {
                   <div className="grid grid-cols-1 gap-3 sm:gap-4">
                     <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
                       <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Full Name</label>
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.fullName || 'Not available'}</p>
+                      {isEditingProfile ? (
+                        <div className="mt-2">
+                          <Input
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Your full name"
+                            className="h-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 shadow-sm"
+                          />
+                        </div>
+                      ) : (
+                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.fullName || 'Not available'}</p>
+                      )}
                     </div>
                     <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
                       <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Email</label>
