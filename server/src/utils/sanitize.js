@@ -17,11 +17,11 @@ const pick = (obj, keys) => {
 
 export const sanitizeBuyer = (buyer) => {
     if (!buyer) return null;
-    const b = buyer.toObject ? buyer.toObject() : buyer;
+    const b = buyer.toJSON ? buyer.toJSON() : buyer;
 
     return {
         id: b.id,
-        name: b.fullName || b.full_name || b.name || '',
+        fullName: b.fullName || b.full_name || b.name || '',
         email: b.email,
         // Phone numbers shown masked — full numbers only needed in order flow, not profile display
         whatsappNumber: b.whatsappNumber || b.whatsapp_number || null,
@@ -39,20 +39,25 @@ export const sanitizeBuyer = (buyer) => {
 
 export const sanitizeSeller = (seller) => {
     if (!seller) return null;
-    const sellerObj = seller.toObject ? seller.toObject() : seller;
+    const sellerObj = seller.toJSON ? seller.toJSON() : seller;
 
-    // Owner-facing DTO: only what the dashboard UI needs to render
-    // NO coordinates, NO phone numbers, NO contact links
     return {
         id: sellerObj.id,
-        fullName: sellerObj.fullName || sellerObj.full_name,
-        shopName: sellerObj.shopName || sellerObj.shop_name,
-        email: sellerObj.email,           // Needed: displayed in seller settings page
+        fullName: sellerObj.fullName || sellerObj.full_name || '',
+        shopName: sellerObj.shopName || sellerObj.shop_name || '',
+        email: sellerObj.email,
+        whatsappNumber: sellerObj.whatsappNumber || sellerObj.whatsapp_number || sellerObj.phone || '',
         city: sellerObj.city,
         location: sellerObj.location,
+        physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
+        latitude: sellerObj.latitude ? parseFloat(sellerObj.latitude) : null,
+        longitude: sellerObj.longitude ? parseFloat(sellerObj.longitude) : null,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
         theme: sellerObj.theme,
-        hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address), // boolean only — not the address string
+        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
+        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
+        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
+        hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
         clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
         totalSales: parseFloat(sellerObj.totalSales || sellerObj.total_sales || 0),
     };

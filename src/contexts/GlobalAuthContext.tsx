@@ -26,6 +26,7 @@ interface BaseUser {
 export interface BuyerProfile extends BaseUser {
     fullName: string;
     phone: string;
+    whatsappNumber: string;
     mobilePayment: string;
     city?: string;
     location?: string;
@@ -668,7 +669,7 @@ export const useGlobalAuth = (): GlobalAuthContextType => {
 // ============================================================================
 
 export const useBuyerAuth = () => {
-    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword } = useGlobalAuth();
+    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
 
     return {
         user: user?.role === 'buyer' ? user.profile as BuyerProfile : null,
@@ -679,11 +680,12 @@ export const useBuyerAuth = () => {
         logout,
         forgotPassword: (email: string) => forgotPassword(email, 'buyer'),
         resetPassword: (token: string, newPassword: string) => resetPassword(token, newPassword, 'buyer'),
+        updateBuyerProfile: (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer'),
     };
 };
 
 export const useSellerAuth = () => {
-    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword } = useGlobalAuth();
+    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
 
     return {
         seller: user?.role === 'seller' ? user.profile as SellerProfile : null,
@@ -694,6 +696,7 @@ export const useSellerAuth = () => {
         logout,
         forgotPassword: (email: string) => forgotPassword(email, 'seller'),
         resetPassword: (token: string, newPassword: string) => resetPassword(token, newPassword, 'seller'),
+        updateSellerProfile: (updates: Partial<SellerProfile>) => updateProfile(updates, 'seller'),
     };
 };
 

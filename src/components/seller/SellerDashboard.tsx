@@ -161,7 +161,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const { toast } = useToast();
 
   // Use seller auth context - same pattern as BuyerDashboard
-  const { seller: sellerProfile, logout: handleLogout, isLoading: isAuthLoading } = useSellerAuth();
+  const { seller: sellerProfile, logout: handleLogout, isLoading: isAuthLoading, updateSellerProfile } = useSellerAuth();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
@@ -172,6 +172,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const [formData, setFormData] = useState<{
+    fullName: string;
     shopName: string;
     city: string;
     location: string;
@@ -183,16 +184,17 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     facebookLink: string;
     whatsappNumber: string;
   }>({
-    shopName: '',
-    city: '',
-    location: '',
-    physicalAddress: '',
-    latitude: null,
-    longitude: null,
-    instagramLink: '',
-    tiktokLink: '',
-    facebookLink: '',
-    whatsappNumber: ''
+    fullName: sellerProfile?.fullName || '',
+    shopName: sellerProfile?.shopName || '',
+    city: sellerProfile?.city || '',
+    location: sellerProfile?.location || '',
+    physicalAddress: sellerProfile?.physicalAddress || '',
+    latitude: sellerProfile?.latitude || null,
+    longitude: sellerProfile?.longitude || null,
+    instagramLink: sellerProfile?.instagramLink || '',
+    tiktokLink: sellerProfile?.tiktokLink || '',
+    facebookLink: sellerProfile?.facebookLink || '',
+    whatsappNumber: sellerProfile?.whatsappNumber || ''
   });
 
   const [shopNameAvailable, setShopNameAvailable] = useState<boolean | null>(null);
@@ -465,6 +467,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       // When entering edit mode, populate form with current values
       if (!prev) {
         setFormData({
+          fullName: sellerProfile?.fullName || '',
           shopName: sellerProfile?.shopName || '',
           city: sellerProfile?.city || '',
           location: sellerProfile?.location || '',
@@ -506,6 +509,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
     try {
       const payload: any = {
+        fullName: formData.fullName,
         shopName: formData.shopName,
         city: formData.city,
         location: formData.location,
@@ -1671,9 +1675,19 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   </div>
                   <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
                     <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Full Name</p>
-                    <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.fullName || 'Not set'}>
-                      {sellerProfile?.fullName || 'Not set'}
-                    </p>
+                    {isEditing ? (
+                      <Input
+                        name="fullName"
+                        value={formData.fullName}
+                        onChange={(e) => setFormData(prev => ({ ...prev, fullName: e.target.value }))}
+                        placeholder="Your Full Name"
+                        className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                      />
+                    ) : (
+                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.fullName || 'Not set'}>
+                        {sellerProfile?.fullName || 'Not set'}
+                      </p>
+                    )}
                   </div>
                   <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
                     <p className="text-xs sm:text-sm font-medium text-gray-300 mb-1">Email</p>
