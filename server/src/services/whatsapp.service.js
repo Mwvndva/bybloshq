@@ -621,6 +621,11 @@ Please enter your M-Pesa PIN to complete payment.
 ⏰ This payment request will expire in a few minutes.
 
 Thank you for shopping with us!`;
+        } else if (newStatus === 'PROCESSING') {
+            msg = `⏳ *ORDER BEING PROCESSED*
+
+Order #${order.orderNumber} is now being prepared by the seller. 
+We will notify you as soon as it's ready for the next step!`;
         } else {
             msg = `📋 *STATUS UPDATE*\n\nOrder #${order.orderNumber}: ${newStatus}`;
         }
@@ -691,6 +696,11 @@ The buyer has been notified.`;
 💰 Revenue (KSh ${amount.toLocaleString()}) added to your balance.
 
 You can withdraw your earnings from your seller dashboard.`;
+        } else if (newStatus === 'PROCESSING') {
+            msg = `⏳ *PROCESSING ORDER*
+
+Order #${order.orderNumber} is now marked as being processed. 
+Please update the status to *Ready for Collection* or *Shipped* once the items are prepared.`;
         } else {
             msg = `📋 *STATUS UPDATE*
 
