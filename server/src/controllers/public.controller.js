@@ -26,9 +26,7 @@ export const getProducts = async (req, res) => {
              p.is_digital as "isDigital",
              p.digital_file_name as "digitalFileName",
              s.id as seller_id,
-             s.full_name as seller_name,
-             s.whatsapp_number as seller_phone,
-             s.email as seller_email,
+             s.shop_name as seller_shop_name,
              s.city as seller_city,
              s.location as seller_location,
              s.physical_address as physical_address,
@@ -36,7 +34,6 @@ export const getProducts = async (req, res) => {
              s.longitude as longitude,
              s.avatar_url as seller_avatar_url,
              s.bio as seller_bio,
-             s.shop_name as seller_shop_name,
              s.theme as seller_theme,
              s.created_at as seller_created_at,
              s.updated_at as seller_updated_at
@@ -81,8 +78,6 @@ export const getProducts = async (req, res) => {
           id: row.seller_id,
           fullName: row.seller_shop_name, // Use shop name instead of full name
           full_name: row.seller_shop_name,
-          email: row.seller_email,
-          phone: row.seller_phone,
           location: row.seller_location,
           city: row.seller_city,
           physicalAddress: row.physical_address,
@@ -149,10 +144,14 @@ export const getProduct = async (req, res) => {
     const { id } = req.params;
 
     const result = await pool.query(
-      `SELECT p.*, 
-              s.full_name as seller_name,
-              s.whatsapp_number as seller_phone,
-              s.email as seller_email
+      `SELECT p.*,
+              s.shop_name,
+              s.city as seller_city,
+              s.location as seller_location,
+              s.theme as seller_theme,
+              s.physical_address,
+              s.latitude,
+              s.longitude
        FROM products p
        JOIN sellers s ON p.seller_id = s.id
        WHERE p.id = $1`,
@@ -219,7 +218,7 @@ export const getSellerPublicInfo = async (req, res) => {
 
     // Only select columns that exist in the sellers table
     const result = await pool.query(
-      `SELECT id, full_name, email, whatsapp_number as phone, theme, created_at, updated_at
+      `SELECT id, shop_name, city, location, theme, created_at, updated_at
        FROM sellers 
        WHERE id = $1`,
       [id]

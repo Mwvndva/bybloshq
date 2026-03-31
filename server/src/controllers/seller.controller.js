@@ -9,6 +9,7 @@ import { setAuthCookie } from '../utils/cookie.utils.js';
 import SellerService from '../services/seller.service.js';
 import ReferralService from '../services/referral.service.js';
 import * as SellerModel from '../models/seller.model.js';
+import { getTokenFromRequest, verifyToken } from '../utils/jwt.js';
 import {
   findSellerById,
   findSellerByUserId,
@@ -42,7 +43,20 @@ const sendTokenResponse = (data, statusCode, res, message) => {
   });
 };
 
-export const logout = (req, res) => {
+export const logout = async (req, res) => {
+  // Blacklist the current token so it can't be reused
+  const token = getTokenFromRequest(req);
+  if (token) {
+    try {
+      const decoded = verifyToken(token);
+      const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
+      await tokenBlacklist.addToken(token, decoded.exp);
+    } catch (err) {
+      // Token may be invalid/expired — that's fine, just clear cookies
+      logger.debug('[LOGOUT] Could not blacklist token:', err.message);
+    }
+  }
+
   const cookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -50,8 +64,8 @@ export const logout = (req, res) => {
     expires: new Date(0),
     path: '/'
   };
-  res.cookie('jwt', '', cookieOptions);   // seller/buyer cookie
-  res.cookie('token', '', cookieOptions);   // admin cookie
+  res.cookie('jwt', '', cookieOptions);
+  res.cookie('token', '', cookieOptions);
   res.status(200).json({ status: 'success', message: 'Logged out successfully' });
 };
 
@@ -232,16 +246,25 @@ export const updateProfile = async (req, res) => {
     }
 
     if (req.body.shopName) {
-      // Use sellerId directly instead of a second lookup
+      const shopNameRegex = /^[a-zA-Z0-9._-]+$/;
+      const shopName = req.body.shopName;
+
+      if (shopName.length < 3) {
+        return res.status(400).json({ status: 'error', message: 'Shop name must be at least 3 characters' });
+      }
+      if (shopName.length > 30) {
+        return res.status(400).json({ status: 'error', message: 'Shop name must be at most 30 characters' });
+      }
+      if (!shopNameRegex.test(shopName)) {
+        return res.status(400).json({ status: 'error', message: 'Shop name can only contain letters, numbers, dots, dashes, and underscores' });
+      }
+
       const currentSeller = await findSellerById(sellerId);
       if (!currentSeller) {
         return res.status(404).json({ status: 'error', message: 'Seller not found' });
       }
-      if (req.body.shopName !== currentSeller.shopName && req.body.shopName !== currentSeller.shop_name) {
-        if (req.body.shopName.length < 3) {
-          return res.status(400).json({ status: 'error', message: 'Shop name must be at least 3 characters' });
-        }
-        const available = await isShopNameAvailable(req.body.shopName);
+      if (shopName !== currentSeller.shopName && shopName !== currentSeller.shop_name) {
+        const available = await isShopNameAvailable(shopName);
         if (!available) {
           return res.status(400).json({ status: 'error', message: 'This shop name is already taken' });
         }

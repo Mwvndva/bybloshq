@@ -29,12 +29,12 @@ class User {
      * @param {Object} userData 
      * @returns {Promise<Object>}
      */
-    static async create({ email, password, role, is_verified = false }) {
+    static async create({ email, password, role, is_verified = false }, externalClient = null) {
         const hashedPassword = await bcrypt.hash(password, 12);
-
-        const client = await pool.connect();
+        const client = externalClient || await pool.connect();
+        const shouldManageTransaction = !externalClient;
         try {
-            await client.query('BEGIN');
+            if (shouldManageTransaction) await client.query('BEGIN');
 
             const userQuery = `
                 INSERT INTO users (email, password_hash, role, is_verified, created_at, updated_at)
@@ -63,13 +63,13 @@ class User {
                 }
             }
 
-            await client.query('COMMIT');
+            if (shouldManageTransaction) await client.query('COMMIT');
             return newUser;
         } catch (error) {
-            await client.query('ROLLBACK');
+            if (shouldManageTransaction) await client.query('ROLLBACK');
             throw error;
         } finally {
-            client.release();
+            if (shouldManageTransaction) client.release();
         }
     }
 
@@ -137,6 +137,7 @@ class User {
         const query = `
       UPDATE users 
       SET password_hash = $1, 
+          password_changed_at = NOW(),
           updated_at = NOW()
       WHERE id = $2
       RETURNING id, email, role
@@ -159,6 +160,7 @@ class User {
       SET password_hash = $1, 
           reset_password_token = NULL, 
           reset_password_expires = NULL,
+          password_changed_at = NOW(),
           updated_at = NOW()
       WHERE email = $2
       RETURNING id, email, role

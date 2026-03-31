@@ -17,6 +17,7 @@ router.post('/forgot-password', buyerController.forgotPassword);
 router.post('/reset-password', buyerController.resetPassword);
 router.post('/check-phone', buyerController.checkBuyerByPhone);
 router.post('/save-info', authLimiter, buyerController.saveBuyerInfo);
+router.post('/auto-login', buyerController.autoLogin);
 router.post('/logout', buyerController.logout);
 
 // Protected routes - require buyer authentication

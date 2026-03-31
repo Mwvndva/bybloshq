@@ -22,7 +22,6 @@ export default async (app) => {
     // 1. Basic Setup
     app.set('trust proxy', 1);
     app.use(requestId);
-    app.use(helmet());
     app.use(compression());
     const morganFormat = process.env.NODE_ENV === 'production' ? 'short' : 'combined';
     app.use(morgan(morganFormat, { stream: logger.stream }));
@@ -135,7 +134,7 @@ export default async (app) => {
 
     // 5. Rate Limiting & Parsing
     const limiter = rateLimit({
-        max: 1000,
+        max: 5000,
         windowMs: 60 * 60 * 1000,
         message: 'Too many requests from this IP, please try again in an hour!',
         standardHeaders: true,
@@ -160,7 +159,10 @@ export default async (app) => {
             req.path.startsWith('/api/payments/webhook') ||
             req.path.startsWith('/api/callbacks/') ||
             req.path.startsWith('/api/whatsapp/') ||
-            req.path.includes('/login');
+            req.path.includes('/login') ||
+            req.path === '/api/buyers/save-info' ||      // guest checkout
+            req.path === '/api/buyers/check-phone' ||    // guest phone check
+            req.path === '/api/buyers/auto-login';       // post-payment auto-login
         // Removed /upload-digital exclusion to implement full protection
 
         if (isExcluded) return next();

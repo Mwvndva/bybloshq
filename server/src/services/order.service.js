@@ -26,9 +26,24 @@ class OrderService {
         buyerWhatsApp,
         shippingAddress,
         notes,
-        metadata = {},
+        metadata: rawMetadata = {},
         buyerLocation = null // { latitude, longitude, fullAddress }
       } = orderData;
+
+      // Block 11 fix: Whitelist allowed metadata keys to prevent internal state injection
+      const metadata = {
+        items: rawMetadata.items || [],
+        seller_initiated: rawMetadata.seller_initiated || false,
+        is_seller_initiated: rawMetadata.is_seller_initiated || false,
+        location_type: rawMetadata.location_type,
+        service_requirements: rawMetadata.service_requirements,
+        product_type: rawMetadata.product_type,
+        product_id: rawMetadata.product_id,
+        narration: rawMetadata.narration,
+        // Any other specific frontend keys needed for display
+        customerName: rawMetadata.customerName,
+        productName: rawMetadata.productName
+      };
 
       logger.info('OrderService: Starting order creation', { buyerId, sellerId, hasLocation: !!buyerLocation });
       await client.query('BEGIN');
@@ -559,17 +574,7 @@ class OrderService {
   }
 
   static _determineInitialStatus(items) {
-    // Determine product types in the order
-    const hasPhysical = items.some(item => item.productType === ProductType.PHYSICAL || (!item.productType && !item.isDigital));
-    const hasDigital = items.some(item => item.productType === ProductType.DIGITAL || item.isDigital);
-    const hasService = items.some(item => item.productType === ProductType.SERVICE);
-
-    // Digital-only orders start as PENDING (will auto-complete after payment)
-    // Service-only orders start as SERVICE_PENDING (requires seller confirmation)
-    // Physical orders start as PENDING (will transition based on shop availability)
-    // ALL orders start as PENDING (unpaid).
-    // They transition to specific pending states (SERVICE_PENDING, DELIVERY_PENDING, etc.)
-    // only AFTER handleSuccessfulPayment calls completeOrder().
+    // Determine product types in the order (logic pruned — all start PENDING)
     const initialStatus = OrderStatus.PENDING;
     logger.info(`[OrderService] Initial status set to ${initialStatus} for new order`);
 

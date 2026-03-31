@@ -56,7 +56,7 @@ class Order {
     let productsMap = new Map();
     if (productIds.length > 0) {
       const productsQuery = `
-        SELECT id, product_type::text as product_type, is_digital
+        SELECT id, product_type::text as product_type, is_digital, image_url, digital_file_name
         FROM products
         WHERE id = ANY($1)
       `;
@@ -82,7 +82,9 @@ class Order {
           original_price: item.price,
           original_quantity: item.quantity,
           productType: productDetails?.product_type || item.productType || 'physical',
-          isDigital: productDetails?.is_digital || item.isDigital || false
+          isDigital: productDetails?.is_digital || item.isDigital || false,
+          imageUrl: productDetails?.image_url || item.imageUrl,
+          digitalFileName: productDetails?.digital_file_name || item.digitalFileName
         })
       ];
     });
@@ -188,9 +190,9 @@ class Order {
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
               'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
-              'digitalFileName', p.digital_file_name,
+              'digitalFileName', COALESCE(p.digital_file_name, oi.metadata->>'digitalFileName'),
               'metadata', oi.metadata,
-              'imageUrl', p.image_url
+              'imageUrl', COALESCE(p.image_url, oi.metadata->>'imageUrl')
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json
@@ -254,9 +256,9 @@ class Order {
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
               'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
-              'digitalFileName', p.digital_file_name,
+              'digitalFileName', COALESCE(p.digital_file_name, oi.metadata->>'digitalFileName'),
               'metadata', oi.metadata,
-              'imageUrl', p.image_url
+              'imageUrl', COALESCE(p.image_url, oi.metadata->>'imageUrl')
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json
@@ -327,9 +329,9 @@ class Order {
               'subtotal', oi.subtotal,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
               'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
-              'digitalFileName', p.digital_file_name,
+              'digitalFileName', COALESCE(p.digital_file_name, oi.metadata->>'digitalFileName'),
               'metadata', oi.metadata,
-              'imageUrl', p.image_url
+              'imageUrl', COALESCE(p.image_url, oi.metadata->>'imageUrl')
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json
@@ -420,7 +422,8 @@ class Order {
               'metadata', oi.metadata,
               'productType', COALESCE(oi.metadata->>'productType', 'physical'),
               'isDigital', COALESCE(p.is_digital, (oi.metadata->>'isDigital')::boolean, false),
-              'digitalFileName', p.digital_file_name
+              'digitalFileName', COALESCE(p.digital_file_name, oi.metadata->>'digitalFileName'),
+              'imageUrl', COALESCE(p.image_url, oi.metadata->>'imageUrl')
             ) ORDER BY oi.id
           ) FILTER (WHERE oi.id IS NOT NULL),
           '[]'::json

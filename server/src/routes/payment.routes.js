@@ -5,6 +5,7 @@ import { protect, hasPermission } from '../middleware/auth.js';
 import { verifyPaydWebhook } from '../middleware/paydWebhookSecurity.js';
 import validate from '../middleware/validation.middleware.js';
 import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
+import { paymentRateLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
 
@@ -18,6 +19,7 @@ publicRouter.use(paymentRequestLogger);
 // Product payment initiation (public) — same flow as tickets, but for products
 publicRouter.post(
   '/initiate-product',
+  paymentRateLimiter,
   [
     body('phone').trim().notEmpty().withMessage('Phone number is required'),
     // Email is optional here because authenticated users might not send it (we fallback to DB)
