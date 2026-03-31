@@ -1,11 +1,10 @@
 -- 1. Accelerate product management and public listings
 CREATE INDEX IF NOT EXISTS idx_products_seller_status ON products(seller_id, status);
-CREATE INDEX IF NOT EXISTS idx_products_category_status ON products(category_id, status);
 
 -- 2. Accelerate order management (Seller & Buyer Dashboards)
 CREATE INDEX IF NOT EXISTS idx_orders_buyer_status ON product_orders(buyer_id, status);
 CREATE INDEX IF NOT EXISTS idx_orders_seller_status ON product_orders(seller_id, status);
-CREATE INDEX IF NOT EXISTS idx_orders_ref ON product_orders(provider_reference);
+CREATE INDEX IF NOT EXISTS idx_orders_payment_ref ON product_orders(payment_reference);
 
 -- 3. Accelerate withdrawal history and tracking
 CREATE INDEX IF NOT EXISTS idx_withdrawals_seller_status ON withdrawal_requests(seller_id, status);
