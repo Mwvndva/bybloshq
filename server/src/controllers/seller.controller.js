@@ -1,4 +1,5 @@
 import { query, pool } from '../config/database.js';
+import { invalidateAuthCache } from '../middleware/auth.js';
 import payoutService from '../services/payout.service.js';
 import whatsappService from '../services/whatsapp.service.js';
 import logger from '../utils/logger.js';
@@ -275,6 +276,10 @@ export const updateProfile = async (req, res) => {
     if (!seller) {
       return res.status(500).json({ status: 'error', message: 'Failed to update profile' });
     }
+
+    // Invalidate auth cache so next request gets fresh seller data
+    const currentToken = getTokenFromRequest(req);
+    invalidateAuthCache(currentToken);
 
     res.status(200).json({ status: 'success', data: { seller: sanitizeSeller(seller) } });
   } catch (error) {

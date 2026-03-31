@@ -19,7 +19,7 @@ const policies = {
 // 30 seconds is safe — permissions don't change frequently, and logout
 // invalidates the token in the blacklist (still checked before cache)
 const _authCache = new Map();
-const AUTH_CACHE_TTL_MS = 30 * 1000;
+const AUTH_CACHE_TTL_MS = 5 * 1000;
 
 // Cleanup stale entries every 2 minutes
 setInterval(() => {
@@ -112,7 +112,7 @@ export const protect = async (req, res, next) => {
       case 'buyer':
         userQuery = `
           SELECT
-            u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
+            u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
             b.id as profile_id, b.full_name, b.whatsapp_number,
             COALESCE(b.status, 'active') as status
           FROM users u
@@ -124,7 +124,7 @@ export const protect = async (req, res, next) => {
       case 'seller':
         userQuery = `
             SELECT 
-                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active,
+                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
                 s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings
             FROM users u 
             LEFT JOIN sellers s ON u.id = s.user_id 
@@ -253,3 +253,24 @@ export const protect = async (req, res, next) => {
     return next(new AppError('Authentication failed', 401));
   }
 };
+
+/**
+ * Invalidate auth cache for a specific token.
+ * Call this after profile updates.
+ */
+export const invalidateAuthCache = (token) => {
+  if (token) {
+    _authCache.delete(token);
+  }
+};
+
+/**
+ * Helper to check if password was changed after token issuance
+ */
+function changedPasswordAfter(passwordChangedAt, JWTTimestamp) {
+  if (passwordChangedAt) {
+    const changedTimestamp = parseInt(passwordChangedAt.getTime() / 1000, 10);
+    return JWTTimestamp < changedTimestamp;
+  }
+  return false;
+}

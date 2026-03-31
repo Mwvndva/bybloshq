@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import { AppError } from '../utils/errorHandler.js';
 import whatsappService from '../services/whatsapp.service.js';
 import Buyer from '../models/buyer.model.js';
+import logger from '../utils/logger.js';
 
 /**
  * Get all refund requests (Admin only)
@@ -56,7 +57,7 @@ export const getAllRefundRequests = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching refund requests:', error);
+    logger.error('Error fetching refund requests:', error);
     next(error);
   }
 };
@@ -94,7 +95,7 @@ export const getRefundRequestById = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching refund request:', error);
+    logger.error('Error fetching refund request:', error);
     next(error);
   }
 };
@@ -111,7 +112,7 @@ export const confirmRefundRequest = async (req, res, next) => {
     const { adminNotes } = req.body;
     const adminId = req.user.id;
 
-    console.log(`Admin ${adminId} confirming refund request ${id}`);
+    logger.info(`Admin ${adminId} confirming refund request ${id}`);
 
     await client.query('BEGIN');
 
@@ -173,7 +174,7 @@ export const confirmRefundRequest = async (req, res, next) => {
 
     await client.query('COMMIT');
 
-    console.log(`Refund request ${id} confirmed. Deducted KSh ${requestAmount} from buyer ${request.buyer_id}`);
+    logger.info(`Refund request ${id} confirmed. Deducted KSh ${requestAmount} from buyer ${request.buyer_id}`);
 
     // Send WhatsApp notification to buyer
     try {
@@ -182,7 +183,7 @@ export const confirmRefundRequest = async (req, res, next) => {
         await whatsappService.sendRefundApprovedNotification(buyer, requestAmount);
       }
     } catch (error) {
-      console.error('Error sending WhatsApp notification:', error);
+      logger.error('[REFUND] WhatsApp notification failed (refund already processed):', error.message);
       // Don't fail the request if notification fails
     }
 
@@ -196,7 +197,7 @@ export const confirmRefundRequest = async (req, res, next) => {
     });
   } catch (error) {
     await client.query('ROLLBACK');
-    console.error('Error confirming refund request:', error);
+    logger.error('Error confirming refund request:', error);
     next(error);
   } finally {
     client.release();
@@ -212,11 +213,11 @@ export const rejectRefundRequest = async (req, res, next) => {
     const { adminNotes } = req.body;
     const adminId = req.user.id;
 
-    console.log(`Admin ${adminId} rejecting refund request ${id}`);
+    logger.info(`Admin ${adminId} rejecting refund request ${id}`);
 
-    // Check if request exists and is pending
+    // Fetch all needed data in ONE query before updating
     const checkResult = await pool.query(
-      `SELECT status FROM refund_requests WHERE id = $1`,
+      `SELECT status, buyer_id, amount FROM refund_requests WHERE id = $1`,
       [id]
     );
 
@@ -224,8 +225,10 @@ export const rejectRefundRequest = async (req, res, next) => {
       return next(new AppError('Refund request not found', 404));
     }
 
-    if (checkResult.rows[0].status !== 'pending') {
-      return next(new AppError(`Refund request is already ${checkResult.rows[0].status}`, 400));
+    const { status: currentStatus, buyer_id, amount } = checkResult.rows[0];
+
+    if (currentStatus !== 'pending') {
+      return next(new AppError(`Refund request is already ${currentStatus}`, 400));
     }
 
     // Update refund request status to rejected
@@ -243,25 +246,16 @@ export const rejectRefundRequest = async (req, res, next) => {
       [adminNotes || 'Refund request rejected', processedBy, id]
     );
 
-    console.log(`Refund request ${id} rejected`);
+    logger.info(`Refund request ${id} rejected`);
 
     // Get buyer details and send WhatsApp notification
     try {
-      const buyerQuery = await pool.query(
-        'SELECT buyer_id, amount FROM refund_requests WHERE id = $1',
-        [id]
-      );
-
-      if (buyerQuery.rows.length > 0) {
-        const { buyer_id, amount } = buyerQuery.rows[0];
-        const buyer = await Buyer.findById(buyer_id);
-
-        if (buyer) {
-          await whatsappService.sendRefundRejectedNotification(buyer, amount, adminNotes);
-        }
+      const buyer = await Buyer.findById(buyer_id);
+      if (buyer) {
+        await whatsappService.sendRefundRejectedNotification(buyer, amount, adminNotes);
       }
     } catch (error) {
-      console.error('Error sending WhatsApp notification:', error);
+      logger.error('[REFUND] WhatsApp rejection notification failed:', error.message);
       // Don't fail the request if notification fails
     }
 
@@ -273,7 +267,7 @@ export const rejectRefundRequest = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('Error rejecting refund request:', error);
+    logger.error('Error rejecting refund request:', error);
     next(error);
   }
 };
