@@ -333,12 +333,20 @@ Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_
         if (serviceReqs) sections.push(`📝 *REQUIREMENTS:*\n${order.service_requirements}`);
         if (instructionText) sections.push(instructionText);
 
+        let buyerInfo = '';
+        if (!isDigital) {
+            buyerInfo = `👤 *BUYER:* ${buyer.name}\n📞 *PHONE:* ${buyer.phone || 'N/A'}`;
+            if (!seller?.physicalAddress) {
+                const locationStr = buyer.location || buyer.city || 'Not specified';
+                buyerInfo += `\n📍 *LOCATION:* ${locationStr}`;
+            }
+            buyerInfo += '\n';
+        }
+
         const msg = `
 ${header}
 
-👤 *BUYER:* ${buyer.name}
-📞 *PHONE:* ${buyer.phone || 'N/A'}
-
+${buyerInfo}
 📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${total.toLocaleString()}
 
