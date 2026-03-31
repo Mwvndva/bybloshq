@@ -1,5 +1,4 @@
-import axios from 'axios';
-import { getFreshCsrfToken } from '@/lib/apiClient';
+import { getFreshCsrfToken, getCachedCsrfToken, setCachedCsrfToken } from '@/lib/apiClient';
 
 type AxiosInstance = any;
 type AxiosRequestConfig = any;
@@ -21,7 +20,6 @@ interface CustomAxiosRequestConfig extends Record<string, any> {
 // Create a custom axios instance with our custom config
 class CustomAxios {
   private instance: any;
-  private csrfTokenCache: string | null = null;
 
   constructor() {
     // Use VITE_API_URL from environment variables or fallback to relative path for development
@@ -47,12 +45,14 @@ class CustomAxios {
       async (config: any) => {
         // 1. Attach CSRF token to non-GET requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-          if (!this.csrfTokenCache) {
-            this.csrfTokenCache = await getFreshCsrfToken();
+          let token = getCachedCsrfToken();
+
+          if (!token) {
+            token = await getFreshCsrfToken();
           }
 
-          if (this.csrfTokenCache) {
-            config.headers['X-CSRF-Token'] = this.csrfTokenCache;
+          if (token) {
+            config.headers['X-CSRF-Token'] = token;
           }
         }
 
@@ -65,6 +65,28 @@ class CustomAxios {
         return config;
       },
       (error: any) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Add response interceptor for CSRF retries (Sync with apiClient)
+    this.instance.interceptors.response.use(
+      (response: any) => response,
+      async (error: any) => {
+        const status = error.response?.status;
+        const message = error.response?.data?.message || '';
+        const config = error.config;
+
+        if (status === 403 && message.includes('CSRF mismatch') && !config._retry) {
+          config._retry = true;
+          console.warn('[CSRF-Public] Mismatch detected. Refreshing token and retrying...');
+
+          const newToken = await getFreshCsrfToken();
+          if (newToken) {
+            config.headers['X-CSRF-Token'] = newToken;
+            return this.instance(config);
+          }
+        }
         return Promise.reject(error);
       }
     );
