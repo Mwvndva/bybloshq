@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { getFreshCsrfToken, getCachedCsrfToken, setCachedCsrfToken } from '@/lib/apiClient';
 
 type AxiosInstance = any;
