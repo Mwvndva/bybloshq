@@ -37,12 +37,22 @@ class ProductService {
 
         if (imageData) {
             // Validate image format only if image is provided
-            if (!imageData.startsWith('data:image/') && !imageData.startsWith('/uploads/')) {
-                throw new Error('Invalid image format');
+            // Allow: base64 (data:image/), local fallback (/uploads/), and remote Cloudinary URLs (http/https)
+            const isBase64 = imageData.startsWith('data:image/');
+            const isLocal = imageData.startsWith('/uploads/');
+            const isRemote = imageData.startsWith('http://') || imageData.startsWith('https://');
+
+            if (!isBase64 && !isLocal && !isRemote) {
+                throw new Error('Invalid image format. Expected base64, local path, or remote URL.');
             }
-            const imageSize = (imageData.length * 0.75);
-            if (imageSize > 2 * 1024 * 1024) {
-                throw new Error('Image size exceeds 2MB limit');
+
+            // Size validation only applies to raw base64 data before upload
+            // Remote/Local URLs are already "physical" files on disk or cloud
+            if (isBase64) {
+                const imageSize = (imageData.length * 0.75);
+                if (imageSize > 5 * 1024 * 1024) { // Increased to 5MB for modern assets
+                    throw new Error('Image size exceeds 5MB limit');
+                }
             }
         }
 
