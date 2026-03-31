@@ -840,7 +840,9 @@ class OrderService {
             name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
             phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
             whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual,
+            city: fullOrder.buyer_city,
+            location: fullOrder.buyer_location_text
           };
           const sellerData = {
             name: fullOrder.seller_name,

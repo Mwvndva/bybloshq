@@ -3,8 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, User, Mail, MapPin, Phone, CheckCircle2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, User, Mail, MapPin, Phone, CheckCircle2, Lock, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { locationData } from '@/lib/constants';
 
 interface BuyerInfo {
   fullName: string;
@@ -37,6 +39,7 @@ export function BuyerInfoModal({
 }: BuyerInfoModalProps) {
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>({
     fullName: initialData?.fullName || '',
     email: initialData?.email || '',
@@ -189,14 +192,16 @@ export function BuyerInfoModal({
                 Full Name *
               </Label>
               <div className="relative">
-                <User className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#555555]`} />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <User className="h-5 w-5 text-[#555555]" />
+                </div>
                 <Input
                   id="fullName"
                   type="text"
                   placeholder="Enter your full name"
                   value={buyerInfo.fullName}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, fullName: e.target.value }))}
-                  className={`pl-14 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
+                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
@@ -211,14 +216,16 @@ export function BuyerInfoModal({
                 Email Address *
               </Label>
               <div className="relative">
-                <Mail className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#555555]`} />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-[#555555]" />
+                </div>
                 <Input
                   id="email"
                   type="email"
                   placeholder="Enter your email address"
                   value={buyerInfo.email}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
-                  className={`pl-14 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
+                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
@@ -227,55 +234,92 @@ export function BuyerInfoModal({
               )}
             </div>
 
-            {/* Phone numbers row - Now single column since WhatsApp is removed */}
+            {/* Phone number */}
             <div className="space-y-1.5">
               <Label htmlFor="mobilePayment" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
                 M-Pesa Number *
               </Label>
               <div className="relative">
-                <Phone className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#555555]`} />
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Phone className="h-5 w-5 text-[#555555]" />
+                </div>
                 <Input
                   id="mobilePayment"
                   type="tel"
                   placeholder="07..."
                   value={buyerInfo.mobilePayment}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, mobilePayment: e.target.value }))}
-                  className={`pl-14 h-11 text-sm rounded-xl ${themeClasses.input}`}
+                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}
                   disabled={isLoading}
                   required
                 />
               </div>
             </div>
 
-            {/* City & Location in a row */}
+            {/* City & Area in a grid */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="city" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
-                  City
+                  City *
                 </Label>
-                <Input
-                  id="city"
-                  type="text"
-                  placeholder="e.g. Nairobi"
-                  value={buyerInfo.city}
-                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, city: e.target.value }))}
-                  className={`h-11 text-sm rounded-xl ${themeClasses.input}`}
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                    <MapPin className="h-4 w-4 text-[#555555]" />
+                  </div>
+                  <Select
+                    value={buyerInfo.city}
+                    onValueChange={(value) => {
+                      setBuyerInfo(prev => ({
+                        ...prev,
+                        city: value,
+                        location: '' // Reset location when city changes
+                      }));
+                    }}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input}`}>
+                      <SelectValue placeholder="Select city" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
+                      {Object.keys(locationData).sort().map((city) => (
+                        <SelectItem key={city} value={city} className="text-white hover:bg-white/5 focus:bg-white/10">
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="location" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
-                  Area
+                  Area *
                 </Label>
-                <Input
-                  id="location"
-                  type="text"
-                  placeholder="e.g. Kilimani"
-                  value={buyerInfo.location}
-                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, location: e.target.value }))}
-                  className={`h-11 text-sm rounded-xl ${themeClasses.input}`}
-                  disabled={isLoading}
-                />
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                    <MapPin className="h-4 w-4 text-[#555555]" />
+                  </div>
+                  <Select
+                    value={buyerInfo.location}
+                    onValueChange={(value) => {
+                      setBuyerInfo(prev => ({
+                        ...prev,
+                        location: value
+                      }));
+                    }}
+                    disabled={isLoading || !buyerInfo.city}
+                  >
+                    <SelectTrigger className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input}`}>
+                      <SelectValue placeholder={buyerInfo.city ? "Select area" : "City first"} />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
+                      {buyerInfo.city && locationData[buyerInfo.city]?.map((area) => (
+                        <SelectItem key={area} value={area} className="text-white hover:bg-white/5 focus:bg-white/10">
+                          {area}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
 
@@ -285,13 +329,16 @@ export function BuyerInfoModal({
                 Set Password *
               </Label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-[#555555]" />
+                </div>
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   placeholder="Min 8 characters"
                   value={buyerInfo.password}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, password: e.target.value }))}
-                  className={`h-11 text-sm rounded-xl ${themeClasses.input} ${errors.password ? 'border-red-500' : ''}`}
+                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.password ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
                 <button
@@ -300,16 +347,16 @@ export function BuyerInfoModal({
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-white transition-colors"
                 >
                   {showPassword ? (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                    <EyeOff className="w-5 h-5" />
                   ) : (
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.882 9.882L5.146 5.147m13.71 13.71L14.12 14.121M21 12c-1.274 4.057-5.064 7-9.542 7-1.274 0-2.434-.216-3.492-.597m11.104-13.483c1.259 1.287 2.181 3.033 2.766 5.08" /></svg>
+                    <Eye className="w-5 h-5" />
                   )}
                 </button>
               </div>
 
               {/* Password Strength Checklist */}
               {buyerInfo.password && (
-                <div className="mt-2 p-3 bg-white/5 rounded-xl border border-white/5 space-y-2">
+                <div className="p-3 bg-white/5 rounded-xl border border-white/5">
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: "8+ chars", met: checkPasswordStrength(buyerInfo.password).minLength },
@@ -341,15 +388,29 @@ export function BuyerInfoModal({
                 Verify Password *
               </Label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-[#555555]" />
+                </div>
                 <Input
                   id="confirmPassword"
-                  type={showPassword ? "text" : "password"}
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Repeat password"
                   value={buyerInfo.confirmPassword}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  className={`h-11 text-sm rounded-xl ${themeClasses.input} ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.confirmPassword ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-white transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
               {errors.confirmPassword && (
                 <p className={`text-[10px] font-bold ${themeClasses.error}`}>{errors.confirmPassword}</p>
