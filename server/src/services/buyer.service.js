@@ -43,6 +43,20 @@ class BuyerService {
                 }
 
                 await client.query('COMMIT');
+
+                // Invalidate cross-role cache for this user
+                try {
+                    const CacheService = (await import('./cache.service.js')).default;
+                    const userId = existingUser?.id;
+                    if (userId) {
+                        await CacheService.delete(`user:${userId}:cross-roles`);
+                    }
+                } catch (cacheErr) {
+                    // Non-critical — cache will expire naturally
+                    const logger = (await import('../utils/logger.js')).default;
+                    logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
+                }
+
                 return buyer;
             }
 
@@ -53,6 +67,20 @@ class BuyerService {
             }, client);
 
             await client.query('COMMIT');
+
+            // Invalidate cross-role cache for this user
+            try {
+                const CacheService = (await import('./cache.service.js')).default;
+                const userId = newUser?.id;
+                if (userId) {
+                    await CacheService.delete(`user:${userId}:cross-roles`);
+                }
+            } catch (cacheErr) {
+                // Non-critical — cache will expire naturally
+                const logger = (await import('../utils/logger.js')).default;
+                logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
+            }
+
             return buyer;
         } catch (error) {
             await client.query('ROLLBACK');
@@ -98,6 +126,20 @@ class BuyerService {
                 }
 
                 await client.query('COMMIT');
+
+                // Invalidate cross-role cache for this user
+                try {
+                    const CacheService = (await import('./cache.service.js')).default;
+                    const userId = existingUser?.id;
+                    if (userId) {
+                        await CacheService.delete(`user:${userId}:cross-roles`);
+                    }
+                } catch (cacheErr) {
+                    // Non-critical — cache will expire naturally
+                    const logger = (await import('../utils/logger.js')).default;
+                    logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
+                }
+
                 return { buyer };
             }
 
@@ -107,6 +149,20 @@ class BuyerService {
             }, client);
 
             await client.query('COMMIT');
+
+            // Invalidate cross-role cache for this user
+            try {
+                const CacheService = (await import('./cache.service.js')).default;
+                const userId = newUser?.id;
+                if (userId) {
+                    await CacheService.delete(`user:${userId}:cross-roles`);
+                }
+            } catch (cacheErr) {
+                // Non-critical — cache will expire naturally
+                const logger = (await import('../utils/logger.js')).default;
+                logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
+            }
+
             return { buyer };
         } catch (error) {
             await client.query('ROLLBACK');

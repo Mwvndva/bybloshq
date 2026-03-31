@@ -426,8 +426,8 @@ export const requestRefund = async (req, res, next) => {
     // Use buyer's existing details for refund
     const paymentMethod = 'M-Pesa'; // Default to M-Pesa for Kenya
     const paymentDetailsJson = JSON.stringify({
-      phone: buyer.mobile_payment || buyer.whatsapp_number,
-      name: buyer.full_name || buyer.fullName,
+      phone: buyer.mobilePayment || buyer.mobile_payment || buyer.whatsappNumber || buyer.whatsapp_number,
+      name: buyer.fullName || buyer.full_name,
       email: buyer.email
     });
 

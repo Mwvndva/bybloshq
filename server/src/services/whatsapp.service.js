@@ -118,6 +118,13 @@ class WhatsAppService {
 
         // Simple Mutex/Queue for same JID to prevent race conditions
         if (!this.messageQueues) this.messageQueues = new Map();
+
+        // Fix M-12-Extra: Enforce MAX_QUEUE_SIZE to prevent leaks
+        if (this.messageQueues.size > this.MAX_QUEUE_SIZE) {
+            const oldestJid = this.messageQueues.keys().next().value;
+            this.messageQueues.delete(oldestJid);
+        }
+
         if (!this.messageQueues.has(jid)) {
             this.messageQueues.set(jid, Promise.resolve());
         }
@@ -433,10 +440,13 @@ ${sections.length > 0 ? '\n' + sections.join('\n\n') : ''}
                 let pickupInstructions = '';
 
                 if (order.status === 'COLLECTION_PENDING') {
-                    if (seller.latitude && seller.longitude) {
-                        mapsLink = `https://www.google.com/maps?q=${seller.latitude},${seller.longitude}`;
+                    const lat = seller.latitude || seller.lat;
+                    const lng = seller.longitude || seller.lng;
+                    if (lat && lng) {
+                        mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
                     } else {
-                        mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(seller.shop_name || seller.physicalAddress)}`;
+                        const query = seller.shop_name ? `${seller.shop_name} ${seller.physicalAddress || ''}` : seller.physicalAddress;
+                        mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
                     }
 
                     pickupInstructions = `
@@ -499,9 +509,11 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}${this.formatSocialLinks(s
             const sellerAddr = updateData.seller?.physicalAddress || 'the shop';
             const shopName = updateData.seller?.shop_name || 'The Shop';
 
+            const lat = updateData.seller?.latitude || updateData.seller?.lat;
+            const lng = updateData.seller?.longitude || updateData.seller?.lng;
             let mapsLink = '';
-            if (updateData.seller?.latitude && updateData.seller?.longitude) {
-                mapsLink = `https://www.google.com/maps?q=${updateData.seller.latitude},${updateData.seller.longitude}`;
+            if (lat && lng) {
+                mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
             } else {
                 mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopName + ' ' + sellerAddr)}`;
             }

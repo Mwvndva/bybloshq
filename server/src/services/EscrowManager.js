@@ -30,6 +30,9 @@ class EscrowManager {
             return { success: true, alreadyReleased: true };
         }
 
+        const paymentResult = await client.query('SELECT id FROM payments WHERE invoice_id = $1 OR (metadata->>\'order_id\')::int = $2 LIMIT 1', [order.order_number, orderId]);
+        const paymentId = paymentResult.rows[0]?.id;
+
         const sellerPayoutAmount = parseFloat(order.seller_payout_amount ?? order.sellerPayoutAmount ?? 0);
         const totalAmount = parseFloat(order.total_amount ?? order.totalAmount ?? 0);
         const platformFeeAmount = parseFloat(
@@ -54,21 +57,22 @@ class EscrowManager {
 
         await client.query(
             `INSERT INTO payouts
-           (seller_id, order_id, amount, platform_fee, status,
+           (seller_id, order_id, payment_id, amount, platform_fee, status,
             payment_method, processed_at, completed_at, metadata)
-         VALUES ($1, $2, $3, $4, 'completed', 'wallet_credit', NOW(), NOW(), $5)
+         VALUES ($1, $2, $3, $4, $5, 'completed', 'wallet_credit', NOW(), NOW(), $6)
          ON CONFLICT (order_id) DO UPDATE
            SET status       = 'completed',
                processed_at = NOW(),
                completed_at = NOW(),
+               payment_id   = EXCLUDED.payment_id,
                amount       = EXCLUDED.amount,
                platform_fee = EXCLUDED.platform_fee,
                metadata     = jsonb_set(
                  COALESCE(payouts.metadata, '{}'::jsonb),
                  '{processed_by}',
-                 $5::jsonb
+                 $6::jsonb
                )`,
-            [sellerId, orderId, sellerPayoutAmount, platformFeeAmount, JSON.stringify({ processed_by: source })],
+            [sellerId, orderId, paymentId, sellerPayoutAmount, platformFeeAmount, JSON.stringify({ processed_by: source })],
         );
 
         logger.info(

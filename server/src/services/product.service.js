@@ -138,9 +138,7 @@ class ProductService {
             if (aesthetic !== undefined) updateFields.aesthetic = aesthetic;
 
             // Status & SoldAt logic
-            // Check columns (Schema aware code from controller)
-            const columns = await ProductModel.checkColumns(client, ['sold_at', 'updated_at']);
-            const hasSoldAt = columns.includes('sold_at');
+            const hasSoldAt = true; // sold_at column exists per schema (20260208_unified_schema_v3.sql)
 
             if (hasSoldAt) {
                 if (soldAt !== undefined) {

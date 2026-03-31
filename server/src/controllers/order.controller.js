@@ -244,12 +244,24 @@ export const createSellerClientOrder = async (req, res) => {
         }
 
         // Create client order
-        const result = await OrderService.createClientOrder(sellerId, {
+        const orderData = {
             clientName: clientName.trim(),
             clientPhone: clientPhone.replace(/\s+/g, ''),
             paymentType: req.body.paymentType,
-            items
-        });
+            items,
+            paymentDetails: req.body.paymentDetails
+        };
+
+        // Ensure paymentDetails is an object for JSONB storage
+        if (orderData.paymentDetails && typeof orderData.paymentDetails === 'string') {
+            try {
+                orderData.paymentDetails = JSON.parse(orderData.paymentDetails);
+            } catch (e) {
+                // Keep as string if not valid JSON
+            }
+        }
+
+        const result = await OrderService.createClientOrder(sellerId, orderData);
 
         res.status(201).json({
             status: 'success',
@@ -298,20 +310,26 @@ export const downloadDigitalProduct = async (req, res) => {
 
         const data = rows[0];
 
-        if (!data.digital_file_path) {
+        const digitalFilePath = data.digital_file_path;
+
+        if (!digitalFilePath) {
             return res.status(404).json({
                 status: 'error',
                 message: 'File path not configured for this product'
             });
         }
 
-        const absolutePath = path.resolve(process.cwd(), data.digital_file_path.replace(/^\//, ''));
-        const fileName = data.digital_file_name || `${data.product_name}${path.extname(absolutePath)}`;
+        const absolutePath = path.resolve(process.cwd(), digitalFilePath.replace(/^\//, ''));
+        const ext = path.extname(absolutePath).toLowerCase();
+        const fileName = data.digital_file_name || `download${ext}`;
 
-        logger.info(`[DOWNLOAD] Direct download for order ${orderId}, product ${productId}: ${absolutePath}`);
+        try {
+            await fs.access(absolutePath);
+        } catch {
+            logger.error(`[DOWNLOAD] File not found on disk: ${absolutePath}`);
+            return res.status(404).json({ status: 'error', message: 'File not found on server' });
+        }
 
-        // 2. Serve the file directly
-        // Use res.download to handle headers and streaming automatically
         return res.download(absolutePath, fileName, (err) => {
             if (err) {
                 logger.error(`[DOWNLOAD] Error sending file: ${err.message}`);

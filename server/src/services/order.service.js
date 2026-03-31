@@ -1239,6 +1239,17 @@ class OrderService {
       logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone, paymentType, skipInventoryDecrement, debtId, fullData: JSON.stringify(data) });
       await client.query('BEGIN');
 
+      // Prevent multiple STK pushes for the same debt
+      if (debtId) {
+        const { rows: existing } = await client.query(
+          "SELECT order_number, status FROM product_orders WHERE (metadata->>'debt_id')::int = $1 AND status != 'FAILED' AND status != 'CANCELLED'",
+          [debtId]
+        );
+        if (existing.length > 0) {
+          throw new Error(`A payment request for this debt is already active (Order #${existing[0].order_number}). Please wait or cancel the previous order.`);
+        }
+      }
+
       // 1. Upsert Client
       const ClientModel = (await import('../models/client.model.js')).default;
       const clientRecord = await ClientModel.upsertClient(client, sellerId, clientName, clientPhone);
@@ -1395,25 +1406,23 @@ class OrderService {
         );
 
         // 9. Send WhatsApp notification to client
-        // DISABLED: WhatsApp notification temporarily disabled due to enrichedItems error
-        /*
         try {
-          const waService = (await import('./whatsapp.service.js')).default;
-  
           // Get seller details
           const sellerQuery = await client.query(
             'SELECT id, shop_name, full_name as businessName FROM sellers WHERE id = $1',
             [sellerId]
           );
           const seller = sellerQuery.rows[0];
-  
-          await waService.sendClientOrderNotification(
+
+          await whatsappService.notifyClientOrderCreated(
             clientPhone,
             {
-              sellerName: seller.shop_name || seller.businessName || 'Seller',
-              orderNumber: order.order_number,
-              totalAmount,
-              items: enrichedItems
+              seller,
+              order: {
+                orderNumber: order.order_number,
+                totalAmount
+              },
+              items: items
             }
           );
           logger.info(`[ClientOrder] WhatsApp notification sent to ${clientPhone}`);
@@ -1421,7 +1430,6 @@ class OrderService {
           logger.error('[ClientOrder] Failed to send WhatsApp notification:', waError.message);
           // Non-critical, continue
         }
-        */
         logger.info('[ClientOrder] WhatsApp notification skipped (disabled)');
         // Don't fail the order creation if WhatsApp fails
 
@@ -1445,25 +1453,9 @@ class OrderService {
         };
 
       } catch (paymentError) {
-        // If STK push fails, mark both order and payment as failed
-        await client.query(
-          'UPDATE product_orders SET status = $1 WHERE id = $2',
-          ['FAILED', order.id]
-        );
-        await client.query(
-          'UPDATE payments SET status = $1, metadata = metadata || $2::jsonb WHERE id = $3',
-          ['failed', JSON.stringify({ error: paymentError.message }), payment.id]
-        );
-        await client.query('COMMIT');
-
-        logger.error('[ClientOrder] STK Push failed, order marked as failed:', paymentError.message);
-
-        // Return a cleaner message for the frontend toast
-        const userFriendlyMessage = paymentError.message.includes('Network connection lost')
-          ? 'Connection to payment provider failed. Please try again.'
-          : paymentError.message;
-
-        throw new Error(userFriendlyMessage);
+        if (client) await client.query('ROLLBACK');
+        logger.error('[ClientOrder] STK Push failed, rolling back:', paymentError.message);
+        throw new Error(`Failed to initiate payment: ${paymentError.message}`);
       }
 
 
