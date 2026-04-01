@@ -174,7 +174,7 @@ class AdminService {
 
   async getAllSellers() {
     const query = `
-            SELECT id, full_name as name, email, whatsapp_number as phone, status, city, location, created_at, shop_name, balance
+            SELECT id, user_id, full_name as name, email, whatsapp_number as phone, status, city, location, created_at, shop_name, balance
             FROM sellers ORDER BY created_at DESC
         `;
     const { rows } = await pool.query(query);

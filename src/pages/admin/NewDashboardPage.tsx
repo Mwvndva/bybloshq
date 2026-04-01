@@ -107,6 +107,7 @@ interface DashboardState {
   analytics: DashboardAnalytics;
   sellers: Array<{
     id: string;
+    user_id: string;
     name: string;
     email: string;
     status: string;
@@ -117,6 +118,7 @@ interface DashboardState {
   }>;
   buyers: Array<{
     id: string;
+    user_id: string;
     name: string;
     email: string;
     phone?: string;
@@ -1260,7 +1262,7 @@ const NewAdminDashboard = () => {
                                   variant="outline"
                                   size="sm"
                                   className="h-9 md:h-10 px-3 md:px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[9px] md:text-[10px] border transition-all"
-                                  onClick={() => handleDeleteUser(seller.id, 'seller')}
+                                  onClick={() => handleDeleteUser(seller.user_id, 'seller')}
                                 >
                                   <Lock className="h-3 md:h-3.5 w-3 md:w-3.5" />
                                   <span className="hidden sm:inline ml-2">Terminate</span>
@@ -1368,7 +1370,7 @@ const NewAdminDashboard = () => {
                                   variant="outline"
                                   size="sm"
                                   className="h-9 md:h-10 px-3 md:px-4 rounded-xl border-white/10 bg-white/5 text-red-400 hover:bg-red-500 hover:text-white font-black uppercase tracking-widest text-[9px] md:text-[10px] border transition-all"
-                                  onClick={() => handleDeleteUser(buyer.id, 'buyer')}
+                                  onClick={() => handleDeleteUser(buyer.user_id, 'buyer')}
                                 >
                                   <Lock className="h-3 md:h-3.5 w-3 md:w-3.5" />
                                   <span className="hidden sm:inline ml-2">Suspend</span>
