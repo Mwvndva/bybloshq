@@ -14,6 +14,7 @@ interface BuyerInfo {
   fullName?: string;
   email: string;
   mobilePayment: string;
+  whatsappNumber: string;
   city: string;
   location: string;
   password?: string;
@@ -47,6 +48,7 @@ export function BuyerInfoModal({
     lastName: initialData?.fullName?.split(' ').slice(1).join(' ') || '',
     email: initialData?.email || '',
     mobilePayment: initialData?.mobilePayment || phoneNumber || '',
+    whatsappNumber: (initialData as any)?.whatsappNumber || phoneNumber || '',
     city: initialData?.city || 'Nairobi',
     location: initialData?.location || '',
     password: '',
@@ -114,6 +116,14 @@ export function BuyerInfoModal({
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
+    if (!buyerInfo.whatsappNumber?.trim()) {
+      newErrors.whatsappNumber = 'WhatsApp number is required' as any;
+    }
+
+    if (!buyerInfo.whatsappNumber?.trim()) {
+      newErrors.whatsappNumber = 'WhatsApp number is required' as any;
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -136,6 +146,7 @@ export function BuyerInfoModal({
         lastName: '',
         email: '',
         mobilePayment: '',
+        whatsappNumber: '',
         city: 'Nairobi',
         location: '',
         password: '',
@@ -160,6 +171,7 @@ export function BuyerInfoModal({
         lastName: '',
         email: '',
         mobilePayment: '',
+        whatsappNumber: '',
         city: 'Nairobi',
         location: '',
         password: '',
@@ -272,25 +284,47 @@ export function BuyerInfoModal({
               )}
             </div>
 
-            {/* Phone number */}
-            <div className="space-y-1.5">
-              <Label htmlFor="mobilePayment" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
-                M-Pesa Number *
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Phone className="h-5 w-5 text-[#555555]" />
+            {/* Phone numbers */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="mobilePayment" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
+                  M-Pesa *
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="h-4 w-4 text-[#555555]" />
+                  </div>
+                  <Input
+                    id="mobilePayment"
+                    type="tel"
+                    placeholder="07..."
+                    value={buyerInfo.mobilePayment}
+                    onChange={(e) => setBuyerInfo(prev => ({ ...prev, mobilePayment: e.target.value }))}
+                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input}`}
+                    disabled={isLoading}
+                    required
+                  />
                 </div>
-                <Input
-                  id="mobilePayment"
-                  type="tel"
-                  placeholder="07..."
-                  value={buyerInfo.mobilePayment}
-                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, mobilePayment: e.target.value }))}
-                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}
-                  disabled={isLoading}
-                  required
-                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="whatsappNumber" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
+                  WhatsApp *
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="h-4 w-4 text-[#555555]" />
+                  </div>
+                  <Input
+                    id="whatsappNumber"
+                    type="tel"
+                    placeholder="07..."
+                    value={buyerInfo.whatsappNumber}
+                    onChange={(e) => setBuyerInfo(prev => ({ ...prev, whatsappNumber: e.target.value }))}
+                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.whatsappNumber ? 'border-red-500' : ''}`}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
               </div>
             </div>
 
