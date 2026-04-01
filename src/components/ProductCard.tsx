@@ -618,11 +618,18 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </p>
 
         {product.description && (
-          <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2",
-            (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
-          )}>
-            {product.description}
-          </p>
+          <div className="relative group/desc">
+            <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2",
+              (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
+            )}>
+              {product.description}
+            </p>
+            {product.description.length > 60 && (
+              <span className="text-[10px] sm:text-xs font-bold text-yellow-500/80 group-hover/desc:text-yellow-500 transition-colors">
+                Read more...
+              </span>
+            )}
+          </div>
         )}
 
         {/* Service Location Info */}
@@ -878,6 +885,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                 </div>
               )}
             </div>
+
+            {/* Full Product Description in Modal */}
+            {product.description && (
+              <div className="px-4 sm:px-6 pb-6 pt-2 max-h-[30vh] overflow-y-auto custom-scrollbar">
+                <h4 className="text-white/40 text-[10px] uppercase tracking-widest font-bold mb-2">Description</h4>
+                <p className="text-gray-200 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
+                  {product.description}
+                </p>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
