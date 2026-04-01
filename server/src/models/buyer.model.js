@@ -67,8 +67,9 @@ class Buyer {
 
   // Find buyer by email
   static async findByEmail(email) {
-    const query = 'SELECT *, user_id AS "userId" FROM buyers WHERE email = $1';
-    const result = await pool.query(query, [email]);
+    if (!email) return null;
+    const query = 'SELECT *, user_id AS "userId" FROM buyers WHERE LOWER(email) = $1';
+    const result = await pool.query(query, [email.toLowerCase()]);
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
