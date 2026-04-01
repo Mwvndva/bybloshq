@@ -25,6 +25,7 @@ const scheduleOrderDeadlineChecks = (options = {}) => {
         await pool.query(`
             UPDATE product_orders 
             SET status = 'FAILED', 
+                payment_status = 'failed',
                 metadata = COALESCE(metadata, '{}'::jsonb) || '{"reason": "Payd STK push expired or never completed"}'::jsonb
             WHERE status = 'PENDING' 
               AND created_at < NOW() - INTERVAL '30 minutes'
