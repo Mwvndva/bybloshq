@@ -321,7 +321,7 @@ export default function MarketingDashboard() {
                                     <thead>
                                         <tr className="text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-white/5">
                                             <th className="pb-4 pr-4">Merchant</th>
-                                            <th className="pb-4 pr-4 hidden sm:table-cell">Region</th>
+                                            <th className="pb-4 pr-4 hidden sm:table-cell">Area</th>
                                             <th className="pb-4 text-right">Revenue</th>
                                         </tr>
                                     </thead>
@@ -333,7 +333,7 @@ export default function MarketingDashboard() {
                                                     {s.shopName}
                                                 </td>
                                                 <td className="py-4 pr-4 hidden sm:table-cell text-xs text-gray-500 font-medium italic">
-                                                    {s.city || 'Global'}
+                                                    {s.location || 'Nairobi'}
                                                 </td>
                                                 <td className="py-4 text-right text-sm font-black text-yellow-500 tabular-nums">
                                                     KSh {Number(s.totalSales || 0).toLocaleString()}

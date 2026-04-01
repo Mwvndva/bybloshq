@@ -288,7 +288,7 @@ const ProductStatusChart = ({ data }: { data: any[] }) => (
 );
 
 const GeoDistributionChart = ({ data }: { data: any[] }) => (
-  <ChartContainer title="Geographic Reach" description="Top 5 cities by user density" className="col-span-4 lg:col-span-2">
+  <ChartContainer title="Geographic Reach" description="Top 5 Areas by user density" className="col-span-4 lg:col-span-2">
     <ResponsiveContainer width="100%" height="100%">
       <PieChart>
         <Pie
@@ -908,6 +908,24 @@ const NewAdminDashboard = () => {
                         </div>
                       ) : (
                         <>
+                          {selectedSeller.banner_image && (
+                            <div className="w-full h-32 md:h-48 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-white/10 mb-8 relative group">
+                              <img src={selectedSeller.banner_image} alt="Shop Banner" className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent" />
+                              <div className="absolute bottom-4 left-6 flex items-end gap-5">
+                                {selectedSeller.avatar_url && (
+                                  <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-[1.5rem] border-2 border-white/10 overflow-hidden shadow-2xl bg-[#0A0A0A]">
+                                    <img src={selectedSeller.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                  </div>
+                                )}
+                                <div className="mb-2">
+                                  <Badge className="bg-yellow-500 text-black font-black text-[9px] tracking-widest px-3 py-1 mb-2">OFFICIAL STORE</Badge>
+                                  <h4 className="text-xl font-black text-white tracking-tighter">{selectedSeller.shop_name}</h4>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
                             <Card className="bg-white/[0.02] border border-white/10 rounded-2xl md:rounded-[2rem] p-5 md:p-6">
                               <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6">Core Identity</h4>
@@ -921,7 +939,26 @@ const NewAdminDashboard = () => {
                                 ].map((item, i) => (
                                   <div key={i} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
                                     <span className="text-gray-500 text-sm font-medium">{item.label}</span>
-                                    <span className={`text-sm font-bold ${item.highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
+                                    <span className={`text-sm font-bold ${(item as any).highlight ? 'text-yellow-500' : 'text-gray-200'}`}>{item.value || 'N/A'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </Card>
+
+                            <Card className="bg-white/[0.02] border border-white/10 rounded-2xl md:rounded-[2rem] p-5 md:p-6">
+                              <h4 className="text-xs font-black text-gray-500 uppercase tracking-widest mb-6">Marketplace Configuration</h4>
+                              <div className="space-y-4">
+                                {[
+                                  { label: 'Shop Reference', value: selectedSeller.shop_name },
+                                  { label: 'Technical Slug', value: selectedSeller.slug },
+                                  { label: 'Visual Theme', value: selectedSeller.theme },
+                                  { label: 'Merchant Bio', value: selectedSeller.bio, isLong: true }
+                                ].map((item, i) => (
+                                  <div key={i} className={`flex ${item.isLong ? 'flex-col items-start' : 'justify-between items-center'} py-2 border-b border-white/5 last:border-0 gap-1`}>
+                                    <span className="text-gray-500 text-[10px] font-black uppercase tracking-widest">{item.label}</span>
+                                    <span className={`text-sm font-bold text-gray-200 ${item.isLong ? 'mt-2 text-xs text-gray-400 font-medium italic leading-relaxed' : ''}`}>
+                                      {item.value || 'NOT_CONFIGURED'}
+                                    </span>
                                   </div>
                                 ))}
                               </div>
