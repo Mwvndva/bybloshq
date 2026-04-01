@@ -44,13 +44,13 @@ import * as sellerController from '../controllers/seller.controller.js';
 // Wishlist routes
 router.use('/wishlist', wishlistRoutes);
 
-// Get shops where user is a client
+// Get followed shops
 router.get('/shops', sellerController.getBuyerShops);
 
-// Become a client of a seller
+// Follow a seller
 router.post('/sellers/:sellerId/become-client', sellerController.handleBecomeClient);
 
-// Leave a seller's clientele
+// Unfollow a seller
 router.post('/sellers/:sellerId/leave-client', sellerController.handleLeaveClient);
 
 

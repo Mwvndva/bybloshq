@@ -680,14 +680,14 @@ const buyerApi = {
       const response = await buyerApiInstance.post<{ message: string; data: { wasClient: boolean } }>(`/buyers/sellers/${sellerId}/leave-client`);
       return {
         success: true,
-        message: response.data.message || 'Successfully left clientele',
+        message: response.data.message || 'Successfully unfollowed',
         wasClient: response.data.data?.wasClient
       };
     } catch (error: any) {
       console.error('Error leaving clientele:', error);
       return {
         success: false,
-        message: error.response?.data?.message || 'Failed to leave clientele'
+        message: error.response?.data?.message || 'Failed to unfollow'
       };
     }
   },

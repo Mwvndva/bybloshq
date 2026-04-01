@@ -321,7 +321,7 @@ function BuyerDashboard() {
               <div>
                 <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">My Shops</h2>
                 <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal">
-                  Shops you have joined as a client
+                  Shops you are following
                 </p>
               </div>
               <div className="relative w-full sm:max-w-xs">
@@ -380,13 +380,13 @@ function BuyerDashboard() {
                             size="sm"
                             className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
                             onClick={async () => {
-                              if (window.confirm(`Are you sure you want to leave ${shop.shopName}'s clientele?`)) {
+                              if (window.confirm(`Are you sure you want to unfollow ${shop.shopName}?`)) {
                                 try {
                                   const res = await buyerApi.leaveClient(shop.id);
                                   if (res.success) {
                                     toast({
                                       title: "Success",
-                                      description: `You have successfully left ${shop.shopName}'s clientele.`,
+                                      description: `You have unfollowed ${shop.shopName}.`,
                                     });
                                     fetchShops();
                                   } else {
@@ -406,7 +406,7 @@ function BuyerDashboard() {
                               }
                             }}
                           >
-                            Leave
+                            Unfollow
                           </Button>
                         </div>
                       </CardContent>
@@ -418,9 +418,9 @@ function BuyerDashboard() {
                 <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center">
                   <ShoppingBag className="h-8 w-8 sm:h-10 sm:w-10 text-gray-500" />
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-2">No shops joined yet</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-white mb-2">No shops followed yet</h3>
                 <p className="text-gray-400 text-sm sm:text-base max-w-sm mx-auto mb-8 px-4">
-                  You haven't joined any shop's clientele yet. Start exploring to find brands you love!
+                  You haven't followed any shops yet. Start exploring to find brands you love!
                 </p>
                 <Button
                   onClick={() => setActiveSection('shop')}

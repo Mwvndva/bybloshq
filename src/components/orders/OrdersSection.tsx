@@ -461,9 +461,9 @@ export default function OrdersSection() {
         const result = await buyerApi.leaveClient(sellerId);
         if (result.success) {
           setClientStatus(prev => ({ ...prev, [sellerId]: false }));
-          toast.success(`You have left ${sellerName}'s clientele`);
+          toast.success(`You have unfollowed ${sellerName}`);
         } else {
-          toast.error(result.message || 'Failed to leave clientele');
+          toast.error(result.message || 'Failed to unfollow');
         }
       } else {
         // Join client
@@ -472,9 +472,9 @@ export default function OrdersSection() {
         setClientStatus(prev => ({ ...prev, [sellerId]: true }));
 
         if (result.data?.alreadyClient) {
-          toast.info(`You are already a client of ${sellerName}`);
+          toast.info(`You are already following ${sellerName}`);
         } else {
-          toast.success(`You have successfully joined ${sellerName}'s clientele!`);
+          toast.success(`You are now following ${sellerName}!`);
         }
       }
     } catch (error: any) {
@@ -736,12 +736,12 @@ export default function OrdersSection() {
                         ) : clientStatus[order.seller.id] ? (
                           <>
                             <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                            Leave
+                            Unfollow
                           </>
                         ) : (
                           <>
                             <Users className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-                            Join
+                            Follow
                           </>
                         )}
                       </Button>
