@@ -29,12 +29,13 @@ export function BuyerRegister() {
   }, []);
 
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     email: '',
     mobilePayment: '',
     password: '',
     confirmPassword: '',
-    city: '',
+    city: 'Nairobi',
     location: ''
   });
 
@@ -111,7 +112,7 @@ export function BuyerRegister() {
     e.preventDefault();
     setErrors({}); // Clear previous errors
 
-    if (!formData.fullName || !formData.email || !formData.mobilePayment || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.mobilePayment || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields including location and phone numbers",
@@ -126,7 +127,7 @@ export function BuyerRegister() {
 
     try {
       await register({
-        fullName: formData.fullName,
+        fullName: `${formData.firstName} ${formData.lastName}`.trim(),
         email: formData.email,
         mobilePayment: formData.mobilePayment,
         password: formData.password,
@@ -237,26 +238,50 @@ export function BuyerRegister() {
               {/* Step 1: Personal Details */}
               {currentStep === 1 && (
                 <>
-                  <div className="space-y-0.5 sm:space-y-2">
-                    <Label htmlFor="fullName" className="text-[10px] sm:text-sm font-medium text-gray-200">
-                      Full Name
-                    </Label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                        <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-0.5 sm:space-y-2">
+                      <Label htmlFor="firstName" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                        First Name
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
+                          <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                        </div>
+                        <Input
+                          id="firstName"
+                          name="firstName"
+                          type="text"
+                          placeholder="First Name"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          required
+                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.firstName ? 'border-red-500' : ''}`}
+                        />
                       </div>
-                      <Input
-                        id="fullName"
-                        name="fullName"
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={formData.fullName}
-                        onChange={handleInputChange}
-                        required
-                        className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.fullName ? 'border-red-500' : ''}`}
-                      />
+                      {errors.firstName && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.firstName}</p>}
                     </div>
-                    {errors.fullName && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.fullName}</p>}
+
+                    <div className="space-y-0.5 sm:space-y-2">
+                      <Label htmlFor="lastName" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                        Last Name
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
+                          <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                        </div>
+                        <Input
+                          id="lastName"
+                          name="lastName"
+                          type="text"
+                          placeholder="Last Name"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          required
+                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm ${errors.lastName ? 'border-red-500' : ''}`}
+                        />
+                      </div>
+                      {errors.lastName && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.lastName}</p>}
+                    </div>
                   </div>
 
                   <div className="space-y-0.5 sm:space-y-2">
@@ -328,14 +353,12 @@ export function BuyerRegister() {
                         }}
                       >
                         <SelectTrigger className="pl-8 sm:pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm">
-                          <SelectValue placeholder="Select your city" />
+                          <SelectValue placeholder="Nairobi" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                          {Object.keys(locationData).sort().map((city) => (
-                            <SelectItem key={city} value={city} className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">
-                              {city}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="Nairobi" className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">
+                            Nairobi
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -492,7 +515,7 @@ export function BuyerRegister() {
                     onClick={() => {
                       // Validate current step before proceeding
                       if (currentStep === 1) {
-                        if (!formData.fullName || !formData.email || !formData.mobilePayment) {
+                        if (!formData.firstName || !formData.lastName || !formData.email || !formData.mobilePayment) {
                           toast({
                             title: "Missing Information",
                             description: "Please fill in all personal details",

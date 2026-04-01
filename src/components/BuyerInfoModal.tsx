@@ -9,10 +9,12 @@ import { useToast } from '@/components/ui/use-toast';
 import { locationData } from '@/lib/constants';
 
 interface BuyerInfo {
-  fullName: string;
+  firstName: string;
+  lastName: string;
+  fullName?: string;
   email: string;
   mobilePayment: string;
-  city?: string;
+  city: string;
   location: string;
   password?: string;
   confirmPassword?: string;
@@ -41,10 +43,11 @@ export function BuyerInfoModal({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>({
-    fullName: initialData?.fullName || '',
+    firstName: initialData?.fullName?.split(' ')[0] || '',
+    lastName: initialData?.fullName?.split(' ').slice(1).join(' ') || '',
     email: initialData?.email || '',
     mobilePayment: initialData?.mobilePayment || phoneNumber || '',
-    city: initialData?.city || '',
+    city: initialData?.city || 'Nairobi',
     location: initialData?.location || '',
     password: '',
     confirmPassword: ''
@@ -57,8 +60,11 @@ export function BuyerInfoModal({
     if (initialData) {
       setBuyerInfo(prev => ({
         ...prev,
-        ...initialData
-      }));
+        ...initialData,
+        firstName: initialData.fullName?.split(' ')[0] || prev.firstName,
+        lastName: initialData.fullName?.split(' ').slice(1).join(' ') || prev.lastName,
+        city: initialData.city || 'Nairobi'
+      }) as BuyerInfo);
     }
   }, [initialData]);
 
@@ -76,8 +82,12 @@ export function BuyerInfoModal({
   const validateForm = (): boolean => {
     const newErrors: Partial<BuyerInfo> = {};
 
-    if (!buyerInfo.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+    if (!buyerInfo.firstName.trim()) {
+      newErrors.firstName = 'First name is required' as any;
+    }
+
+    if (!buyerInfo.lastName.trim()) {
+      newErrors.lastName = 'Last name is required' as any;
     }
 
     if (!buyerInfo.email.trim()) {
@@ -116,13 +126,17 @@ export function BuyerInfoModal({
     }
 
     try {
-      await onSubmit(buyerInfo);
+      await onSubmit({
+        ...buyerInfo,
+        fullName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim()
+      } as any);
       // Reset form on successful submission
       setBuyerInfo({
-        fullName: '',
+        firstName: '',
+        lastName: '',
         email: '',
         mobilePayment: '',
-        city: '',
+        city: 'Nairobi',
         location: '',
         password: '',
         confirmPassword: ''
@@ -142,10 +156,11 @@ export function BuyerInfoModal({
   const handleClose = () => {
     if (!isLoading) {
       setBuyerInfo({
-        fullName: '',
+        firstName: '',
+        lastName: '',
         email: '',
         mobilePayment: '',
-        city: '',
+        city: 'Nairobi',
         location: '',
         password: '',
         confirmPassword: ''
@@ -186,28 +201,51 @@ export function BuyerInfoModal({
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent'
             }}>
-            {/* Full Name */}
-            <div className="space-y-1.5">
-              <Label htmlFor="fullName" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
-                Full Name *
-              </Label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <User className="h-5 w-5 text-[#555555]" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
+                  First Name *
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-[#555555]" />
+                  </div>
+                  <Input
+                    id="firstName"
+                    type="text"
+                    placeholder="First Name"
+                    value={buyerInfo.firstName}
+                    onChange={(e) => setBuyerInfo(prev => ({ ...prev, firstName: e.target.value }))}
+                    className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.firstName ? 'border-red-500' : ''}`}
+                    disabled={isLoading}
+                  />
                 </div>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Enter your full name"
-                  value={buyerInfo.fullName}
-                  onChange={(e) => setBuyerInfo(prev => ({ ...prev, fullName: e.target.value }))}
-                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.fullName ? 'border-red-500' : ''}`}
-                  disabled={isLoading}
-                />
+                {errors.firstName && (
+                  <p className={`text-[10px] font-bold ${themeClasses.error}`}>{(errors as any).firstName}</p>
+                )}
               </div>
-              {errors.fullName && (
-                <p className={`text-[10px] font-bold ${themeClasses.error}`}>{errors.fullName}</p>
-              )}
+              <div className="space-y-1.5">
+                <Label htmlFor="lastName" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
+                  Last Name *
+                </Label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-[#555555]" />
+                  </div>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Last Name"
+                    value={buyerInfo.lastName}
+                    onChange={(e) => setBuyerInfo(prev => ({ ...prev, lastName: e.target.value }))}
+                    className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.lastName ? 'border-red-500' : ''}`}
+                    disabled={isLoading}
+                  />
+                </div>
+                {errors.lastName && (
+                  <p className={`text-[10px] font-bold ${themeClasses.error}`}>{(errors as any).lastName}</p>
+                )}
+              </div>
             </div>
 
             {/* Email */}
@@ -281,11 +319,9 @@ export function BuyerInfoModal({
                       <SelectValue placeholder="Select city" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
-                      {Object.keys(locationData).sort().map((city) => (
-                        <SelectItem key={city} value={city} className="text-white hover:bg-white/5 focus:bg-white/10">
-                          {city}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="Nairobi" className="text-white hover:bg-white/5 focus:bg-white/10">
+                        Nairobi
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
