@@ -16,26 +16,7 @@ interface SellerRegistrationProps {
 
 // Location data with Kenyan cities and their areas
 const locationData: Record<string, string[]> = {
-  'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka'],
-  'Mombasa': ['Mombasa Island', 'Nyali', 'Bamburi', 'Kisauni', 'Changamwe', 'Likoni', 'Mtongwe', 'Tudor', 'Shanzu', 'Diani'],
-  'Kisumu': ['Kisumu Central', 'Milimani', 'Mamboleo', 'Dunga', 'Kogony', 'Kakamega Road', 'Kibuye', 'Kondele', 'Manyatta', 'Nyalenda'],
-  'Nakuru': ['Nakuru Town', 'Lanet', 'Kaptembwa', 'Shabab', 'Free Area', 'Section 58', 'Milimani', 'Kiamunyi', 'Kivumbini', 'Ponda Mali'],
-  'Eldoret': ['Eldoret Town', 'Kapsoya', 'Langas', 'Huruma', 'Kipkaren', 'Kimumu', 'Chebaiywa', 'Kipkenyo', 'Kapsabet Road', 'Maili Nne'],
-  'Thika': ['Thika Town', 'Makongeni', 'Kiganjo', 'Kangemi'],
-  'Malindi': ['Malindi Town', 'Casuarina', 'Shella', 'Watamu', 'Kilifi', 'Mtwapa', 'Bamburi', 'Kikambala', 'Vipingo', 'Gede'],
-  'Kitale': ['Kitale Town', 'Milimani', 'Kipsongol', 'Matunda', 'Kiminini', 'Sikhendu', 'Kachibora', 'Kapenguria', 'Endebess', 'Saboti'],
-  'Garissa': ['Garissa Town', 'Bula Garissa', 'Iftin', 'Bulla Iftin', 'Bulla Punda', 'Bulla Mzuri', 'Bulla Mpya', 'Bulla Kuku', 'Bulla Ngombe', 'Bulla Mbwa'],
-  'Kakamega': ['Kakamega Town', 'Shinyalu', 'Ikolomani', 'Lurambi', 'Matungu', 'Mumias', 'Butere', 'Khwisero', 'Malava', 'Navakholo'],
-  'Meru': ['Meru Town', 'Makutano', 'Maua', 'Chuka', 'Chogoria', 'Nkubu', 'Kianjai', 'Mitunguu', 'Kithirune', 'Kiguchwa'],
-  'Nyeri': ['Nyeri Town', 'Kiganjo', 'Karatina', 'Mathira', 'Othaya', 'Tetu', 'Mukurweini', 'Kieni', 'Mweiga', 'Chaka'],
-  'Machakos': ['Machakos Town', 'Athi River', 'Syokimau', 'Tala', 'Kangundo', 'Matuu', 'Kathiani', 'Mavoko', 'Mwala', 'Yatta'],
-  'Kericho': ['Kericho Town', 'Londiani', 'Kipkelion', 'Bureti', 'Belgut', 'Sigowet', 'Soin', 'Kipkelion East', 'Kipkelion West', 'Ainamoi'],
-  'Kisii': ['Kisii Town', 'Nyamira', 'Bobasi', 'Bomachoge', 'Bomachoge Chache', 'Bonchari', 'Kitutu Chache', 'Kitutu Masaba', 'Nyaribari Chache', 'Nyaribari Masaba'],
-  'Embu': ['Embu Town', 'Manyatta', 'Runyenjes', 'Siakago', 'Mbeere North', 'Mbeere South', 'Gachoka', 'Kithyoko', 'Kangaru', 'Mavuria'],
-  'Narok': ['Narok Town', 'Kilgoris', 'Suswa', 'Ntulele', 'Mara', 'Loita', 'Oloitokitok', 'Sekenani', 'Ewaso Ngiro', 'Ololulunga'],
-  'Kitui': ['Kitui Town', 'Mwingi', 'Mutomo', 'Ikutha', 'Kanyangi', 'Mutha', 'Mumoni', 'Mutonguni', 'Nzambani', 'Kyuso'],
-  'Bungoma': ['Bungoma Town', 'Webuye', 'Kimilili', 'Tongaren', 'Kanduyi', 'Bumula', 'Kabuchai', 'Mt. Elgon', 'Sirisia', 'Cheptais'],
-  'Busia': ['Busia Town', 'Bunyala', 'Samia', 'Teso North', 'Teso South', 'Nambale', 'Matayos']
+  'Nairobi': ['CBD', 'Westlands', 'Karen', 'Runda', 'Kileleshwa', 'Kilimani', 'Lavington', 'Parklands', 'Eastleigh', 'South B', 'South C', 'Langata', 'Kasarani', 'Embakasi', 'Ruaraka']
 };
 
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
@@ -50,13 +31,14 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const referralCode = queryParams.get('ref') || undefined;
 
   const [formData, setFormData] = useState({
-    fullName: '',
+    firstName: '',
+    lastName: '',
     shopName: '',
     email: '',
     whatsappNumber: '',
     password: '',
     confirmPassword: '',
-    city: '',
+    city: 'Nairobi',
     location: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -208,7 +190,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     e.preventDefault();
 
     // Validate form
-    if (!formData.fullName || !formData.shopName || !formData.email || !formData.whatsappNumber || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
+    if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email || !formData.whatsappNumber || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields including location",
@@ -247,7 +229,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     try {
       // Use the auth context register which now supports referralCode
       await register({
-        fullName: formData.fullName,
+        fullName: `${formData.firstName} ${formData.lastName}`.trim(),
         shopName: formData.shopName.trim(),
         email: formData.email,
         whatsappNumber: formData.whatsappNumber,
@@ -380,24 +362,47 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
               {/* Step 1: Personal Details */}
               {currentStep === 1 && (
                 <>
-                  <div className="space-y-0.5 sm:space-y-2">
-                    <Label htmlFor="fullName" className="text-[10px] sm:text-sm font-medium text-gray-200">
-                      Full Name
-                    </Label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                        <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-0.5 sm:space-y-2">
+                      <Label htmlFor="firstName" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                        First Name
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
+                          <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                        </div>
+                        <Input
+                          id="firstName"
+                          name="firstName"
+                          type="text"
+                          placeholder="First Name"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          required
+                          className="input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                        />
                       </div>
-                      <Input
-                        id="fullName"
-                        name="fullName"
-                        type="text"
-                        placeholder="Enter your full name"
-                        value={formData.fullName}
-                        onChange={handleInputChange}
-                        required
-                        className="input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
-                      />
+                    </div>
+
+                    <div className="space-y-0.5 sm:space-y-2">
+                      <Label htmlFor="lastName" className="text-[10px] sm:text-sm font-medium text-gray-200">
+                        Last Name
+                      </Label>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
+                          <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
+                        </div>
+                        <Input
+                          id="lastName"
+                          name="lastName"
+                          type="text"
+                          placeholder="Last Name"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          required
+                          className="input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -495,14 +500,12 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                         onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, location: '' }))}
                       >
                         <SelectTrigger className="pl-8 sm:pl-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
-                          <SelectValue placeholder="Select your city" className="text-gray-300" />
+                          <SelectValue placeholder="Nairobi" className="text-gray-300" />
                         </SelectTrigger>
                         <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                          {Object.keys(locationData).sort((a, b) => a.localeCompare(b)).map((city) => (
-                            <SelectItem key={city} value={city} className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">
-                              {city}
-                            </SelectItem>
-                          ))}
+                          <SelectItem value="Nairobi" className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">
+                            Nairobi
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -651,7 +654,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                     onClick={() => {
                       // ... validation logic ...
                       if (currentStep === 1) {
-                        if (!formData.fullName || !formData.shopName || !formData.email || !formData.whatsappNumber) {
+                        if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email || !formData.whatsappNumber) {
                           toast({ title: "Missing Information", description: "Please fill in all details", variant: 'destructive' });
                           return;
                         }
