@@ -343,9 +343,13 @@ Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_
         let buyerInfo = '';
         if (!isDigital) {
             buyerInfo = `👤 *BUYER:* ${buyer.name}\n📞 *PHONE:* ${buyer.phone || 'N/A'}`;
-            if (!seller?.physicalAddress) {
-                const locationStr = buyer.location || buyer.city || 'Not specified';
+            if (isService && !seller?.physicalAddress) {
+                const locationStr = buyer.full_address || buyer.location || buyer.city || 'Not specified';
                 buyerInfo += `\n📍 *LOCATION:* ${locationStr}`;
+
+                if (buyer.latitude && buyer.longitude) {
+                    buyerInfo += `\n🗺️ *MAP:* https://www.google.com/maps?q=${buyer.latitude},${buyer.longitude}`;
+                }
             }
             buyerInfo += '\n';
         }
