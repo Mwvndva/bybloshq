@@ -76,6 +76,7 @@ export interface BuyerRegistrationData {
     fullName: string;
     email: string;
     mobilePayment: string;
+    whatsappNumber: string;
     password: string;
     confirmPassword: string;
     city: string;
