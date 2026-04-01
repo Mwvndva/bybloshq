@@ -280,6 +280,16 @@ class AdminService {
       }
 
       // --- Universal cleanup: runs for ALL roles (Sellers can be Buyers too) ---
+
+      // Fix for "seller_clients" FK violation (where user is the client)
+      // Also decrement client count for affected sellers
+      await client.query(`
+        UPDATE sellers 
+        SET client_count = GREATEST(COALESCE(client_count, 0) - 1, 0)
+        WHERE id IN (SELECT seller_id FROM seller_clients WHERE user_id = $1)
+      `, [userId]);
+      await client.query('DELETE FROM seller_clients WHERE user_id = $1', [userId]);
+
       const buyerRow = await client.query('SELECT id FROM buyers WHERE user_id = $1', [userId]);
       if (buyerRow.rows.length > 0) {
         const buyerId = buyerRow.rows[0].id;
