@@ -3,7 +3,7 @@ import { getFreshCsrfToken, getCachedCsrfToken, setCachedCsrfToken } from '@/lib
 
 type AxiosInstance = any;
 type AxiosRequestConfig = any;
-import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
+
 
 // Extend the AxiosRequestConfig interface to include our custom options
 interface CustomAxiosRequestConfig extends Record<string, any> {
