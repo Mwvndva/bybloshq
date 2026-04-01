@@ -1,4 +1,5 @@
 import * as wishlistRepository from '../repositories/wishlist.repository.js';
+import { sanitizePublicProduct } from '../utils/sanitize.js';
 
 // Get the buyer's wishlist
 export const getWishlist = async (req, res) => {
@@ -12,12 +13,13 @@ export const getWishlist = async (req, res) => {
     }
 
     const wishlist = await wishlistRepository.findByBuyerId(buyerId);
+    const sanitizedItems = wishlist.map(item => sanitizePublicProduct(item));
 
     // Return the data in the expected format
     res.status(200).json({
       success: true,
       data: {
-        items: wishlist
+        items: sanitizedItems
       }
     });
   } catch (error) {

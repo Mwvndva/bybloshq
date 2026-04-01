@@ -46,9 +46,10 @@ export const createOrder = async (req, res) => {
 
         const order = await OrderService.createOrder(orderData);
 
+        const userType = req.user.userType || req.user.role;
         res.status(201).json({
             status: 'success',
-            data: order
+            data: { order: sanitizeOrder(order, userType) }
         });
     } catch (error) {
         logger.error('Error creating order:', error);
@@ -183,7 +184,7 @@ export const cancelOrder = async (req, res) => {
         }
 
         const updatedOrder = await OrderService.cancelOrder(id, 'Buyer requested cancellation');
-        res.status(200).json({ status: 'success', message: 'Order cancelled', data: updatedOrder });
+        res.status(200).json({ status: 'success', message: 'Order cancelled', data: { order: sanitizeOrder(updatedOrder, 'buyer') } });
     } catch (error) {
         logger.error('Error cancelling order:', error);
         res.status(400).json({ status: 'error', message: error.message });
@@ -213,7 +214,7 @@ export const sellerCancelOrder = async (req, res) => {
         res.status(200).json({
             status: 'success',
             message: 'Order cancelled',
-            data: updatedOrder
+            data: { order: sanitizeOrder(updatedOrder, 'seller') }
         });
     } catch (error) {
         logger.error('Error cancelling order (seller):', error);
@@ -265,7 +266,7 @@ export const createSellerClientOrder = async (req, res) => {
 
         res.status(201).json({
             status: 'success',
-            data: result
+            data: { order: sanitizeOrder(result, 'seller') }
         });
     } catch (error) {
         logger.error('Error creating client order:', error);

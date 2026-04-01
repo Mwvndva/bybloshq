@@ -90,7 +90,7 @@ const transformBuyer = (data: any): Buyer => {
     location: buyer.location || '',
     hasLocation: buyer.hasLocation || false,
     hasEmail: buyer.hasEmail || false,
-    refunds: 0, // Never trust server-sent refund balance in profile — fetch separately if needed
+    refunds: buyer.refunds || 0,
     createdAt: buyer.createdAt || new Date().toISOString(),
     updatedAt: buyer.updatedAt
   };

@@ -68,59 +68,31 @@ export const getProducts = async (req, res) => {
 
     const result = await pool.query(query, queryParams);
 
-    // Transform results to include nested seller object
-    const transformedResults = result.rows.map(row => {
-      const product = { ...row };
+    // Transform results to use sanitization DTOs
+    const sanitizedProducts = result.rows.map(row => {
+      const product = sanitizePublicProduct(row);
 
-      // Create seller object
-      if (row.seller_id) {
-        product.seller = {
-          id: row.seller_id,
-          fullName: row.seller_shop_name, // Use shop name instead of full name
-          full_name: row.seller_shop_name,
-          location: row.seller_location,
-          city: row.seller_city,
-          physicalAddress: row.physical_address,
-          latitude: row.latitude,
-          longitude: row.longitude,
-          hasPhysicalShop: !!row.physical_address,
-          avatarUrl: row.seller_avatar_url,
-          avatar_url: row.seller_avatar_url,
-          bio: row.seller_bio,
-          theme: row.seller_theme || 'black',
-          shopName: row.seller_shop_name,
-          shop_name: row.seller_shop_name,
-          createdAt: row.seller_created_at,
-          created_at: row.seller_created_at,
-          updatedAt: row.seller_updated_at,
-          updated_at: row.seller_updated_at
-        };
-      }
-
-      // Remove individual seller fields from root level
-      delete product.seller_id;
-      delete product.seller_name;
-      delete product.seller_phone;
-      delete product.seller_email;
-      delete product.seller_city;
-      delete product.seller_location;
-      delete product.physical_address;
-      delete product.latitude;
-      delete product.longitude;
-      delete product.seller_avatar_url;
-      delete product.seller_bio;
-      delete product.seller_shop_name;
-      delete product.seller_created_at;
-      delete product.seller_updated_at;
+      // Inject nested seller info (also sanitized)
+      product.seller = sanitizePublicSeller({
+        ...row,
+        id: row.seller_id,
+        shopName: row.seller_shop_name,
+        city: row.seller_city,
+        location: row.seller_location,
+        physicalAddress: row.physical_address,
+        avatarUrl: row.seller_avatar_url,
+        bio: row.seller_bio,
+        theme: row.seller_theme,
+      });
 
       return product;
     });
 
     const responseData = {
       status: 'success',
-      results: transformedResults.length,
+      results: sanitizedProducts.length,
       data: {
-        products: transformedResults
+        products: sanitizedProducts
       }
     };
 
@@ -165,11 +137,19 @@ export const getProduct = async (req, res) => {
       });
     }
 
+    const product = sanitizePublicProduct(result.rows[0]);
+    product.seller = sanitizePublicSeller({
+      ...result.rows[0],
+      shopName: result.rows[0].shop_name,
+      city: result.rows[0].seller_city,
+      location: result.rows[0].seller_location,
+      theme: result.rows[0].seller_theme,
+      physicalAddress: result.rows[0].physical_address
+    });
+
     res.status(200).json({
       status: 'success',
-      data: {
-        product: result.rows[0]
-      }
+      data: { product }
     });
   } catch (error) {
     console.error(`Error fetching product ${req.params.id}:`, error);
@@ -231,13 +211,10 @@ export const getSellerPublicInfo = async (req, res) => {
       });
     }
 
-    // Don't expose sensitive data
-    const { password, reset_token, reset_token_expiry, ...sellerData } = result.rows[0];
-
     res.status(200).json({
       status: 'success',
       data: {
-        seller: sellerData
+        seller: sanitizePublicSeller(result.rows[0])
       }
     });
   } catch (error) {
@@ -279,7 +256,6 @@ export const getSellers = async (req, res) => {
       id: row.id,
       shopName: row.shop_name,
       shopLink: row.shop_name, // Use shop_name as the link slug
-      fullName: row.full_name,
       bannerUrl: row.banner_image, // Mapped from banner_image
       avatarUrl: null, // avatar_url not available in sellers table
       theme: row.theme, // Mapped from theme

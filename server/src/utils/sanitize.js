@@ -28,11 +28,12 @@ export const sanitizeBuyer = (buyer) => {
         mobilePayment: b.mobilePayment || b.mobile_payment || b.payment_phone || null,
         city: b.city || null,
         location: b.location || b.physical_address || null,
+        refunds: b.refunds ? parseFloat(b.refunds) : 0,
         // Coordinates: boolean presence only — full coords not needed by the frontend profile UI
         hasLocation: !!(b.latitude && b.longitude),
         role: 'buyer',
         createdAt: b.createdAt || b.created_at || null,
-        // NEVER return: user_id, password, password_hash, refunds, full_address,
+        // NEVER return: user_id, password, password_hash, full_address,
         // latitude, longitude, userId, reset tokens, internal flags
     };
 };
@@ -97,24 +98,23 @@ export const sanitizeProduct = (product) => {
         sold_at: p.sold_at || p.soldAt || null,
         created_at: p.created_at || p.createdAt,
         updated_at: p.updated_at || p.updatedAt,
-        // seller_id: NEVER returned — client already knows their own ID
     };
 };
 
 /**
- * Sanitize a product for public display (shop page / buyer view).
- * Strips all internal management fields.
+ * STRONGER PUBLIC SANITIZATION
+ * Used for public storefront and product listings
  */
 export const sanitizePublicProduct = (product) => {
     if (!product) return null;
-    const p = product.toObject ? product.toObject() : product;
+    const p = product.toJSON ? product.toJSON() : product;
 
     return {
         id: p.id,
         name: p.name,
         description: p.description,
         price: parseFloat(p.price),
-        image_url: p.image_url,
+        image_url: p.image_url || p.imageUrl,
         images: (() => {
             try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []); }
             catch { return []; }
@@ -125,32 +125,30 @@ export const sanitizePublicProduct = (product) => {
         product_type: p.product_type || p.productType || 'physical',
         service_locations: p.service_locations || p.serviceLocations || null,
         service_options: p.service_options || p.serviceOptions || null,
-        is_sold: !!(p.is_sold || p.isSold),
-        // NO: seller_id, digital_file_path, digital_file_name, track_inventory, quantity, low_stock_threshold
+        is_sold: !!(p.is_sold || p.isSold || p.status === 'sold'),
+        created_at: p.created_at || p.createdAt,
+        // NEVER: digital_file_path, quantity, low_stock_threshold, track_inventory, seller_id (if nested)
     };
 };
 
 // For public seller profile (viewed by buyers)
 export const sanitizePublicSeller = (seller) => {
     if (!seller) return null;
-    const sellerObj = seller.toObject ? seller.toObject() : seller;
+    const sellerObj = seller.toJSON ? seller.toJSON() : seller;
 
     return {
-        id: sellerObj.id,
-        shopName: sellerObj.shopName || sellerObj.shop_name,
-        fullName: sellerObj.fullName || sellerObj.full_name, // Needed for shop page "By {name}" display
+        id: sellerObj.id || sellerObj.seller_id,
+        shopName: sellerObj.shopName || sellerObj.shop_name || '',
         city: sellerObj.city,
         location: sellerObj.location,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
-        theme: sellerObj.theme,
-        physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address,
-        latitude: sellerObj.latitude,
-        longitude: sellerObj.longitude,
-        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
-        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
-        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
+        avatarUrl: sellerObj.avatarUrl || sellerObj.avatar_url,
+        bio: sellerObj.bio,
+        theme: sellerObj.theme || 'black',
+        physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
+        hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
         clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
-        // NO email, phone, balance, revenue, internal IDs
+        // STRICTLY REMOVED: email, phone, whatsappNumber, fullName, balance, revenue, internal IDs, coordinates
     };
 };
 

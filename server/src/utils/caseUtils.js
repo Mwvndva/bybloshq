@@ -3,6 +3,7 @@
  */
 export const toCamelCase = (obj) => {
     if (!obj || typeof obj !== 'object') return obj;
+    if (obj instanceof Date || obj instanceof Buffer) return obj;
     if (Array.isArray(obj)) return obj.map(v => toCamelCase(v));
 
     const newObj = {};
