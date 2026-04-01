@@ -207,7 +207,8 @@ export const adminApi = {
         city: buyer.city || 'N/A',
         location: buyer.location || 'N/A',
         // Transform snake_case to camelCase for the frontend
-        createdAt: buyer.created_at || buyer.createdAt || new Date().toISOString()
+        createdAt: buyer.created_at || buyer.createdAt || new Date().toISOString(),
+        user_id: buyer.user_id
       }));
 
       console.log(`Fetched ${buyers.length} buyers with location data`);
@@ -249,7 +250,8 @@ export const adminApi = {
         id: String(seller.id || ''),
         name: seller.name || seller.full_name || 'Unnamed Seller',
         phone: seller.phone || seller.whatsapp_number || '',
-        createdAt: seller.created_at || seller.createdAt || new Date().toISOString()
+        createdAt: seller.created_at || seller.createdAt || new Date().toISOString(),
+        user_id: seller.user_id
       }));
     } catch (error) {
       console.error('Error fetching sellers:', error);

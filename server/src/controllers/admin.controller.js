@@ -383,6 +383,7 @@ const getAllBuyers = async (req, res, next) => {
     const query = `
       SELECT 
         id,
+        user_id,
         full_name as name,
         email,
         mobile_payment as phone,
