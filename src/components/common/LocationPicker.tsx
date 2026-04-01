@@ -73,6 +73,15 @@ export default function LocationPicker({
     const [showResults, setShowResults] = useState(false);
     const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimeoutRef.current) {
+                clearTimeout(searchTimeoutRef.current);
+            }
+        };
+    }, []);
+
     useEffect(() => {
         if (initialAddress && initialAddress !== address) {
             setAddress(initialAddress);

@@ -271,12 +271,11 @@ const buyerApi = {
   updateProfile: async (data: any): Promise<Buyer> => {
     try {
       const response = await updateBuyerProfile(data) as any;
-      if (response.data && response.data.data && response.data.data.buyer) {
+      if (response.data?.data?.buyer) {
         return transformBuyer(response.data.data.buyer);
       }
-      return transformBuyer(response.data.data || response.data);
+      return transformBuyer(response.data?.data || response.data);
     } catch (error: any) {
-      console.error('Error updating profile:', error);
       if (error.response?.data?.message) {
         throw new Error(error.response.data.message);
       }

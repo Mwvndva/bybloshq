@@ -36,17 +36,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Safely use wishlist context
-  let wishlistContext = null;
-  try {
-    wishlistContext = useWishlist?.();
-  } catch (error) {
-    console.warn('ProductCard: Wishlist not available');
-  }
+  const wishlistContext = useWishlist();
+  const { isAuthenticated, user: userData } = useBuyerAuth();
 
-  const addToWishlist = wishlistContext?.addToWishlist || (async () => { });
-  const isInWishlist = wishlistContext?.isInWishlist || (() => false);
-  const isWishlistLoading = wishlistContext?.isLoading || false;
+  const addToWishlist = wishlistContext.addToWishlist;
+  const isInWishlist = wishlistContext.isInWishlist;
+  const isWishlistLoading = wishlistContext.isLoading;
 
   // Dialog state
   const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
@@ -61,6 +56,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
+
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Add cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Derived state
   const displaySeller = seller || product.seller;
@@ -178,18 +184,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       setIsImageDialogOpen(true);
     }
   };
-
-  // Safely use buyer auth context
-  let isAuthenticated = false;
-  let userData = null;
-
-  try {
-    const buyerAuth = useBuyerAuth?.();
-    isAuthenticated = buyerAuth?.isAuthenticated || false;
-    userData = buyerAuth?.user || null;
-  } catch (error) {
-    console.warn('ProductCard: BuyerAuth not available');
-  }
 
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string; locationType?: string } | null>(null);
@@ -420,39 +414,43 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const pollPaymentStatus = (invoiceId: string) => {
     let attempts = 0;
-    const interval = setInterval(async () => {
+
+    // Clear any existing poll
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    pollingIntervalRef.current = setInterval(async () => {
       attempts++;
-      if (attempts > 24) { clearInterval(interval); setIsProcessingPurchase(false); return; }
+      if (attempts > 24) {
+        clearInterval(pollingIntervalRef.current!);
+        pollingIntervalRef.current = null;
+        setIsProcessingPurchase(false);
+        return;
+      }
 
       try {
-        // USE NEW API CLIENT
         const response = await apiClient.get(`/payments/status/${invoiceId}`);
         const data: any = response.data;
         const status = data.data?.status || data.status;
 
         if (status === 'success' || status === 'completed') {
-          clearInterval(interval);
+          clearInterval(pollingIntervalRef.current!);
+          pollingIntervalRef.current = null;
           setIsProcessingPurchase(false);
-
-          toast({
-            title: 'Payment Successful',
-            description: 'Your purchase has been confirmed! Redirecting...',
-            className: 'bg-green-600 text-white',
-            duration: 2000
-          });
-
-          // **NAVIGATION**: Redirect to payment success page to show modal
-          // User will manually click "Go to Login" button from success modal
+          toast({ title: 'Payment Successful', description: 'Your purchase has been confirmed! Redirecting...' });
           setTimeout(() => {
             navigate(`/payment/success?reference=${invoiceId}&status=success`, { replace: true });
           }, 1500);
-
         } else if (status === 'failed') {
-          clearInterval(interval);
+          clearInterval(pollingIntervalRef.current!);
+          pollingIntervalRef.current = null;
           setIsProcessingPurchase(false);
           toast({ title: 'Payment Failed', description: 'Transaction declined.', variant: 'destructive' });
         }
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error('[POLL] Status check error:', e);
+      }
     }, 5000);
   };
 
@@ -783,7 +781,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Image/Preview Dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="w-[95vw] sm:max-w-4xl mx-auto max-h-[90vh] flex flex-col p-2 sm:p-6 bg-[#111] sm:bg-background border-white/10 border sm:border-border rounded-xl">
+        <DialogContent className="product-image-dialog w-[95vw] sm:max-w-4xl mx-auto max-h-[90vh] flex flex-col p-2 sm:p-6 bg-[#111] sm:bg-background border-white/10 border sm:border-border rounded-xl">
           <DialogHeader className="pr-8 px-2 sm:px-0 mt-2 sm:mt-0">
             <DialogTitle className="text-sm sm:text-base flex items-center gap-2 text-white sm:text-foreground">
               {(product.product_type === 'digital' || (product as any).productType === 'digital') && (
@@ -801,19 +799,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                  we can use the DialogClose exported from the library. */}
           </div>
           {/* We'll use CSS to target the internal close button since we don't want to change the global ui/dialog.tsx component. */}
-          <style>{`
-            div[role="dialog"] button.absolute.right-4.top-4 {
-              color: rgba(250, 204, 21, 1); /* text-yellow-400 */
-              opacity: 1;
-              background: rgba(0,0,0,0.5);
-              padding: 4px;
-              border-radius: 50%;
-            }
-            div[role="dialog"] button.absolute.right-4.top-4:hover {
-              color: rgba(234, 179, 8, 1); /* text-yellow-500 */
-              background-color: rgba(250, 204, 21, 0.2);
-            }
-          `}</style>
 
           <div className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh] relative group/modal">
             <style>{`

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { Product } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,47 +10,32 @@ import { sellerApi } from '@/api/sellerApi';
 import { toast } from '@/components/ui/sonner';
 
 export default function SellerProductsPage() {
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   // Toast is imported directly from sonner
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
-      // Get the seller ID from localStorage
-      const sellerData = localStorage.getItem('seller');
-      if (!sellerData) {
-        throw new Error('Seller not authenticated');
-      }
-      // No need to pass seller ID as it's handled by the auth token
       const data = await sellerApi.getProducts();
-      setProducts(data);
+      setProducts(data as Product[]);
     } catch (error) {
       console.error('Failed to fetch products:', error);
       toast.error('Failed to load products');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Fetch products on component mount and when the component is focused
   useEffect(() => {
-    const handleFocus = () => {
-      fetchProducts();
-    };
-
-    // Add event listener for when the window regains focus
-    window.addEventListener('focus', handleFocus);
-
-    // Initial fetch
+    window.addEventListener('focus', fetchProducts);
     fetchProducts();
-
-    // Cleanup
     return () => {
-      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('focus', fetchProducts);
     };
-  }, []);
+  }, [fetchProducts]);
 
   const handleDelete = async (id: string) => {
     // Store product to delete for potential revert
@@ -113,9 +99,6 @@ export default function SellerProductsPage() {
 
       // Show success message
       toast.success(`${productName} has been marked as ${status}`);
-
-      // Force a refresh of the products list to ensure consistency
-      fetchProducts();
 
     } catch (error) {
       console.error('Failed to update product status:', error);

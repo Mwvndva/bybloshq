@@ -35,7 +35,7 @@ export function DataTable<TData, TValue>({
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-  const [rowSelection, setRowSelection] = React.useState({});
+  const [searchValue, setSearchValue] = React.useState('');
 
   const table = useReactTable({
     data,
@@ -57,16 +57,25 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  // Debounce search input to avoid excessive re-renders on large datasets
+  React.useEffect(() => {
+    if (!searchKey) return;
+
+    const timeout = setTimeout(() => {
+      table.getColumn(searchKey)?.setFilterValue(searchValue);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+  }, [searchValue, searchKey, table]);
+
   return (
     <div className="space-y-4">
       {searchKey && (
         <div className="flex items-center justify-between">
           <Input
             placeholder={placeholder}
-            value={(table.getColumn(searchKey)?.getFilterValue() as string) ?? ''}
-            onChange={(event) =>
-              table.getColumn(searchKey)?.setFilterValue(event.target.value)
-            }
+            value={searchValue}
+            onChange={(event) => setSearchValue(event.target.value)}
             className="max-w-sm bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
           />
         </div>
@@ -75,19 +84,19 @@ export function DataTable<TData, TValue>({
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="bg-gray-800 hover:bg-gray-800">
+              <TableRow key={headerGroup.id} className="bg-gray-800 hover:bg-gray-800 border-b border-gray-700">
                 {headerGroup.headers.map((header) => {
                   return (
                     <TableHead
                       key={header.id}
-                      className="text-gray-300 font-medium border-b border-gray-700"
+                      className="text-gray-300 font-bold uppercase tracking-wider text-xs border-b border-gray-700 py-4"
                     >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
                     </TableHead>
                   );
                 })}
@@ -106,7 +115,7 @@ export function DataTable<TData, TValue>({
                     <TableCell
                       key={cell.id}
                       className={cn(
-                        'py-3 px-4',
+                        'py-4 px-4 text-sm text-gray-300',
                         cell.column.getIsPinned() ? 'sticky left-0 bg-gray-800 z-10' : ''
                       )}
                     >
@@ -122,9 +131,9 @@ export function DataTable<TData, TValue>({
               <TableRow>
                 <TableCell
                   colSpan={columns.length}
-                  className="h-24 text-center text-gray-300"
+                  className="h-32 text-center text-gray-400 font-medium italic"
                 >
-                  No results found.
+                  No results found matching your criteria.
                 </TableCell>
               </TableRow>
             )}
@@ -132,9 +141,9 @@ export function DataTable<TData, TValue>({
         </Table>
       </div>
       {showPagination && (
-        <div className="flex items-center justify-between py-4">
-          <div className="text-sm text-gray-300">
-            {table.getFilteredRowModel().rows.length} items
+        <div className="flex items-center justify-between py-4 px-2">
+          <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+            Showing {table.getFilteredRowModel().rows.length} total entries
           </div>
           <div className="flex items-center space-x-2">
             <Button
@@ -142,7 +151,7 @@ export function DataTable<TData, TValue>({
               size="sm"
               onClick={() => table.previousPage()}
               disabled={!table.getCanPreviousPage()}
-              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 hover:text-white disabled:opacity-50"
+              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 hover:text-white disabled:opacity-50 h-9 font-bold uppercase tracking-widest text-[10px] px-4"
             >
               Previous
             </Button>
@@ -151,7 +160,7 @@ export function DataTable<TData, TValue>({
               size="sm"
               onClick={() => table.nextPage()}
               disabled={!table.getCanNextPage()}
-              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 hover:text-white disabled:opacity-50"
+              className="bg-gray-800 border-gray-700 text-white hover:bg-gray-700 hover:text-white disabled:opacity-50 h-9 font-bold uppercase tracking-widest text-[10px] px-4"
             >
               Next
             </Button>

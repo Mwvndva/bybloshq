@@ -14,19 +14,25 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchSellers = async () => {
+        const controller = new AbortController();
+
+        const fetchSellers = async (signal: AbortSignal) => {
             setLoading(true);
             try {
                 const data = await publicApiService.getSellers();
+                if (signal.aborted) return;
                 setSellers(data);
-            } catch (error) {
+            } catch (error: any) {
+                if (error.name === 'AbortError') return;
                 console.error('Failed to fetch sellers', error);
             } finally {
-                setLoading(false);
+                if (!signal.aborted) setLoading(false);
             }
         };
 
-        fetchSellers();
+        fetchSellers(controller.signal);
+
+        return () => controller.abort();
     }, []);
 
     const filteredSellers = sellers.filter(seller => {

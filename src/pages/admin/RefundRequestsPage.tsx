@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { adminApiInstance as axios } from '@/api/adminApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,15 +41,12 @@ export default function RefundRequestsPage() {
 
   useEffect(() => {
     fetchRefundRequests();
-  }, [statusFilter]);
+  }, [fetchRefundRequests]);
 
-  const fetchRefundRequests = async () => {
+  const fetchRefundRequests = useCallback(async () => {
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('admin_token');
-      const response = await axios.get(`${API_URL}/refunds?status=${statusFilter}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await axios.get(`${API_URL}/refunds?status=${statusFilter}`);
       setRequests(response.data.data.requests);
     } catch (error) {
       console.error('Error fetching refund requests:', error);
@@ -57,18 +54,16 @@ export default function RefundRequestsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [statusFilter]);
 
   const handleConfirmRefund = async () => {
     if (!selectedRequest) return;
 
     setIsProcessing(true);
     try {
-      const token = localStorage.getItem('admin_token');
       await axios.patch(
         `${API_URL}/refunds/${selectedRequest.id}/confirm`,
-        { adminNotes },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { adminNotes }
       );
 
       toast.success('Refund confirmed and processed successfully!');
@@ -89,11 +84,9 @@ export default function RefundRequestsPage() {
 
     setIsProcessing(true);
     try {
-      const token = localStorage.getItem('admin_token');
       await axios.patch(
         `${API_URL}/refunds/${selectedRequest.id}/reject`,
-        { adminNotes },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { adminNotes }
       );
 
       toast.success('Refund request rejected');
@@ -286,6 +279,7 @@ export default function RefundRequestsPage() {
                   <div className="flex gap-4 pt-6">
                     <Button
                       onClick={() => {
+                        setAdminNotes('');
                         setSelectedRequest(request);
                         setIsConfirmDialogOpen(true);
                       }}
@@ -297,6 +291,7 @@ export default function RefundRequestsPage() {
                     <Button
                       variant="outline"
                       onClick={() => {
+                        setAdminNotes('');
                         setSelectedRequest(request);
                         setIsRejectDialogOpen(true);
                       }}
@@ -315,7 +310,11 @@ export default function RefundRequestsPage() {
 
       {/* Confirm Dialog */}
       <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
-        <DialogContent className="bg-[#0A0A0A] border border-white/10 text-white sm:rounded-[2.5rem] p-10 max-w-md shadow-[0_0_100px_rgba(34,197,94,0.1)]">
+        <DialogContent
+          role="dialog"
+          aria-modal="true"
+          className="bg-[#0A0A0A] border border-white/10 text-white sm:rounded-[2.5rem] p-10 max-w-md shadow-[0_0_100px_rgba(34,197,94,0.1)]"
+        >
           <DialogHeader className="mb-6">
             <DialogTitle className="text-3xl font-black text-white tracking-tighter italic">AUTHORIZE<span className="text-green-500">.</span></DialogTitle>
           </DialogHeader>
@@ -372,7 +371,11 @@ export default function RefundRequestsPage() {
 
       {/* Reject Dialog */}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        <DialogContent className="bg-[#0A0A0A] border border-white/10 text-white sm:rounded-[2.5rem] p-10 max-w-md shadow-[0_0_100px_rgba(239,68,68,0.1)]">
+        <DialogContent
+          role="dialog"
+          aria-modal="true"
+          className="bg-[#0A0A0A] border border-white/10 text-white sm:rounded-[2.5rem] p-10 max-w-md shadow-[0_0_100px_rgba(239,68,68,0.1)]"
+        >
           <DialogHeader className="mb-6">
             <DialogTitle className="text-3xl font-black text-white tracking-tighter italic">VETO<span className="text-red-500">.</span></DialogTitle>
           </DialogHeader>

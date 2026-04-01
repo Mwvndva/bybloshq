@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import buyerApi from '@/api/buyerApi';
@@ -185,11 +185,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     /**
      * Determine which role to check auth for based on current route
      */
-    const getRoleFromRoute = (): UserRole | null => {
-        const path = location.pathname;
-        if (path.startsWith('/buyer')) return 'buyer';
-        if (path.startsWith('/seller')) return 'seller';
-        if (path.startsWith('/admin')) return 'admin';
+    const getRoleFromRoute = (pathname: string): UserRole | null => {
+        if (pathname.startsWith('/buyer')) return 'buyer';
+        if (pathname.startsWith('/seller')) return 'seller';
+        if (pathname.startsWith('/admin')) return 'admin';
         return null;
     };
 
@@ -197,31 +196,44 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // AUTH CHECK ON MOUNT
     // ============================================================================
 
-    const checkAuth = useCallback(async () => {
-        const currentRole = getRoleFromRoute();
+    // Using a ref to track currently running checkAuth to prevent race conditions
+    const authCheckInProgress = useRef(false);
+
+    const checkAuth = useCallback(async (force = false) => {
+        // If already checking, don't start another one unless forced
+        if (authCheckInProgress.current && !force) return;
+
+        const currentPath = window.location.pathname;
+        const currentRole = getRoleFromRoute(currentPath);
+
+        // Optimization: if already authenticated for this role, skip check unless forced
+        if (!force && user && user.role === currentRole && user.isAuthenticated) {
+            setIsLoading(false);
+            return;
+        }
 
         // Skip auth check if we're on a public route or homepage
-        if (!currentRole || location.pathname === '/') {
+        if (!currentRole || currentPath === '/') {
             setIsLoading(false);
             return;
         }
 
         // Skip auth check if we're on a login/register page
         const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
-        const isPublicPath = publicPaths.some(path => location.pathname.includes(path));
+        const isPublicPath = publicPaths.some(path => currentPath.includes(path));
         if (isPublicPath) {
             setIsLoading(false);
             return;
         }
 
+        authCheckInProgress.current = true;
+        setIsLoading(true);
+
         // CRITICAL: Set rehydration state to prevent 401 interceptor from redirecting
         authStateManager.setRehydrating(true);
 
-
         // Persisted State Check: Check if session was active before reload
         const sessionKey = `${currentRole}SessionActive`;
-        const hadActiveSession = localStorage.getItem(sessionKey) === 'true';
-
 
         try {
             const api = getApiForRole(currentRole);
@@ -255,10 +267,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             // Mark session as active
             localStorage.setItem(sessionKey, 'true');
         } catch (error: any) {
-
             // CROSS-ROLE FIX: Don't fail if we're trying buyer access and user has seller session
             // This prevents the "Split Identity" 404 from blocking access
-            if (currentRole === 'buyer' && error.response?.status === 404) {
+            if (currentRole === 'buyer' && (error.response?.status === 404 || error.response?.status === 401)) {
+                // Keep existing user if it's just a mismatched role check (if we had one)
             } else {
                 setUser(null);
                 localStorage.removeItem(sessionKey);
@@ -267,8 +279,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             // CRITICAL: Always set isLoading to false and clear rehydration state
             authStateManager.setRehydrating(false);
             setIsLoading(false);
+            authCheckInProgress.current = false;
         }
-    }, [location.pathname]);
+    }, [user]); // Add user to deps to allow the optimization check
 
     useEffect(() => {
         checkAuth();
@@ -442,37 +455,33 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // ============================================================================
 
     const logout = useCallback(async () => {
-        // 1. Clear localStorage session flags for all roles
         ['buyer', 'seller', 'admin'].forEach(r => {
             localStorage.removeItem(`${r}SessionActive`);
             localStorage.removeItem(`${r}Token`);
         });
 
         if (!user) {
-            clearAllAuthData();
+            try { clearAllAuthData(); } catch { /* ignore */ }
             return;
-        };
+        }
 
         const role = user.role;
 
-        // 2. Call server-side logout to clear httpOnly cookie
         try {
             const logoutUrl = role === 'seller' ? '/sellers/logout' : '/buyers/logout';
             await apiClient.post(logoutUrl);
         } catch (error) {
-            // Fail silently — still clear local state
+            // Fail silently
+        } finally {
+            try {
+                clearAllAuthData();
+            } catch (error) {
+                // Fail silently — always clear user state
+            }
+            setUser(null);
+            toast('Logged out', { description: 'You have been successfully logged out.' });
+            navigate('/', { replace: true });
         }
-
-        // 3. Clear all auth data from memory and storage
-        clearAllAuthData();
-
-        // 4. Clear user state
-        setUser(null);
-
-        toast('Logged out', { description: 'You have been successfully logged out.' });
-
-        // 5. Navigate to home
-        navigate('/', { replace: true });
     }, [user, navigate]);
 
     // ============================================================================

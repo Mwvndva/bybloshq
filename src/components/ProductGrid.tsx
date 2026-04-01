@@ -73,7 +73,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
   };
 
   // Optimized product fetching logic with caching
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (signal?: AbortSignal) => {
     const params = {
       locationCity,
       locationArea,
@@ -108,6 +108,9 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       // Fetch products from the API
       let fetchedProducts = await publicApiService.getProducts(queryParams);
 
+      // Check if the component was unmounted or a new request was started
+      if (signal?.aborted) return;
+
       // Filter by aesthetic if one is selected
       if (selectedAesthetic && selectedAesthetic !== 'all') {
         fetchedProducts = fetchedProducts.filter(
@@ -138,6 +141,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
       requestCache.set(key, { data: transformedProducts, timestamp: Date.now() });
 
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       console.error('Failed to fetch products:', err);
       setError('Failed to load products. Please try again later.');
       setProducts([]);
@@ -149,13 +153,18 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
 
   // Fetch products when any filter changes - no debouncing for faster response
   useEffect(() => {
-    fetchProducts().catch(err => {
+    const controller = new AbortController();
+
+    fetchProducts(controller.signal).catch(err => {
+      if (err.name === 'AbortError') return;
       console.error('Error in fetchProducts:', err);
       setError('Failed to load products. Please try again later.');
       setProducts([]);
       setSellers({});
       setLoading(false);
     });
+
+    return () => controller.abort();
   }, [fetchProducts]);
 
   // Memoized filtered products for better performance

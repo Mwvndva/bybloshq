@@ -6,11 +6,6 @@ type AxiosRequestConfig = any;
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 
 // Extend the AxiosRequestConfig interface to include our custom options
-interface CustomAxiosRequestConfig extends AxiosRequestConfig {
-  skipAuth?: boolean;
-}
-
-// Define a type for our custom config
 interface CustomAxiosRequestConfig extends Record<string, any> {
   skipAuth?: boolean;
   headers?: Record<string, string>;
@@ -519,15 +514,7 @@ export const publicApiService = {
   // Get seller public info
   getSellerInfo: async (sellerId: string): Promise<Seller | null> => {
     try {
-      // First try to get the seller info with authentication
-      const token = localStorage.getItem('buyer_token') || localStorage.getItem('token');
-      console.log('Auth token from localStorage:', token ? 'Found' : 'Not found');
-
-      const response = await publicApi.get(`sellers/${sellerId}`, {
-        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-      });
-
-      console.log('Seller info response:', response.data);
+      const response = await publicApi.get(`sellers/${sellerId}`);
       const sellerData = response.data.seller || response.data;
       return sellerData ? transformSeller(sellerData) : null;
     } catch (error: any) {

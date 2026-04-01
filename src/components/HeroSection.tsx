@@ -1,6 +1,6 @@
 
 import { Button } from '@/components/ui/button';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 interface HeroSectionProps {
   onExploreClick?: () => void;
 }
@@ -46,12 +46,13 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
 
           {/* Minimal CTA Group */}
           <div className="flex flex-col sm:flex-row items-center gap-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
-            <Button
-              onClick={handleStartThrifting}
-              className="bg-white text-black hover:bg-yellow-300 text-black rounded-full px-12 py-7 text-lg font-medium transition-all duration-500 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-yellow-300/20"
-            >
-              Explore Brands
-            </Button>
+            <Link to="/buyer/login">
+              <Button
+                className="bg-white text-black hover:bg-yellow-300 rounded-full px-12 py-7 text-lg font-medium transition-all duration-500 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-yellow-300/20"
+              >
+                Explore Brands
+              </Button>
+            </Link>
           </div>
 
           {/* Glass Verification Badges - Minimal Version */}

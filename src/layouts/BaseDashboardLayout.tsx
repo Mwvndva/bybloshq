@@ -73,7 +73,15 @@ export function BaseDashboardLayout({
     };
 
     return (
-        <div className="seller-layout min-h-screen bg-[#000000] flex">
+        <div className="dashboard-layout min-h-screen bg-[#000000] flex">
+            {/* Skip to Content for Accessibility */}
+            <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-yellow-500 focus:text-black focus:font-bold focus:rounded-lg"
+            >
+                Skip to content
+            </a>
+
             {/* Sidebar (if enabled) */}
             {showSidebar && (
                 <>
@@ -82,6 +90,7 @@ export function BaseDashboardLayout({
                         <div
                             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
                             onClick={() => setSidebarOpen(false)}
+                            aria-hidden="true"
                         />
                     )}
 
@@ -91,6 +100,8 @@ export function BaseDashboardLayout({
                             'fixed lg:sticky top-0 left-0 h-screen w-64 bg-black/80 backdrop-blur-md border-r border-white/10 z-50 transition-transform duration-300 ease-in-out',
                             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                         )}
+                        role="navigation"
+                        aria-label={`${role} sidebar navigation`}
                     >
                         {/* Sidebar Header */}
                         <div className="h-20 flex items-center justify-between px-6 border-b border-white/10">
@@ -104,12 +115,13 @@ export function BaseDashboardLayout({
                                 size="sm"
                                 onClick={() => setSidebarOpen(false)}
                                 className="lg:hidden text-zinc-400 hover:text-white hover:bg-white/5"
+                                aria-label="Close sidebar"
                             >
                                 <X className="h-5 w-5" />
                             </Button>
                         </div>
 
-                        {/* Navigation */}
+                        {/* Navigation Items */}
                         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
                             {navigationItems.map((item, index) => {
                                 const Icon = item.icon;
@@ -124,8 +136,9 @@ export function BaseDashboardLayout({
                                             'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
                                             isActive
                                                 ? 'bg-white/10 text-white font-semibold'
-                                                : 'text-white hover:text-white hover:bg-white/5'
+                                                : 'text-white/60 hover:text-white hover:bg-white/5'
                                         )}
+                                        aria-current={isActive ? 'page' : undefined}
                                     >
                                         {Icon && <Icon className="h-5 w-5 flex-shrink-0" />}
                                         <span className="flex-1">{item.label}</span>
@@ -159,7 +172,10 @@ export function BaseDashboardLayout({
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Header */}
-                <header className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30">
+                <header
+                    className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30"
+                    role="banner"
+                >
                     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
                         <div className="relative flex items-center justify-between h-20">
                             {/* Left: Menu/Back Button */}
@@ -170,6 +186,7 @@ export function BaseDashboardLayout({
                                         size="sm"
                                         onClick={() => setSidebarOpen(true)}
                                         className="lg:hidden text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 -ml-3"
+                                        aria-label="Open sidebar"
                                     >
                                         <Menu className="h-5 w-5" />
                                     </Button>
@@ -180,6 +197,7 @@ export function BaseDashboardLayout({
                                         size="sm"
                                         onClick={handleBack}
                                         className="text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
+                                        aria-label={backButtonLabel}
                                     >
                                         <ArrowLeft className="h-4 w-4 mr-2" />
                                         <span className="hidden sm:inline">{backButtonLabel}</span>
@@ -219,7 +237,11 @@ export function BaseDashboardLayout({
                 </header>
 
                 {/* Main Content */}
-                <main className="flex-1 relative overflow-y-auto focus:outline-none">
+                <main
+                    id="main-content"
+                    className="flex-1 relative overflow-y-auto focus:outline-none"
+                    role="main"
+                >
                     {children || <Outlet />}
                 </main>
             </div>
@@ -228,7 +250,7 @@ export function BaseDashboardLayout({
 }
 
 // ============================================================================
-// ROLE-SPECIFIC LAYOUT WRAPPERS (for convenience)
+// ROLE-SPECIFIC LAYOUT WRAPPERS
 // ============================================================================
 
 export function BuyerDashboardLayout(props: Omit<BaseDashboardLayoutProps, 'role'>) {
@@ -237,10 +259,6 @@ export function BuyerDashboardLayout(props: Omit<BaseDashboardLayoutProps, 'role
 
 export function SellerDashboardLayout(props: Omit<BaseDashboardLayoutProps, 'role'>) {
     return <BaseDashboardLayout role="seller" {...props} />;
-}
-
-export function OrganizerDashboardLayout(props: Omit<BaseDashboardLayoutProps, 'role'>) {
-    return <BaseDashboardLayout role="organizer" {...props} />;
 }
 
 export function AdminDashboardLayout(props: Omit<BaseDashboardLayoutProps, 'role'>) {

@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GlobalAuthProvider } from "../contexts/GlobalAuthContext";
 import { WishlistProvider } from "../contexts/WishlistContext";
-import { BybxProvider } from "../contexts/BybxContext";
 
 const queryClient = new QueryClient({
     defaultOptions: {

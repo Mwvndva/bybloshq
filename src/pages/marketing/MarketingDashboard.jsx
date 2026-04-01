@@ -326,7 +326,7 @@ export default function MarketingDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
-                                        {topPerfs.topSellers.map((s, i) => (
+                                        {topPerfs?.topSellers?.map((s, i) => (
                                             <tr key={s.id} className="group hover:bg-white/[0.02] transition-colors">
                                                 <td className="py-4 pr-4 text-sm font-bold text-white tracking-tight">
                                                     <span className="text-yellow-500/50 mr-3 tabular-nums">0{i + 1}</span>
@@ -336,7 +336,7 @@ export default function MarketingDashboard() {
                                                     {s.city || 'Global'}
                                                 </td>
                                                 <td className="py-4 text-right text-sm font-black text-yellow-500 tabular-nums">
-                                                    KSh {Number(s.totalSales).toLocaleString()}
+                                                    KSh {Number(s.totalSales || 0).toLocaleString()}
                                                 </td>
                                             </tr>
                                         ))}
@@ -356,7 +356,7 @@ export default function MarketingDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
-                                        {topPerfs.topProducts.map((p, i) => (
+                                        {topPerfs?.topProducts?.map((p, i) => (
                                             <tr key={p.id} className="group hover:bg-white/[0.02] transition-colors">
                                                 <td className="py-4 pr-4 text-sm font-bold text-white tracking-tight">
                                                     <span className="text-blue-500/50 mr-3 tabular-nums">0{i + 1}</span>
@@ -368,7 +368,7 @@ export default function MarketingDashboard() {
                                                     </span>
                                                 </td>
                                                 <td className="py-4 text-right text-sm font-black text-green-400 tabular-nums">
-                                                    KSh {Number(p.totalRevenue).toLocaleString()}
+                                                    KSh {Number(p.totalRevenue || 0).toLocaleString()}
                                                 </td>
                                             </tr>
                                         ))}
@@ -383,38 +383,48 @@ export default function MarketingDashboard() {
                 <section className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-500">
                     <ChartCard title="Real-time Protocol Feed" subtitle="Latest platform transactions and registrations">
                         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
-                            {activity.map((item, i) => {
-                                const icons = { order: '🛒', seller: '🏪', buyer: '👤' }
-                                const colors = { order: 'text-yellow-500', seller: 'text-purple-500', buyer: 'text-blue-500' }
-                                const bgColors = { order: 'bg-yellow-500/5', seller: 'bg-purple-500/5', buyer: 'bg-blue-500/5' }
-                                const timeAgo = (ts) => {
-                                    const diff = Date.now() - new Date(ts)
-                                    const mins = Math.floor(diff / 60000)
-                                    const hours = Math.floor(diff / 3600000)
-                                    const days = Math.floor(diff / 86400000)
-                                    if (mins < 60) return `${mins}m ago`
-                                    if (hours < 24) return `${hours}h ago`
-                                    return `${days}d ago`
-                                }
+                            {Array.isArray(activity) && activity.length > 0 ? (
+                                activity.map((item, i) => {
+                                    const icons = { order: '🛒', seller: '🏪', buyer: '👤' }
+                                    const colors = { order: 'text-yellow-500', seller: 'text-purple-500', buyer: 'text-blue-500' }
+                                    const bgColors = { order: 'bg-yellow-500/5', seller: 'bg-purple-500/5', buyer: 'bg-blue-500/5' }
+                                    const timeAgo = (ts) => {
+                                        if (!ts) return 'Unknown';
+                                        const diff = Date.now() - new Date(ts).getTime();
+                                        const mins = Math.floor(diff / 60000);
+                                        const hours = Math.floor(diff / 3600000);
+                                        const days = Math.floor(diff / 86400000);
 
-                                return (
-                                    <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border border-white/[0.03] transition-all hover:bg-white/[0.02] ${bgColors[item.type]}`}>
-                                        <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-xl shadow-inner border border-white/5">
-                                            {icons[item.type]}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className={`text-sm font-bold tracking-tight ${colors[item.type]}`}>{item.description}</p>
-                                            <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest mt-0.5">{timeAgo(item.timestamp)}</p>
-                                        </div>
-                                        {item.value && (
-                                            <div className="text-right">
-                                                <p className="text-sm font-black text-white tabular-nums">KSh {Number(item.value).toLocaleString()}</p>
-                                                <p className="text-[9px] font-black text-gray-700 uppercase tracking-widest">Protocol Value</p>
+                                        if (mins < 1) return 'Just now';
+                                        if (mins < 60) return `${mins}m ago`;
+                                        if (hours < 24) return `${hours}h ago`;
+                                        if (days === 1) return 'Yesterday';
+                                        return `${days}d ago`;
+                                    }
+
+                                    return (
+                                        <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border border-white/[0.03] transition-all hover:bg-white/[0.02] ${bgColors[item.type] || 'bg-white/5'}`}>
+                                            <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-xl shadow-inner border border-white/5">
+                                                {icons[item.type] || '⚡'}
                                             </div>
-                                        )}
-                                    </div>
-                                )
-                            })}
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-sm font-bold tracking-tight ${colors[item.type] || 'text-white'}`}>{item.description}</p>
+                                                <p className="text-gray-600 text-[10px] font-black uppercase tracking-widest mt-0.5">{timeAgo(item.timestamp)}</p>
+                                            </div>
+                                            {item.value && (
+                                                <div className="text-right">
+                                                    <p className="text-sm font-black text-white tabular-nums">KSh {Number(item.value).toLocaleString()}</p>
+                                                    <p className="text-[9px] font-black text-gray-700 uppercase tracking-widest">Protocol Value</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })
+                            ) : (
+                                <div className="py-12 text-center text-gray-600 font-bold uppercase tracking-widest text-xs italic">
+                                    No recent activity reported by protocol.
+                                </div>
+                            )}
                         </div>
                     </ChartCard>
                 </section>

@@ -46,9 +46,10 @@ export function formatCurrency(amount: number | string | null | undefined): stri
       maximumFractionDigits: 2
     }).format(numericAmount);
 
-    return formatted;
+    // Standardize currency symbol to capital KSh
+    return formatted.replace(/Ksh/i, 'KSh');
   } catch (error) {
-    const fallback = `KSh ${numericAmount.toFixed(0)}`;
+    const fallback = `KSh ${numericAmount.toLocaleString('en-KE', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
     return fallback;
   }
 }

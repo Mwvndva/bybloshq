@@ -372,18 +372,9 @@ const NewAdminDashboard = () => {
 
     const fetchDashboardData = async () => {
       setIsLoading(true);
+      setError(null);
       try {
-        const [
-          analytics,
-          sellers,
-          buyers,
-          withdrawalRequests,
-          monthlyMetrics,
-          financialMetrics,
-          monthlyFinancialData,
-          dashboardStats,
-          clients
-        ] = await Promise.all([
+        const results = await Promise.allSettled([
           adminApi.getAnalytics(),
           adminApi.getSellers(),
           adminApi.getBuyers(),
@@ -394,6 +385,28 @@ const NewAdminDashboard = () => {
           adminApi.getDashboardStats(),
           adminApi.getClients()
         ]);
+
+        const [
+          analyticsRes,
+          sellersRes,
+          buyersRes,
+          withdrawalsRes,
+          monthlyRes,
+          financialRes,
+          statsRes,
+          dashboardStatsRes,
+          clientsRes
+        ] = results;
+
+        const analytics = analyticsRes.status === 'fulfilled' ? analyticsRes.value : null;
+        const sellers = sellersRes.status === 'fulfilled' ? sellersRes.value : [];
+        const buyers = buyersRes.status === 'fulfilled' ? buyersRes.value : [];
+        const withdrawalRequests = withdrawalsRes.status === 'fulfilled' ? withdrawalsRes.value : [];
+        const monthlyMetrics = monthlyRes.status === 'fulfilled' ? monthlyRes.value : null;
+        const financialMetrics = financialRes.status === 'fulfilled' ? financialRes.value : null;
+        const monthlyFinancialData = statsRes.status === 'fulfilled' ? statsRes.value : [];
+        const dashboardStats = dashboardStatsRes.status === 'fulfilled' ? dashboardStatsRes.value : null;
+        const clients = clientsRes.status === 'fulfilled' ? clientsRes.value : [];
 
         const totalSellersCount = Array.isArray(sellers) ? sellers.length : 0;
         const totalBuyersCount = Array.isArray(buyers) ? buyers.length : 0;
@@ -408,6 +421,8 @@ const NewAdminDashboard = () => {
           userGrowth: analytics?.userGrowth || [],
           revenueTrends: analytics?.revenueTrends || [],
           salesTrends: analytics?.salesTrends || [],
+          productStatus: analytics?.productStatus || [],
+          geoDistribution: analytics?.geoDistribution || [],
           monthlyGrowth: {
             revenue: analytics?.monthlyGrowth?.revenue || 0,
             products: analytics?.monthlyGrowth?.products || 0,
@@ -416,7 +431,6 @@ const NewAdminDashboard = () => {
           }
         };
 
-        setDashboardState(prev => ({ ...prev, analytics: { ...prev.analytics, totalSellers: totalSellersCount } }));
         let metricsData = [];
         if (Array.isArray(monthlyMetrics)) {
           metricsData = monthlyMetrics;
@@ -445,8 +459,16 @@ const NewAdminDashboard = () => {
           clients: Array.isArray(clients) ? clients : [],
           topShops: dashboardStats?.topShops || []
         });
-      } catch (err) {
-        console.error('Error fetching dashboard data:', err);
+
+        // Show warning if some requests failed
+        if (results.some(r => r.status === 'rejected')) {
+          console.warn('[DASHBOARD] Some partial data failed to load');
+          toast.warning('Dashboard loaded with some missing data');
+        }
+      } catch (err: any) {
+        console.error('Critical error fetching dashboard data:', err);
+        setError(err.message || 'Failed to initialize dashboard');
+        toast.error('Failed to load dashboard data');
       } finally {
         setIsInitialized(true);
         setIsLoading(false);
@@ -599,10 +621,40 @@ const NewAdminDashboard = () => {
   };
 
 
-  if (authLoading || !isAuthenticated || !isInitialized) {
+  if (authLoading || !isInitialized) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="h-12 w-12" />
+      <div className="flex items-center justify-center min-h-screen bg-[#050505]">
+        <div className="flex flex-col items-center gap-4">
+          <Spinner className="h-12 w-12 text-yellow-500" />
+          <p className="text-gray-500 font-black uppercase tracking-widest text-xs animate-pulse">Initializing System...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    navigate('/admin/login', { replace: true });
+    return null;
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#050505] p-6 text-center">
+        <div className="max-w-md space-y-6">
+          <div className="w-20 h-20 bg-red-500/10 rounded-3xl flex items-center justify-center mx-auto border border-red-500/20">
+            <XCircle className="h-10 w-10 text-red-500" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-black text-white tracking-tight uppercase">System Error</h2>
+            <p className="text-gray-400 font-medium">{error}</p>
+          </div>
+          <Button
+            onClick={() => window.location.reload()}
+            className="w-full h-14 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition-all"
+          >
+            Re-Initialize
+          </Button>
+        </div>
       </div>
     );
   }
@@ -745,18 +797,7 @@ const NewAdminDashboard = () => {
 
   // Loading and error states are now handled at the top of the component
 
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <Spinner className="h-8 w-8 text-yellow-500" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    navigate('/admin/login');
-    return null;
-  }
+  // Accessibility labels and aria roles were missing on modals
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-yellow-500/30 selection:text-black">
@@ -838,7 +879,12 @@ const NewAdminDashboard = () => {
             <div className="z-[100]">
               {/* Seller Details Modal */}
               {selectedSeller && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]">
+                <div
+                  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="seller-modal-title"
+                >
                   <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] w-full max-w-6xl max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(245,158,11,0.1)] scale-in-95 duration-300">
                     <div className="flex items-center justify-between p-5 md:p-8 border-b border-white/10 bg-white/[0.02]">
                       <div className="flex items-center gap-4">
@@ -846,7 +892,7 @@ const NewAdminDashboard = () => {
                           <Store className="h-7 w-7 text-yellow-500" />
                         </div>
                         <div>
-                          <h3 className="text-2xl font-black text-white tracking-tight">{selectedSeller.shop_name || selectedSeller.name}</h3>
+                          <h3 id="seller-modal-title" className="text-2xl font-black text-white tracking-tight">{selectedSeller.shop_name || selectedSeller.name}</h3>
                           <p className="text-gray-400 font-medium">Verified Merchant Profile</p>
                         </div>
                       </div>
@@ -943,7 +989,12 @@ const NewAdminDashboard = () => {
 
               {/* Buyer Details Modal */}
               {selectedBuyer && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]">
+                <div
+                  className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 md:p-4 animate-in fade-in duration-300 overflow-hidden z-[100]"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="buyer-modal-title"
+                >
                   <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] w-full max-w-4xl max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(6,182,212,0.1)] scale-in-95 duration-300">
                     <div className="flex items-center justify-between p-5 md:p-8 border-b border-white/10 bg-white/[0.02]">
                       <div className="flex items-center gap-4">
@@ -951,7 +1002,7 @@ const NewAdminDashboard = () => {
                           <UserCircle className="h-5 w-5 md:h-7 md:w-7 text-cyan-500" />
                         </div>
                         <div>
-                          <h3 className="text-xl md:text-2xl font-black text-white tracking-tight">{selectedBuyer.name}</h3>
+                          <h3 id="buyer-modal-title" className="text-xl md:text-2xl font-black text-white tracking-tight">{selectedBuyer.name}</h3>
                           <p className="text-xs md:text-sm text-gray-400 font-medium">Customer Intelligence Report</p>
                         </div>
                       </div>

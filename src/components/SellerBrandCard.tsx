@@ -100,9 +100,10 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
 
     const gradientClass = getGradient(themeColor);
 
+    const shopName = seller.shopName || seller.shop_name;
     const shopLink = isBuyer
-        ? `/buyer/shop/${seller.shopName || seller.shop_name}`
-        : `/shop/${seller.shopName || seller.shop_name}`;
+        ? `/buyer/shop/${encodeURIComponent(shopName)}`
+        : `/shop/${encodeURIComponent(shopName)}`;
 
     return (
         <div className={cn("group relative aspect-square overflow-hidden rounded-2xl bg-gray-900", className)}>

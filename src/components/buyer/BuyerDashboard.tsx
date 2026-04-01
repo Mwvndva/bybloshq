@@ -210,8 +210,8 @@ function BuyerDashboard() {
     navigate('/');
   };
 
-  // Get refund amount from user
-  const refundAmount = user?.refunds || 0;
+  // Get refund amount from user - Parse as float to ensure it's a number
+  const refundAmount = typeof user?.refunds === 'string' ? parseFloat(user.refunds) : (user?.refunds || 0);
 
 
 
