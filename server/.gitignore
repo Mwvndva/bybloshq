@@ -38,8 +38,6 @@ yarn-error.log*
 # Knex migrations and seeds
 knexfile.js
 knexfile.ts
-migrations/*.js
-seeds/*.js
 
 # Database
 *.sqlite3
