@@ -350,36 +350,37 @@ export const getOrderFunnel = async (req, res, next) => {
  */
 export const getGeography = async (req, res, next) => {
   try {
-    const [buyerCities, sellerCities, gmvCities] = await Promise.all([
+    const [buyerLocations, sellerLocations, gmvLocations] = await Promise.all([
       pool.query(`
         SELECT
-          COALESCE(NULLIF(TRIM(city), ''), 'Unknown') AS city,
+          COALESCE(NULLIF(TRIM(location), ''), 'Unknown') AS location,
           COUNT(*) AS buyer_count
         FROM buyers
-        GROUP BY city
+        WHERE city = 'Nairobi' OR city IS NULL OR city = ''
+        GROUP BY location
         ORDER BY buyer_count DESC
         LIMIT 10
       `),
       pool.query(`
         SELECT
-          COALESCE(NULLIF(TRIM(city), ''), 'Unknown') AS city,
+          COALESCE(NULLIF(TRIM(location), ''), 'Unknown') AS location,
           COUNT(*) AS seller_count,
-          COALESCE(SUM(total_sales), 0) AS city_gmv
+          COALESCE(SUM(total_sales), 0) AS location_gmv
         FROM sellers
-        WHERE is_active = true
-        GROUP BY city
+        WHERE is_active = true AND (city = 'Nairobi' OR city IS NULL OR city = '')
+        GROUP BY location
         ORDER BY seller_count DESC
         LIMIT 10
       `),
       pool.query(`
         SELECT
-          COALESCE(NULLIF(TRIM(s.city), ''), 'Unknown') AS city,
+          COALESCE(NULLIF(TRIM(s.location), ''), 'Unknown') AS location,
           COALESCE(SUM(o.total_amount), 0) AS gmv,
           COUNT(o.id) AS order_count
         FROM product_orders o
         JOIN sellers s ON o.seller_id = s.id
-        WHERE o.payment_status = 'completed'
-        GROUP BY s.city
+        WHERE o.payment_status = 'completed' AND (s.city = 'Nairobi' OR s.city IS NULL OR s.city = '')
+        GROUP BY s.location
         ORDER BY gmv DESC
         LIMIT 10
       `)
@@ -388,9 +389,9 @@ export const getGeography = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: {
-        topBuyerCities: buyerCities.rows.map(r => ({ city: r.city, count: parseInt(r.buyer_count) })),
-        topSellerCities: sellerCities.rows.map(r => ({ city: r.city, count: parseInt(r.seller_count), gmv: parseFloat(r.city_gmv) })),
-        topGmvCities: gmvCities.rows.map(r => ({ city: r.city, gmv: parseFloat(r.gmv), orderCount: parseInt(r.order_count) }))
+        topBuyerRegions: buyerLocations.rows.map(r => ({ location: r.location, count: parseInt(r.buyer_count) })),
+        topSellerRegions: sellerLocations.rows.map(r => ({ location: r.location, count: parseInt(r.seller_count), gmv: parseFloat(r.location_gmv) })),
+        topGmvRegions: gmvLocations.rows.map(r => ({ location: r.location, gmv: parseFloat(r.gmv), orderCount: parseInt(r.order_count) }))
       }
     })
   } catch (err) {
@@ -411,7 +412,7 @@ export const getTopPerformers = async (req, res, next) => {
         SELECT
           s.id,
           s.shop_name,
-          s.city,
+          s.location,
           s.total_sales,
           s.client_count,
           COUNT(DISTINCT o.id) AS order_count
@@ -458,7 +459,7 @@ export const getTopPerformers = async (req, res, next) => {
         topSellers: topSellers.rows.map(r => ({
           id: r.id,
           shopName: r.shop_name,
-          city: r.city,
+          location: r.location,
           totalSales: parseFloat(r.total_sales),
           clientCount: parseInt(r.client_count),
           orderCount: parseInt(r.order_count)
@@ -511,7 +512,7 @@ export const getReferralPerformance = async (req, res, next) => {
       pool.query(`
         SELECT
           s.shop_name,
-          s.city,
+          s.location,
           COUNT(DISTINCT rel.referred_seller_id) AS referrals_made,
           COALESCE(SUM(rel.reward_amount), 0)    AS total_earned
         FROM referral_earnings_log rel
@@ -544,7 +545,7 @@ export const getReferralPerformance = async (req, res, next) => {
         })).reverse(),
         topReferrers: topReferrers.rows.map(r => ({
           shopName: r.shop_name,
-          city: r.city,
+          location: r.location,
           referralsMade: parseInt(r.referrals_made),
           totalEarned: parseFloat(r.total_earned)
         })),
@@ -585,7 +586,7 @@ export const getRecentActivity = async (req, res, next) => {
         SELECT
           'seller' AS type,
           s.created_at AS timestamp,
-          'New seller: ' || s.shop_name || ' (' || COALESCE(s.city, 'Kenya') || ')' AS description,
+          'New seller: ' || s.shop_name || ' (' || COALESCE(s.location, 'Nairobi') || ')' AS description,
           NULL AS value
         FROM sellers s
         ORDER BY s.created_at DESC
@@ -596,7 +597,7 @@ export const getRecentActivity = async (req, res, next) => {
         SELECT
           'buyer' AS type,
           b.created_at AS timestamp,
-          'New buyer registered in ' || COALESCE(b.city, 'Kenya') AS description,
+          'New buyer registered in ' || COALESCE(b.location, 'Nairobi') AS description,
           NULL AS value
         FROM buyers b
         WHERE b.user_id IS NOT NULL

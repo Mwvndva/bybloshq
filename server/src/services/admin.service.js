@@ -124,17 +124,23 @@ class AdminService {
       // 3. Product Status Distribution
       const productStatusQuery = `
               SELECT 
-                status as name,
+                CASE 
+                  WHEN status = 'available' THEN 'Available'
+                  WHEN status = 'sold' THEN 'Sold'
+                  ELSE INITCAP(status)
+                END as name,
                 COUNT(*) as value
               FROM products 
+              WHERE status != 'draft'
               GROUP BY status;
             `;
 
-      // 4. Geographic Distribution (Top 5 Cities)
+      // 4. Geographic Distribution (Top 5 Areas in Nairobi)
       const geoQuery = `
-              SELECT COALESCE(NULLIF(city, ''), 'Unknown') as name, COUNT(*) as value
+              SELECT COALESCE(NULLIF(location, ''), 'Unknown') as name, COUNT(*) as value
               FROM buyers 
-              GROUP BY COALESCE(NULLIF(city, ''), 'Unknown')
+              WHERE city = 'Nairobi' OR city IS NULL OR city = ''
+              GROUP BY COALESCE(NULLIF(location, ''), 'Unknown')
               ORDER BY value DESC 
               LIMIT 5;
             `;
