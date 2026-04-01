@@ -1455,6 +1455,21 @@ class OrderService {
       } catch (paymentError) {
         if (client) await client.query('ROLLBACK');
         logger.error('[ClientOrder] STK Push failed, rolling back:', paymentError.message);
+
+        // Defensive: mark as failed after rollback just in case
+        try {
+          await pool.query(
+            "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
+            [order.id]
+          );
+          await pool.query(
+            "UPDATE payments SET status = 'failed' WHERE metadata->>'order_id' = $1",
+            [order.id]
+          );
+        } catch (err) {
+          // Ignore errors here
+        }
+
         throw new Error(`Failed to initiate payment: ${paymentError.message}`);
       }
 

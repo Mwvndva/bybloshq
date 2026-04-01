@@ -180,6 +180,7 @@ class OrderDeadlineService {
             await client.query(
                 `UPDATE product_orders 
                  SET status = 'CANCELLED',
+                     payment_status = 'failed',
                      auto_cancelled_reason = $1,
                      cancelled_at = NOW()
                  WHERE id = $2`,
