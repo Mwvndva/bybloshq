@@ -66,6 +66,7 @@ const ShopPage = () => {
       try {
         setIsLoading(true);
         setError(null);
+        window.scrollTo(0, 0);
 
         if (!shopName) {
           throw new Error('Shop name is required');

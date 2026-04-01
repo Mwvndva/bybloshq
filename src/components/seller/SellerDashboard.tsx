@@ -443,7 +443,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [navigate]); // Removed toast and location.pathname - toast is stable, location causes loops
+  }, [navigate, toast, fetchWithdrawalRequests]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -525,7 +525,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         payload.longitude = formData.longitude;
       }
 
-      await sellerApi.updateProfile(payload);
+      if (updateSellerProfile) {
+        await updateSellerProfile(payload);
+      } else {
+        await sellerApi.updateProfile(payload);
+      }
 
       // Profile will be automatically updated by SellerAuthContext
       setIsEditing(false);
@@ -625,6 +629,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       setUpdatingId(null);
     }
   };
+
+  // Fix 8: Clear state on unmount to prevent leaks
+  useEffect(() => {
+    return () => {
+      setUpdatingId(null);
+      setDeletingId(null);
+    };
+  }, []);
 
   const handleWithdrawalRequest = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();

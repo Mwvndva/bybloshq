@@ -99,6 +99,7 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="ACCESS_ID@BYBLOS.HQ"
                       required
+                      autoComplete="email"
                       className="w-full h-12 md:h-14 px-5 md:px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-xl md:rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-sm md:text-base"
                     />
                   </div>
@@ -116,6 +117,7 @@ export const AdminLoginPage = () => {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       required
+                      autoComplete="current-password"
                       className="w-full h-12 md:h-14 px-5 md:px-6 bg-white/[0.03] border-white/10 text-white placeholder:text-gray-700 rounded-xl md:rounded-2xl focus:border-yellow-500/50 focus:ring-yellow-500/10 transition-all font-bold tracking-tight text-sm md:text-base"
                     />
                   </div>
@@ -145,7 +147,7 @@ export const AdminLoginPage = () => {
         {/* Footer */}
         <div className="text-center mt-12 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500">
           <p className="text-gray-600 text-[9px] uppercase tracking-[0.3em] font-black opacity-40">
-            Encrypted Session • Node {Math.floor(Math.random() * 1000)} • Layer-7 Protection
+            Encrypted Session • Node ID: 0x4F92 • Layer-7 Protection
           </p>
         </div>
       </div>

@@ -293,6 +293,7 @@ export const sellerApi = {
     confirmPassword: string;
     city?: string;
     location?: string;
+    referralCode?: string;
   }): Promise<{ seller: Seller }> => {
     try {
       const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
@@ -303,7 +304,8 @@ export const sellerApi = {
         password: data.password,
         confirmPassword: data.confirmPassword,
         city: data.city,
-        location: data.location
+        location: data.location,
+        referral_code: (data as any).referralCode || undefined,
       });
 
       // The response data structure is { data: { seller } }

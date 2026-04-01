@@ -52,8 +52,6 @@ const Footer = () => {
               </button>
               <div className="flex flex-wrap items-center gap-4">
                 <Link to="/seller" className="text-white/80 hover:text-white transition-colors text-sm font-light">Sell on Byblos</Link>
-                <div className="w-1 h-1 bg-white/10 rounded-full" />
-                <Link to="/organizer/events/new" className="text-white/80 hover:text-white transition-colors text-sm font-light">Create an Event</Link>
               </div>
             </div>
           </div>

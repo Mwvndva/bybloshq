@@ -22,19 +22,44 @@ export default function PaymentSuccess() {
       }
 
       try {
+        // NOTE: This call may fail with 401 if buyer is not authenticated.
+        // That's OK — we handle it below using autoLoginToken.
         const response = await apiClient.get<any>(`/payments/status/${reference}`);
-        const paymentData = response.data.data;
+        const paymentData = response.data?.data || response.data;
 
         if (paymentData.status === 'completed' || paymentData.status === 'success') {
           setStatus('success');
           setMessage('Payment completed successfully!');
           setOrderReference(reference);
-          setTimeout(() => setShowSuccessModal(true), 1000);
+
+          // Handle auto-login if buyer isn't currently authenticated
+          if (paymentData.autoLoginToken) {
+            try {
+              await apiClient.post('/buyers/auto-login', {
+                autoLoginToken: paymentData.autoLoginToken
+              });
+              // Cookie is now set — show success modal then navigate to orders
+            } catch (loginErr) {
+              console.warn('[PAYMENT-SUCCESS] Auto-login failed:', loginErr);
+              // Still show success UI but navigation will require manual login
+            }
+          }
+
+          setTimeout(() => setShowSuccessModal(true), 800);
+        } else if (paymentData.status === 'pending' || paymentData.status === 'processing') {
+          // Payment is still being processed — redirect to checkout polling page
+          navigate(`/checkout?status=pending&reference=${reference}`, { replace: true });
         } else {
           setStatus('error');
           setMessage('Payment failed or was cancelled');
         }
       } catch (error: any) {
+        if (error.response?.status === 401) {
+          // Buyer not authenticated — the payment may still have succeeded.
+          // Redirect to checkout page which handles polling + auto-login properly.
+          navigate(`/checkout?status=pending&reference=${reference}`, { replace: true });
+          return;
+        }
         console.error('[PaymentSuccess] Payment verification failed:', error);
         setStatus('error');
         setMessage(error.response?.data?.message || 'Failed to verify payment. Please contact support.');
@@ -42,7 +67,7 @@ export default function PaymentSuccess() {
     };
 
     verifyPayment();
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#000000] relative">
@@ -85,9 +110,10 @@ export default function PaymentSuccess() {
             <button
               onClick={() => {
                 setShowSuccessModal(false);
-                navigate('/buyer/dashboard', { state: { activeSection: 'orders' } });
+                navigate('/buyer/orders', { replace: true });
               }}
               className="absolute top-4 right-4 p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors z-10"
+              aria-label="Close and view orders"
             >
               <X className="h-5 w-5 text-gray-300" />
             </button>
@@ -124,7 +150,7 @@ export default function PaymentSuccess() {
                 <button
                   onClick={() => {
                     setShowSuccessModal(false);
-                    navigate('/buyer/dashboard', { state: { activeSection: 'orders' } });
+                    navigate('/buyer/orders', { replace: true });
                   }}
                   className="group relative w-full px-8 py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-lg rounded-xl overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:scale-[1.02] active:scale-[0.98]"
                 >

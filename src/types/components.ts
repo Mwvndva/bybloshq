@@ -1,4 +1,4 @@
-import { Aesthetic } from './index';
+import type { Product, Aesthetic } from './index';
 
 export type AestheticWithNone = Aesthetic | '';
 
@@ -16,54 +16,15 @@ export interface AestheticCategoriesProps {
   onAestheticChange: (aesthetic: AestheticWithNone) => void;
 }
 
+// Use the canonical Product type — never redefine inline
 export interface ProductCardProps {
-  product: {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    image_url: string;
-    sellerId: string;
-    seller?: {
-      id: string;
-      fullName: string;
-      email?: string;
-      phone?: string;
-    };
-    isSold: boolean;
-    status: 'available' | 'sold';
-    soldAt?: string | null;
-    createdAt: string;
-    updatedAt: string;
-    aesthetic: Aesthetic;
-  };
-  seller?: {
-    id: string;
-    fullName: string;
-    email?: string;
-    phone?: string;
-  };
+  product: Product;
+  seller?: Product['seller'];
+  hideWishlist?: boolean;
+  theme?: string;
 }
 
 export interface WishlistItemProps {
-  product: {
-    id: string;
-    name: string;
-    description: string;
-    price: number;
-    image_url: string;
-    seller?: {
-      id: string;
-      fullName: string;
-      email?: string;
-      phone?: string;
-    };
-    isSold: boolean;
-    status: 'available' | 'sold';
-    soldAt?: string | null;
-    createdAt: string;
-    updatedAt: string;
-    aesthetic: Aesthetic;
-  };
+  product: Product;
   onRemove: (productId: string) => void;
 }

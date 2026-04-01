@@ -294,9 +294,11 @@ export default function OrdersSection() {
       );
     }
 
+    const sellerAddress = order.seller?.physicalAddress || "Dynamic Mall, along Tomboya Street - shop number SL 32";
+
     return (
       <div className="space-y-4">
-        <p>Have you picked up and inspected your package from <strong>"Dynamic Mall, along Tomboya Street - shop number SL 32"</strong>?</p>
+        <p>Have you picked up and inspected your package from <strong>"{sellerAddress}"</strong>?</p>
         <p className="text-sm text-muted-foreground">
           Please only confirm after you have physically received and inspected your package.
         </p>
