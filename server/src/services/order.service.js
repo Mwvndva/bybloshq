@@ -815,6 +815,9 @@ class OrderService {
                   b.email              AS buyer_email_actual,
                   b.city               AS buyer_city,
                   b.location           AS buyer_location_text,
+                  b.latitude           AS buyer_latitude,
+                  b.longitude          AS buyer_longitude,
+                  b.full_address       AS buyer_full_address,
                   COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
                   COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
                   COALESCE(s.email, u.email)                       AS seller_email, 
@@ -836,14 +839,7 @@ class OrderService {
 
         if (fullOrderResult.rows.length > 0) {
           const fullOrder = fullOrderResult.rows[0];
-          const buyerData = {
-            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-            phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
-            whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-            email: fullOrder.buyer_email || fullOrder.buyer_email_actual,
-            city: fullOrder.buyer_city,
-            location: fullOrder.buyer_location_text
-          };
+          const buyerData = this._buildBuyerNotificationData(fullOrder);
           const sellerData = {
             name: fullOrder.seller_name,
             phone: fullOrder.seller_phone,
@@ -989,11 +985,19 @@ class OrderService {
         // Re-fetch order details or reuse
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
-                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
-                  COALESCE(s.email, u.email) as seller_email, 
-                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
+                  b.full_name          AS buyer_name_actual,
+                  b.mobile_payment     AS buyer_phone_actual,
+                  b.whatsapp_number    AS buyer_whatsapp_actual,
+                  b.email              AS buyer_email_actual,
+                  b.city               AS buyer_city,
+                  b.location           AS buyer_location_text,
+                  b.latitude           AS buyer_latitude,
+                  b.longitude          AS buyer_longitude,
+                  b.full_address       AS buyer_full_address,
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
+                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
+                  COALESCE(s.email, u.email)                       AS seller_email, 
+                  s.physical_address   AS seller_address, s.latitude AS seller_latitude, s.longitude AS seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
@@ -1004,11 +1008,7 @@ class OrderService {
 
         if (fullOrderResult.rows.length > 0) {
           const fullOrder = fullOrderResult.rows[0];
-          const buyerData = {
-            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
-            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
-          };
+          const buyerData = this._buildBuyerNotificationData(fullOrder);
           const sellerData = {
             name: fullOrder.seller_name,
             phone: fullOrder.seller_phone,
@@ -1091,11 +1091,19 @@ class OrderService {
       try {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
-                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
-                  COALESCE(s.email, u.email) as seller_email, 
-                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude
+                  b.full_name          AS buyer_name_actual,
+                  b.mobile_payment     AS buyer_phone_actual,
+                  b.whatsapp_number    AS buyer_whatsapp_actual,
+                  b.email              AS buyer_email_actual,
+                  b.city               AS buyer_city,
+                  b.location           AS buyer_location_text,
+                  b.latitude           AS buyer_latitude,
+                  b.longitude          AS buyer_longitude,
+                  b.full_address       AS buyer_full_address,
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
+                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
+                  COALESCE(s.email, u.email)                       AS seller_email, 
+                  s.physical_address   AS seller_address, s.latitude AS seller_latitude, s.longitude AS seller_longitude
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
@@ -1106,12 +1114,7 @@ class OrderService {
 
         if (fullOrderResult.rows.length > 0) {
           const fullOrder = fullOrderResult.rows[0];
-          const buyerData = {
-            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual,
-            whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
-          };
+          const buyerData = this._buildBuyerNotificationData(fullOrder);
           const sellerData = {
             name: fullOrder.seller_name,
             phone: fullOrder.seller_phone,
@@ -1506,6 +1509,35 @@ class OrderService {
 
       logger.info(`[ClientOrder] Decremented inventory for product ${item.productId} by ${item.quantity}`);
     }
+  }
+
+  static _buildBuyerNotificationData(fullOrder) {
+    const metadata = typeof fullOrder.metadata === 'string' ? JSON.parse(fullOrder.metadata) : (fullOrder.metadata || {});
+    const buyerLocation = metadata.buyer_location || {};
+
+    // Parse shipping address if it's a string
+    let shippingAddr = fullOrder.shipping_address;
+    if (typeof shippingAddr === 'string' && shippingAddr.startsWith('{')) {
+      try { shippingAddr = JSON.parse(shippingAddr); } catch (e) { /* ignore */ }
+    }
+
+    const city = fullOrder.buyer_city || (typeof shippingAddr === 'object' ? shippingAddr.city : null) || 'Nairobi';
+    const location = fullOrder.buyer_location_text || (typeof shippingAddr === 'string' ? shippingAddr : (shippingAddr?.address || shippingAddr?.location));
+    const full_address = fullOrder.buyer_full_address || buyerLocation.fullAddress || (typeof shippingAddr === 'string' ? shippingAddr : shippingAddr?.fullAddress);
+    const latitude = fullOrder.buyer_latitude || buyerLocation.latitude;
+    const longitude = fullOrder.buyer_longitude || buyerLocation.longitude;
+
+    return {
+      name: fullOrder.buyer_name || fullOrder.buyer_name_actual || 'Customer',
+      phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
+      whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+      email: fullOrder.buyer_email || fullOrder.buyer_email_actual,
+      city,
+      location: location || full_address || 'Not specified',
+      full_address: full_address || location || 'Not specified',
+      latitude,
+      longitude
+    };
   }
 }
 
