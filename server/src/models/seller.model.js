@@ -19,9 +19,10 @@ export const createSeller = async (sellerData, externalClient = null) => {
 };
 
 export const findSellerByEmail = async (email) => {
+  if (!email) return null;
   const result = await query(
-    `SELECT * FROM sellers WHERE email = $1`,
-    [email]
+    `SELECT * FROM sellers WHERE LOWER(email) = $1`,
+    [email.toLowerCase()]
   );
   return toCamelCase(result.rows[0]);
 };
