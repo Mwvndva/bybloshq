@@ -6,9 +6,9 @@ import User from '../models/user.model.js';
 
 class BuyerService {
     static async register(data) {
-        const { fullName, email, phone, mobilePayment, whatsappNumber, password, city, location } = data;
-        const mobile_payment = mobilePayment || phone;
-        const whatsapp_number = whatsappNumber || phone;
+        const { fullName, email, phone, mobilePayment, whatsappNumber, mobile_payment: mp, whatsapp_number: wn, password, city, location } = data;
+        const mobile_payment = mobile_payment || mp || mobilePayment || phone;
+        const whatsapp_number = whatsappNumber || wn || phone;
 
         const client = await (await import('../config/database.js')).pool.connect();
         try {
@@ -91,9 +91,9 @@ class BuyerService {
     }
 
     static async registerGuest(data) {
-        const { fullName, email, phone, mobilePayment, whatsappNumber, city, location, password } = data;
-        const mobile_payment = mobilePayment || phone;
-        const whatsapp_number = whatsappNumber || phone;
+        const { fullName, email, phone, mobilePayment, whatsappNumber, mobile_payment: mp, whatsapp_number: wn, city, location, password } = data;
+        const mobile_payment = mobilePayment || mp || phone;
+        const whatsapp_number = whatsappNumber || wn || phone;
 
         const client = await (await import('../config/database.js')).pool.connect();
         try {
