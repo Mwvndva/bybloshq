@@ -56,7 +56,8 @@ import { ProductsList } from './ProductsList';
 import NewClientOrderModal from './NewClientOrderModal';
 import ReferralPanel from './ReferralPanel';
 
-type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+// Theme type is now imported from sellerApi.ts
+// type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
 // Local helpers for consistent formatting within this component
 const formatNumber = (value: number | null | undefined) => {
@@ -357,7 +358,36 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     }));
   }, []);
 
-  // handleLogout removed - now using logout from SellerAuthContext
+  const fetchWithdrawalRequests = useCallback(async () => {
+    try {
+      const requests = await sellerApi.getWithdrawalRequests();
+      setWithdrawalRequests(requests);
+    } catch (error) {
+      console.error('Error fetching withdrawal requests:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load withdrawal requests. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  }, [toast]);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const data = await sellerApi.getProducts();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load products. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   // Fetch data function
   const fetchData = useCallback(async (): Promise<AnalyticsData> => {
@@ -444,23 +474,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       setIsLoading(false);
     }
   }, [navigate, toast, fetchWithdrawalRequests]);
-
-  const fetchProducts = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const data = await sellerApi.getProducts();
-      setProducts(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load products. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
 
   const toggleEdit = useCallback(() => {
     setIsEditing(prev => {
@@ -552,19 +565,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   // fetchProfile removed - profile data now comes from useSellerAuth context
 
-  const fetchWithdrawalRequests = useCallback(async () => {
-    try {
-      const requests = await sellerApi.getWithdrawalRequests();
-      setWithdrawalRequests(requests);
-    } catch (error) {
-      console.error('Error fetching withdrawal requests:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to load withdrawal requests. Please try again.',
-        variant: 'destructive',
-      });
-    }
-  }, [toast]);
 
   const handleDeleteProduct = async (id: string) => {
     setProductToDelete(id);
