@@ -82,6 +82,38 @@ export const buyerRoutes = [
           </Suspense>
         ),
       },
+      {
+        path: 'orders',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerDashboard />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'shops',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerDashboard />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'wishlist',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerDashboard />
+          </Suspense>
+        ),
+      },
+      {
+        path: 'profile',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerDashboard />
+          </Suspense>
+        ),
+      },
     ],
   },
 

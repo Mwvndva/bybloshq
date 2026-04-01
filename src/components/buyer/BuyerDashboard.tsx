@@ -49,11 +49,18 @@ function BuyerDashboard() {
   const { toast } = useToast();
   const [selectedAesthetic, setSelectedAesthetic] = useState<AestheticWithNone>('clothes-style');
   const [activeSection, setActiveSection] = useState<'shop' | 'shops' | 'wishlist' | 'orders' | 'profile'>(() => {
-    // Priority 1: Navigation state
+    // Priority 1: Pathname (new standard for direct linking)
+    const pathname = location.pathname;
+    if (pathname.includes('/buyer/orders')) return 'orders';
+    if (pathname.includes('/buyer/shops')) return 'shops';
+    if (pathname.includes('/buyer/wishlist')) return 'wishlist';
+    if (pathname.includes('/buyer/profile')) return 'profile';
+
+    // Priority 2: Navigation state
     const stateSection = (location.state as any)?.activeSection;
     if (stateSection) return stateSection;
 
-    // Priority 2: Query parameters (useful for full page reloads and payment success)
+    // Priority 3: Query parameters (legacy support)
     const queryParams = new URLSearchParams(location.search);
     const querySection = queryParams.get('section') || queryParams.get('tab');
     if (querySection && ['shop', 'shops', 'wishlist', 'orders', 'profile'].includes(querySection)) {
@@ -62,6 +69,23 @@ function BuyerDashboard() {
 
     return 'shop';
   });
+
+  // Sync active section with URL changes
+  useEffect(() => {
+    const pathname = location.pathname;
+    const pathMapping: Record<string, typeof activeSection> = {
+      '/buyer/orders': 'orders',
+      '/buyer/shops': 'shops',
+      '/buyer/wishlist': 'wishlist',
+      '/buyer/profile': 'profile',
+      '/buyer/dashboard': 'shop'
+    };
+
+    const targetSection = pathMapping[pathname];
+    if (targetSection && targetSection !== activeSection) {
+      setActiveSection(targetSection);
+    }
+  }, [location.pathname, activeSection]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
@@ -251,7 +275,15 @@ function BuyerDashboard() {
           ].map(({ id, label, icon: Icon }) => (
             <button
               onClick={() => {
-                setActiveSection(id as any);
+                const pathMap: Record<string, string> = {
+                  shop: 'dashboard',
+                  shops: 'shops',
+                  orders: 'orders',
+                  wishlist: 'wishlist',
+                  profile: 'profile'
+                };
+                navigate(`/buyer/${pathMap[id]}`);
+
                 // Mark orders as viewed when Orders tab is clicked
                 if (id === 'orders') {
                   const now = new Date().toISOString();
@@ -419,7 +451,7 @@ function BuyerDashboard() {
                   You haven't followed any shops yet. Start exploring to find brands you love!
                 </p>
                 <Button
-                  onClick={() => setActiveSection('shop')}
+                  onClick={() => navigate('/buyer/dashboard')}
                   className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-bold px-6 py-2 rounded-xl hover:scale-105 transition-transform"
                 >
                   Discover Shops
