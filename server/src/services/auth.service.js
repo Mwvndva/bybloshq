@@ -29,8 +29,22 @@ class AuthService {
             // CASE 1: A seller or admin trying to access the BUYER portal
             // They can if they also have a buyer profile
             if (type === 'buyer') {
-                const buyerProfile = await Buyer.findByUserId(user.id);
-                if (buyerProfile) {
+                let buyerProfile = await Buyer.findByUserId(user.id);
+
+                // Lazy-link legacy buyer profile if it exists by email
+                if (!buyerProfile) {
+                    buyerProfile = await Buyer.findByEmail(user.email);
+                    if (buyerProfile && !buyerProfile.userId) {
+                        await pool.query(
+                            'UPDATE buyers SET user_id = $1 WHERE id = $2 AND user_id IS NULL',
+                            [user.id, buyerProfile.id]
+                        );
+                        buyerProfile.userId = user.id;
+                        buyerProfile.user_id = user.id;
+                    }
+                }
+
+                if (buyerProfile && (buyerProfile.userId === user.id || buyerProfile.user_id === user.id)) {
                     const token = signToken(user.id, 'buyer');
                     return { user, profile: buyerProfile, token, crossRole: true };
                 }
@@ -39,8 +53,22 @@ class AuthService {
             // CASE 2: A buyer or admin trying to access the SELLER portal
             // They can if they also have a seller profile
             if (type === 'seller') {
-                const sellerProfile = await SellerModel.findSellerByUserId(user.id);
-                if (sellerProfile) {
+                let sellerProfile = await SellerModel.findSellerByUserId(user.id);
+
+                // Lazy-link legacy seller profile if it exists by email
+                if (!sellerProfile) {
+                    sellerProfile = await SellerModel.findSellerByEmail(user.email);
+                    if (sellerProfile && !sellerProfile.userId) {
+                        await pool.query(
+                            'UPDATE sellers SET user_id = $1 WHERE id = $2 AND user_id IS NULL',
+                            [user.id, sellerProfile.id]
+                        );
+                        sellerProfile.userId = user.id;
+                        sellerProfile.user_id = user.id;
+                    }
+                }
+
+                if (sellerProfile && (sellerProfile.userId === user.id || sellerProfile.user_id === user.id)) {
                     // Issue a token scoped to 'seller' role
                     const token = signToken(user.id, 'seller');
                     return { user, profile: sellerProfile, token, crossRole: true };
