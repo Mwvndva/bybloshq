@@ -721,7 +721,7 @@ export const handleBecomeClient = async (req, res) => {
     res.status(200).json({
       status: 'success',
       success: true,
-      message: result.alreadyClient ? 'You are already a client of this shop' : 'You have successfully joined the clientele',
+      message: result.alreadyClient ? 'You are already following this shop' : 'You are now following this shop',
       data: {
         clientCount: result.clientCount,
         alreadyClient: result.alreadyClient
@@ -732,7 +732,7 @@ export const handleBecomeClient = async (req, res) => {
     console.error('Error becoming client:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Failed to join clientele',
+      message: 'Failed to follow shop',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
@@ -762,7 +762,7 @@ export const handleLeaveClient = async (req, res) => {
     res.status(200).json({
       status: 'success',
       success: true,
-      message: 'You have left the clientele',
+      message: 'You have unfollowed this shop',
       data: {
         clientCount: result.clientCount,
         wasClient: result.wasClient
@@ -773,7 +773,7 @@ export const handleLeaveClient = async (req, res) => {
     console.error('Error leaving clientele:', error);
     res.status(500).json({
       status: 'error',
-      message: 'Failed to leave clientele',
+      message: 'Failed to unfollow shop',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

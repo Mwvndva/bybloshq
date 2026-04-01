@@ -84,7 +84,7 @@ const ShopPage = () => {
           phone: seller.phone || '',
           whatsappNumber: seller.whatsappNumber || seller.phone || '',
           email: seller.email || '',
-          bannerImage: seller.bannerImage || seller.banner_image || seller.banner_url || '',
+          bannerImage: seller.bannerImage || seller.banner_image || '',
           city: seller.city,
           location: seller.location,
           theme: (seller.theme as Theme) || 'black',
@@ -246,7 +246,7 @@ const ShopPage = () => {
               <span className="flex items-center gap-1 shrink-0">
                 <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
-                <span className="hidden xs:inline">Clients</span>
+                <span className="hidden xs:inline">Followers</span>
               </span>
             </div>
 
