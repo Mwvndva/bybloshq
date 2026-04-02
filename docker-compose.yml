@@ -86,7 +86,7 @@ services:
     container_name: byblos-frontend
     restart: unless-stopped
     environment:
-      VITE_API_URL: ${FRONTEND_API_URL:-http://localhost:3002/api}
+      VITE_API_URL: ${FRONTEND_API_URL:-https://api.bybloshq.space/api}
     # ports:
     #   - "80:80"
     depends_on:
