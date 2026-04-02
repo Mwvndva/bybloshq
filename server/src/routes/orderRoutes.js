@@ -19,7 +19,15 @@ import { createOrderSchema, updateOrderStatusSchema } from '../validations/order
 
 const router = express.Router();
 
-// Apply protection to all order routes
+/**
+ * @swagger
+ * /api/orders/reference/{reference}:
+ *   get:
+ *     summary: Get order by order number or payment reference (Public)
+ */
+router.get('/reference/:reference', getByReference);
+
+// Apply protection to all other order routes
 router.use(protect);
 
 /**
@@ -41,14 +49,6 @@ router.post(
  *     summary: Get orders for the authenticated user
  */
 router.get('/user', getUserOrders);
-
-/**
- * @swagger
- * /api/orders/reference/{reference}:
- *   get:
- *     summary: Get order by order number or payment reference
- */
-router.get('/reference/:reference', getByReference);
 
 /**
  * @swagger
