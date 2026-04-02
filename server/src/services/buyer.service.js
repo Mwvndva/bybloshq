@@ -7,7 +7,7 @@ import User from '../models/user.model.js';
 class BuyerService {
     static async register(data) {
         const { fullName, email, phone, mobilePayment, whatsappNumber, mobile_payment: mp, whatsapp_number: wn, password, city, location } = data;
-        const mobile_payment = mobile_payment || mp || mobilePayment || phone;
+        const mobile_payment = mp || mobilePayment || phone;
         const whatsapp_number = whatsappNumber || wn || phone;
 
         const client = await (await import('../config/database.js')).pool.connect();
