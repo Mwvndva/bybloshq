@@ -144,25 +144,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     if (isWishlistLoading || wishlistActionLoading || isSold) return;
     setWishlistActionLoading(true);
     try {
-      await addToWishlist(product);
-      toast({
-        title: 'Added to Wishlist',
-        description: `${product.name} added to your wishlist.`
-      });
-    } catch (error: any) {
-      if (error.code === 'DUPLICATE_WISHLIST_ITEM' || error.response?.status === 409) {
-        toast({
-          title: 'Already in Wishlist',
-          description: 'Product already in wishlist',
-          variant: 'default'
-        });
+      if (isWishlisted) {
+        await wishlistContext.removeFromWishlist(product.id);
+        // Toast is handled inside removeFromWishlist context method
       } else {
-        toast({
-          title: 'Error',
-          description: 'Failed to add item to wishlist.',
-          variant: 'destructive'
-        });
+        await addToWishlist(product);
+        // Toast is handled inside addToWishlist context method
       }
+    } catch (error: any) {
+      console.error('Wishlist toggle error:', error);
+      // Errors are also handled with toasts in the context, 
+      // but we log here just in case.
     } finally {
       setWishlistActionLoading(false);
     }
