@@ -45,7 +45,9 @@ services:
       DB_NAME: ${DB_NAME:-byblos_atelier}
       DB_USER: ${DB_USER:-postgres}
       DB_PASSWORD: ${DB_PASSWORD}
+      DB_SSL: "false"
       REDIS_URL: redis://redis:6379
+
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
@@ -96,6 +98,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+
 
 networks:
   byblos-network:
