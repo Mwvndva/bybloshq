@@ -650,13 +650,16 @@ class OrderService {
         }
       });
 
-      let hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL);
-      let hasService = items.some(i => i.product_type === ProductType.SERVICE);
+      // 3. Determine if this order has physical, digital or service items
+      let hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL || i.product_type === 'physical');
+      let hasService = items.some(i => i.product_type === ProductType.SERVICE || i.product_type === 'service');
+      let hasDigital = items.some(i => i.product_type === ProductType.DIGITAL || i.product_type === 'digital' || i.is_digital === true);
 
       // Fallback logic for metadata if product/type missing (e.g. deleted product)
-      if (!hasPhysical && !hasService && metadata.product_type) {
+      if (!hasPhysical && !hasService && !hasDigital && metadata.product_type) {
         if (metadata.product_type === ProductType.PHYSICAL) hasPhysical = true;
         if (metadata.product_type === ProductType.SERVICE) hasService = true;
+        if (metadata.product_type === ProductType.DIGITAL) hasDigital = true;
       }
 
       logger.info(`[PURCHASE-FLOW] CompleteOrder - Product Analysis:`, {
@@ -1473,15 +1476,25 @@ class OrderService {
     const isClientOrder = order.client_id !== null || order.is_seller_initiated === true;
     if (isClientOrder) return OrderStatus.COMPLETED;
 
-    const hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL || i.productType === ProductType.PHYSICAL);
-    const hasService = items.some(i => i.product_type === ProductType.SERVICE || i.productType === ProductType.SERVICE);
-    const hasDigital = items.some(i => i.is_digital || i.isDigital);
+    const hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL || i.product_type === 'physical');
+    const hasService = items.some(i => i.product_type === ProductType.SERVICE || i.product_type === 'service');
+    const hasDigital = items.some(i => i.product_type === ProductType.DIGITAL || i.product_type === 'digital' || i.is_digital === true);
 
+    // Mixed orders: If they have physical, fulfillment is pending
     if (hasPhysical) {
+      // If seller has no shop, it must be delivered by courier -> DELIVERY_PENDING
+      // If seller HAS a shop, it can be collected -> COLLECTION_PENDING
       return sellerHasShop ? OrderStatus.COLLECTION_PENDING : OrderStatus.DELIVERY_PENDING;
     }
-    if (hasService) return OrderStatus.SERVICE_PENDING;
-    if (hasDigital) return OrderStatus.COMPLETED;
+
+    if (hasService) {
+      return OrderStatus.SERVICE_PENDING;
+    }
+
+    // Purely digital orders are completed immediately
+    if (hasDigital) {
+      return OrderStatus.COMPLETED;
+    }
 
     return OrderStatus.COMPLETED;
   }
