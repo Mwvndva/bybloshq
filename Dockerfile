@@ -16,7 +16,7 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Build stage
 FROM deps AS builder
