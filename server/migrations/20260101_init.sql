@@ -148,7 +148,6 @@ CREATE TABLE IF NOT EXISTS buyers (
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
     refunds DECIMAL(12, 2) DEFAULT 0,
-    profile_image TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
