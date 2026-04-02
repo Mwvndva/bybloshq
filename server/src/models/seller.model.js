@@ -181,11 +181,7 @@ export const updateSeller = async (id, updates) => {
     values.push(whatsappNumber);
   }
 
-  if (password) {
-    paramCount++;
-    updatesList.push(`password = $${paramCount}`);
-    values.push(password);
-  }
+  // Removed password update from here - it is handled by User model
 
   if (city) {
     paramCount++;
@@ -382,7 +378,7 @@ export const verifyPasswordResetToken = async (email, token) => {
 export const updatePassword = async (email, newPassword) => {
   const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
   await query(
-    'UPDATE sellers SET password = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE email = $2',
+    'UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE email = $2',
     [hashedPassword, email]
   );
   return true;
