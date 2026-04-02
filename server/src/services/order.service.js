@@ -636,7 +636,7 @@ class OrderService {
       const items = itemsResult.rows;
 
       // 3a. INVENTORY DECREMENT: Update stock for tracked products
-      await this._decrementInventory(client, orderId, items, order);
+      await this._decrementInventory(client, items, orderId, order);
 
       // Fetch Seller to check for Shop Address
       const { rows: sellers } = await client.query('SELECT physical_address FROM sellers WHERE id = $1', [order.seller_id]);
