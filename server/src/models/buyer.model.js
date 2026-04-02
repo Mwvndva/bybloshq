@@ -9,49 +9,37 @@ import { toCamelCase } from '../utils/caseUtils.js';
 
 class Buyer {
   // Create a new buyer
-  static async create({ fullName, email, mobilePayment, whatsappNumber, password, city, location, latitude, longitude, fullAddress, userId = null }, externalClient = null) {
-    // If we have a userId, we expect the user record already exists (with hashed password)
-    // and we just create the profile.
-    let hashedPassword = null;
-    if (!userId) {
-      hashedPassword = await bcrypt.hash(password, 10);
-    }
-
+  static async create({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress, userId = null }, externalClient = null) {
     const query = `
       INSERT INTO buyers (
-        full_name, email, mobile_payment, whatsapp_number, password, 
+        full_name, email, mobile_payment, whatsapp_number, 
         city, location, latitude, longitude, full_address, user_id, 
         created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *
     `;
     const values = [
-      fullName, email, mobilePayment, whatsappNumber, hashedPassword,
+      fullName, email, mobilePayment, whatsappNumber,
       city, location, latitude, longitude, fullAddress, userId
     ];
     const result = await (externalClient || pool).query(query, values);
     return toCamelCase(result.rows[0]);
   }
 
-  // Create a new buyer for guest checkout (generates secure random password)
-  static async createGuest({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress }, externalClient = null) {
-    // Generate a secure random password for guest accounts
-    const randomPassword = crypto.randomBytes(32).toString('hex');
-    const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
+  static async createGuest({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress, userId = null }, externalClient = null) {
     const query = `
       INSERT INTO buyers (
-        full_name, email, mobile_payment, whatsapp_number, password, 
-        city, location, latitude, longitude, full_address, created_at, updated_at
+        full_name, email, mobile_payment, whatsapp_number, 
+        city, location, latitude, longitude, full_address, user_id, created_at, updated_at
       )
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
       RETURNING *
     `;
 
     const values = [
-      fullName, email, mobilePayment, whatsappNumber, hashedPassword,
-      city, location, latitude, longitude, fullAddress
+      fullName, email, mobilePayment, whatsappNumber,
+      city, location, latitude, longitude, fullAddress, userId
     ];
     const result = await (externalClient || pool).query(query, values);
     return toCamelCase(result.rows[0]);
