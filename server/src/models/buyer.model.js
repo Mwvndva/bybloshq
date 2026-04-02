@@ -144,7 +144,7 @@ class Buyer {
       longitude: 'longitude',
       fullAddress: 'full_address',
       isVerified: 'is_verified',
-      profileImage: 'profile_image'
+      isVerified: 'is_verified'
       // Add other fields as needed
     };
 
