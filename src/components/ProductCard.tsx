@@ -10,7 +10,7 @@ import { useWishlist } from '@/contexts/WishlistContext';
 import { cn, formatCurrency, getImageUrl } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { BuyerInfoModal } from '@/components/BuyerInfoModal';
+import { BuyerInfoModal, BuyerInfo } from '@/components/BuyerInfoModal';
 import PhoneCheckModal from '@/components/PhoneCheckModal';
 import { ServiceBookingModal } from '@/components/ServiceBookingModal';
 import buyerApi from '@/api/buyerApi';
@@ -298,6 +298,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       fullName: string;
       email: string;
       mobilePayment: string;
+      whatsappNumber: string;
       city?: string;
       location?: string;
       password?: string
@@ -319,7 +320,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
 
         // Proceed with new ID (or let backend infer from cookie)
-        await executePayment(buyerInfo, explicitBookingData, saveResult.user?.id || saveResult.buyer?.id);
+        await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
       } else {
         // Existing user (skipped save) -> Proceed using backend lookup
         await executePayment(buyerInfo, explicitBookingData);
@@ -896,7 +897,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         isOpen={isBuyerModalOpen}
         onClose={() => setIsBuyerModalOpen(false)}
         onSubmit={async (buyerInfo) => {
-          await handleBuyerInfoSubmit(buyerInfo, null, shouldSkipSave);
+          await handleBuyerInfoSubmit({
+            ...buyerInfo,
+            fullName: buyerInfo.fullName || `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim(),
+          }, null, shouldSkipSave);
         }}
         isLoading={isProcessingPurchase}
         theme={theme}

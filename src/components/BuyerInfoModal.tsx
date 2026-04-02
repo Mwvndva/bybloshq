@@ -8,7 +8,7 @@ import { Loader2, User, Mail, MapPin, Phone, CheckCircle2, Lock, Eye, EyeOff } f
 import { useToast } from '@/components/ui/use-toast';
 import { locationData } from '@/lib/constants';
 
-interface BuyerInfo {
+export interface BuyerInfo {
   firstName: string;
   lastName: string;
   fullName?: string;
