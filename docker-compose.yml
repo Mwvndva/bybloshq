@@ -5,8 +5,8 @@ services:
     container_name: byblos-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-byblos_atelier}
-      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_DB: ${DB_NAME:-bybloshqdb}
+      POSTGRES_USER: ${DB_USER:-byblos_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -42,8 +42,8 @@ services:
       APP_NAME: ${APP_NAME:-Byblos}
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_NAME: ${DB_NAME:-byblos_atelier}
-      DB_USER: ${DB_USER:-postgres}
+      DB_NAME: ${DB_NAME:-bybloshqdb}
+      DB_USER: ${DB_USER:-byblos_user}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_SSL: "false"
       REDIS_URL: redis://redis:6379
