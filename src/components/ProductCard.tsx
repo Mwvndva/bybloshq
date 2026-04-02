@@ -808,7 +808,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                     style={{ scrollBehavior: 'smooth' }}
                   >
                     {allImages.map((img, idx) => (
-                      <div key={idx} className="relative w-full flex-none snap-center flex items-center justify-center min-h-[40vh]">
+                      <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center min-h-[40vh]">
                         <img
                           src={getImageUrl(img)}
                           alt={`${product.name} - Image ${idx + 1}`}
@@ -841,9 +841,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                         <ChevronRight className="h-6 w-6" />
                       </Button>
                       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-                        {allImages.map((_, idx) => (
+                        {allImages.map((img, idx) => (
                           <div
-                            key={idx}
+                            key={`indicator-${img}`}
                             className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
                             onClick={() => {
                               setCurrentImageIndex(idx);

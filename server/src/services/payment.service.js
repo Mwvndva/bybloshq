@@ -7,7 +7,6 @@ import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
-import Buyer from '../models/buyer.model.js';
 import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
 
 export class PaymentService {
@@ -232,7 +231,7 @@ export class PaymentService {
                     required: amount
                 });
 
-                if (parseFloat(balance.available_balance) < parseFloat(amount) * 1.1) {
+                if (Number.parseFloat(balance.available_balance) < Number.parseFloat(amount) * 1.1) {
                     // Alert if balance is low (less than 110% of transaction amount)
                     logger.warn('[PAYD-PAYIN] Low platform balance', {
                         available: balance.available_balance,
@@ -259,7 +258,7 @@ export class PaymentService {
             const payload = {
                 username: this.payloadUsername,
                 channel: "MPESA",
-                amount: parseFloat(amount),
+                amount: Number.parseFloat(amount),
                 phone_number: normalizedPhone,
                 narration: narration || narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
@@ -432,175 +431,50 @@ export class PaymentService {
      * Handle Payd Webhook/Callback
      */
     async handlePaydCallback(callbackData) {
-        logger.info('[PAYD-WEBHOOK] Received payment callback', {
-            raw_data: callbackData
-        });
+        logger.info('[PAYD-WEBHOOK] Received payment callback', { raw_data: callbackData });
 
         try {
-            // ============================================================
-            // STEP 1: EXTRACT DATA
-            // ============================================================
-            const data = callbackData.data || callbackData;
+            // STEP 1: PARSE AND VALIDATE
+            const { reference, isSuccess, amount, phone, mpesaReceipt, status } = this._parseCallbackData(callbackData);
 
-            const reference = data.transaction_reference;
-
-            const status = data.status?.toLowerCase();
-            const amount = parseFloat(data.amount || 0);
-            const phone = data.phone_number;
-            const resultCode = data.result_code || callbackData.result_code;
-
-            if (!reference) {
-                logger.error('[PAYD-WEBHOOK] Missing reference in callback payload', callbackData);
-                throw new Error('Webhook missing transaction reference');
-            }
-
-            // Payd docs: SUCCESS requires result_code=0 AND success=true
-            // Lenient check: Also allow 200 or status=SUCCESS for broader provider compatibility
-            const resultCodeNum = Number.parseInt(resultCode, 10);
-            const isSuccess = (resultCodeNum === 0 || resultCodeNum === 200 || status === 'success') &&
-                (data.success === true || data.success === 'true');
-
-            logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
-                reference,
-                status,
-                isSuccess,
-                amount,
-                phone
-            });
-
-            // ============================================================
-            // STEP 2: FIND PAYMENT RECORD
-            // ============================================================
+            // STEP 2: FIND PAYMENT RECORD (initial non-locking check)
             const { rows: payments } = await pool.query(
                 'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1',
                 [reference]
             );
 
-            if (!payments || payments.length === 0) {
-                if (isSuccess) {
-                    logger.warn('[PAYD-WEBHOOK] Payment not found for reference — will be resolved by cron', {
-                        reference,
-                        amount
-                    });
-                    // Do not call handleSuccessfulPayment — it uses a different flow and
-                    // can cause issues when reference matching is fuzzy.
-                    // The payment will be resolved by processPendingPayments cron within 5 minutes.
-                } else {
-                    logger.warn('[PAYD-WEBHOOK] Failed webhook for unknown reference', { reference });
-                }
+            if (!payments?.length) {
+                if (isSuccess) logger.warn('[PAYD-WEBHOOK] Payment not found - will be resolved by cron', { reference, amount });
+                else logger.warn('[PAYD-WEBHOOK] Failed webhook for unknown reference', { reference });
                 return { success: false, message: 'Payment record not found' };
             }
 
             const payment = payments[0];
-
-            // ============================================================
-            // STEP 3: CHECK IDEMPOTENCY (Fast check - no lock yet)
-            // ============================================================
-            if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
-                logger.warn('[PAYD-WEBHOOK] Duplicate success webhook ignored (fast check)', {
-                    payment_id: payment.id,
-                    reference
-                });
-                return {
-                    success: true,
-                    message: 'Webhook already processed',
-                    duplicate: true
-                };
-            }
-
-            // ============================================================
-            // STEP 4: UPDATE PAYMENT STATUS
-            // ============================================================
-            const dbClient = await pool.connect();
-            let transactionCommitted = false;
-
-            try {
-                await dbClient.query('BEGIN');
-
-                // ─── Acquire FOR UPDATE lock and re-check idempotency ───────────────
-                const { rows: lockedRows } = await dbClient.query(
-                    'SELECT id, status FROM payments WHERE id = $1 FOR UPDATE',
-                    [payment.id]
-                );
-                if (!lockedRows[0]) {
-                    await dbClient.query('ROLLBACK');
-                    logger.error('[PAYD-WEBHOOK] Payment disappeared during lock attempt', { payment_id: payment.id });
-                    return { success: false, message: 'Payment not found during lock' };
-                }
-                const lockedPayment = lockedRows[0];
-
-                if (lockedPayment.status === PaymentStatus.COMPLETED || lockedPayment.status === PaymentStatus.SUCCESS) {
-                    await dbClient.query('ROLLBACK');
-                    logger.warn('[PAYD-WEBHOOK] Duplicate success webhook ignored (post-lock check)', {
-                        payment_id: payment.id,
-                        reference
-                    });
-                    return { success: true, message: 'Webhook already processed (concurrent)', duplicate: true };
-                }
-                // ─────────────────────────────────────────────────────────────────────────
-
-                const mpesaReceipt = data.third_party_trans_id || null;
-
-                // Update payment record
-                await dbClient.query(
-                    `UPDATE payments 
-                     SET status = $1,
-                         mpesa_receipt = $2,
-                         metadata = jsonb_set(
-                             COALESCE(metadata, '{}'::jsonb),
-                             '{webhook_received_at}',
-                             $3::jsonb
-                         ),
-                         updated_at = NOW()
-                     WHERE id = $4`,
-                    [
-                        isSuccess ? PaymentStatus.COMPLETED : 'failed',
-                        mpesaReceipt,
-                        JSON.stringify(new Date().toISOString()),
-                        payment.id
-                    ]
-                );
-
-                if (isSuccess) {
-                    const paymentMeta = payment.metadata || {};
-                    if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-                        await dbClient.query(
-                            'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                            [paymentMeta.debt_id]
-                        );
-                    }
-                }
-
-                await dbClient.query('COMMIT');
-                transactionCommitted = true;
-            } catch (error) {
-                if (!transactionCommitted) {
-                    await dbClient.query('ROLLBACK').catch(e => logger.error('[PAYD-WEBHOOK] Rollback failed:', e));
-                }
-                throw error;
-            } finally {
-                dbClient.release();
-            }
-
-            // Step 5: Post-commit side effects (notifications, order completion)
-            // These MUST NOT run inside the transaction to avoid blocking status updates
             const paymentMeta = payment.metadata || {};
-            if (isSuccess && transactionCommitted && (paymentMeta.order_id || paymentMeta.product_id)) {
+
+            // STEP 3: IDEMPOTENCY CHECK (Fast path)
+            if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
+                logger.warn('[PAYD-WEBHOOK] Duplicate webhook ignored', { payment_id: payment.id, reference });
+                return { success: true, message: 'Webhook already processed', duplicate: true };
+            }
+
+            // STEP 4: UPDATE PAYMENT (Atomic Transaction)
+            const updateResult = await this._updatePaymentOnCallback(payment, isSuccess, mpesaReceipt);
+            if (!updateResult.success) return updateResult;
+
+            // STEP 5: POST-COMMIT SIDE EFFECTS (Order Completion)
+            if (isSuccess && (paymentMeta.order_id || paymentMeta.product_id)) {
                 try {
-                    // Use the already imported OrderService
                     await OrderService.completeOrder({
                         ...payment,
                         status: PaymentStatus.COMPLETED,
                         metadata: { ...paymentMeta, payd_confirmation: callbackData }
                     });
-                    logger.info('[PAYD-WEBHOOK] Order completion successful after commit', { payment_id: payment.id });
+                    logger.info('[PAYD-WEBHOOK] Order completion successful', { payment_id: payment.id });
                 } catch (completionErr) {
                     logger.error('[CRITICAL] handlePaydCallback completeOrder failed:', completionErr);
-                    // Mark for retry via cron if it fails post-commit
                     await pool.query(
-                        `UPDATE payments 
-                         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb)
-                         WHERE id = $1`,
+                        "UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb) WHERE id = $1",
                         [payment.id]
                     );
                 }
@@ -619,43 +493,109 @@ export class PaymentService {
             };
 
         } catch (error) {
-            logger.error('[PAYD-WEBHOOK] Webhook processing failed', {
-                error: error.message,
-                stack: error.stack
-            });
-
+            logger.error('[PAYD-WEBHOOK] Webhook processing failed', { error: error.message });
             throw error;
         }
     }
 
     /**
-     * Process successful payment logic and trigger ticket creation
+     * Parse and validate Payd callback data
+     * @private
+     */
+    _parseCallbackData(callbackData) {
+        const data = callbackData.data || callbackData;
+        const reference = data.transaction_reference;
+        const status = data.status?.toLowerCase();
+        const amount = Number.parseFloat(data.amount || 0);
+        const phone = data.phone_number;
+        const resultCode = data.result_code || callbackData.result_code;
+        const mpesaReceipt = data.third_party_trans_id || null;
+
+        if (!reference) {
+            logger.error('[PAYD-WEBHOOK] Missing reference in payload', callbackData);
+            throw new Error('Webhook missing transaction reference');
+        }
+
+        const resultCodeNum = Number.parseInt(resultCode, 10);
+        const isSuccess = (resultCodeNum === 0 || resultCodeNum === 200 || status === 'success') &&
+            (data.success === true || data.success === 'true');
+
+        return { reference, isSuccess, amount, phone, mpesaReceipt, status };
+    }
+
+    /**
+     * Update payment record within a transaction
+     * @private
+     */
+    async _updatePaymentOnCallback(payment, isSuccess, mpesaReceipt) {
+        const dbClient = await pool.connect();
+        try {
+            await dbClient.query('BEGIN');
+
+            const { rows: lockedRows } = await dbClient.query(
+                'SELECT id, status FROM payments WHERE id = $1 FOR UPDATE',
+                [payment.id]
+            );
+
+            if (!lockedRows[0]) {
+                await dbClient.query('ROLLBACK');
+                return { success: false, message: 'Payment not found during lock' };
+            }
+
+            if (lockedRows[0].status === PaymentStatus.COMPLETED || lockedRows[0].status === PaymentStatus.SUCCESS) {
+                await dbClient.query('ROLLBACK');
+                return { success: true, message: 'Webhook already processed (concurrent)', duplicate: true };
+            }
+
+            await dbClient.query(
+                `UPDATE payments 
+                 SET status = $1, mpesa_receipt = $2,
+                     metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{webhook_received_at}', $3::jsonb),
+                     updated_at = NOW()
+                 WHERE id = $4`,
+                [
+                    isSuccess ? PaymentStatus.COMPLETED : 'failed',
+                    mpesaReceipt,
+                    JSON.stringify(new Date().toISOString()),
+                    payment.id
+                ]
+            );
+
+            const paymentMeta = payment.metadata || {};
+            if (isSuccess && paymentMeta.type === 'debt' && paymentMeta.debt_id) {
+                await dbClient.query(
+                    'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
+                    [paymentMeta.debt_id]
+                );
+            }
+
+            await dbClient.query('COMMIT');
+            return { success: true };
+        } catch (error) {
+            await dbClient.query('ROLLBACK').catch(e => logger.error('[PAYD-WEBHOOK] Rollback failed:', e));
+            throw error;
+        } finally {
+            dbClient.release();
+        }
+    }
+
+
+    /**
+     * Process successful payment logic and trigger downstream actions
      */
     async handleSuccessfulPayment(data) {
         const { reference, amount, metadata } = data;
+        logger.info(`[PAYMENT-SUCCESS] Processing Ref: ${reference}, Amount: ${amount}`);
 
-        logger.info(`[PURCHASE-FLOW] 6. Handling Successful Payment logic for Ref: ${reference}, Amount: ${amount}`);
-
-        let payment = null;
-
-        // 1. Find payment by reference OR invoice_id
-        // 1. Find payment by provider_reference or api_ref (Fuzzy matching removed - C-2 FIX)
+        // 1. Find payment by provider_reference or api_ref
         const { rows } = await pool.query(
-            `SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 LIMIT 1`,
+            'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 LIMIT 1',
             [reference]
         );
-        payment = rows[0];
+        let payment = rows[0];
 
+        // 2. Fallback: Check if it's a Withdrawal Request (Payout)
         if (!payment) {
-            logger.warn(`[PAYMENT] No payment found for reference: ${reference}`);
-            return { status: 'not_found', message: 'Payment record not found' };
-        }
-
-        // If still no payment, use the rows[0] (which will be undefined) or handle normally
-        // const payment = rows[0]; // Logic below handles if (!payment)
-
-        if (!payment) {
-            // Check if it's a Withdrawal Request (Payout)
             const { rows: withdrawalRows } = await pool.query(
                 'SELECT * FROM withdrawal_requests WHERE provider_reference = $1',
                 [reference]
@@ -663,129 +603,99 @@ export class PaymentService {
 
             if (withdrawalRows.length > 0) {
                 const withdrawal = withdrawalRows[0];
-                logger.info(`Payout Callback received for Withdrawal ${withdrawal.id}`);
-
                 if (withdrawal.status === PaymentStatus.COMPLETED || withdrawal.status === PaymentStatus.FAILED) {
                     return { status: 'success', message: 'Withdrawal already processed' };
                 }
 
-                // Mark as Completed
-                // Since we are in handleSuccessfulPayment, we assume success
                 await pool.query(
                     "UPDATE withdrawal_requests SET status = 'completed', raw_response = COALESCE(raw_response, '{}'::jsonb) || $1::jsonb, processed_at = NOW() WHERE id = $2",
-                    [JSON.stringify(data.metadata || {}), withdrawal.id]
+                    [JSON.stringify(metadata || {}), withdrawal.id]
                 );
-                logger.info(`Withdrawal ${withdrawal.id} marked as COMPLETED`);
+                logger.info(`[PAYMENT-SUCCESS] Withdrawal ${withdrawal.id} marked COMPLETED`);
                 return { status: 'success', message: 'Withdrawal processed successfully' };
             }
 
-            logger.warn(`Payment/Withdrawal not found for reference: ${reference}`);
+            logger.warn(`[PAYMENT-SUCCESS] No record found for reference: ${reference}`);
             return { status: 'error', message: 'Record not found' };
         }
 
-        if (payment.status === 'completed') {
-            logger.info('[PAYD-PAYIN] Payment already marked completed. Skipping side effects.', { reference });
+        // 3. Process Payment Idempotency
+        if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
+            logger.info(`[PAYMENT-SUCCESS] Payment ${payment.id} already COMPLETED. Skipping.`, { reference });
             return { status: 'already_processed', message: 'Payment already completed' };
         }
 
-        // ========================================
-        // TRANSACTION-LEVEL LOCKING (P1-001)
-        // ========================================
-        // Use FOR UPDATE to prevent race conditions when multiple webhooks arrive simultaneously
+        // 4. STEP 1: ATOMIC UPDATE
+        const updateResult = await this._updatePaymentOnSuccess(payment, reference, amount, metadata);
+        if (updateResult.status === 'already_processed') return updateResult;
+
+        payment = updateResult.payment;
+        const paymentMeta = payment.metadata || {};
+
+        // 5. STEP 2: DOWNSTREAM ACTIONS
+        if (paymentMeta.order_id || paymentMeta.product_id) {
+            return await this._handleDownstreamOrderAction(payment, paymentMeta);
+        } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
+            return await this._handleDownstreamDebtAction(payment, paymentMeta);
+        }
+
+        logger.warn(`[PAYMENT-SUCCESS] Payment ${payment.id} completed but no downstream action defined`);
+        return { status: 'success', message: 'Payment received but no downstream action defined' };
+    }
+
+    /**
+     * Atomically update payment to COMPLETED status
+     * @private
+     */
+    async _updatePaymentOnSuccess(payment, reference, amount, metadata) {
         const dbClient = await pool.connect();
         try {
             await dbClient.query('BEGIN');
 
-            // Lock the payment row for update to prevent concurrent processing
             const { rows: lockedRows } = await dbClient.query(
-                `SELECT * FROM payments WHERE id = $1 FOR UPDATE`,
+                'SELECT * FROM payments WHERE id = $1 FOR UPDATE',
                 [payment.id]
             );
 
-            if (lockedRows.length === 0) {
+            if (!lockedRows.length) {
                 await dbClient.query('ROLLBACK');
-                logger.error(`[LOCKING] Payment ${payment.id} not found during lock attempt`);
-                throw new Error('Payment not found');
+                throw new Error('Payment not found during lock');
             }
 
             const lockedPayment = lockedRows[0];
-
-            // ========================================
-            // DOUBLE-CHECK IDEMPOTENCY AFTER LOCK (P1-002)
-            // ========================================
-            // Another webhook might have processed it while we were waiting for the lock
-            if (lockedPayment.status !== PaymentStatus.PENDING) {
+            if (lockedPayment.status === PaymentStatus.COMPLETED || lockedPayment.status === PaymentStatus.SUCCESS) {
                 await dbClient.query('ROLLBACK');
-                logger.warn(`[IDEMPOTENCY] Payment ${payment.id} was processed by concurrent webhook. Skipping.`, {
-                    paymentId: payment.id,
-                    statusAfterLock: lockedPayment.status
-                });
-                return {
-                    status: 'already_processed',
-                    message: 'Payment completed by concurrent webhook',
-                    paymentId: payment.id
-                };
+                return { status: 'already_processed', message: 'Payment processed by concurrent webhook' };
             }
 
-            logger.info(`[LOCKING] Successfully locked payment ${payment.id} for update`);
-
-            // 2. Validate Amount
             if (amount) {
-                const paidAmount = parseFloat(amount);
-                if (Math.abs(paidAmount - parseFloat(payment.amount)) > 1) {
+                const paidAmount = Number.parseFloat(amount);
+                if (Math.abs(paidAmount - Number.parseFloat(payment.amount)) > 1) {
                     logger.warn(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
                 }
             }
 
-            // 3. Mark as Success in DB
-            // We also set provider_reference here so that any subsequent webhook matches via tier-1
-            logger.info(`[PURCHASE-FLOW] 6b. Updating payment ${payment.id} status to 'completed' and setting provider_reference`);
-
             const mpesaReceipt = metadata?.data?.third_party_trans_id || metadata?.third_party_trans_id || null;
 
-            await dbClient.query(
+            const { rows: updatedRows } = await dbClient.query(
                 `UPDATE payments 
-                 SET status = $1, 
-                     provider_reference = $4,
-                     mpesa_receipt = $5,
+                 SET status = $1, provider_reference = $4, mpesa_receipt = $5,
                      metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
                      updated_at = NOW()
-                 WHERE id = $3`,
+                 WHERE id = $3 RETURNING *`,
                 [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id, reference, mpesaReceipt]
             );
 
-            // Commit the transaction to release the lock
             await dbClient.query('COMMIT');
-            logger.info(`[LOCKING] Transaction committed and lock released for payment ${payment.id}`);
-
+            return { status: 'success', payment: updatedRows[0] };
         } catch (error) {
-            if (dbClient) await dbClient.query('ROLLBACK').catch(e => logger.error('Rollback failed:', e));
-            logger.error(`[LOCKING] Error in locked transaction for payment ${payment.id}:`, error);
+            await dbClient.query('ROLLBACK').catch(e => logger.error('[LOCKING] Rollback failed:', e));
             throw error;
         } finally {
             dbClient.release();
         }
-
-        // 4. Trigger Post-Payment Logic
-        // Determine if it's Ticket or Product
-        const { rows: updatedRows } = await pool.query('SELECT * FROM payments WHERE id = $1', [payment.id]);
-        const updatedPayment = updatedRows[0];
-        const paymentMeta = updatedPayment.metadata || {};
-
-        logger.info(`[PURCHASE-FLOW] 6c. Payment updated, determining downstream action`, {
-            hasOrderId: !!paymentMeta.order_id,
-            hasProductId: !!paymentMeta.product_id
-        });
-
-        if (paymentMeta.order_id || paymentMeta.product_id) {
-            return await this._handleDownstreamOrderAction(updatedPayment, paymentMeta);
-        } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-            return await this._handleDownstreamDebtAction(updatedPayment, paymentMeta);
-        }
-
-        logger.warn(`[PURCHASE-FLOW] Payment ${payment.id} completed but no downstream action defined (no order_id)`);
-        return { status: 'success', message: 'Payment received but no downstream action defined' };
     }
+
 
     /**
      * Map Payd provider status to internal status
@@ -988,7 +898,7 @@ export class PaymentService {
                 success: true,
                 transaction_id: transactionId,
                 status,
-                amount: parseFloat(data.amount || 0),
+                amount: Number.parseFloat(data.amount || 0),
                 phone_number: details.payer || details.recipient,
                 narration: details.reason,
                 created_at: data.created_at,
@@ -1140,8 +1050,8 @@ export class PaymentService {
      */
     async hasSufficientBalance(requiredAmount, bufferPercent = 10) {
         const balance = await this.checkBalance();
-        const available = parseFloat(balance.available_balance);
-        const requiredWithBuffer = parseFloat(requiredAmount) * (1 + bufferPercent / 100);
+        const available = Number.parseFloat(balance.available_balance);
+        const requiredWithBuffer = Number.parseFloat(requiredAmount) * (1 + bufferPercent / 100);
 
         return {
             sufficient: available >= requiredWithBuffer,
@@ -1472,8 +1382,8 @@ export class PaymentService {
         if (product.status !== 'available') throw new Error('Product not available');
 
         // Verify Price
-        const dbPrice = parseFloat(product.price);
-        const clientAmount = parseFloat(amount);
+        const dbPrice = Number.parseFloat(product.price);
+        const clientAmount = Number.parseFloat(amount);
         if (Math.abs(dbPrice - clientAmount) > 0.01) {
             logger.warn('Price mismatch', { dbPrice, clientAmount });
             throw new Error('Price verification failed');
@@ -1495,7 +1405,7 @@ export class PaymentService {
 
         const orderData = {
             buyerId,
-            sellerId: parseInt(product.seller_id),
+            sellerId: Number.parseInt(product.seller_id),
             paymentMethod: 'payd',
             buyerName: customerName,
             buyerEmail,
@@ -1514,8 +1424,8 @@ export class PaymentService {
                     productId: productId,
                     name: product.name,
                     price: dbPrice,
-                    quantity: parseInt(quantity, 10),
-                    subtotal: dbPrice * parseInt(quantity, 10),
+                    quantity: Number.parseInt(quantity, 10),
+                    subtotal: dbPrice * Number.parseInt(quantity, 10),
                     productType: product.product_type,
                     isDigital: product.is_digital,
                     serviceLocations: product.service_locations // Pass location info

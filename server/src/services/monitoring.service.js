@@ -77,7 +77,7 @@ class MonitoringService {
                 [clientIP]
             );
 
-            const hourlyCount = parseInt(rows[0]?.count || 0);
+            const hourlyCount = Number.parseInt(rows[0]?.count || 0);
 
             // Alert if unusual volume detected
             if (hourlyCount > 100) {
@@ -106,7 +106,7 @@ class MonitoringService {
                 [reference]
             );
 
-            const duplicateCount = parseInt(duplicates[0]?.count || 0);
+            const duplicateCount = Number.parseInt(duplicates[0]?.count || 0);
 
             if (duplicateCount > 3) {
                 await this.alertSecurityTeam('Duplicate webhook detected (possible replay attack)', {
@@ -145,7 +145,7 @@ class MonitoringService {
             return {
                 period: `${hours} hours`,
                 alerts: rows,
-                total: rows.reduce((sum, row) => sum + parseInt(row.count), 0)
+                total: rows.reduce((sum, row) => sum + Number.parseInt(row.count), 0)
             };
         } catch (error) {
             logger.error('[MONITORING] Failed to get alert stats:', error);

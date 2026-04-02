@@ -106,7 +106,7 @@ class PayoutService {
      * @returns {number} validated amount
      */
     validateAmount(amount) {
-        const parsed = parseFloat(amount);
+        const parsed = Number.parseFloat(amount);
         if (isNaN(parsed) || parsed <= 0) {
             throw new Error('Invalid withdrawal amount');
         }
@@ -164,7 +164,7 @@ class PayoutService {
             // ============================================================
             try {
                 const balance = await this.checkPayoutBalance();
-                const available = parseFloat(balance.available_balance || 0);
+                const available = Number.parseFloat(balance.available_balance || 0);
                 if (available < validatedAmount) {
                     logger.warn('[PAYD-PAYOUT] Balance may be insufficient', {
                         available,
@@ -451,7 +451,7 @@ class PayoutService {
      * @returns {Promise<number|null>} newBalance
      */
     async refundToWallet(client, request) {
-        const amount = parseFloat(request.amount);
+        const amount = Number.parseFloat(request.amount);
         let newBalance = null;
 
         if (request.seller_id) {
@@ -459,7 +459,7 @@ class PayoutService {
                 'UPDATE sellers SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
                 [amount, request.seller_id]
             );
-            newBalance = parseFloat(rows[0]?.balance ?? 0);
+            newBalance = Number.parseFloat(rows[0]?.balance ?? 0);
             logger.info(`[PayoutService] Refunded KES ${amount} to seller ${request.seller_id}. New balance: ${newBalance}`);
         } else {
             logger.error('[PayoutService] Cannot refund: withdrawal has no seller_id', {
