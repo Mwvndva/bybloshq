@@ -1,21 +1,24 @@
 # Multi-stage build for React frontend
-FROM node:20-alpine AS base
+# Switching to node:20-slim (Debian) for better support of native modules like canvas during build
+FROM node:20-slim AS base
 
 # Dependencies stage
 FROM base AS deps
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
-    pkgconfig \
-    pixman-dev \
-    cairo-dev \
-    pango-dev \
-    libjpeg-turbo-dev \
-    giflib-dev
+    pkg-config \
+    libcairo2-dev \
+    libjpeg-dev \
+    libpango1.0-dev \
+    libgif-dev \
+    librsvg2-dev \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY package*.json ./
+# Install all dependencies including devDependencies (needed for vite build)
 RUN npm ci
 
 # Build stage
