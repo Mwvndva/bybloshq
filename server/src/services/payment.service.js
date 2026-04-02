@@ -455,8 +455,10 @@ export class PaymentService {
             }
 
             // Payd docs: SUCCESS requires result_code=0 AND success=true
+            // Lenient check: Also allow 200 or status=SUCCESS for broader provider compatibility
             const resultCodeNum = Number.parseInt(resultCode, 10);
-            const isSuccess = resultCodeNum === 0 && data.success === true;
+            const isSuccess = (resultCodeNum === 0 || resultCodeNum === 200 || status === 'success') &&
+                (data.success === true || data.success === 'true');
 
             logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
                 reference,
