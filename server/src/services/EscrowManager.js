@@ -33,11 +33,11 @@ class EscrowManager {
         const paymentResult = await client.query('SELECT id FROM payments WHERE invoice_id = $1 OR (metadata->>\'order_id\')::int = $2 LIMIT 1', [order.order_number, orderId]);
         const paymentId = paymentResult.rows[0]?.id;
 
-        const sellerPayoutAmount = parseFloat(order.seller_payout_amount ?? order.sellerPayoutAmount ?? 0);
-        const totalAmount = parseFloat(order.total_amount ?? order.totalAmount ?? 0);
-        const platformFeeAmount = parseFloat(
+        const sellerPayoutAmount = Math.round(parseFloat(order.seller_payout_amount ?? order.sellerPayoutAmount ?? 0) * 100) / 100;
+        const totalAmount = Math.round(parseFloat(order.total_amount ?? order.totalAmount ?? 0) * 100) / 100;
+        const platformFeeAmount = Math.round(parseFloat(
             order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount),
-        );
+        ) * 100) / 100;
         const sellerId = order.seller_id ?? order.sellerId;
 
         if (sellerPayoutAmount <= 0) {

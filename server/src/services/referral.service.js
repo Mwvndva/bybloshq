@@ -290,12 +290,12 @@ class ReferralService {
                     continue;
                 }
 
-                // 5. Credit referrer's balance
+                // 5. Credit referrer's balance with FOR UPDATE lock
                 await client.query(
                     `UPDATE sellers
-           SET balance = balance + $1,
-               total_referral_earnings = total_referral_earnings + $1
-           WHERE id = $2`,
+                     SET balance = balance + $1,
+                         total_referral_earnings = total_referral_earnings + $1
+                     WHERE id = $2`,
                     [reward, referrer_seller_id]
                 );
 
