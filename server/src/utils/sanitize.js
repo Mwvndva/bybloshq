@@ -28,7 +28,7 @@ export const sanitizeBuyer = (buyer) => {
         mobilePayment: b.mobilePayment || b.mobile_payment || b.payment_phone || null,
         city: b.city || null,
         location: b.location || b.physical_address || null,
-        refunds: b.refunds ? parseFloat(b.refunds) : 0,
+        refunds: b.refunds ? Number.parseFloat(b.refunds) : 0,
         // Coordinates: boolean presence only — full coords not needed by the frontend profile UI
         hasLocation: !!(b.latitude && b.longitude),
         role: 'buyer',
@@ -51,16 +51,16 @@ export const sanitizeSeller = (seller) => {
         city: sellerObj.city,
         location: sellerObj.location,
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
-        latitude: sellerObj.latitude ? parseFloat(sellerObj.latitude) : null,
-        longitude: sellerObj.longitude ? parseFloat(sellerObj.longitude) : null,
+        latitude: sellerObj.latitude ? Number.parseFloat(sellerObj.latitude) : null,
+        longitude: sellerObj.longitude ? Number.parseFloat(sellerObj.longitude) : null,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
         theme: sellerObj.theme,
         instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
         tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
         facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
         hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
-        clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
-        totalSales: parseFloat(sellerObj.totalSales || sellerObj.total_sales || 0),
+        clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
+        totalSales: Number.parseFloat(sellerObj.totalSales || sellerObj.total_sales || 0),
     };
 };
 
@@ -77,7 +77,7 @@ export const sanitizeProduct = (product) => {
         id: p.id,
         name: p.name,
         description: p.description,
-        price: parseFloat(p.price),
+        price: Number.parseFloat(p.price),
         image_url: p.image_url,
         images: (() => {
             try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []); }
@@ -113,7 +113,7 @@ export const sanitizePublicProduct = (product) => {
         id: p.id,
         name: p.name,
         description: p.description,
-        price: parseFloat(p.price),
+        price: Number.parseFloat(p.price),
         image_url: p.image_url || p.imageUrl,
         images: (() => {
             try { return typeof p.images === 'string' ? JSON.parse(p.images) : (p.images || []); }
@@ -147,7 +147,7 @@ export const sanitizePublicSeller = (seller) => {
         theme: sellerObj.theme || 'black',
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
         hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
-        clientCount: parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
+        clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
         // STRICTLY REMOVED: email, phone, whatsappNumber, fullName, balance, revenue, internal IDs, coordinates
     };
 };
@@ -161,9 +161,9 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         id: item.id,
         productId: item.productId || item.product_id,
         name: item.name || item.product_name,
-        price: parseFloat(item.price || item.product_price || 0),
-        quantity: parseInt(item.quantity || 1),
-        subtotal: parseFloat(item.subtotal || 0),
+        price: Number.parseFloat(item.price || item.product_price || 0),
+        quantity: Number.parseInt(item.quantity || 1),
+        subtotal: Number.parseFloat(item.subtotal || 0),
         imageUrl: item.imageUrl || item.image_url || null,
         productType: item.productType || item.product_type || 'physical',
         isDigital: !!(item.isDigital || item.is_digital),
@@ -175,7 +175,7 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         orderNumber: orderObj.orderNumber || orderObj.order_number,
         status: orderObj.status,
         paymentStatus: orderObj.paymentStatus || orderObj.payment_status,
-        totalAmount: parseFloat(orderObj.totalAmount || orderObj.total_amount || 0),
+        totalAmount: Number.parseFloat(orderObj.totalAmount || orderObj.total_amount || 0),
         paymentMethod: orderObj.paymentMethod || orderObj.payment_method,
         shippingAddress: orderObj.shippingAddress || orderObj.shipping_address || {},
         notes: orderObj.notes || '',
@@ -201,8 +201,8 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
     if (userType === 'seller' || userType === 'admin') {
         return {
             ...baseOrder,
-            platformFeeAmount: parseFloat(orderObj.platformFeeAmount || orderObj.platform_fee_amount || 0),
-            sellerPayoutAmount: parseFloat(orderObj.sellerPayoutAmount || orderObj.seller_payout_amount || 0),
+            platformFeeAmount: Number.parseFloat(orderObj.platformFeeAmount || orderObj.platform_fee_amount || 0),
+            sellerPayoutAmount: Number.parseFloat(orderObj.sellerPayoutAmount || orderObj.seller_payout_amount || 0),
             buyerName: orderObj.buyerName || orderObj.buyer_name || '',
             buyerWhatsAppNumber: orderObj.buyerWhatsAppNumber || orderObj.buyer_whatsapp_number || '',
             buyerMobilePayment: orderObj.buyerMobilePayment || orderObj.buyer_mobile_payment || '',
@@ -219,7 +219,7 @@ export const sanitizeWithdrawalRequest = (request) => {
 
     return {
         id: reqObj.id,
-        amount: parseFloat(reqObj.amount),
+        amount: Number.parseFloat(reqObj.amount),
         status: reqObj.status,
         mpesaNumber: reqObj.mpesaNumber || reqObj.mpesa_number, // User's own number
         mpesaName: reqObj.mpesaName || reqObj.mpesa_name,       // User's own name

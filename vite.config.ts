@@ -1,6 +1,6 @@
 import { defineConfig, loadEnv, type ViteDevServer } from 'vite';
 import react from '@vitejs/plugin-react-swc';
-import path from 'path';
+import path from 'node:path';
 import { componentTagger } from 'lovable-tagger';
 import type { IncomingMessage, ServerResponse } from 'http';
 

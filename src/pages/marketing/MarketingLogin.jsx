@@ -58,9 +58,10 @@ export default function MarketingLogin() {
 
                     <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6 relative z-10">
                         <div className="space-y-2">
-                            <label className="block text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 ml-1 opacity-60">Identification</label>
+                            <label htmlFor="email" className="block text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 ml-1 opacity-60">Identification</label>
                             <input
                                 type="email"
+                                id="email"
                                 value={email}
                                 onChange={e => setEmail(e.target.value)}
                                 placeholder="INTEL_NODE@BYBLOS.HQ"
@@ -71,9 +72,10 @@ export default function MarketingLogin() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <label className="block text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 ml-1 opacity-60">Secret Key</label>
+                            <label htmlFor="password" className="block text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1 ml-1 opacity-60">Secret Key</label>
                             <input
                                 type="password"
+                                id="password"
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
                                 placeholder="••••••••••••"

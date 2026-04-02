@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import logger from '../utils/logger.js';
 
 function ipToInt(ip) {
-    return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet, 10), 0) >>> 0;
+    return ip.split('.').reduce((acc, octet) => (acc << 8) + Number.parseInt(octet, 10), 0) >>> 0;
 }
 
 function ipMatches(clientIP, allowedEntry) {
@@ -11,7 +11,7 @@ function ipMatches(clientIP, allowedEntry) {
 
     if (allowedEntry.includes('/')) {
         const [network, prefixStr] = allowedEntry.split('/');
-        const prefix = parseInt(prefixStr, 10);
+        const prefix = Number.parseInt(prefixStr, 10);
         const mask = prefix === 0 ? 0 : (~0 << (32 - prefix)) >>> 0;
         try { return (ipToInt(ip) & mask) === (ipToInt(network) & mask); }
         catch { return false; }

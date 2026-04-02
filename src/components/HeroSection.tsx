@@ -1,17 +1,11 @@
 
 import { Button } from '@/components/ui/button';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 interface HeroSectionProps {
   onExploreClick?: () => void;
 }
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
-  const navigate = useNavigate();
-
-  const handleStartThrifting = () => {
-    navigate('/buyer/login');
-  };
-
   return (
     <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden bg-black">
       {/* Background with deep blur and subtle movement */}

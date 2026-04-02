@@ -8,15 +8,15 @@ import { AppError } from '../utils/errorHandler.js'
 
 export const protectMarketing = (req, res, next) => {
     try {
-        const authHeader = req.headers.authorization
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        const authHeader = req?.headers?.authorization
+        if (!authHeader?.startsWith('Bearer ')) {
             return next(new AppError('Marketing authentication required', 401))
         }
 
         const token = authHeader.split(' ')[1]
-        const decoded = jwt.verify(token, process.env.JWT_SECRET)
+        const decoded = jwt.verify(token, globalThis.process?.env?.JWT_SECRET)
 
-        if (decoded.role !== 'marketing' && decoded.role !== 'admin') {
+        if (decoded?.role !== 'marketing' && decoded?.role !== 'admin') {
             return next(new AppError('Insufficient permissions for marketing dashboard', 403))
         }
 

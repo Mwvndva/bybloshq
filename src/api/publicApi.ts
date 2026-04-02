@@ -61,7 +61,7 @@ class CustomAxios {
         return config;
       },
       (error: any) => {
-        return Promise.reject(error);
+        throw error;
       }
     );
 
@@ -83,7 +83,7 @@ class CustomAxios {
             return this.instance(config);
           }
         }
-        return Promise.reject(error);
+        throw error;
       }
     );
   }
@@ -182,8 +182,8 @@ const transformProduct = (product: any): Product => {
     if (typeof product.price === 'number') {
       price = product.price;
     } else if (typeof product.price === 'string') {
-      const parsed = parseFloat(product.price);
-      price = isNaN(parsed) ? 0 : parsed;
+      const parsed = Number.parseFloat(product.price);
+      price = Number.isNaN(parsed) ? 0 : parsed;
     } else if (typeof product.price === 'object') {
       // Handle price objects (e.g., { value: 100, currency: 'KES' })
       const numericValue = product.price.value || product.price.amount || product.price.price || 0;

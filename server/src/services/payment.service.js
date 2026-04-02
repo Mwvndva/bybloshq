@@ -455,7 +455,7 @@ export class PaymentService {
             }
 
             // Payd docs: SUCCESS requires result_code=0 AND success=true
-            const resultCodeNum = parseInt(resultCode, 10);
+            const resultCodeNum = Number.parseInt(resultCode, 10);
             const isSuccess = resultCodeNum === 0 && data.success === true;
 
             logger.info('[PAYD-WEBHOOK] Parsed webhook data', {
@@ -776,69 +776,85 @@ export class PaymentService {
         });
 
         if (paymentMeta.order_id || paymentMeta.product_id) {
-            // It's a Product Order — C-4 FIX: await completeOrder so failures are captured
-            try {
-                logger.info(`[PURCHASE-FLOW] 7. Completing Order ${paymentMeta.order_id} via OrderService.completeOrder()`);
-                const OrderSvc = (await import('./order.service.js')).default;
-                const completionResult = await OrderSvc.completeOrder(updatedPayment);
-                logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
-            } catch (completionErr) {
-                logger.error('[PAYD-PAYIN] CRITICAL: Order completion failed after payment was confirmed.', {
-                    paymentId: updatedPayment.id,
-                    orderId: paymentMeta.order_id,
-                    error: completionErr.message
-                });
-                // ⚠️ DO NOT mark payment as 'failed' — the buyer WAS charged.
-                // The payment is legitimately 'completed'. Only the order side-effect failed.
-                // Mark needs_completion so the retry cron (completionRetryCron.js) picks it up.
-                await pool.query(
-                    `UPDATE payments 
-                     SET metadata = jsonb_set(
-                         COALESCE(metadata, '{}'),
-                         '{needs_completion}',
-                         'true'::jsonb
-                     ) 
-                     WHERE id = $1`,
-                    [updatedPayment.id]
-                );
-                // Do NOT throw — payment is confirmed. Completion will be retried by cron.
-                // Return a partial success so caller knows order completion is pending.
-                return {
-                    status: 'payment_confirmed_completion_pending',
-                    message: 'Payment received. Order completion will be retried.',
-                    paymentId: updatedPayment.id,
-                    completionError: completionErr.message
-                };
-            }
-            return { status: 'success', message: 'Payment processed and Order completion triggered' };
-
+            return await this._handleDownstreamOrderAction(updatedPayment, paymentMeta);
         } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-            const debtClient = await pool.connect();
-            try {
-                await debtClient.query('BEGIN');
-                logger.info(`[PURCHASE-FLOW] 7. Marking debt ${paymentMeta.debt_id} as paid`);
-
-                await debtClient.query(
-                    'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                    [paymentMeta.debt_id]
-                );
-
-                // Update payment status (already done, but good to ensure transaction consistency if needed)
-                await debtClient.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, updatedPayment.id]);
-
-                await debtClient.query('COMMIT');
-                logger.info(`[PURCHASE-FLOW] 8. Debt ${paymentMeta.debt_id} settled successfully`);
-            } catch (debtErr) {
-                if (debtClient) await debtClient.query('ROLLBACK').catch(e => logger.error('Debt rollback failed:', e));
-                logger.error('[PURCHASE-FLOW] ERROR - Error settling debt after payment:', debtErr);
-                throw debtErr;
-            } finally {
-                debtClient.release();
-            }
-            return { status: 'success', message: 'Payment processed and Debt settled' };
+            return await this._handleDownstreamDebtAction(updatedPayment, paymentMeta);
         }
+
         logger.warn(`[PURCHASE-FLOW] Payment ${payment.id} completed but no downstream action defined (no order_id)`);
         return { status: 'success', message: 'Payment received but no downstream action defined' };
+    }
+
+    /**
+     * Map Payd provider status to internal status
+     * @private
+     */
+    _mapPaydStatus(providerData) {
+        if (providerData.status === 'SUCCESS' || providerData.result_code == 200 || (providerData.result_code == 0 && providerData.success === true)) {
+            return 'success';
+        }
+        if (providerData.status === 'FAILED' || providerData.status === 'ERROR') {
+            return 'failed';
+        }
+        return 'pending';
+    }
+
+    /**
+     * Handle downstream order completion logic
+     * @private
+     */
+    async _handleDownstreamOrderAction(payment, metadata) {
+        try {
+            logger.info(`[PURCHASE-FLOW] 7. Completing Order ${metadata.order_id} via OrderService.completeOrder()`);
+            const completionResult = await OrderService.completeOrder(payment);
+            logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
+            return { status: 'success', message: 'Payment processed and Order completion triggered' };
+        } catch (completionErr) {
+            logger.error('[PAYD-PAYIN] CRITICAL: Order completion failed after payment was confirmed.', {
+                paymentId: payment.id,
+                orderId: metadata.order_id,
+                error: completionErr.message
+            });
+            await pool.query(
+                `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{needs_completion}', 'true'::jsonb) WHERE id = $1`,
+                [payment.id]
+            );
+            return {
+                status: 'payment_confirmed_completion_pending',
+                message: 'Payment received. Order completion will be retried.',
+                paymentId: payment.id,
+                completionError: completionErr.message
+            };
+        }
+    }
+
+    /**
+     * Handle downstream debt settlement logic
+     * @private
+     */
+    async _handleDownstreamDebtAction(payment, metadata) {
+        const debtClient = await pool.connect();
+        try {
+            await debtClient.query('BEGIN');
+            logger.info(`[PURCHASE-FLOW] 7. Marking debt ${metadata.debt_id} as paid`);
+
+            await debtClient.query(
+                'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
+                [metadata.debt_id]
+            );
+
+            await debtClient.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, payment.id]);
+
+            await debtClient.query('COMMIT');
+            logger.info(`[PURCHASE-FLOW] 8. Debt ${metadata.debt_id} settled successfully`);
+            return { status: 'success', message: 'Payment processed and Debt settled' };
+        } catch (debtErr) {
+            await debtClient.query('ROLLBACK').catch(e => logger.error('Debt rollback failed:', e));
+            logger.error('[PURCHASE-FLOW] ERROR - Error settling debt after payment:', debtErr);
+            throw debtErr;
+        } finally {
+            debtClient.release();
+        }
     }
 
     async checkPaymentStatus(identifier) {
@@ -1284,14 +1300,7 @@ export class PaymentService {
                             headers: { Authorization: this.getAuthHeader() }
                         });
                         providerData = response.data;
-
-                        // Map provider status
-                        // Payd v3 usually returns { status: 'SUCCESS' | 'FAILED' | ... }
-                        if (providerData.status === 'SUCCESS' || providerData.result_code == 200) {
-                            providerStatus = 'success';
-                        } else if (providerData.status === 'FAILED') {
-                            providerStatus = 'failed';
-                        }
+                        providerStatus = this._mapPaydStatus(providerData);
                     } catch (netErr) {
                         // Check if it's a 404 error
                         if (netErr.response?.status === 404) {

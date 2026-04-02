@@ -30,10 +30,10 @@ export default function SellerProductsPage() {
 
   // Fetch products on component mount and when the component is focused
   useEffect(() => {
-    window.addEventListener('focus', fetchProducts);
+    globalThis.addEventListener('focus', fetchProducts);
     fetchProducts();
     return () => {
-      window.removeEventListener('focus', fetchProducts);
+      globalThis.removeEventListener('focus', fetchProducts);
     };
   }, [fetchProducts]);
 

@@ -124,22 +124,22 @@ export const getOverview = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: {
-        totalSellers: parseInt(d.total_sellers),
-        totalBuyers: parseInt(d.total_buyers),
-        activeProducts: parseInt(d.active_products),
-        totalGmv: parseFloat(d.total_gmv),
-        totalRevenue: parseFloat(d.total_revenue),
-        completedOrders: parseInt(d.completed_orders),
-        cancelledOrders: parseInt(d.cancelled_orders),
-        totalOrders: parseInt(d.total_orders),
-        cancellationRate: parseFloat(cancellationRate),
-        avgOrderValue: parseFloat(avgOrderValue),
-        newSellersThisMonth: parseInt(d.new_sellers_this_month),
-        newBuyersThisMonth: parseInt(d.new_buyers_this_month),
-        gmvThisMonth: parseFloat(d.gmv_this_month),
-        totalWishlists: parseInt(d.total_wishlists),
-        totalRefunded: parseFloat(d.total_refunded),
-        totalReferralRewards: parseFloat(d.total_referral_rewards),
+        totalSellers: Number.parseInt(d.total_sellers),
+        totalBuyers: Number.parseInt(d.total_buyers),
+        activeProducts: Number.parseInt(d.active_products),
+        totalGmv: Number.parseFloat(d.total_gmv),
+        totalRevenue: Number.parseFloat(d.total_revenue),
+        completedOrders: Number.parseInt(d.completed_orders),
+        cancelledOrders: Number.parseInt(d.cancelled_orders),
+        totalOrders: Number.parseInt(d.total_orders),
+        cancellationRate: Number.parseFloat(cancellationRate),
+        avgOrderValue: Number.parseFloat(avgOrderValue),
+        newSellersThisMonth: Number.parseInt(d.new_sellers_this_month),
+        newBuyersThisMonth: Number.parseInt(d.new_buyers_this_month),
+        gmvThisMonth: Number.parseFloat(d.gmv_this_month),
+        totalWishlists: Number.parseInt(d.total_wishlists),
+        totalRefunded: Number.parseFloat(d.total_refunded),
+        totalReferralRewards: Number.parseFloat(d.total_referral_rewards),
       }
     })
   } catch (err) {
@@ -155,7 +155,7 @@ export const getOverview = async (req, res, next) => {
  */
 export const getGmvTrend = async (req, res, next) => {
   try {
-    const months = Math.min(parseInt(req.query.months) || 12, 24)
+    const months = Math.min(Number.parseInt(req.query.months) || 12, 24)
 
     const { rows } = await pool.query(`
       WITH month_series AS (
@@ -186,11 +186,11 @@ export const getGmvTrend = async (req, res, next) => {
       data: rows.map(r => ({
         month: r.month,
         label: r.label,
-        gmv: parseFloat(r.gmv),
-        revenue: parseFloat(r.revenue),
-        sellerPayouts: parseFloat(r.seller_payouts),
-        orderCount: parseInt(r.order_count),
-        avgOrderValue: parseFloat(r.avg_order_value)
+        gmv: Number.parseFloat(r.gmv),
+        revenue: Number.parseFloat(r.revenue),
+        sellerPayouts: Number.parseFloat(r.seller_payouts),
+        orderCount: Number.parseInt(r.order_count),
+        avgOrderValue: Number.parseFloat(r.avg_order_value)
       }))
     })
   } catch (err) {
@@ -206,7 +206,7 @@ export const getGmvTrend = async (req, res, next) => {
  */
 export const getUserGrowth = async (req, res, next) => {
   try {
-    const months = Math.min(parseInt(req.query.months) || 12, 24)
+    const months = Math.min(Number.parseInt(req.query.months) || 12, 24)
 
     const { rows } = await pool.query(`
       WITH month_series AS (
@@ -233,8 +233,8 @@ export const getUserGrowth = async (req, res, next) => {
       data: rows.map(r => ({
         month: r.month,
         label: r.label,
-        newSellers: parseInt(r.new_sellers),
-        newBuyers: parseInt(r.new_buyers)
+        newSellers: Number.parseInt(r.new_sellers),
+        newBuyers: Number.parseInt(r.new_buyers)
       }))
     })
   } catch (err) {
@@ -280,12 +280,12 @@ export const getProductMix = async (req, res, next) => {
       data: {
         productTypes: typeRows.rows.map(r => ({
           type: r.product_type,
-          count: parseInt(r.count),
-          totalRevenue: parseFloat(r.total_revenue)
+          count: Number.parseInt(r.count),
+          totalRevenue: Number.parseFloat(r.total_revenue)
         })),
         aesthetics: aestheticRows.rows.map(r => ({
           aesthetic: r.aesthetic,
-          productCount: parseInt(r.product_count)
+          productCount: Number.parseInt(r.product_count)
         }))
       }
     })
@@ -327,13 +327,13 @@ export const getOrderFunnel = async (req, res, next) => {
       data: {
         orderStatuses: rows.map(r => ({
           status: r.status,
-          count: parseInt(r.count),
-          totalValue: parseFloat(r.total_value)
+          count: Number.parseInt(r.count),
+          totalValue: Number.parseFloat(r.total_value)
         })),
         paymentStatuses: paymentRows.map(r => ({
           status: r.payment_status,
-          count: parseInt(r.count),
-          totalValue: parseFloat(r.total_value)
+          count: Number.parseInt(r.count),
+          totalValue: Number.parseFloat(r.total_value)
         }))
       }
     })
@@ -389,9 +389,9 @@ export const getGeography = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: {
-        topBuyerRegions: buyerLocations.rows.map(r => ({ location: r.location, count: parseInt(r.buyer_count) })),
-        topSellerRegions: sellerLocations.rows.map(r => ({ location: r.location, count: parseInt(r.seller_count), gmv: parseFloat(r.location_gmv) })),
-        topGmvRegions: gmvLocations.rows.map(r => ({ location: r.location, gmv: parseFloat(r.gmv), orderCount: parseInt(r.order_count) }))
+        topBuyerRegions: buyerLocations.rows.map(r => ({ location: r.location, count: Number.parseInt(r.buyer_count) })),
+        topSellerRegions: sellerLocations.rows.map(r => ({ location: r.location, count: Number.parseInt(r.seller_count), gmv: Number.parseFloat(r.location_gmv) })),
+        topGmvRegions: gmvLocations.rows.map(r => ({ location: r.location, gmv: Number.parseFloat(r.gmv), orderCount: Number.parseInt(r.order_count) }))
       }
     })
   } catch (err) {
@@ -460,24 +460,24 @@ export const getTopPerformers = async (req, res, next) => {
           id: r.id,
           shopName: r.shop_name,
           location: r.location,
-          totalSales: parseFloat(r.total_sales),
-          clientCount: parseInt(r.client_count),
-          orderCount: parseInt(r.order_count)
+          totalSales: Number.parseFloat(r.total_sales),
+          clientCount: Number.parseInt(r.client_count),
+          orderCount: Number.parseInt(r.order_count)
         })),
         topProducts: topProducts.rows.map(r => ({
           id: r.id,
           name: r.name,
           productType: r.product_type,
           aesthetic: r.aesthetic,
-          totalRevenue: parseFloat(r.total_revenue),
-          unitsSold: parseInt(r.units_sold)
+          totalRevenue: Number.parseFloat(r.total_revenue),
+          unitsSold: Number.parseInt(r.units_sold)
         })),
         topWishlisted: topWishlisted.rows.map(r => ({
           id: r.id,
           name: r.name,
           productType: r.product_type,
-          price: parseFloat(r.price),
-          wishlistCount: parseInt(r.wishlist_count)
+          price: Number.parseFloat(r.price),
+          wishlistCount: Number.parseInt(r.wishlist_count)
         }))
       }
     })
@@ -538,19 +538,19 @@ export const getReferralPerformance = async (req, res, next) => {
           label: r.label,
           year: r.period_year,
           month: r.period_month,
-          activeReferrers: parseInt(r.active_referrers),
-          referralPairs: parseInt(r.referral_pairs),
-          totalRewards: parseFloat(r.total_rewards),
-          referredGmv: parseFloat(r.referred_gmv)
+          activeReferrers: Number.parseInt(r.active_referrers),
+          referralPairs: Number.parseInt(r.referral_pairs),
+          totalRewards: Number.parseFloat(r.total_rewards),
+          referredGmv: Number.parseFloat(r.referred_gmv)
         })).reverse(),
         topReferrers: topReferrers.rows.map(r => ({
           shopName: r.shop_name,
           location: r.location,
-          referralsMade: parseInt(r.referrals_made),
-          totalEarned: parseFloat(r.total_earned)
+          referralsMade: Number.parseInt(r.referrals_made),
+          totalEarned: Number.parseFloat(r.total_earned)
         })),
-        sellersWithCodes: parseInt(referralStats[0]?.sellers_with_codes || 0),
-        referredSellers: parseInt(referralStats[0]?.referred_sellers || 0)
+        sellersWithCodes: Number.parseInt(referralStats[0]?.sellers_with_codes || 0),
+        referredSellers: Number.parseInt(referralStats[0]?.referred_sellers || 0)
       }
     })
   } catch (err) {
@@ -566,7 +566,7 @@ export const getReferralPerformance = async (req, res, next) => {
  */
 export const getRecentActivity = async (req, res, next) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit) || 20, 50)
+    const limit = Math.min(Number.parseInt(req.query.limit) || 20, 50)
 
     const { rows } = await pool.query(`
       (
@@ -614,7 +614,7 @@ export const getRecentActivity = async (req, res, next) => {
         type: r.type,
         timestamp: r.timestamp,
         description: r.description,
-        value: r.value ? parseFloat(r.value) : null
+        value: r.value ? Number.parseFloat(r.value) : null
       }))
     })
   } catch (err) {

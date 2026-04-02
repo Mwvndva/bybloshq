@@ -80,9 +80,74 @@ apiClient.interceptors.request.use(
         return config;
     },
     (error) => {
-        return Promise.reject(error);
+        throw error;
     }
 );
+
+// Response Interceptor: Global Error Handling
+/**
+ * Get the login path based on the error URL
+ */
+const getLoginRedirectPath = (url: string): string => {
+    const redirectMap: Record<string, string> = {
+        '/buyers': '/buyer/login',
+        '/sellers': '/seller/login',
+        '/organizers': '/organizer/login',
+        '/admin': '/admin/login',
+    };
+
+    return Object.entries(redirectMap).find(([key]) =>
+        url.includes(key)
+    )?.[1] || '/buyer/login';
+};
+
+/**
+ * Handle 401 Unauthorized errors
+ */
+const handleUnauthorized = (error: any) => {
+    const url = error.config?.url || 'unknown';
+    const currentPath = globalThis.location.pathname;
+
+    const isAuthCheck = url.includes('/profile') ||
+        url.includes('/me') ||
+        url.includes('/check-auth');
+
+    const isPaymentSuccessPage = currentPath.includes('/payment/success') ||
+        currentPath.includes('/checkout/success');
+
+    if (authStateManager.isCurrentlyRehydrating()) {
+        authStateManager.queueError(error);
+        throw error;
+    }
+
+    const roles = ['buyer', 'seller', 'organizer', 'admin'];
+    const hadActiveSession = roles.some(role =>
+        localStorage.getItem(`${role}SessionActive`) === 'true'
+    );
+
+    if (!isAuthCheck && !isPaymentSuccessPage && hadActiveSession) {
+        toast.error('Session Expired', {
+            description: 'Please log in again to continue.',
+            duration: 4000,
+        });
+
+        roles.forEach(role => {
+            localStorage.removeItem(`${role}SessionActive`);
+        });
+
+        const redirectPath = getLoginRedirectPath(url);
+
+        if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
+            sessionStorage.setItem('redirectAfterLogin', currentPath);
+        }
+
+        if (!currentPath.includes('/login')) {
+            setTimeout(() => {
+                globalThis.location.href = redirectPath;
+            }, 1000);
+        }
+    }
+};
 
 // Response Interceptor: Global Error Handling
 apiClient.interceptors.response.use(
@@ -92,7 +157,6 @@ apiClient.interceptors.response.use(
     async (error) => {
         const status = error.response?.status;
         const message = (error.response?.data as any)?.message || error.message || 'An error occurred';
-        const url = error.config?.url || 'unknown';
         const config = error.config;
 
         // Handle 403 Forbidden - Potential CSRF Mismatch
@@ -107,86 +171,32 @@ apiClient.interceptors.response.use(
             }
         }
 
-        // Handle 401 Unauthorized - Session expired
+        // Handle Status Codes
         if (status === 401) {
-            // ... (rest of the 401 logic remains the same)
-            const isAuthCheck = url.includes('/profile') ||
-                url.includes('/me') ||
-                url.includes('/check-auth');
-
-            const isPaymentSuccessPage = window.location.pathname.includes('/payment/success') ||
-                window.location.pathname.includes('/checkout/success');
-
-            if (authStateManager.isCurrentlyRehydrating()) {
-                authStateManager.queueError(error);
-                return Promise.reject(error);
-            }
-
-            const hadActiveSession = ['buyer', 'seller', 'organizer', 'admin'].some(role =>
-                localStorage.getItem(`${role}SessionActive`) === 'true'
-            );
-
-            if (!isAuthCheck && !isPaymentSuccessPage && hadActiveSession) {
-                toast.error('Session Expired', {
-                    description: 'Please log in again to continue.',
-                    duration: 4000,
-                });
-
-                ['buyer', 'seller', 'organizer', 'admin'].forEach(role => {
-                    localStorage.removeItem(`${role}SessionActive`);
-                });
-
-                const redirectMap: Record<string, string> = {
-                    '/buyers': '/buyer/login',
-                    '/sellers': '/seller/login',
-                    '/organizers': '/organizer/login',
-                    '/admin': '/admin/login',
-                };
-
-                const redirectPath = Object.entries(redirectMap).find(([key]) =>
-                    url.includes(key)
-                )?.[1] || '/buyer/login';
-
-                const currentPath = window.location.pathname;
-                if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
-                    sessionStorage.setItem('redirectAfterLogin', currentPath);
-                }
-
-                if (!window.location.pathname.includes('/login')) {
-                    setTimeout(() => {
-                        window.location.href = redirectPath;
-                    }, 1000);
-                }
-            }
-        }
-
-        // Other errors...
-        else if (status && status >= 500) {
+            handleUnauthorized(error);
+        } else if (status && status >= 500) {
             toast.error('Server Error', {
                 description: 'Something went wrong on our end. Please try again later.',
                 duration: 5000,
             });
-        }
-        else if (status === 403) {
+        } else if (status === 403) {
             toast.error('Access Denied', {
                 description: message || 'You do not have permission to perform this action.',
                 duration: 4000,
             });
-        }
-        else if (status === 429) {
+        } else if (status === 429) {
             toast.error('Too Many Requests', {
                 description: 'Please slow down and try again in a moment.',
                 duration: 4000,
             });
-        }
-        else if (!status) {
+        } else if (!status) {
             toast.error('Network Error', {
                 description: 'Please check your internet connection and try again.',
                 duration: 5000,
             });
         }
 
-        return Promise.reject(error);
+        throw error;
     }
 );
 

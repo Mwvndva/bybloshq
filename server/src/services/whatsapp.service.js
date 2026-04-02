@@ -273,11 +273,11 @@ class WhatsAppService {
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
-            const price = parseFloat(item.price || item.product_price || 0);
+            const price = Number.parseFloat(item.price || item.product_price || 0);
             return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
         }).join('\n');
 
-        const total = parseFloat(order.totalAmount || 0);
+        const total = Number.parseFloat(order.totalAmount || 0);
         const productType = order.metadata?.product_type;
         const isService = productType === 'service';
 
@@ -387,11 +387,11 @@ ${sections.length > 0 ? '\n' + sections.join('\n\n') : ''}
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
-            const price = parseFloat(item.price || item.product_price || 0);
+            const price = Number.parseFloat(item.price || item.product_price || 0);
             return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()} `;
         }).join('\n');
 
-        const total = parseFloat(order.totalAmount || 0);
+        const total = Number.parseFloat(order.totalAmount || 0);
         const productType = order.metadata?.product_type;
         const isService = productType === 'service';
         const isDigital = productType === 'digital';
@@ -509,7 +509,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}${this.formatSocialLinks(s
 
         let msg = '';
         if (newStatus === 'COLLECTION_PENDING') {
-            const amount = parseFloat(order.totalAmount || 0);
+            const amount = Number.parseFloat(order.totalAmount || 0);
             const sellerAddr = updateData.seller?.physicalAddress || 'the shop';
             const shopName = updateData.seller?.shop_name || 'The Shop';
 
@@ -548,7 +548,7 @@ Thank you for shopping with Byblos!`;
             // Existing logic for Service/Digital...
             if (isService) {
                 const serviceType = this.getServiceProviderType(order);
-                const amount = parseFloat(order.totalAmount || 0);
+                const amount = Number.parseFloat(order.totalAmount || 0);
                 const sellerAddr = updateData.seller?.physicalAddress || 'Contact provider for details';
                 const shopName = updateData.seller?.shop_name || 'Service Provider';
 
@@ -568,7 +568,7 @@ Order #${order.orderNumber}`;
                 msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} payment received. Your download is ready.`;
             } else {
                 // FALLBACK for Logistics (No Shop Address)
-                const amount = parseFloat(order.totalAmount || 0);
+                const amount = Number.parseFloat(order.totalAmount || 0);
 
                 msg = `✅ *PAYMENT SUCCESSFUL*
 
@@ -581,7 +581,7 @@ We are preparing your order for pickup. You'll be notified when it's ready at ${
         } else if (newStatus === 'DELIVERY_COMPLETE') {
             if (isService) {
                 const serviceType = this.getServiceProviderType(order);
-                const amount = parseFloat(order.totalAmount || 0);
+                const amount = Number.parseFloat(order.totalAmount || 0);
                 msg = `⚠️ *ACTION REQUIRED*
 
 Your ${serviceType} has marked the job as DONE.
@@ -594,7 +594,7 @@ Your ${serviceType} has marked the job as DONE.
             } else if (isDigital) {
                 msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
             } else {
-                const amount = parseFloat(order.totalAmount || 0);
+                const amount = Number.parseFloat(order.totalAmount || 0);
                 const sellerAddr = updateData.seller?.physicalAddress || this.DROPOFF_LOCATION;
                 // Improve address formatting if it doesn't clearly state city/country
                 const locationText = sellerAddr.includes('Nairobi') ? sellerAddr : `${sellerAddr}\nNairobi, Kenya`;
@@ -633,7 +633,7 @@ ${sellerAddr}
 ⏰ *WHAT'S NEXT:* Once the service is completed to your satisfaction, please visit your dashboard and click *'Mark as Done'* to release the funds to the provider.`;
         } else if (newStatus === 'CLIENT_PAYMENT_PENDING') {
             // Client order created by seller - waiting for M-Pesa payment
-            const amount = parseFloat(order.totalAmount || 0);
+            const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `💳 *PAYMENT REQUEST SENT*
 
 📦 Order #${order.orderNumber}
@@ -671,7 +671,7 @@ We will notify you as soon as it's ready for the next step!`;
         let msg = `📋 Order #${order.orderNumber} status: ${newStatus}`;
 
         if (newStatus === 'DELIVERY_PENDING') {
-            const amount = parseFloat(order.totalAmount || 0);
+            const amount = Number.parseFloat(order.totalAmount || 0);
             if (productType === 'service') {
                 msg = `💰 *PAYMENT RECEIVED*
 
@@ -690,7 +690,7 @@ Funds will be held for 24 hours after job completion to ensure customer satisfac
 Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.`;
             }
         } else if (newStatus === 'COLLECTION_PENDING') {
-            const amount = parseFloat(order.totalAmount || 0);
+            const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `💰 *PAYMENT RECEIVED*
 
 ✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
@@ -699,7 +699,7 @@ Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_
 The buyer has been notified to pick up the item from your shop. 
 Please ensure the order is ready for collection.`;
         } else if (newStatus === 'SERVICE_PENDING') {
-            const amount = parseFloat(order.totalAmount || 0);
+            const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `💰 *PAYMENT RECEIVED*
 
 ✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
@@ -713,7 +713,7 @@ Please contact the buyer if necessary and prepare for the appointment.`;
 You have confirmed the booking for Order #${order.orderNumber}.
 The buyer has been notified.`;
         } else if (newStatus === 'COMPLETED') {
-            const amount = parseFloat(order.totalAmount || 0);
+            const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `🎉 *ORDER COMPLETED*
 
 ✅ Order #${order.orderNumber} is finished.
@@ -741,11 +741,11 @@ Order #${order.orderNumber} status changed to: *${newStatus}*`;
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
-            const price = parseFloat(item.price || item.product_price || 0);
+            const price = Number.parseFloat(item.price || item.product_price || 0);
             return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
         }).join('\n');
 
-        const total = parseFloat(order.totalAmount || 0);
+        const total = Number.parseFloat(order.totalAmount || 0);
         const shopName = seller?.shop_name || seller?.businessName || 'Byblos Seller';
 
         const msg = `
@@ -780,7 +780,7 @@ Thank you!
 
 Your refund request has been approved!
 
-💰 *Refund Amount:* KSh ${parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+💰 *Refund Amount:* KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 
 ✅ The refund will be processed to your registered M-Pesa number within 1-3 business days.
 
@@ -802,7 +802,7 @@ Thank you for your patience!
 
 Your refund request has been declined.
 
-💰 *Requested Amount:* KSh ${parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+💰 *Requested Amount:* KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
 
 📝 *Reason:* ${reason || 'Please contact support for more information.'}
 
@@ -840,13 +840,13 @@ Your refund balance remains available for future withdrawal requests.
         if (order.items && order.items.length > 0) {
             itemsList = order.items.map((item, i) => {
                 const name = item.product_name || item.name || 'Product'
-                const price = parseFloat(item.product_price || item.product_price_actual || item.price || 0)
-                const qty = parseInt(item.quantity || 1, 10)
+                const price = Number.parseFloat(item.product_price || item.product_price_actual || item.price || 0)
+                const qty = Number.parseInt(item.quantity || 1, 10)
                 return `${i + 1}. ${name} × ${qty} — KSh ${price.toLocaleString()}`
             }).join('\n')
         }
 
-        const total = parseFloat(order.totalAmount || order.total_amount || 0)
+        const total = Number.parseFloat(order.totalAmount || order.total_amount || 0)
         const orderNum = order.orderNumber || order.order_number || order.id
         const buyerName = buyer.fullName || buyer.full_name || 'N/A'
         const buyerPhone = buyer.whatsapp_number || buyer.phone || 'N/A'
@@ -898,7 +898,7 @@ Please coordinate pickup and delivery to buyer within this window.
         const buyerPhone = buyer?.whatsapp_number || buyer?.phone || 'N/A'
         const shopName = seller?.shop_name || seller?.full_name || 'N/A'
         const sellerPhone = seller?.whatsapp_number || 'N/A'
-        const total = parseFloat(order.total_amount || order.totalAmount || 0)
+        const total = Number.parseFloat(order.total_amount || order.totalAmount || 0)
 
         const message = `
 ❌ *ORDER CANCELLED — DELIVERY CANCELLED*
@@ -974,21 +974,6 @@ The buyer has cancelled Order #${order.id || order.orderNumber}.
         return this.sendMessage(sellerWhatsApp, message);
     }
 
-    async sendLogisticsCancellationNotification(order, buyer, seller, cancelledBy) {
-        const logisticsNumber = '+254748137819';
-
-        const message = `
-❌ *ORDER CANCELLED*
-
-📦 *Order #${order.id || order.orderNumber}*
-🚫 *Cancelled By:* ${cancelledBy || 'Buyer'}
-
-⚠️ *Action Required:*
-Please disregard instructions for this order. If picked up, please return to seller.
-        `.trim();
-
-        return this.sendMessage(logisticsNumber, message);
-    }
     async notifySellerWithdrawalUpdate(phone, withdrawalData) {
         if (!phone) return false;
 
@@ -996,7 +981,7 @@ Please disregard instructions for this order. If picked up, please return to sel
 
         let header = '';
         let message = '';
-        const fmtAmount = parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        const fmtAmount = Number.parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const idSuffix = request_id ? ` #${request_id}` : '';
 
         if (status === 'completed') {
@@ -1020,7 +1005,7 @@ ${header}
 ⚠️ *Reason:* ${reason || 'Transaction failed'}
 
 The amount has been returned to your wallet.
-💵 *New Balance:* KSh ${parseFloat(newBalance || 0).toLocaleString()}
+💵 *New Balance:* KSh ${Number.parseFloat(newBalance || 0).toLocaleString()}
             `.trim();
         } else if (status === 'processing') {
             header = '⏳ *WITHDRAWAL PROCESSING*';

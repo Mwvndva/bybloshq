@@ -25,9 +25,9 @@ marketingClient.interceptors.response.use(
         if (err.response?.status === 401 && !isAuthRequest) {
             sessionStorage.removeItem('marketing_token');
             sessionStorage.removeItem('marketing_user');
-            window.location.href = '/admin/marketing/login';
+            globalThis.location.href = '/admin/marketing/login';
         }
-        return Promise.reject(err);
+        throw err;
     }
 );
 

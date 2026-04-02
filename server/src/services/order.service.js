@@ -49,69 +49,7 @@ class OrderService {
       await client.query('BEGIN');
 
       // 1. Verify seller exists and is active
-      try {
-        // First try to get basic seller info that should definitely exist
-        let sellerCheck;
-        try {
-          sellerCheck = await client.query(
-            'SELECT id, user_id, physical_address, status FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
-            [sellerId, 'active']
-          );
-        } catch (schemaError) {
-          // If even basic columns don't exist, try minimal query
-          logger.warn('Seller schema issue, trying minimal query:', schemaError);
-          sellerCheck = await client.query(
-            'SELECT id, user_id FROM sellers WHERE id = $1 FOR UPDATE',
-            [sellerId]
-          );
-        }
-
-        if (sellerCheck.rows.length === 0) {
-          throw new Error(`Seller with ID ${sellerId} not found or inactive`);
-        }
-
-        sellerInfo = sellerCheck.rows[0];
-
-        // Always fetch user details since sellers table might not have the contact info
-        if (sellerInfo.user_id) {
-          const userCheck = await client.query(
-            'SELECT id, email, role FROM users WHERE id = $1',
-            [sellerInfo.user_id]
-          );
-
-          if (userCheck.rows.length > 0) {
-            const userInfo = userCheck.rows[0];
-
-            // Map user info to sellerInfo structure expected by the rest of the code
-            sellerInfo.full_name = userInfo.role === 'seller' ? 'Seller' : userInfo.email; // Fallback name
-            sellerInfo.email = userInfo.email;
-            sellerInfo.whatsapp_number = null; // Will be set later if available
-
-            // Try to get additional contact info from buyers table (some sellers might have buyer records too)
-            try {
-              const buyerContactCheck = await client.query(
-                'SELECT full_name, whatsapp_number FROM buyers WHERE user_id = $1 LIMIT 1',
-                [sellerInfo.user_id]
-              );
-
-              if (buyerContactCheck.rows.length > 0) {
-                const buyerInfo = buyerContactCheck.rows[0];
-                sellerInfo.full_name = sellerInfo.full_name || buyerInfo.full_name;
-                sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || buyerInfo.whatsapp_number;
-              }
-            } catch (buyerError) {
-              logger.debug('Could not fetch buyer contact info:', buyerError);
-            }
-          }
-        }
-
-        // Ensure 'name' is available for notifications
-        sellerInfo.name = sellerInfo.full_name || 'Unknown Seller';
-
-      } catch (err) {
-        logger.error(`Error fetching seller info for ID ${sellerId}:`, err);
-        throw err;
-      }
+      sellerInfo = await this._getSellerDetails(client, sellerId);
 
       // 2. Process and validate order items
       const items = metadata.items || [];
@@ -122,65 +60,13 @@ class OrderService {
       logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
       // 4. Enrich items with product type and inventory data
-      const productIds = items.map(item => parseInt(item.productId, 10));
-      const productsResult = await client.query(
-        'SELECT id, product_type::text as product_type, is_digital, service_options, track_inventory, quantity FROM products WHERE id = ANY($1)',
-        [productIds]
-      );
-      const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
-
-      items.forEach(item => {
-        const prod = productsMap.get(parseInt(item.productId, 10));
-        if (prod) {
-          item.productType = prod.product_type;
-          item.isDigital = prod.is_digital;
-          item.trackInventory = prod.track_inventory;
-          item.availableQuantity = prod.quantity;
-
-          // Robustness: Infer 'service' type if missing but has service options
-          if (!item.productType && prod.service_options) {
-            item.productType = ProductType.SERVICE;
-          }
-        }
-      });
+      await this._enrichItemsWithProductData(client, items);
 
       // 4b. INVENTORY CHECK: Verify stock availability for tracked products
-      for (const item of items) {
-        if (item.trackInventory === true) {
-          const requestedQty = item.quantity || 1;
-
-          if (item.availableQuantity === null || item.availableQuantity === undefined) {
-            throw new Error(`Product "${item.name || item.productId}" has inventory tracking enabled but no quantity set`);
-          }
-
-          if (item.availableQuantity < requestedQty) {
-            throw new Error(`Insufficient stock for "${item.name || item.productId}". Available: ${item.availableQuantity}, Requested: ${requestedQty}`);
-          }
-
-          if (item.availableQuantity === 0) {
-            throw new Error(`Product "${item.name || item.productId}" is out of stock`);
-          }
-        }
-      }
+      this._checkInventory(items);
 
       // 4c. Update Buyer Location if provided
-      if (buyerId && buyerLocation) {
-        try {
-          const Buyer = (await import('../models/buyer.model.js')).default;
-          await Buyer.updateLocation(buyerId, {
-            latitude: buyerLocation.latitude,
-            longitude: buyerLocation.longitude,
-            fullAddress: buyerLocation.fullAddress
-          });
-          logger.info(`Updated buyer ${buyerId} location coordinates`);
-
-          // Also store in metadata for this specific order
-          metadata.buyer_location = buyerLocation;
-        } catch (locError) {
-          logger.error('Error updating buyer location during order creation:', locError);
-          // Don't fail the order creation for location update failure
-        }
-      }
+      await this._handleLocationUpdate(buyerId, buyerLocation, metadata);
 
       // Shopless Service Logic: If seller has no physical_address and product is service, ensure location_type is set
       if (!sellerInfo.physical_address) {
@@ -549,14 +435,131 @@ class OrderService {
     }
   }
 
-  // --- Private Helpers ---
+  static async _getSellerDetails(client, sellerId) {
+    try {
+      let sellerCheck;
+      try {
+        sellerCheck = await client.query(
+          'SELECT id, user_id, physical_address, status FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+          [sellerId, 'active']
+        );
+      } catch (schemaError) {
+        logger.warn('Seller schema issue, trying minimal query:', schemaError);
+        sellerCheck = await client.query(
+          'SELECT id, user_id FROM sellers WHERE id = $1 FOR UPDATE',
+          [sellerId]
+        );
+      }
+
+      if (sellerCheck.rows.length === 0) {
+        throw new Error(`Seller with ID ${sellerId} not found or inactive`);
+      }
+
+      const sellerInfo = sellerCheck.rows[0];
+
+      if (sellerInfo.user_id) {
+        const userCheck = await client.query(
+          'SELECT id, email, role FROM users WHERE id = $1',
+          [sellerInfo.user_id]
+        );
+
+        if (userCheck.rows.length > 0) {
+          const userInfo = userCheck.rows[0];
+          sellerInfo.full_name = userInfo.role === 'seller' ? 'Seller' : userInfo.email;
+          sellerInfo.email = userInfo.email;
+          sellerInfo.whatsapp_number = null;
+
+          try {
+            const buyerContactCheck = await client.query(
+              'SELECT full_name, whatsapp_number FROM buyers WHERE user_id = $1 LIMIT 1',
+              [sellerInfo.user_id]
+            );
+
+            if (buyerContactCheck.rows.length > 0) {
+              const buyerInfo = buyerContactCheck.rows[0];
+              sellerInfo.full_name = sellerInfo.full_name || buyerInfo.full_name;
+              sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || buyerInfo.whatsapp_number;
+            }
+          } catch (buyerError) {
+            logger.debug('Could not fetch buyer contact info:', buyerError);
+          }
+        }
+      }
+
+      sellerInfo.name = sellerInfo.full_name || 'Unknown Seller';
+      return sellerInfo;
+    } catch (err) {
+      logger.error(`Error fetching seller info for ID ${sellerId}:`, err);
+      throw err;
+    }
+  }
+
+  static async _enrichItemsWithProductData(client, items) {
+    const productIds = items.map(item => Number.parseInt(item.productId, 10));
+    const productsResult = await client.query(
+      'SELECT id, product_type::text as product_type, is_digital, service_options, track_inventory, quantity FROM products WHERE id = ANY($1)',
+      [productIds]
+    );
+    const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
+
+    items.forEach(item => {
+      const prod = productsMap.get(Number.parseInt(item.productId, 10));
+      if (prod) {
+        item.productType = prod.product_type;
+        item.isDigital = prod.is_digital;
+        item.trackInventory = prod.track_inventory;
+        item.availableQuantity = prod.quantity;
+
+        if (!item.productType && prod.service_options) {
+          item.productType = ProductType.SERVICE;
+        }
+      }
+    });
+  }
+
+  static _checkInventory(items) {
+    for (const item of items) {
+      if (item.trackInventory === true) {
+        const requestedQty = item.quantity || 1;
+
+        if (item.availableQuantity === null || item.availableQuantity === undefined) {
+          throw new Error(`Product "${item.name || item.productId}" has inventory tracking enabled but no quantity set`);
+        }
+
+        if (item.availableQuantity < requestedQty) {
+          throw new Error(`Insufficient stock for "${item.name || item.productId}". Available: ${item.availableQuantity}, Requested: ${requestedQty}`);
+        }
+
+        if (item.availableQuantity === 0) {
+          throw new Error(`Product "${item.name || item.productId}" is out of stock`);
+        }
+      }
+    }
+  }
+
+  static async _handleLocationUpdate(buyerId, buyerLocation, metadata) {
+    if (buyerId && buyerLocation) {
+      try {
+        const Buyer = (await import('../models/buyer.model.js')).default;
+        await Buyer.updateLocation(buyerId, {
+          latitude: buyerLocation.latitude,
+          longitude: buyerLocation.longitude,
+          fullAddress: buyerLocation.fullAddress
+        });
+        logger.info(`Updated buyer ${buyerId} location coordinates`);
+        metadata.buyer_location = buyerLocation;
+      } catch (locError) {
+        logger.error('Error updating buyer location during order creation:', locError);
+      }
+    }
+  }
 
   static _validateItems(items) {
     items.forEach((item, index) => {
-      if (typeof item.price !== 'number' || isNaN(item.price) || item.price <= 0) {
+      if (typeof item.price !== 'number' || Number.isNaN(item.price) || item.price <= 0) {
         throw new Error(`Invalid price for item at index ${index}`);
       }
-      if (typeof item.quantity !== 'number' || isNaN(item.quantity) || item.quantity <= 0) {
+      if (typeof item.quantity !== 'number' || Number.isNaN(item.quantity) || item.quantity <= 0) {
         throw new Error(`Invalid quantity for item ${item.productId}`);
       }
     });
@@ -568,17 +571,15 @@ class OrderService {
       return sum + subtotal;
     }, 0);
 
-    const platformFee = parseFloat((totalAmount * Fees.PLATFORM_COMMISSION_RATE).toFixed(2));
-    const sellerPayout = parseFloat((totalAmount - platformFee).toFixed(2));
+    const platformFee = Number.parseFloat((totalAmount * Fees.PLATFORM_COMMISSION_RATE).toFixed(2));
+    const sellerPayout = Number.parseFloat((totalAmount - platformFee).toFixed(2));
 
     return { totalAmount, platformFee, sellerPayout };
   }
 
   static _determineInitialStatus(items) {
-    // Determine product types in the order (logic pruned — all start PENDING)
     const initialStatus = OrderStatus.PENDING;
     logger.info(`[OrderService] Initial status set to ${initialStatus} for new order`);
-
     return initialStatus;
   }
 
@@ -631,55 +632,7 @@ class OrderService {
       const items = itemsResult.rows;
 
       // 3a. INVENTORY DECREMENT: Update stock for tracked products
-      // Skip if this is a debt payment order (inventory already decremented when debt was created)
-      const skipInventory = order.metadata?.skip_inventory_decrement === true;
-
-      if (skipInventory) {
-        logger.info(`[INVENTORY] Skipping inventory decrement for debt payment order ${orderId}`);
-      } else {
-        const trackedItems = items.filter(item => item.track_inventory === true && item.product_id);
-        if (trackedItems.length > 0) {
-          // Block 6 fix: Lock tracked inventory rows BEFORE decrementing to prevent oversell race
-          const trackedProductIds = trackedItems.map(i => i.product_id);
-          await client.query(
-            `SELECT id, quantity, name FROM products
-             WHERE id = ANY($1::int[]) AND track_inventory = true
-             FOR UPDATE`,
-            [trackedProductIds]
-          );
-
-          const values = trackedItems.map(item => `(${item.product_id}, ${item.quantity || 1})`).join(',');
-          const bulkUpdateResult = await client.query(
-            `UPDATE products AS p
-             SET quantity = p.quantity - v.qty
-             FROM (VALUES ${values}) AS v(id, qty)
-             WHERE p.id = v.id AND p.track_inventory = true AND p.quantity >= v.qty
-             RETURNING p.id, p.quantity, p.low_stock_threshold, p.name`,
-            []
-          );
-
-          const updatedProductIds = new Set(bulkUpdateResult.rows.map(r => String(r.id)))
-          if (bulkUpdateResult.rows.length !== trackedItems.length) {
-            const failedItem = trackedItems.find(item =>
-              !updatedProductIds.has(String(item.product_id))
-            )
-            throw new Error(
-              `Insufficient stock for "${failedItem?.product_name || failedItem?.product_id}". ` +
-              `Cannot complete order ${orderId}.`
-            )
-          }
-
-          // Post-update alerts
-          for (const row of bulkUpdateResult.rows) {
-            if (row.low_stock_threshold && row.quantity <= row.low_stock_threshold && row.quantity > 0) {
-              this._sendLowStockAlert(order.seller_id, row.name, row.quantity, row.low_stock_threshold).catch(e => logger.error('[INVENTORY] Low stock alert failed:', e));
-            } else if (row.quantity === 0) {
-              this._sendOutOfStockAlert(order.seller_id, row.name).catch(e => logger.error('[INVENTORY] Out of stock alert failed:', e));
-            }
-          }
-          logger.info(`[INVENTORY] Bulk decremented stock for ${trackedItems.length} products in order ${orderId}`);
-        }
-      }
+      await this._decrementInventory(client, orderId, items, order);
 
       // Fetch Seller to check for Shop Address
       const { rows: sellers } = await client.query('SELECT physical_address FROM sellers WHERE id = $1', [order.seller_id]);
@@ -715,34 +668,7 @@ class OrderService {
       const isClientOrder = order.client_id !== null || order.is_seller_initiated === true;
 
       // Determine final status based on order type
-      let newStatus = OrderStatus.COMPLETED;
-
-      if (isClientOrder) {
-        // Client orders always auto-complete (client has no account to update status)
-        newStatus = OrderStatus.COMPLETED;
-        logger.info(`[PURCHASE-FLOW] Client order detected (client_id: ${order.client_id}, is_seller_initiated: ${order.is_seller_initiated}) → Auto-completing to COMPLETED`);
-      } else {
-        // Regular buyer orders follow product-type logic
-        if (hasPhysical) {
-          if (sellerHasShop) {
-            newStatus = OrderStatus.COLLECTION_PENDING;
-            logger.info(`[PURCHASE-FLOW] Physical product with shop → Status: ${newStatus} (buyer must collect)`);
-          } else {
-            newStatus = OrderStatus.DELIVERY_PENDING;
-            logger.info(`[PURCHASE-FLOW] Physical product without shop → Status: ${newStatus} (delivery required)`);
-          }
-        } else if (hasService) {
-          newStatus = OrderStatus.SERVICE_PENDING;
-          logger.info(`[PURCHASE-FLOW] Service order detected → Status: ${newStatus} (seller must confirm)`);
-        } else if (items.some(i => i.is_digital)) {
-          // Digital products - auto-complete
-          newStatus = OrderStatus.COMPLETED;
-          logger.info(`[PURCHASE-FLOW] Digital order detected → Status: ${newStatus} (auto-completing)`);
-        } else {
-          // Digital or unknown - auto-complete
-          logger.info(`[PURCHASE-FLOW] Digital/Auto-complete order → Status: ${newStatus}`);
-        }
-      }
+      const newStatus = this._determineCompletionStatus(items, sellerHasShop, order, metadata);
 
       const updatedOrder = await Order.updateStatusWithSideEffects(client, orderId, newStatus, 'completed', payment.provider_reference);
 
@@ -1486,29 +1412,74 @@ class OrderService {
     }
   }
 
-  /**
-   * Helper to decrement inventory for sold items
-   */
-  static async _decrementInventory(client, items) {
-    const Product = (await import('../models/product.model.js')).default;
-
-    for (const item of items) {
-      // Skip digital products or services if they don't track stock
-      if (item.productType === 'digital' || item.productType === 'service') {
-        continue;
-      }
-
-      // Decrease stock (only if track_inventory is true)
-      await client.query(
-        `UPDATE products 
-         SET quantity = quantity - $1, 
-             updated_at = NOW() 
-         WHERE id = $2 AND track_inventory = true`,
-        [item.quantity, item.productId]
-      );
-
-      logger.info(`[ClientOrder] Decremented inventory for product ${item.productId} by ${item.quantity}`);
+  static async _decrementInventory(client, items, orderId = null, order = null) {
+    if (order && order.metadata?.skip_inventory_decrement === true) {
+      logger.info(`[INVENTORY] Skipping inventory decrement for order ${orderId}`);
+      return;
     }
+
+    const trackedItems = items.map(item => ({
+      productId: item.product_id || item.productId,
+      quantity: Number.parseInt(item.quantity || 1, 10),
+      track_inventory: item.track_inventory === true
+    })).filter(i => i.track_inventory && i.productId);
+
+    if (trackedItems.length === 0) return;
+
+    // Lock rows to prevent race conditions
+    const productIds = trackedItems.map(i => i.productId);
+    await client.query(
+      `SELECT id, quantity, name FROM products
+       WHERE id = ANY($1::int[]) AND track_inventory = true
+       FOR UPDATE`,
+      [productIds]
+    );
+
+    const values = trackedItems.map(item => `(${item.productId}, ${item.quantity})`).join(',');
+    const bulkUpdateResult = await client.query(
+      `UPDATE products AS p
+       SET quantity = p.quantity - v.qty,
+           updated_at = NOW()
+       FROM (VALUES ${values}) AS v(id, qty)
+       WHERE p.id = v.id AND p.track_inventory = true AND p.quantity >= v.qty
+       RETURNING p.id, p.quantity, p.low_stock_threshold, p.name`,
+      []
+    );
+
+    if (bulkUpdateResult.rows.length !== trackedItems.length) {
+      const updatedIds = new Set(bulkUpdateResult.rows.map(r => r.id));
+      const failedItem = trackedItems.find(i => !updatedIds.has(i.productId));
+      throw new Error(`Insufficient stock for product ID ${failedItem?.productId}. Operation aborted.`);
+    }
+
+    // Post-update alerts
+    for (const row of bulkUpdateResult.rows) {
+      const sellerId = order ? order.seller_id : null;
+      if (sellerId) {
+        if (row.low_stock_threshold && row.quantity <= row.low_stock_threshold && row.quantity > 0) {
+          this._sendLowStockAlert(sellerId, row.name, row.quantity, row.low_stock_threshold).catch(e => logger.error('[INVENTORY] Low stock alert failed:', e));
+        } else if (row.quantity === 0) {
+          this._sendOutOfStockAlert(sellerId, row.name).catch(e => logger.error('[INVENTORY] Out of stock alert failed:', e));
+        }
+      }
+    }
+  }
+
+  static _determineCompletionStatus(items, sellerHasShop, order, metadata) {
+    const isClientOrder = order.client_id !== null || order.is_seller_initiated === true;
+    if (isClientOrder) return OrderStatus.COMPLETED;
+
+    const hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL || i.productType === ProductType.PHYSICAL);
+    const hasService = items.some(i => i.product_type === ProductType.SERVICE || i.productType === ProductType.SERVICE);
+    const hasDigital = items.some(i => i.is_digital || i.isDigital);
+
+    if (hasPhysical) {
+      return sellerHasShop ? OrderStatus.COLLECTION_PENDING : OrderStatus.DELIVERY_PENDING;
+    }
+    if (hasService) return OrderStatus.SERVICE_PENDING;
+    if (hasDigital) return OrderStatus.COMPLETED;
+
+    return OrderStatus.COMPLETED;
   }
 
   static _buildBuyerNotificationData(fullOrder) {

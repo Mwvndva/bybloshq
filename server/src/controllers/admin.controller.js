@@ -329,9 +329,9 @@ const getMonthlyMetrics = async (req, res, next) => {
     // Format the response
     const monthlyMetrics = result.rows.map(row => ({
       month: row.month,
-      seller_count: parseInt(row.seller_count) || 0,
-      product_count: parseInt(row.product_count) || 0,
-      buyer_count: parseInt(row.buyer_count) || 0
+      seller_count: Number.parseInt(row.seller_count) || 0,
+      product_count: Number.parseInt(row.product_count) || 0,
+      buyer_count: Number.parseInt(row.buyer_count) || 0
     }));
 
     res.status(200).json({
@@ -361,8 +361,8 @@ const processPendingPayments = async (req, res, next) => {
 
     // Process pending payments
     const result = await paymentService.processPendingPayments(
-      parseInt(hours, 10),
-      parseInt(limit, 10)
+      Number.parseInt(hours, 10),
+      Number.parseInt(limit, 10)
     );
 
     res.status(200).json({
@@ -609,7 +609,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
       res.status(200).json({
         status: 'success',
         message: `Withdrawal manually set to "${status}"`,
-        data: { id: parseInt(id), status, processedBy: `admin:${req.user.id}`, newBalance }
+        data: { id: Number.parseInt(id), status, processedBy: `admin:${req.user.id}`, newBalance }
       });
 
     } catch (err) {
@@ -672,10 +672,10 @@ const getFinancialMetrics = async (req, res, next) => {
     `);
 
     const totalSales = parseFloat(salesQuery.rows[0].total_sales) || 0;
-    const totalOrders = parseInt(salesQuery.rows[0].total_orders) || 0;
+    const totalOrders = Number.parseInt(salesQuery.rows[0].total_orders) || 0;
     const totalCommission = parseFloat(commissionQuery.rows[0].total_commission) || 0;
     const totalRefunds = parseFloat(refundsQuery.rows[0].total_refunds) || 0;
-    const totalRefundRequests = parseInt(refundsQuery.rows[0].total_refund_requests) || 0;
+    const totalRefundRequests = Number.parseInt(refundsQuery.rows[0].total_refund_requests) || 0;
     const pendingRefunds = parseFloat(pendingRefundsQuery.rows[0].pending_refunds) || 0;
 
     res.status(200).json({
