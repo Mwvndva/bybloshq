@@ -1,7 +1,5 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
-import whatsappService from '../services/whatsapp.service.js';
-import payoutService from '../services/payout.service.js';
 import WithdrawalService from '../services/withdrawal.service.js';
 
 /**
@@ -48,7 +46,7 @@ export const handlePaydPayoutCallback = async (req, res) => {
 
             // Payd docs: SUCCESS = result_code===0 AND (status==="success" OR success===true)
             // Both result_code AND status/success must confirm success
-            const resultCodeNum = parseInt(resultCode, 10);
+            const resultCodeNum = Number.parseInt(resultCode, 10);
             const isSuccess = resultCodeNum === 0 &&
                 (paydStatus === 'success' || payload.success === true);
 

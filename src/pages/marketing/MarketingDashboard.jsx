@@ -26,8 +26,8 @@ const CustomTooltip = ({ active, payload, label, prefix = '', suffix = '' }) => 
     return (
         <div className="bg-gray-900 border border-gray-700 rounded-lg p-3 text-xs shadow-xl">
             <p className="text-gray-400 mb-2 font-medium">{label}</p>
-            {payload.map((entry, i) => (
-                <p key={i} style={{ color: entry.color }} className="mb-0.5">
+            {payload.map((entry) => (
+                <p key={entry.name} style={{ color: entry.color }} className="mb-0.5">
                     {entry.name}: <span className="font-bold">{prefix}{Number(entry.value).toLocaleString()}{suffix}</span>
                 </p>
             ))}
@@ -300,8 +300,8 @@ export default function MarketingDashboard() {
                                             label={({ aesthetic, percent }) => `${aesthetic} ${(percent * 100).toFixed(0)}%`}
                                             labelLine={false}
                                         >
-                                            {productMix.aesthetics.map((_, i) => (
-                                                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                                            {productMix.aesthetics.map((entry) => (
+                                                <Cell key={entry.aesthetic} fill={COLORS[productMix.aesthetics.indexOf(entry) % COLORS.length]} />
                                             ))}
                                         </Pie>
                                         <Tooltip />
@@ -384,7 +384,8 @@ export default function MarketingDashboard() {
                     <ChartCard title="Real-time Protocol Feed" subtitle="Latest platform transactions and registrations">
                         <div className="space-y-3 max-h-[400px] overflow-y-auto pr-4 custom-scrollbar">
                             {Array.isArray(activity) && activity.length > 0 ? (
-                                activity.map((item, i) => {
+                                activity.map((item) => {
+                                    const key = `${item.type}-${item.timestamp}-${item.description.slice(0, 20)}`;
                                     const icons = { order: '🛒', seller: '🏪', buyer: '👤' }
                                     const colors = { order: 'text-yellow-500', seller: 'text-purple-500', buyer: 'text-blue-500' }
                                     const bgColors = { order: 'bg-yellow-500/5', seller: 'bg-purple-500/5', buyer: 'bg-blue-500/5' }
@@ -403,7 +404,7 @@ export default function MarketingDashboard() {
                                     }
 
                                     return (
-                                        <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border border-white/[0.03] transition-all hover:bg-white/[0.02] ${bgColors[item.type] || 'bg-white/5'}`}>
+                                        <div key={key} className={`flex items-center gap-4 p-4 rounded-2xl border border-white/[0.03] transition-all hover:bg-white/[0.02] ${bgColors[item.type] || 'bg-white/5'}`}>
                                             <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center text-xl shadow-inner border border-white/5">
                                                 {icons[item.type] || '⚡'}
                                             </div>

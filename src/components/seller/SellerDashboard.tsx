@@ -418,23 +418,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         recentDebts: (analyticsData as any).recentDebts || []
       };
 
-
-      // Return the analytics data with the correct type
-      const result: AnalyticsData = {
-        totalProducts: processedAnalytics.totalProducts,
-        totalSales: processedAnalytics.totalSales,
-        totalRevenue: processedAnalytics.totalRevenue,
-        totalPayout: processedAnalytics.totalPayout,
-        balance: processedAnalytics.balance,
-        pendingDebt: processedAnalytics.pendingDebt,
-        pendingDebtCount: processedAnalytics.pendingDebtCount,
-        monthlySales: processedAnalytics.monthlySales,
-        recentOrders: processedAnalytics.recentOrders,
-        recentDebts: processedAnalytics.recentDebts
-      };
-
       setAnalytics(processedAnalytics);
-      return result;
+      return processedAnalytics as AnalyticsData;
 
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
@@ -778,7 +763,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   useEffect(() => {
 
-    const fetchData = async () => {
+    const fetchTabData = async () => {
       // This effect no longer fetches on tab switches for overview/products
       try {
         if (activeTab === 'withdrawals') {
@@ -792,7 +777,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       }
     };
 
-    fetchData();
+    fetchTabData();
   }, [activeTab, fetchWithdrawalRequests]);
 
   // Prefetch data on initial mount to make tabs render instantly like Settings

@@ -122,7 +122,7 @@ export function BaseDashboardLayout({
                         </div>
 
                         {/* Navigation Items */}
-                        <nav className="flex-1 overflow-y-auto p-4 space-y-1">
+                        <nav className="flex-1 overflow-y-auto p-4 space-y-1" aria-label="Main sidebar navigation">
                             {navigationItems.map((item, index) => {
                                 const Icon = item.icon;
                                 const isActive = isActivePath(item.path);

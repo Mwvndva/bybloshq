@@ -246,8 +246,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
       return;
     }
 
-    const priceValue = parseFloat(editFormData.price);
-    if (isNaN(priceValue) || priceValue <= 0) {
+    const priceValue = Number.parseFloat(editFormData.price);
+    if (Number.isNaN(priceValue) || priceValue <= 0) {
       toast({
         title: 'Error',
         description: 'Please enter a valid price',
@@ -513,9 +513,9 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         'font-mono font-semibold text-[10px] px-1.5 py-0',
                         (product as any).quantity === 0
                           ? 'bg-red-500/20 text-red-400 border-red-500/30'
-                          : (product as any).quantity <= ((product as any).low_stock_threshold || 5)
+                          : ((product as any).quantity <= ((product as any).low_stock_threshold || 5)
                             ? 'bg-amber-500/20 text-amber-400 border-amber-500/30'
-                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                            : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30')
                       )}
                     >
                       <Package className="h-2.5 w-2.5 mr-0.5" />
@@ -761,7 +761,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       type="number"
                       min="0"
                       value={stockQuantity}
-                      onChange={(e) => setStockQuantity(Math.max(0, parseInt(e.target.value) || 0))}
+                      onChange={(e) => setStockQuantity(Math.max(0, Number.parseInt(e.target.value, 10) || 0))}
                       className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono text-lg focus:outline-none focus:ring-2 focus:ring-emerald-500/50 focus:border-emerald-500/50"
                       placeholder="0"
                     />
@@ -789,7 +789,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     type="number"
                     min="1"
                     value={lowStockThreshold}
-                    onChange={(e) => setLowStockThreshold(Math.max(1, parseInt(e.target.value) || 5))}
+                    onChange={(e) => setLowStockThreshold(Math.max(1, Number.parseInt(e.target.value, 10) || 5))}
                     className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white font-mono focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50"
                     placeholder="5"
                   />

@@ -1,8 +1,7 @@
--- 20260208_unified_schema_v3.sql
--- COMPLETE CONSOLIDATED UNIFIED SCHEMA V3
+-- 20260413_initial_consolidated_schema.sql
+-- CONSOLIDATED INITIAL PRODUCTION SCHEMA
 -- This file defines the entire database structure in its final desired state.
--- It is strictly idempotent and designed to bring a database from any state (even empty)
--- to the latest production-ready version with all enhancements and security fixes.
+-- It combines all previous migrations (1-23) into a single idempotent baseline.
 
 -- ============================================================================
 -- 0. EXTENSIONS
@@ -10,20 +9,12 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- ============================================================================
--- 1. ENUMS (Updated with all latest values)
+-- 1. ENUMS
 -- ============================================================================
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'product_status') THEN
         CREATE TYPE product_status AS ENUM ('draft', 'available', 'sold');
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'ticket_status') THEN
-        CREATE TYPE ticket_status AS ENUM ('pending', 'paid', 'cancelled', 'refunded');
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'event_status') THEN
-        CREATE TYPE event_status AS ENUM ('draft', 'published', 'cancelled', 'completed');
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_status') THEN
@@ -38,25 +29,16 @@ BEGIN
         CREATE TYPE order_status AS ENUM (
             'PENDING', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'FAILED',
             'DELIVERY_PENDING', 'DELIVERY_COMPLETE', 'SERVICE_PENDING', 'CONFIRMED', 
-            'COLLECTION_PENDING', 'CLIENT_PAYMENT_PENDING'
+            'COLLECTION_PENDING', 'CLIENT_PAYMENT_PENDING', 'DEBT_PENDING'
         );
-    ELSE
-         -- Ensure new values exist in existing enum
-        ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'SERVICE_PENDING';
-        ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'CONFIRMED';
-        ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'COLLECTION_PENDING';
-        ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'CLIENT_PAYMENT_PENDING';
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_status') THEN
-        CREATE TYPE payment_status AS ENUM ('pending', 'success', 'failed', 'reversed', 'completed', 'cancelled', 'paid');
-    ELSE
-        ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'cancelled';
-        ALTER TYPE payment_status ADD VALUE IF NOT EXISTS 'paid';
+        CREATE TYPE payment_status AS ENUM ('pending', 'success', 'failed', 'reversed', 'completed', 'cancelled', 'paid', 'pending_debt');
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_method') THEN
-        CREATE TYPE payment_method AS ENUM ('mpesa', 'card', 'bank');
+        CREATE TYPE payment_method AS ENUM ('mpesa', 'card', 'bank', 'debt');
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payout_status') THEN
@@ -65,15 +47,14 @@ BEGIN
 END $$;
 
 -- ============================================================================
--- 2. CORE AUTH TABLES (Users & RBAC)
+-- 2. CORE AUTH TABLES
 -- ============================================================================
 
--- Users Table
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role VARCHAR(50) NOT NULL CHECK (role IN ('buyer', 'seller', 'organizer', 'admin')),
+    role VARCHAR(50) NOT NULL CHECK (role IN ('buyer', 'seller', 'admin', 'marketing')),
     is_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
     reset_password_token VARCHAR(255),
@@ -84,19 +65,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Sync Users Columns
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'is_active') THEN
-        ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
-    END IF;
-
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'password_changed_at') THEN
-        ALTER TABLE users ADD COLUMN password_changed_at TIMESTAMP WITH TIME ZONE;
-    END IF;
-END $$;
-
--- RBAC tables
 CREATE TABLE IF NOT EXISTS permissions (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -129,7 +97,6 @@ CREATE TABLE IF NOT EXISTS user_roles (
 -- 3. PROFILE TABLES
 -- ============================================================================
 
--- Sellers
 CREATE TABLE IF NOT EXISTS sellers (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
@@ -152,41 +119,21 @@ CREATE TABLE IF NOT EXISTS sellers (
     city VARCHAR(100),
     location VARCHAR(100),
     instagram_link VARCHAR(255),
+    tiktok_link TEXT,
+    facebook_link TEXT,
     physical_address TEXT,
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
+    -- Referral Program
+    referral_code VARCHAR(20) UNIQUE,
+    referred_by_seller_id INTEGER REFERENCES sellers(id) ON DELETE SET NULL,
+    referral_active_until TIMESTAMP WITH TIME ZONE,
+    total_referral_earnings DECIMAL(12,2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP WITH TIME ZONE
 );
 
--- Sync Sellers Columns
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sellers' AND column_name = 'is_active') THEN
-        ALTER TABLE sellers ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'sellers' AND column_name = 'client_count') THEN
-        ALTER TABLE sellers ADD COLUMN client_count INTEGER DEFAULT 0;
-    END IF;
-END $$;
-
--- Organizers
-CREATE TABLE IF NOT EXISTS organizers (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    full_name VARCHAR(255) NOT NULL,
-    email VARCHAR(255) UNIQUE NOT NULL,
-    whatsapp_number VARCHAR(50),
-    status user_status DEFAULT 'active' NOT NULL,
-    is_verified BOOLEAN DEFAULT FALSE,
-    balance DECIMAL(12, 2) DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP WITH TIME ZONE
-);
-
--- Buyers
 CREATE TABLE IF NOT EXISTS buyers (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
@@ -197,16 +144,18 @@ CREATE TABLE IF NOT EXISTS buyers (
     status user_status DEFAULT 'active' NOT NULL,
     city VARCHAR(100),
     location VARCHAR(100),
+    full_address TEXT,
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
     refunds DECIMAL(12, 2) DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ============================================================================
--- 4. NEW RELATIONSHIP TABLES
+-- 4. RELATIONSHIP TABLES
 -- ============================================================================
 
--- Simple clients table (for manual orders)
 CREATE TABLE IF NOT EXISTS clients (
     id SERIAL PRIMARY KEY,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
@@ -217,7 +166,6 @@ CREATE TABLE IF NOT EXISTS clients (
     CONSTRAINT unique_seller_phone UNIQUE (seller_id, phone)
 );
 
--- Registered users who are clients of sellers
 CREATE TABLE IF NOT EXISTS seller_clients (
     id SERIAL PRIMARY KEY,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
@@ -230,44 +178,6 @@ CREATE TABLE IF NOT EXISTS seller_clients (
 -- 5. COMMERCE TABLES
 -- ============================================================================
 
--- Events
-CREATE TABLE IF NOT EXISTS events (
-    id SERIAL PRIMARY KEY,
-    organizer_id INTEGER NOT NULL REFERENCES organizers(id) ON DELETE CASCADE,
-    name VARCHAR(255) NOT NULL,
-    description TEXT,
-    image_url TEXT,
-    location VARCHAR(255) NOT NULL,
-    ticket_quantity INTEGER NOT NULL,
-    ticket_price DECIMAL(10, 2) NOT NULL,
-    start_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    end_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    status event_status DEFAULT 'published' NOT NULL,
-    tickets_sold INTEGER DEFAULT 0,
-    balance DECIMAL(12, 2) DEFAULT 0,
-    withdrawal_status VARCHAR(20) DEFAULT 'pending',
-    withdrawal_date TIMESTAMP WITH TIME ZONE,
-    withdrawal_amount DECIMAL(12, 2) DEFAULT 0,
-    CONSTRAINT valid_dates CHECK (end_date > start_date)
-);
-
--- Sync Events Columns
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'withdrawal_status') THEN
-        ALTER TABLE events ADD COLUMN withdrawal_status VARCHAR(20) DEFAULT 'pending';
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'withdrawal_date') THEN
-        ALTER TABLE events ADD COLUMN withdrawal_date TIMESTAMP WITH TIME ZONE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'events' AND column_name = 'withdrawal_amount') THEN
-        ALTER TABLE events ADD COLUMN withdrawal_amount DECIMAL(12, 2) DEFAULT 0;
-    END IF;
-END $$;
-
--- Products
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
@@ -275,6 +185,7 @@ CREATE TABLE IF NOT EXISTS products (
     description TEXT,
     price DECIMAL(10, 2) NOT NULL,
     image_url TEXT,
+    images JSONB DEFAULT '[]'::jsonb,
     status product_status DEFAULT 'draft' NOT NULL,
     aesthetic VARCHAR(50) DEFAULT 'noir' NOT NULL,
     sold_at TIMESTAMP WITH TIME ZONE,
@@ -295,33 +206,14 @@ CREATE TABLE IF NOT EXISTS products (
     CONSTRAINT quantity_non_negative CHECK (quantity IS NULL OR quantity >= 0)
 );
 
--- Sync Products Columns
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'track_inventory') THEN
-        ALTER TABLE products ADD COLUMN track_inventory BOOLEAN DEFAULT FALSE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'quantity') THEN
-        ALTER TABLE products ADD COLUMN quantity INTEGER DEFAULT NULL;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'products' AND column_name = 'low_stock_threshold') THEN
-        ALTER TABLE products ADD COLUMN low_stock_threshold INTEGER DEFAULT 5;
-    END IF;
-    
-    -- Ensure constraint exists
-    IF NOT EXISTS (SELECT 1 FROM information_schema.constraint_column_usage WHERE table_name = 'products' AND constraint_name = 'quantity_non_negative') THEN
-        ALTER TABLE products ADD CONSTRAINT quantity_non_negative CHECK (quantity IS NULL OR quantity >= 0);
-    END IF;
-END $$;
-
--- Product Orders
 CREATE TABLE IF NOT EXISTS product_orders (
     id SERIAL PRIMARY KEY,
     order_number VARCHAR(50) NOT NULL UNIQUE,
     buyer_id INTEGER REFERENCES buyers(id) ON DELETE SET NULL,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
-    client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL, -- For seller-initiated
+    client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL,
     is_seller_initiated BOOLEAN DEFAULT FALSE,
+    is_debt BOOLEAN DEFAULT FALSE,
     total_amount DECIMAL(12, 2) NOT NULL,
     platform_fee_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
     seller_payout_amount DECIMAL(12, 2) NOT NULL DEFAULT 0,
@@ -345,21 +237,6 @@ CREATE TABLE IF NOT EXISTS product_orders (
     payment_completed_at TIMESTAMP WITH TIME ZONE
 );
 
--- Sync Product Orders Columns
-DO $$
-BEGIN
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'client_id') THEN
-        ALTER TABLE product_orders ADD COLUMN client_id INTEGER REFERENCES clients(id) ON DELETE SET NULL;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'is_seller_initiated') THEN
-        ALTER TABLE product_orders ADD COLUMN is_seller_initiated BOOLEAN DEFAULT FALSE;
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'product_orders' AND column_name = 'service_requirements') THEN
-        ALTER TABLE product_orders ADD COLUMN service_requirements TEXT;
-    END IF;
-END $$;
-
--- Order Items
 CREATE TABLE IF NOT EXISTS order_items (
     id SERIAL PRIMARY KEY,
     order_id INTEGER NOT NULL REFERENCES product_orders(id) ON DELETE CASCADE,
@@ -376,10 +253,9 @@ CREATE TABLE IF NOT EXISTS order_items (
 );
 
 -- ============================================================================
--- 6. TICKETING & PAYMENTS
+-- 6. PAYMENTS & PAYOUTS
 -- ============================================================================
 
--- General Payments (for tickets and orders)
 CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     invoice_id VARCHAR(100) UNIQUE NOT NULL,
@@ -390,86 +266,19 @@ CREATE TABLE IF NOT EXISTS payments (
     mobile_payment VARCHAR(20),
     whatsapp_number VARCHAR(50),
     email VARCHAR(255) NOT NULL,
-    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
-    organizer_id INTEGER REFERENCES organizers(id) ON DELETE CASCADE,
     metadata JSONB,
     provider_reference VARCHAR(100),
     api_ref VARCHAR(100),
+    raw_response JSONB,
+    mpesa_receipt VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Event Ticket Types
-CREATE TABLE IF NOT EXISTS event_ticket_types (
-    id SERIAL PRIMARY KEY,
-    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    price DECIMAL(10, 2) NOT NULL,
-    quantity INTEGER NOT NULL,
-    available INTEGER,
-    quantity_available INTEGER,
-    max_per_order INTEGER DEFAULT 10,
-    min_per_order INTEGER DEFAULT 1,
-    sold INTEGER DEFAULT 0,
-    sales_start_date TIMESTAMP WITH TIME ZONE,
-    sales_end_date TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Ticket Purchases
-CREATE TABLE IF NOT EXISTS ticket_purchases (
-    id SERIAL PRIMARY KEY,
-    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    ticket_type_id INTEGER NOT NULL REFERENCES event_ticket_types(id) ON DELETE CASCADE,
-    quantity INTEGER NOT NULL,
-    customer_name VARCHAR(255) NOT NULL,
-    customer_email VARCHAR(255) NOT NULL,
-    whatsapp_number VARCHAR(50),
-    amount_paid DECIMAL(10, 2) NOT NULL,
-    payment_method VARCHAR(50) NOT NULL,
-    payment_reference VARCHAR(100),
-    purchase_status VARCHAR(20) DEFAULT 'pending',
-    discount_code VARCHAR(50),
-    discount_amount DECIMAL(10, 2),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- Tickets
-CREATE TABLE IF NOT EXISTS tickets (
-    id SERIAL PRIMARY KEY,
-    ticket_number VARCHAR(50) NOT NULL UNIQUE,
-    event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-    organizer_id INTEGER NOT NULL REFERENCES organizers(id) ON DELETE CASCADE,
-    customer_name VARCHAR(255) NOT NULL,
-    customer_email VARCHAR(255) NOT NULL,
-    whatsapp_number VARCHAR(50),
-    ticket_type_id INTEGER REFERENCES event_ticket_types(id) ON DELETE SET NULL,
-    ticket_type_name VARCHAR(100) NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
-    status ticket_status DEFAULT 'pending' NOT NULL,
-    scanned BOOLEAN DEFAULT FALSE,
-    scanned_at TIMESTAMP WITH TIME ZONE,
-    unit_price DECIMAL(10, 2) DEFAULT 0 NOT NULL,
-    total_price DECIMAL(10, 2) DEFAULT 0 NOT NULL,
-    metadata JSONB,
-    payment_id INTEGER REFERENCES payments(id) ON DELETE SET NULL,
-    qr_code TEXT,
-    purchase_id INTEGER REFERENCES ticket_purchases(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- ============================================================================
--- 7. UTILITY TABLES
--- ============================================================================
-
--- Payouts
 CREATE TABLE IF NOT EXISTS payouts (
     id SERIAL PRIMARY KEY,
     order_id INTEGER REFERENCES product_orders(id) ON DELETE SET NULL,
+    payment_id INTEGER REFERENCES payments(id) ON DELETE SET NULL,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
     amount DECIMAL(12, 2) NOT NULL,
     platform_fee DECIMAL(12, 2) DEFAULT 0,
@@ -485,34 +294,110 @@ CREATE TABLE IF NOT EXISTS payouts (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Withdrawal Requests
 CREATE TABLE IF NOT EXISTS withdrawal_requests (
     id SERIAL PRIMARY KEY,
     seller_id INTEGER REFERENCES sellers(id) ON DELETE CASCADE,
-    organizer_id INTEGER REFERENCES organizers(id) ON DELETE CASCADE,
-    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
     amount DECIMAL(10,2) NOT NULL CHECK (amount > 0),
     mpesa_number VARCHAR(15) NOT NULL,
     mpesa_name VARCHAR(255) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'pending',
     provider_reference VARCHAR(255) UNIQUE,
     raw_response JSONB,
+    mpesa_receipt VARCHAR(50),
+    api_call_pending BOOLEAN DEFAULT FALSE,
     metadata JSONB,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     processed_at TIMESTAMP WITH TIME ZONE,
     processed_by VARCHAR(100)
 );
 
--- Rename wishlist to wishlists (idempotent)
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wishlist') AND 
-       NOT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'wishlists') THEN
-        ALTER TABLE wishlist RENAME TO wishlists;
-    END IF;
-END $$;
+-- ============================================================================
+-- 7. FEATURE SPECIFIC TABLES
+-- ============================================================================
 
--- Ensure wishlists table exists
+-- Debt Feature
+CREATE TABLE IF NOT EXISTS client_debts (
+  id SERIAL PRIMARY KEY,
+  seller_id INTEGER REFERENCES sellers(id) ON DELETE CASCADE,
+  client_id INTEGER REFERENCES clients(id) ON DELETE CASCADE,
+  product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  quantity INTEGER DEFAULT 1,
+  is_paid BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- DRM / Digital Activations
+CREATE TABLE IF NOT EXISTS digital_activations (
+  id SERIAL PRIMARY KEY,
+  order_id INTEGER REFERENCES product_orders(id) ON DELETE CASCADE,
+  product_id INTEGER REFERENCES products(id) ON DELETE SET NULL,
+  hardware_binding_id VARCHAR(255),
+  session_token VARCHAR(32),
+  session_expires_at TIMESTAMPTZ,
+  download_count INTEGER DEFAULT 0,
+  last_downloaded_at TIMESTAMP WITH TIME ZONE,
+  bond_window_expires_at TIMESTAMP WITH TIME ZONE,
+  activated_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Referral Earnings
+CREATE TABLE IF NOT EXISTS referral_earnings_log (
+    id                  SERIAL PRIMARY KEY,
+    referrer_seller_id  INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+    referred_seller_id  INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+    period_month        INTEGER NOT NULL,
+    period_year         INTEGER NOT NULL,
+    referred_gmv        DECIMAL(12,2) NOT NULL,
+    reward_amount       DECIMAL(12,2) NOT NULL,
+    credited_at         TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(referrer_seller_id, referred_seller_id, period_month, period_year)
+);
+
+-- Security Monitoring
+CREATE TABLE IF NOT EXISTS security_alerts (
+  id SERIAL PRIMARY KEY,
+  alert_type VARCHAR(255) NOT NULL,
+  details JSONB NOT NULL,
+  reviewed BOOLEAN DEFAULT FALSE,
+  reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT reviewed_at_check CHECK (
+    (reviewed = FALSE AND reviewed_at IS NULL) OR
+    (reviewed = TRUE AND reviewed_at IS NOT NULL)
+  )
+);
+
+CREATE TABLE IF NOT EXISTS webhook_logs (
+  id SERIAL PRIMARY KEY,
+  reference VARCHAR(255),
+  client_ip VARCHAR(45) NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Refund Requests
+CREATE TABLE IF NOT EXISTS refund_requests (
+    id               SERIAL PRIMARY KEY,
+    buyer_id         INTEGER NOT NULL REFERENCES buyers(id) ON DELETE CASCADE,
+    amount           DECIMAL(10, 2) NOT NULL CHECK (amount > 0),
+    status           VARCHAR(20) NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'completed', 'rejected')),
+    payment_method   VARCHAR(50) NOT NULL DEFAULT 'M-Pesa',
+    payment_details  JSONB,
+    requested_at     TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    processed_at     TIMESTAMP WITH TIME ZONE,
+    processed_by     INTEGER REFERENCES users(id),
+    admin_notes      TEXT,
+    created_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Wishlists
 CREATE TABLE IF NOT EXISTS wishlists (
     id SERIAL PRIMARY KEY,
     buyer_id INTEGER NOT NULL REFERENCES buyers(id) ON DELETE CASCADE,
@@ -522,93 +407,59 @@ CREATE TABLE IF NOT EXISTS wishlists (
     UNIQUE(buyer_id, product_id)
 );
 
--- Security Monitoring
-CREATE TABLE IF NOT EXISTS security_alerts (
-    id SERIAL PRIMARY KEY,
-    alert_type VARCHAR(255) NOT NULL,
-    details JSONB NOT NULL,
-    reviewed BOOLEAN DEFAULT FALSE,
-    reviewed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-    reviewed_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT reviewed_at_check CHECK (
-        (reviewed = FALSE AND reviewed_at IS NULL) OR
-        (reviewed = TRUE AND reviewed_at IS NOT NULL)
-    )
-);
-
-CREATE TABLE IF NOT EXISTS webhook_logs (
-    id SERIAL PRIMARY KEY,
-    reference VARCHAR(255),
-    client_ip VARCHAR(45) NOT NULL,
-    payload JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 -- ============================================================================
--- 8. INDEXES (Unified Performance Suite)
+-- 8. INDEXES (Unified Suite)
 -- ============================================================================
 
--- General Payment Lookups
-CREATE INDEX IF NOT EXISTS idx_payments_provider_reference ON payments(provider_reference) WHERE provider_reference IS NOT NULL;
+-- Payments
+CREATE INDEX IF NOT EXISTS idx_payments_provider_ref ON payments(provider_reference);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_payments_api_ref ON payments(api_ref);
 CREATE INDEX IF NOT EXISTS idx_payments_status_created ON payments(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_payments_mobile_payment ON payments(mobile_payment);
+CREATE INDEX IF NOT EXISTS idx_payments_mpesa_receipt ON payments(mpesa_receipt);
 CREATE INDEX IF NOT EXISTS idx_payments_pending ON payments(created_at DESC) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_payments_fuzzy_match ON payments (status, mobile_payment) WHERE status = 'pending';
 
--- Withdrawal Lookups
+-- Withdrawals
 CREATE INDEX IF NOT EXISTS idx_withdrawals_provider_ref ON withdrawal_requests(provider_reference);
 CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawal_requests(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_seller_status ON withdrawal_requests(seller_id, status);
+CREATE INDEX IF NOT EXISTS idx_withdrawals_mpesa_receipt ON withdrawal_requests(mpesa_receipt);
 
--- User Lookups
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-CREATE INDEX IF NOT EXISTS idx_sellers_user_id ON sellers(user_id);
-CREATE INDEX IF NOT EXISTS idx_sellers_shop_name ON sellers(shop_name);
-CREATE INDEX IF NOT EXISTS idx_buyers_user_id ON buyers(user_id);
-CREATE INDEX IF NOT EXISTS idx_organizers_user_id ON organizers(user_id);
-
--- Profile Search
-CREATE INDEX IF NOT EXISTS idx_sellers_city_location ON sellers(city, location);
-CREATE INDEX IF NOT EXISTS idx_buyers_city_location ON buyers(city, location);
-
--- Order Performance
+-- Orders
 CREATE INDEX IF NOT EXISTS idx_product_orders_number ON product_orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_product_orders_seller_id ON product_orders(seller_id, status);
 CREATE INDEX IF NOT EXISTS idx_product_orders_buyer_id ON product_orders(buyer_id, status);
 CREATE INDEX IF NOT EXISTS idx_product_orders_client_id ON product_orders(client_id);
-CREATE INDEX IF NOT EXISTS idx_product_orders_seller_initiated ON product_orders(is_seller_initiated) WHERE is_seller_initiated = TRUE;
+CREATE INDEX IF NOT EXISTS idx_orders_payment_ref ON product_orders(payment_reference);
 
--- Product Discovery & Inventory
-CREATE INDEX IF NOT EXISTS idx_products_seller_id ON products(seller_id, status);
+-- Products
+CREATE INDEX IF NOT EXISTS idx_products_seller_status ON products(seller_id, status);
 CREATE INDEX IF NOT EXISTS idx_products_inventory ON products(track_inventory, quantity) WHERE track_inventory = TRUE;
 
--- Client Management
-CREATE INDEX IF NOT EXISTS idx_seller_clients_seller_id ON seller_clients(seller_id);
-CREATE INDEX IF NOT EXISTS idx_clients_phone ON clients(phone);
+-- Sellers
+CREATE INDEX IF NOT EXISTS idx_sellers_shop_name ON sellers(shop_name);
+CREATE INDEX IF NOT EXISTS idx_sellers_shop_name_lower ON sellers(LOWER(shop_name));
+CREATE INDEX IF NOT EXISTS idx_sellers_city_location ON sellers(city, location);
+CREATE INDEX IF NOT EXISTS idx_sellers_referral_code ON sellers(referral_code) WHERE referral_code IS NOT NULL;
 
--- Webhook Monitoring
+-- Payouts
+CREATE UNIQUE INDEX IF NOT EXISTS idx_payouts_order_id_unique ON payouts (order_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_payment_id ON payouts(payment_id);
+
+-- Miscellaneous
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, is_active);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_digital_activations_order_product ON digital_activations(order_id, product_id);
+CREATE INDEX IF NOT EXISTS idx_digital_activations_session_token ON digital_activations(session_token) WHERE session_token IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_webhook_logs_created ON webhook_logs(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_security_alerts_reviewed ON security_alerts(reviewed, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_refund_requests_buyer ON refund_requests (buyer_id, status);
 
 -- ============================================================================
--- 9. FUNCTIONS
--- ============================================================================
-
-CREATE OR REPLACE FUNCTION cleanup_old_webhook_logs(days_to_keep INTEGER DEFAULT 30)
-RETURNS TABLE(deleted_count BIGINT) AS $$
-DECLARE
-    deleted BIGINT;
-BEGIN
-    DELETE FROM webhook_logs 
-    WHERE created_at < NOW() - (days_to_keep || ' days')::INTERVAL;
-    GET DIAGNOSTICS deleted = ROW_COUNT;
-    RETURN QUERY SELECT deleted;
-END;
-$$ LANGUAGE plpgsql;
-
--- ============================================================================
--- 10. SEED DATA (Permissions, Roles, Admin)
+-- 9. SEED DATA (RBAC)
 -- ============================================================================
 
 -- Seed Permissions
@@ -616,20 +467,19 @@ INSERT INTO permissions (name, slug) VALUES
 ('Manage Products', 'manage-products'),
 ('Request Payouts', 'request-payouts'),
 ('Manage Shop', 'manage-shop'),
-('Create Events', 'create-events'),
-('Verify Tickets', 'verify-tickets'),
 ('View Analytics', 'view-analytics'),
 ('View Orders', 'view-orders'),
-('Manage Profile', 'manage-profile'),
-('Super Admin Access', 'manage-all')
+ ('Manage Profile', 'manage-profile'),
+('Super Admin Access', 'manage-all'),
+('View Marketing Analytics', 'view-marketing')
 ON CONFLICT (slug) DO NOTHING;
 
 -- Seed Roles
 INSERT INTO roles (name, slug) VALUES 
 ('Buyer', 'buyer'),
 ('Seller', 'seller'),
-('Organizer', 'organizer'),
-('Admin', 'admin')
+('Admin', 'admin'),
+('Marketing Admin', 'marketing')
 ON CONFLICT (slug) DO NOTHING;
 
 -- Map Permissions
@@ -637,8 +487,8 @@ DO $$
 DECLARE
     role_buyer_id INTEGER := (SELECT id FROM roles WHERE slug = 'buyer');
     role_seller_id INTEGER := (SELECT id FROM roles WHERE slug = 'seller');
-    role_organizer_id INTEGER := (SELECT id FROM roles WHERE slug = 'organizer');
     role_admin_id INTEGER := (SELECT id FROM roles WHERE slug = 'admin');
+    role_marketing_id INTEGER := (SELECT id FROM roles WHERE slug = 'marketing');
 BEGIN
     IF role_buyer_id IS NOT NULL THEN
         INSERT INTO role_permissions (role_id, permission_id)
@@ -652,26 +502,15 @@ BEGIN
         ON CONFLICT DO NOTHING;
     END IF;
 
-    IF role_organizer_id IS NOT NULL THEN
-        INSERT INTO role_permissions (role_id, permission_id)
-        SELECT role_organizer_id, id FROM permissions WHERE slug IN ('create-events', 'verify-tickets', 'view-analytics', 'manage-profile')
-        ON CONFLICT DO NOTHING;
-    END IF;
-
     IF role_admin_id IS NOT NULL THEN
         INSERT INTO role_permissions (role_id, permission_id)
         SELECT role_admin_id, id FROM permissions WHERE slug = 'manage-all'
         ON CONFLICT DO NOTHING;
     END IF;
-END $$;
 
--- 10. ROLES & PERMISSIONS
--- (Final block: ensuring essential roles and permissions exist)
--- Admin creation is now handled by server/scripts/seed-admin.js for security.
-DO $$
-BEGIN
-    -- Ensure roles are mapped to permissions as defined above
-    -- (The permission mapping logic is already in section 10 above)
-    NULL; 
+    IF role_marketing_id IS NOT NULL THEN
+        INSERT INTO role_permissions (role_id, permission_id)
+        SELECT role_marketing_id, id FROM permissions WHERE slug = 'view-marketing'
+        ON CONFLICT DO NOTHING;
+    END IF;
 END $$;
-

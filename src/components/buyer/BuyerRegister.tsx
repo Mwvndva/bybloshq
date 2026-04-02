@@ -595,6 +595,6 @@ export function BuyerRegister() {
           </div>
         </div>
       </div>
-    </div >
+    </div>
   );
 }

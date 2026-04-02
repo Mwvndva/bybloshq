@@ -48,7 +48,7 @@ export function BuyerInfoModal({
     lastName: initialData?.fullName?.split(' ').slice(1).join(' ') || '',
     email: initialData?.email || '',
     mobilePayment: initialData?.mobilePayment || phoneNumber || '',
-    whatsappNumber: (initialData as any)?.whatsappNumber || phoneNumber || '',
+    whatsappNumber: initialData?.whatsappNumber || phoneNumber || '',
     city: initialData?.city || 'Nairobi',
     location: initialData?.location || '',
     password: '',
@@ -85,11 +85,11 @@ export function BuyerInfoModal({
     const newErrors: Partial<BuyerInfo> = {};
 
     if (!buyerInfo.firstName.trim()) {
-      newErrors.firstName = 'First name is required' as any;
+      newErrors.firstName = 'First name is required';
     }
 
     if (!buyerInfo.lastName.trim()) {
-      newErrors.lastName = 'Last name is required' as any;
+      newErrors.lastName = 'Last name is required';
     }
 
     if (!buyerInfo.email.trim()) {
@@ -117,11 +117,7 @@ export function BuyerInfoModal({
     }
 
     if (!buyerInfo.whatsappNumber?.trim()) {
-      newErrors.whatsappNumber = 'WhatsApp number is required' as any;
-    }
-
-    if (!buyerInfo.whatsappNumber?.trim()) {
-      newErrors.whatsappNumber = 'WhatsApp number is required' as any;
+      newErrors.whatsappNumber = 'WhatsApp number is required';
     }
 
     setErrors(newErrors);
@@ -139,7 +135,7 @@ export function BuyerInfoModal({
       await onSubmit({
         ...buyerInfo,
         fullName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim()
-      } as any);
+      });
       // Reset form on successful submission
       setBuyerInfo({
         firstName: '',
@@ -233,7 +229,7 @@ export function BuyerInfoModal({
                   />
                 </div>
                 {errors.firstName && (
-                  <p className={`text-[10px] font-bold ${themeClasses.error}`}>{(errors as any).firstName}</p>
+                  <p className={`text-[10px] font-bold ${themeClasses.error}`}>{errors.firstName}</p>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -255,7 +251,7 @@ export function BuyerInfoModal({
                   />
                 </div>
                 {errors.lastName && (
-                  <p className={`text-[10px] font-bold ${themeClasses.error}`}>{(errors as any).lastName}</p>
+                  <p className={`text-[10px] font-bold ${themeClasses.error}`}>{errors.lastName}</p>
                 )}
               </div>
             </div>
@@ -382,11 +378,13 @@ export function BuyerInfoModal({
                       <SelectValue placeholder={buyerInfo.city ? "Select area" : "City first"} />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
-                      {buyerInfo.city && locationData[buyerInfo.city]?.map((area) => (
-                        <SelectItem key={area} value={area} className="text-white hover:bg-white/5 focus:bg-white/10">
-                          {area}
-                        </SelectItem>
-                      ))}
+                      {buyerInfo.city && [...(locationData[buyerInfo.city] || [])]
+                        .sort((a, b) => a.localeCompare(b))
+                        .map((area) => (
+                          <SelectItem key={area} value={area} className="text-white hover:bg-white/5 focus:bg-white/10">
+                            {area}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                 </div>

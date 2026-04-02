@@ -19,7 +19,7 @@ class AdminService {
       Object.entries(queries).map(async ([key, query]) => {
         try {
           const res = await pool.query(query);
-          stats[`total_${key}`] = parseInt(res.rows[0].count, 10);
+          stats[`total_${key}`] = Number.parseInt(res.rows[0].count, 10);
         } catch (e) {
           logger.error(`Failed to count ${key}:`, e);
           stats[`total_${key}`] = 0;
@@ -42,7 +42,7 @@ class AdminService {
         id: row.id,
         name: row.name,
         shopName: row.shop_name,
-        clientCount: parseInt(row.client_count)
+        clientCount: Number.parseInt(row.client_count)
       }));
     } catch (e) {
       logger.error('Failed to fetch top shops:', e);
@@ -214,14 +214,14 @@ class AdminService {
     return {
       ...seller,
       metrics: {
-        totalOrders: parseInt(metrics.total_orders),
+        totalOrders: Number.parseInt(metrics.total_orders),
         totalSales: parseFloat(metrics.total_sales),
         totalCommission: parseFloat(metrics.total_commission),
         netSales: parseFloat(metrics.net_sales),
-        pendingOrders: parseInt(metrics.pending_orders),
-        completedOrders: parseInt(metrics.completed_orders),
-        cancelledOrders: parseInt(metrics.cancelled_orders),
-        totalProducts: parseInt(productCountRes.rows[0].total)
+        pendingOrders: Number.parseInt(metrics.pending_orders),
+        completedOrders: Number.parseInt(metrics.completed_orders),
+        cancelledOrders: Number.parseInt(metrics.cancelled_orders),
+        totalProducts: Number.parseInt(productCountRes.rows[0].total)
       },
       recentOrders: recentOrdersRes.rows
     };

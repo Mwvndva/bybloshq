@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { CheckCircle, XCircle, Clock, DollarSign, Loader2, User, Phone, Mail } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, DollarSign, Loader2, User, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 
@@ -131,7 +131,7 @@ export default function RefundRequestsPage() {
   };
 
   const formatCurrency = (value: string) => {
-    return `KSh ${parseFloat(value).toLocaleString(undefined, {
+    return `KSh ${Number.parseFloat(value).toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}`;

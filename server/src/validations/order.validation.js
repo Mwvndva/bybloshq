@@ -39,8 +39,8 @@ const updateOrderStatusSchema = z.object({
 // Schema for order query parameters (pagination, filtering)
 const orderQuerySchema = z.object({
   status: z.enum(['pending', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']).optional(),
-  page: z.preprocess((val) => parseInt(val, 10), z.number().int().min(1).default(1)),
-  limit: z.preprocess((val) => parseInt(val, 10), z.number().int().min(1).max(100).default(10))
+  page: z.preprocess((val) => Number.parseInt(val, 10), z.number().int().min(1).default(1)),
+  limit: z.preprocess((val) => Number.parseInt(val, 10), z.number().int().min(1).max(100).default(10))
 });
 
 // Schema for order ID parameter

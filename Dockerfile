@@ -1,17 +1,26 @@
 # Multi-stage build for React frontend
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 # Dependencies stage
 FROM base AS deps
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    pkgconfig \
+    pixman-dev \
+    cairo-dev \
+    pango-dev \
+    libjpeg-turbo-dev \
+    giflib-dev
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
 # Build stage
-FROM base AS builder
+FROM deps AS builder
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci
 COPY . .
 RUN npm run build
 

@@ -193,6 +193,16 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         return null;
     };
 
+    /**
+     * Check if the current path is a public route that doesn't require authentication
+     */
+    const isPublicRoute = (pathname: string): boolean => {
+        if (!pathname || pathname === '/') return true;
+
+        const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password', '/marketing'];
+        return publicPaths.some(path => pathname.includes(path));
+    };
+
     // ============================================================================
     // AUTH CHECK ON MOUNT
     // ============================================================================
@@ -204,7 +214,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         // If already checking, don't start another one unless forced
         if (authCheckInProgress.current && !force) return;
 
-        const currentPath = window.location.pathname;
+        const currentPath = globalThis.location.pathname;
         const currentRole = getRoleFromRoute(currentPath);
 
         // Optimization: if already authenticated for this role, skip check unless forced
@@ -214,15 +224,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         }
 
         // Skip auth check if we're on a public route or homepage
-        if (!currentRole || currentPath === '/') {
-            setIsLoading(false);
-            return;
-        }
-
-        // Skip auth check if we're on a login/register page
-        const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
-        const isPublicPath = publicPaths.some(path => currentPath.includes(path));
-        if (isPublicPath) {
+        if (!currentRole || isPublicRoute(currentPath)) {
             setIsLoading(false);
             return;
         }
