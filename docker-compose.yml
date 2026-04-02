@@ -38,7 +38,8 @@ services:
     env_file: .env
     environment:
       NODE_ENV: production
-      PORT: 3002
+      PORT: 3000
+      APP_NAME: ${APP_NAME:-Byblos}
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: ${DB_NAME:-byblos_atelier}
@@ -68,9 +69,10 @@ services:
     depends_on:
       - postgres
       - redis
-    ports:
-      - "3002:3002"
+    # ports:
+    #   - "3002:3002"
     volumes:
+
       - ./server/uploads:/app/uploads
     networks:
       - byblos-network
@@ -85,9 +87,10 @@ services:
     restart: unless-stopped
     environment:
       VITE_API_URL: ${FRONTEND_API_URL:-http://localhost:3002/api}
-    ports:
-      - "80:80"
+    # ports:
+    #   - "80:80"
     depends_on:
+
       - backend
     networks:
       - byblos-network
