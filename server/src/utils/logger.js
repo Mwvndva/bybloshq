@@ -24,18 +24,17 @@ const logger = winston.createLogger({
     winston.format.json() // Production logs should be JSON
   ),
   transports: [
-    // Console transport - ONLY if NOT in production or if explicitly enabled
-    ...(process.env.NODE_ENV !== 'production' ? [
-      new winston.transports.Console({
-        format: winston.format.combine(
-          winston.format.colorize(),
-          winston.format.printf(({ timestamp, level, message, stack }) => {
-            const stackMessage = stack ? `\n${stack}` : '';
-            return `${timestamp} ${level}: ${message}${stackMessage}`;
-          })
-        )
-      })
-    ] : []),
+    // Console transport - Always enabled for Docker visibility
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.printf(({ timestamp, level, message, stack }) => {
+          const stackMessage = stack ? `\n${stack}` : '';
+          return `${timestamp} ${level}: ${message}${stackMessage}`;
+        })
+      )
+    }),
+
 
     // Daily Rotate File for errors
     new DailyRotateFile({
@@ -58,15 +57,8 @@ const logger = winston.createLogger({
   exitOnError: false, // Don't exit on handled exceptions
 });
 
-// Production Silencer: Override global console methods if in production
-if (process.env.NODE_ENV === 'production') {
-  console.log = () => { };
-  console.info = () => { };
-  console.debug = () => { };
-  // Keep console.error and console.warn for critical issues, but maybe redirect to winston
-  console.error = (...args) => logger.error(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
-  console.warn = (...args) => logger.warn(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
-}
+// No longer silencing console in production to ensure Docker logs work correctly.
+
 
 // Create a stream object for morgan
 logger.stream = {
