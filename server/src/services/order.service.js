@@ -84,8 +84,12 @@ class OrderService {
       const initialStatus = this._determineInitialStatus(items);
       logger.info(`OrderService: initial status determined: ${initialStatus}`);
 
+      // 5. Generate unique order number
+      const orderNumber = await this._generateOrderNumber(client);
+
       // 5. Prepare Order Record
       const orderRecord = {
+        order_number: orderNumber,
         buyer_id: buyerId,
         seller_id: sellerId,
         total_amount: totalAmount,
@@ -1509,6 +1513,33 @@ class OrderService {
       latitude,
       longitude
     };
+  }
+  static async _generateOrderNumber(client) {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude ambiguous characters like O, 0, I, 1
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      let suffix = '';
+      for (let i = 0; i < 6; i++) {
+        suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const orderNumber = `BYB-${suffix}`;
+
+      // Check for uniqueness
+      const checkResult = await client.query(
+        'SELECT id FROM product_orders WHERE order_number = $1',
+        [orderNumber]
+      );
+
+      if (checkResult.rows.length === 0) {
+        return orderNumber;
+      }
+      attempts++;
+    }
+
+    // Fallback to timestamp if random collisions occur
+    return `BYB-${Date.now().toString().slice(-6)}`;
   }
 }
 
