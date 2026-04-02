@@ -38,7 +38,7 @@ BEGIN
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payment_method') THEN
-        CREATE TYPE payment_method AS ENUM ('mpesa', 'card', 'bank', 'debt');
+        CREATE TYPE payment_method AS ENUM ('mpesa', 'card', 'bank', 'debt', 'payd');
     END IF;
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'payout_status') THEN
