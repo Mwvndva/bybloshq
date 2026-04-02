@@ -41,7 +41,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
     };
 
     return {
-      id: item.id,
+      id: String(item.id),
       name: item.name,
       description: item.description,
       price: typeof item.price === 'string' ? parseFloat(item.price) : item.price,
@@ -119,7 +119,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    isInWishlist: (productId: string) => wishlist.some(item => item.id === productId),
+    isInWishlist: (productId: string) => wishlist.some(item => String(item.id) === String(productId)),
     refreshWishlist: loadWishlist,
     isLoading,
     error,
