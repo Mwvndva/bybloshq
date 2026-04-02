@@ -55,9 +55,13 @@ class WhatsAppService {
                 auth: state,
                 printQRInTerminal: false,
                 logger: mockLogger,
+                browser: ['Byblos', 'Chrome', '121.0.6167.160'], // More modern browser ID
                 connectTimeoutMs: 60000,
-                syncFullHistory: false, // Don't sync old history, faster startup
+                keepAliveIntervalMs: 30000, // Keep connection alive
+                syncFullHistory: false,
+                markOnlineOnConnect: true,
             });
+
 
             // Credential updates
             this.sock.ev.on('creds.update', saveCreds);
