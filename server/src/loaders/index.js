@@ -16,8 +16,12 @@ export default async (app) => {
     try {
         await testConnection();
         logger.info('✅ Database connected');
+
+        // 1b. Schema Verification (Fix M-5)
+        const { verifyRequiredIndexes } = await import('./schemaCheck.js');
+        await verifyRequiredIndexes();
     } catch (err) {
-        logger.error('❌ Database connection failed:', err.message);
+        logger.error('❌ Database connection/verification failed:', err.message);
         process.exit(1);
     }
 

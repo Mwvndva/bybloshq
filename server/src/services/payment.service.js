@@ -475,26 +475,27 @@ export class PaymentService {
             );
 
             if (!payments || payments.length === 0) {
-                // If not found, try handlesuccessfulpayment for fuzzy matching
                 if (isSuccess) {
-                    return await this.handleSuccessfulPayment({
+                    logger.warn('[PAYD-WEBHOOK] Payment not found for reference — will be resolved by cron', {
                         reference,
-                        amount,
-                        metadata: callbackData
+                        amount
                     });
+                    // Do not call handleSuccessfulPayment — it uses a different flow and
+                    // can cause issues when reference matching is fuzzy.
+                    // The payment will be resolved by processPendingPayments cron within 5 minutes.
+                } else {
+                    logger.warn('[PAYD-WEBHOOK] Failed webhook for unknown reference', { reference });
                 }
-
-                logger.warn('[PAYD-WEBHOOK] Payment record not found', { reference });
                 return { success: false, message: 'Payment record not found' };
             }
 
             const payment = payments[0];
 
             // ============================================================
-            // STEP 3: CHECK IDEMPOTENCY (Prevent duplicate processing)
+            // STEP 3: CHECK IDEMPOTENCY (Fast check - no lock yet)
             // ============================================================
             if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
-                logger.warn('[PAYD-WEBHOOK] Duplicate success webhook ignored', {
+                logger.warn('[PAYD-WEBHOOK] Duplicate success webhook ignored (fast check)', {
                     payment_id: payment.id,
                     reference
                 });
@@ -513,6 +514,28 @@ export class PaymentService {
 
             try {
                 await dbClient.query('BEGIN');
+
+                // ─── Acquire FOR UPDATE lock and re-check idempotency ───────────────
+                const { rows: lockedRows } = await dbClient.query(
+                    'SELECT id, status FROM payments WHERE id = $1 FOR UPDATE',
+                    [payment.id]
+                );
+                if (!lockedRows[0]) {
+                    await dbClient.query('ROLLBACK');
+                    logger.error('[PAYD-WEBHOOK] Payment disappeared during lock attempt', { payment_id: payment.id });
+                    return { success: false, message: 'Payment not found during lock' };
+                }
+                const lockedPayment = lockedRows[0];
+
+                if (lockedPayment.status === PaymentStatus.COMPLETED || lockedPayment.status === PaymentStatus.SUCCESS) {
+                    await dbClient.query('ROLLBACK');
+                    logger.warn('[PAYD-WEBHOOK] Duplicate success webhook ignored (post-lock check)', {
+                        payment_id: payment.id,
+                        reference
+                    });
+                    return { success: true, message: 'Webhook already processed (concurrent)', duplicate: true };
+                }
+                // ─────────────────────────────────────────────────────────────────────────
 
                 const mpesaReceipt = data.third_party_trans_id || null;
 
@@ -536,16 +559,7 @@ export class PaymentService {
                     ]
                 );
 
-                // ============================================================
-                // STEP 5: PROCESS BASED ON STATUS
-                // ============================================================
                 if (isSuccess) {
-                    logger.info('[PAYD-WEBHOOK] Payment successful, updating order', {
-                        payment_id: payment.id,
-                        amount
-                    });
-
-                    // Update order to COMPLETED
                     const paymentMeta = payment.metadata || {};
                     if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
                         await dbClient.query(
@@ -553,18 +567,13 @@ export class PaymentService {
                             [paymentMeta.debt_id]
                         );
                     }
-                } else if (status === 'failed' || status === 'cancelled' || resultCode == 1) {
-                    logger.warn('[PAYD-WEBHOOK] Payment failed', {
-                        payment_id: payment.id,
-                        status
-                    });
                 }
 
                 await dbClient.query('COMMIT');
                 transactionCommitted = true;
             } catch (error) {
-                if (dbClient) {
-                    await dbClient.query('ROLLBACK').catch(e => logger.error('Rollback failed:', e));
+                if (!transactionCommitted) {
+                    await dbClient.query('ROLLBACK').catch(e => logger.error('[PAYD-WEBHOOK] Rollback failed:', e));
                 }
                 throw error;
             } finally {
@@ -646,7 +655,7 @@ export class PaymentService {
         if (!payment) {
             // Check if it's a Withdrawal Request (Payout)
             const { rows: withdrawalRows } = await pool.query(
-                'SELECT * FROM withdrawal_requests WHERE provider_reference = $1 OR id::text = $1',
+                'SELECT * FROM withdrawal_requests WHERE provider_reference = $1',
                 [reference]
             );
 
@@ -774,13 +783,32 @@ export class PaymentService {
                 const completionResult = await OrderSvc.completeOrder(updatedPayment);
                 logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
             } catch (completionErr) {
-                // P-4: Robustness - ensure payment is marked failed if order completion fails
-                logger.error('[PAYD-PAYIN] Critical failure in order completion logic:', completionErr);
+                logger.error('[PAYD-PAYIN] CRITICAL: Order completion failed after payment was confirmed.', {
+                    paymentId: updatedPayment.id,
+                    orderId: paymentMeta.order_id,
+                    error: completionErr.message
+                });
+                // ⚠️ DO NOT mark payment as 'failed' — the buyer WAS charged.
+                // The payment is legitimately 'completed'. Only the order side-effect failed.
+                // Mark needs_completion so the retry cron (completionRetryCron.js) picks it up.
                 await pool.query(
-                    'UPDATE payments SET status = $1, metadata = metadata || $2::jsonb WHERE id = $3',
-                    ['failed', JSON.stringify({ completion_error: completionErr.message }), updatedPayment.id]
+                    `UPDATE payments 
+                     SET metadata = jsonb_set(
+                         COALESCE(metadata, '{}'),
+                         '{needs_completion}',
+                         'true'::jsonb
+                     ) 
+                     WHERE id = $1`,
+                    [updatedPayment.id]
                 );
-                throw completionErr;
+                // Do NOT throw — payment is confirmed. Completion will be retried by cron.
+                // Return a partial success so caller knows order completion is pending.
+                return {
+                    status: 'payment_confirmed_completion_pending',
+                    message: 'Payment received. Order completion will be retried.',
+                    paymentId: updatedPayment.id,
+                    completionError: completionErr.message
+                };
             }
             return { status: 'success', message: 'Payment processed and Order completion triggered' };
 

@@ -116,11 +116,10 @@ export const confirmRefundRequest = async (req, res, next) => {
 
     await client.query('BEGIN');
 
-    // Get refund request with lock
+    // Lock the refund request row
     const requestResult = await client.query(
-      `SELECT rr.*, b.refunds as buyer_refunds
+      `SELECT rr.*
        FROM refund_requests rr
-       JOIN buyers b ON rr.buyer_id = b.id
        WHERE rr.id = $1
        FOR UPDATE`,
       [id]
@@ -133,14 +132,26 @@ export const confirmRefundRequest = async (req, res, next) => {
 
     const request = requestResult.rows[0];
 
-    // Check if already processed
+    // Check status before acquiring the buyer lock (fast check)
     if (request.status !== 'pending') {
       await client.query('ROLLBACK');
       return next(new AppError(`Refund request is already ${request.status}`, 400));
     }
 
-    // Verify buyer still has sufficient refunds
-    const buyerRefunds = parseFloat(request.buyer_refunds || 0);
+    // Lock the buyer row SEPARATELY to serialize concurrent refund processing
+    // for the same buyer across different refund requests
+    const buyerResult = await client.query(
+      `SELECT id, refunds FROM buyers WHERE id = $1 FOR UPDATE`,
+      [request.buyer_id]
+    );
+
+    if (buyerResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return next(new AppError('Buyer account not found', 404));
+    }
+
+    const buyer = buyerResult.rows[0];
+    const buyerRefunds = parseFloat(buyer.refunds || 0);
     const requestAmount = parseFloat(request.amount);
 
     if (buyerRefunds < requestAmount) {
