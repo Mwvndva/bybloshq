@@ -30,7 +30,7 @@ class ReferralService {
             throw new AppError('Seller not found', 404);
         }
 
-        const totalSales = parseFloat(sellerCheck.rows[0].total_sales || 0);
+        const totalSales = Number.parseFloat(sellerCheck.rows[0].total_sales || 0);
 
         if (totalSales <= 0) {
             // Fallback: check if there's at least one paid order (even if not yet in total_sales/escrow release)
@@ -201,13 +201,13 @@ class ReferralService {
             shopName: row.shop_name,
             referralActiveUntil: row.referral_active_until,
             isActive: row.referral_active_until ? new Date(row.referral_active_until) > now : false,
-            totalEarned: parseFloat(row.total_earned)
+            totalEarned: Number.parseFloat(row.total_earned)
         }));
 
         return {
             referralCode: referral_code,
             referralLink,
-            totalReferralEarnings: parseFloat(total_referral_earnings || 0),
+            totalReferralEarnings: Number.parseFloat(total_referral_earnings || 0),
             referred
         };
     }
@@ -263,12 +263,12 @@ class ReferralService {
                     [referred_seller_id, month, year]
                 );
 
-                const gmv = parseFloat(gmvResult.rows[0].gmv);
+                const gmv = Number.parseFloat(gmvResult.rows[0].gmv);
                 logger.info(`[REFERRAL-CRON] Seller ${referred_seller_id} GMV (Seller Payout) for ${year}-${month}: ${gmv}`);
                 if (gmv <= 0) continue;
 
                 // 2. Calculate reward
-                const reward = parseFloat((gmv * Fees.REFERRAL_REWARD_RATE).toFixed(2));
+                const reward = Number.parseFloat((gmv * Fees.REFERRAL_REWARD_RATE).toFixed(2));
 
                 // 3. Skip sub-1 KES rewards
                 if (reward < 1) {
@@ -300,7 +300,7 @@ class ReferralService {
                 );
 
                 processed++;
-                totalCredited = parseFloat((totalCredited + reward).toFixed(2));
+                totalCredited = Number.parseFloat((totalCredited + reward).toFixed(2));
 
                 logger.info(`[REFERRAL-CRON] SUCCESS: Credited KES ${reward} to referrer ${referrer_seller_id} from referred ${referred_seller_id} (GMV: ${gmv})`);
 

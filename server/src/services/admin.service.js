@@ -215,9 +215,9 @@ class AdminService {
       ...seller,
       metrics: {
         totalOrders: Number.parseInt(metrics.total_orders),
-        totalSales: parseFloat(metrics.total_sales),
-        totalCommission: parseFloat(metrics.total_commission),
-        netSales: parseFloat(metrics.net_sales),
+        totalSales: Number.parseFloat(metrics.total_sales),
+        totalCommission: Number.parseFloat(metrics.total_commission),
+        netSales: Number.parseFloat(metrics.net_sales),
         pendingOrders: Number.parseInt(metrics.pending_orders),
         completedOrders: Number.parseInt(metrics.completed_orders),
         cancelledOrders: Number.parseInt(metrics.cancelled_orders),

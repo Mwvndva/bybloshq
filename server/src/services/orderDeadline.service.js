@@ -252,7 +252,7 @@ class OrderDeadlineService {
             // Send notification to buyer
             if (order.buyer_phone) {
                 const serviceType = whatsappService.getServiceProviderType(order);
-                const amount = parseFloat(order.total_amount || 0);
+                const amount = Number.parseFloat(order.total_amount || 0);
 
                 const msg = `✅ *SERVICE PAYMENT RELEASED*
 
@@ -285,7 +285,7 @@ Thank you for using Byblos!`;
      */
     async sendCancellationNotifications(order, reason) {
         try {
-            const amount = parseFloat(order.total_amount || 0);
+            const amount = Number.parseFloat(order.total_amount || 0);
             const isBuyerFault = reason.includes('Buyer failed');
             const isSellerFault = reason.includes('Seller failed');
 
@@ -357,7 +357,7 @@ Order #${order.order_number} has been automatically cancelled.
 ❌ *ORDER CANCELLED — DELIVERY CANCELLED*
 
 📦 *Order #${order.order_number}*
-💰 *Amount:* KSh ${parseFloat(order.total_amount || 0).toLocaleString()}
+💰 *Amount:* KSh ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
 
 📝 *Reason:* ${reason}
 

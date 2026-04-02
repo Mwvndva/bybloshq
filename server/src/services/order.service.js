@@ -313,7 +313,7 @@ class OrderService {
 
       if (updatedOrder) {
         // 4. Update Buyer Refunds (Track cumulative refunds)
-        const refundAmount = parseFloat(order.total_amount);
+        const refundAmount = Number.parseFloat(order.total_amount);
         await client.query(
           `UPDATE buyers 
            SET refunds = COALESCE(refunds, 0) + $1,
@@ -720,153 +720,10 @@ class OrderService {
 
       if (shouldManageTransaction) await client.query('COMMIT');
 
-      // Trigger Referral Activation (post-commit, non-blocking)
-      try {
-        ReferralService.activateReferral(order.seller_id).catch(err => {
-          logger.warn(`[REFERRAL] activateReferral failed for seller ${order.seller_id} on order ${orderId}: ${err.message}`);
-        });
-      } catch (e) {
-        logger.error(`[REFERRAL] Unexpected error triggering activation for seller ${order.seller_id} on order ${orderId}:`, e);
-      }
-
-      // DRM-FIX-7: Invalidate product cache after order completion (post-commit)
-      try {
-        const cacheService = (await import('./cache.service.js')).default;
-        await cacheService.clearPattern('products:*');
-      } catch (cacheErr) {
-        logger.warn('[ORDER] Cache invalidation failed (non-critical):', cacheErr.message);
-      }
-
-      // Trigger Notifications (WhatsApp/Email)
-      try {
-        // Fetch full order details with buyer and seller for notification
-        const fullOrderResult = await pool.query(
-          `SELECT o.*, 
-                  b.full_name          AS buyer_name_actual,
-                  b.mobile_payment     AS buyer_phone_actual,
-                  b.whatsapp_number    AS buyer_whatsapp_actual,
-                  b.email              AS buyer_email_actual,
-                  b.city               AS buyer_city,
-                  b.location           AS buyer_location_text,
-                  b.latitude           AS buyer_latitude,
-                  b.longitude          AS buyer_longitude,
-                  b.full_address       AS buyer_full_address,
-                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
-                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
-                  COALESCE(s.email, u.email)                       AS seller_email, 
-                  s.physical_address   AS seller_address,
-                  s.shop_name,
-                  s.city               AS seller_city,
-                  s.latitude           AS seller_latitude,
-                  s.longitude          AS seller_longitude,
-                  s.instagram_link,
-                  s.tiktok_link,
-                  s.facebook_link
-           FROM product_orders o
-           LEFT JOIN buyers  b ON o.buyer_id  = b.id
-           LEFT JOIN sellers s ON o.seller_id = s.id
-           LEFT JOIN users   u ON s.user_id   = u.id
-           WHERE o.id = $1`,
-          [orderId]
-        );
-
-        if (fullOrderResult.rows.length > 0) {
-          const fullOrder = fullOrderResult.rows[0];
-          const buyerData = this._buildBuyerNotificationData(fullOrder);
-          const sellerData = {
-            name: fullOrder.seller_name,
-            phone: fullOrder.seller_phone,
-            email: fullOrder.seller_email,
-            physicalAddress: fullOrder.seller_address,
-            shop_name: fullOrder.shop_name,
-            latitude: fullOrder.seller_latitude,
-            longitude: fullOrder.seller_longitude,
-            instagram_link: fullOrder.instagram_link,
-            tiktok_link: fullOrder.tiktok_link,
-            facebook_link: fullOrder.facebook_link
-          };
-
-          const notificationPayload = {
-            buyer: buyerData,
-            seller: sellerData,
-            order: {
-              orderNumber: fullOrder.order_number,
-              totalAmount: fullOrder.total_amount,
-              status: newStatus,
-              metadata: fullOrder.metadata,
-              service_requirements: fullOrder.service_requirements
-            },
-            items: items
-          };
-
-          // Check if it's a seller-initiated client order
-          const isSellerInitiated = fullOrder.metadata && (fullOrder.metadata.seller_initiated === true || fullOrder.metadata.is_seller_initiated === true);
-
-          if (isSellerInitiated) {
-            logger.info(`[PURCHASE-FLOW] 9b. Skipping notifications for seller-initiated client order #${fullOrder.order_number}`);
-          } else {
-            logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyerData.phone || 'NO_PHONE'}`);
-            whatsappService.notifyBuyerOrderConfirmation(notificationPayload)
-              .then(() => logger.info(`[PURCHASE-FLOW] 9c. Buyer confirmation sent successfully`))
-              .catch(err => logger.error('Error sending buyer confirmation:', err));
-
-            // Notify Seller of New Order (now that payment is confirmed)
-            logger.info(`[PURCHASE-FLOW] 9d. Sending New Order Notification to Seller ${sellerData.phone || 'NO_PHONE'}`);
-            logger.info(`[PURCHASE-FLOW] 9d-DEBUG. Seller Data:`, JSON.stringify(sellerData, null, 2));
-            logger.info(`[PURCHASE-FLOW] 9d-DEBUG. Order Data:`, JSON.stringify(notificationPayload.order, null, 2));
-            logger.info(`[PURCHASE-FLOW] 9d-DEBUG. Items:`, JSON.stringify(items, null, 2));
-
-            whatsappService.notifySellerNewOrder({
-              seller: sellerData,
-              buyer: buyerData,
-              order: notificationPayload.order,
-              items: items
-            })
-              .then(() => logger.info(`[PURCHASE-FLOW] 9e. ✅ Seller notification sent...`))
-              .catch(err => logger.error(`[PURCHASE-FLOW] 9e. ❌ Seller notification failed:`, err.message))
-
-            // ── COURIER NOTIFICATION (logistics orders only) ──────────────────────────
-            // Fire for physical products where seller has NO physicalAddress.
-            // sendLogisticsNotification() internally checks and skips for:
-            //   - service orders
-            //   - digital orders
-            //   - orders where seller has a physical shop (buyer collects directly)
-            // Only NO-SHOP physical orders trigger the courier message.
-            const orderForCourier = {
-              id: fullOrder.id,
-              orderNumber: fullOrder.order_number,
-              totalAmount: fullOrder.total_amount,
-              items: items,           // already fetched order_items rows — contains product_name, quantity, price
-              metadata: fullOrder.metadata
-            }
-            const buyerForCourier = {
-              fullName: fullOrder.buyer_name || buyerData.name,
-              full_name: fullOrder.buyer_name || buyerData.name,
-              whatsapp_number: fullOrder.buyer_whatsapp_number || buyerData.whatsapp_number,
-              phone: fullOrder.buyer_mobile_payment || buyerData.phone,
-              city: fullOrder.buyer_city || '',
-              location: fullOrder.buyer_location_text || ''
-            }
-            const sellerForCourier = {
-              shop_name: sellerData.shop_name || sellerData.name,
-              full_name: sellerData.name,
-              whatsapp_number: sellerData.phone,
-              physicalAddress: sellerData.physicalAddress || null,
-              city: fullOrder.seller_city || ''
-            }
-
-            whatsappService.sendLogisticsNotification(orderForCourier, buyerForCourier, sellerForCourier)
-              .then(sent => {
-                if (sent) logger.info(`[PURCHASE-FLOW] 9f. ✅ Courier notification sent for order ${fullOrder.order_number}`)
-                else logger.info(`[PURCHASE-FLOW] 9f. Courier notification skipped (shop/service/digital order)`)
-              })
-              .catch(err => logger.error(`[PURCHASE-FLOW] 9f. ❌ Courier notification failed:`, err.message))
-            // ── END COURIER NOTIFICATION ──────────────────────────────────────────────
-          }
-        }
-      } catch (e) {
-        logger.error('Error triggering completion notifications:', e);
-      }
+      // Trigger side effects (non-blocking)
+      this._handleOrderCompletionSideEffects(updatedOrder, items, payment, callbackData).catch(err =>
+        logger.error('[ORDER-SIDE-EFFECTS] Error in completion side effects:', err)
+      );
 
       return { success: true, orderId, newStatus };
 
@@ -1199,7 +1056,7 @@ class OrderService {
       logger.info(`[ClientOrder] Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
       // 4. Enrich items with product data
-      const productIds = items.map(item => parseInt(item.productId, 10));
+      const productIds = items.map(item => Number.parseInt(item.productId, 10));
       const productsResult = await client.query(
         'SELECT id, product_type::text as product_type, is_digital, service_options, name FROM products WHERE id = ANY($1)',
         [productIds]
@@ -1207,7 +1064,7 @@ class OrderService {
       const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
 
       items.forEach(item => {
-        const prod = productsMap.get(parseInt(item.productId, 10));
+        const prod = productsMap.get(Number.parseInt(item.productId, 10));
         if (prod) {
           item.productType = prod.product_type;
           item.isDigital = prod.is_digital;
@@ -1262,152 +1119,11 @@ class OrderService {
 
       // BRANCH: DEBT FLOW
       if (isDebt) {
-        // Decrement inventory immediately
-        await this._decrementInventory(client, items);
-
-        // Record debt in client_debts table
-        for (const item of items) {
-          await client.query(
-            `INSERT INTO client_debts (seller_id, client_id, product_id, amount, quantity, is_paid)
-              VALUES ($1, $2, $3, $4, $5, false)`,
-            [sellerId, clientRecord.id, parseInt(item.productId, 10), item.price * item.quantity, item.quantity]
-          );
-        }
-
-        await client.query('COMMIT');
-        logger.info(`[ClientOrder] Debt recorded successfully for client ${clientRecord.id}`);
-
-        return {
-          success: true,
-          order: {
-            id: 'debt-' + Date.now(), // specific ID format for debts if needed by frontend, though distinct from order IDs
-            orderNumber: 'DEBT-' + Date.now(),
-            totalAmount,
-            status: OrderStatus.DEBT_PENDING
-          },
-          message: 'Inventory updated. Debt recorded.'
-        };
+        return await this._handleDebtFlow(client, sellerId, clientRecord, items, totalAmount);
       }
 
       // BRANCH: STK FLOW (Default)
-      // 8. Initiate M-Pesa STK Push
-      const paymentService = (await import('./payment.service.js')).default;
-
-
-      // Create payment record
-      const paymentData = {
-        invoice_id: order.order_number,
-        amount: totalAmount,
-        currency: 'KES',
-        status: 'pending',
-        payment_method: 'mpesa',
-        mobile_payment: clientPhone,
-        whatsapp_number: clientPhone,
-        email: `client_${clientRecord.id}@byblos.local`,
-        metadata: {
-          order_id: order.id,
-          order_number: order.order_number,
-          client_id: clientRecord.id,
-          seller_initiated: true
-        }
-      };
-
-      const paymentInsert = await client.query(
-        `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
-         VALUES ($1, $2, $3, $4, $5, 'pending', 'mpesa', $6) RETURNING *`,
-        [
-          paymentData.invoice_id,
-          paymentData.email,
-          paymentData.mobile_payment,
-          paymentData.whatsapp_number,
-          paymentData.amount,
-          JSON.stringify(paymentData.metadata)
-        ]
-      );
-      const payment = paymentInsert.rows[0];
-
-      // Initiate STK Push
-      try {
-        const stkResult = await paymentService.initiatePayment({
-          ...paymentData,
-          phone: clientPhone,
-          narrative: `Payment for Order ${order.order_number}`,
-          billing_address: 'Kenya'
-        });
-
-        // Update payment with provider reference
-        await client.query(
-          'UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2',
-          [stkResult.reference, payment.id]
-        );
-
-        // 9. Send WhatsApp notification to client
-        try {
-          // Get seller details
-          const sellerQuery = await client.query(
-            'SELECT id, shop_name, full_name as businessName FROM sellers WHERE id = $1',
-            [sellerId]
-          );
-          const seller = sellerQuery.rows[0];
-
-          await whatsappService.notifyClientOrderCreated(
-            clientPhone,
-            {
-              seller,
-              order: {
-                orderNumber: order.order_number,
-                totalAmount
-              },
-              items: items
-            }
-          );
-          logger.info(`[ClientOrder] WhatsApp notification sent to ${clientPhone}`);
-        } catch (waError) {
-          logger.error('[ClientOrder] Failed to send WhatsApp notification:', waError.message);
-          // Non-critical, continue
-        }
-        logger.info('[ClientOrder] WhatsApp notification skipped (disabled)');
-        // Don't fail the order creation if WhatsApp fails
-
-
-        await client.query('COMMIT');
-        logger.info(`[ClientOrder] STK Push initiated successfully for order ${order.id}`);
-
-        return {
-          success: true,
-          order: {
-            id: order.id,
-            orderNumber: order.order_number,
-            totalAmount,
-            status: OrderStatus.CLIENT_PAYMENT_PENDING
-          },
-          payment: {
-            id: payment.id,
-            reference: stkResult.reference
-          },
-          message: 'Payment prompt sent to client'
-        };
-
-      } catch (paymentError) {
-        if (client) await client.query('ROLLBACK');
-        logger.error('[ClientOrder] STK Push failed, rolling back:', paymentError.message);
-
-        // Defensive: mark as failed after rollback just in case
-        try {
-          await pool.query(
-            "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
-            [order.id]
-          );
-          await pool.query(
-            "UPDATE payments SET status = 'failed' WHERE metadata->>'order_id' = $1",
-            [order.id]
-          );
-        } catch (err) {
-          // Ignore errors here
-        }
-
-        throw new Error(`Failed to initiate payment: ${paymentError.message}`);
-      }
+      return await this._handleStkPaymentFlow(client, sellerId, clientRecord, order, items, totalAmount, clientPhone, skipInventoryDecrement, debtId);
 
 
     } catch (error) {
@@ -1527,6 +1243,146 @@ class OrderService {
       longitude
     };
   }
+  static async _handleOrderCompletionSideEffects(order, items, payment, callbackData) {
+    const orderId = order.id;
+
+    // 1. Referral Activation
+    ReferralService.activateReferral(order.seller_id).catch(err =>
+      logger.warn(`[REFERRAL] activateReferral failed for seller ${order.seller_id} on order ${orderId}: ${err.message}`)
+    );
+
+    // 2. Cache Invalidation
+    try {
+      const cacheService = (await import('./cache.service.js')).default;
+      await cacheService.clearPattern('products:*');
+    } catch (cacheErr) {
+      logger.warn('[ORDER] Cache invalidation failed:', cacheErr.message);
+    }
+
+    // 3. Notifications
+    try {
+      const fullOrderResult = await pool.query(
+        `SELECT o.*, 
+                b.full_name AS buyer_name_actual, b.mobile_payment AS buyer_phone_actual,
+                b.whatsapp_number AS buyer_whatsapp_actual, b.email AS buyer_email_actual,
+                b.city AS buyer_city, b.location AS buyer_location_text, b.latitude AS buyer_latitude,
+                b.longitude AS buyer_longitude, b.full_address AS buyer_full_address,
+                COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
+                COALESCE(s.whatsapp_number, NULL) AS seller_phone, 
+                COALESCE(s.email, u.email) AS seller_email, 
+                s.physical_address AS seller_address, s.shop_name, s.city AS seller_city,
+                s.latitude AS seller_latitude, s.longitude AS seller_longitude,
+                s.instagram_link, s.tiktok_link, s.facebook_link
+         FROM product_orders o
+         LEFT JOIN buyers b ON o.buyer_id = b.id
+         LEFT JOIN sellers s ON o.seller_id = s.id
+         LEFT JOIN users u ON s.user_id = u.id
+         WHERE o.id = $1`,
+        [orderId]
+      );
+
+      if (fullOrderResult.rows.length === 0) return;
+      const fullOrder = fullOrderResult.rows[0];
+      const buyerData = this._buildBuyerNotificationData(fullOrder);
+      const sellerData = {
+        name: fullOrder.seller_name, phone: fullOrder.seller_phone, email: fullOrder.seller_email,
+        physicalAddress: fullOrder.seller_address, shop_name: fullOrder.shop_name,
+        latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude,
+        instagram_link: fullOrder.instagram_link, tiktok_link: fullOrder.tiktok_link, facebook_link: fullOrder.facebook_link
+      };
+
+      const isSellerInitiated = fullOrder.metadata?.seller_initiated === true || fullOrder.metadata?.is_seller_initiated === true;
+      if (isSellerInitiated) return logger.info(`[ORDER] Skipping notifications for seller-initiated order #${fullOrder.order_number}`);
+
+      const payload = {
+        buyer: buyerData, seller: sellerData,
+        order: {
+          orderNumber: fullOrder.order_number, totalAmount: fullOrder.total_amount,
+          status: fullOrder.status, metadata: fullOrder.metadata,
+          service_requirements: fullOrder.service_requirements
+        },
+        items
+      };
+
+      whatsappService.notifyBuyerOrderConfirmation(payload).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
+      whatsappService.notifySellerNewOrder({ seller: sellerData, buyer: buyerData, order: payload.order, items })
+        .catch(e => logger.error('[ORDER] Seller notification failed:', e));
+
+      whatsappService.sendLogisticsNotification(
+        { id: fullOrder.id, orderNumber: fullOrder.order_number, totalAmount: fullOrder.total_amount, items, metadata: fullOrder.metadata },
+        { fullName: buyerData.name, whatsapp_number: buyerData.whatsapp_number, phone: buyerData.phone, city: fullOrder.buyer_city, location: buyerData.location },
+        { shop_name: sellerData.shop_name, full_name: sellerData.name, whatsapp_number: sellerData.phone, physicalAddress: sellerData.physicalAddress, city: fullOrder.seller_city }
+      ).catch(e => logger.error('[ORDER] Courier notification failed:', e));
+
+    } catch (e) {
+      logger.error('[ORDER] Error triggering completion notifications:', e);
+    }
+  }
+
+  static async _handleDebtFlow(client, sellerId, clientRecord, items, totalAmount) {
+    await this._decrementInventory(client, items);
+    for (const item of items) {
+      await client.query(
+        `INSERT INTO client_debts (seller_id, client_id, product_id, amount, quantity, is_paid)
+         VALUES ($1, $2, $3, $4, $5, false)`,
+        [sellerId, clientRecord.id, Number.parseInt(item.productId, 10), item.price * item.quantity, item.quantity]
+      );
+    }
+    await client.query('COMMIT');
+    logger.info(`[ORDER] Debt recorded for client ${clientRecord.id}`);
+    return {
+      success: true,
+      order: { id: `debt-${Date.now()}`, orderNumber: `DEBT-${Date.now()}`, totalAmount, status: OrderStatus.DEBT_PENDING },
+      message: 'Inventory updated. Debt recorded.'
+    };
+  }
+
+  static async _handleStkPaymentFlow(client, sellerId, clientRecord, order, items, totalAmount, clientPhone, skipInventoryDecrement, debtId) {
+    const paymentService = (await import('./payment.service.js')).default;
+    const paymentData = {
+      invoice_id: order.order_number, amount: totalAmount, currency: 'KES', status: 'pending', payment_method: 'mpesa',
+      mobile_payment: clientPhone, whatsapp_number: clientPhone, email: `client_${clientRecord.id}@byblos.local`,
+      metadata: { order_id: order.id, order_number: order.order_number, client_id: clientRecord.id, seller_initiated: true }
+    };
+
+    const paymentInsert = await client.query(
+      `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
+       VALUES ($1, $2, $3, $4, $5, 'pending', 'mpesa', $6) RETURNING *`,
+      [paymentData.invoice_id, paymentData.email, paymentData.mobile_payment, paymentData.whatsapp_number, paymentData.amount, JSON.stringify(paymentData.metadata)]
+    );
+    const payment = paymentInsert.rows[0];
+
+    try {
+      const stkResult = await paymentService.initiatePayment({
+        ...paymentData, phone: clientPhone, narrative: `Payment for Order ${order.order_number}`, billing_address: 'Kenya'
+      });
+
+      await client.query('UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2', [stkResult.reference, payment.id]);
+
+      // Notification
+      try {
+        const { rows } = await client.query('SELECT shop_name, full_name as businessName FROM sellers WHERE id = $1', [sellerId]);
+        await whatsappService.notifyClientOrderCreated(clientPhone, { seller: rows[0], order: { orderNumber: order.order_number, totalAmount }, items });
+      } catch (waError) {
+        logger.warn('[ORDER] Client notification failed:', waError.message);
+      }
+
+      await client.query('COMMIT');
+      return {
+        success: true,
+        order: { id: order.id, orderNumber: order.order_number, totalAmount, status: OrderStatus.CLIENT_PAYMENT_PENDING },
+        payment: { id: payment.id, reference: stkResult.reference },
+        message: 'Payment prompt sent to client'
+      };
+    } catch (paymentError) {
+      await client.query('ROLLBACK');
+      logger.error('[ORDER] STK Push failed:', paymentError.message);
+      await pool.query("UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1", [order.id]).catch(() => { });
+      await pool.query("UPDATE payments SET status = 'failed' WHERE metadata->>'order_id' = $1", [order.id]).catch(() => { });
+      throw new Error(`Failed to initiate payment: ${paymentError.message}`);
+    }
+  }
+
   static async _generateOrderNumber(client) {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude ambiguous characters like O, 0, I, 1
     let attempts = 0;

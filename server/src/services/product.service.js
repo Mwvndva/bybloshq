@@ -61,7 +61,7 @@ class ProductService {
 
         const productData = {
             name: name.trim(),
-            price: parseFloat(price),
+            price: Number.parseFloat(price),
             description: description.trim(),
             image_url: imageData,
             images: data.images ? JSON.stringify(data.images) : '[]',
@@ -129,7 +129,7 @@ class ProductService {
 
             const updateFields = {};
             if (name !== undefined) updateFields.name = name;
-            if (price !== undefined) updateFields.price = parseFloat(price);
+            if (price !== undefined) updateFields.price = Number.parseFloat(price);
             if (description !== undefined) updateFields.description = description;
             if (image_url !== undefined) updateFields.image_url = image_url;
             if (images !== undefined) {

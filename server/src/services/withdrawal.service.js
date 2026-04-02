@@ -135,7 +135,7 @@ class WithdrawalService {
 
             let deductionAmount = validatedAmount;
 
-            const currentBalance = parseFloat(entity.balance || 0);
+            const currentBalance = Number.parseFloat(entity.balance || 0);
             if (currentBalance < deductionAmount) {
                 throw new Error(
                     `Insufficient balance. Available: KES ${currentBalance.toLocaleString()}, ` +
@@ -303,7 +303,7 @@ class WithdrawalService {
                 };
 
                 // Note: amount and phone are already in the request row
-                this._callPaydAndUpdate(request, entity, parseFloat(request.amount), request.mpesa_number)
+                this._callPaydAndUpdate(request, entity, Number.parseFloat(request.amount), request.mpesa_number)
                     .catch(err => logger.error(`[WithdrawalService] Retry failed for request ${request.id}:`, err));
             }
         } catch (error) {
@@ -419,7 +419,7 @@ class WithdrawalService {
 
         return {
             rows: dataResult.rows,
-            total: parseInt(countResult.rows[0].total, 10),
+            total: Number.parseInt(countResult.rows[0].total, 10),
         };
     }
 

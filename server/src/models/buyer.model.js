@@ -143,7 +143,6 @@ class Buyer {
       latitude: 'latitude',
       longitude: 'longitude',
       fullAddress: 'full_address',
-      isVerified: 'is_verified',
       isVerified: 'is_verified'
       // Add other fields as needed
     };
