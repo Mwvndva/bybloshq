@@ -32,16 +32,19 @@ dotenv.config({ path: envPath });
 const { Pool } = pg;
 
 async function run() {
-    // Task 3: Fallback Logic
-    if (!process.env.DATABASE_URL) {
-        // Attempt to construct from components
+    console.log(`[${new Date().toISOString()}] [DEBUG] Initial DATABASE_URL: ${process.env.DATABASE_URL ? (process.env.DATABASE_URL.substring(0, 15) + '...') : 'undefined'}`);
+
+    // Task 3: Robust Fallback Logic
+    // If DATABASE_URL is missing, empty, or literally "undefined", try constructing from parts
+    if (!process.env.DATABASE_URL || process.env.DATABASE_URL === 'undefined' || process.env.DATABASE_URL === 'null' || process.env.DATABASE_URL.trim() === '') {
         if (process.env.DB_USER && process.env.DB_PASSWORD && process.env.DB_NAME) {
             const host = process.env.DB_HOST || 'localhost';
             const port = process.env.DB_PORT || 5432;
             process.env.DATABASE_URL = `postgres://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${host}:${port}/${process.env.DB_NAME}`;
-            console.log(`[${new Date().toISOString()}] [INFO] Constructed DATABASE_URL from individual variables.`);
+            console.log(`[${new Date().toISOString()}] [INFO] Constructed DATABASE_URL from components: postgres://${process.env.DB_USER}:****@${host}:${port}/${process.env.DB_NAME}`);
         }
     }
+
 
     // 1. Environment Check
     if (!process.env.DATABASE_URL) {
