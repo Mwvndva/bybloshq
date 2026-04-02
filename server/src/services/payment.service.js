@@ -883,10 +883,31 @@ export class PaymentService {
         if (payment.status === PaymentStatus.PENDING && payment.provider_reference) {
             try {
                 const paydStatus = await this.checkTransactionStatus(payment.provider_reference);
-                if (paydStatus.status === 'success' || paydStatus.status === 'failed') {
-                    // This will be caught by the next webhook or we could manually sync here
-                    // For now, we'll just return the updated status if it was success/failed
-                    payment.status = paydStatus.status;
+                const normalizedStatus = paydStatus.status; // already lowercased in checkTransactionStatus
+
+                if (['success', 'completed', 'processed', 'paid'].includes(normalizedStatus)) {
+                    payment.status = PaymentStatus.COMPLETED;
+                    // Persist status change immediately
+                    await pool.query('UPDATE payments SET status = $1, updated_at = NOW() WHERE id = $2', [PaymentStatus.COMPLETED, payment.id]);
+                    logger.info(`[PaymentService] In-poll sync: Payment ${payment.id} verified as ${normalizedStatus} -> COMPLETED (Persisted)`);
+
+                    // If this is a pending order, trigger completion now instead of waiting for webhook
+                    const paymentMeta = payment.metadata || {};
+                    if (paymentMeta.order_id || paymentMeta.product_id) {
+                        try {
+                            await OrderService.completeOrder({
+                                ...payment,
+                                status: PaymentStatus.COMPLETED
+                            });
+                            logger.info('[PaymentService] In-poll fulfillment triggered successfully', { payment_id: payment.id });
+                        } catch (fulfillErr) {
+                            logger.warn('[PaymentService] In-poll fulfillment deferred (already processed or failed)', fulfillErr.message);
+                        }
+                    }
+                } else if (normalizedStatus === 'failed' || normalizedStatus === 'fail' || normalizedStatus === 'declined') {
+                    payment.status = 'failed';
+                    await pool.query('UPDATE payments SET status = $1, updated_at = NOW() WHERE id = $2', ['failed', payment.id]);
+                    logger.info(`[PaymentService] In-poll sync: Payment ${payment.id} verified as ${normalizedStatus} -> FAILED (Persisted)`);
                 }
             } catch (err) {
                 logger.warn('[PaymentService] Status sync during check failed', err.message);
@@ -957,10 +978,16 @@ export class PaymentService {
                 amount: data.amount
             });
 
+            let status = (details.status || data.status || 'pending').toLowerCase();
+
+            // Normalize status strings from Payd
+            if (status === 'processed' || status === 'paid') status = 'completed';
+            if (status === 'fail') status = 'failed';
+
             return {
                 success: true,
                 transaction_id: transactionId,
-                status: (details.status || data.status || 'pending').toLowerCase(),
+                status,
                 amount: parseFloat(data.amount || 0),
                 phone_number: details.payer || details.recipient,
                 narration: details.reason,
