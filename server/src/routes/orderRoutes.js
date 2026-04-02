@@ -10,7 +10,8 @@ import {
   sellerCancelOrder,
   downloadDigitalProduct,
   createSellerClientOrder,
-  locationPreview
+  locationPreview,
+  getByReference
 } from '../controllers/order.controller.js';
 import { protect } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
@@ -40,6 +41,14 @@ router.post(
  *     summary: Get orders for the authenticated user
  */
 router.get('/user', getUserOrders);
+
+/**
+ * @swagger
+ * /api/orders/reference/{reference}:
+ *   get:
+ *     summary: Get order by order number or payment reference
+ */
+router.get('/reference/:reference', getByReference);
 
 /**
  * @swagger

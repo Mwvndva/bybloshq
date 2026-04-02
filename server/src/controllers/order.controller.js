@@ -191,6 +191,59 @@ export const cancelOrder = async (req, res) => {
     }
 };
 
+export const getByReference = async (req, res) => {
+    try {
+        const { reference } = req.params;
+        const order = await Order.findByReference(reference);
+
+        if (!order) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Order not found for this reference'
+            });
+        }
+
+        // Generate auto-login token if order is successful
+        let autoLoginToken = null;
+        if (['success', 'completed'].includes((order.paymentStatus || '').toLowerCase())) {
+            try {
+                const { rows: buyerRows } = await pool.query(
+                    'SELECT user_id FROM buyers WHERE id = $1',
+                    [order.buyerId]
+                );
+                const userId = buyerRows[0]?.user_id;
+
+                if (userId) {
+                    const { signAutoLoginToken } = await import('../utils/jwt.js');
+                    autoLoginToken = signAutoLoginToken(userId, 'buyer', 'payment_success');
+                }
+            } catch (err) {
+                logger.warn('[OrderController] Failed to generate autoLoginToken for reference-based check', err.message);
+            }
+        }
+
+        // Return a structure compatible with CheckoutPage.tsx
+        res.status(200).json({
+            success: true,
+            status: 'success',
+            data: {
+                id: order.id,
+                orderNumber: order.orderNumber,
+                status: order.status.toLowerCase(),
+                message: `Order status is ${order.status}`,
+                paymentStatus: order.paymentStatus,
+                autoLoginToken // Added for CheckoutPage redirection
+            }
+        });
+    } catch (error) {
+        logger.error('Error fetching order by reference:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to fetch order by reference'
+        });
+    }
+};
+
 export const sellerCancelOrder = async (req, res) => {
     try {
         const { id } = req.params;
