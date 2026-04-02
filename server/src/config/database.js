@@ -26,7 +26,9 @@ const dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   // SSL is required in production and for Render/Heroku Postgres
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  // Allow disabling it via DB_SSL environment variable for internal Docker networks
+  ssl: process.env.DB_SSL === 'false' ? false : (process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false),
+
   connectionTimeoutMillis: 10000,
   idleTimeoutMillis: 30000,
   max: process.env.NODE_ENV === 'production' ? 100 : 25,
