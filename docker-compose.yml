@@ -72,8 +72,8 @@ services:
     # ports:
     #   - "3002:3002"
     volumes:
-
       - ./server/uploads:/app/uploads
+      - ./server/baileys_auth_info:/app/baileys_auth_info
     networks:
       - byblos-network
 
