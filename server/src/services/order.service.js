@@ -4,6 +4,8 @@ import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';
 import { OrderStatus, ProductType } from '../constants/enums.js';
 import Order from '../models/order.model.js';
+import { Buyer } from '../models/buyer.model.js';
+import { Seller } from '../models/seller.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
 import ReferralService from './referral.service.js';

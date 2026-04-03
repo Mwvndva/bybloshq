@@ -8,6 +8,8 @@ import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
 import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
+import { Buyer } from '../models/buyer.model.js';
+import { Seller } from '../models/seller.model.js';
 
 export class PaymentService {
     constructor() {
