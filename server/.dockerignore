@@ -15,11 +15,11 @@ README.md
 Dockerfile
 docker-compose.yml
 # Exclude frontend code to reduce build context
-src/
+# Note: src/ is REQUIRED for the backend, so we don't ignore it here.
+# Only ignore frontend-specific root files if we are in the server context.
 public/
 index.html
 vite.config.js
 tailwind.config.js
 postcss.config.js
-package-lock.json
-package.json
+# Do NOT ignore package.json or package-lock.json here as they are needed for npm ci
