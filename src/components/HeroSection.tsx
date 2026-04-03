@@ -10,12 +10,13 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
     <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden bg-black">
       {/* Background with deep blur and subtle movement */}
       <div
-        className="absolute inset-0 z-0 opacity-40 scale-110"
+        className="absolute inset-0 z-0 opacity-40 scale-110 bg-black"
         style={{
           backgroundImage: 'url(/herowallpaper/blackboredapewallpaper.png)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           filter: 'blur(40px)',
+          backgroundColor: '#000'
         }}
       />
 
