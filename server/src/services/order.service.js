@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';
@@ -1391,7 +1392,8 @@ class OrderService {
     while (attempts < maxAttempts) {
       let suffix = '';
       for (let i = 0; i < 6; i++) {
-        suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+        // Use crypto.randomInt for secure randomness (SonarQube compliance)
+        suffix += chars.charAt(crypto.randomInt(0, chars.length));
       }
       const orderNumber = `BYB-${suffix}`;
 

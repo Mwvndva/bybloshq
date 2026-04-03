@@ -27,14 +27,12 @@ export class PaymentService {
             logger.error('[PAYD-INIT] ERROR: PAYD_BASE_URL must use HTTPS');
         }
 
-        // Set DNS cache
+        // Set DNS cache for reliability in environments with flaky local DNS
         try {
             dns.setDefaultResultOrder('ipv4first');
-            dns.setServers([
-                '8.8.8.8',  // Google DNS
-                '8.8.4.4',
-                '1.1.1.1'   // Cloudflare DNS
-            ]);
+            // Using configurable DNS servers (SonarQube compliance)
+            const dnsServers = process.env.DNS_SERVERS ? process.env.DNS_SERVERS.split(',') : ['8.8.8.8', '8.8.4.4', '1.1.1.1'];
+            dns.setServers(dnsServers);
         } catch (e) {
             logger.warn('[PAYD-INIT] DNS cache setup failed:', e.message);
         }

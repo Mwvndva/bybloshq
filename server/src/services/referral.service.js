@@ -1,6 +1,8 @@
 // @ts-nocheck
 'use strict';
 
+import crypto from 'crypto';
+
 // @ts-ignore
 import { pool } from '../config/database.js';
 import Fees from '../config/fees.js';
@@ -55,7 +57,8 @@ class ReferralService {
         while (attempts < MAX_ATTEMPTS) {
             let suffix = '';
             for (let i = 0; i < 6; i++) {
-                suffix += CHARS.charAt(Math.floor(Math.random() * CHARS.length));
+                // Use crypto.randomInt for secure randomness (SonarQube compliance)
+                suffix += CHARS.charAt(crypto.randomInt(0, CHARS.length));
             }
             code = `BY${suffix}`;
 

@@ -1,5 +1,6 @@
 import multer from 'multer';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
@@ -30,7 +31,8 @@ const storage = multer.diskStorage({
     },
     filename: (req, file, cb) => {
         // Generate unique filename: timestamp-random-originalName
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        // Using crypto.randomBytes for secure randomness (SonarQube compliance)
+        const uniqueSuffix = Date.now() + '-' + crypto.randomBytes(4).toString('hex');
         cb(null, uniqueSuffix + path.extname(file.originalname));
     }
 });
