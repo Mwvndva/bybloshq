@@ -199,7 +199,7 @@ export const adminApi = {
       }
 
       const buyers = buyersData.map((buyer: any) => ({
-        id: String(buyer.id || `buyer-${self.crypto.randomUUID()}`),
+        id: String(buyer.id || `buyer-${globalThis.crypto.randomUUID()}`),
         name: String(buyer.name || buyer.full_name || 'Unnamed Buyer'),
         email: String(buyer.email || ''),
         phone: buyer.phone ? String(buyer.phone) : undefined,
@@ -366,7 +366,7 @@ export const adminApi = {
       }
 
       const requests = withdrawalRequests.map((request: any) => ({
-        id: String(request.id || `withdrawal-${self.crypto.randomUUID()}`),
+        id: String(request.id || `withdrawal-${globalThis.crypto.randomUUID()}`),
         amount: Number(request.amount || 0),
         mpesaNumber: String(request.mpesa_number || request.mpesaNumber || ''),
         mpesaName: String(request.mpesa_name || request.mpesaName || ''),

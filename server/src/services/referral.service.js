@@ -1,7 +1,7 @@
 // @ts-nocheck
 'use strict';
 
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 
 // @ts-ignore
 import { pool } from '../config/database.js';

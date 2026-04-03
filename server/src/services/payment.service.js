@@ -1,8 +1,8 @@
 import axios from 'axios';
 import https from 'https';
-import fs from 'fs';
-import crypto from 'crypto';
-import dns from 'dns';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
+import dns from 'node:dns';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';

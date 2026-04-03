@@ -52,7 +52,7 @@ class Order {
   static async insertItems(client, orderId, items) {
     // Fetch product details for type info - only for items that don't already have them
     const itemsMissingDetails = items.filter(item => !item.productType && item.isDigital === undefined);
-    const productIds = itemsMissingDetails.map(item => parseInt(item.productId, 10));
+    const productIds = itemsMissingDetails.map(item => Number.Number.parseInt(item.productId, 10));
 
     let productsMap = new Map();
     if (productIds.length > 0) {
@@ -68,7 +68,7 @@ class Order {
 
     const itemValues = items.map(item => {
       const subtotal = item.subtotal || (item.price * item.quantity);
-      const productId = parseInt(item.productId, 10);
+      const productId = Number.Number.parseInt(item.productId, 10);
       const productDetails = productsMap.get(productId);
 
       return [
@@ -76,7 +76,7 @@ class Order {
         productId,
         item.name || `Product ${item.productId}`,
         parseFloat(item.price).toFixed(2),
-        parseInt(item.quantity, 10),
+        Number.Number.parseInt(item.quantity, 10),
         parseFloat(subtotal).toFixed(2),
         JSON.stringify({
           ...(item.metadata || {}),
@@ -366,7 +366,7 @@ class Order {
     return {
       data: ordersResult.rows,
       pagination: {
-        total: parseInt(countResult.rows[0].count, 10),
+        total: Number.parseInt(countResult.rows[0].count, 10),
         page,
         limit,
         pages: Math.ceil(countResult.rows[0].count / limit)
@@ -454,7 +454,7 @@ class Order {
     return {
       data: ordersResult.rows,
       pagination: {
-        total: parseInt(countResult.rows[0].count, 10),
+        total: Number.parseInt(countResult.rows[0].count, 10),
         page,
         limit,
         pages: Math.ceil(countResult.rows[0].count / limit)
