@@ -723,7 +723,7 @@ class OrderService {
       if (shouldManageTransaction) await client.query('COMMIT');
 
       // Trigger side effects (non-blocking)
-      this._handleOrderCompletionSideEffects(updatedOrder, items, payment, callbackData).catch(err =>
+      this._handleOrderCompletionSideEffects(updatedOrder, items, payment).catch(err =>
         logger.error('[ORDER-SIDE-EFFECTS] Error in completion side effects:', err)
       );
 
@@ -1245,7 +1245,7 @@ class OrderService {
       longitude
     };
   }
-  static async _handleOrderCompletionSideEffects(order, items, payment, callbackData) {
+  static async _handleOrderCompletionSideEffects(order, items, payment) {
     const orderId = order.id;
 
     // 1. Referral Activation
