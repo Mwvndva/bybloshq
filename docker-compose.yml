@@ -73,7 +73,7 @@ services:
     #   - "3002:3002"
     volumes:
       - ./server/uploads:/app/uploads
-      - ./server/baileys_auth_info:/app/baileys_auth_info
+      - baileys_auth:/app/baileys_auth_info
     networks:
       - byblos-network
 
@@ -115,6 +115,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  baileys_auth:
 
 
 networks:
