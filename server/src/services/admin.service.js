@@ -204,6 +204,14 @@ class AdminService {
 
     const productCountRes = await pool.query('SELECT COUNT(*) as total FROM products WHERE seller_id = $1', [id]);
 
+    // Wishlist Count (All products belonging to this seller)
+    const wishlistCountRes = await pool.query(`
+            SELECT COUNT(*) as total 
+            FROM wishlists w
+            JOIN products p ON w.product_id = p.id
+            WHERE p.seller_id = $1
+        `, [id]);
+
     const recentOrdersRes = await pool.query(`
             SELECT id, order_number, buyer_name, total_amount, status, payment_status, created_at
             FROM product_orders WHERE seller_id = $1 ORDER BY created_at DESC LIMIT 5
@@ -214,14 +222,15 @@ class AdminService {
     return {
       ...seller,
       metrics: {
-        totalOrders: Number.parseInt(metrics.total_orders),
-        totalSales: Number.parseFloat(metrics.total_sales),
-        totalCommission: Number.parseFloat(metrics.total_commission),
-        netSales: Number.parseFloat(metrics.net_sales),
-        pendingOrders: Number.parseInt(metrics.pending_orders),
-        completedOrders: Number.parseInt(metrics.completed_orders),
-        cancelledOrders: Number.parseInt(metrics.cancelled_orders),
-        totalProducts: Number.parseInt(productCountRes.rows[0].total)
+        totalOrders: parseInt(metrics.total_orders, 10),
+        totalSales: parseFloat(metrics.total_sales),
+        totalCommission: parseFloat(metrics.total_commission),
+        netSales: parseFloat(metrics.net_sales),
+        pendingOrders: parseInt(metrics.pending_orders, 10),
+        completedOrders: parseInt(metrics.completed_orders, 10),
+        cancelledOrders: parseInt(metrics.cancelled_orders, 10),
+        totalProducts: parseInt(productCountRes.rows[0].total, 10),
+        wishlistCount: parseInt(wishlistCountRes.rows[0].total, 10)
       },
       recentOrders: recentOrdersRes.rows
     };
