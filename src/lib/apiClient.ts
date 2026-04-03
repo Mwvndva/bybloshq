@@ -137,6 +137,14 @@ const handleUnauthorized = (error: any) => {
 
         const redirectPath = getLoginRedirectPath(url);
 
+        const isPublicRoute = currentPath === '/' ||
+            ['/login', '/register', '/forgot-password', '/reset-password', '/marketing'].some(p => currentPath.includes(p));
+
+        if (isPublicRoute) {
+            console.log(`[Auth] 401 on public route ${currentPath} - ignoring redirect`);
+            return;
+        }
+
         if (!currentPath.includes('/login') && !currentPath.includes('/register')) {
             sessionStorage.setItem('redirectAfterLogin', currentPath);
         }
