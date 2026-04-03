@@ -1,6 +1,7 @@
 // CRUD only
 import { pool } from '../config/database.js';
 import { toCamelCase } from '../utils/caseUtils.js';
+import logger from '../utils/logger.js';
 
 const SALT_ROUNDS = 10;
 
@@ -56,7 +57,7 @@ export const findSellerByUserId = async (userId) => {
 };
 
 export const findSellerByShopName = async (shopName) => {
-  console.log('Executing findSellerByShopName query for:', shopName);
+  logger.debug('Executing findSellerByShopName query', { shopName: shopName?.replace(/[\n\r]/g, '') });
 
   const queryText = `
     SELECT 
@@ -84,16 +85,13 @@ export const findSellerByShopName = async (shopName) => {
     WHERE slug = $1 OR shop_name = $1
   `;
 
-  console.log('SQL Query:', queryText);
+  // SQL Query log removed for security/cleanliness
 
   const result = await query(queryText, [shopName.toLowerCase()]);
 
-  console.log('Query result:', {
+  logger.debug('Query result details', {
     rowCount: result.rowCount,
-    hasBannerImage: result.rows[0] ? !!result.rows[0].banner_image : false,
-    bannerImageLength: result.rows[0] && result.rows[0].banner_image
-      ? result.rows[0].banner_image.length
-      : 0
+    hasBannerImage: !!result.rows[0]?.banner_image
   });
 
   return result.rows[0];
@@ -138,17 +136,13 @@ export const findSellerById = async (id) => {
 };
 
 export const updateSeller = async (id, updates) => {
-  console.log('Updating seller:', {
+  logger.info('Updating seller record', {
     id,
-    updates: {
-      ...updates,
-      email: updates.email ? '[REDACTED]' : 'missing',
-      whatsappNumber: updates.whatsappNumber ? '[REDACTED]' : 'missing'
-    }
+    updatedFields: Object.keys(updates || {}).filter(k => k !== 'password')
   });
 
   if (!id) {
-    console.error('No ID provided for update');
+    logger.error('No ID provided for updateSeller');
     throw new Error('Seller ID is required for update');
   }
 
@@ -258,7 +252,7 @@ export const updateSeller = async (id, updates) => {
   }
 
   if (updatesList.length === 0) {
-    console.log('No valid fields to update');
+    logger.warn('No valid fields to updateSeller', { id });
     throw new Error('No valid fields to update');
   }
 
@@ -293,24 +287,16 @@ export const updateSeller = async (id, updates) => {
     const result = await query(queryText, values);
 
     if (!result.rows || result.rows.length === 0) {
-      console.error('No rows returned from update query');
+      logger.warn('No rows returned from updateSeller', { id });
       throw new Error('No seller found with the given ID');
     }
 
-    console.log('Successfully updated seller:', {
-      id: result.rows[0].id,
-      shopName: result.rows[0].shop_name,
-      email: result.rows[0].email ? '[REDACTED]' : 'missing',
-      whatsappNumber: result.rows[0].whatsapp_number ? '[REDACTED]' : 'missing'
-    });
+    logger.info('Successfully updated seller', { id: result.rows[0].id });
     return result.rows[0];
   } catch (error) {
-    console.error('Database error in updateSeller:', {
+    logger.error('Database error in updateSeller', {
       message: error.message,
-      code: error.code,
-      detail: error.detail,
-      query: queryText,
-      values
+      code: error.code
     });
     throw error; // Re-throw to be caught by the controller
   }

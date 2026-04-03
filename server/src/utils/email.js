@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
 import ejs from 'ejs';
+import logger from './logger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -26,7 +27,7 @@ const createTransporter = () => {
   if (missingFields.length > 0) {
     const errorMsg = `Missing required email configuration fields: ${missingFields.join(', ')}. ` +
       `Checked both EMAIL_* and SMTP_* environment variables.`;
-    console.error('[Email] Configuration Error:', errorMsg);
+    logger.error('Email Configuration Error', { missingFields });
     throw new Error(errorMsg);
   }
 
@@ -34,7 +35,7 @@ const createTransporter = () => {
   const port = parseInt(config.port, 10);
   const secure = process.env.EMAIL_SECURE === 'true' || port === 465;
 
-  console.log('[Email] Creating transporter with config:', {
+  logger.info('Creating email transporter', {
     host: config.host,
     port,
     secure,
@@ -91,18 +92,16 @@ export const sendEmail = async (options, retryCount = 0) => {
     try {
       transporter = createTransporter();
     } catch (error) {
-      console.error('Failed to create email transporter:', error);
+      logger.error('Failed to create email transporter', { error: error.message });
       throw new Error('Email service is not properly configured');
     }
   }
 
   try {
-    console.log(`[Email] Preparing to send email (attempt ${retryCount + 1}/${MAX_RETRIES + 1}):`, {
+    logger.info('Preparing to send email', {
+      attempt: retryCount + 1,
       to: options.to,
-      subject: options.subject,
-      hasHtml: !!options.html,
-      hasText: !!options.text,
-      attachmentCount: options.attachments ? options.attachments.length : 0
+      subject: options.subject
     });
 
     const fromName = process.env.EMAIL_FROM_NAME || process.env.APP_NAME || 'Byblos';
@@ -126,33 +125,31 @@ export const sendEmail = async (options, retryCount = 0) => {
     // Verify connection before sending
     try {
       if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true') {
-        console.log('[Email] Verifying SMTP connection...');
+        logger.debug('Verifying SMTP connection...');
       }
       await transporter.verify();
     } catch (verifyError) {
-      console.error('SMTP connection verification failed:', {
+      logger.error('SMTP connection verification failed', {
         message: verifyError.message,
-        code: verifyError.code,
-        command: verifyError.command
+        code: verifyError.code
       });
       throw new Error(`SMTP connection failed: ${verifyError.message}`);
     }
 
     try {
       const info = await transporter.sendMail(mailOptions);
-      console.log(`[Email] Successfully sent email to ${options.to}:`, info.messageId);
+      logger.info('Successfully sent email', { to: options.to, messageId: info.messageId });
       return info;
     } catch (sendError) {
-      console.error(`[Email] Error sending email (attempt ${retryCount + 1}):`, {
+      logger.error('Error sending email', {
+        attempt: retryCount + 1,
         error: sendError.message,
-        code: sendError.code,
-        command: sendError.command,
-        response: sendError.response
+        code: sendError.code
       });
 
       // If we have retries left, wait and try again
       if (retryCount < MAX_RETRIES) {
-        console.log(`[Email] Retrying in ${RETRY_DELAY}ms...`);
+        logger.info('Retrying email delivery', { delay: RETRY_DELAY, nextAttempt: retryCount + 2 });
         await delay(RETRY_DELAY);
         return sendEmail(options, retryCount + 1);
       }
@@ -161,9 +158,8 @@ export const sendEmail = async (options, retryCount = 0) => {
       throw new Error(`Failed to send email after ${MAX_RETRIES + 1} attempts: ${sendError.message}`);
     }
   } catch (error) {
-    console.error('[Email] Fatal error in sendEmail:', {
+    logger.error('Fatal error in sendEmail', {
       message: error.message,
-      stack: error.stack,
       retryCount,
       to: options.to,
       subject: options.subject
@@ -171,17 +167,17 @@ export const sendEmail = async (options, retryCount = 0) => {
 
     // If this is a connection error, we might want to recreate the transporter
     if (error.code === 'ECONNECTION' || error.code === 'ETIMEDOUT' || error.code === 'ESOCKET') {
-      console.log('[Email] Connection error detected, recreating transporter...');
+      logger.warn('Connection error detected, recreating transporter...');
       try {
         transporter = createTransporter();
         // If we have retries left, try again with the new transporter
         if (retryCount < MAX_RETRIES) {
-          console.log(`[Email] Retrying with new transporter in ${RETRY_DELAY}ms...`);
+          logger.info('Retrying with new transporter', { delay: RETRY_DELAY });
           await delay(RETRY_DELAY);
           return sendEmail(options, retryCount + 1);
         }
       } catch (transporterError) {
-        console.error('[Email] Failed to recreate transporter:', transporterError);
+        logger.error('Failed to recreate transporter', { error: transporterError.message });
       }
     }
 
@@ -229,10 +225,10 @@ export const sendPasswordResetEmail = async (email, token, userType = 'seller') 
       text: `You requested a password reset for your account. Please click on the following link to reset your password: ${resetUrl}`,
     });
 
-    console.log('Password reset email sent successfully to:', email);
+    logger.info('Password reset email sent successfully', { email });
     return true;
   } catch (error) {
-    console.error('Error sending password reset email:', error);
+    logger.error('Error sending password reset email', { email, error: error.message });
     throw new Error('Failed to send password reset email');
   }
 };
