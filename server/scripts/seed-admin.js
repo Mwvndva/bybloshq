@@ -11,12 +11,17 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 async function seedAdmin() {
-    const email = process.env.ADMIN_EMAIL || 'admin@bybloshq.space';
+    const email = process.env.ADMIN_EMAIL;
     const password = process.env.ADMIN_SEED_PASSWORD;
+
+    if (!email) {
+        console.error('❌ ERROR: ADMIN_EMAIL environment variable is required');
+        process.exit(1);
+    }
 
     if (!password) {
         console.error('❌ ERROR: ADMIN_SEED_PASSWORD environment variable is required');
-        console.log('Usage: ADMIN_SEED_PASSWORD=your_secure_password node server/scripts/seed-admin.js');
+        console.log('Usage: ADMIN_SEED_PASSWORD=your_secure_password ADMIN_EMAIL=admin@example.com node server/scripts/seed-admin.js');
         process.exit(1);
     }
 

@@ -16,11 +16,17 @@ import bcrypt from 'bcrypt';
 import { pool } from '../src/config/database.js';
 
 // ── Configuration ─────────────────────────────────────────────────────────────
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@bybloshq.space';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+
+if (!ADMIN_EMAIL) {
+    console.error('❌ ERROR: ADMIN_EMAIL environment variable is required');
+    process.exit(1);
+}
+
 if (!ADMIN_PASSWORD) {
     console.error('❌ ERROR: ADMIN_PASSWORD environment variable is required');
-    console.error('   Usage: ADMIN_PASSWORD=your_secure_password node scripts/reset-admin-password.js');
+    console.error('   Usage: ADMIN_PASSWORD=your_secure_password ADMIN_EMAIL=admin@example.com node scripts/reset-admin-password.js');
     process.exit(1);
 }
 const SALT_ROUNDS = 12;
@@ -94,7 +100,7 @@ async function resetAdminPassword() {
         console.log('');
         console.log('🎉 Done! You can now log in at /admin/login with:');
         console.log(`   Email:    ${ADMIN_EMAIL}`);
-        console.log(`   Password: ${ADMIN_PASSWORD}`);
+        console.log('   Password: [REDACTED]');
 
     } catch (error) {
         console.error('');
