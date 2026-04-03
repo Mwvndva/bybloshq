@@ -203,12 +203,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         return publicPaths.some(path => pathname.includes(path));
     };
 
-    // ============================================================================
-    // AUTH CHECK ON MOUNT
-    // ============================================================================
-
     // Using a ref to track currently running checkAuth to prevent race conditions
     const authCheckInProgress = useRef(false);
+    // Using a ref to ensure we only run the initial auth check once
+    const initialized = useRef(false);
 
     const checkAuth = useCallback(async (force = false) => {
         // If already checking, don't start another one unless forced
@@ -262,7 +260,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             }
 
             setUser({
-                role: currentRole,
+                role: currentRole as any,
                 profile: profileData,
                 isAuthenticated: true
             });
@@ -287,7 +285,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     }, [user]); // Add user to deps to allow the optimization check
 
     useEffect(() => {
-        checkAuth();
+        if (!initialized.current) {
+            checkAuth();
+            initialized.current = true;
+        }
     }, [checkAuth]);
 
     // ============================================================================
