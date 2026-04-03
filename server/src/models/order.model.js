@@ -68,7 +68,7 @@ class Order {
 
     const itemValues = items.map(item => {
       const subtotal = item.subtotal || (item.price * item.quantity);
-      const productId = Number.Number.parseInt(item.productId, 10);
+      const productId = Number.parseInt(item.productId, 10);
       const productDetails = productsMap.get(productId);
 
       return [
@@ -76,7 +76,7 @@ class Order {
         productId,
         item.name || `Product ${item.productId}`,
         parseFloat(item.price).toFixed(2),
-        Number.Number.parseInt(item.quantity, 10),
+        Number.parseInt(item.quantity, 10),
         parseFloat(subtotal).toFixed(2),
         JSON.stringify({
           ...(item.metadata || {}),
