@@ -42,8 +42,8 @@ COPY . .
 # Expose port
 EXPOSE 3002
 
-# Create uploads directory and ensure node user can write to it
-RUN mkdir -p uploads && chown -R node:node /app
+# Create necessary directories and ensure node user can write to them
+RUN mkdir -p uploads baileys_auth_info && chown -R node:node /app
 
 # Switch to non-root user
 USER node
