@@ -100,7 +100,6 @@ export function BaseDashboardLayout({
                             'fixed lg:sticky top-0 left-0 h-screen w-64 bg-black/80 backdrop-blur-md border-r border-white/10 z-50 transition-transform duration-300 ease-in-out',
                             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                         )}
-                        role="navigation"
                         aria-label={`${role} sidebar navigation`}
                     >
                         {/* Sidebar Header */}

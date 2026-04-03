@@ -1,9 +1,9 @@
 import multer from 'multer';
-import path from 'path';
-import crypto from 'crypto';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import fs from 'fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { fileURLToPath } from 'node:url';
+import { dirname } from 'node:path';
+import fs from 'node:fs';
 import { promisify } from 'util';
 
 const __filename = fileURLToPath(import.meta.url);

@@ -912,12 +912,12 @@ const NewAdminDashboard = () => {
                         <>
                           {selectedSeller.banner_image && (
                             <div className="w-full h-32 md:h-48 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-white/10 mb-8 relative group">
-                              <img src={selectedSeller.banner_image} alt="Shop Banner" className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
+                              <img src={selectedSeller.banner_image} alt={`${selectedSeller.shop_name || selectedSeller.name} branding`} className="w-full h-full object-cover opacity-40 group-hover:opacity-60 transition-opacity duration-700" />
                               <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A] via-transparent to-transparent" />
                               <div className="absolute bottom-4 left-6 flex items-end gap-5">
                                 {selectedSeller.avatar_url && (
                                   <div className="w-16 h-16 md:w-24 md:h-24 rounded-2xl md:rounded-[1.5rem] border-2 border-white/10 overflow-hidden shadow-2xl bg-[#0A0A0A]">
-                                    <img src={selectedSeller.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                    <img src={selectedSeller.avatar_url} alt={`${selectedSeller.shop_name || selectedSeller.name} profile`} className="w-full h-full object-cover" />
                                   </div>
                                 )}
                                 <div className="mb-2">

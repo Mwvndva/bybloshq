@@ -1,6 +1,3 @@
-import { Pool } from 'pg';
-import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 

@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import crypto from 'node:crypto';
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';

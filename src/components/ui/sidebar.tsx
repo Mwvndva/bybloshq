@@ -652,7 +652,7 @@ const SidebarMenuSkeleton = React.forwardRef<
   const width = React.useMemo(() => {
     // Using crypto.getRandomValues for secure randomness (SonarQube compliance)
     const array = new Uint32Array(1);
-    self.crypto.getRandomValues(array);
+    globalThis.crypto.getRandomValues(array);
     const random = array[0] / (0xffffffff + 1);
     return `${Math.floor(random * 40) + 50}%`
   }, [])
