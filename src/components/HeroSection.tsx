@@ -1,6 +1,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 interface HeroSectionProps {
   onExploreClick?: () => void;
 }
@@ -43,9 +44,10 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
           <div className="flex flex-col sm:flex-row items-center gap-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
             <Link to="/buyer/login">
               <Button
-                className="bg-white text-black hover:bg-yellow-300 rounded-full px-12 py-7 text-lg font-medium transition-all duration-500 shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:shadow-yellow-300/20"
+                className="bg-white/10 backdrop-blur-md text-white hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] group"
               >
-                Explore Brands
+                View Businesses
+                <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </div>
