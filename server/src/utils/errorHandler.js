@@ -87,7 +87,8 @@ export const handleJWTExpiredError = () => {
 // Handle PostgreSQL Unique Violation (23505)
 export const handlePostgresUniqueError = (err) => {
   const detail = err.detail || '';
-  const match = detail.match(/\((.*?)\)=\((.*?)\)/);
+  // C-1: Use a safer regex to prevent ReDoS by explicitly excluding parentheses
+  const match = detail.match(/\(([^)]+)\)=\(([^)]+)\)/);
   const message = match
     ? `Duplicate value for ${match[1]}: ${match[2]}. Please use another value!`
     : 'Duplicate field value. Please use another value!';

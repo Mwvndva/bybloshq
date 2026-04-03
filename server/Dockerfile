@@ -42,8 +42,11 @@ COPY . .
 # Expose port
 EXPOSE 3002
 
-# Create uploads directory
-RUN mkdir -p uploads
+# Create uploads directory and ensure node user can write to it
+RUN mkdir -p uploads && chown -R node:node /app
+
+# Switch to non-root user
+USER node
 
 # Start the application
 CMD ["npm", "start"]

@@ -122,6 +122,16 @@ export function BuyerRegister() {
       return;
     }
 
+    if (!/^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      setErrors(prev => ({ ...prev, email: 'Please enter a valid email address' }));
+      toast({
+        title: "Validation Error",
+        description: "Please enter a valid email address",
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!validatePasswords(formData.password, formData.confirmPassword)) {
       return;
     }

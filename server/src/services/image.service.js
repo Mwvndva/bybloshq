@@ -44,7 +44,8 @@ class ImageService {
             const imageData = matches[2];
             const buffer = Buffer.from(imageData, 'base64');
 
-            const hash = crypto.createHash('md5').update(imageData).digest('hex').substring(0, 12);
+            // Using SHA-256 for secure hashing (SonarQube compliance)
+            const hash = crypto.createHash('sha256').update(imageData).digest('hex').substring(0, 12);
             const filename = `${prefix}_${Date.now()}_${hash}.${extension}`;
             const filepath = path.join(this.uploadDir, filename);
 

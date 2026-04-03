@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import cron from 'node-cron';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
@@ -14,7 +15,8 @@ export const scheduleCompletionRetry = (options = {}) => {
     const schedule = options.schedule || '*/2 * * * *';
 
     // Stagger startup by 0-60 seconds to prevent thundering herd on multi-instance
-    const jitterMs = Math.floor(Math.random() * 60000);
+    // Using crypto.randomInt for secure randomness (SonarQube compliance)
+    const jitterMs = crypto.randomInt(0, 60000);
 
     setTimeout(() => {
         logger.info(`[COMPLETION-RETRY] Scheduling completion retry cron (${jitterMs}ms jitter applied): ${schedule}`);
