@@ -8,6 +8,7 @@ import Buyer from '../models/buyer.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
 import ReferralService from './referral.service.js';
+import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail } from '../utils/email.js';
 
 class OrderService {
   /**
@@ -1294,7 +1295,17 @@ class OrderService {
       };
 
       const isSellerInitiated = fullOrder.metadata?.seller_initiated === true || fullOrder.metadata?.is_seller_initiated === true;
-      if (isSellerInitiated) return logger.info(`[ORDER] Skipping notifications for seller-initiated order #${fullOrder.order_number}`);
+
+      // Always notify Seller via Email
+      if (sellerData.email) {
+        sendNewOrderNotificationEmail(sellerData.email, {
+          ...fullOrder,
+          seller_name: sellerData.name,
+          items
+        }).catch(e => logger.error('[ORDER] Seller email notification failed:', e));
+      }
+
+      if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
 
       const payload = {
         buyer: buyerData, seller: sellerData,
@@ -1309,6 +1320,14 @@ class OrderService {
       whatsappService.notifyBuyerOrderConfirmation(payload).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
       whatsappService.notifySellerNewOrder({ seller: sellerData, buyer: buyerData, order: payload.order, items })
         .catch(e => logger.error('[ORDER] Seller notification failed:', e));
+
+      // Notify Buyer via Email if not seller-initiated
+      if (buyerData.email) {
+        sendProductOrderConfirmationEmail(buyerData.email, {
+          ...fullOrder,
+          items
+        }).catch(e => logger.error('[ORDER] Buyer email notification failed:', e));
+      }
 
       whatsappService.sendLogisticsNotification(
         { id: fullOrder.id, orderNumber: fullOrder.order_number, totalAmount: fullOrder.total_amount, items, metadata: fullOrder.metadata },

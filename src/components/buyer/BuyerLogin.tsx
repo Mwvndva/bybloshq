@@ -22,6 +22,7 @@ export function BuyerLogin() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
 
   const { toast } = useToast();
   const navigate = useNavigate(); // Kept for Back button
@@ -49,6 +50,7 @@ export function BuyerLogin() {
     }));
     // Clear error when user starts typing
     if (error) setError('');
+    if (infoMessage) setInfoMessage('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,10 +70,18 @@ export function BuyerLogin() {
         formData.password
       );
     } catch (error: any) {
-      // Extract the actual error message from the API response
-      const errorMessage = error?.response?.data?.message || error?.message || 'Invalid email or password. Please check your credentials and try again.';
+      // Extract the actual error message and code from the SDK/API response
+      const apiError = error?.response?.data;
+      const errorMessage = apiError?.message || error?.message || 'Invalid email or password. Please check your credentials and try again.';
+
+      if (apiError?.code === 'PENDING_VERIFICATION') {
+        setInfoMessage(`Your account isn't verified yet. We've sent a new link to ${apiError.email || formData.email}. Check your inbox.`);
+        setError('');
+        return;
+      }
 
       setError(errorMessage);
+      setInfoMessage('');
 
       // Also show a toast for better visibility
       toast({
@@ -153,6 +163,12 @@ export function BuyerLogin() {
               {error && (
                 <Alert variant="destructive" className="py-2 px-3">
                   <AlertDescription className="text-xs">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {infoMessage && (
+                <Alert className="py-2 px-3 border-amber-500/50 bg-amber-500/10 text-amber-200">
+                  <AlertDescription className="text-xs">{infoMessage}</AlertDescription>
                 </Alert>
               )}
 

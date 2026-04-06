@@ -157,6 +157,16 @@ export const login = async (req, res, next) => {
         userType: error.userType
       });
     }
+
+    if (error.code === 'PENDING_VERIFICATION') {
+      return res.status(403).json({
+        status: 'error',
+        message: error.message,
+        code: 'PENDING_VERIFICATION',
+        email: error.email,
+        userType: error.userType
+      });
+    }
     next(error);
   }
 };

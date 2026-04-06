@@ -68,6 +68,26 @@ class PendingRegistration {
         const result = await pool.query(query, [email.toLowerCase()]);
         return result.rows[0] || null;
     }
+
+    /**
+     * Regenerate the verification token for a pending registration.
+     * Called when user tries to login before verifying — sends a fresh link.
+     * @param {string} email
+     * @param {string} newHashedToken - SHA-256 hash of new raw token
+     * @param {Date} newExpiresAt
+     * @returns {Promise<Object|null>}
+     */
+    static async updateToken(email, newHashedToken, newExpiresAt) {
+        const query = `
+            UPDATE pending_registrations
+            SET verification_token = $1,
+                expires_at = $2
+            WHERE LOWER(email) = $3
+            RETURNING id, email, role
+        `;
+        const result = await pool.query(query, [newHashedToken, newExpiresAt, email.toLowerCase()]);
+        return result.rows[0] || null;
+    }
 }
 
 export default PendingRegistration;
