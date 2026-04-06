@@ -333,6 +333,22 @@ class AuthService {
                 profile = await SellerModel.createSeller(profileData, client);
             } else if (pending.role === 'buyer') {
                 profile = await Buyer.create(profileData, client);
+
+                // --- LATE BINDING OF ORDERS ---
+                // Search for any orders made with this email while it was pending and associate them
+                // This ensures checkout flow continues seamlessly for unregistered buyers
+                const linkResult = await client.query(
+                    'UPDATE product_orders SET buyer_id = $1 WHERE LOWER(buyer_email) = $2 AND buyer_id IS NULL',
+                    [profile.id, pending.email.toLowerCase()]
+                );
+
+                if (linkResult.rowCount > 0) {
+                    console.log(`[AUTH] Linked ${linkResult.rowCount} previous guest orders for new buyer: ${pending.email}`);
+                    logger.info(`[AUTH] Linked ${linkResult.rowCount} previous guest orders for new buyer: ${pending.email}`, {
+                        buyerId: profile.id,
+                        email: pending.email
+                    });
+                }
             }
 
             // c. Delete from pending

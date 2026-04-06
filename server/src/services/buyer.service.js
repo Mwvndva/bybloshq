@@ -146,27 +146,25 @@ class BuyerService {
                 return { buyer };
             }
 
-            const newUser = await User.create({ email, password, role: 'buyer', is_verified: false }, client);
-            const buyer = await Buyer.create({
-                fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id
-            }, client);
+            // Use AuthService.register to handle the pending registration flow
+            // This ensures the user is NOT created in the main users table until verified
+            const AuthService = (await import('./auth.service.js')).default;
 
-            await client.query('COMMIT');
-
-            // Invalidate cross-role cache for this user
-            try {
-                const CacheService = (await import('./cache.service.js')).default;
-                const userId = newUser?.id;
-                if (userId) {
-                    await CacheService.delete(`user:${userId}:cross-roles`);
+            const result = await AuthService.register({
+                email,
+                password,
+                role: 'buyer',
+                registrationData: {
+                    fullName,
+                    email,
+                    mobilePayment: mobile_payment,
+                    whatsappNumber: whatsapp_number,
+                    city,
+                    location
                 }
-            } catch (cacheErr) {
-                // Non-critical — cache will expire naturally
-                const logger = (await import('../utils/logger.js')).default;
-                logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
-            }
+            }, 'buyer');
 
-            return { buyer };
+            return result;
         } catch (error) {
             await client.query('ROLLBACK');
             throw error;
