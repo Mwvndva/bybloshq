@@ -576,7 +576,7 @@ export const saveBuyerInfo = async (req, res, next) => {
 
     const effectivePhone = phone || mobilePayment || whatsappNumber;
 
-    // 2. Register buyer immediately (no OTP step)
+    // 2. Register buyer immediately (follows pending registration flow)
     let result;
     try {
       result = await BuyerService.registerGuest({
@@ -590,21 +590,36 @@ export const saveBuyerInfo = async (req, res, next) => {
         password
       });
     } catch (err) {
-      // If the service flagged that we need login (password mismatch on existing account)
       if (err.requiresLogin) {
         return res.status(200).json({
           status: 'success',
-          message: err.message,
           data: { requiresLogin: true, exists: true, buyer: { email } }
         });
       }
       throw err;
     }
 
-    const buyer = result.buyer;
+    // 3. Handle pending verification (Verify-Before-Create)
+    if (result.status === 'pending_verification') {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          emailVerificationRequired: true,
+          email: result.email,
+          message: 'Please verify your email address to complete your account setup. You can still proceed with your purchase now.'
+        }
+      });
+    }
+
+    // 4. Handle immediate creation (e.g. if user already existed)
+    const buyer = result.buyer || result.user;
+    if (!buyer) {
+      throw new Error('Failed to create or retrieve buyer profile');
+    }
+
     const token = BuyerService.signToken(buyer);
 
-    // 3. Set auth cookie immediately
+    // 5. Set auth cookie
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -614,7 +629,6 @@ export const saveBuyerInfo = async (req, res, next) => {
     };
     res.cookie('jwt', token, cookieOptions);
 
-    // 4. Return buyer data — frontend can now immediately call initiate-product
     return res.status(200).json({
       status: 'success',
       data: { buyer: sanitizeBuyer(buyer) }
