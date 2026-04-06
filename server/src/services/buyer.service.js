@@ -21,8 +21,10 @@ class BuyerService {
             if (existingUser) {
                 const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
                 if (!isPasswordCorrect) {
+                    console.log(`[DEBUG] BuyerService: Password check FAILED for existing user ${email}`);
                     throw new Error('An account with this email already exists. Please login or use the correct password.');
                 }
+                console.log(`[DEBUG] BuyerService: Password check SUCCESS for existing user ${email}`);
 
                 let buyer = await Buyer.findByUserId(existingUser.id);
                 if (buyer) {
