@@ -20,7 +20,57 @@ class AuthService {
      */
     static async login(email, password, type = null) {
         const user = await User.findByEmail(email);
-        if (!user) return null;
+
+        // ── PENDING REGISTRATION CHECK ──────────────────────────────────────────────
+        // User not found in users table — check if they're in pending_registrations
+        // (created via checkout modal but never verified their email)
+        if (!user) {
+            const pending = await PendingRegistration.findByEmail(email);
+
+            if (pending) {
+                // SECURITY: verify password BEFORE revealing the pending state.
+                // If password is wrong, return null — same as "user not found".
+                // Never enumerate that this email exists in the system.
+                const passwordMatchesPending = await bcrypt.compare(password, pending.password_hash);
+
+                if (!passwordMatchesPending) {
+                    // Wrong password — treat same as "not found" to prevent enumeration
+                    return null;
+                }
+
+                // Password correct — regenerate the verification token and resend email
+                const crypto = await import('node:crypto');
+                const rawToken = crypto.randomBytes(32).toString('hex');
+                const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+                const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10);
+                const expiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
+
+                // Update the pending record with a fresh token
+                await PendingRegistration.updateToken(email, hashedToken, expiresAt);
+
+                // Send the new verification email (non-blocking)
+                const { sendVerificationEmail } = await import('../utils/email.js');
+                sendVerificationEmail(email, rawToken, pending.role).catch(err =>
+                    logger.error('[AUTH] Failed to resend pending verification email:', err.message)
+                );
+
+                logger.info(`[AUTH] Login attempted for pending user, resent verification email: ${email}`);
+
+                // Throw a typed error so the controller can return the right response
+                const err = new Error(
+                    "Your account is not yet verified. We've sent a new verification link to your email. Please check your inbox."
+                );
+                err.code = 'PENDING_VERIFICATION';
+                err.statusCode = 403;
+                err.email = email;
+                err.userType = pending.role;
+                throw err;
+            }
+
+            // Not in users OR pending — genuinely not found
+            return null;
+        }
+        // ────────────────────────────────────────────────────────────────────────────
 
         const isMatch = await User.verifyPassword(password, user.password_hash);
         if (!isMatch) return null;

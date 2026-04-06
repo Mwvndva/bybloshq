@@ -22,6 +22,8 @@ export function SellerLogin() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [isSendingResetLink, setIsSendingResetLink] = useState(false);
+  const [infoMessage, setInfoMessage] = useState('');
+  const [error, setError] = useState('');
 
   // Ensure body and html have black background and no margins/padding
   useEffect(() => {
@@ -43,6 +45,8 @@ export function SellerLogin() {
       ...prev,
       [name]: value,
     }));
+    if (error) setError('');
+    if (infoMessage) setInfoMessage('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -57,8 +61,18 @@ export function SellerLogin() {
         description: 'Successfully logged in',
       });
     } catch (error: any) {
-      // Extract the actual error message from the API response
-      const errorMessage = error?.response?.data?.message || error?.message || 'Invalid email or password';
+      // Extract the actual error message and code from the SDK/API response
+      const apiError = error?.response?.data;
+      const errorMessage = apiError?.message || error?.message || 'Invalid email or password';
+
+      if (apiError?.code === 'PENDING_VERIFICATION') {
+        setInfoMessage(`Your account isn't verified yet. We've sent a new link to ${apiError.email || formData.email}. Check your inbox.`);
+        setError('');
+        return;
+      }
+
+      setError(errorMessage);
+      setInfoMessage('');
 
       toast({
         title: 'Login Failed',
@@ -178,6 +192,18 @@ export function SellerLogin() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {error && (
+                <Alert variant="destructive" className="py-2 px-3 border-red-500/50 bg-red-500/10 text-red-200">
+                  <AlertDescription className="text-xs">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {infoMessage && (
+                <Alert className="py-2 px-3 border-amber-500/50 bg-amber-500/10 text-amber-200">
+                  <AlertDescription className="text-xs">{infoMessage}</AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-xs font-medium text-gray-200">
                   Email Address
@@ -292,12 +318,14 @@ export function SellerLogin() {
             <div className="space-y-1.5">
               <Label htmlFor="forgot-email" className="text-xs font-medium text-gray-200">Email Address</Label>
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none z-10">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                </div>
                 <Input
                   id="forgot-email"
                   type="email"
                   placeholder="your@email.com"
-                  className="pl-11 h-10 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                  className="pl-10 h-10 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   value={forgotPasswordEmail}
                   onChange={(e) => setForgotPasswordEmail(e.target.value)}
                   required

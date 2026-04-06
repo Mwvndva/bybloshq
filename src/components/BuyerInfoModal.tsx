@@ -215,8 +215,8 @@ export function BuyerInfoModal({
                   First Name *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-[#555555]" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                    <User className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
                     id="firstName"
@@ -224,7 +224,7 @@ export function BuyerInfoModal({
                     placeholder="First Name"
                     value={buyerInfo.firstName}
                     onChange={(e) => setBuyerInfo(prev => ({ ...prev, firstName: e.target.value }))}
-                    className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.firstName ? 'border-red-500' : ''}`}
+                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.firstName ? 'border-red-500' : ''}`}
                     disabled={isLoading}
                   />
                 </div>
@@ -237,8 +237,8 @@ export function BuyerInfoModal({
                   Last Name *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <User className="h-5 w-5 text-[#555555]" />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                    <User className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
                     id="lastName"
@@ -246,7 +246,7 @@ export function BuyerInfoModal({
                     placeholder="Last Name"
                     value={buyerInfo.lastName}
                     onChange={(e) => setBuyerInfo(prev => ({ ...prev, lastName: e.target.value }))}
-                    className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.lastName ? 'border-red-500' : ''}`}
+                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.lastName ? 'border-red-500' : ''}`}
                     disabled={isLoading}
                   />
                 </div>
@@ -262,8 +262,8 @@ export function BuyerInfoModal({
                 Email Address *
               </Label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-[#555555]" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <Mail className="h-4 w-4 text-[#555555]" />
                 </div>
                 <Input
                   id="email"
@@ -271,7 +271,7 @@ export function BuyerInfoModal({
                   placeholder="Enter your email address"
                   value={buyerInfo.email}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
-                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
+                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
@@ -287,7 +287,7 @@ export function BuyerInfoModal({
                   M-Pesa *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <Phone className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
@@ -307,7 +307,7 @@ export function BuyerInfoModal({
                   WhatsApp *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
                     <Phone className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
@@ -397,8 +397,8 @@ export function BuyerInfoModal({
                 Set Password *
               </Label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-[#555555]" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <Lock className="h-4 w-4 text-[#555555]" />
                 </div>
                 <Input
                   id="password"
@@ -406,7 +406,7 @@ export function BuyerInfoModal({
                   placeholder="Min 8 characters"
                   value={buyerInfo.password}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, password: e.target.value }))}
-                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.password ? 'border-red-500' : ''}`}
+                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.password ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
                 <button
@@ -456,8 +456,8 @@ export function BuyerInfoModal({
                 Verify Password *
               </Label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-[#555555]" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <Lock className="h-4 w-4 text-[#555555]" />
                 </div>
                 <Input
                   id="confirmPassword"
@@ -465,7 +465,7 @@ export function BuyerInfoModal({
                   placeholder="Repeat password"
                   value={buyerInfo.confirmPassword}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  className={`pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.confirmPassword ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
                 <button

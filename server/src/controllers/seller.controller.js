@@ -198,6 +198,16 @@ export const login = async (req, res) => {
         userType: e.userType
       });
     }
+
+    if (e.code === 'PENDING_VERIFICATION') {
+      return res.status(403).json({
+        status: 'error',
+        message: e.message,
+        code: 'PENDING_VERIFICATION',
+        email: e.email,
+        userType: e.userType
+      });
+    }
     console.error('Seller login error:', e);
     res.status(500).json({ status: 'error', message: 'Login failed. Please try again.' });
   }
