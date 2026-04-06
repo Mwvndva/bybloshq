@@ -10,6 +10,7 @@ import ShopPage from '@/pages/ShopPage';
 const PaymentSuccessPage = safeLazy(() => import('@/pages/PaymentSuccess'));
 const MarketingLogin = safeLazy(() => import('@/pages/marketing/MarketingLogin'));
 const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
+const VerifyEmail = safeLazy(() => import('@/pages/auth/VerifyEmail'));
 
 // Main routes configuration
 export const routes = [
@@ -43,6 +44,14 @@ export const routes = [
     element: (
       <Suspense fallback={<RouteFallback />}>
         <MarketingDashboard />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/verify-email',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <VerifyEmail />
       </Suspense>
     ),
   },

@@ -719,6 +719,21 @@ const buyerApi = {
       console.error('Error fetching shops:', error);
       throw error;
     }
+  },
+
+  verifyEmail: async (email: string, token: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await apiClient.get(`/buyers/verify-email`, {
+        params: { email, token }
+      });
+      return {
+        success: true,
+        message: (response.data as any).message || 'Email verified successfully'
+      };
+    } catch (error: any) {
+      console.error('Email verification error:', error);
+      throw new Error(error.response?.data?.message || 'Email verification failed');
+    }
   }
 };
 

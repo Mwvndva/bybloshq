@@ -724,6 +724,21 @@ export const sellerApi = {
     const response = await sellerApiInstance.post<ReferralCodeResponse>('/sellers/referral/generate-code');
     return response.data.data;
   },
+
+  verifyEmail: async (email: string, token: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await apiClient.get(`/sellers/verify-email`, {
+        params: { email, token }
+      });
+      return {
+        success: true,
+        message: (response.data as any).message || 'Email verified successfully'
+      };
+    } catch (error: any) {
+      console.error('Email verification error:', error);
+      throw new Error(error.response?.data?.message || 'Email verification failed');
+    }
+  }
 };
 
 export const withdrawalService = {
