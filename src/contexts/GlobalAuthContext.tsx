@@ -452,6 +452,13 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             navigate(getDashboardPath(role), { replace: true });
             return { status: 'success' };
         } catch (error: any) {
+            if (error.response?.status === 409) {
+                toast.error('Account Already Exists', {
+                    description: 'This email is already registered. Please login or use Forgot Password.',
+                    duration: 6000,
+                });
+                throw error;
+            }
 
             const message = error.response?.data?.message || error.message || 'Registration failed';
             toast.error('Registration Failed', { description: message });

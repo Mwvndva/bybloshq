@@ -260,6 +260,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
       if (onSuccess) onSuccess();
     } catch (error: any) {
+      if (error.response?.status === 409) return;
       console.error('Registration failed:', error);
 
       let errorMessage = 'An error occurred during registration';
