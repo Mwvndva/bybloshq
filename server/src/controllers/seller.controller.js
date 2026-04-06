@@ -128,21 +128,34 @@ export const checkShopNameAvailability = async (req, res) => {
 
 export const register = async (req, res) => {
   try {
-    // Register logic delegated to AuthService (which calls SellerService)
-    await AuthService.register(req.body, 'seller');
+    // Register logic delegated to AuthService
+    const result = await AuthService.register(req.body, 'seller');
 
-    // Auto-login to get token and full profile structure
+    // If verification is required, don't login or issue token
+    if (result.status === 'pending_verification') {
+      return res.status(200).json({
+        status: 'success',
+        message: 'Registration received! Please check your email to verify your account before logging in.',
+        data: {
+          email: result.email,
+          emailVerificationRequired: true,
+          emailVerificationSent: true
+        }
+      });
+    }
+
+    // Auto-login for existing users added to seller role
     const loginData = await AuthService.login(req.body.email, req.body.password, 'seller');
 
     sendTokenResponse(loginData, 201, res, 'Registration successful');
 
-    // ── Referral hook (post-response, non-blocking, never fails registration) ──
+    // ── Referral hook (post-response, non-blocking) ──
     const refCode = req.body.referralCode || req.query.ref;
     if (refCode) {
       const newSellerId = loginData?.profile?.id;
       if (newSellerId) {
         ReferralService.applyReferral(newSellerId, refCode).catch((err) =>
-          logger.warn(`[REFERRAL] applyReferral failed (non-fatal): ${err.message}`)
+          logger.warn(`[REFERRAL] applyReferral failed: ${err.message}`)
         );
       }
     }

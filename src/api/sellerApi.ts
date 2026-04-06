@@ -221,8 +221,13 @@ interface LoginResponse {
 }
 
 interface RegisterResponse {
+  status: string;
+  message?: string;
   data: {
-    seller: Seller;
+    seller?: Seller;
+    email?: string;
+    emailVerificationRequired?: boolean;
+    emailVerificationSent?: boolean;
   };
 }
 
@@ -294,7 +299,7 @@ export const sellerApi = {
     city?: string;
     location?: string;
     referralCode?: string;
-  }): Promise<{ seller: Seller }> => {
+  }): Promise<{ seller?: Seller; status?: string; message?: string }> => {
     try {
       const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
         fullName: data.fullName,
@@ -308,17 +313,25 @@ export const sellerApi = {
         referral_code: (data as any).referralCode || undefined,
       });
 
-      // The response data structure is { data: { seller } }
-      const responseData = response.data?.data;
+      const responseBody = response.data;
+      const responseData = responseBody?.data;
 
-      if (!responseData) {
+      if (!responseBody) {
         throw new Error('Invalid response from server');
       }
 
-      const { seller } = responseData;
+      // Handle pending verification
+      if (responseBody.status === 'success' && responseData?.emailVerificationRequired) {
+        return {
+          status: 'pending_verification',
+          message: responseBody.message
+        };
+      }
+
+      const { seller } = responseData || {};
 
       if (!seller) {
-        throw new Error('Invalid response from server - missing seller');
+        throw new Error('Invalid response from server - missing seller profile');
       }
 
       // Token is handled via HttpOnly cookie
