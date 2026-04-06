@@ -178,6 +178,7 @@ class AuthService {
         await User.setPasswordResetToken(email, hashedToken, passwordResetExpires);
 
         try {
+            console.log('DEBUG: AuthService attempting to send email to', email, 'type:', type);
             await sendPasswordResetEmail(email, resetToken, type);
             return true;
         } catch (err) {
