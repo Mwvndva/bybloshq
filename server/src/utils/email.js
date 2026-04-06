@@ -9,9 +9,6 @@ import logger from './logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-console.log('DEBUG: email.js loaded. HOST:', process.env.EMAIL_HOST, 'USER:', process.env.EMAIL_USERNAME);
-logger.info('Email service initializing', { host: process.env.EMAIL_HOST, user: process.env.EMAIL_USERNAME });
-
 // Helper function to create transporter with retry logic
 const createTransporter = () => {
   // Map standard variable names to their values or fallback to alternative names
@@ -38,15 +35,6 @@ const createTransporter = () => {
   // Parse port as number and handle secure flag
   const port = parseInt(config.port, 10);
   const secure = process.env.EMAIL_SECURE === 'true' || port === 465;
-
-  console.log('DEBUG: Creating transporter with:', {
-    host: config.host,
-    port,
-    secure,
-    user: config.user,
-    hasPassword: !!config.pass,
-    passwordLength: config.pass ? config.pass.length : 0,
-  });
 
   // Create transporter with connection pooling and timeout
   return nodemailer.createTransport({
@@ -126,7 +114,6 @@ export const sendEmail = async (options, retryCount = 0) => {
       }
     };
 
-    // Verify connection before sending
     try {
       if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true') {
         logger.debug('Verifying SMTP connection...');
@@ -137,6 +124,7 @@ export const sendEmail = async (options, retryCount = 0) => {
         message: verifyError.message,
         code: verifyError.code
       });
+      transporter = null; // Reset cached transporter so next attempt triggers createTransporter
       throw new Error(`SMTP connection failed: ${verifyError.message}`);
     }
 

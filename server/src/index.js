@@ -20,8 +20,6 @@ process.on('unhandledRejection', (err) => {
 // Load environment variables
 dotenv.config();
 
-console.log('\n🚀 BYBLOS BACKEND STARTING [BUILD: 2026-04-06-V2] 🚀\n');
-
 /**
  * Start Server
  */
