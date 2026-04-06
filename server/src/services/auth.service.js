@@ -8,6 +8,7 @@ import Buyer from '../models/buyer.model.js';
 import { signToken } from '../utils/jwt.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import { pool } from '../config/database.js';
+import PendingRegistration from '../models/pendingRegistration.model.js';
 
 class AuthService {
     /**
@@ -136,26 +137,62 @@ class AuthService {
      * @param {string} type 
      */
     static async register(data, type) {
-        switch (type) {
-            case 'seller': {
-                const seller = await SellerService.register(data);
-                // Send verification email after successful registration
-                // Non-blocking: if email fails, registration still succeeds
-                AuthService.sendEmailVerification(data.email, 'seller').catch(err =>
-                    console.error('[AUTH] Failed to send seller verification email:', err.message)
-                );
-                return seller;
+        const { email, password } = data;
+        const normalizedEmail = email.toLowerCase();
+
+        // 1. Check if user already exists in unified users table
+        const existingUser = await User.findByEmail(normalizedEmail);
+
+        if (existingUser) {
+            // Already a user - check if they already have this profile type
+            switch (type) {
+                case 'seller': {
+                    const existingSeller = await SellerModel.findSellerByUserId(existingUser.id);
+                    if (existingSeller) throw new Error('A seller account with this email already exists.');
+
+                    // Add seller profile to existing user
+                    const seller = await SellerService.register(data);
+                    return { status: 'created', user: seller };
+                }
+                case 'buyer': {
+                    const existingBuyer = await Buyer.findByUserId(existingUser.id);
+                    if (existingBuyer) throw new Error('A buyer account with this email already exists.');
+
+                    // Add buyer profile to existing user
+                    const buyer = await BuyerService.register(data);
+                    return { status: 'created', user: buyer };
+                }
+                default:
+                    throw new Error('Invalid registration type');
             }
-            case 'buyer': {
-                const buyer = await BuyerService.register(data);
-                AuthService.sendEmailVerification(data.email, 'buyer').catch(err =>
-                    console.error('[AUTH] Failed to send buyer verification email:', err.message)
-                );
-                return buyer;
-            }
-            default:
-                throw new Error('Invalid registration type');
         }
+
+        // 2. NEW USER: Store in pending_registrations
+        const passwordHash = await bcrypt.hash(password, 12);
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10);
+        const expiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
+
+        // Remove sensitive fields from registration_data
+        const registrationData = { ...data };
+        delete registrationData.password;
+        delete registrationData.confirmPassword;
+
+        await PendingRegistration.create({
+            email: normalizedEmail,
+            passwordHash,
+            role: type,
+            registrationData,
+            verificationToken: hashedToken,
+            expiresAt
+        });
+
+        // 3. Send verification email
+        const { sendVerificationEmail } = await import('../utils/email.js');
+        await sendVerificationEmail(normalizedEmail, rawToken, type);
+
+        return { status: 'pending_verification', email: normalizedEmail };
     }
 
     /**
@@ -232,23 +269,79 @@ class AuthService {
      */
     static async verifyEmail(email, rawToken) {
         if (!email || !rawToken) {
-            throw new Error('Email and token are required')
+            throw new Error('Email and token are required');
         }
 
-        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
-        const user = await User.verifyEmailToken(email, hashedToken)
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-        if (!user) {
-            throw new Error('Verification link is invalid or has expired. Please request a new one.')
+        // 1. Check if user already exists in users table (existing verification flow)
+        const user = await User.verifyEmailToken(email, hashedToken);
+
+        if (user) {
+            if (user.is_verified) {
+                return { alreadyVerified: true, user };
+            }
+            const verifiedUser = await User.markEmailVerified(email);
+            return { alreadyVerified: false, user: verifiedUser };
         }
 
-        if (user.is_verified) {
-            // Idempotent — already verified, no error
-            return { alreadyVerified: true, user }
+        // 2. Check pending_registrations
+        const pending = await PendingRegistration.findByEmailAndToken(email, hashedToken);
+        if (!pending) {
+            throw new Error('Verification link is invalid or has expired. Please request a new one.');
         }
 
-        const verifiedUser = await User.markEmailVerified(email)
-        return { alreadyVerified: false, user: verifiedUser }
+        // 3. Create account from pending data
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            // a. Create base user record
+            // Use internal password hash from pending (no need to re-hash)
+            const userQuery = `
+                INSERT INTO users (email, password_hash, role, is_verified, created_at, updated_at)
+                VALUES ($1, $2, $3, true, NOW(), NOW())
+                RETURNING id, email, role, is_verified
+            `;
+            const userResult = await client.query(userQuery, [
+                pending.email.toLowerCase(),
+                pending.password_hash,
+                pending.role
+            ]);
+            const newUser = userResult.rows[0];
+
+            // Assign role
+            const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', [pending.role]);
+            if (roleResult.rows[0]) {
+                await client.query(
+                    'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                    [newUser.id, roleResult.rows[0].id]
+                );
+            }
+
+            // b. Create profile based on role
+            const profileData = { ...pending.registration_data, userId: newUser.id };
+            let profile = null;
+
+            if (pending.role === 'seller') {
+                profile = await SellerModel.createSeller(profileData, client);
+            } else if (pending.role === 'buyer') {
+                profile = await Buyer.create(profileData, client);
+            }
+
+            // c. Delete from pending
+            await client.query('DELETE FROM pending_registrations WHERE email = $1', [pending.email]);
+
+            await client.query('COMMIT');
+
+            return { alreadyVerified: false, user: newUser, profile };
+        } catch (error) {
+            await client.query('ROLLBACK');
+            console.error('[AUTH] Failed to create account from verification:', error);
+            throw new Error('An error occurred during account creation. Please try again.');
+        } finally {
+            client.release();
+        }
     }
 
     /**
@@ -258,20 +351,36 @@ class AuthService {
      * @param {string} userType - 'buyer' | 'seller'
      */
     static async resendVerificationEmail(email, userType) {
-        const user = await User.findByEmail(email)
+        const normalizedEmail = email.toLowerCase();
+        const user = await User.findByEmail(normalizedEmail);
 
-        // Always return success to prevent email enumeration
-        if (!user) {
-            return true
+        if (user) {
+            if (user.is_verified) return true;
+            await AuthService.sendEmailVerification(normalizedEmail, userType);
+            return true;
         }
 
-        if (user.is_verified) {
-            // Already verified — silently succeed (no need to send again)
-            return true
+        // Check pending_registrations
+        const pending = await PendingRegistration.findByEmail(normalizedEmail);
+        if (pending) {
+            const rawToken = crypto.randomBytes(32).toString('hex');
+            const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+            const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10);
+            const expiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
+
+            await PendingRegistration.create({
+                ...pending,
+                passwordHash: pending.password_hash,
+                registrationData: pending.registration_data,
+                verificationToken: hashedToken,
+                expiresAt
+            });
+
+            const { sendVerificationEmail } = await import('../utils/email.js');
+            await sendVerificationEmail(normalizedEmail, rawToken, userType);
         }
 
-        await AuthService.sendEmailVerification(email, userType)
-        return true
+        return true;
     }
 }
 

@@ -92,9 +92,21 @@ export const register = async (req, res, next) => {
 
     try {
       // Delegate to AuthService
-      await AuthService.register(req.body, 'buyer');
+      const result = await AuthService.register(req.body, 'buyer');
 
-      // Auto-login
+      if (result.status === 'pending_verification') {
+        return res.status(200).json({
+          status: 'success',
+          message: 'Account pending verification! Please check your email to complete your registration.',
+          data: {
+            email: result.email,
+            emailVerificationRequired: true,
+            emailVerificationSent: true
+          }
+        });
+      }
+
+      // Auto-login for existing users added to buyer role
       const loginData = await AuthService.login(req.body.email, password, 'buyer');
 
       createSendToken(loginData, 201, req, res);

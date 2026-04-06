@@ -59,7 +59,20 @@ interface LoginApiResponse {
 }
 
 interface LoginResponse {
-  buyer: Buyer;
+  buyer?: Buyer;
+  status?: string;
+  message?: string;
+}
+
+interface RegisterResponse {
+  status: string;
+  message?: string;
+  data: {
+    buyer?: Buyer;
+    email?: string;
+    emailVerificationRequired?: boolean;
+    emailVerificationSent?: boolean;
+  };
 }
 
 interface RegisterData {
@@ -161,24 +174,27 @@ const buyerApi = {
         location: data.location
       };
 
-      // Add proper type to the response - backend returns token and data directly
-      const response = await buyerApiInstance.post<{
-        status: string;
-        message: string;
-        data: {
-          buyer: Buyer;
-        };
-      }>('/buyers/register', payload);
+      const response = await buyerApiInstance.post<RegisterResponse>('/buyers/register', payload);
+      const responseBody = response.data;
+      const responseData = responseBody?.data;
 
-
-
-      const responseData = response.data;
-
-      if (!responseData) {
+      if (!responseBody) {
         throw new Error('Invalid response from server');
       }
 
-      const { buyer } = responseData.data;
+      // Handle pending verification
+      if (responseBody.status === 'success' && responseData?.emailVerificationRequired) {
+        return {
+          status: 'pending_verification',
+          message: responseBody.message
+        };
+      }
+
+      const { buyer } = responseData || {};
+
+      if (!buyer) {
+        throw new Error('Invalid response from server - missing buyer profile');
+      }
 
       // Refresh CSRF token for New Session
       await getFreshCsrfToken();

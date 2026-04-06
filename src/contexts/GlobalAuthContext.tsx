@@ -113,7 +113,7 @@ interface GlobalAuthContextType {
     login: (email: string, password: string, role: UserRole) => Promise<void>;
     loginWithToken: (token: string, role: UserRole) => Promise<void>;
     loginAdmin: (email: string, password: string) => Promise<void>;
-    register: (data: RegistrationData, role: UserRole) => Promise<void>;
+    register: (data: RegistrationData, role: UserRole) => Promise<{ status: string; message?: string } | void>;
     logout: () => void;
     refreshRole: (newRole: UserRole) => Promise<void>;
 
@@ -418,15 +418,23 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(true);
         try {
             const api = getApiForRole(role);
-            let profileData;
+            let response;
 
             if (role === 'buyer') {
-                const response = await api.register(data as BuyerRegistrationData);
-                profileData = response.buyer;
+                response = await api.register(data as BuyerRegistrationData);
             } else if (role === 'seller') {
-                const response = await api.register(data as SellerRegistrationData);
-                profileData = response.seller;
+                response = await api.register(data as SellerRegistrationData);
             }
+
+            if (response?.status === 'pending_verification') {
+                toast.success('Verification link sent!', {
+                    description: response.message || 'Please check your email to verify your account.',
+                    duration: 8000,
+                });
+                return { status: 'pending_verification', message: response.message };
+            }
+
+            const profileData = role === 'buyer' ? response?.buyer : response?.seller;
 
             setUser({
                 role,
@@ -441,8 +449,8 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 description: 'Your account has been successfully created.',
                 duration: 3000,
             });
-
             navigate(getDashboardPath(role), { replace: true });
+            return { status: 'success' };
         } catch (error: any) {
 
             const message = error.response?.data?.message || error.message || 'Registration failed';
