@@ -61,7 +61,7 @@ class BuyerService {
             }
 
             // 2. Create new User + Profile atomically
-            const newUser = await User.create({ email, password, role: 'buyer', is_verified: true }, client);
+            const newUser = await User.create({ email, password, role: 'buyer', is_verified: false }, client);
             const buyer = await Buyer.create({
                 fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id
             }, client);
@@ -143,7 +143,7 @@ class BuyerService {
                 return { buyer };
             }
 
-            const newUser = await User.create({ email, password, role: 'buyer', is_verified: true }, client);
+            const newUser = await User.create({ email, password, role: 'buyer', is_verified: false }, client);
             const buyer = await Buyer.create({
                 fullName, email, mobilePayment: mobile_payment, whatsappNumber: whatsapp_number, city, location, userId: newUser.id
             }, client);

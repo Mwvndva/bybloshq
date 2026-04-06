@@ -23,6 +23,18 @@ class AuthService {
         const isMatch = await User.verifyPassword(password, user.password_hash);
         if (!isMatch) return null;
 
+        // Check email verification
+        // Sellers must verify before accessing the platform
+        // Buyers get a softer check — they can still purchase (for guest checkout compat)
+        if (!user.is_verified) {
+            const err = new Error('Please verify your email before logging in. Check your inbox or request a new verification link.');
+            err.statusCode = 403;
+            err.code = 'EMAIL_NOT_VERIFIED';
+            err.email = user.email;
+            err.userType = type || user.role;
+            throw err;
+        }
+
         // ── Role mismatch handling ──────────────────────────────────────────
         if (type && user.role !== type) {
 
@@ -125,10 +137,22 @@ class AuthService {
      */
     static async register(data, type) {
         switch (type) {
-            case 'seller':
-                return await SellerService.register(data);
-            case 'buyer':
-                return await BuyerService.register(data);
+            case 'seller': {
+                const seller = await SellerService.register(data);
+                // Send verification email after successful registration
+                // Non-blocking: if email fails, registration still succeeds
+                AuthService.sendEmailVerification(data.email, 'seller').catch(err =>
+                    console.error('[AUTH] Failed to send seller verification email:', err.message)
+                );
+                return seller;
+            }
+            case 'buyer': {
+                const buyer = await BuyerService.register(data);
+                AuthService.sendEmailVerification(data.email, 'buyer').catch(err =>
+                    console.error('[AUTH] Failed to send buyer verification email:', err.message)
+                );
+                return buyer;
+            }
             default:
                 throw new Error('Invalid registration type');
         }
@@ -177,6 +201,77 @@ class AuthService {
 
         // Reset
         return await User.resetPassword(email, newPassword);
+    }
+
+    /**
+     * Generate a verification token and send the verification email.
+     * Called AFTER successful registration.
+     * @param {string} email
+     * @param {string} userType - 'buyer' | 'seller'
+     */
+    static async sendEmailVerification(email, userType) {
+        const rawToken = crypto.randomBytes(32).toString('hex')
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+        const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10)
+        const expires = new Date(Date.now() + expiresHours * 60 * 60 * 1000)
+
+        await User.setEmailVerificationToken(email, hashedToken, expires)
+
+        // Send raw token in the email link — backend hashes it on verification
+        const { sendVerificationEmail } = await import('../utils/email.js')
+        await sendVerificationEmail(email, rawToken, userType)
+
+        return true
+    }
+
+    /**
+     * Verify an email using the token from the verification link
+     * @param {string} email
+     * @param {string} rawToken - the raw token from the email link (will be hashed internally)
+     * @returns {Promise<Object>} the verified user
+     */
+    static async verifyEmail(email, rawToken) {
+        if (!email || !rawToken) {
+            throw new Error('Email and token are required')
+        }
+
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex')
+        const user = await User.verifyEmailToken(email, hashedToken)
+
+        if (!user) {
+            throw new Error('Verification link is invalid or has expired. Please request a new one.')
+        }
+
+        if (user.is_verified) {
+            // Idempotent — already verified, no error
+            return { alreadyVerified: true, user }
+        }
+
+        const verifiedUser = await User.markEmailVerified(email)
+        return { alreadyVerified: false, user: verifiedUser }
+    }
+
+    /**
+     * Resend a verification email.
+     * Rate-limited by the calling route.
+     * @param {string} email
+     * @param {string} userType - 'buyer' | 'seller'
+     */
+    static async resendVerificationEmail(email, userType) {
+        const user = await User.findByEmail(email)
+
+        // Always return success to prevent email enumeration
+        if (!user) {
+            return true
+        }
+
+        if (user.is_verified) {
+            // Already verified — silently succeed (no need to send again)
+            return true
+        }
+
+        await AuthService.sendEmailVerification(email, userType)
+        return true
     }
 }
 

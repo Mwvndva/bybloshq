@@ -15,6 +15,8 @@ router.post('/register', authLimiter, validateRegistration, buyerController.regi
 router.post('/login', authLimiter, validateLogin, buyerController.login);
 router.post('/forgot-password', buyerController.forgotPassword);
 router.post('/reset-password', buyerController.resetPassword);
+router.get('/verify-email', buyerController.verifyEmail);
+router.post('/resend-verification', authLimiter, buyerController.resendVerification);
 router.post('/check-phone', buyerController.checkBuyerByPhone);
 router.post('/save-info', authLimiter, buyerController.saveBuyerInfo);
 router.post('/auto-login', buyerController.autoLogin);

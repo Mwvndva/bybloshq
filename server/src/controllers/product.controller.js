@@ -33,6 +33,15 @@ export const createProduct = async (req, res) => {
       });
     }
 
+    // Email verification guard for sellers
+    if (!req.user.is_verified) {
+      return res.status(403).json({
+        status: 'error',
+        message: 'Please verify your email before listing products.',
+        code: 'EMAIL_NOT_VERIFIED'
+      });
+    }
+
     const sellerId = req.user.sellerId;
 
     // Convert base64 image to file if present

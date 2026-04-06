@@ -50,6 +50,14 @@ class SellerService {
 
                 await client.query('COMMIT');
 
+                // If existing user isn't verified, send verification email
+                if (!existingUser.is_verified) {
+                    const { default: AuthService } = await import('./auth.service.js');
+                    AuthService.sendEmailVerification(email, 'seller').catch(err =>
+                        logger.error('[AUTH] Failed to send verification email to existing user:', err.message)
+                    );
+                }
+
                 // Invalidate cross-role cache for this user
                 try {
                     const CacheService = (await import('./cache.service.js')).default;
@@ -66,7 +74,7 @@ class SellerService {
             }
 
             // 2. Create new User + Profile atomically
-            const newUser = await User.create({ email, password, role: 'seller', is_verified: true }, client);
+            const newUser = await User.create({ email, password, role: 'seller', is_verified: false }, client);
             const seller = await SellerModel.createSeller({
                 fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: newUser.id
             }, client);
