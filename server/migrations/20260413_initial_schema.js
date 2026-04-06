@@ -1,16 +1,13 @@
--- 20260413_initial_consolidated_schema.sql
+export async function up(pgm) {
+    // 1. Run the initial consolidated schema
+    pgm.sql(`
 -- CONSOLIDATED INITIAL PRODUCTION SCHEMA
 -- This file defines the entire database structure in its final desired state.
--- It combines all previous migrations (1-23) into a single idempotent baseline.
 
--- ============================================================================
 -- 0. EXTENSIONS
--- ============================================================================
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- ============================================================================
 -- 1. ENUMS
--- ============================================================================
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'product_status') THEN
@@ -46,10 +43,7 @@ BEGIN
     END IF;
 END $$;
 
--- ============================================================================
 -- 2. CORE AUTH TABLES
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
@@ -93,10 +87,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
--- ============================================================================
 -- 3. PROFILE TABLES
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS sellers (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
@@ -124,7 +115,6 @@ CREATE TABLE IF NOT EXISTS sellers (
     physical_address TEXT,
     latitude DECIMAL(10, 8),
     longitude DECIMAL(11, 8),
-    -- Referral Program
     referral_code VARCHAR(20) UNIQUE,
     referred_by_seller_id INTEGER REFERENCES sellers(id) ON DELETE SET NULL,
     referral_active_until TIMESTAMP WITH TIME ZONE,
@@ -152,10 +142,7 @@ CREATE TABLE IF NOT EXISTS buyers (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- ============================================================================
 -- 4. RELATIONSHIP TABLES
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS clients (
     id SERIAL PRIMARY KEY,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
@@ -174,10 +161,7 @@ CREATE TABLE IF NOT EXISTS seller_clients (
     UNIQUE(seller_id, user_id)
 );
 
--- ============================================================================
 -- 5. COMMERCE TABLES
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS products (
     id SERIAL PRIMARY KEY,
     seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
@@ -198,7 +182,6 @@ CREATE TABLE IF NOT EXISTS products (
     is_digital BOOLEAN DEFAULT FALSE,
     digital_file_path TEXT,
     digital_file_name TEXT,
-    -- Inventory Tracking
     track_inventory BOOLEAN DEFAULT FALSE,
     quantity INTEGER DEFAULT NULL,
     low_stock_threshold INTEGER DEFAULT 5,
@@ -256,10 +239,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     CONSTRAINT chk_subtotal_positive CHECK (subtotal >= 0)
 );
 
--- ============================================================================
 -- 6. PAYMENTS & PAYOUTS
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS payments (
     id SERIAL PRIMARY KEY,
     invoice_id VARCHAR(100) UNIQUE NOT NULL,
@@ -315,11 +295,7 @@ CREATE TABLE IF NOT EXISTS withdrawal_requests (
     processed_by VARCHAR(100)
 );
 
--- ============================================================================
 -- 7. FEATURE SPECIFIC TABLES
--- ============================================================================
-
--- Debt Feature
 CREATE TABLE IF NOT EXISTS client_debts (
   id SERIAL PRIMARY KEY,
   seller_id INTEGER REFERENCES sellers(id) ON DELETE CASCADE,
@@ -332,7 +308,6 @@ CREATE TABLE IF NOT EXISTS client_debts (
   updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- DRM / Digital Activations
 CREATE TABLE IF NOT EXISTS digital_activations (
   id SERIAL PRIMARY KEY,
   order_id INTEGER REFERENCES product_orders(id) ON DELETE CASCADE,
@@ -348,7 +323,6 @@ CREATE TABLE IF NOT EXISTS digital_activations (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Referral Earnings
 CREATE TABLE IF NOT EXISTS referral_earnings_log (
     id                  SERIAL PRIMARY KEY,
     referrer_seller_id  INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
@@ -361,7 +335,6 @@ CREATE TABLE IF NOT EXISTS referral_earnings_log (
     UNIQUE(referrer_seller_id, referred_seller_id, period_month, period_year)
 );
 
--- Security Monitoring
 CREATE TABLE IF NOT EXISTS security_alerts (
   id SERIAL PRIMARY KEY,
   alert_type VARCHAR(255) NOT NULL,
@@ -384,7 +357,6 @@ CREATE TABLE IF NOT EXISTS webhook_logs (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Refund Requests
 CREATE TABLE IF NOT EXISTS refund_requests (
     id               SERIAL PRIMARY KEY,
     buyer_id         INTEGER NOT NULL REFERENCES buyers(id) ON DELETE CASCADE,
@@ -401,7 +373,6 @@ CREATE TABLE IF NOT EXISTS refund_requests (
     updated_at       TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Wishlists
 CREATE TABLE IF NOT EXISTS wishlists (
     id SERIAL PRIMARY KEY,
     buyer_id INTEGER NOT NULL REFERENCES buyers(id) ON DELETE CASCADE,
@@ -411,11 +382,7 @@ CREATE TABLE IF NOT EXISTS wishlists (
     UNIQUE(buyer_id, product_id)
 );
 
--- ============================================================================
--- 8. INDEXES (Unified Suite)
--- ============================================================================
-
--- Payments
+-- 8. INDEXES
 CREATE INDEX IF NOT EXISTS idx_payments_provider_ref ON payments(provider_reference);
 CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
 CREATE INDEX IF NOT EXISTS idx_payments_api_ref ON payments(api_ref);
@@ -424,35 +391,23 @@ CREATE INDEX IF NOT EXISTS idx_payments_mobile_payment ON payments(mobile_paymen
 CREATE INDEX IF NOT EXISTS idx_payments_mpesa_receipt ON payments(mpesa_receipt);
 CREATE INDEX IF NOT EXISTS idx_payments_pending ON payments(created_at DESC) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_payments_fuzzy_match ON payments (status, mobile_payment) WHERE status = 'pending';
-
--- Withdrawals
 CREATE INDEX IF NOT EXISTS idx_withdrawals_provider_ref ON withdrawal_requests(provider_reference);
 CREATE INDEX IF NOT EXISTS idx_withdrawals_status ON withdrawal_requests(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_withdrawals_seller_status ON withdrawal_requests(seller_id, status);
 CREATE INDEX IF NOT EXISTS idx_withdrawals_mpesa_receipt ON withdrawal_requests(mpesa_receipt);
-
--- Orders
 CREATE INDEX IF NOT EXISTS idx_product_orders_number ON product_orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_product_orders_seller_id ON product_orders(seller_id, status);
 CREATE INDEX IF NOT EXISTS idx_product_orders_buyer_id ON product_orders(buyer_id, status);
 CREATE INDEX IF NOT EXISTS idx_product_orders_client_id ON product_orders(client_id);
 CREATE INDEX IF NOT EXISTS idx_orders_payment_ref ON product_orders(payment_reference);
-
--- Products
 CREATE INDEX IF NOT EXISTS idx_products_seller_status ON products(seller_id, status);
 CREATE INDEX IF NOT EXISTS idx_products_inventory ON products(track_inventory, quantity) WHERE track_inventory = TRUE;
-
--- Sellers
 CREATE INDEX IF NOT EXISTS idx_sellers_shop_name ON sellers(shop_name);
 CREATE INDEX IF NOT EXISTS idx_sellers_shop_name_lower ON sellers(LOWER(shop_name));
 CREATE INDEX IF NOT EXISTS idx_sellers_city_location ON sellers(city, location);
 CREATE INDEX IF NOT EXISTS idx_sellers_referral_code ON sellers(referral_code) WHERE referral_code IS NOT NULL;
-
--- Payouts
 CREATE UNIQUE INDEX IF NOT EXISTS idx_payouts_order_id_unique ON payouts (order_id);
 CREATE INDEX IF NOT EXISTS idx_payouts_payment_id ON payouts(payment_id);
-
--- Miscellaneous
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role_status ON users(role, is_active);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
@@ -462,23 +417,18 @@ CREATE INDEX IF NOT EXISTS idx_webhook_logs_created ON webhook_logs(created_at D
 CREATE INDEX IF NOT EXISTS idx_security_alerts_reviewed ON security_alerts(reviewed, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_refund_requests_buyer ON refund_requests (buyer_id, status);
 
--- ============================================================================
 -- 9. SEED DATA (RBAC)
--- ============================================================================
-
--- Seed Permissions
 INSERT INTO permissions (name, slug) VALUES 
 ('Manage Products', 'manage-products'),
 ('Request Payouts', 'request-payouts'),
 ('Manage Shop', 'manage-shop'),
 ('View Analytics', 'view-analytics'),
 ('View Orders', 'view-orders'),
- ('Manage Profile', 'manage-profile'),
+('Manage Profile', 'manage-profile'),
 ('Super Admin Access', 'manage-all'),
 ('View Marketing Analytics', 'view-marketing')
 ON CONFLICT (slug) DO NOTHING;
 
--- Seed Roles
 INSERT INTO roles (name, slug) VALUES 
 ('Buyer', 'buyer'),
 ('Seller', 'seller'),
@@ -486,7 +436,6 @@ INSERT INTO roles (name, slug) VALUES
 ('Marketing Admin', 'marketing')
 ON CONFLICT (slug) DO NOTHING;
 
--- Map Permissions
 DO $$
 DECLARE
     role_buyer_id INTEGER := (SELECT id FROM roles WHERE slug = 'buyer');
@@ -518,3 +467,63 @@ BEGIN
         ON CONFLICT DO NOTHING;
     END IF;
 END $$;
+  `);
+
+    // 2. Add email verification columns (Latest changes)
+    pgm.addColumns('users', {
+        email_verification_token: {
+            type: 'varchar(255)',
+            notNull: false,
+            default: null,
+        },
+        email_verification_expires: {
+            type: 'timestamptz',
+            notNull: false,
+            default: null,
+        },
+    });
+
+    pgm.createIndex('users', 'email_verification_token', {
+        name: 'idx_users_email_verification_token',
+        where: 'email_verification_token IS NOT NULL',
+    });
+
+    // Mark all EXISTING users as verified
+    pgm.sql(`UPDATE users SET is_verified = true WHERE is_verified = false`);
+}
+
+export async function down(pgm) {
+    // Cascading drop for a clean reset
+    pgm.sql(`
+    DROP TABLE IF EXISTS wishlists CASCADE;
+    DROP TABLE IF EXISTS refund_requests CASCADE;
+    DROP TABLE IF EXISTS webhook_logs CASCADE;
+    DROP TABLE IF EXISTS security_alerts CASCADE;
+    DROP TABLE IF EXISTS referral_earnings_log CASCADE;
+    DROP TABLE IF EXISTS digital_activations CASCADE;
+    DROP TABLE IF EXISTS client_debts CASCADE;
+    DROP TABLE IF EXISTS withdrawal_requests CASCADE;
+    DROP TABLE IF EXISTS payouts CASCADE;
+    DROP TABLE IF EXISTS payments CASCADE;
+    DROP TABLE IF EXISTS order_items CASCADE;
+    DROP TABLE IF EXISTS product_orders CASCADE;
+    DROP TABLE IF EXISTS products CASCADE;
+    DROP TABLE IF EXISTS seller_clients CASCADE;
+    DROP TABLE IF EXISTS clients CASCADE;
+    DROP TABLE IF EXISTS buyers CASCADE;
+    DROP TABLE IF EXISTS sellers CASCADE;
+    DROP TABLE IF EXISTS user_roles CASCADE;
+    DROP TABLE IF EXISTS role_permissions CASCADE;
+    DROP TABLE IF EXISTS roles CASCADE;
+    DROP TABLE IF EXISTS permissions CASCADE;
+    DROP TABLE IF EXISTS users CASCADE;
+    
+    DROP TYPE IF EXISTS payout_status CASCADE;
+    DROP TYPE IF EXISTS payment_method CASCADE;
+    DROP TYPE IF EXISTS payment_status CASCADE;
+    DROP TYPE IF EXISTS order_status CASCADE;
+    DROP TYPE IF EXISTS product_type CASCADE;
+    DROP TYPE IF EXISTS user_status CASCADE;
+    DROP TYPE IF EXISTS product_status CASCADE;
+  `);
+}

@@ -34,12 +34,18 @@ const sendTokenResponse = (data, statusCode, res, message) => {
 
   setAuthCookie(res, token);
 
+  const registrationMessage = statusCode === 201
+    ? 'Account created! Please verify your email before listing products.'
+    : message;
+
   res.status(statusCode).json({
     status: 'success',
-    message,
+    message: registrationMessage,
     data: {
       seller: sanitizeSeller(profile),
-      user: { email: user.email, role: user.role }
+      user: { email: user.email, role: user.role },
+      emailVerificationRequired: statusCode === 201,
+      emailVerificationSent: statusCode === 201
     }
   });
 };
@@ -166,6 +172,15 @@ export const login = async (req, res) => {
         status: 'error',
         message: e.message, // "Wrong portal. This account is registered as a buyer."
         code: 'WRONG_PORTAL'
+      });
+    }
+    if (e.code === 'EMAIL_NOT_VERIFIED') {
+      return res.status(403).json({
+        status: 'error',
+        message: e.message,
+        code: 'EMAIL_NOT_VERIFIED',
+        email: e.email,
+        userType: e.userType
       });
     }
     console.error('Seller login error:', e);
@@ -328,6 +343,58 @@ export const resetPassword = async (req, res) => {
     });
   }
 };
+
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { token, email } = req.query
+
+    if (!token || !email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Token and email are required'
+      })
+    }
+
+    const result = await AuthService.verifyEmail(email, token)
+
+    return res.status(200).json({
+      status: 'success',
+      message: result.alreadyVerified
+        ? 'Your email is already verified. You can log in.'
+        : 'Email verified successfully! You can now log in.',
+      data: {
+        alreadyVerified: result.alreadyVerified,
+        email: result.user.email
+      }
+    })
+  } catch (error) {
+    logger.error('Email verification failed:', error.message)
+    return res.status(400).json({
+      status: 'error',
+      message: error.message
+    })
+  }
+}
+
+export const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body
+    if (!email) {
+      return res.status(400).json({ status: 'error', message: 'Email is required' })
+    }
+    await AuthService.resendVerificationEmail(email.toLowerCase().trim(), 'seller')
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email and is unverified, a new verification link has been sent.'
+    })
+  } catch (error) {
+    logger.error('Seller resend verification failed:', error.message)
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email and is unverified, a new verification link has been sent.'
+    })
+  }
+}
 
 /**
  * @desc    Forgot password

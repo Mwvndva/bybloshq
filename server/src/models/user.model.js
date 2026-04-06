@@ -127,6 +127,61 @@ class User {
     }
 
     /**
+     * Store a hashed email verification token for a user
+     * @param {string} email
+     * @param {string} hashedToken - SHA-256 hash of the raw token
+     * @param {Date} expires - expiry timestamp
+     */
+    static async setEmailVerificationToken(email, hashedToken, expires) {
+        const query = `
+      UPDATE users
+      SET email_verification_token = $1,
+          email_verification_expires = $2,
+          updated_at = NOW()
+      WHERE email = $3
+      RETURNING id, email
+    `
+        const result = await pool.query(query, [hashedToken, expires, email.toLowerCase()])
+        return result.rows[0] || null
+    }
+
+    /**
+     * Verify an email verification token. Returns the user if valid, null if not.
+     * @param {string} email
+     * @param {string} hashedToken - SHA-256 hash of the raw token
+     * @returns {Promise<Object|null>}
+     */
+    static async verifyEmailToken(email, hashedToken) {
+        const query = `
+      SELECT id, email, role, is_verified
+      FROM users
+      WHERE LOWER(email) = $1
+        AND email_verification_token = $2
+        AND email_verification_expires > NOW()
+    `
+        const result = await pool.query(query, [email.toLowerCase(), hashedToken])
+        return result.rows[0] || null
+    }
+
+    /**
+     * Mark user email as verified and clear the verification token (single-use)
+     * @param {string} email
+     */
+    static async markEmailVerified(email) {
+        const query = `
+      UPDATE users
+      SET is_verified = true,
+          email_verification_token = NULL,
+          email_verification_expires = NULL,
+          updated_at = NOW()
+      WHERE LOWER(email) = $1
+      RETURNING id, email, role, is_verified
+    `
+        const result = await pool.query(query, [email.toLowerCase()])
+        return result.rows[0] || null
+    }
+
+    /**
      * Update password for a logged in user
      * @param {number} userId 
      * @param {string} newPassword 

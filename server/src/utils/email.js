@@ -185,26 +185,33 @@ export const sendEmail = async (options, retryCount = 0) => {
   }
 };
 
-export const sendVerificationEmail = async (email, token) => {
+export const sendVerificationEmail = async (email, token, userType = 'buyer') => {
   try {
-    const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${token}`;
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000'
+    // Include email in URL so backend can look up the user without a session
+    const verificationUrl = `${baseUrl}/verify-email?token=${token}&email=${encodeURIComponent(email)}&type=${userType}`
+    const appName = process.env.APP_NAME || 'Byblos'
 
     const html = await readTemplate('verify-email', {
       verificationUrl,
-      appName: process.env.APP_NAME || 'Byblos',
-    });
+      appName,
+      name: email.split('@')[0], // fallback name until we have it
+    })
 
     await sendEmail({
       to: email,
-      subject: 'Verify Your Email Address',
+      subject: `${appName} — Please verify your email address`,
       html,
-      text: `Please verify your email by clicking on the following link: ${verificationUrl}`,
-    });
+      text: `Please verify your email by clicking: ${verificationUrl}\n\nThis link expires in 24 hours.`
+    })
+
+    logger.info('Verification email sent', { email, userType })
+    return true
   } catch (error) {
-    console.error('Error sending verification email:', error);
-    throw error;
+    logger.error('Error sending verification email:', { email, error: error.message })
+    throw error
   }
-};
+}
 
 export const sendPasswordResetEmail = async (email, token, userType = 'seller') => {
   try {

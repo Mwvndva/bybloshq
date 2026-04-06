@@ -39,7 +39,14 @@ const createSendToken = (data, statusCode, req, res, next) => {
 
   return res.status(statusCode).json({
     status: 'success',
-    data: { buyer: sanitizeBuyer(buyer) }
+    message: statusCode === 201
+      ? 'Account created! Please check your email to verify your account.'
+      : undefined,
+    data: {
+      buyer: sanitizeBuyer(buyer),
+      emailVerificationRequired: statusCode === 201,
+      emailVerificationSent: statusCode === 201
+    }
   });
 };
 
@@ -129,6 +136,15 @@ export const login = async (req, res, next) => {
         code: 'WRONG_PORTAL'
       });
     }
+    if (error.code === 'EMAIL_NOT_VERIFIED') {
+      return res.status(403).json({
+        status: 'error',
+        message: error.message,
+        code: 'EMAIL_NOT_VERIFIED',
+        email: error.email,
+        userType: error.userType
+      });
+    }
     next(error);
   }
 };
@@ -183,6 +199,66 @@ export const resetPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { token, email } = req.query
+
+    if (!token || !email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Token and email are required'
+      })
+    }
+
+    const result = await AuthService.verifyEmail(email, token)
+
+    return res.status(200).json({
+      status: 'success',
+      message: result.alreadyVerified
+        ? 'Your email is already verified. You can log in.'
+        : 'Email verified successfully! You can now log in.',
+      data: {
+        alreadyVerified: result.alreadyVerified,
+        email: result.user.email
+      }
+    })
+  } catch (error) {
+    logger.error('Email verification failed:', error.message)
+    return res.status(400).json({
+      status: 'error',
+      message: error.message
+    })
+  }
+}
+
+export const resendVerification = async (req, res, next) => {
+  try {
+    const { email } = req.body
+
+    if (!email) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Email is required'
+      })
+    }
+
+    await AuthService.resendVerificationEmail(email.toLowerCase().trim(), 'buyer')
+
+    // Always return 200 to prevent email enumeration
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email and is unverified, a new verification link has been sent.'
+    })
+  } catch (error) {
+    logger.error('Resend verification failed:', error.message)
+    // Still return 200 — do not reveal whether email exists
+    return res.status(200).json({
+      status: 'success',
+      message: 'If an account exists with this email and is unverified, a new verification link has been sent.'
+    })
+  }
+}
 
 
 // Order fetching functionality has been removed

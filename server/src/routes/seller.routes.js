@@ -18,6 +18,8 @@ router.post('/register', authLimiter, validateSellerRegistration, sellerControll
 router.post('/login', authLimiter, validateSellerLogin, sellerController.login);
 router.post('/forgot-password', sellerController.forgotPassword);
 router.post('/reset-password', sellerController.resetPassword);
+router.get('/verify-email', sellerController.verifyEmail);
+router.post('/resend-verification', authLimiter, sellerController.resendVerification);
 router.get('/check-shop-name', sellerController.checkShopNameAvailability);
 router.get('/shop/:shopName', sellerController.getSellerByShopName);
 
