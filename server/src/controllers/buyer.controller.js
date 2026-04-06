@@ -39,13 +39,13 @@ const createSendToken = (data, statusCode, req, res, next) => {
 
   return res.status(statusCode).json({
     status: 'success',
-    message: statusCode === 201
+    message: (statusCode === 201 && !user?.is_verified)
       ? 'Account created! Please check your email to verify your account.'
-      : undefined,
+      : (statusCode === 201 ? 'Account updated!' : undefined),
     data: {
       buyer: sanitizeBuyer(buyer),
-      emailVerificationRequired: statusCode === 201,
-      emailVerificationSent: statusCode === 201
+      emailVerificationRequired: !user?.is_verified,
+      emailVerificationSent: statusCode === 201 && !user?.is_verified
     }
   });
 };

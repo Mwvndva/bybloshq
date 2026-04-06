@@ -40,12 +40,14 @@ const sendTokenResponse = (data, statusCode, res, message) => {
 
   res.status(statusCode).json({
     status: 'success',
-    message: registrationMessage,
+    message: (statusCode === 201 && !user?.is_verified)
+      ? 'Account created! Please verify your email before listing products.'
+      : (statusCode === 201 ? 'Account updated!' : message),
     data: {
       seller: sanitizeSeller(profile),
-      user: { email: user.email, role: user.role },
-      emailVerificationRequired: statusCode === 201,
-      emailVerificationSent: statusCode === 201
+      user: { email: user.email, role: user.role, is_verified: user.is_verified },
+      emailVerificationRequired: !user?.is_verified,
+      emailVerificationSent: statusCode === 201 && !user?.is_verified
     }
   });
 };
