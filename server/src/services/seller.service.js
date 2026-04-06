@@ -21,7 +21,7 @@ class SellerService {
             await client.query('BEGIN');
 
             // 1. Check if user already exists
-            const existingUserResult = await client.query('SELECT * FROM users WHERE email = $1 FOR UPDATE', [email.toLowerCase()]);
+            const existingUserResult = await client.query('SELECT * FROM users WHERE LOWER(email) = $1 FOR UPDATE', [email.toLowerCase()]);
             const existingUser = existingUserResult.rows[0];
 
             if (existingUser) {

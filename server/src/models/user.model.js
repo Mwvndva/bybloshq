@@ -8,7 +8,8 @@ class User {
      * @returns {Promise<Object|null>}
      */
     static async findByEmail(email) {
-        const query = 'SELECT * FROM users WHERE email = $1';
+        if (!email) return null;
+        const query = 'SELECT * FROM users WHERE LOWER(email) = $1';
         const result = await pool.query(query, [email.toLowerCase()]);
         return result.rows[0] || null;
     }
