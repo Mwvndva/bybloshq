@@ -39,15 +39,13 @@ const createTransporter = () => {
   const port = parseInt(config.port, 10);
   const secure = process.env.EMAIL_SECURE === 'true' || port === 465;
 
-  logger.info('Creating email transporter', {
+  console.log('DEBUG: Creating transporter with:', {
     host: config.host,
     port,
     secure,
     user: config.user,
-    fromEmail: config.fromEmail,
     hasPassword: !!config.pass,
     passwordLength: config.pass ? config.pass.length : 0,
-    nodeEnv: process.env.NODE_ENV
   });
 
   // Create transporter with connection pooling and timeout
