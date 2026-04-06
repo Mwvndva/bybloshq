@@ -9,6 +9,9 @@ import logger from './logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+console.log('DEBUG: email.js loaded. HOST:', process.env.EMAIL_HOST, 'USER:', process.env.EMAIL_USERNAME);
+logger.info('Email service initializing', { host: process.env.EMAIL_HOST, user: process.env.EMAIL_USERNAME });
+
 // Helper function to create transporter with retry logic
 const createTransporter = () => {
   // Map standard variable names to their values or fallback to alternative names
