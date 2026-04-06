@@ -142,6 +142,11 @@ class AuthService {
 
         // 1. Check if user already exists in unified users table
         const existingUser = await User.findByEmail(normalizedEmail);
+        if (existingUser) {
+            logger.info(`[DEBUG] Registration conflict check: Email ${normalizedEmail} found in users table with ID ${existingUser.id}`);
+        } else {
+            logger.info(`[DEBUG] Registration check: Email ${normalizedEmail} not found in users table.`);
+        }
 
         if (existingUser) {
             // Already a user - check if they already have this profile type
