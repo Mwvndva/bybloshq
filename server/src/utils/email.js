@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
@@ -41,7 +42,9 @@ const createTransporter = () => {
     secure,
     user: config.user,
     fromEmail: config.fromEmail,
-    hasPassword: !!config.pass
+    hasPassword: !!config.pass,
+    passwordLength: config.pass ? config.pass.length : 0,
+    nodeEnv: process.env.NODE_ENV
   });
 
   // Create transporter with connection pooling and timeout
