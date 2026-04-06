@@ -141,21 +141,8 @@ class AuthService {
         const { email, password } = data;
         const normalizedEmail = (email || '').trim().toLowerCase();
 
-        // TEMPORARY DEBUG LOGGING
-        try {
-            const fs = await import('fs');
-            const logMsg = `\n[${new Date().toISOString()}] REGISTER ATTEMPT: email=${normalizedEmail} type=${type}\n`;
-            fs.appendFileSync('c:/Users/Administrator/Downloads/bybloshq/server/register_debug.log', logMsg);
-        } catch (e) { }
-
         // 1. Check if user already exists in unified users table
         const existingUser = await User.findByEmail(normalizedEmail);
-
-        try {
-            const fs = await import('fs');
-            const logMsg = `[${new Date().toISOString()}] DB CHECK: email=${normalizedEmail} found=${!!existingUser} id=${existingUser?.id} verified=${existingUser?.is_verified}\n`;
-            fs.appendFileSync('c:/Users/Administrator/Downloads/bybloshq/server/register_debug.log', logMsg);
-        } catch (e) { }
 
         if (existingUser) {
             // Already a user - check if they already have this profile type

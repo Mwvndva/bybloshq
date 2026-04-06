@@ -50,14 +50,6 @@ class SellerService {
 
                 await client.query('COMMIT');
 
-                // If existing user isn't verified, send verification email
-                if (!existingUser.is_verified) {
-                    const { default: AuthService } = await import('./auth.service.js');
-                    AuthService.sendEmailVerification(email, 'seller').catch(err =>
-                        logger.error('[AUTH] Failed to send verification email to existing user:', err.message)
-                    );
-                }
-
                 // Invalidate cross-role cache for this user
                 try {
                     const CacheService = (await import('./cache.service.js')).default;
