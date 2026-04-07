@@ -42,7 +42,7 @@ import {
   Handshake,
   Gift
 } from 'lucide-react';
-import { sellerApi, checkShopNameAvailability, debtService } from '@/api/sellerApi';
+import { sellerApi, checkShopNameAvailability, debtService, type Theme } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
@@ -56,8 +56,7 @@ import { ProductsList } from './ProductsList';
 import NewClientOrderModal from './NewClientOrderModal';
 import ReferralPanel from './ReferralPanel';
 
-// Theme type is now imported from sellerApi.ts
-// type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
+
 
 // Local helpers for consistent formatting within this component
 const formatNumber = (value: number | null | undefined) => {
@@ -172,6 +171,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  const initialPhysicalAddress = sellerProfile?.physicalAddress === 'Nairobi, Kenya' ? '' : (sellerProfile?.physicalAddress || '');
+  const initialLat = sellerProfile?.latitude;
+  const initialLng = sellerProfile?.longitude;
+  const isDefaultCoord = initialLat && initialLng &&
+    Math.abs(Number(initialLat) - (-1.2921)) < 0.0001 &&
+    Math.abs(Number(initialLng) - (36.8219)) < 0.0001;
+
   const [formData, setFormData] = useState<{
     fullName: string;
     shopName: string;
@@ -189,9 +195,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     shopName: sellerProfile?.shopName || '',
     city: sellerProfile?.city || '',
     location: sellerProfile?.location || '',
-    physicalAddress: sellerProfile?.physicalAddress || '',
-    latitude: sellerProfile?.latitude || null,
-    longitude: sellerProfile?.longitude || null,
+    physicalAddress: initialPhysicalAddress,
+    latitude: isDefaultCoord ? null : (initialLat || null),
+    longitude: isDefaultCoord ? null : (initialLng || null),
     instagramLink: sellerProfile?.instagramLink || '',
     tiktokLink: sellerProfile?.tiktokLink || '',
     facebookLink: sellerProfile?.facebookLink || '',
@@ -464,14 +470,20 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     setIsEditing(prev => {
       // When entering edit mode, populate form with current values
       if (!prev) {
+        const currentLat = sellerProfile?.latitude;
+        const currentLng = sellerProfile?.longitude;
+        const isDefault = currentLat && currentLng &&
+          Math.abs(Number(currentLat) - (-1.2921)) < 0.0001 &&
+          Math.abs(Number(currentLng) - (36.8219)) < 0.0001;
+
         setFormData({
           fullName: sellerProfile?.fullName || '',
           shopName: sellerProfile?.shopName || '',
           city: sellerProfile?.city || '',
           location: sellerProfile?.location || '',
-          physicalAddress: sellerProfile?.physicalAddress || '',
-          latitude: sellerProfile?.latitude || null,
-          longitude: sellerProfile?.longitude || null,
+          physicalAddress: sellerProfile?.physicalAddress === 'Nairobi, Kenya' ? '' : (sellerProfile?.physicalAddress || ''),
+          latitude: isDefault ? null : (currentLat || null),
+          longitude: isDefault ? null : (currentLng || null),
           instagramLink: sellerProfile?.instagramLink || '',
           tiktokLink: sellerProfile?.tiktokLink || '',
           facebookLink: sellerProfile?.facebookLink || '',
