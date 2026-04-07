@@ -211,6 +211,44 @@ class WhatsAppService {
         return '';
     }
 
+    /**
+     * Safely parse order metadata
+     */
+    _getMetadata(order) {
+        if (!order || !order.metadata) return {};
+        if (typeof order.metadata === 'string') {
+            try {
+                return JSON.parse(order.metadata);
+            } catch (e) {
+                logger.error('[WHATSAPP-SERVICE] Error parsing metadata:', e.message);
+                return {};
+            }
+        }
+        return order.metadata;
+    }
+
+    /**
+     * Standardized helper to generate Google Maps links
+     */
+    _getGoogleMapsLink(name, address, lat, lng) {
+        try {
+            // Convert to numbers if they are strings (e.g. from PostgreSQL DECIMAL)
+            const nLat = lat !== null && lat !== undefined ? Number.parseFloat(lat) : null;
+            const nLng = lng !== null && lng !== undefined ? Number.parseFloat(lng) : null;
+
+            if (nLat !== null && nLng !== null && !Number.isNaN(nLat) && !Number.isNaN(nLng)) {
+                return `https://www.google.com/maps?q=${nLat},${nLng}`;
+            }
+
+            const query = name ? `${name} ${address || ''}` : address;
+            if (!query) return null;
+            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query.trim())}`;
+        } catch (e) {
+            logger.error('[WHATSAPP-SERVICE] Error generating maps link:', e.message);
+            return null;
+        }
+    }
+
     // ==========================================
     // NOTIFICATION LOGIC (Business Logic)
     // ==========================================
@@ -265,15 +303,11 @@ class WhatsAppService {
     async notifySellerNewOrder(orderData) {
         const { seller, buyer, order, items } = orderData;
         const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
-        logger.info(`[WHATSAPP-SERVICE] notifySellerNewOrder called for seller: ${sellerWhatsApp || 'NO_PHONE'}`);
 
         if (!sellerWhatsApp) {
             logger.error('[WHATSAPP-SERVICE] ❌ Seller phone is missing!');
             return false;
         }
-
-        logger.info(`[WHATSAPP-SERVICE] Processing ${items?.length || 0} items for order ${order?.orderNumber}`);
-        logger.info(`[WHATSAPP-SERVICE] Seller data:`, JSON.stringify({ phone: sellerWhatsApp, name: seller.name, physicalAddress: seller.physicalAddress }, null, 2));
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
@@ -284,104 +318,66 @@ class WhatsAppService {
         const total = Number.parseFloat(order.totalAmount || 0);
         const productType = order.metadata?.product_type;
         const isService = productType === 'service';
-
-        logger.info(`[WHATSAPP-SERVICE] Product type: ${productType}, isService: ${isService}`);
         const isDigital = productType === 'digital';
 
-        // Check for Service Booking Metadata
+        let actionText = '';
         let bookingInfo = '';
-        if (isService && order.metadata?.booking_date) {
-            const locationType = order.metadata.location_type;
-            const locationLabel = locationType === 'seller_visits_buyer' ? 'Client Location' : 'Service Location';
-            const locationVal = order.metadata.service_location || seller.physicalAddress || seller.location || seller.city || 'Not specified';
 
-            let locationExtra = '';
-            const buyerLoc = order.metadata.buyer_location;
-            if (buyerLoc && (buyerLoc.latitude || buyerLoc.fullAddress)) {
-                const address = buyerLoc.fullAddress || 'Coordinates provided';
-                const mapLink = (buyerLoc.latitude && buyerLoc.longitude)
-                    ? `https://www.google.com/maps?q=${buyerLoc.latitude},${buyerLoc.longitude}`
-                    : '';
+        if (isService) {
+            const locationType = order.metadata?.location_type;
+            const isSellerVisitsBuyer = locationType === 'seller_visits_buyer';
+            const locationLabel = isSellerVisitsBuyer ? 'Client Location' : 'Service Location';
+            const locationVal = order.metadata?.service_location || seller.physicalAddress || 'Not specified';
 
-                locationExtra = `\n• *Buyer Map:* ${mapLink || 'N/A'}\n• *Full Address:* ${address}`;
+            let clientMapsLink = '';
+            if (isSellerVisitsBuyer && order.metadata?.buyer_location) {
+                const bloc = order.metadata.buyer_location;
+                clientMapsLink = this._getGoogleMapsLink(buyer.name, bloc.fullAddress, bloc.latitude, bloc.longitude);
             }
 
             bookingInfo = `
-📅 *SERVICE BOOKING DETAILS*
-• Date: ${order.metadata.booking_date}
-• Time: ${order.metadata.booking_time}
-• ${locationLabel}: ${locationVal}${locationExtra}
+📅 *SERVICE BOOKING*
+• Date: ${order.metadata?.booking_date || 'N/A'}
+• Time: ${order.metadata?.booking_time || 'N/A'}
+• ${locationLabel}: ${locationVal}${clientMapsLink ? `\n• *Buyer Map:* ${clientMapsLink}` : ''}
 `.trim();
-        }
 
-        let instructionText = `⚠️ *ACTION REQUIRED:*\nPlease drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.\n\n⏰ *DEADLINE:* Order will be auto-cancelled if not delivered by deadline.\n💰 Payment will be released 24 hours after buyer pickup.`;
-
-        if (isService) {
-            instructionText = `⏰ *ACTION REQUIRED:*\nPlease visit the *Orders* tab in your seller dashboard to *Confirm* or *Cancel* this booking.\n\n🔒 Payment (KSh ${total.toLocaleString()}) is secured and will be released 24 hours after the booking date ends.`;
+            actionText = `⏰ *ACTION REQUIRED:*
+Please visit your dashboard to *Confirm* or *Cancel* this booking.
+🔒 Payment of KSh ${total.toLocaleString()} is secured.`;
         } else if (isDigital) {
-            instructionText = `✅ *INFO:* Customer has received download link. No action required.\n\n💰 Revenue (KSh ${total.toLocaleString()}) will be added to your balance automatically.`;
+            actionText = `✅ *INFO:* Digital order. Customer has received the download link.
+💰 Revenue added to your balance automatically.`;
         } else {
-            // Physical Product Logic
+            // Physical Product
             if (seller?.physicalAddress) {
-                // Shop Collection — buyer will come to seller's shop directly
-                instructionText = `✅ *ACTION:* Prepare the items for collection.\n\nThe buyer will visit your shop to pick up the order.\nYou will receive a notification once they collect it.`;
+                actionText = `📍 *SHOP COLLECTION:*
+The buyer will visit your shop to pick up the order.
+✅ *ACTION:* Please prepare the items for collection.`;
             } else {
-                // Logistics / Drop-off Logic
-                instructionText = `⚠️ *ACTION REQUIRED:*
-Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.
-
-⏰ *DEADLINE:* Order will be auto-cancelled if not delivered by deadline.
-💰 Payment will be released 24 hours after buyer pickup.`;
+                actionText = `🚚 *LOGISTICS DROP-OFF:*
+⚠️ *ACTION REQUIRED:*
+Please drop items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.
+⏰ *DEADLINE:* Order will auto-cancel if not delivered on time.`;
             }
         }
 
         const header = isDigital ? '🎉 *NEW DIGITAL ORDER!*' : '🎉 *NEW ORDER RECEIVED!*';
-        const serviceReqs = order.service_requirements ? `\n\n📝 *REQUIREMENTS:*\n${order.service_requirements}` : '';
-
-        // Build sections — only include non-empty ones
-        const sections = [];
-        if (bookingInfo) sections.push(bookingInfo);
-        if (serviceReqs) sections.push(`📝 *REQUIREMENTS:*\n${order.service_requirements}`);
-        if (instructionText) sections.push(instructionText);
-
-        let buyerInfo = '';
-        if (!isDigital) {
-            buyerInfo = `👤 *BUYER:* ${buyer.name}\n📞 *PHONE:* ${buyer.phone || 'N/A'}`;
-            if (isService && !seller?.physicalAddress) {
-                const locationStr = buyer.full_address || buyer.location || buyer.city || 'Not specified';
-                buyerInfo += `\n📍 *LOCATION:* ${locationStr}`;
-
-                if (buyer.latitude && buyer.longitude) {
-                    buyerInfo += `\n🗺️ *MAP:* https://www.google.com/maps?q=${buyer.latitude},${buyer.longitude}`;
-                }
-            }
-            buyerInfo += '\n';
-        }
+        const buyerInfo = isDigital ? '' : `👤 *BUYER:* ${buyer.name}\n📞 *PHONE:* ${buyer.phone || 'N/A'}\n`;
 
         const msg = `
 ${header}
 
-${buyerInfo}
-📦 *Order #${order.orderNumber}*
+${buyerInfo}📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${total.toLocaleString()}
 
 📋 *Items:*
 ${itemsList}
-${sections.length > 0 ? '\n' + sections.join('\n\n') : ''}
-        `.trim();
 
-        logger.info(`[WHATSAPP-SERVICE] Message prepared, length: ${msg.length} chars`);
-        logger.info(`[WHATSAPP-SERVICE] Attempting to send to: ${sellerWhatsApp}`);
+${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
+`.trim();
 
-        try {
-            const result = await this.sendMessage(sellerWhatsApp, msg);
-            logger.info(`[WHATSAPP-SERVICE] ✅ New order notification sent to seller ${sellerWhatsApp}`);
-            return result;
-        } catch (error) {
-            logger.error(`[WHATSAPP-SERVICE] ❌ Failed to send message to ${sellerWhatsApp}:`, error.message);
-            logger.error(`[WHATSAPP-SERVICE] Error stack:`, error.stack);
-            throw error;
-        }
+        return this.sendMessage(sellerWhatsApp, msg);
     }
 
     async notifyBuyerOrderConfirmation(orderData) {
@@ -392,102 +388,71 @@ ${sections.length > 0 ? '\n' + sections.join('\n\n') : ''}
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
             const price = Number.parseFloat(item.price || item.product_price || 0);
-            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()} `;
+            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
         }).join('\n');
 
         const total = Number.parseFloat(order.totalAmount || 0);
-        const productType = order.metadata?.product_type;
+        const metadata = this._getMetadata(order);
+        const productType = metadata?.product_type;
         const isService = productType === 'service';
         const isDigital = productType === 'digital';
 
-        let bookingInfo = '';
-        if (isService && order.metadata?.booking_date && order.status === 'SERVICE_PENDING') {
-            const locationType = order.metadata.location_type;
-            const locationLabel = locationType === 'seller_visits_buyer' ? 'Client Location' : 'Service Location';
-            const locationVal = order.metadata.service_location || seller?.physicalAddress || seller?.location || seller?.city || 'Not specified';
-
-            let mapsLink = '';
-            if (seller?.latitude && seller?.longitude) {
-                mapsLink = `https://www.google.com/maps?q=${seller.latitude},${seller.longitude}`;
-            } else {
-                mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationVal)}`;
-            }
-
-            bookingInfo = `
-📅 *YOUR BOOKING IS CONFIRMED*
-• Date: ${order.metadata.booking_date}
-• Time: ${order.metadata.booking_time}
-• ${locationLabel}: ${locationVal}
-
-🗺️ *Location:* ${mapsLink}
-`.trim();
-        } else if (isService && order.metadata?.booking_date) {
-            // Service confirmed but not PENDING status? (e.g. manual confirmation)
-            // Still show details but maybe no map link if we want strictly only for PENDING
-            bookingInfo = `
-📅 *YOUR BOOKING IS CONFIRMED*
-• Date: ${order.metadata.booking_date}
-• Time: ${order.metadata.booking_time}
-`.trim();
-        }
-
-        const pickupLocation = seller?.physicalAddress || 'Dynamic Mall, Shop SL 32';
-        let nextSteps = '';
+        const header = isDigital ? '🎉 *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
+        let body = '';
 
         if (isService) {
-            const serviceType = this.getServiceProviderType(order);
-            nextSteps = `⏰ *WHAT'S NEXT:*\n\n📍 *PROVIDER ADDRESS:*\n${seller?.shop_name || 'Service Provider'}\n${seller?.physicalAddress || 'Contact for location'}\n\n🔒 Your payment (KSh ${total.toLocaleString()}) is secure and will be released 24 hours after the booking date ends.`;
+            const locationType = metadata?.location_type;
+            const locationLabel = locationType === 'seller_visits_buyer' ? 'Client Location' : 'Service Location';
+            const locationVal = metadata?.service_location || seller?.physicalAddress || 'Not specified';
+            const mapsLink = this._getGoogleMapsLink(seller?.shopName || 'Service Provider', locationVal, seller?.latitude, seller?.longitude);
+
+            body = `
+📅 *SERVICE BOOKING*
+• Date: ${metadata?.booking_date || 'N/A'}
+• Time: ${metadata?.booking_time || 'N/A'}
+• ${locationLabel}: ${locationVal}
+${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
+
+⏰ *WHAT'S NEXT:*
+The provider has been notified. Please visit your dashboard to track the status.
+🔒 Your payment is secure and will be held until the service is complete.`.trim();
+
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
-            nextSteps = `✅ *YOUR DOWNLOAD IS READY!*\n🔗 Access it here: ${dashboardUrl}`;
+            body = `
+✅ *YOUR DOWNLOAD IS READY!*
+🔗 *Access here:* ${dashboardUrl}
+
+Check your email for additional instructions.`.trim();
+
         } else {
-            // Physical Product Logic
+            // Physical Product
             if (seller?.physicalAddress) {
-                // Shop Collection Logic
-                let mapsLink = '';
-                let pickupInstructions = '';
+                const mapsLink = this._getGoogleMapsLink(seller.shopName, seller.physicalAddress, seller.latitude, seller.longitude);
+                body = `
+📍 *PICKUP AT SHOP:*
+*${seller.shopName || 'The Shop'}*
+${seller.physicalAddress}
+${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
-                if (order.status === 'COLLECTION_PENDING') {
-                    const lat = seller.latitude || seller.lat;
-                    const lng = seller.longitude || seller.lng;
-                    if (lat && lng) {
-                        mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
-                    } else {
-                        const query = seller.shop_name ? `${seller.shop_name} ${seller.physicalAddress || ''}` : seller.physicalAddress;
-                        mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-                    }
-
-                    pickupInstructions = `
-🗺️ *Location:* ${mapsLink}
-
-✅ *STATUS:* Order Confirmed.
-Please proceed to the shop for collection.`;
-                } else {
-                    pickupInstructions = `
-✅ *STATUS:* Order Confirmed.
-We will notify you when it's ready for collection.`;
-                }
-
-                nextSteps = `📍 *PICKUP INSTRUCTIONS:*
-Please pick up your order at:
-*${seller.shop_name || 'The Shop'}*
-${pickupLocation}
-${pickupInstructions}`;
+⏰ *WHAT'S NEXT:*
+Please proceed to the shop for collection. Show your order number *#${order.orderNumber}* at the counter.`.trim();
             } else {
-                // Logistics/Drop-off Logic
-                nextSteps = `📍 *NEXT STEPS:*
-We'll notify you when it's ready for pickup at ${this.DROPOFF_LOCATION}.
+                body = `
+🚚 *LOGISTICS DELIVERY:*
+Your order will be delivered to:
+*${buyer.location || 'Your Address'}*
 
-⏰ *SELLER DEADLINE:* Seller has ${this.SELLER_DEADLINE_HRS} hours to drop off your order.`;
+⏰ *WHAT'S NEXT:*
+We'll notify you when it's ready for pickup at ${this.DROPOFF_LOCATION}.
+The seller has ${this.SELLER_DEADLINE_HRS} hours to drop off your order.`.trim();
             }
         }
-
-        const header = isDigital ? '🎉 *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
 
         const msg = `
 ${header}
 
-Thanks for ordering, ${buyer.full_name?.split(' ')[0] || 'valued customer'}!
+Thanks for ordering, ${buyer.name?.split(' ')[0] || 'valued customer'}!
 
 📦 *Order #${order.orderNumber}*
 💰 Total: KSh ${total.toLocaleString()}
@@ -495,8 +460,10 @@ Thanks for ordering, ${buyer.full_name?.split(' ')[0] || 'valued customer'}!
 📋 *Items:*
 ${itemsList}
 
-${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}${this.formatSocialLinks(seller)}
-        `.trim();
+${body}
+
+${this.formatSocialLinks(seller)}
+`.trim();
 
         logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyerWhatsApp}`);
         return this.sendMessage(buyerWhatsApp, msg);
@@ -515,16 +482,8 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}${this.formatSocialLinks(s
         if (newStatus === 'COLLECTION_PENDING') {
             const amount = Number.parseFloat(order.totalAmount || 0);
             const sellerAddr = updateData.seller?.physicalAddress || 'the shop';
-            const shopName = updateData.seller?.shop_name || 'The Shop';
-
-            const lat = updateData.seller?.latitude || updateData.seller?.lat;
-            const lng = updateData.seller?.longitude || updateData.seller?.lng;
-            let mapsLink = '';
-            if (lat && lng) {
-                mapsLink = `https://www.google.com/maps?q=${lat},${lng}`;
-            } else {
-                mapsLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(shopName + ' ' + sellerAddr)}`;
-            }
+            const shopName = updateData.seller?.shopName || 'The Shop';
+            const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
 
             msg = `✅ *READY FOR COLLECTION*
 
@@ -534,8 +493,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${nextSteps}${this.formatSocialLinks(s
 📍 *PICKUP LOCATION:*
 *${shopName}*
 ${sellerAddr}
-
-🗺️ *Map:* ${mapsLink}
+${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
 ⏰ *INSTRUCTIONS:*
 Please proceed to the shop to collect your items. 
@@ -543,18 +501,18 @@ Please proceed to the shop to collect your items.
 *IMPORTANT:* Once you've collected the items, please visit your dashboard and click *'Mark as Collected'* to finalize the order.`;
 
         } else if (newStatus === 'COMPLETED') {
-            // User Request: "After buyer clicks 'collected' sends order completion notification"
             msg = `🎉 *ORDER COMPLETED*
 
 Order #${order.orderNumber} has been marked as collected/completed.
 Thank you for shopping with Byblos!`;
+
         } else if (newStatus === 'DELIVERY_PENDING') {
-            // Existing logic for Service/Digital...
             if (isService) {
                 const serviceType = this.getServiceProviderType(order);
                 const amount = Number.parseFloat(order.totalAmount || 0);
                 const sellerAddr = updateData.seller?.physicalAddress || 'Contact provider for details';
-                const shopName = updateData.seller?.shop_name || 'Service Provider';
+                const shopName = updateData.seller?.shopName || 'Service Provider';
+                const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
 
                 msg = `✅ *BOOKING CONFIRMED*
 
@@ -563,6 +521,7 @@ Thank you for shopping with Byblos!`;
 📍 *PROVIDER ADDRESS:*
 *${shopName}*
 ${sellerAddr}
+${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
 💰 Amount Held: KSh ${amount.toLocaleString()}
 🔒 Your payment is secure and will be released to the service provider 24 hours after job completion.
@@ -571,9 +530,7 @@ Order #${order.orderNumber}`;
             } else if (isDigital) {
                 msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} payment received. Your download is ready.`;
             } else {
-                // FALLBACK for Logistics (No Shop Address)
                 const amount = Number.parseFloat(order.totalAmount || 0);
-
                 msg = `✅ *PAYMENT SUCCESSFUL*
 
 💰 Amount: KSh ${amount.toLocaleString()}
@@ -600,8 +557,8 @@ Your ${serviceType} has marked the job as DONE.
             } else {
                 const amount = Number.parseFloat(order.totalAmount || 0);
                 const sellerAddr = updateData.seller?.physicalAddress || this.DROPOFF_LOCATION;
-                // Improve address formatting if it doesn't clearly state city/country
-                const locationText = sellerAddr.includes('Nairobi') ? sellerAddr : `${sellerAddr}\nNairobi, Kenya`;
+                const shopName = updateData.seller?.shopName || 'Pickup Point';
+                const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
 
                 msg = `⚠️ *ACTION REQUIRED: PICKUP READY*
 
@@ -609,7 +566,9 @@ Your ${serviceType} has marked the job as DONE.
 💰 Amount: KSh ${amount.toLocaleString()}
 
 📍 *PICKUP LOCATION:*
-${locationText}
+*${shopName}*
+${sellerAddr}
+${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
 ⏰ *PICKUP DEADLINE:* 
 🚨 You have ${this.BUYER_PICKUP_HRS} hours to pick up or order will be auto-cancelled and refunded.
@@ -619,10 +578,11 @@ ${locationText}
 • Payment released to seller 24 hours after pickup
 • Report any issues immediately`;
             }
-        } else if (newStatus === 'CONFIRMED' && isService) { // Custom status for Service
+        } else if (newStatus === 'CONFIRMED' && isService) {
             const serviceType = this.getServiceProviderType(order);
             const sellerAddr = updateData.seller?.physicalAddress || 'Contact provider for details';
-            const shopName = updateData.seller?.shop_name || 'Service Provider';
+            const shopName = updateData.seller?.shopName || 'Service Provider';
+            const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
 
             msg = `✅ *BOOKING ACCEPTED*
 
@@ -631,12 +591,12 @@ Great news! Your ${serviceType} has accepted your booking.
 📍 *PROVIDER ADDRESS:*
 *${shopName}*
 ${sellerAddr}
+${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
 📦 Order #${order.orderNumber}
 
 ⏰ *WHAT'S NEXT:* Once the service is completed to your satisfaction, please visit your dashboard and click *'Mark as Done'* to release the funds to the provider.`;
         } else if (newStatus === 'CLIENT_PAYMENT_PENDING') {
-            // Client order created by seller - waiting for M-Pesa payment
             const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `💳 *PAYMENT REQUEST SENT*
 
@@ -655,14 +615,15 @@ Thank you for shopping with us!`;
 Order #${order.orderNumber} is now being prepared by the seller. 
 We will notify you as soon as it's ready for the next step!`;
         } else {
-            msg = `📋 *STATUS UPDATE*\n\nOrder #${order.orderNumber}: ${newStatus}`;
+            msg = `📋 *STATUS UPDATE*
+
+Order #${order.orderNumber} status changed to: *${newStatus}*`;
         }
 
-        if (notes) msg += `\nNote: ${notes}`;
-
+        if (notes) msg += `\n\n📝 *NOTE:* ${notes}`;
         msg += this.formatSocialLinks(updateData.seller || {});
 
-        return this.sendMessage(buyerWhatsApp, msg);
+        return this.sendMessage(buyerWhatsApp, msg.trim());
     }
 
     async notifySellerStatusUpdate(updateData) {
@@ -670,16 +631,18 @@ We will notify you as soon as it's ready for the next step!`;
         const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
         if (!sellerWhatsApp) return false;
 
-        const productType = order.metadata?.product_type;
+        const metadata = this._getMetadata(order);
+        const productType = metadata?.product_type;
+        const isService = productType === 'service';
+        const total = Number.parseFloat(order.totalAmount || 0);
 
         let msg = `📋 Order #${order.orderNumber} status: ${newStatus}`;
 
         if (newStatus === 'DELIVERY_PENDING') {
-            const amount = Number.parseFloat(order.totalAmount || 0);
-            if (productType === 'service') {
+            if (isService) {
                 msg = `💰 *PAYMENT RECEIVED*
 
-✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+✅ Order #${order.orderNumber} is paid (KSh ${total.toLocaleString()}).
 
 ⏰ *PAYMENT HOLD:*
 Funds will be held for 24 hours after job completion to ensure customer satisfaction.
@@ -688,55 +651,62 @@ Funds will be held for 24 hours after job completion to ensure customer satisfac
             } else {
                 msg = `💰 *PAYMENT RECEIVED*
 
-✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+✅ Order #${order.orderNumber} is paid (KSh ${total.toLocaleString()}).
 
 📦 *ACTION REQUIRED:*
 Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.`;
             }
         } else if (newStatus === 'COLLECTION_PENDING') {
-            const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `💰 *PAYMENT RECEIVED*
 
-✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+✅ Order #${order.orderNumber} is confirmed.
+💰 Amount: KSh ${total.toLocaleString()}
 
-📍 *ACTION REQUIRED:*
-The buyer has been notified to pick up the item from your shop. 
-Please ensure the order is ready for collection.`;
+📍 *SHOP COLLECTION:*
+The buyer will visit your shop to pick up the items.
+✅ *ACTION:* Please ensure the items are ready for collection.`;
+
         } else if (newStatus === 'SERVICE_PENDING') {
-            const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `💰 *PAYMENT RECEIVED*
 
-✅ Order #${order.orderNumber} is paid (KSh ${amount.toLocaleString()}).
+✅ Order #${order.orderNumber} is paid (KSh ${total.toLocaleString()}).
 
 ⏰ *SERVICE BOOKING:*
 Buyer has paid and is waiting for service. 
 Please contact the buyer if necessary and prepare for the appointment.`;
-        } else if (newStatus === 'CONFIRMED' && productType === 'service') {
-            msg = `✅ *BOOKING CONFIRMED*
 
-You have confirmed the booking for Order #${order.orderNumber}.
+        } else if (newStatus === 'CONFIRMED' && isService) {
+            msg = `✅ *BOOKING ACCEPTED*
+
+You have accepted the booking for Order #${order.orderNumber}.
 The buyer has been notified.`;
+
         } else if (newStatus === 'COMPLETED') {
-            const amount = Number.parseFloat(order.totalAmount || 0);
             msg = `🎉 *ORDER COMPLETED*
 
-✅ Order #${order.orderNumber} is finished.
-💰 Revenue (KSh ${amount.toLocaleString()}) added to your balance.
+Order #${order.orderNumber} has been successfully completed.
+💰 Revenue of KSh ${total.toLocaleString()} will be added to your balance.
 
-You can withdraw your earnings from your seller dashboard.`;
+You can withdraw your earnings from your dashboard. Thank you for using Byblos!`;
+
         } else if (newStatus === 'PROCESSING') {
             msg = `⏳ *PROCESSING ORDER*
 
-Order #${order.orderNumber} is now marked as being processed. 
-Please update the status to *Ready for Collection* or *Shipped* once the items are prepared.`;
+Order #${order.orderNumber} is now being processed. 
+Please update the status once the items are ready for collection or delivery.`;
+
+        } else if (newStatus === 'CANCELLED') {
+            msg = `❌ *ORDER CANCELLED*
+
+Order #${order.orderNumber} has been cancelled.
+📝 Note: ${updateData.notes || 'No reason provided'}`;
         } else {
             msg = `📋 *STATUS UPDATE*
 
-Order #${order.orderNumber} status changed to: *${newStatus}*`;
+Order #${order.orderNumber} status: *${newStatus}*`;
         }
 
-        logger.info(`[PURCHASE-FLOW] 9d. Sending Status Update (${newStatus}) to Seller ${sellerWhatsApp}`);
-        return this.sendMessage(sellerWhatsApp, msg);
+        return this.sendMessage(sellerWhatsApp, msg.trim());
     }
 
     async notifyClientOrderCreated(clientPhone, orderData) {

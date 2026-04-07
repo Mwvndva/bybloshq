@@ -227,11 +227,14 @@ class OrderService {
       try {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
-                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, 
+                  b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  b.latitude AS buyer_latitude, b.longitude AS buyer_longitude,
                   COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
                   COALESCE(s.whatsapp_number, NULL) as seller_phone, 
                   COALESCE(s.email, u.email) as seller_email, 
-                  s.physical_address as seller_address, s.latitude as seller_latitude, s.longitude as seller_longitude,
+                  s.physical_address as seller_address, s.shop_name,
+                  s.latitude as seller_latitude, s.longitude as seller_longitude,
                   s.instagram_link, s.tiktok_link, s.facebook_link
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
@@ -247,13 +250,16 @@ class OrderService {
             name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
             phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
             whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual,
+            latitude: fullOrder.buyer_latitude,
+            longitude: fullOrder.buyer_longitude
           };
           const sellerData = {
             name: fullOrder.seller_name,
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
             physicalAddress: fullOrder.seller_address,
+            shopName: fullOrder.shop_name,
             latitude: fullOrder.seller_latitude,
             longitude: fullOrder.seller_longitude,
             instagram_link: fullOrder.instagram_link,
@@ -1289,7 +1295,7 @@ class OrderService {
       const buyerData = this._buildBuyerNotificationData(fullOrder);
       const sellerData = {
         name: fullOrder.seller_name, phone: fullOrder.seller_phone, email: fullOrder.seller_email,
-        physicalAddress: fullOrder.seller_address, shop_name: fullOrder.shop_name,
+        physicalAddress: fullOrder.seller_address, shopName: fullOrder.shop_name,
         latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude,
         instagram_link: fullOrder.instagram_link, tiktok_link: fullOrder.tiktok_link, facebook_link: fullOrder.facebook_link
       };
