@@ -826,21 +826,25 @@ Your refund balance remains available for future withdrawal requests.
     }
 
     async sendLogisticsNotification(order, buyer, seller, items = []) {
-        // Skip for service, digital, and shop-pickup orders
-        const productType = order.metadata?.product_type
-        const isService = productType === 'service'
-        const isDigital = productType === 'digital'
+        const metadata = this._getMetadata(order);
+        const productType = metadata?.product_type || order.productType;
+        const isService = productType === 'service';
+        const isDigital = productType === 'digital';
 
         if (isService || isDigital) {
-            logger.info(`[LOGISTICS] Skipping courier notification — ${productType} order #${order.orderNumber || order.id}`)
+            logger.info(`[LOGISTICS] Skipping courier notification — ${productType} order #${order.orderNumber || order.id || order.order_number}`)
             return false
         }
 
         // Skip if seller has their own shop (buyer collects directly)
-        const isPlaceholderCoords = seller && Math.abs(Number(seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(seller.longitude) - 36.8219) < 0.001;
-        const hasCoordinates = seller?.latitude && seller?.longitude && Number(seller.latitude) !== 0 && !isPlaceholderCoords;
-        if (seller?.physicalAddress && hasCoordinates) {
-            logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop with coordinates, order #${order.orderNumber || order.id}`)
+        const s_lat = seller?.latitude || seller?.lat;
+        const s_lng = seller?.longitude || seller?.lng;
+        const isPlaceholderCoords = s_lat && s_lng && Math.abs(Number(s_lat) - (-1.2921)) < 0.001 && Math.abs(Number(s_lng) - 36.8219) < 0.001;
+        const hasCoordinates = s_lat && s_lng && Number(s_lat) !== 0 && !isPlaceholderCoords;
+        const physicalAddr = seller?.physicalAddress || seller?.physical_address;
+
+        if (physicalAddr && hasCoordinates) {
+            logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop with coordinates, order #${order.orderNumber || order.id || order.order_number}`)
             return false
         }
 
@@ -849,24 +853,25 @@ Your refund balance remains available for future withdrawal requests.
 
         // Build items list
         let itemsList = 'No items listed';
-        const rawItems = order.items || order.metadata?.items || items || [];
+        const rawItems = order.items || metadata?.items || items || [];
 
         if (rawItems && rawItems.length > 0) {
             itemsList = rawItems.map((item, i) => {
                 const name = item.product_name || item.name || 'Product';
                 const price = Number.parseFloat(item.product_price || item.product_price_actual || item.price || 0);
-                const qty = Number.parseInt(item.quantity || 1, 10);
+                const qty = Number.parseInt(item.quantity || item.qty || 1, 10);
                 return `${i + 1}. ${name} × ${qty} — KSh ${price.toLocaleString()}`;
             }).join('\n');
         }
 
         const total = Number.parseFloat(order.totalAmount || order.total_amount || 0)
         const orderNum = order.orderNumber || order.order_number || order.id
-        const buyerName = buyer.fullName || buyer.full_name || 'N/A'
-        const buyerPhone = buyer.whatsapp_number || buyer.phone || 'N/A'
+        const buyerName = buyer.fullName || buyer.full_name || buyer.name || 'N/A'
+        const buyerPhone = buyer.whatsapp_number || buyer.whatsappNumber || buyer.phone || 'N/A'
         const buyerCity = buyer.city || buyer.location || 'N/A'
-        const shopName = seller.shop_name || seller.full_name || 'N/A'
-        const sellerPhone = seller.whatsapp_number || 'N/A'
+        const shopName = seller.shop_name || seller.shopName || seller.full_name || seller.name || 'N/A'
+        const sellerPhone = seller.whatsapp_number || seller.whatsappNumber || seller.phone || 'N/A'
+        const sellerLocation = seller.city || seller.location || '';
 
         const message = `
 🚚 *NEW DELIVERY ORDER*
@@ -883,7 +888,7 @@ Your refund balance remains available for future withdrawal requests.
 ━━━━━━━━━━━━━━━━━━━━
 🏪 *SELLER DETAILS*
 • Shop:     ${shopName}
-• Phone:    ${sellerPhone}
+• Phone:    ${sellerPhone}${sellerLocation ? `\n• Area:     ${sellerLocation}` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━
 📋 *ORDER ITEMS*

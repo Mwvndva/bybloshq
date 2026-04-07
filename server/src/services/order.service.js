@@ -661,9 +661,13 @@ class OrderService {
       // Fetch Seller to check for Shop Address & Coordinates
       const { rows: sellers } = await client.query('SELECT physical_address, latitude, longitude FROM sellers WHERE id = $1', [order.seller_id]);
       const s = sellers[0];
-      const isPlaceholderCoords = s && Math.abs(Number(s.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(s.longitude) - 36.8219) < 0.001;
-      const sellerHasShop = sellers.length > 0 && !!s.physical_address &&
-        (!!s.latitude && !!s.longitude && Number(s.latitude) !== 0) && !isPlaceholderCoords;
+      const address = (s?.physical_address || '').trim();
+      const hasRealAddress = address && address.toLowerCase() !== 'nairobi, kenya' && address.toLowerCase() !== 'nairobi' && address.toLowerCase() !== 'kenya';
+      const s_lat = Number(s?.latitude);
+      const s_lng = Number(s?.longitude);
+      const isPlaceholderCoords = s && Math.abs(s_lat - (-1.2921)) < 0.001 && Math.abs(s_lng - 36.8219) < 0.001;
+      const hasCoordinates = s_lat && s_lng && s_lat !== 0 && !isPlaceholderCoords;
+      const sellerHasShop = sellers.length > 0 && hasRealAddress && hasCoordinates;
 
       // Enrich product type if missing but service_options exist
       items.forEach(i => {
@@ -1293,7 +1297,7 @@ class OrderService {
                 COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
                 COALESCE(s.whatsapp_number, NULL) AS seller_phone, 
                 COALESCE(s.email, u.email) AS seller_email, 
-                s.physical_address AS seller_address, s.shop_name, s.city AS seller_city,
+                s.physical_address AS seller_address, s.shop_name, s.city AS seller_city, s.location AS seller_location,
                 s.latitude AS seller_latitude, s.longitude AS seller_longitude,
                 s.instagram_link, s.tiktok_link, s.facebook_link
          FROM product_orders o
@@ -1310,6 +1314,7 @@ class OrderService {
       const sellerData = {
         name: fullOrder.seller_name, phone: fullOrder.seller_phone, email: fullOrder.seller_email,
         physicalAddress: fullOrder.seller_address, shopName: fullOrder.shop_name,
+        city: fullOrder.seller_city, location: fullOrder.seller_location,
         latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude,
         instagram_link: fullOrder.instagram_link, tiktok_link: fullOrder.tiktok_link, facebook_link: fullOrder.facebook_link
       };
@@ -1349,12 +1354,16 @@ class OrderService {
       whatsappService.notifySellerNewOrder({ seller: sellerData, buyer: buyerData, order: payload.order, items })
         .catch(e => logger.error('[ORDER] Seller notification failed:', e));
 
-      // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates)
+      // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates/Address)
       const hasPhysical = items.some(i => i.product_type === 'physical' || i.productType === 'physical');
-      const isPlaceholderCoords = sellerData && Math.abs(Number(sellerData.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(sellerData.longitude) - 36.8219) < 0.001;
-      const sellerHasNoCoordinates = !sellerData.latitude || !sellerData.longitude || Number(sellerData.latitude) === 0 || isPlaceholderCoords;
+      const address = (sellerData.physicalAddress || sellerData.physical_address || '').trim();
+      const hasRealAddress = address && !['nairobi, kenya', 'nairobi', 'kenya'].includes(address.toLowerCase());
+      const s_lat = Number(sellerData.latitude || sellerData.lat);
+      const s_lng = Number(sellerData.longitude || sellerData.lng);
+      const isPlaceholderCoords = s_lat && s_lng && Math.abs(s_lat - (-1.2921)) < 0.001 && Math.abs(s_lng - 36.8219) < 0.001;
+      const hasCoordinates = s_lat && s_lng && s_lat !== 0 && !isPlaceholderCoords;
 
-      if (hasPhysical && (sellerHasNoCoordinates || !sellerData.physicalAddress)) {
+      if (hasPhysical && (!hasCoordinates || !hasRealAddress)) {
         whatsappService.sendLogisticsNotification(payload.order, payload.buyer, payload.seller, items)
           .catch(e => logger.error('[ORDER] Courier notification failed:', e));
       }
