@@ -372,7 +372,9 @@ class AuthService {
             }
 
             // b. Create profile based on role
-            const profileData = { ...pending.registration_data, userId: newUser.id };
+            // Handle potentially nested registrationData from some register paths
+            const regData = pending.registration_data?.registrationData || pending.registration_data;
+            const profileData = { ...regData, userId: newUser.id };
             let profile = null;
 
             if (pending.role === 'seller') {

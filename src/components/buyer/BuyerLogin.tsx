@@ -211,7 +211,7 @@ export function BuyerLogin() {
                     onChange={handleChange}
                     required
                     disabled={isLoading}
-                    className="!pl-11 !pr-11 h-10 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                    className="!pl-12 !pr-11 h-10 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                   />
                   <button
                     type="button"
