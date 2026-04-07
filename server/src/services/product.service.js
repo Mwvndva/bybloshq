@@ -40,6 +40,8 @@ class ProductService {
             // Allow: base64 (data:image/), local fallback (/uploads/), and remote Cloudinary URLs (http/https)
             const isBase64 = imageData.startsWith('data:image/');
             const isLocal = imageData.startsWith('/uploads/');
+            const isRemote = imageData.startsWith('http');
+
             if (isRemote) {
                 try {
                     const url = new URL(imageData);
