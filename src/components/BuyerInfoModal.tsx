@@ -224,7 +224,7 @@ export function BuyerInfoModal({
                     placeholder="First Name"
                     value={buyerInfo.firstName}
                     onChange={(e) => setBuyerInfo(prev => ({ ...prev, firstName: e.target.value }))}
-                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.firstName ? 'border-red-500' : ''}`}
+                    className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.firstName ? 'border-red-500' : ''}`}
                     disabled={isLoading}
                   />
                 </div>
@@ -246,7 +246,7 @@ export function BuyerInfoModal({
                     placeholder="Last Name"
                     value={buyerInfo.lastName}
                     onChange={(e) => setBuyerInfo(prev => ({ ...prev, lastName: e.target.value }))}
-                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.lastName ? 'border-red-500' : ''}`}
+                    className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.lastName ? 'border-red-500' : ''}`}
                     disabled={isLoading}
                   />
                 </div>
@@ -271,7 +271,7 @@ export function BuyerInfoModal({
                   placeholder="Enter your email address"
                   value={buyerInfo.email}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, email: e.target.value }))}
-                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
+                  className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.email ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
               </div>
@@ -296,7 +296,7 @@ export function BuyerInfoModal({
                     placeholder="07..."
                     value={buyerInfo.mobilePayment}
                     onChange={(e) => setBuyerInfo(prev => ({ ...prev, mobilePayment: e.target.value }))}
-                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input}`}
+                    className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}
                     disabled={isLoading}
                     required
                   />
@@ -316,7 +316,7 @@ export function BuyerInfoModal({
                     placeholder="07..."
                     value={buyerInfo.whatsappNumber}
                     onChange={(e) => setBuyerInfo(prev => ({ ...prev, whatsappNumber: e.target.value }))}
-                    className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.whatsappNumber ? 'border-red-500' : ''}`}
+                    className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.whatsappNumber ? 'border-red-500' : ''}`}
                     disabled={isLoading}
                     required
                   />
@@ -345,7 +345,7 @@ export function BuyerInfoModal({
                     }}
                     disabled={isLoading}
                   >
-                    <SelectTrigger className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input}`}>
+                    <SelectTrigger className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}>
                       <SelectValue placeholder="Select city" />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
@@ -374,7 +374,7 @@ export function BuyerInfoModal({
                     }}
                     disabled={isLoading || !buyerInfo.city}
                   >
-                    <SelectTrigger className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input}`}>
+                    <SelectTrigger className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}>
                       <SelectValue placeholder={buyerInfo.city ? "Select area" : "City first"} />
                     </SelectTrigger>
                     <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
@@ -406,7 +406,7 @@ export function BuyerInfoModal({
                   placeholder="Min 8 characters"
                   value={buyerInfo.password}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, password: e.target.value }))}
-                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.password ? 'border-red-500' : ''}`}
+                  className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.password ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
                 <button
@@ -465,7 +465,7 @@ export function BuyerInfoModal({
                   placeholder="Repeat password"
                   value={buyerInfo.confirmPassword}
                   onChange={(e) => setBuyerInfo(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  className={`pl-10 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.confirmPassword ? 'border-red-500' : ''}`}
+                  className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input} ${errors.confirmPassword ? 'border-red-500' : ''}`}
                   disabled={isLoading}
                 />
                 <button
@@ -517,4 +517,3 @@ export function BuyerInfoModal({
     </Dialog>
   );
 }
-
