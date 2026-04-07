@@ -1294,7 +1294,9 @@ class OrderService {
         instagram_link: fullOrder.instagram_link, tiktok_link: fullOrder.tiktok_link, facebook_link: fullOrder.facebook_link
       };
 
-      const isSellerInitiated = fullOrder.metadata?.seller_initiated === true || fullOrder.metadata?.is_seller_initiated === true;
+      const isSellerInitiated = fullOrder.metadata?.seller_initiated === true ||
+        fullOrder.metadata?.is_seller_initiated === true ||
+        fullOrder.is_seller_initiated === true;
 
       // Always notify Seller via Email
       if (sellerData.email) {
