@@ -56,7 +56,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
     const isPlaceholderCoords = product.seller && Math.abs(Number(product.seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(product.seller.longitude) - 36.8219) < 0.001;
-    const isShopless = !product.seller?.physicalAddress || isPlaceholderCoords;
+    const hasCoordinates = !!product.seller?.latitude && !!product.seller?.longitude && Number(product.seller.latitude) !== 0;
+    const isShopless = !product.seller?.physicalAddress || !hasCoordinates || isPlaceholderCoords;
 
     // Reset state when modal opens
     useEffect(() => {
@@ -274,24 +275,20 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                 <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">Location</Label>
                                 {isShopless ? (
                                     <div className="space-y-3">
-                                        <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#000000] border border-white/5">
+                                        <div
+                                            onClick={() => setIsChangingLocation(true)}
+                                            className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#000000] border border-yellow-400/20 cursor-pointer hover:bg-white/5 transition-colors group/loc"
+                                        >
                                             <div className="flex items-center gap-3 overflow-hidden">
-                                                <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
+                                                <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.fullAddress ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
                                                 <div className="overflow-hidden">
-                                                    <p className="text-sm font-bold text-white truncate">
-                                                        {buyerLocation?.fullAddress || 'No address set'}
+                                                    <p className={cn("text-sm font-bold truncate", !buyerLocation?.fullAddress ? "text-yellow-400" : "text-white")}>
+                                                        {buyerLocation?.fullAddress || 'Tap to set your location'}
                                                     </p>
-                                                    <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location (Auto-applied)</p>
+                                                    <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location (Required)</p>
                                                 </div>
                                             </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => setIsChangingLocation(true)}
-                                                className="h-8 w-8 p-0 rounded-lg hover:bg-white/5 shrink-0"
-                                            >
-                                                <Edit2 className="w-4 h-4 text-yellow-400" />
-                                            </Button>
+                                            <Edit2 className="w-4 h-4 text-yellow-400 shrink-0 opacity-50 group-hover/loc:opacity-100 transition-opacity" />
                                         </div>
                                     </div>
                                 ) : (
@@ -333,24 +330,20 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
 
                                         {(selectedLocationType === 'buyer' || isSellerVisits) && (
                                             <div className="space-y-3">
-                                                <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-white/5">
+                                                <div
+                                                    onClick={() => setIsChangingLocation(true)}
+                                                    className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-yellow-400/20 cursor-pointer hover:bg-white/10 transition-colors group/loc"
+                                                >
                                                     <div className="flex items-center gap-3 overflow-hidden">
-                                                        <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
+                                                        <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.fullAddress ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
                                                         <div className="overflow-hidden">
-                                                            <p className="text-sm font-bold text-white truncate">
-                                                                {buyerLocation?.fullAddress || 'No address set'}
+                                                            <p className={cn("text-sm font-bold truncate", !buyerLocation?.fullAddress ? "text-yellow-400" : "text-white")}>
+                                                                {buyerLocation?.fullAddress || 'Tap to set your location'}
                                                             </p>
-                                                            <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location</p>
+                                                            <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location (Required)</p>
                                                         </div>
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setIsChangingLocation(true)}
-                                                        className="h-8 w-8 p-0 rounded-lg hover:bg-white/5 shrink-0"
-                                                    >
-                                                        <Edit2 className="w-4 h-4 text-yellow-400" />
-                                                    </Button>
+                                                    <Edit2 className="w-4 h-4 text-yellow-400 shrink-0 opacity-50 group-hover/loc:opacity-100 transition-opacity" />
                                                 </div>
                                             </div>
                                         )}
