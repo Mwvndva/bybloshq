@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { isSellerShopless } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
@@ -496,14 +497,15 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                           type="button"
                           variant={formData.product_type === 'service' ? "default" : "outline"}
                           onClick={() => {
+                            const shopless = isSellerShopless(sellerProfile);
                             setFormData(prev => ({
                               ...prev,
                               product_type: 'service',
                               is_digital: false,
-                              service_locations: sellerProfile?.physicalAddress || '',
+                              service_locations: shopless ? '' : (sellerProfile?.physicalAddress || ''),
                               service_options: {
                                 ...prev.service_options,
-                                location_type: sellerProfile?.hasPhysicalShop ? 'buyer_visits_seller' : 'seller_visits_buyer'
+                                location_type: shopless ? 'seller_visits_buyer' : 'buyer_visits_seller'
                               }
                             }));
                           }}
@@ -638,7 +640,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                           </div>
                           <div>
                             <h4 className="font-semibold text-yellow-100 text-sm">Service Location</h4>
-                            {sellerProfile?.hasPhysicalShop ? (
+                            {!isSellerShopless(sellerProfile) ? (
                               <p className="text-yellow-200/80 text-sm mt-1">
                                 All services will be performed at your shop address:
                                 <br />
@@ -646,9 +648,9 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                               </p>
                             ) : (
                               <p className="text-yellow-200/80 text-sm mt-1">
-                                You do not have a shop address.
+                                You do not have a registered shop address.
                                 <br />
-                                <span className="font-medium text-white">Defaulting to Home Service (You visit buyer).</span>
+                                <span className="font-medium text-white underline decoration-yellow-400/50">Home Service: You will visit the buyer.</span>
                               </p>
                             )}
                           </div>

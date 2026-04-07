@@ -166,3 +166,23 @@ export function getImageUrl(path: string | undefined | null): string {
   // 4. Combine and return
   return `${baseUrl}${cleanPath}`;
 }
+
+/**
+ * Standardized check to determine if a seller is "Shopless"
+ * (Missing physical shop flag, missing address, or using default placeholder coordinates)
+ */
+export function isSellerShopless(seller: any | null | undefined): boolean {
+  if (!seller) return true;
+  if (!seller.hasPhysicalShop && !seller.physicalAddress) return true;
+
+  // Even if they have the flag, check if they have a real address
+  const address = (seller.physicalAddress || '').trim();
+  if (!address || address.toLowerCase() === 'nairobi' || address.toLowerCase() === 'kenya') return true;
+
+  // Check for default placeholder coordinates (Nairobi Default)
+  const lat = Number(seller.latitude);
+  const lng = Number(seller.longitude);
+  const isDefaultNairobi = Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001;
+
+  return isDefaultNairobi;
+}

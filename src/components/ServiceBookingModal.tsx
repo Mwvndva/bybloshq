@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Product } from '@/types';
 import { format, addDays, isBefore, startOfDay, parse } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, isSellerShopless } from '@/lib/utils';
 import { Calendar as CalendarIcon, Clock, MapPin, Edit2, Loader2 } from 'lucide-react';
 import { useBuyerAuth, useGlobalAuth } from '@/contexts/GlobalAuthContext';
 import LocationPicker from './common/LocationPicker';
@@ -55,9 +55,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const locationType = serviceOptions.location_type || 'buyer_visits_seller';
     const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
-    const isPlaceholderCoords = product.seller && Math.abs(Number(product.seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(product.seller.longitude) - 36.8219) < 0.001;
-    const hasCoordinates = !!product.seller?.latitude && !!product.seller?.longitude && Number(product.seller.latitude) !== 0;
-    const isShopless = !product.seller?.physicalAddress || !hasCoordinates || isPlaceholderCoords;
+    const isShopless = isSellerShopless(product.seller);
 
     // Reset state when modal opens
     useEffect(() => {

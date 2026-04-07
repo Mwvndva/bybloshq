@@ -7,7 +7,7 @@ import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loade
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { cn, formatCurrency, getImageUrl } from '@/lib/utils';
+import { cn, formatCurrency, getImageUrl, isSellerShopless } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { BuyerInfoModal, BuyerInfo } from '@/components/BuyerInfoModal';
@@ -635,7 +635,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
               ) : (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') ? (
                 "In-store & Mobile"
               ) : (
-                product.service_locations || (product as any).serviceLocations || "In-store"
+                (product.service_locations || (product as any).serviceLocations) || (isSellerShopless(displaySeller) ? "Mobile Service" : "In-store")
               )}
             </span>
           </div>
@@ -662,7 +662,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           >
             {displaySellerName}
           </span>
-          {displaySeller?.physicalAddress && (
+          {displaySeller && !isSellerShopless(displaySeller) && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>
                 <PopoverTrigger asChild>
