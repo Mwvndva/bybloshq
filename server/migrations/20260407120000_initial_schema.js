@@ -51,6 +51,8 @@ CREATE TABLE IF NOT EXISTS users (
     role VARCHAR(50) NOT NULL CHECK (role IN ('buyer', 'seller', 'admin', 'marketing')),
     is_verified BOOLEAN DEFAULT FALSE,
     is_active BOOLEAN DEFAULT TRUE,
+    email_verification_token VARCHAR(255) DEFAULT NULL,
+    email_verification_expires TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     reset_password_token VARCHAR(255),
     reset_password_expires TIMESTAMP WITH TIME ZONE,
     password_changed_at TIMESTAMP WITH TIME ZONE,
@@ -487,23 +489,24 @@ BEGIN
 END $$;
   `);
 
-    // 2. Add email verification columns (Latest changes)
-    pgm.addColumns('users', {
-        email_verification_token: {
-            type: 'varchar(255)',
-            notNull: false,
-            default: null,
-        },
-        email_verification_expires: {
-            type: 'timestamptz',
-            notNull: false,
-            default: null,
-        },
-    });
+    // 2. Add email verification columns (Latest changes) - Made idempotent
+    pgm.sql(`
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_verification_token') THEN
+                ALTER TABLE users ADD COLUMN email_verification_token VARCHAR(255) DEFAULT NULL;
+            END IF;
+            
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='email_verification_expires') THEN
+                ALTER TABLE users ADD COLUMN email_verification_expires TIMESTAMPTZ DEFAULT NULL;
+            END IF;
+        END $$;
+    `);
 
     pgm.createIndex('users', 'email_verification_token', {
         name: 'idx_users_email_verification_token',
         where: 'email_verification_token IS NOT NULL',
+        ifNotExists: true
     });
 
     // Mark all EXISTING users as verified
