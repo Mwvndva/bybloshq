@@ -29,6 +29,9 @@ export const sellerRegistrationSchema = z.object({
     city: z.string().min(1, 'City is required').trim(),
 
     location: z.string().min(1, 'Location is required').trim(),
+    physicalAddress: z.string().optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
