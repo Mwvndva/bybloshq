@@ -235,7 +235,7 @@ export const updateSeller = async (id, updates) => {
   }
 
   // Handle physical address update
-  if (updates.physicalAddress) {
+  if (updates.physicalAddress !== undefined) {
     paramCount++;
     updatesList.push(`physical_address = $${paramCount}`);
     values.push(updates.physicalAddress);

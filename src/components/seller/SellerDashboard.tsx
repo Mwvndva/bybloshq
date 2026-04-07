@@ -530,10 +530,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         whatsappNumber: formData.whatsappNumber
       };
 
-      if (formData.latitude && formData.longitude) {
-        payload.latitude = formData.latitude;
-        payload.longitude = formData.longitude;
-      }
+      payload.latitude = formData.latitude;
+      payload.longitude = formData.longitude;
 
       if (updateSellerProfile) {
         await updateSellerProfile(payload);
