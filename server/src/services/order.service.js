@@ -660,8 +660,10 @@ class OrderService {
 
       // Fetch Seller to check for Shop Address & Coordinates
       const { rows: sellers } = await client.query('SELECT physical_address, latitude, longitude FROM sellers WHERE id = $1', [order.seller_id]);
-      const sellerHasShop = sellers.length > 0 && !!sellers[0].physical_address &&
-        (!!sellers[0].latitude && !!sellers[0].longitude && Number(sellers[0].latitude) !== 0);
+      const s = sellers[0];
+      const isPlaceholderCoords = s && Math.abs(Number(s.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(s.longitude) - 36.8219) < 0.001;
+      const sellerHasShop = sellers.length > 0 && !!s.physical_address &&
+        (!!s.latitude && !!s.longitude && Number(s.latitude) !== 0) && !isPlaceholderCoords;
 
       // Enrich product type if missing but service_options exist
       items.forEach(i => {
