@@ -370,9 +370,15 @@ class OrderService {
             // fetching items is better.
           };
 
-          // Fetch items for better notification
-          const itemsResult = await pool.query('SELECT product_name, quantity, product_price FROM order_items WHERE order_id = $1', [orderId]);
-          orderData.items = itemsResult.rows.map(i => ({
+          // Fetch items      // 3. WhatsApp Notifications
+          const { rows: items } = await pool.query(
+            `SELECT oi.*, p.product_type 
+             FROM order_items oi
+             JOIN products p ON oi.product_id = p.id
+             WHERE oi.order_id = $1`,
+            [orderId]
+          );
+          orderData.items = items.map(i => ({
             product_name: i.product_name,
             quantity: i.quantity,
             product_price: i.product_price
@@ -1340,10 +1346,12 @@ class OrderService {
       whatsappService.notifySellerNewOrder({ seller: sellerData, buyer: buyerData, order: payload.order, items })
         .catch(e => logger.error('[ORDER] Seller notification failed:', e));
 
-      // 4. Logistics / Courier Notification (If Physical and no Shop)
+      // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates)
       const hasPhysical = items.some(i => i.product_type === 'physical' || i.productType === 'physical');
-      if (hasPhysical && !sellerData.physicalAddress) {
-        whatsappService.sendLogisticsNotification(payload.order, payload.buyer, payload.seller)
+      const sellerHasNoCoordinates = !sellerData.latitude || !sellerData.longitude || Number(sellerData.latitude) === 0;
+
+      if (hasPhysical && (sellerHasNoCoordinates || !sellerData.physicalAddress)) {
+        whatsappService.sendLogisticsNotification(payload.order, payload.buyer, payload.seller, items)
           .catch(e => logger.error('[ORDER] Courier notification failed:', e));
       }
 

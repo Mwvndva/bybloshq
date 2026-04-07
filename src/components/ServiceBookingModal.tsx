@@ -64,19 +64,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             setTime('');
             setServiceRequirements('');
 
-            // Initialize buyer location from profile (only on open)
-            if (buyerProfile) {
-                const loc = {
-                    latitude: (buyerProfile as any).latitude || 0,
-                    longitude: (buyerProfile as any).longitude || 0,
-                    fullAddress: (buyerProfile as any).fullAddress || buyerProfile.location || ''
-                };
-                setBuyerLocation(loc);
-                setCustomLocation(loc.fullAddress);
-            } else {
-                setBuyerLocation(null);
-                setCustomLocation('');
-            }
+            // DON'T auto-fill buyer location from profile anymore to force explicit selection
+            // as requested by user ("should always ask buyer to input their location details")
+            setBuyerLocation(null);
+            setCustomLocation('');
 
             // Auto-select first location if available
             if (locations.length > 0) {

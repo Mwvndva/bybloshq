@@ -15,8 +15,8 @@ class WhatsAppService {
         this.MAX_QUEUE_SIZE = 500;
 
         // Configuration (override via env)
-        this.DROPOFF_LOCATION = process.env.DROPOFF_LOCATION || 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32';
-        this.COURIER_NUMBER = process.env.COURIER_WHATSAPP_NUMBER || '0748137819';
+        this.DROPOFF_LOCATION = (process.env.DROPOFF_LOCATION || 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32').replace(/^["']|["']$/g, '');
+        this.COURIER_NUMBER = (process.env.COURIER_WHATSAPP_NUMBER || '0748137819').replace(/\s/g, '');
         this.SELLER_DEADLINE_HRS = 48;
         this.BUYER_PICKUP_HRS = 24;
     }
@@ -810,7 +810,7 @@ Your refund balance remains available for future withdrawal requests.
         return this.sendMessage(buyerWhatsApp, message);
     }
 
-    async sendLogisticsNotification(order, buyer, seller) {
+    async sendLogisticsNotification(order, buyer, seller, items = []) {
         // Skip for service, digital, and shop-pickup orders
         const productType = order.metadata?.product_type
         const isService = productType === 'service'
@@ -822,8 +822,9 @@ Your refund balance remains available for future withdrawal requests.
         }
 
         // Skip if seller has their own shop (buyer collects directly)
-        if (seller?.physicalAddress) {
-            logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop, order #${order.orderNumber || order.id}`)
+        const hasCoordinates = seller?.latitude && seller?.longitude && Number(seller.latitude) !== 0;
+        if (seller?.physicalAddress && hasCoordinates) {
+            logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop with coordinates, order #${order.orderNumber || order.id}`)
             return false
         }
 
