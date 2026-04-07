@@ -1413,12 +1413,12 @@ export class PaymentService {
             shippingAddress, // Pass the resolved address
             buyerLocation: payload.metadata?.buyer_location, // Extract from metadata if provided by frontend
             metadata: {
+                ...payload.metadata, // Preserve all incoming metadata (booking_date, booking_time, etc)
                 product_type: product.product_type,
                 is_digital: product.is_digital,
                 product_id: productId,
                 product_name: product.name,
                 customer_name: customerName,
-                buyer_location: payload.metadata?.buyer_location,
                 items: [{
                     productId: productId,
                     name: product.name,

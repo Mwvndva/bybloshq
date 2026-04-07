@@ -43,6 +43,11 @@ class OrderService {
         product_type: rawMetadata.product_type,
         product_id: rawMetadata.product_id,
         narration: rawMetadata.narration,
+        // Booking specific keys
+        booking_date: rawMetadata.booking_date,
+        booking_time: rawMetadata.booking_time,
+        service_location: rawMetadata.service_location,
+        buyer_location: rawMetadata.buyer_location,
         // Any other specific frontend keys needed for display
         customerName: rawMetadata.customerName,
         productName: rawMetadata.productName
@@ -1334,6 +1339,13 @@ class OrderService {
       whatsappService.notifyBuyerOrderConfirmation(payload).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
       whatsappService.notifySellerNewOrder({ seller: sellerData, buyer: buyerData, order: payload.order, items })
         .catch(e => logger.error('[ORDER] Seller notification failed:', e));
+
+      // 4. Logistics / Courier Notification (If Physical and no Shop)
+      const hasPhysical = items.some(i => i.product_type === 'physical' || i.productType === 'physical');
+      if (hasPhysical && !sellerData.physicalAddress) {
+        whatsappService.sendLogisticsNotification(payload.order, payload.buyer, payload.seller)
+          .catch(e => logger.error('[ORDER] Courier notification failed:', e));
+      }
 
       // Notify Buyer via Email if not seller-initiated
       if (buyerData.email) {

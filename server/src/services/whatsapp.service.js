@@ -232,17 +232,26 @@ class WhatsAppService {
      */
     _getGoogleMapsLink(name, address, lat, lng) {
         try {
-            // Convert to numbers if they are strings (e.g. from PostgreSQL DECIMAL)
-            const nLat = lat !== null && lat !== undefined ? Number.parseFloat(lat) : null;
-            const nLng = lng !== null && lng !== undefined ? Number.parseFloat(lng) : null;
+            // If no address and no coordinates, return null
+            if (!address && (lat === null || lat === undefined || lng === null || lng === undefined)) return null;
 
-            if (nLat !== null && nLng !== null && !Number.isNaN(nLat) && !Number.isNaN(nLng)) {
-                return `https://www.google.com/maps?q=${nLat},${nLng}`;
+            // If coordinates are provided, prioritize them
+            if (lat !== null && lat !== undefined && lng !== null && lng !== undefined) {
+                const latitude = Number(lat);
+                const longitude = Number(lng);
+
+                if (!isNaN(latitude) && !isNaN(longitude)) {
+                    return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+                }
             }
 
-            const query = name ? `${name} ${address || ''}` : address;
-            if (!query) return null;
-            return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query.trim())}`;
+            // Fallback to address string encoding
+            if (address) {
+                const query = encodeURIComponent(`${name ? name + ', ' : ''}${address}`);
+                return `https://www.google.com/maps/search/?api=1&query=${query}`;
+            }
+
+            return null;
         } catch (e) {
             logger.error('[WHATSAPP-SERVICE] Error generating maps link:', e.message);
             return null;
@@ -326,20 +335,25 @@ class WhatsAppService {
         if (isService) {
             const locationType = order.metadata?.location_type;
             const isSellerVisitsBuyer = locationType === 'seller_visits_buyer';
-            const locationLabel = isSellerVisitsBuyer ? 'Client Location' : 'Service Location';
-            const locationVal = order.metadata?.service_location || seller.physicalAddress || 'Not specified';
+            const sellerHasNoShop = !seller.latitude || !seller.longitude;
+            const locationLabel = (isSellerVisitsBuyer || sellerHasNoShop) ? 'Client Location' : 'Service Location';
+            const locationVal = order.metadata?.service_location || seller.physicalAddress || buyer.location || 'Not specified';
 
             let clientMapsLink = '';
-            if (isSellerVisitsBuyer && order.metadata?.buyer_location) {
-                const bloc = order.metadata.buyer_location;
-                clientMapsLink = this._getGoogleMapsLink(buyer.name, bloc.fullAddress, bloc.latitude, bloc.longitude);
+            // If it's a home-visit service OR the seller has no shop coordinates, give the seller the buyer's map link
+            if ((isSellerVisitsBuyer || sellerHasNoShop) && (buyer.latitude || order.metadata?.buyer_location)) {
+                const bloc = order.metadata?.buyer_location || { latitude: buyer.latitude, longitude: buyer.longitude, fullAddress: buyer.location };
+                clientMapsLink = this._getGoogleMapsLink(buyer.name, bloc.fullAddress || buyer.location, bloc.latitude, bloc.longitude);
+            } else {
+                // Otherwise use the service location/seller shop link
+                clientMapsLink = this._getGoogleMapsLink(seller.shopName || 'Service Provider', locationVal, seller.latitude, seller.longitude);
             }
 
             bookingInfo = `
 📅 *SERVICE BOOKING*
 • Date: ${order.metadata?.booking_date || 'N/A'}
 • Time: ${order.metadata?.booking_time || 'N/A'}
-• ${locationLabel}: ${locationVal}${clientMapsLink ? `\n• *Buyer Map:* ${clientMapsLink}` : ''}
+• ${locationLabel}: ${locationVal}${clientMapsLink ? `\n📍 *Navigate:* ${clientMapsLink}` : ''}
 `.trim();
 
             actionText = `⏰ *ACTION REQUIRED:*
@@ -402,19 +416,24 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
 
         if (isService) {
             const locationType = metadata?.location_type;
-            const locationLabel = locationType === 'seller_visits_buyer' ? 'Client Location' : 'Service Location';
-            const locationVal = metadata?.service_location || seller?.physicalAddress || 'Not specified';
-            const mapsLink = this._getGoogleMapsLink(seller?.shopName || 'Service Provider', locationVal, seller?.latitude, seller?.longitude);
+            const sellerHasNoShop = !seller?.latitude || !seller?.longitude;
+            const isHomeVisit = locationType === 'seller_visits_buyer' || sellerHasNoShop;
+
+            const locationLabel = isHomeVisit ? 'Your Address (Home Visit)' : 'Service Location';
+            const locationVal = isHomeVisit ? (buyer.location || 'Your Registered Address') : (metadata?.service_location || seller?.physicalAddress || 'Not specified');
+
+            // For buyer, if it's a shop service, give them the shop map. If it's a home visit, no map needed for themselves.
+            const mapsLink = !isHomeVisit ? this._getGoogleMapsLink(seller?.shopName || 'Service Provider', locationVal, seller?.latitude, seller?.longitude) : null;
 
             body = `
 📅 *SERVICE BOOKING*
 • Date: ${metadata?.booking_date || 'N/A'}
 • Time: ${metadata?.booking_time || 'N/A'}
 • ${locationLabel}: ${locationVal}
-${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
+${mapsLink ? `\n📍 *Navigate to Provider:* ${mapsLink}` : ''}
 
 ⏰ *WHAT'S NEXT:*
-The provider has been notified. Please visit your dashboard to track the status.
+The provider has been notified. They will ${isHomeVisit ? 'come to your location' : 'see you at the scheduled time'}.
 🔒 Your payment is secure and will be held until the service is complete.`.trim();
 
         } else if (isDigital) {
@@ -439,13 +458,15 @@ ${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 Please proceed to the shop for collection. Show your order number *#${order.orderNumber}* at the counter.`.trim();
             } else {
                 body = `
-🚚 *LOGISTICS DELIVERY:*
-Your order will be delivered to:
-*${buyer.location || 'Your Address'}*
+🚚 *SYSTEM DELIVERY (COURIER):*
+Your order will be handled by our system delivery partner.
 
 ⏰ *WHAT'S NEXT:*
-We'll notify you when it's ready for pickup at ${this.DROPOFF_LOCATION}.
-The seller has ${this.SELLER_DEADLINE_HRS} hours to drop off your order.`.trim();
+1. Seller drops items at *${this.DROPOFF_LOCATION}*
+2. We verify and notify you when it's ready for your collection.
+3. You will pick it up at the same central location (*${this.DROPOFF_LOCATION.split('|')[0].trim()}*).
+
+📍 *Delivery Address:* ${buyer.location || 'Your Address'}`.trim();
             }
         }
 
@@ -809,15 +830,17 @@ Your refund balance remains available for future withdrawal requests.
         const COURIER_NUMBER = this.COURIER_NUMBER
         const DROPOFF_LOCATION = this.DROPOFF_LOCATION
 
-        // Build items list from order.items (pre-fetched order_items rows)
-        let itemsList = 'No items listed'
-        if (order.items && order.items.length > 0) {
-            itemsList = order.items.map((item, i) => {
-                const name = item.product_name || item.name || 'Product'
-                const price = Number.parseFloat(item.product_price || item.product_price_actual || item.price || 0)
-                const qty = Number.parseInt(item.quantity || 1, 10)
-                return `${i + 1}. ${name} × ${qty} — KSh ${price.toLocaleString()}`
-            }).join('\n')
+        // Build items list
+        let itemsList = 'No items listed';
+        const rawItems = order.items || order.metadata?.items || items || [];
+
+        if (rawItems && rawItems.length > 0) {
+            itemsList = rawItems.map((item, i) => {
+                const name = item.product_name || item.name || 'Product';
+                const price = Number.parseFloat(item.product_price || item.product_price_actual || item.price || 0);
+                const qty = Number.parseInt(item.quantity || 1, 10);
+                return `${i + 1}. ${name} × ${qty} — KSh ${price.toLocaleString()}`;
+            }).join('\n');
         }
 
         const total = Number.parseFloat(order.totalAmount || order.total_amount || 0)
