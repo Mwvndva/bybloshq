@@ -426,7 +426,7 @@ export function BuyerRegister() {
                             }));
                           }}
                         >
-                          <SelectTrigger className="pl-8 sm:pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm">
+                          <SelectTrigger className="!pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-sm">
                             <SelectValue placeholder="Nairobi" />
                           </SelectTrigger>
                           <SelectContent className="bg-gray-800 border-gray-700 text-white">
@@ -456,7 +456,7 @@ export function BuyerRegister() {
                           }}
                           disabled={!formData.city}
                         >
-                          <SelectTrigger className="pl-8 sm:pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-sm">
+                          <SelectTrigger className="!pl-8 sm:!pl-14 h-8 sm:h-11 md:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-sm">
                             <SelectValue placeholder={formData.city ? "Select your area" : "Select city first"} />
                           </SelectTrigger>
                           <SelectContent className="bg-gray-800 border-gray-700 text-white">

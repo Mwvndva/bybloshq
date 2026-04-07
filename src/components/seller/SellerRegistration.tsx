@@ -524,7 +524,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                           value={formData.city}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, location: '' }))}
                         >
-                          <SelectTrigger className="pl-8 sm:pl-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
+                          <SelectTrigger className="!pl-8 sm:!pl-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
                             <SelectValue placeholder="Nairobi" className="text-gray-300" />
                           </SelectTrigger>
                           <SelectContent className="bg-gray-800 border-gray-700 text-white">
@@ -547,7 +547,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                           onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
                           disabled={!formData.city}
                         >
-                          <SelectTrigger className="pl-8 sm:pl-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-base">
+                          <SelectTrigger className="!pl-8 sm:!pl-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-base">
                             <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} className="text-gray-300" />
                           </SelectTrigger>
                           <SelectContent className="bg-gray-800 border-gray-700 text-white">
