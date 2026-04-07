@@ -556,7 +556,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             type="button"
                             onClick={() => {
                               setHasPhysicalShop(false);
-                              setFormData(prev => ({ ...prev, physicalAddress: 'Nairobi, Kenya', latitude: -1.2921, longitude: 36.8219 }));
+                              setFormData(prev => ({ ...prev, physicalAddress: '', latitude: undefined, longitude: undefined }));
                               setCurrentStep(4); // Move directly to verification
                             }}
                             variant="ghost"
