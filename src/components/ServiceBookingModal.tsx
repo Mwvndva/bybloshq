@@ -55,7 +55,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const locationType = serviceOptions.location_type || 'buyer_visits_seller';
     const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
-    const isShopless = !product.seller?.physicalAddress;
+    const isPlaceholderCoords = product.seller && Math.abs(Number(product.seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(product.seller.longitude) - 36.8219) < 0.001;
+    const isShopless = !product.seller?.physicalAddress || isPlaceholderCoords;
 
     // Reset state when modal opens
     useEffect(() => {
@@ -226,7 +227,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                     </div>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto px-6 py-4">
+                <div className="flex-1 overflow-y-auto px-6 py-4 no-scrollbar">
                     <div className="space-y-6">
                         <div className="space-y-3">
                             <div className="flex justify-center">
@@ -412,7 +413,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                         </div>
                     </DialogHeader>
 
-                    <div className="flex-1 overflow-y-auto px-6 py-4">
+                    <div className="flex-1 overflow-y-auto px-6 py-4 no-scrollbar">
                         <LocationPicker
                             initialAddress={buyerLocation?.fullAddress}
                             initialCoordinates={buyerLocation ? { lat: buyerLocation.latitude, lng: buyerLocation.longitude } : null}
