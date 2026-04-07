@@ -826,7 +826,8 @@ Your refund balance remains available for future withdrawal requests.
         }
 
         // Skip if seller has their own shop (buyer collects directly)
-        const hasCoordinates = seller?.latitude && seller?.longitude && Number(seller.latitude) !== 0;
+        const isPlaceholderCoords = seller && Math.abs(Number(seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(seller.longitude) - 36.8219) < 0.001;
+        const hasCoordinates = seller?.latitude && seller?.longitude && Number(seller.latitude) !== 0 && !isPlaceholderCoords;
         if (seller?.physicalAddress && hasCoordinates) {
             logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop with coordinates, order #${order.orderNumber || order.id}`)
             return false

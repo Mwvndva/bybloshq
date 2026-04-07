@@ -1351,7 +1351,8 @@ class OrderService {
 
       // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates)
       const hasPhysical = items.some(i => i.product_type === 'physical' || i.productType === 'physical');
-      const sellerHasNoCoordinates = !sellerData.latitude || !sellerData.longitude || Number(sellerData.latitude) === 0;
+      const isPlaceholderCoords = sellerData && Math.abs(Number(sellerData.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(sellerData.longitude) - 36.8219) < 0.001;
+      const sellerHasNoCoordinates = !sellerData.latitude || !sellerData.longitude || Number(sellerData.latitude) === 0 || isPlaceholderCoords;
 
       if (hasPhysical && (sellerHasNoCoordinates || !sellerData.physicalAddress)) {
         whatsappService.sendLogisticsNotification(payload.order, payload.buyer, payload.seller, items)
@@ -1372,11 +1373,6 @@ class OrderService {
         }, false).catch(e => logger.error('[ORDER] Buyer receipt email failed:', e));
       }
 
-      whatsappService.sendLogisticsNotification(
-        { id: fullOrder.id, orderNumber: fullOrder.order_number, totalAmount: fullOrder.total_amount, items, metadata: fullOrder.metadata },
-        { fullName: buyerData.name, whatsapp_number: buyerData.whatsapp_number, phone: buyerData.phone, city: fullOrder.buyer_city, location: buyerData.location },
-        { shop_name: sellerData.shop_name, full_name: sellerData.name, whatsapp_number: sellerData.phone, physicalAddress: sellerData.physicalAddress, city: fullOrder.seller_city }
-      ).catch(e => logger.error('[ORDER] Courier notification failed:', e));
 
     } catch (e) {
       logger.error('[ORDER] Error triggering completion notifications:', e);
