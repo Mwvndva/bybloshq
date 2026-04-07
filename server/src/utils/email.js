@@ -310,6 +310,36 @@ export const sendNewOrderNotificationEmail = async (email, orderData) => {
   }
 };
 
+export const sendPaymentReceiptEmail = async (email, orderData, isSeller = false) => {
+  try {
+    const templateData = {
+      appName: process.env.APP_NAME || 'Byblos Atelier',
+      websiteUrl: process.env.FRONTEND_URL || 'https://bybloshq.space',
+      buyerName: orderData.buyer_name || 'Customer',
+      buyerEmail: orderData.buyer_email || 'Not specified',
+      orderNumber: orderData.order_number,
+      paymentDate: new Date().toLocaleDateString(), // Or use orderData.paid_at if available
+      items: orderData.items || [],
+      totalAmount: orderData.total_amount,
+      paymentMethod: orderData.payment_method || 'mpesa',
+      transactionId: orderData.payment_reference || 'Ref pending',
+      isSeller
+    };
+
+    const html = await readTemplate('product-payment-receipt', templateData);
+
+    await sendEmail({
+      to: email,
+      subject: `Payment Receipt - Order #${orderData.order_number}`,
+      html,
+      text: `Payment Receipt for Order #${orderData.order_number}. Total amount: KSh ${orderData.total_amount}`
+    });
+  } catch (error) {
+    console.error('Error sending payment receipt email:', error);
+    throw error;
+  }
+};
+
 export const sendWelcomeEmail = async (email, name) => {
   try {
     const loginUrl = `${process.env.FRONTEND_URL}/login`;
