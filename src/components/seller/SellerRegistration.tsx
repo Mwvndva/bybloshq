@@ -52,6 +52,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [hasPhysicalShop, setHasPhysicalShop] = useState<boolean | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
   const { toast } = useToast();
 
@@ -576,23 +577,92 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
                 {/* Step 3: Shop Details */}
                 {currentStep === 3 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2 mb-2 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/10">
-                      <Store className="h-4 w-4 text-yellow-400" />
-                      <p className="text-[10px] sm:text-xs text-gray-300">Adding your physical address helps customers find you.</p>
-                    </div>
-                    <ShopLocationPicker
-                      initialAddress={formData.physicalAddress}
-                      initialCoordinates={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
-                      onLocationChange={(address, coords) => {
-                        setFormData(prev => ({
-                          ...prev,
-                          physicalAddress: address,
-                          latitude: coords?.lat,
-                          longitude: coords?.lng
-                        }));
-                      }}
-                    />
+                  <div className="space-y-4 animate-in fade-in duration-500">
+                    {hasPhysicalShop === null ? (
+                      <div className="space-y-6 py-4">
+                        <div className="text-center space-y-2">
+                          <h3 className="text-lg font-bold text-white">Do you have a physical shop?</h3>
+                          <p className="text-gray-400 text-xs font-medium">
+                            Adding your shop location helps local customers find you easily.
+                          </p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              setHasPhysicalShop(false);
+                              setFormData(prev => ({ ...prev, physicalAddress: 'Nairobi, Kenya', latitude: -1.2921, longitude: 36.8219 })); // Default for online-only
+                            }}
+                            variant="ghost"
+                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-white/5 uppercase tracking-wider"
+                          >
+                            <div className="text-3xl group-hover:scale-110 transition-transform">🏠</div>
+                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-white transition-colors">Online Only</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={() => setHasPhysicalShop(true)}
+                            variant="ghost"
+                            className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-yellow-400/5 hover:text-yellow-400 uppercase tracking-wider"
+                          >
+                            <div className="text-3xl group-hover:scale-110 transition-transform">🏪</div>
+                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-yellow-400 transition-colors">Physical Shop</span>
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4 animate-in zoom-in-95 duration-300">
+                        {hasPhysicalShop ? (
+                          <>
+                            <div className="flex items-center justify-between mb-2 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/10">
+                              <div className="flex items-center gap-2">
+                                <Store className="h-4 w-4 text-yellow-400" />
+                                <p className="text-[10px] sm:text-xs text-gray-300">Pin your shop's specific location.</p>
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setHasPhysicalShop(null)}
+                                className="h-6 px-2 text-[10px] text-zinc-500 hover:text-white"
+                              >
+                                Change
+                              </Button>
+                            </div>
+                            <ShopLocationPicker
+                              initialAddress={formData.physicalAddress}
+                              initialCoordinates={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
+                              onLocationChange={(address, coords) => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  physicalAddress: address,
+                                  latitude: coords?.lat,
+                                  longitude: coords?.lng
+                                }));
+                              }}
+                            />
+                          </>
+                        ) : (
+                          <div className="py-8 text-center space-y-4 bg-white/5 rounded-2xl border border-white/10 animate-in slide-in-from-top-4 duration-500">
+                            <div className="w-12 h-12 mx-auto bg-yellow-400/10 rounded-full flex items-center justify-center">
+                              <Check className="h-6 w-6 text-yellow-400" />
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-white font-bold">Online-only Shop</p>
+                              <p className="text-zinc-500 text-xs px-8">You've selected that your shop only operates online. You can add a physical address later from your settings.</p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="link"
+                              onClick={() => setHasPhysicalShop(null)}
+                              className="text-yellow-400 text-xs"
+                            >
+                              Wait, I actually have a physical shop
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -728,8 +798,13 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             return;
                           }
                         } else if (currentStep === 3) {
-                          // Mandatory
-                          if (!formData.physicalAddress) {
+                          // Must have made a choice
+                          if (hasPhysicalShop === null) {
+                            toast({ title: "Selection Required", description: "Please select whether you have a physical shop or operate online only.", variant: 'destructive' });
+                            return;
+                          }
+                          // If they have a shop, must have a specific address (not the default/empty)
+                          if (hasPhysicalShop && !formData.physicalAddress) {
                             toast({ title: "Shop Address Required", description: "Please provide a specific shop address or location on the map.", variant: 'destructive' });
                             return;
                           }
