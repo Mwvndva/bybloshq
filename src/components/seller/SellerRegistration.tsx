@@ -347,8 +347,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
             className="rounded-2xl border border-white/10 shadow-2xl p-5 sm:p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md"
           >
             <div className="text-center mb-6">
-              <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
-                <Store className="h-6 w-6 text-white" />
+              <div className="mx-auto mb-4 flex items-center justify-center">
+                <Store className="h-12 w-12 text-yellow-500" />
               </div>
               <h1 className="text-xl font-semibold tracking-tight text-white mb-1">Create Account</h1>
               <p className="text-sm text-gray-400">Join our seller community</p>
@@ -562,8 +562,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             variant="ghost"
                             className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-white/5 uppercase tracking-wider"
                           >
-                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform">
-                              <Globe className="h-5 w-5 text-zinc-400 group-hover:text-white" />
+                            <div className="flex items-center justify-center group-hover:scale-110 transition-transform">
+                              <Globe className="h-12 w-12 text-zinc-400 group-hover:text-white" />
                             </div>
                             <span className="font-bold text-[10px] text-gray-400 group-hover:text-white transition-colors">No, online only</span>
                           </Button>
@@ -573,8 +573,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             variant="ghost"
                             className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-yellow-400/5 hover:text-yellow-400 uppercase tracking-wider"
                           >
-                            <div className="w-10 h-10 bg-yellow-400/10 rounded-xl flex items-center justify-center border border-yellow-400/20 group-hover:scale-110 transition-transform">
-                              <Store className="h-5 w-5 text-yellow-400" />
+                            <div className="flex items-center justify-center group-hover:scale-110 transition-transform">
+                              <Store className="h-12 w-12 text-yellow-500" />
                             </div>
                             <span className="font-bold text-[10px] text-gray-400 group-hover:text-yellow-400 transition-colors">Yes, I have a physical shop</span>
                           </Button>
