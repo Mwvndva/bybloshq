@@ -39,22 +39,22 @@ class AuthService {
                 }
 
                 // Password correct — regenerate the verification token and resend email
-                const crypto = await import('node:crypto');
                 const rawToken = crypto.randomBytes(32).toString('hex');
                 const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
                 const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10);
                 const expiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
 
                 // Update the pending record with a fresh token
-                await PendingRegistration.updateToken(email, hashedToken, expiresAt);
+                const normalizedEmail = email.toLowerCase().trim();
+                await PendingRegistration.updateToken(normalizedEmail, hashedToken, expiresAt);
 
                 // Send the new verification email (non-blocking)
                 const { sendVerificationEmail } = await import('../utils/email.js');
-                sendVerificationEmail(email, rawToken, pending.role).catch(err =>
+                sendVerificationEmail(normalizedEmail, rawToken, pending.role).catch(err =>
                     logger.error('[AUTH] Failed to resend pending verification email:', err.message)
                 );
 
-                logger.info(`[AUTH] Login attempted for pending user, resent verification email: ${email}`);
+                logger.info(`[AUTH] Login attempted for pending user, resent verification email: ${normalizedEmail}`);
 
                 // Throw a typed error so the controller can return the right response
                 const err = new Error(
@@ -62,7 +62,7 @@ class AuthService {
                 );
                 err.code = 'PENDING_VERIFICATION';
                 err.statusCode = 403;
-                err.email = email;
+                err.email = normalizedEmail;
                 err.userType = pending.role;
                 throw err;
             }
@@ -339,6 +339,7 @@ class AuthService {
         // 2. Check pending_registrations
         const pending = await PendingRegistration.findByEmailAndToken(email, hashedToken);
         if (!pending) {
+            logger.warn(`[AUTH] Verification failed - record not found for email: ${email} with hashed token: ${hashedToken}`);
             throw new Error('Verification link is invalid or has expired. Please request a new one.');
         }
 

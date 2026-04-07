@@ -215,7 +215,7 @@ export function BuyerInfoModal({
                   First Name *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                     <User className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
@@ -237,7 +237,7 @@ export function BuyerInfoModal({
                   Last Name *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                     <User className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
@@ -262,7 +262,7 @@ export function BuyerInfoModal({
                 Email Address *
               </Label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                   <Mail className="h-4 w-4 text-[#555555]" />
                 </div>
                 <Input
@@ -287,7 +287,7 @@ export function BuyerInfoModal({
                   M-Pesa *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                     <Phone className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
@@ -307,7 +307,7 @@ export function BuyerInfoModal({
                   WhatsApp *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                     <Phone className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Input
@@ -331,7 +331,7 @@ export function BuyerInfoModal({
                   City *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                     <MapPin className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Select
@@ -361,7 +361,7 @@ export function BuyerInfoModal({
                   Area *
                 </Label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                     <MapPin className="h-4 w-4 text-[#555555]" />
                   </div>
                   <Select
@@ -397,7 +397,7 @@ export function BuyerInfoModal({
                 Set Password *
               </Label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                   <Lock className="h-4 w-4 text-[#555555]" />
                 </div>
                 <Input
@@ -456,7 +456,7 @@ export function BuyerInfoModal({
                 Verify Password *
               </Label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none z-10">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
                   <Lock className="h-4 w-4 text-[#555555]" />
                 </div>
                 <Input
