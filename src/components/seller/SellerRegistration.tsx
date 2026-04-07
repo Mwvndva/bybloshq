@@ -383,8 +383,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
             {isRegistered ? (
               <div className="text-center py-8 space-y-6">
-                <div className="w-20 h-20 mx-auto bg-yellow-400/10 rounded-full flex items-center justify-center border border-yellow-400/20 shadow-[0_0_30px_rgba(250,204,21,0.1)]">
-                  <Mail className="h-10 w-10 text-yellow-400 animate-pulse" />
+                <div className="mx-auto flex items-center justify-center pb-2">
+                  <Mail className="h-16 w-16 text-yellow-500 animate-pulse" />
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-2xl font-bold text-white tracking-tight">Check your email</h2>
