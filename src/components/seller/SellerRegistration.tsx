@@ -263,8 +263,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         description: "Welcome to your seller dashboard!",
       });
 
-      // Redirect to shop setup
-      navigate('/seller/shop-setup');
+      // Redirect to dashboard
+      navigate('/seller/dashboard');
 
       if (onSuccess) onSuccess();
     } catch (error: any) {
@@ -591,13 +591,14 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             type="button"
                             onClick={() => {
                               setHasPhysicalShop(false);
-                              setFormData(prev => ({ ...prev, physicalAddress: 'Nairobi, Kenya', latitude: -1.2921, longitude: 36.8219 })); // Default for online-only
+                              setFormData(prev => ({ ...prev, physicalAddress: 'Nairobi, Kenya', latitude: -1.2921, longitude: 36.8219 }));
+                              setCurrentStep(4); // Move directly to verification
                             }}
                             variant="ghost"
                             className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-white/5 uppercase tracking-wider"
                           >
                             <div className="text-3xl group-hover:scale-110 transition-transform">🏠</div>
-                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-white transition-colors">Online Only</span>
+                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-white transition-colors">No, online only</span>
                           </Button>
                           <Button
                             type="button"
@@ -606,7 +607,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-yellow-400/5 hover:text-yellow-400 uppercase tracking-wider"
                           >
                             <div className="text-3xl group-hover:scale-110 transition-transform">🏪</div>
-                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-yellow-400 transition-colors">Physical Shop</span>
+                            <span className="font-bold text-[10px] text-gray-400 group-hover:text-yellow-400 transition-colors">Yes, I have a physical shop</span>
                           </Button>
                         </div>
                       </div>

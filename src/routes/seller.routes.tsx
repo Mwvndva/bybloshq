@@ -7,7 +7,6 @@ import { RouteFallback } from '@/components/common/RouteFallback';
 
 const SellerDashboard = safeLazy(() => import('../components/seller/SellerDashboard'));
 const SellerRegistration = safeLazy(() => import('../components/seller/SellerRegistration'));
-const ShopSetup = safeLazy(() => import('../components/seller/ShopSetup'));
 const SellerLogin = safeLazy(() => import('../components/seller/SellerLogin').then(m => m.SellerLogin));
 const AddProductForm = safeLazy(() => import('../components/seller/AddProductForm'));
 const SellerProductsPage = safeLazy(() => import('@/pages/seller/SellerProductsPage'));
@@ -77,14 +76,6 @@ export const sellerRoutes: RouteObject[] = [
         element: (
           <Suspense fallback={<RouteFallback />}>
             <SellerProductsPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: 'shop-setup',
-        element: (
-          <Suspense fallback={<RouteFallback />}>
-            <ShopSetup />
           </Suspense>
         ),
       },
