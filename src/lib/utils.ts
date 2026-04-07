@@ -179,10 +179,12 @@ export function isSellerShopless(seller: any | null | undefined): boolean {
   const address = (seller.physicalAddress || '').trim();
   if (!address || address.toLowerCase() === 'nairobi' || address.toLowerCase() === 'kenya') return true;
 
-  // Check for default placeholder coordinates (Nairobi Default)
+  // Check for missing or placeholder coordinates
   const lat = Number(seller.latitude);
   const lng = Number(seller.longitude);
-  const isDefaultNairobi = Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001;
 
+  if (!lat || !lng || lat === 0 || lng === 0) return true;
+
+  const isDefaultNairobi = Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001;
   return isDefaultNairobi;
 }
