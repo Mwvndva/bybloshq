@@ -8,7 +8,7 @@ import Buyer from '../models/buyer.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
 import ReferralService from './referral.service.js';
-import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail } from '../utils/email.js';
+import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../utils/email.js';
 
 class OrderService {
   /**
@@ -1304,7 +1304,13 @@ class OrderService {
           ...fullOrder,
           seller_name: sellerData.name,
           items
-        }).catch(e => logger.error('[ORDER] Seller email notification failed:', e));
+        }).catch(e => logger.error('[ORDER] Seller notification email failed:', e));
+
+        // Also send formal Receipt to Seller
+        sendPaymentReceiptEmail(sellerData.email, {
+          ...fullOrder,
+          items
+        }, true).catch(e => logger.error('[ORDER] Seller receipt email failed:', e));
       }
 
       if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
@@ -1328,7 +1334,13 @@ class OrderService {
         sendProductOrderConfirmationEmail(buyerData.email, {
           ...fullOrder,
           items
-        }).catch(e => logger.error('[ORDER] Buyer email notification failed:', e));
+        }).catch(e => logger.error('[ORDER] Buyer confirmation email failed:', e));
+
+        // Also send formal Receipt to Buyer
+        sendPaymentReceiptEmail(buyerData.email, {
+          ...fullOrder,
+          items
+        }, false).catch(e => logger.error('[ORDER] Buyer receipt email failed:', e));
       }
 
       whatsappService.sendLogisticsNotification(
