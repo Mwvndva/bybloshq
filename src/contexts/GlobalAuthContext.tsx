@@ -92,6 +92,9 @@ export interface SellerRegistrationData {
     confirmPassword: string;
     city?: string;
     location?: string;
+    physicalAddress?: string;
+    latitude?: number;
+    longitude?: number;
     referralCode?: string;
 }
 
