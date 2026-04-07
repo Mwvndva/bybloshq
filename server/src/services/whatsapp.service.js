@@ -233,10 +233,8 @@ class WhatsAppService {
      */
     _getGoogleMapsLink(name, address, lat, lng) {
         try {
-            // If no address and no coordinates, return null
-            if (!address && (lat === null || lat === undefined || lng === null || lng === undefined)) return null;
-
-            // If coordinates are provided, prioritize them
+            // Strict check: Only return a link if coordinates are provided
+            // do not include google maps links without longitude and latitude in notifications
             if (lat !== null && lat !== undefined && lng !== null && lng !== undefined) {
                 const latitude = Number(lat);
                 const longitude = Number(lng);
@@ -246,12 +244,7 @@ class WhatsAppService {
                 }
             }
 
-            // Fallback to address string encoding
-            if (address) {
-                const query = encodeURIComponent(`${name ? name + ', ' : ''}${address}`);
-                return `https://www.google.com/maps/search/?api=1&query=${query}`;
-            }
-
+            // Fallback removed as per user request: "remove NAVIGATE and do not send google link of the pick up address"
             return null;
         } catch (e) {
             logger.error('[WHATSAPP-SERVICE] Error generating maps link:', e.message);
@@ -601,7 +594,6 @@ Your ${serviceType} has marked the job as DONE.
 📍 *PICKUP LOCATION:*
 *${shopName}*
 ${sellerAddr}
-${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
 ⏰ *PICKUP DEADLINE:* 
 🚨 You have ${this.BUYER_PICKUP_HRS} hours to pick up or order will be auto-cancelled and refunded.
@@ -613,7 +605,13 @@ ${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
             }
         } else if (newStatus === 'CONFIRMED' && isService) {
             const serviceType = this.getServiceProviderType(order);
-            const sellerAddr = updateData.seller?.physicalAddress || 'Contact provider for details';
+            const sellerHasShop = sellerHasPhysicalShop(updateData.seller);
+
+            // Format address: show shop address if it exists, otherwise Location, City for online services
+            const sellerAddr = sellerHasShop
+                ? (updateData.seller?.physicalAddress || 'Contact provider for details')
+                : `${updateData.seller?.location || ''}${updateData.seller?.city ? ', ' + updateData.seller?.city : ''}`;
+
             const shopName = updateData.seller?.shopName || 'Service Provider';
             const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
 
@@ -621,9 +619,9 @@ ${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
 Great news! Your ${serviceType} has accepted your booking.
 
-📍 *PROVIDER ADDRESS:*
+📍 *${sellerHasShop ? 'PROVIDER ADDRESS:' : 'SERVICE LOCATION (Online/Remote):'}*
 *${shopName}*
-${sellerAddr}
+${sellerAddr || 'Not specified'}
 ${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
 📦 Order #${order.orderNumber}
