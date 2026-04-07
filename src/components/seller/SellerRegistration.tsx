@@ -195,10 +195,10 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     e.preventDefault();
 
     // Validate form
-    if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email || !formData.whatsappNumber || !formData.password || !formData.confirmPassword || !formData.city || !formData.location) {
+    if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email || !formData.whatsappNumber || !formData.password || !formData.confirmPassword || !formData.city || !formData.location || !formData.physicalAddress) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields including location",
+        description: "Please fill in all required fields including your shop address",
         variant: 'destructive',
       });
       return;
@@ -728,9 +728,10 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             return;
                           }
                         } else if (currentStep === 3) {
-                          // Optional but recommended
+                          // Mandatory
                           if (!formData.physicalAddress) {
-                            toast({ title: "Location details helpful", description: "While optional, a specific shop address builds trust.", variant: 'default' });
+                            toast({ title: "Shop Address Required", description: "Please provide a specific shop address or location on the map.", variant: 'destructive' });
+                            return;
                           }
                         }
                         setCurrentStep(currentStep + 1);
