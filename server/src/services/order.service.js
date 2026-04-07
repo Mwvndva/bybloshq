@@ -658,9 +658,10 @@ class OrderService {
       // 3a. INVENTORY DECREMENT: Update stock for tracked products
       await this._decrementInventory(client, items, orderId, order);
 
-      // Fetch Seller to check for Shop Address
-      const { rows: sellers } = await client.query('SELECT physical_address FROM sellers WHERE id = $1', [order.seller_id]);
-      const sellerHasShop = sellers.length > 0 && !!sellers[0].physical_address;
+      // Fetch Seller to check for Shop Address & Coordinates
+      const { rows: sellers } = await client.query('SELECT physical_address, latitude, longitude FROM sellers WHERE id = $1', [order.seller_id]);
+      const sellerHasShop = sellers.length > 0 && !!sellers[0].physical_address &&
+        (!!sellers[0].latitude && !!sellers[0].longitude && Number(sellers[0].latitude) !== 0);
 
       // Enrich product type if missing but service_options exist
       items.forEach(i => {
