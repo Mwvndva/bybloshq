@@ -219,21 +219,13 @@
         @apply px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3;
     }
 
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
     }
 
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.2);
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 }
 

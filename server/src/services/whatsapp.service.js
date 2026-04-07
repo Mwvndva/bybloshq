@@ -535,21 +535,27 @@ Thank you for shopping with Byblos!`;
             if (isService) {
                 const serviceType = this.getServiceProviderType(order);
                 const amount = Number.parseFloat(order.totalAmount || 0);
-                const sellerAddr = updateData.seller?.physicalAddress || 'Contact provider for details';
-                const shopName = updateData.seller?.shopName || 'Service Provider';
-                const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
+                const metadata = this._getMetadata(order);
+                const locationType = metadata?.location_type;
+                const isPlaceholderCoords = updateData.seller && Math.abs(Number(updateData.seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(updateData.seller.longitude) - 36.8219) < 0.001;
+                const sellerHasNoShop = !updateData.seller?.latitude || !updateData.seller?.longitude || isPlaceholderCoords;
+                const isHomeVisit = locationType === 'seller_visits_buyer' || sellerHasNoShop;
+
+                const locationLabel = isHomeVisit ? 'Client Address (Home Visit)' : 'Provider Address';
+                const locationVal = isHomeVisit ? (buyer.location || 'Your Registered Address') : (metadata?.service_location || updateData.seller?.physicalAddress || 'Contact provider for details');
+                const mapsLink = !isHomeVisit ? this._getGoogleMapsLink(updateData.seller?.shopName || 'Service Provider', locationVal, updateData.seller?.latitude, updateData.seller?.longitude) : null;
 
                 msg = `✅ *BOOKING CONFIRMED*
 
 🎉 Payment received! Your ${serviceType} booking is confirmed.
 
-📍 *PROVIDER ADDRESS:*
-*${shopName}*
-${sellerAddr}
+📍 *${locationLabel}:*
+${locationVal}
 ${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
 
-💰 Amount Held: KSh ${amount.toLocaleString()}
-🔒 Your payment is secure and will be released to the service provider 24 hours after job completion.
+⏰ *WHAT'S NEXT:*
+The provider has been notified. They will ${isHomeVisit ? 'come to your location' : 'see you at the scheduled time'}.
+🔒 Your payment is secure and will be held until the service is complete.
 
 Order #${order.orderNumber}`;
             } else if (isDigital) {
@@ -581,9 +587,14 @@ Your ${serviceType} has marked the job as DONE.
                 msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
             } else {
                 const amount = Number.parseFloat(order.totalAmount || 0);
-                const sellerAddr = updateData.seller?.physicalAddress || this.DROPOFF_LOCATION;
-                const shopName = updateData.seller?.shopName || 'Pickup Point';
-                const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
+                const isPlaceholderCoords = updateData.seller && Math.abs(Number(updateData.seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(updateData.seller.longitude) - 36.8219) < 0.001;
+                const sellerHasShop = !!updateData.seller?.physicalAddress && !!updateData.seller?.latitude && !!updateData.seller?.longitude && Number(updateData.seller.latitude) !== 0 && !isPlaceholderCoords;
+
+                const sellerAddr = sellerHasShop ? (updateData.seller?.physicalAddress || 'the shop') : this.DROPOFF_LOCATION;
+                const shopName = sellerHasShop ? (updateData.seller?.shopName || 'The Shop') : 'Byblos Pickup Point';
+                const mapsLink = sellerHasShop ?
+                    this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude) :
+                    this._getGoogleMapsLink('Byblos Pickup Point', this.DROPOFF_LOCATION, null, null);
 
                 msg = `⚠️ *ACTION REQUIRED: PICKUP READY*
 
