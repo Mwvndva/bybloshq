@@ -19,7 +19,11 @@ export const globalErrorHandler = (err, req, res, next) => {
   const requestId = req.id || req.headers['x-request-id'] || 'N/A';
 
   if (process.env.NODE_ENV === 'development') {
-    logger.error(`[Request ID: ${requestId}] ERROR 💥`, err);
+    if (err.statusCode === 404) {
+      logger.warn(`[Request ID: ${requestId}] 404 Not Found: ${err.message}`);
+    } else {
+      logger.error(`[Request ID: ${requestId}] ERROR 💥`, err);
+    }
 
     res.status(err.statusCode).json({
       status: err.status,
@@ -43,12 +47,16 @@ export const globalErrorHandler = (err, req, res, next) => {
     if (error.code === 'EBADCSRFTOKEN') error.isOperational = true;
 
     // Log the error with Request ID
-    logger.error(`[Request ID: ${requestId}] ERROR 💥`, {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-      statusCode: error.statusCode
-    });
+    if (error.statusCode === 404) {
+      logger.warn(`[Request ID: ${requestId}] 404 Not Found: ${error.message}`);
+    } else {
+      logger.error(`[Request ID: ${requestId}] ERROR 💥`, {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        statusCode: error.statusCode
+      });
+    }
 
     // Operational, trusted error: send message to client
     if (error.isOperational) {
