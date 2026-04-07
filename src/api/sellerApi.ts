@@ -298,6 +298,9 @@ export const sellerApi = {
     confirmPassword: string;
     city?: string;
     location?: string;
+    physicalAddress?: string;
+    latitude?: number;
+    longitude?: number;
     referralCode?: string;
   }): Promise<{ seller?: Seller; status?: string; message?: string }> => {
     try {
@@ -310,6 +313,9 @@ export const sellerApi = {
         confirmPassword: data.confirmPassword,
         city: data.city,
         location: data.location,
+        physicalAddress: data.physicalAddress,
+        latitude: data.latitude,
+        longitude: data.longitude,
         referral_code: (data as any).referralCode || undefined,
       });
 
