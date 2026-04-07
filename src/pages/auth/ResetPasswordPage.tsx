@@ -212,85 +212,82 @@ export function ResetPasswordPage() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="password">New Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="New Password"
-                    required
-                    className="pl-11 pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
-                  />
-                  <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onClick={() => setShowPassword(!showPassword)}>
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="New Password"
+                  required
+                  className="pl-4 pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                />
+                <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
-
-              {/* Password Requirements */}
-              {password && (
-                <div className="mt-2 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50">
-                  <p className="text-[10px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">Security Requirements:</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { label: "8+ chars", met: strength.minLength },
-                      { label: "1 Number", met: strength.hasNumber },
-                      { label: "1 Special", met: strength.hasSpecial },
-                      { label: "Upper/Lower", met: strength.hasUpper && strength.hasLower },
-                    ].map((req, index) => (
-                      <div key={index} className="flex items-center space-x-2">
-                        {req.met ? (
-                          <div className="bg-green-500/20 p-0.5 rounded-full">
-                            <Check className="h-2.5 w-2.5 text-green-400" />
-                          </div>
-                        ) : (
-                          <div className="bg-gray-700 p-0.5 rounded-full">
-                            <X className="h-2.5 w-2.5 text-gray-400" />
-                          </div>
-                        )}
-                        <span className={`text-[10px] ${req.met ? 'text-green-400 font-medium' : 'text-gray-400'}`}>{req.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm Password"
-                    required
-                    className="pl-11 pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
-                  />
-                  <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-
-              {passwordError && <p className="text-[11px] text-red-500 font-medium px-1 leading-tight">{passwordError}</p>}
-
-              <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 rounded-xl font-bold mt-4 shadow-lg transition-all duration-200">
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Updating...
-                  </>
-                ) : 'Update Password'}
-              </Button>
-            </form>
           </div>
-        </div>
+
+          {/* Password Requirements */}
+          {password && (
+            <div className="mt-2 p-3 bg-gray-800/50 rounded-xl border border-gray-700/50">
+              <p className="text-[10px] font-semibold text-gray-400 mb-2 uppercase tracking-wider">Security Requirements:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { label: "8+ chars", met: strength.minLength },
+                  { label: "1 Number", met: strength.hasNumber },
+                  { label: "1 Special", met: strength.hasSpecial },
+                  { label: "Upper/Lower", met: strength.hasUpper && strength.hasLower },
+                ].map((req, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    {req.met ? (
+                      <div className="bg-green-500/20 p-0.5 rounded-full">
+                        <Check className="h-2.5 w-2.5 text-green-400" />
+                      </div>
+                    ) : (
+                      <div className="bg-gray-700 p-0.5 rounded-full">
+                        <X className="h-2.5 w-2.5 text-gray-400" />
+                      </div>
+                    )}
+                    <span className={`text-[10px] ${req.met ? 'text-green-400 font-medium' : 'text-gray-400'}`}>{req.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <div className="relative">
+              <Input
+                id="confirmPassword"
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Confirm Password"
+                required
+                className="pl-4 pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+              />
+              <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+
+          {passwordError && <p className="text-[11px] text-red-500 font-medium px-1 leading-tight">{passwordError}</p>}
+
+          <Button type="submit" disabled={isLoading} className="w-full h-11 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 rounded-xl font-bold mt-4 shadow-lg transition-all duration-200">
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Updating...
+              </>
+            ) : 'Update Password'}
+          </Button>
+        </form>
       </div>
     </div>
+      </div >
+    </div >
   );
 }
 
