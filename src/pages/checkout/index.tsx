@@ -8,7 +8,7 @@ import { Loader2, CheckCircle2, Clock, XCircle, FileText } from 'lucide-react';
 import axios from 'axios';
 import { toast } from '@/components/ui/use-toast';
 
-type OrderStatus = 'success' | 'completed' | 'pending' | 'processing' | 'error' | 'failed' | 'declined';
+type OrderStatus = 'success' | 'completed' | 'pending' | 'processing' | 'error' | 'failed' | 'declined' | 'delivery_pending' | 'collection_pending' | 'service_pending';
 
 interface PaymentStatusResponse {
   success: boolean;
@@ -50,7 +50,11 @@ export default function CheckoutPage() {
 
   const updateStatusUI = useCallback((status: string, message?: string | null) => {
     const normalized = status.toLowerCase();
-    if (normalized === 'success' || normalized === 'completed') {
+    const isSuccess = normalized === 'success' || normalized === 'completed' ||
+      normalized === 'delivery_pending' || normalized === 'collection_pending' ||
+      normalized === 'service_pending';
+
+    if (isSuccess) {
       setIsFinalStatus(true);
       stopPolling();
       setStatusData({
@@ -110,7 +114,7 @@ export default function CheckoutPage() {
       const responseData = response.data.data || (response.data as any);
       const { status, message, autoLoginToken } = responseData as PaymentStatusResponse;
 
-      const isFinal = ['success', 'completed', 'error', 'failed'].includes(status);
+      const isFinal = ['success', 'completed', 'error', 'failed', 'declined', 'delivery_pending', 'collection_pending', 'service_pending'].includes(status);
 
       if (isFinal) {
         stopPolling();

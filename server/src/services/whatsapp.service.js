@@ -364,7 +364,8 @@ Please visit your dashboard to *Confirm* or *Cancel* this booking.
 💰 Revenue added to your balance automatically.`;
         } else {
             // Physical Product
-            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0;
+            const isPlaceholderCoords = seller && Math.abs(Number(seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(seller.longitude) - 36.8219) < 0.001;
+            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0 && !isPlaceholderCoords;
             if (sellerHasShop) {
                 actionText = `📍 *SHOP COLLECTION:*
 The buyer will visit your shop to pick up the order.
@@ -447,7 +448,8 @@ Check your email for additional instructions.`.trim();
 
         } else {
             // Physical Product
-            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0;
+            const isPlaceholderCoords = seller && Math.abs(Number(seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(seller.longitude) - 36.8219) < 0.001;
+            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0 && !isPlaceholderCoords;
             if (sellerHasShop) {
                 const mapsLink = this._getGoogleMapsLink(seller.shopName, seller.physicalAddress, seller.latitude, seller.longitude);
                 body = `
