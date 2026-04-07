@@ -235,6 +235,9 @@ class AuthService {
             passwordHash,
             role: type,
             registrationData,
+            physicalAddress: data.physicalAddress,
+            latitude: data.latitude,
+            longitude: data.longitude,
             verificationToken: hashedToken,
             expiresAt
         });
@@ -374,7 +377,13 @@ class AuthService {
             // b. Create profile based on role
             // Handle potentially nested registrationData from some register paths
             const regData = pending.registration_data?.registrationData || pending.registration_data;
-            const profileData = { ...regData, userId: newUser.id };
+            const profileData = {
+                ...regData,
+                physicalAddress: pending.physical_address || regData.physicalAddress,
+                latitude: pending.latitude !== null && pending.latitude !== undefined ? Number(pending.latitude) : regData.latitude,
+                longitude: pending.longitude !== null && pending.longitude !== undefined ? Number(pending.longitude) : regData.longitude,
+                userId: newUser.id
+            };
             let profile = null;
 
             if (pending.role === 'seller') {
@@ -442,6 +451,9 @@ class AuthService {
                 ...pending,
                 passwordHash: pending.password_hash,
                 registrationData: pending.registration_data,
+                physicalAddress: pending.physical_address,
+                latitude: pending.latitude,
+                longitude: pending.longitude,
                 verificationToken: hashedToken,
                 expiresAt
             });

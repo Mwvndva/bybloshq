@@ -6,14 +6,17 @@ class PendingRegistration {
      * @param {Object} param0 
      * @returns {Promise<Object>}
      */
-    static async create({ email, passwordHash, role, registrationData, verificationToken, expiresAt }) {
+    static async create({ email, passwordHash, role, registrationData, physicalAddress, latitude, longitude, verificationToken, expiresAt }) {
         const query = `
-            INSERT INTO pending_registrations (email, password_hash, role, registration_data, verification_token, expires_at)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO pending_registrations (email, password_hash, role, registration_data, physical_address, latitude, longitude, verification_token, expires_at)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             ON CONFLICT (email) DO UPDATE SET
                 password_hash = EXCLUDED.password_hash,
                 role = EXCLUDED.role,
                 registration_data = EXCLUDED.registration_data,
+                physical_address = EXCLUDED.physical_address,
+                latitude = EXCLUDED.latitude,
+                longitude = EXCLUDED.longitude,
                 verification_token = EXCLUDED.verification_token,
                 expires_at = EXCLUDED.expires_at,
                 created_at = NOW()
@@ -25,6 +28,9 @@ class PendingRegistration {
             passwordHash,
             role,
             registrationData,
+            physicalAddress || null,
+            latitude || null,
+            longitude || null,
             verificationToken,
             expiresAt
         ]);

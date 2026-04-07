@@ -87,6 +87,24 @@ CREATE TABLE IF NOT EXISTS user_roles (
     PRIMARY KEY (user_id, role_id)
 );
 
+-- 2.1 PENDING REGISTRATIONS
+CREATE TABLE IF NOT EXISTS pending_registrations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) NOT NULL CHECK (role IN ('buyer', 'seller')),
+    registration_data JSONB NOT NULL,
+    physical_address TEXT,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    verification_token VARCHAR(255) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_pending_registrations_email ON pending_registrations(email);
+CREATE INDEX IF NOT EXISTS idx_pending_registrations_token ON pending_registrations(verification_token);
+
 -- 3. PROFILE TABLES
 CREATE TABLE IF NOT EXISTS sellers (
     id SERIAL PRIMARY KEY,
@@ -495,6 +513,7 @@ END $$;
 export async function down(pgm) {
     // Cascading drop for a clean reset
     pgm.sql(`
+    DROP TABLE IF EXISTS pending_registrations CASCADE;
     DROP TABLE IF EXISTS wishlists CASCADE;
     DROP TABLE IF EXISTS refund_requests CASCADE;
     DROP TABLE IF EXISTS webhook_logs CASCADE;
