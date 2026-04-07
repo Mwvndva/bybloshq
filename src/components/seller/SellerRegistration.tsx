@@ -9,6 +9,7 @@ import { User, Mail, Phone, Lock, Loader2, Eye, EyeOff, ArrowLeft, Store, MapPin
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
+import ShopLocationPicker from './ShopLocationPicker';
 
 interface SellerRegistrationProps {
   onSuccess?: () => void;
@@ -39,7 +40,10 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
     password: '',
     confirmPassword: '',
     city: 'Nairobi',
-    location: ''
+    location: '',
+    physicalAddress: '',
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingShopName, setIsCheckingShopName] = useState(false);
@@ -238,6 +242,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         confirmPassword: formData.confirmPassword,
         city: formData.city,
         location: formData.location,
+        physicalAddress: formData.physicalAddress,
+        latitude: formData.latitude,
+        longitude: formData.longitude,
         referralCode
       });
 
@@ -362,6 +369,12 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                 <div className="flex items-center">
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 3 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
                     3
+                  </div>
+                </div>
+                <div className={`w-6 h-0.5 ${currentStep >= 4 ? 'bg-yellow-400' : 'bg-gray-700'}`} />
+                <div className="flex items-center">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold ${currentStep >= 4 ? 'bg-yellow-400 text-black' : 'bg-gray-700 text-gray-400'}`}>
+                    4
                   </div>
                 </div>
               </div>
@@ -561,8 +574,30 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                   </>
                 )}
 
-                {/* Step 3: Security */}
+                {/* Step 3: Shop Details */}
                 {currentStep === 3 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-2 mb-2 p-2 bg-yellow-400/5 rounded-lg border border-yellow-400/10">
+                      <Store className="h-4 w-4 text-yellow-400" />
+                      <p className="text-[10px] sm:text-xs text-gray-300">Adding your physical address helps customers find you.</p>
+                    </div>
+                    <ShopLocationPicker
+                      initialAddress={formData.physicalAddress}
+                      initialCoordinates={formData.latitude && formData.longitude ? { lat: formData.latitude, lng: formData.longitude } : null}
+                      onLocationChange={(address, coords) => {
+                        setFormData(prev => ({
+                          ...prev,
+                          physicalAddress: address,
+                          latitude: coords?.lat,
+                          longitude: coords?.lng
+                        }));
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Step 4: Security */}
+                {currentStep === 4 && (
                   <>
                     <div className="space-y-0.5 sm:space-y-2">
                       <Label htmlFor="password" className="text-[10px] sm:text-sm font-medium text-gray-200">
@@ -673,11 +708,11 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                       Back
                     </Button>
                   )}
-                  {currentStep < 3 ? (
+                  {currentStep < 4 ? (
                     <Button
                       type="button"
                       onClick={() => {
-                        // ... currentStep logic ...
+                        // Validate current step
                         if (currentStep === 1) {
                           if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email || !formData.whatsappNumber) {
                             toast({ title: "Missing Information", description: "Please fill in all details", variant: 'destructive' });
@@ -691,6 +726,11 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                           if (!formData.city || !formData.location) {
                             toast({ title: "Missing Information", description: "Please select your location", variant: 'destructive' });
                             return;
+                          }
+                        } else if (currentStep === 3) {
+                          // Optional but recommended
+                          if (!formData.physicalAddress) {
+                            toast({ title: "Location details helpful", description: "While optional, a specific shop address builds trust.", variant: 'default' });
                           }
                         }
                         setCurrentStep(currentStep + 1);
