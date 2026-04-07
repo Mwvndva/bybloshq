@@ -364,7 +364,8 @@ Please visit your dashboard to *Confirm* or *Cancel* this booking.
 💰 Revenue added to your balance automatically.`;
         } else {
             // Physical Product
-            if (seller?.physicalAddress) {
+            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0;
+            if (sellerHasShop) {
                 actionText = `📍 *SHOP COLLECTION:*
 The buyer will visit your shop to pick up the order.
 ✅ *ACTION:* Please prepare the items for collection.`;
@@ -446,7 +447,8 @@ Check your email for additional instructions.`.trim();
 
         } else {
             // Physical Product
-            if (seller?.physicalAddress) {
+            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0;
+            if (sellerHasShop) {
                 const mapsLink = this._getGoogleMapsLink(seller.shopName, seller.physicalAddress, seller.latitude, seller.longitude);
                 body = `
 📍 *PICKUP AT SHOP:*
