@@ -195,11 +195,18 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form
-    if (!formData.firstName || !formData.lastName || !formData.shopName || !formData.email || !formData.whatsappNumber || !formData.password || !formData.confirmPassword || !formData.city || !formData.location || !formData.physicalAddress) {
+    // Validate form - Check all required fields (physicalAddress is only required if hasPhysicalShop is true)
+    const isPhysicalAddressRequired = hasPhysicalShop === true;
+    const isMissingFields = !formData.firstName || !formData.lastName || !formData.shopName || !formData.email ||
+      !formData.whatsappNumber || !formData.password || !formData.confirmPassword ||
+      !formData.city || !formData.location || (isPhysicalAddressRequired && !formData.physicalAddress);
+
+    if (isMissingFields) {
       toast({
         title: "Missing Information",
-        description: "Please fill in all required fields including your shop address",
+        description: isPhysicalAddressRequired
+          ? "Please fill in all required fields including your shop address"
+          : "Please fill in all required fields",
         variant: 'destructive',
       });
       return;
