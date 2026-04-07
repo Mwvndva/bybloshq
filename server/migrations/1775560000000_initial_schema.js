@@ -509,6 +509,24 @@ END $$;
         ifNotExists: true
     });
 
+    // 3. Add missing columns to pending_registrations (Idempotent)
+    pgm.sql(`
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='pending_registrations' AND column_name='physical_address' AND table_schema = 'public') THEN
+                ALTER TABLE pending_registrations ADD COLUMN physical_address TEXT;
+            END IF;
+            
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='pending_registrations' AND column_name='latitude' AND table_schema = 'public') THEN
+                ALTER TABLE pending_registrations ADD COLUMN latitude DOUBLE PRECISION;
+            END IF;
+
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='pending_registrations' AND column_name='longitude' AND table_schema = 'public') THEN
+                ALTER TABLE pending_registrations ADD COLUMN longitude DOUBLE PRECISION;
+            END IF;
+        END $$;
+    `);
+
     // Mark all EXISTING users as verified
     pgm.sql(`UPDATE users SET is_verified = true WHERE is_verified = false`);
 }
