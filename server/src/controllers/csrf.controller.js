@@ -18,7 +18,8 @@ export const getCsrfToken = (req, res) => {
             secure: isProduction,
             sameSite: 'lax',
             path: '/',
-            maxAge: 24 * 60 * 60 * 1000 // 24 hours
+            maxAge: 24 * 60 * 60 * 1000, // 24 hours
+            domain: process.env.COOKIE_DOMAIN || undefined
         });
 
         logger.info(`[CSRF] Issued new token: ${token.substring(0, 8)}...`);

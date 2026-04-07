@@ -158,12 +158,7 @@ export default async (app) => {
         const isExcluded =
             req.path.startsWith('/api/payments/webhook') ||
             req.path.startsWith('/api/callbacks/') ||
-            req.path.startsWith('/api/whatsapp/') ||
-            req.path.includes('/login') ||
-            req.path === '/api/buyers/save-info' ||      // guest checkout
-            req.path === '/api/buyers/check-phone' ||    // guest phone check
-            req.path === '/api/buyers/auto-login';       // post-payment auto-login
-        // Removed /upload-digital exclusion to implement full protection
+            req.path.startsWith('/api/whatsapp/');
 
         if (isExcluded) return next();
 

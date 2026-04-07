@@ -52,7 +52,7 @@ class Order {
   static async insertItems(client, orderId, items) {
     // Fetch product details for type info - only for items that don't already have them
     const itemsMissingDetails = items.filter(item => !item.productType && item.isDigital === undefined);
-    const productIds = itemsMissingDetails.map(item => Number.Number.parseInt(item.productId, 10));
+    const productIds = itemsMissingDetails.map(item => Number.parseInt(item.productId, 10));
 
     let productsMap = new Map();
     if (productIds.length > 0) {

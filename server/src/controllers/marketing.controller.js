@@ -24,7 +24,7 @@ export const marketingLogin = async (req, res, next) => {
       return next(new AppError('Email and password are required', 400))
     }
 
-    const MARKETING_EMAIL = 'adminmarketing@bybloshq.space'
+    const MARKETING_EMAIL = process.env.MARKETING_EMAIL || 'adminmarketing@bybloshq.space'
     if (email.toLowerCase().trim() !== MARKETING_EMAIL) {
       return next(new AppError('Invalid credentials', 401))
     }

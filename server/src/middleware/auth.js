@@ -19,7 +19,8 @@ const policies = {
 // 30 seconds is safe — permissions don't change frequently, and logout
 // invalidates the token in the blacklist (still checked before cache)
 const _authCache = new Map();
-const AUTH_CACHE_TTL_MS = 5 * 1000;
+const AUTH_CACHE_TTL_MS = 30 * 1000;
+const MAX_AUTH_CACHE_SIZE = 500;
 
 // Cleanup stale entries every 2 minutes
 setInterval(() => {
@@ -27,7 +28,7 @@ setInterval(() => {
   for (const [key, val] of _authCache.entries()) {
     if (val.expiresAt < now) _authCache.delete(key);
   }
-}, 2 * 60 * 1000).unref(); // .unref() so this doesn't prevent process exit
+}, 2 * 60 * 1000).unref();
 
 /**
  * Middleware to restrict access based on permissions
@@ -89,6 +90,11 @@ export const protect = async (req, res, next) => {
     if (userType !== 'admin') {
       const cached = _authCache.get(token);
       if (cached && cached.expiresAt > Date.now()) {
+        // SECURITY FIX (FIX-11): Even on cache hit, check if user was suspended/deactivated
+        if (cached.user.is_active === false || (cached.user.status && cached.user.status === 'suspended')) {
+          _authCache.delete(token); // Clear bad entry
+          return next(new AppError('Your account has been deactivated or suspended.', 401));
+        }
         req.user = cached.user;
         res.locals.user = cached.user;
         return next();
@@ -223,6 +229,12 @@ export const protect = async (req, res, next) => {
 
     // Cache the auth result (not for admin)
     if (userType !== 'admin') {
+      // Limit cache size to prevent OOM
+      if (_authCache.size >= MAX_AUTH_CACHE_SIZE) {
+        const firstKey = _authCache.keys().next().value;
+        _authCache.delete(firstKey);
+      }
+
       _authCache.set(token, {
         user,
         expiresAt: Date.now() + AUTH_CACHE_TTL_MS

@@ -26,7 +26,7 @@ const adminLogin = async (req, res, next) => {
 
     // Reuse shared auth logic directly or via service
     // For now, simpler to query user and check role
-    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    const result = await pool.query('SELECT * FROM users WHERE email = $1 AND role = \'admin\' AND is_active = true', [email]);
     const user = result.rows[0];
 
     if (!user || user.role !== 'admin' || !(await bcrypt.compare(password, user.password_hash))) {
@@ -41,7 +41,8 @@ const adminLogin = async (req, res, next) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000,
-      path: '/'
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN || undefined
     });
     // Keep 'token' for any legacy code that reads it:
     res.cookie('token', token, {
@@ -49,7 +50,8 @@ const adminLogin = async (req, res, next) => {
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 24 * 60 * 60 * 1000,
-      path: '/'
+      path: '/',
+      domain: process.env.COOKIE_DOMAIN || undefined
     });
 
     res.status(200).json({

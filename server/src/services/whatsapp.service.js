@@ -4,6 +4,7 @@ import qrcode from 'qrcode-terminal';
 import path from 'path';
 import fs from 'fs';
 import logger from '../utils/logger.js';
+import { sellerHasPhysicalShop } from '../utils/sellerUtils.js';
 
 class WhatsAppService {
     constructor() {
@@ -364,9 +365,8 @@ Please visit your dashboard to *Confirm* or *Cancel* this booking.
 💰 Revenue added to your balance automatically.`;
         } else {
             // Physical Product
-            const isPlaceholderCoords = seller && Math.abs(Number(seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(seller.longitude) - 36.8219) < 0.001;
-            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0 && !isPlaceholderCoords;
-            if (sellerHasShop) {
+            const sHasShop = sellerHasPhysicalShop(seller);
+            if (sHasShop) {
                 actionText = `📍 *SHOP COLLECTION:*
 The buyer will visit your shop to pick up the order.
 ✅ *ACTION:* Please prepare the items for collection.`;
@@ -448,9 +448,8 @@ Check your email for additional instructions.`.trim();
 
         } else {
             // Physical Product
-            const isPlaceholderCoords = seller && Math.abs(Number(seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(seller.longitude) - 36.8219) < 0.001;
-            const sellerHasShop = !!seller?.physicalAddress && !!seller?.latitude && !!seller?.longitude && Number(seller.latitude) !== 0 && !isPlaceholderCoords;
-            if (sellerHasShop) {
+            const sHasShop = sellerHasPhysicalShop(seller);
+            if (sHasShop) {
                 const mapsLink = this._getGoogleMapsLink(seller.shopName, seller.physicalAddress, seller.latitude, seller.longitude);
                 body = `
 📍 *PICKUP AT SHOP:*
@@ -537,9 +536,8 @@ Thank you for shopping with Byblos!`;
                 const amount = Number.parseFloat(order.totalAmount || 0);
                 const metadata = this._getMetadata(order);
                 const locationType = metadata?.location_type;
-                const isPlaceholderCoords = updateData.seller && Math.abs(Number(updateData.seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(updateData.seller.longitude) - 36.8219) < 0.001;
-                const sellerHasNoShop = !updateData.seller?.latitude || !updateData.seller?.longitude || isPlaceholderCoords;
-                const isHomeVisit = locationType === 'seller_visits_buyer' || sellerHasNoShop;
+                const sHasShop = sellerHasPhysicalShop(updateData.seller);
+                const isHomeVisit = locationType === 'seller_visits_buyer' || !sHasShop;
 
                 const locationLabel = isHomeVisit ? 'Client Address (Home Visit)' : 'Provider Address';
                 const locationVal = isHomeVisit ? (buyer.location || 'Your Registered Address') : (metadata?.service_location || updateData.seller?.physicalAddress || 'Contact provider for details');
@@ -587,8 +585,7 @@ Your ${serviceType} has marked the job as DONE.
                 msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
             } else {
                 const amount = Number.parseFloat(order.totalAmount || 0);
-                const isPlaceholderCoords = updateData.seller && Math.abs(Number(updateData.seller.latitude) - (-1.2921)) < 0.001 && Math.abs(Number(updateData.seller.longitude) - 36.8219) < 0.001;
-                const sellerHasShop = !!updateData.seller?.physicalAddress && !!updateData.seller?.latitude && !!updateData.seller?.longitude && Number(updateData.seller.latitude) !== 0 && !isPlaceholderCoords;
+                const sellerHasShop = sellerHasPhysicalShop(updateData.seller);
 
                 const sellerAddr = sellerHasShop ? (updateData.seller?.physicalAddress || 'the shop') : this.DROPOFF_LOCATION;
                 const shopName = sellerHasShop ? (updateData.seller?.shopName || 'The Shop') : 'Byblos Pickup Point';
@@ -837,13 +834,9 @@ Your refund balance remains available for future withdrawal requests.
         }
 
         // Skip if seller has their own shop (buyer collects directly)
-        const s_lat = seller?.latitude || seller?.lat;
-        const s_lng = seller?.longitude || seller?.lng;
-        const isPlaceholderCoords = s_lat && s_lng && Math.abs(Number(s_lat) - (-1.2921)) < 0.001 && Math.abs(Number(s_lng) - 36.8219) < 0.001;
-        const hasCoordinates = s_lat && s_lng && Number(s_lat) !== 0 && !isPlaceholderCoords;
-        const physicalAddr = seller?.physicalAddress || seller?.physical_address;
+        const sHasShop = sellerHasPhysicalShop(seller);
 
-        if (physicalAddr && hasCoordinates) {
+        if (sHasShop) {
             logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop with coordinates, order #${order.orderNumber || order.id || order.order_number}`)
             return false
         }
@@ -910,7 +903,7 @@ Please coordinate pickup and delivery to buyer within this window.
         const COURIER_NUMBER = this.COURIER_NUMBER
 
         // Skip if this was a shop-pickup order (no logistics involved)
-        if (seller?.physicalAddress) return false
+        if (sellerHasPhysicalShop(seller)) return false
 
         const orderNum = order.orderNumber || order.order_number || order.id
         const buyerName = buyer?.fullName || buyer?.full_name || 'N/A'

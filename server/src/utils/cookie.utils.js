@@ -5,7 +5,8 @@ const setAuthCookie = (res, token) => {
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000,
-        path: '/'
+        path: '/',
+        domain: process.env.COOKIE_DOMAIN || undefined
     };
     // Set primary jwt cookie
     res.cookie('jwt', token, cookieOptions);

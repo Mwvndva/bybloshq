@@ -58,13 +58,26 @@ export const createWithdrawal = async (req, res, next) => {
 
     const { amount, mpesaNumber, mpesaName } = req.body;
     try {
+        // Standardize phone normalization for Kenyan mobile numbers (v2026/02/08 standard)
+        let normalizedPhone = mpesaNumber.replace(/\s+/g, '');
+        if (normalizedPhone.startsWith('0')) normalizedPhone = '254' + normalizedPhone.substring(1);
+        if (normalizedPhone.startsWith('+')) normalizedPhone = normalizedPhone.substring(1);
+
         const request = await WithdrawalService.createWithdrawalRequest({
             entityId: sellerId,
             entityType: 'seller',
             amount: parseFloat(amount),
-            mpesaNumber,
+            mpesaNumber: normalizedPhone,
             mpesaName,
         });
+        // Improved validation for Kenyan mobile numbers (starts with 07 or 01)
+        const phoneRegex = /^(07|01)\d{8}$|^254(7|1)\d{8}$|^\+254(7|1)\d{8}$/;
+        if (!phoneRegex.test(mpesaNumber)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Invalid M-Pesa number. Please provide a valid Kenyan mobile number (e.g., 0712345678 or 0112345678).'
+            });
+        }
         logger.info(`[WithdrawalCtrl] Request ${request.id} created for seller ${sellerId}`);
         return res.status(201).json({
             status: 'success',

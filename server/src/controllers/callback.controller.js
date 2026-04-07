@@ -83,13 +83,13 @@ export const handlePaydPayoutCallback = async (req, res) => {
             });
 
             logger.info(`[PAYOUT-CALLBACK] Processed request ${request.id} using WithdrawalService. Status: ${finalStatus}`);
-
+            await client.query('COMMIT');
 
         } catch (error) {
             await client.query('ROLLBACK').catch(() => { });
             logger.error('[PAYOUT-CALLBACK] Processing error:', error);
         } finally {
-            client.release();
+            if (client) client.release();
         }
     });
 };
