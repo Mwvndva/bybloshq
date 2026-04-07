@@ -415,42 +415,32 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                         <Label htmlFor="firstName" className="text-[10px] sm:text-sm font-medium text-gray-200">
                           First Name
                         </Label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                            <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                          </div>
-                          <Input
-                            id="firstName"
-                            name="firstName"
-                            type="text"
-                            placeholder="First Name"
-                            value={formData.firstName}
-                            onChange={handleInputChange}
-                            required
-                            className="input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
-                          />
-                        </div>
+                        <Input
+                          id="firstName"
+                          name="firstName"
+                          type="text"
+                          placeholder="First Name"
+                          value={formData.firstName}
+                          onChange={handleInputChange}
+                          required
+                          className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                        />
                       </div>
 
                       <div className="space-y-0.5 sm:space-y-2">
                         <Label htmlFor="lastName" className="text-[10px] sm:text-sm font-medium text-gray-200">
                           Last Name
                         </Label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                            <User className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                          </div>
-                          <Input
-                            id="lastName"
-                            name="lastName"
-                            type="text"
-                            placeholder="Last Name"
-                            value={formData.lastName}
-                            onChange={handleInputChange}
-                            required
-                            className="input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
-                          />
-                        </div>
+                        <Input
+                          id="lastName"
+                          name="lastName"
+                          type="text"
+                          placeholder="Last Name"
+                          value={formData.lastName}
+                          onChange={handleInputChange}
+                          required
+                          className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                        />
                       </div>
                     </div>
 
@@ -463,21 +453,16 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                           </span>
                         )}
                       </Label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Store className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                        </div>
-                        <Input
-                          id="shopName"
-                          name="shopName"
-                          type="text"
-                          placeholder="Unique shop name"
-                          value={formData.shopName}
-                          onChange={handleInputChange}
-                          required
-                          className={`input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base ${shopNameAvailable === false ? 'border-red-500' : ''}`}
-                        />
-                      </div>
+                      <Input
+                        id="shopName"
+                        name="shopName"
+                        type="text"
+                        placeholder="Unique shop name"
+                        value={formData.shopName}
+                        onChange={handleInputChange}
+                        required
+                        className={`input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base ${shopNameAvailable === false ? 'border-red-500' : ''}`}
+                      />
                       <p className="text-[8px] sm:text-[10px] text-gray-400">Byblos.space/{formData.shopName.toLowerCase() || 'yourshop'}</p>
                     </div>
 
@@ -485,42 +470,32 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                       <Label htmlFor="email" className="text-[10px] sm:text-sm font-medium text-gray-200">
                         Email Address
                       </Label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Mail className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                        </div>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          placeholder="Your email address"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          required
-                          className="input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
-                        />
-                      </div>
+                      <Input
+                        id="email"
+                        name="email"
+                        type="email"
+                        placeholder="Your email address"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                      />
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
                       <Label htmlFor="whatsappNumber" className="text-[10px] sm:text-sm font-medium text-gray-200">
                         WhatsApp Number
                       </Label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Phone className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                        </div>
-                        <Input
-                          id="whatsappNumber"
-                          name="whatsappNumber"
-                          type="tel"
-                          placeholder="07... or 01..."
-                          value={formData.whatsappNumber}
-                          onChange={handleInputChange}
-                          required
-                          className="input-mobile !pl-8 sm:!pl-14 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
-                        />
-                      </div>
+                      <Input
+                        id="whatsappNumber"
+                        name="whatsappNumber"
+                        type="tel"
+                        placeholder="07... or 01..."
+                        value={formData.whatsappNumber}
+                        onChange={handleInputChange}
+                        required
+                        className="input-mobile !pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                      />
                     </div>
                   </>
                 )}
@@ -530,47 +505,37 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                   <>
                     <div className="space-y-0.5 sm:space-y-2">
                       <Label className="text-[10px] sm:text-sm font-medium text-gray-200">City</Label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none z-10">
-                          <MapPin className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                        </div>
-                        <Select
-                          value={formData.city}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, location: '' }))}
-                        >
-                          <SelectTrigger className="!pl-8 sm:!pl-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
-                            <SelectValue placeholder="Nairobi" className="text-gray-300" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                            <SelectItem value="Nairobi" className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">
-                              Nairobi
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select
+                        value={formData.city}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, city: value, location: '' }))}
+                      >
+                        <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
+                          <SelectValue placeholder="Nairobi" className="text-gray-300" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                          <SelectItem value="Nairobi" className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">
+                            Nairobi
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-2">
                       <Label className="text-[10px] sm:text-sm font-medium text-gray-200">Area/Location</Label>
-                      <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none z-10">
-                          <MapPin className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                        </div>
-                        <Select
-                          value={formData.location}
-                          onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
-                          disabled={!formData.city}
-                        >
-                          <SelectTrigger className="!pl-8 sm:!pl-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-base">
-                            <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} className="text-gray-300" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                            {formData.city && locationData[formData.city]?.sort((a, b) => a.localeCompare(b)).map((area) => (
-                              <SelectItem key={area} value={area} className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">{area}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <Select
+                        value={formData.location}
+                        onValueChange={(value) => setFormData(prev => ({ ...prev, location: value }))}
+                        disabled={!formData.city}
+                      >
+                        <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-base">
+                          <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} className="text-gray-300" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                          {formData.city && locationData[formData.city]?.sort((a, b) => a.localeCompare(b)).map((area) => (
+                            <SelectItem key={area} value={area} className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">{area}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                   </>
                 )}
@@ -597,7 +562,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             variant="ghost"
                             className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-white/5 uppercase tracking-wider"
                           >
-                            <div className="text-3xl group-hover:scale-110 transition-transform">🏠</div>
+                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center border border-white/10 group-hover:scale-110 transition-transform">
+                              <Globe className="h-5 w-5 text-zinc-400 group-hover:text-white" />
+                            </div>
                             <span className="font-bold text-[10px] text-gray-400 group-hover:text-white transition-colors">No, online only</span>
                           </Button>
                           <Button
@@ -606,7 +573,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                             variant="ghost"
                             className="h-24 flex flex-col items-center justify-center gap-2 rounded-2xl transition-all group active:scale-95 border border-white/5 hover:bg-yellow-400/5 hover:text-yellow-400 uppercase tracking-wider"
                           >
-                            <div className="text-3xl group-hover:scale-110 transition-transform">🏪</div>
+                            <div className="w-10 h-10 bg-yellow-400/10 rounded-xl flex items-center justify-center border border-yellow-400/20 group-hover:scale-110 transition-transform">
+                              <Store className="h-5 w-5 text-yellow-400" />
+                            </div>
                             <span className="font-bold text-[10px] text-gray-400 group-hover:text-yellow-400 transition-colors">Yes, I have a physical shop</span>
                           </Button>
                         </div>
@@ -675,9 +644,6 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                         Password
                       </Label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Lock className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                        </div>
                         <Input
                           id="password"
                           name="password"
@@ -686,7 +652,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                           value={formData.password}
                           onChange={handleInputChange}
                           required
-                          className="input-mobile !pl-8 sm:!pl-14 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                          className="input-mobile !pl-4 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                         />
                         <button
                           type="button"
@@ -737,9 +703,6 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                         Confirm Password
                       </Label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-2 sm:pl-4 flex items-center pointer-events-none">
-                          <Lock className="h-3.5 w-3.5 sm:h-5 sm:w-5 text-gray-300" />
-                        </div>
                         <Input
                           id="confirmPassword"
                           name="confirmPassword"
@@ -748,7 +711,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                           value={formData.confirmPassword}
                           onChange={handleInputChange}
                           required
-                          className="input-mobile !pl-8 sm:!pl-14 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
+                          className="input-mobile !pl-4 !pr-8 sm:!pr-12 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base"
                         />
                         <button
                           type="button"
@@ -847,8 +810,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 };
 

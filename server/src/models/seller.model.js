@@ -48,6 +48,9 @@ export const findSellerByUserId = async (userId) => {
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
       facebook_link AS "facebookLink",
+      physical_address AS "physicalAddress",
+      latitude,
+      longitude,
       created_at AS "createdAt"
      FROM sellers 
      WHERE user_id = $1`,
@@ -278,8 +281,11 @@ export const updateSeller = async (id, updates) => {
       net_revenue AS "netRevenue",
       balance,
       client_count AS "clientCount",
+      physical_address AS "physicalAddress",
+      latitude,
+      longitude,
       created_at AS "createdAt"
-  `;
+    `;
 
   console.log('Executing update query:', { queryText, values });
 
