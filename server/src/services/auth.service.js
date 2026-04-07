@@ -19,61 +19,56 @@ class AuthService {
      * @param {string} type - Optional portal type: 'buyer' | 'seller' | 'admin'
      */
     static async login(email, password, type = null) {
-        const user = await User.findByEmail(email);
+        const normalizedEmail = email.toLowerCase().trim();
+        let target = await User.findByEmail(normalizedEmail);
+        let isPending = false;
 
-        // ── PENDING REGISTRATION CHECK ──────────────────────────────────────────────
-        // User not found in users table — check if they're in pending_registrations
-        // (created via checkout modal but never verified their email)
-        if (!user) {
-            const pending = await PendingRegistration.findByEmail(email);
+        if (!target) {
+            target = await PendingRegistration.findByEmail(normalizedEmail);
+            isPending = !!target;
+        }
 
-            if (pending) {
-                // SECURITY: verify password BEFORE revealing the pending state.
-                // If password is wrong, return null — same as "user not found".
-                // Never enumerate that this email exists in the system.
-                const passwordMatchesPending = await bcrypt.compare(password, pending.password_hash);
+        // Anti-Enumeration: Always run bcrypt.compare to prevent timing attacks.
+        // Use a dummy hash if the email doesn't exist in either table.
+        const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuvwxyz0123456789.abcdefghijk';
+        const hashToCompare = target ? (target.password_hash || target.password) : DUMMY_HASH;
+        const isMatch = await bcrypt.compare(password, hashToCompare);
 
-                if (!passwordMatchesPending) {
-                    // Wrong password — treat same as "not found" to prevent enumeration
-                    return null;
-                }
-
-                // Password correct — regenerate the verification token and resend email
-                const rawToken = crypto.randomBytes(32).toString('hex');
-                const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
-                const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10);
-                const expiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
-
-                // Update the pending record with a fresh token
-                const normalizedEmail = email.toLowerCase().trim();
-                await PendingRegistration.updateToken(normalizedEmail, hashedToken, expiresAt);
-
-                // Send the new verification email (non-blocking)
-                const { sendVerificationEmail } = await import('../utils/email.js');
-                sendVerificationEmail(normalizedEmail, rawToken, pending.role).catch(err =>
-                    logger.error('[AUTH] Failed to resend pending verification email:', err.message)
-                );
-
-                logger.info(`[AUTH] Login attempted for pending user, resent verification email: ${normalizedEmail}`);
-
-                // Throw a typed error so the controller can return the right response
-                const err = new Error(
-                    "Your account is not yet verified. We've sent a new verification link to your email. Please check your inbox."
-                );
-                err.code = 'PENDING_VERIFICATION';
-                err.statusCode = 403;
-                err.email = normalizedEmail;
-                err.userType = pending.role;
-                throw err;
-            }
-
-            // Not in users OR pending — genuinely not found
+        if (!target || !isMatch) {
+            // Timing-safe: we spent the same amount of CPU time regardless of email existence.
             return null;
         }
-        // ────────────────────────────────────────────────────────────────────────────
 
-        const isMatch = await User.verifyPassword(password, user.password_hash);
-        if (!isMatch) return null;
+        // --- At this point, the password is correct ---
+
+        if (isPending) {
+            // Regeneration of verification token logic (same as before)
+            const rawToken = crypto.randomBytes(32).toString('hex');
+            const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+            const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10);
+            const expiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
+
+            await PendingRegistration.updateToken(normalizedEmail, hashedToken, expiresAt);
+
+            const { sendVerificationEmail } = await import('../utils/email.js');
+            sendVerificationEmail(normalizedEmail, rawToken, target.role).catch(err =>
+                logger.error('[AUTH] Failed to resend pending verification email:', err.message)
+            );
+
+            logger.info(`[AUTH] Login attempted for pending user, resent verification email: ${normalizedEmail}`);
+
+            const err = new Error(
+                "Your account is not yet verified. We've sent a new verification link to your email. Please check your inbox."
+            );
+            err.code = 'PENDING_VERIFICATION';
+            err.statusCode = 403;
+            err.email = normalizedEmail;
+            err.userType = target.role;
+            throw err;
+        }
+
+        // Renamed 'user' to 'target' for clarity, let's keep 'user' for later logic
+        const user = target;
 
         // Check email verification
         // Sellers must verify before accessing the platform
@@ -375,13 +370,17 @@ class AuthService {
             }
 
             // b. Create profile based on role
-            // Handle potentially nested registrationData from some register paths
-            const regData = pending.registration_data?.registrationData || pending.registration_data;
+            // Handle potentially nested registrationData (FIX-19)
+            const rawRegData = pending.registration_data || {};
+            const regData = rawRegData.registrationData || rawRegData;
+
             const profileData = {
                 ...regData,
-                physicalAddress: pending.physical_address || regData.physicalAddress,
-                latitude: pending.latitude !== null && pending.latitude !== undefined ? Number(pending.latitude) : regData.latitude,
-                longitude: pending.longitude !== null && pending.longitude !== undefined ? Number(pending.longitude) : regData.longitude,
+                fullName: regData.fullName || regData.full_name || regData.name,
+                whatsappNumber: regData.whatsappNumber || regData.whatsapp_number || regData.phone,
+                physicalAddress: pending.physical_address || regData.physicalAddress || regData.physical_address || regData.location,
+                latitude: pending.latitude !== null && pending.latitude !== undefined ? Number(pending.latitude) : (regData.latitude || null),
+                longitude: pending.longitude !== null && pending.longitude !== undefined ? Number(pending.longitude) : (regData.longitude || null),
                 userId: newUser.id
             };
             let profile = null;

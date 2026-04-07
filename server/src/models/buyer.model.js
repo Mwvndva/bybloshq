@@ -58,39 +58,33 @@ class Buyer {
     return result.rows.length ? this.createInstance(result.rows[0]) : null;
   }
 
-  // Find buyer by phone number (checks multiple formats in both columns)
   static async findByPhone(phone) {
     if (!phone) return null;
-
     // Generate all possible phone formats to check
-    let normalized = phone.replace(/[\s\-\(\)]/g, ''); // Remove spaces, dashes, parentheses
+    let normalized = phone.toString().replace(/\D/g, ''); // Remove all non-digits
 
-    // Create variations to search for
-    const phoneVariations = [];
+    const phoneVariations = new Set();
+    phoneVariations.add(normalized);
 
-    // Add the phone as-is
-    phoneVariations.push(normalized);
-
-    // If starts with +254, add variations
-    if (normalized.startsWith('+254')) {
-      phoneVariations.push(normalized.substring(1)); // Remove +
-      phoneVariations.push('0' + normalized.substring(4)); // +254712... -> 0712...
+    // 07XXXXXXXX -> +2547XXXXXXXX, 2547XXXXXXXX
+    if (normalized.startsWith('0') && normalized.length === 10) {
+      phoneVariations.add('+254' + normalized.substring(1));
+      phoneVariations.add('254' + normalized.substring(1));
     }
-    // If starts with 254 (no +)
-    else if (normalized.startsWith('254')) {
-      phoneVariations.push('+' + normalized); // Add +
-      phoneVariations.push('0' + normalized.substring(3)); // 254712... -> 0712...
+    // 2547XXXXXXXX -> +2547XXXXXXXX, 07XXXXXXXX
+    else if (normalized.startsWith('254') && normalized.length === 12) {
+      phoneVariations.add('+' + normalized);
+      phoneVariations.add('0' + normalized.substring(3));
     }
-    // If starts with 0
-    else if (normalized.startsWith('0')) {
-      phoneVariations.push('+254' + normalized.substring(1)); // 0712... -> +254712...
-      phoneVariations.push('254' + normalized.substring(1)); // 0712... -> 254712...
+    // +2547XXXXXXXX -> 2547XXXXXXXX, 07XXXXXXXX
+    else if (normalized.startsWith('254') && normalized.length === 12) {
+      // already handled by Replace(\D)
     }
-    // If just the number (e.g., 712345678)
-    else {
-      phoneVariations.push('0' + normalized); // 712... -> 0712...
-      phoneVariations.push('+254' + normalized); // 712... -> +254712...
-      phoneVariations.push('254' + normalized); // 712... -> 254712...
+    // 7XXXXXXXX -> 07XXXXXXXX, +2547XXXXXXXX, 2547XXXXXXXX
+    else if (normalized.length === 9) {
+      phoneVariations.add('0' + normalized);
+      phoneVariations.add('+254' + normalized);
+      phoneVariations.add('254' + normalized);
     }
 
     const query = `
@@ -100,7 +94,7 @@ class Buyer {
       OR whatsapp_number = ANY($1)
       LIMIT 1
     `;
-    const result = await pool.query(query, [phoneVariations]);
+    const result = await pool.query(query, [Array.from(phoneVariations)]);
 
     if (result.rows.length > 0) {
       // Log matched without actual value

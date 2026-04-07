@@ -7,6 +7,7 @@ import Order from '../models/order.model.js';
 import Buyer from '../models/buyer.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
+import { sellerHasPhysicalShop } from '../utils/sellerUtils.js';
 import ReferralService from './referral.service.js';
 import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../utils/email.js';
 
@@ -436,7 +437,7 @@ class OrderService {
                 id: fullOrder.id,
                 orderNumber: fullOrder.order_number || fullOrder.id,
                 total_amount: fullOrder.total_amount,
-                items: itemsResult.rows
+                items: items
               };
               await whatsappService.sendLogisticsCancellationNotification(
                 orderForCancel, buyerForCancel, sellerForCancel, 'Buyer'
@@ -591,14 +592,19 @@ class OrderService {
 
   static _calculateTotals(items) {
     const totalAmount = items.reduce((sum, item) => {
-      const subtotal = item.subtotal || (item.price * item.quantity);
+      // Ensure we use 2 decimal precision for subtotals to prevent drift
+      const subtotal = Math.round((item.subtotal || (item.price * item.quantity)) * 100) / 100;
       return sum + subtotal;
     }, 0);
 
-    const platformFee = Number.parseFloat((totalAmount * Fees.PLATFORM_COMMISSION_RATE).toFixed(2));
-    const sellerPayout = Number.parseFloat((totalAmount - platformFee).toFixed(2));
+    const platformFee = Math.round(totalAmount * Fees.PLATFORM_COMMISSION_RATE * 100) / 100;
+    const sellerPayout = Math.round((totalAmount - platformFee) * 100) / 100;
 
-    return { totalAmount, platformFee, sellerPayout };
+    return {
+      totalAmount: Math.round(totalAmount * 100) / 100,
+      platformFee,
+      sellerPayout
+    };
   }
 
   static _determineInitialStatus(items) {
@@ -661,13 +667,7 @@ class OrderService {
       // Fetch Seller to check for Shop Address & Coordinates
       const { rows: sellers } = await client.query('SELECT physical_address, latitude, longitude FROM sellers WHERE id = $1', [order.seller_id]);
       const s = sellers[0];
-      const address = (s?.physical_address || '').trim();
-      const hasRealAddress = address && address.toLowerCase() !== 'nairobi, kenya' && address.toLowerCase() !== 'nairobi' && address.toLowerCase() !== 'kenya';
-      const s_lat = Number(s?.latitude);
-      const s_lng = Number(s?.longitude);
-      const isPlaceholderCoords = s && Math.abs(s_lat - (-1.2921)) < 0.001 && Math.abs(s_lng - 36.8219) < 0.001;
-      const hasCoordinates = s_lat && s_lng && s_lat !== 0 && !isPlaceholderCoords;
-      const sellerHasShop = sellers.length > 0 && hasRealAddress && hasCoordinates;
+      const sellerHasShop = sellerHasPhysicalShop(s);
 
       // Enrich product type if missing but service_options exist
       items.forEach(i => {
@@ -1083,21 +1083,13 @@ class OrderService {
       logger.info(`[ClientOrder] Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
       // 4. Enrich items with product data
-      const productIds = items.map(item => Number.parseInt(item.productId, 10));
-      const productsResult = await client.query(
-        'SELECT id, product_type::text as product_type, is_digital, service_options, name FROM products WHERE id = ANY($1)',
-        [productIds]
-      );
-      const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
+      await this._enrichItemsWithProductData(client, items);
 
-      items.forEach(item => {
-        const prod = productsMap.get(Number.parseInt(item.productId, 10));
-        if (prod) {
-          item.productType = prod.product_type;
-          item.isDigital = prod.is_digital;
-          item.name = item.name || prod.name;
-        }
-      });
+      // 4b. INVENTORY CHECK: Verify stock availability for tracked products
+      // Only skip if explicitly requested (e.g. for debt payments)
+      if (!skipInventoryDecrement) {
+        this._checkInventory(items);
+      }
 
       // Determine if this is a debt order
       const isDebt = paymentType === 'debt';
@@ -1206,8 +1198,11 @@ class OrderService {
     for (const row of bulkUpdateResult.rows) {
       const sellerId = order ? order.seller_id : null;
       if (sellerId) {
-        if (row.low_stock_threshold && row.quantity <= row.low_stock_threshold && row.quantity > 0) {
-          this._sendLowStockAlert(sellerId, row.name, row.quantity, row.low_stock_threshold).catch(e => logger.error('[INVENTORY] Low stock alert failed:', e));
+        // FIXED (FIX-13): Ensure alert fires if threshold is reached OR crossed
+        // Use COALESCE or default to 0 for threshold
+        const threshold = row.low_stock_threshold || 0;
+        if (threshold > 0 && row.quantity <= threshold && row.quantity > 0) {
+          this._sendLowStockAlert(sellerId, row.name, row.quantity, threshold).catch(e => logger.error('[INVENTORY] Low stock alert failed:', e));
         } else if (row.quantity === 0) {
           this._sendOutOfStockAlert(sellerId, row.name).catch(e => logger.error('[INVENTORY] Out of stock alert failed:', e));
         }
@@ -1331,11 +1326,8 @@ class OrderService {
           items
         }).catch(e => logger.error('[ORDER] Seller notification email failed:', e));
 
-        // Also send formal Receipt to Seller
-        sendPaymentReceiptEmail(sellerData.email, {
-          ...fullOrder,
-          items
-        }, true).catch(e => logger.error('[ORDER] Seller receipt email failed:', e));
+        // REMOVED (FIX-17): sendPaymentReceiptEmail is redundant with sendNewOrderNotificationEmail
+        // which already contains the order details and amount.
       }
 
       if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
@@ -1356,14 +1348,12 @@ class OrderService {
 
       // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates/Address)
       const hasPhysical = items.some(i => i.product_type === 'physical' || i.productType === 'physical');
-      const address = (sellerData.physicalAddress || sellerData.physical_address || '').trim();
-      const hasRealAddress = address && !['nairobi, kenya', 'nairobi', 'kenya'].includes(address.toLowerCase());
       const s_lat = Number(sellerData.latitude || sellerData.lat);
       const s_lng = Number(sellerData.longitude || sellerData.lng);
-      const isPlaceholderCoords = s_lat && s_lng && Math.abs(s_lat - (-1.2921)) < 0.001 && Math.abs(s_lng - 36.8219) < 0.001;
-      const hasCoordinates = s_lat && s_lng && s_lat !== 0 && !isPlaceholderCoords;
+      const sHasShop = sellerHasPhysicalShop({ latitude: s_lat, longitude: s_lng });
+      const sellerHasShop = sHasShop && !!fullOrder.seller_address;
 
-      if (hasPhysical && (!hasCoordinates || !hasRealAddress)) {
+      if (hasPhysical && !sellerHasShop) {
         whatsappService.sendLogisticsNotification(payload.order, payload.buyer, payload.seller, items)
           .catch(e => logger.error('[ORDER] Courier notification failed:', e));
       }
@@ -1375,11 +1365,7 @@ class OrderService {
           items
         }).catch(e => logger.error('[ORDER] Buyer confirmation email failed:', e));
 
-        // Also send formal Receipt to Buyer
-        sendPaymentReceiptEmail(buyerData.email, {
-          ...fullOrder,
-          items
-        }, false).catch(e => logger.error('[ORDER] Buyer receipt email failed:', e));
+        // REMOVED (FIX-17): sendPaymentReceiptEmail is redundant with sendProductOrderConfirmationEmail
       }
 
 

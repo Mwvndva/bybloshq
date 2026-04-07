@@ -234,6 +234,11 @@ export const updateSeller = async (id, updates) => {
     values.push(facebookLinkToUpdate);
   }
 
+  // Handle physical shop fields. If no physical address, coordinates MUST be null (not Nairobi sentinel)
+  const hasShop = !!updates.physicalAddress;
+  const lat = hasShop ? parseFloat(updates.latitude || 0) : null;
+  const lng = hasShop ? parseFloat(updates.longitude || 0) : null;
+
   // Handle physical address update
   if (updates.physicalAddress !== undefined) {
     paramCount++;
