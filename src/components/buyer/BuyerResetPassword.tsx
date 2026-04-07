@@ -236,7 +236,7 @@ export function BuyerResetPassword() {
                                         name="password"
                                         type={showPassword ? 'text' : 'password'}
                                         placeholder="••••••••"
-                                        className="!pl-11 !pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                                        className="!pl-12 !pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                                         value={formData.password}
                                         onChange={handleInputChange}
                                         required
@@ -294,7 +294,7 @@ export function BuyerResetPassword() {
                                         name="confirmPassword"
                                         type={showConfirmPassword ? 'text' : 'password'}
                                         placeholder="••••••••"
-                                        className="!pl-11 !pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
+                                        className="!pl-12 !pr-11 h-11 rounded-xl bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 focus:border-yellow-400 focus:ring-yellow-400 text-sm"
                                         value={formData.confirmPassword}
                                         onChange={handleInputChange}
                                         required

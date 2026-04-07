@@ -153,15 +153,11 @@ class BuyerService {
             const result = await AuthService.register({
                 email,
                 password,
-                role: 'buyer',
-                registrationData: {
-                    fullName,
-                    email,
-                    mobilePayment: mobile_payment,
-                    whatsappNumber: whatsapp_number,
-                    city,
-                    location
-                }
+                fullName,
+                mobilePayment: mobile_payment,
+                whatsappNumber: whatsapp_number,
+                city,
+                location
             }, 'buyer');
 
             return result;
