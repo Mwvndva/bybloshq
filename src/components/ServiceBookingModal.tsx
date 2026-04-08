@@ -76,10 +76,12 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 setLocation('');
             }
 
-            // Default based on product settings
-            if (isShopless || isSellerVisits) {
+            // Default based on product settings and shop availability
+            if (isShopless) {
+                // If shopless, buyer MUST set their location (Home Service)
                 setSelectedLocationType('buyer');
             } else {
+                // If seller HAS a shop, buyer MUST visit them (In-Store)
                 setSelectedLocationType('seller');
             }
         }
@@ -291,7 +293,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                     </div>
                                 ) : (
                                     <>
-                                        {isHybrid && (
+                                        {isShopless && isHybrid && (
                                             <div className="flex p-0.5 bg-white/5 rounded-xl mb-3">
                                                 <button
                                                     type="button"
@@ -316,7 +318,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                             </div>
                                         )}
 
-                                        {(selectedLocationType === 'seller' && !isSellerVisits) && (
+                                        {(selectedLocationType === 'seller' || !isShopless) && (
                                             <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
                                                 <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
                                                 <div>
@@ -326,7 +328,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                                             </div>
                                         )}
 
-                                        {(selectedLocationType === 'buyer' || isSellerVisits) && (
+                                        {isShopless && (selectedLocationType === 'buyer' || isSellerVisits) && (
                                             <div className="space-y-3">
                                                 <div
                                                     onClick={() => setIsChangingLocation(true)}
