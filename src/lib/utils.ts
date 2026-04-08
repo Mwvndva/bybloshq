@@ -173,18 +173,32 @@ export function getImageUrl(path: string | undefined | null): string {
  */
 export function isSellerShopless(seller: any | null | undefined): boolean {
   if (!seller) return true;
-  if (!seller.hasPhysicalShop && !seller.physicalAddress) return true;
 
-  // Even if they have the flag, check if they have a real address
-  const address = (seller.physicalAddress || '').trim();
-  if (!address || address.toLowerCase() === 'nairobi' || address.toLowerCase() === 'kenya') return true;
+  // Flatten object to handle both seller details and joined product fields
+  // Some API responses return coordinates flat on the product object
+  const data = seller.seller ? { ...seller.seller, ...seller } : seller;
 
-  // Check for missing or placeholder coordinates
-  const lat = Number(seller.latitude);
-  const lng = Number(seller.longitude);
+  // Check for presence of coordinates first as they are the primary "shop" indicator
+  // Handle both naming conventions: latitude/longitude and lat/lng
+  const latField = data.latitude !== undefined ? data.latitude : data.lat;
+  const lngField = data.longitude !== undefined ? data.longitude : data.lng;
 
-  if (!lat || !lng || lat === 0 || lng === 0) return true;
+  const lat = Number(latField);
+  const lng = Number(lngField);
 
-  const isDefaultNairobi = Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001;
-  return isDefaultNairobi;
+  const hasCoords = lat && lng && lat !== 0 && lng !== 0;
+
+  // If they have valid coords and it's NOT the default Nairobi sentinel, they have a shop
+  if (hasCoords) {
+    const isDefaultNairobi = Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001;
+    if (!isDefaultNairobi) return false;
+  }
+
+  // Fallback to flag and address checks if coords are missing or default
+  if (data.hasPhysicalShop === true) return false;
+
+  const address = (data.physicalAddress || '').trim();
+  if (address && address.toLowerCase() !== 'nairobi' && address.toLowerCase() !== 'kenya') return false;
+
+  return true;
 }
