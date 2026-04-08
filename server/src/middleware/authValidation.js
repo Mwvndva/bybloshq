@@ -17,11 +17,11 @@ export const registrationSchema = z.object({
 
     confirmPassword: z.string().min(1, 'Please confirm your password'),
 
-    mobilePayment: z.string().optional().trim(),
-    mobile_payment: z.string().optional().trim(),
+    mobilePayment: z.string().trim().optional(),
+    mobile_payment: z.string().trim().optional(),
 
-    whatsappNumber: z.string().optional().trim(),
-    whatsapp_number: z.string().optional().trim(),
+    whatsappNumber: z.string().trim().optional(),
+    whatsapp_number: z.string().trim().optional(),
 
     city: z.string().min(1, 'City is required').trim(),
     location: z.string().min(1, 'Location is required').trim(),
