@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { marketingApi } from '../../services/marketingApi'
+import { getFreshCsrfToken } from '@/lib/apiClient'
 
 export default function MarketingLogin() {
     const navigate = useNavigate()
@@ -8,6 +9,11 @@ export default function MarketingLogin() {
     const [password, setPassword] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+
+    useEffect(() => {
+        // Fetch CSRF token on mount to avoid mismatch on first login attempt
+        getFreshCsrfToken();
+    }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault()
