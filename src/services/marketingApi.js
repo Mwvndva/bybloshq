@@ -4,25 +4,58 @@
  * Token is stored in sessionStorage (clears when browser tab closes).
  */
 import axios from 'axios'
+import { getFreshCsrfToken, getCachedCsrfToken } from '@/lib/apiClient'
 
 const BASE_URL = '/api'
 
-const marketingClient = axios.create({ baseURL: BASE_URL })
+const marketingClient = axios.create({
+    baseURL: BASE_URL,
+    withCredentials: true // Ensure cookies are sent
+})
 
 // Attach token to every request
-marketingClient.interceptors.request.use((config) => {
+marketingClient.interceptors.request.use(async (config) => {
+    // 1. Attach Auth Token
     const token = sessionStorage.getItem('marketing_token')
     if (token) config.headers.Authorization = `Bearer ${token}`
+
+    // 2. Attach CSRF token to non-GET requests
+    if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+        let csrfToken = getCachedCsrfToken();
+        if (!csrfToken) {
+            csrfToken = await getFreshCsrfToken();
+        }
+        if (csrfToken) {
+            config.headers['X-CSRF-Token'] = csrfToken;
+        }
+    }
+
     return config
 })
 
 marketingClient.interceptors.response.use(
     (res) => res,
-    (err) => {
-        // Only redirect to login if NOT already trying to login/logout
-        const isAuthRequest = err.config?.url?.includes('/admin/marketing/login');
+    async (err) => {
+        const config = err.config;
+        const status = err.response?.status;
+        const message = err.response?.data?.message || '';
 
-        if (err.response?.status === 401 && !isAuthRequest) {
+        // Handle CSRF Mismatch
+        if (status === 403 && message.includes('CSRF mismatch') && !config._retry) {
+            config._retry = true;
+            console.warn('[CSRF-Marketing] Mismatch detected. Refreshing token and retrying...');
+
+            const newToken = await getFreshCsrfToken();
+            if (newToken) {
+                config.headers['X-CSRF-Token'] = newToken;
+                return marketingClient(config);
+            }
+        }
+
+        // Only redirect to login if NOT already trying to login/logout
+        const isAuthRequest = config?.url?.includes('/admin/marketing/login');
+
+        if (status === 401 && !isAuthRequest) {
             sessionStorage.removeItem('marketing_token');
             sessionStorage.removeItem('marketing_user');
             globalThis.location.href = '/admin/marketing/login';
