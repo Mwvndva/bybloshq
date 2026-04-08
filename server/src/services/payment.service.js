@@ -769,23 +769,19 @@ export class PaymentService {
     }
 
     async checkPaymentStatus(identifier) {
-        let rows;
-        // Check if identifier is a valid integer (for ID lookup)
-        const isId = /^\d+$/.test(identifier);
-
-        if (isId) {
-            const result = await pool.query('SELECT * FROM payments WHERE id = $1', [identifier]);
-            rows = result.rows;
-        } else {
-            // It's a string reference (provider ref, invoice_id, etc.)
-            const result = await pool.query(
-                'SELECT * FROM payments WHERE provider_reference = $1 OR invoice_id = $1 OR api_ref = $1',
-                [identifier]
-            );
-            rows = result.rows;
-        }
-
+        // Query by all possible identifiers in one go to avoid numeric collision bugs
+        // (Previously, purely numeric references were misidentified as internal payment IDs)
+        const query = `
+            SELECT * FROM payments 
+            WHERE id::text = $1 
+               OR provider_reference = $1 
+               OR invoice_id = $1 
+               OR api_ref = $1 
+            LIMIT 1
+        `;
+        const { rows } = await pool.query(query, [String(identifier)]);
         const payment = rows[0];
+
         if (!payment) throw new Error('Payment not found');
 
         // If payment is pending and we have a provider_reference, check Payd status
@@ -813,11 +809,10 @@ export class PaymentService {
                             logger.warn('[PaymentService] In-poll fulfillment deferred (already processed or failed)', fulfillErr.message);
                         }
                     }
-                } else if (normalizedStatus === 'failed' || normalizedStatus === 'fail' || normalizedStatus === 'declined') {
-                    payment.status = 'failed';
-                    await pool.query('UPDATE payments SET status = $1, updated_at = NOW() WHERE id = $2', ['failed', payment.id]);
-                    logger.info(`[PaymentService] In-poll sync: Payment ${payment.id} verified as ${normalizedStatus} -> FAILED (Persisted)`);
                 }
+                // REMOVED: Auto-fail update. We should not mark as failed in the poller to avoid race conditions with webhooks.
+                // Webhooks and Cron are the authoritative sources for failure.
+                // else if (normalizedStatus === 'failed' || normalizedStatus === 'fail' || normalizedStatus === 'declined') { ... }
             } catch (err) {
                 logger.warn('[PaymentService] Status sync during check failed', err.message);
             }
@@ -869,9 +864,8 @@ export class PaymentService {
         try {
             logger.info('[PAYD-STATUS] Checking transaction status', { transaction_id: transactionId });
 
-            // Note: status endpoint is v1
-            const response = await this.client.get(`/status/${transactionId}`, {
-                baseURL: 'https://api.payd.money/api/v1',
+            // Using v2 payments endpoint (consistent with cron)
+            const response = await this.client.get(`/payments/${transactionId}`, {
                 headers: {
                     'Authorization': this.getAuthHeader(),
                     'Accept': 'application/json'
@@ -879,12 +873,13 @@ export class PaymentService {
             });
 
             const data = response.data;
-            const details = data.transaction_details || {};
+            // Payd v2 sometimes nests details, sometimes returns at root
+            const details = data.data || data;
 
             logger.info('[PAYD-STATUS] Status retrieved', {
                 transaction_id: transactionId,
                 status: details.status || data.status,
-                amount: data.amount
+                amount: details.amount || data.amount
             });
 
             let status = (details.status || data.status || 'pending').toLowerCase();
