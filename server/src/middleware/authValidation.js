@@ -17,16 +17,23 @@ export const registrationSchema = z.object({
 
     confirmPassword: z.string().min(1, 'Please confirm your password'),
 
-    mobile_payment: z.string().min(1, 'Mobile payment number is required').trim(),
+    mobilePayment: z.string().optional().trim(),
+    mobile_payment: z.string().optional().trim(),
 
-    whatsapp_number: z.string().min(1, 'WhatsApp number is required').trim(),
+    whatsappNumber: z.string().optional().trim(),
+    whatsapp_number: z.string().optional().trim(),
 
     city: z.string().min(1, 'City is required').trim(),
-
     location: z.string().min(1, 'Location is required').trim(),
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
+}).refine((data) => data.mobilePayment || data.mobile_payment, {
+    message: "Mobile payment number is required",
+    path: ["mobile_payment"],
+}).refine((data) => data.whatsappNumber || data.whatsapp_number, {
+    message: "WhatsApp number is required",
+    path: ["whatsapp_number"],
 });
 
 export const loginSchema = z.object({

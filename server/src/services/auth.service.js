@@ -377,6 +377,7 @@ class AuthService {
             const profileData = {
                 ...regData,
                 fullName: regData.fullName || regData.full_name || regData.name,
+                mobilePayment: regData.mobilePayment || regData.mobile_payment || regData.phone,
                 whatsappNumber: regData.whatsappNumber || regData.whatsapp_number || regData.phone,
                 physicalAddress: pending.physical_address || regData.physicalAddress || regData.physical_address || regData.location,
                 latitude: pending.latitude !== null && pending.latitude !== undefined ? Number(pending.latitude) : (regData.latitude || null),
