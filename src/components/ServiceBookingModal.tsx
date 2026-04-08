@@ -55,7 +55,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
     const locationType = serviceOptions.location_type || 'buyer_visits_seller';
     const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
-    const isShopless = isSellerShopless(product.seller);
+    const isShopless = isSellerShopless(product);
 
     // Reset state when modal opens
     useEffect(() => {
