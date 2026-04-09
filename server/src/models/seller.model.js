@@ -292,7 +292,6 @@ export const updateSeller = async (id, updates) => {
       created_at AS "createdAt"
     `;
 
-  console.log('Executing update query:', { queryText, values });
 
   try {
     const result = await query(queryText, values);

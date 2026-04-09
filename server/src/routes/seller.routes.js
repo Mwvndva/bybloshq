@@ -9,6 +9,7 @@ import referralRoutes from './referral_routes.js';
 import { createWithdrawal, getWithdrawals, getWithdrawalById } from '../controllers/withdrawal.controller.js';
 
 import { authLimiter } from '../middleware/authRateLimiter.js';
+import { uploadRateLimiter } from '../middleware/rateLimiting.js';
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
 
 const router = express.Router();
@@ -37,7 +38,7 @@ router.use(protect);
 // Seller profile routes
 router.get('/profile', sellerController.getProfile);
 router.patch('/profile', sellerController.updateProfile);
-router.post('/upload-banner', sellerController.uploadBanner);
+router.post('/upload-banner', uploadRateLimiter, upload.single('bannerImage'), sellerController.uploadBanner);
 router.patch('/theme', sellerController.updateTheme);
 
 // Seller analytics
