@@ -578,12 +578,12 @@ async function getSellerProductsFromDB(sellerId) {
 // @access  Private
 export const uploadBanner = async (req, res) => {
   try {
-    const sellerId = req.user?.id;
+    const sellerId = req.user?.sellerId;
 
     if (!sellerId) {
       return res.status(401).json({
         status: 'error',
-        message: 'Authentication required'
+        message: 'Seller profile required'
       });
     }
 
@@ -611,7 +611,7 @@ export const uploadBanner = async (req, res) => {
        SET banner_image = $1 
        WHERE id = $2 
        RETURNING id, banner_image AS "bannerImage"`,
-      [bannerValue, req.user.sellerId]
+      [bannerValue, sellerId]
     );
 
     if (!result.rows[0]) {
@@ -628,7 +628,11 @@ export const uploadBanner = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error uploading banner:', error);
+    logger.error('Error uploading banner:', {
+      error: error.message,
+      stack: error.stack,
+      sellerId: req.user?.sellerId
+    });
     res.status(500).json({
       status: 'error',
       message: 'Failed to upload banner',

@@ -13,7 +13,11 @@ class ImageService {
     constructor() {
         this.uploadDir = path.join(process.cwd(), 'uploads', 'images');
         this.baseUrl = process.env.BACKEND_URL || 'https://bybloshq.space';
-        this.useCloudinary = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY);
+        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.CLOUDINARY_API_KEY;
+        this.useCloudinary = !!(cloudName && apiKey &&
+            cloudName !== 'your_cloud_name' &&
+            apiKey !== 'your_api_key');
 
         if (!fs.existsSync(this.uploadDir)) {
             fs.mkdirSync(this.uploadDir, { recursive: true });
