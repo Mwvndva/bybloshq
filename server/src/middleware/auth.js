@@ -204,23 +204,22 @@ export const protect = async (req, res, next) => {
     user.buyerProfileId = user.buyerId;
 
     if (userType !== 'admin') {
-      console.log(`[AUTH] Identity verified for ${user.email}: UserID=${user.id}, ProfileID=${user.profileId}, Roles: [${user.hasBuyerProfile ? 'buyer' : ''}${user.hasSellerProfile ? ', seller' : ''}]`);
+      logger.debug(`[AUTH] Identity verified`, { userId: user.id, userType: user.userType });
     }
 
     // 4) Fetch permissions and attach to user
     const lookupId = user.userId || user.id;
     user.permissions = await AuthorizationService.getUserPermissions(lookupId);
 
-    // DEBUG: Log permissions and IDs
-    console.log(`[AUTH] User ${user.email} (type: ${userType}) IDs: userId=${user.userId}, id=${user.id}, lookupId=${lookupId}`);
-    console.log(`[AUTH] Permissions for ${user.email}:`, Array.from(user.permissions));
+    // DEBUG: Log IDs
+    logger.debug(`[AUTH] User IDs: userId=${user.userId}, id=${user.id}, lookupId=${lookupId}`);
 
 
     // 5) Attach helper method for easier checks in controllers
     user.can = async (permission, resource = null, policyKey = null, action = null) => {
       const policy = policyKey ? policies[policyKey] : null;
       const result = await AuthorizationService.can(user, permission, policy, action, resource);
-      console.log(`[AUTH] Permission check: ${user.email} can '${permission}'? ${result}`);
+      logger.debug(`[AUTH] Permission check: ${permission}? ${result}`, { userId: user.id });
       return result;
     };
 

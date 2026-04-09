@@ -589,16 +589,13 @@ export const uploadBanner = async (req, res) => {
 
     let { bannerImage } = req.body;
 
-    // Allow empty string to remove banner
-    if (bannerImage === undefined || bannerImage === null) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Banner image is required'
-      });
+    // 1. Handle Multipart Upload (req.file)
+    if (req.file) {
+      const base64String = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      bannerImage = await ImageService.base64ToFile(base64String, 'seller_banner');
     }
-
-    // Convert base64 to file if present
-    if (bannerImage && ImageService.isBase64Image(bannerImage)) {
+    // 2. Fallback to Legacy Base64 (req.body.bannerImage)
+    else if (bannerImage && ImageService.isBase64Image(bannerImage)) {
       bannerImage = await ImageService.base64ToFile(bannerImage, 'seller_banner');
     }
 

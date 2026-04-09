@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 
 import cacheService from '../services/cache.service.js';
+import { sanitizePublicProduct, sanitizePublicSeller } from '../utils/sanitize.js';
 
 // Get all products (public)
 export const getProducts = async (req, res) => {
