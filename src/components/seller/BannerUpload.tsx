@@ -14,6 +14,7 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(currentBannerUrl || null);
   const [file, setFile] = useState<File | null>(null);
+  const [bannerError, setBannerError] = useState<string>('');
 
   // Update preview URL when currentBannerUrl changes (e.g., after refresh)
   useEffect(() => {
@@ -36,15 +37,19 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
       return;
     }
 
-    // Validate file size (max 5MB)
-    if (selectedFile.size > 5 * 1024 * 1024) {
+    // Validate file size (max 50MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (selectedFile.size > MAX_SIZE) {
+      setBannerError('Banner exceeds 50MB limit');
       toast({
         title: 'File too large',
-        description: 'Maximum file size is 5MB',
+        description: 'Maximum banner size is 50MB',
         variant: 'destructive',
       });
+      e.target.value = ''; // Reset input
       return;
     }
+    setBannerError('');
 
     setFile(selectedFile);
     setPreviewUrl(URL.createObjectURL(selectedFile));
@@ -163,7 +168,7 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
         <Button
           variant="outline"
           size="default"
-          className="relative flex-1 sm:flex-none border-2 border-gray-300 hover:border-yellow-500 hover:bg-yellow-50 transition-all"
+          className={`relative flex-1 sm:flex-none border-2 transition-all ${bannerError ? 'border-red-500 bg-red-50' : 'border-gray-300 hover:border-yellow-500 hover:bg-yellow-50'}`}
           disabled={isUploading}
         >
           <input
@@ -175,6 +180,11 @@ export const BannerUpload = ({ currentBannerUrl, onBannerUploaded }: BannerUploa
           />
           <UploadCloud className="h-4 w-4 mr-2" />
           <span className="text-sm font-semibold">{file ? 'Change Image' : 'Upload Banner'}</span>
+          {bannerError && (
+            <div className="absolute -bottom-8 left-0 right-0 text-center text-[10px] font-bold text-red-500 animate-pulse whitespace-nowrap">
+              ⚠️ {bannerError}
+            </div>
+          )}
         </Button>
 
         {(previewUrl || currentBannerUrl) && !file && (

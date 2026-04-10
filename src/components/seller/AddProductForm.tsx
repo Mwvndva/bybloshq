@@ -212,15 +212,19 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
       return;
     }
 
-    // Check file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Check file size (max 50MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      setFileError('Image exceeds 50MB limit');
       toast({
         title: 'File too large',
-        description: 'Maximum file size is 5MB',
+        description: 'Maximum image size is 50MB',
         variant: 'destructive',
       });
+      e.target.value = ''; // Reset input
       return;
     }
+    setFileError('');
 
     try {
       const processedImage = await processImage(file);
@@ -788,12 +792,19 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                                   {isFirst ? 'Main photo' : `Photo ${slot + 1}`}
                                 </span>
                                 {!isDisabled && (
-                                  <input
-                                    type="file"
-                                    accept="image/*"
-                                    className="sr-only"
-                                    onChange={(e) => handleImageChange(e, slot)}
-                                  />
+                                  <>
+                                    <input
+                                      type="file"
+                                      accept="image/*"
+                                      className="sr-only"
+                                      onChange={(e) => handleImageChange(e, slot)}
+                                    />
+                                    {isFirst && fileError && (
+                                      <div className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-bold text-red-500 animate-pulse whitespace-nowrap overflow-hidden text-ellipsis">
+                                        ⚠️ {fileError}
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </label>
                             )}
