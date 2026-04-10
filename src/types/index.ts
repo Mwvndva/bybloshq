@@ -70,6 +70,7 @@ export interface Product {
   is_digital?: boolean;
   digital_file_path?: string;
   digital_file_name?: string;
+  digital_file_size?: number;
   product_type?: ProductType;
   productType?: ProductType;
   service_locations?: string;

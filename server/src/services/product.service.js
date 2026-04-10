@@ -10,7 +10,7 @@ class ProductService {
     static async createProduct(sellerId, data) {
         const {
             name, price, description, image, image_url, aesthetic = 'noir',
-            is_digital = false, digital_file_path, digital_file_name,
+            is_digital = false, digital_file_path, digital_file_name, digital_file_size,
             product_type = 'physical', service_locations, service_options
         } = data;
 
@@ -95,6 +95,7 @@ class ProductService {
             is_digital: is_digital || false,
             digital_file_path: digital_file_path || null,
             digital_file_name: digital_file_name || null,
+            digital_file_size: digital_file_size || null,
             product_type: finalProductType,
             service_locations: service_locations || null,
             service_options: service_options || null

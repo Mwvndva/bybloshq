@@ -649,7 +649,7 @@ export const sellerApi = {
     return response.data.data;
   },
 
-  async uploadDigitalProduct(file: File, onProgress?: (progress: number) => void): Promise<{ filePath: string; fileName: string }> {
+  async uploadDigitalProduct(file: File, onProgress?: (progress: number) => void): Promise<{ filePath: string; fileName: string; size: number }> {
     const formData = new FormData();
     formData.append('digital_file', file);
 
@@ -671,11 +671,12 @@ export const sellerApi = {
         'Content-Type': 'multipart/form-data',
       },
       timeout: 5 * 60 * 1000, // 5 minutes timeout for large files
-    });
+    } as any);
 
     return {
       filePath: response.data.data.filePath,
-      fileName: response.data.data.fileName
+      fileName: response.data.data.fileName,
+      size: response.data.data.size
     };
   },
 
