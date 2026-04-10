@@ -143,8 +143,8 @@ export default async (app) => {
 
     app.use('/api', limiter);
     // Enable JSON body parsing with higher limits for base64 images
-    app.use(express.json({ limit: '100mb' }));
-    app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+    app.use(express.json({ limit: '500mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '500mb' }));
     app.use(cookieParser());
     app.use(xss());
     app.use(hpp());
