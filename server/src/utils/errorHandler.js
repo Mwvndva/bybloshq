@@ -46,6 +46,15 @@ export const globalErrorHandler = (err, req, res, next) => {
     if (error.name === 'TokenExpiredError') error = handleJWTExpiredError();
     if (error.code === 'EBADCSRFTOKEN') error.isOperational = true;
 
+    // Handle Multer errors
+    if (error.code?.startsWith('LIMIT_')) {
+      error.isOperational = true;
+      error.statusCode = 400;
+      if (error.code === 'LIMIT_FILE_SIZE') {
+        error.message = 'File is too large. Max size is 500MB.';
+      }
+    }
+
     // Log the error with Request ID
     if (error.statusCode === 404) {
       logger.warn(`[Request ID: ${requestId}] 404 Not Found: ${error.message}`);

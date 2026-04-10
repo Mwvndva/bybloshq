@@ -44,6 +44,11 @@ async function startServer() {
         `);
   });
 
+  // Increase timeouts for large file uploads
+  server.timeout = 600000; // 10 minutes
+  server.keepAliveTimeout = 600000;
+  server.headersTimeout = 601000; // slightly more than keepAliveTimeout
+
   // Handle Unhandled Rejections
   process.on('unhandledRejection', (err) => {
     logger.error('💥 UNHANDLED REJECTION! Shutting down...');
