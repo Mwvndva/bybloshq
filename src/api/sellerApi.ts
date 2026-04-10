@@ -605,7 +605,9 @@ export const sellerApi = {
 
   // Upload banner image
   async uploadBanner(bannerImage: string): Promise<{ bannerUrl: string }> {
-    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/sellers/upload-banner', { bannerImage });
+    const response = await sellerApiInstance.post<{ data: { bannerUrl: string } }>('/sellers/upload-banner', { bannerImage }, {
+      timeout: 2 * 60 * 1000, // 2 minutes timeout for banner files
+    });
     return response.data.data;
   },
 
@@ -662,6 +664,7 @@ export const sellerApi = {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 5 * 60 * 1000, // 5 minutes timeout for large files
     });
 
     return {
