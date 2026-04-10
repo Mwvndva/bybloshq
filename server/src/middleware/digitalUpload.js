@@ -55,7 +55,7 @@ const digitalUpload = multer({
     storage: storage,
     fileFilter: fileFilter,
     limits: {
-        fileSize: 100 * 1024 * 1024, // 100MB limit to provide headroom
+        fileSize: 500 * 1024 * 1024, // 500MB limit to provide headroom
     },
 });
 
