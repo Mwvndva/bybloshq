@@ -11,6 +11,7 @@ import { createWithdrawal, getWithdrawals, getWithdrawalById } from '../controll
 import { authLimiter } from '../middleware/authRateLimiter.js';
 import { uploadRateLimiter } from '../middleware/rateLimiting.js';
 import { validateSellerRegistration, validateSellerLogin } from '../middleware/sellerValidation.js';
+import digitalUpload from '../middleware/digitalUpload.js';
 
 const router = express.Router();
 
@@ -71,12 +72,8 @@ router.route('/products/:id')
 router.patch('/products/:id/inventory', productController.updateInventory);
 
 router.post('/products/upload-digital',
-  (req, res, next) => {
-    // Import dynamically or use the imported middleware
-    import('../middleware/digitalUpload.js').then(module => {
-      module.default.single('digital_file')(req, res, next);
-    }).catch(next);
-  },
+  uploadRateLimiter,
+  digitalUpload.single('digital_file'),
   productController.uploadDigitalFile
 );
 
