@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from '../utils/logger.js';
 import * as sellerController from '../controllers/seller.controller.js';
 import * as productController from '../controllers/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
@@ -72,10 +73,6 @@ router.route('/products/:id')
 router.patch('/products/:id/inventory', productController.updateInventory);
 
 router.post('/products/upload-digital',
-  (req, res, next) => {
-    logger.info(`[UPLOAD-DEBUG] Incoming digital upload: ${req.headers['content-length']} bytes`);
-    next();
-  },
   uploadRateLimiter,
   digitalUpload.single('digital_file'),
   productController.uploadDigitalFile
