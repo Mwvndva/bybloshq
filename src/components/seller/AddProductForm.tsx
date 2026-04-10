@@ -36,6 +36,28 @@ interface FormData {
   service_options: ServiceOptions;
 }
 
+const formDataDefaults: FormData = {
+  name: '',
+  price: '',
+  description: '',
+  image: null,
+  image_url: '',
+  aesthetic: 'noir',
+  is_digital: false,
+  digital_file: null,
+  digital_file_name: '',
+  digital_file_path: '',
+  product_type: 'physical',
+  service_locations: '',
+  service_options: {
+    availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    location_type: 'buyer_visits_seller',
+    price_type: 'fixed',
+    start_time: '09:00',
+    end_time: '17:00'
+  }
+};
+
 export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -45,27 +67,11 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const [extraFiles, setExtraFiles] = useState<File[]>([]);
   const [extraPreviews, setExtraPreviews] = useState<string[]>([]);
   const [formData, setFormData] = useState<FormData>({
-    name: '',
-    price: '',
-    description: '',
-    image: null,
-    image_url: '',
-    aesthetic: 'noir',
-    is_digital: false,
-    digital_file: null,
-    digital_file_name: '',
-    digital_file_path: '',
-    product_type: 'physical',
-    service_locations: '',
-    service_options: {
-      availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-      location_type: 'buyer_visits_seller',
-      price_type: 'fixed',
-      start_time: '09:00',
-      end_time: '17:00'
-    }
+    ...formDataDefaults
   });
-  const [sellerProfile, setSellerProfile] = useState<any>(null); // Store full seller profile
+  const [sellerProfile, setSellerProfile] = useState<any>(null);
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [fileError, setFileError] = useState<string>('');
 
   // Get the current seller ID from the API
   const getSellerId = async () => {
@@ -299,11 +305,19 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
       if (formData.is_digital) {
         if (formData.digital_file) {
           try {
-            const uploadResult = await sellerApi.uploadDigitalProduct(formData.digital_file);
+            setUploadProgress(0);
+            const uploadResult = await sellerApi.uploadDigitalProduct(
+              formData.digital_file,
+              (progress) => setUploadProgress(progress)
+            );
             digitalFilePath = uploadResult.filePath;
             digitalFileName = uploadResult.fileName;
+            setUploadProgress(100);
+            // Small delay to show 100% completion
+            await new Promise(resolve => setTimeout(resolve, 500));
           } catch (error) {
             console.error('Error uploading digital file:', error);
+            setUploadProgress(0);
             toast({
               title: 'Upload Error',
               description: 'Failed to upload digital file. Please try again.',
@@ -311,6 +325,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
             });
             setIsLoading(false);
             return;
+          } finally {
+            setUploadProgress(0);
           }
         } else if (!digitalFilePath) {
           toast({
@@ -520,21 +536,53 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                   {formData.product_type === 'digital' && (
                     <div className="space-y-3 animate-in fade-in zoom-in duration-300">
                       <Label htmlFor="digital_file" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Digital File</Label>
-                      <Input
-                        id="digital_file"
-                        type="file"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setFormData(prev => ({ ...prev, digital_file: file }));
-                          }
-                        }}
-                        accept=".pdf,.zip,.rar,.epub,.mobi"
-                        className="h-12 bg-gray-800 border-gray-700 text-white file:text-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl pt-2.5"
-                      />
-                      <p className="text-xs text-gray-300">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
-                      {formData.digital_file && (
-                        <p className="text-sm text-green-200 font-medium">Selected: {formData.digital_file.name}</p>
+                      <div className="relative">
+                        <Input
+                          id="digital_file"
+                          type="file"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const MAX_SIZE = 50 * 1024 * 1024; // 50MB
+                              if (file.size > MAX_SIZE) {
+                                setFileError('File exceeds 50MB limit');
+                                setFormData(prev => ({ ...prev, digital_file: null }));
+                                e.target.value = ''; // Reset input
+                              } else {
+                                setFileError('');
+                                setFormData(prev => ({ ...prev, digital_file: file }));
+                              }
+                            }
+                          }}
+                          accept=".pdf,.zip,.rar,.epub,.mobi"
+                          className={`h-12 bg-gray-800 border-gray-700 text-white file:text-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl pt-2.5 ${fileError ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                        />
+                        {fileError && (
+                          <div className="absolute -bottom-6 left-0 text-xs font-bold text-red-500 animate-pulse">
+                            ⚠️ {fileError}
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-300 mt-2">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
+
+                      {/* Upload Progress Indicator */}
+                      {uploadProgress > 0 && (
+                        <div className="space-y-2 mt-4 bg-white/5 p-3 rounded-lg border border-white/10">
+                          <div className="flex justify-between text-xs font-black text-white uppercase tracking-wider">
+                            <span>Uploading digital asset...</span>
+                            <span>{uploadProgress}%</span>
+                          </div>
+                          <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
+                            <div
+                              className="bg-yellow-400 h-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(250,204,21,0.5)]"
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {formData.digital_file && !fileError && (
+                        <p className="text-sm text-green-200 font-medium pt-2">Selected: {formData.digital_file.name}</p>
                       )}
                     </div>
                   )}

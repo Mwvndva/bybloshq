@@ -649,7 +649,7 @@ export const sellerApi = {
     return response.data.data;
   },
 
-  async uploadDigitalProduct(file: File): Promise<{ filePath: string; fileName: string }> {
+  async uploadDigitalProduct(file: File, onProgress?: (progress: number) => void): Promise<{ filePath: string; fileName: string }> {
     const formData = new FormData();
     formData.append('digital_file', file);
 
@@ -661,6 +661,12 @@ export const sellerApi = {
         size: number;
       }
     }>('/sellers/products/upload-digital', formData, {
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(progress);
+        }
+      },
       headers: {
         'Content-Type': 'multipart/form-data',
       },
