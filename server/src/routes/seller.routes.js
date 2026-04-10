@@ -72,6 +72,10 @@ router.route('/products/:id')
 router.patch('/products/:id/inventory', productController.updateInventory);
 
 router.post('/products/upload-digital',
+  (req, res, next) => {
+    logger.info(`[UPLOAD-DEBUG] Incoming digital upload: ${req.headers['content-length']} bytes`);
+    next();
+  },
   uploadRateLimiter,
   digitalUpload.single('digital_file'),
   productController.uploadDigitalFile

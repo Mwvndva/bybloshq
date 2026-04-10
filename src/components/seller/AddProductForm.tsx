@@ -323,8 +323,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
             console.error('Error uploading digital file:', error);
             setUploadProgress(0);
             toast({
-              title: 'Upload Error',
-              description: 'Failed to upload digital file. Please try again.',
+              title: `Upload Error (${error.response?.status || 'Network'})`,
+              description: error.response?.data?.message || error.message || 'Failed to upload digital file. Please try again.',
               variant: 'destructive',
             });
             setIsLoading(false);
@@ -799,7 +799,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                                       className="sr-only"
                                       onChange={(e) => handleImageChange(e, slot)}
                                     />
-                                    {isFirst && fileError && (
+                                    {fileError && (
                                       <div className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-bold text-red-500 animate-pulse whitespace-nowrap overflow-hidden text-ellipsis">
                                         ⚠️ {fileError}
                                       </div>
@@ -812,7 +812,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                         );
                       })}
                     </div>
-                    <p className="text-xs text-gray-400">PNG, JPG up to 5MB each. First photo is shown as the main image.</p>
+                    <p className="text-xs text-gray-400">PNG, JPG up to 50MB each. First photo is shown as the main image.</p>
                   </div>
                 </div>
               </div>
