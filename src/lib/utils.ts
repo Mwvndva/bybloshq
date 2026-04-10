@@ -202,3 +202,17 @@ export function isSellerShopless(seller: any | null | undefined): boolean {
 
   return true;
 }
+
+/**
+ * Formats bytes into a human-readable string (KB, MB, etc.)
+ */
+export function formatFileSize(bytes: number | string | null | undefined): string {
+  if (bytes === null || bytes === undefined || bytes === '') return '0 KB';
+
+  const numBytes = typeof bytes === 'string' ? parseInt(bytes, 10) : bytes;
+  if (isNaN(numBytes) || numBytes <= 0) return '0 KB';
+
+  if (numBytes < 1024) return `${numBytes} B`;
+  if (numBytes < 1024 * 1024) return `${(numBytes / 1024).toFixed(1)} KB`;
+  return `${(numBytes / (1024 * 1024)).toFixed(1)} MB`;
+}

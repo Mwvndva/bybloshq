@@ -7,7 +7,7 @@ import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loade
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { cn, formatCurrency, getImageUrl, isSellerShopless } from '@/lib/utils';
+import { cn, formatCurrency, getImageUrl, isSellerShopless, formatFileSize } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { BuyerInfoModal, BuyerInfo } from '@/components/BuyerInfoModal';
@@ -544,14 +544,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Product Image — always renders, shows placeholder when no image */}
       <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
-        {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
-          <div className="absolute top-2 left-2 z-10">
-            <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
-              <FileText className="h-3 w-3 mr-1" />
-              Digital
+        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+          <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
+            <FileText className="h-3 w-3 mr-1" />
+            Digital
+          </Badge>
+          {product.digital_file_size && (
+            <Badge className="bg-black/60 text-white border-0 text-[9px] py-0 px-1.5 backdrop-blur-md">
+              {formatFileSize(product.digital_file_size)}
             </Badge>
-          </div>
-        )}
+          )}
+        </div>
 
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
@@ -662,7 +665,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           >
             {displaySellerName}
           </span>
-          {displaySeller && !isSellerShopless(displaySeller) && (
+          {displaySeller && !isSellerShopless(displaySeller) && (product.product_type !== 'digital' && !(product as any).isDigital) && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>
                 <PopoverTrigger asChild>
@@ -793,7 +796,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           </div>
           {/* We'll use CSS to target the internal close button since we don't want to change the global ui/dialog.tsx component. */}
 
-          <div className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh] relative group/modal">
+          <div
+            className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh] relative group/modal cursor-pointer"
+            onClick={() => setIsImageDialogOpen(false)}
+          >
             <style>{`
               .hide-scrollbar::-webkit-scrollbar { display: none; }
               .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -845,7 +851,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                           <div
                             key={`indicator-${img}`}
                             className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setCurrentImageIndex(idx);
                               scrollToImage(idx);
                             }}

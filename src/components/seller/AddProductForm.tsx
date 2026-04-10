@@ -31,6 +31,7 @@ interface FormData {
   digital_file: File | null;
   digital_file_name: string;
   digital_file_path: string;
+  digital_file_size: number | null;
   product_type: 'physical' | 'digital' | 'service';
   service_locations: string;
   service_options: ServiceOptions;
@@ -47,6 +48,7 @@ const formDataDefaults: FormData = {
   digital_file: null,
   digital_file_name: '',
   digital_file_path: '',
+  digital_file_size: null,
   product_type: 'physical',
   service_locations: '',
   service_options: {
@@ -101,6 +103,12 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
+
+    // Enforce 300 character limit for description
+    if (name === 'description' && value.length > 300) {
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value
@@ -316,6 +324,15 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
             );
             digitalFilePath = uploadResult.filePath;
             digitalFileName = uploadResult.fileName;
+            const digitalFileSize = uploadResult.size;
+
+            setFormData(prev => ({
+              ...prev,
+              digital_file_path: digitalFilePath,
+              digital_file_name: digitalFileName,
+              digital_file_size: digitalFileSize
+            }));
+
             setUploadProgress(100);
             // Small delay to show 100% completion
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -353,8 +370,9 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         aesthetic: formData.aesthetic,
         sellerId: sellerId,
         is_digital: formData.is_digital,
-        digital_file_path: formData.is_digital ? digitalFilePath : undefined,
-        digital_file_name: formData.is_digital ? digitalFileName : undefined,
+        digital_file_path: formData.is_digital ? (digitalFilePath || formData.digital_file_path) : undefined,
+        digital_file_name: formData.is_digital ? (digitalFileName || formData.digital_file_name) : undefined,
+        digital_file_size: formData.is_digital ? (formData.digital_file_size) : undefined,
         product_type: formData.product_type,
         service_locations: formData.product_type === 'service' ? formData.service_locations : undefined,
         service_options: formData.product_type === 'service' ? formData.service_options : undefined,
@@ -380,6 +398,7 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
         digital_file: null,
         digital_file_name: '',
         digital_file_path: '',
+        digital_file_size: null,
         product_type: 'physical',
         service_locations: '',
         service_options: {
@@ -712,17 +731,26 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                   )}
 
                   <div className="space-y-3">
-                    <Label htmlFor="description" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Description</Label>
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="description" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Description</Label>
+                      <span className={`text-[10px] font-bold tracking-wider uppercase ${formData.description.length >= 280 ? 'text-yellow-400' : 'text-gray-500'}`}>
+                        {formData.description.length} / 300
+                      </span>
+                    </div>
                     <Textarea
                       id="description"
                       name="description"
                       value={formData.description}
                       onChange={handleChange}
-                      placeholder="Enter product description"
+                      placeholder="Enter product description (Max 300 characters)"
                       rows={4}
                       required
-                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
+                      maxLength={300}
+                      className={`bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl transition-all ${formData.description.length >= 300 ? 'ring-1 ring-yellow-400/50' : ''}`}
                     />
+                    {formData.description.length >= 300 && (
+                      <p className="text-[10px] text-yellow-400 font-bold uppercase animate-pulse">Maximum length reached</p>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -841,7 +869,8 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
                         price_type: 'fixed',
                         start_time: '09:00',
                         end_time: '17:00'
-                      }
+                      },
+                      digital_file_size: null
                     });
                     resetImages();
                   }}
