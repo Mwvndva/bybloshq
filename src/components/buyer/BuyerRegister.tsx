@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Mail, User, Phone, Lock, ArrowLeft, ShoppingBag, MapPin, Check, X } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { locationData } from '@/lib/constants';
+import TermsModal from '@/components/TermsModal';
 
 export function BuyerRegister() {
   const { toast } = useToast();
@@ -42,9 +43,9 @@ export function BuyerRegister() {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-  const [currentStep, setCurrentStep] = useState(1);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
 
   // Password strength checker function
   const checkPasswordStrength = (password: string) => {
@@ -146,7 +147,8 @@ export function BuyerRegister() {
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         city: formData.city,
-        location: formData.location
+        location: formData.location,
+        termsAccepted: true
       });
 
       if ((result as any)?.status === 'pending_verification') {
@@ -617,7 +619,7 @@ export function BuyerRegister() {
                     <Button
                       type="submit"
                       className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold tracking-tight transition-all duration-200 h-11 text-sm"
-                      disabled={isLoading}
+                      disabled={isLoading || !termsAccepted}
                     >
                       {isLoading ? (
                         <>
@@ -644,6 +646,11 @@ export function BuyerRegister() {
                 </p>
               </div>
             )}
+            <TermsModal
+              isOpen={isTermsModalOpen}
+              onClose={() => setIsTermsModalOpen(false)}
+              onAccept={() => setTermsAccepted(true)}
+            />
           </div>
         </div>
       </div>

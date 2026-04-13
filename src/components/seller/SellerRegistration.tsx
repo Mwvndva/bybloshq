@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
 import ShopLocationPicker from './ShopLocationPicker';
+import TermsModal from '@/components/TermsModal';
 
 interface SellerRegistrationProps {
   onSuccess?: () => void;
@@ -54,6 +55,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [hasPhysicalShop, setHasPhysicalShop] = useState<boolean | null>(null);
   const [isRegistered, setIsRegistered] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const { toast } = useToast();
 
   // Ensure body and html have black background and no margins/padding
@@ -253,7 +256,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         physicalAddress: formData.physicalAddress,
         latitude: formData.latitude,
         longitude: formData.longitude,
-        referralCode
+        referralCode,
+        termsAccepted: true
       });
 
       if ((result as any)?.status === 'pending_verification') {
@@ -736,6 +740,29 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                         <p className="text-[10px] sm:text-sm text-red-400 font-medium">{passwordError}</p>
                       )}
                     </div>
+
+                    <div className="pt-2">
+                      <div className="flex items-start space-x-2 bg-gray-900/40 p-3 rounded-xl border border-gray-800">
+                        <input
+                          type="checkbox"
+                          id="termsAccepted"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                          className="mt-1 h-4 w-4 rounded border-gray-700 bg-gray-800 text-yellow-500 focus:ring-yellow-500"
+                        />
+                        <Label htmlFor="termsAccepted" className="text-xs text-gray-400 leading-tight">
+                          I agree to the{' '}
+                          <button
+                            type="button"
+                            onClick={() => setIsTermsModalOpen(true)}
+                            className="text-yellow-400 hover:text-yellow-300 font-medium underline underline-offset-2"
+                          >
+                            Terms & Conditions
+                          </button>
+                          {' '}and have read the Privacy Policy.
+                        </Label>
+                      </div>
+                    </div>
                   </>
                 )}
 
@@ -790,7 +817,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                     <Button
                       type="submit"
                       className="flex-1 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl h-11 font-semibold tracking-tight transition-all duration-200 text-sm"
-                      disabled={isLoading}
+                      disabled={isLoading || !termsAccepted}
                     >
                       {isLoading ? (
                         <>
@@ -815,6 +842,11 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                 </Link>
               </p>
             </div>
+            <TermsModal
+              isOpen={isTermsModalOpen}
+              onClose={() => setIsTermsModalOpen(false)}
+              onAccept={() => setTermsAccepted(true)}
+            />
           </div>
         </div>
       </div>
