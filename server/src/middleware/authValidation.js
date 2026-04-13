@@ -25,6 +25,7 @@ export const registrationSchema = z.object({
 
     city: z.string().min(1, 'City is required').trim(),
     location: z.string().min(1, 'Location is required').trim(),
+    termsAccepted: z.boolean().optional()
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
     path: ["confirmPassword"],

@@ -105,9 +105,9 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
 
               <Sub title="1.2 Information We Collect">
                 <BulletList items={[
-                  "Identity data: Full name, national ID, KRA PIN, business registration number.",
-                  "Contact data: Phone number, email address, postal address.",
-                  "Transactional data: Payment records, M-Pesa references, order history, invoices.",
+                  "Identity data: Full name, email, phone number, location.",
+                  "Contact data: Phone number, email address,",
+                  "Transactional data: Payment records, M-Pesa references, order history, order confirmations, receipts.",
                   "Technical data: IP address, device type, browser, cookies, session logs.",
                   "Communications: Customer service interactions, WhatsApp messages, dispute records.",
                   "Compliance data: KYC/AML verification documents where required by law."
@@ -130,7 +130,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
                   "Transaction processing and payment reconciliation.",
                   "Fraud prevention, AML checks, and platform security.",
                   "Regulatory reporting and tax compliance (e.g. KRA).",
-                  "Sending transactional notifications, invoices, and service alerts.",
+                  "Sending transactional notifications, receipts, and service alerts.",
                   "Product improvement and aggregated analytics (anonymised).",
                   "Legal defence of claims against Byblos."
                 ]} />
@@ -177,7 +177,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
               <p className="mb-4 text-gray-600 italic">This Agreement is a legally binding contract between Byblos and every registered user.</p>
 
               <Sub title="2.1 Platform Role">
-                Byblos is a digital marketplace and technology platform. Byblos is <strong>not</strong> a seller, buyer, event organiser, or party to any transaction between users. Byblos facilitates commerce and assumes no liability for the actions or omissions of users.
+                Byblos is a digital marketplace and technology platform. Byblos is <strong>not</strong> a seller, buyer, or party to any transaction between users. Byblos facilitates commerce and assumes no liability for the actions or omissions of users.
               </Sub>
 
               <Sub title="2.2 Eligibility">
@@ -191,7 +191,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
 
               <Sub title="2.3 Seller Terms">
                 <BulletList items={[
-                  "A commission of 3% is charged on every completed sale. This is non-negotiable and non-refundable.",
+                  "A commission of 1% is charged on every completed sale. This is non-negotiable and non-refundable.",
                   "Sellers warrant that all listings are truthful, lawful, and not misleading (Consumer Protection Act, 2012).",
                   "Sellers must fulfill orders within the stated timeframe or face suspension.",
                   "Sellers are solely responsible for tax obligations on income earned, including VAT and income tax to KRA.",
@@ -209,14 +209,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
                 ]} />
               </Sub>
 
-              <Sub title="2.5 Event Organiser Terms">
-                <BulletList items={[
-                  "A commission of 6% applies per ticket sold.",
-                  "Organisers must hold all required permits, licences, and approvals (e.g. Kenya Film Classification Board, NEMA, county government approvals where applicable).",
-                  "Byblos provides ticketing infrastructure only and is not liable for event cancellations, safety incidents, or refunds beyond its Refund Policy.",
-                  "Event organisers indemnify Byblos against all third-party claims arising from their events."
-                ]} />
-              </Sub>
+
 
               <Sub title="2.6 Platform Rights">
                 Byblos may, at its sole discretion and without prior notice:
@@ -245,17 +238,16 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
               <SectionHeading number="3" title="REFUND POLICY" />
 
               <Sub title="3.1 General">
-                Byblos processes refunds on behalf of sellers and event organisers, consistent with the Consumer Protection Act, 2012 (Kenya). Byblos does not guarantee refunds for third-party seller conduct beyond what is explicitly stated herein.
+                Byblos processes refunds on behalf of sellers, consistent with the Consumer Protection Act, 2012 (Kenya). Byblos does not guarantee refunds for third-party seller conduct beyond what is explicitly stated herein.
               </Sub>
 
               <Sub title="3.2 Eligible Refunds">
                 A refund may be approved where:
                 <BulletList items={[
                   "The goods or services were materially different from the listing description.",
-                  "The event was cancelled or rescheduled without buyer consent.",
                   "A verified payment system error resulted in a duplicate charge.",
                   "The seller failed to deliver within 14 days of the confirmed delivery date with no communication.",
-                  "Proven fraudulent activity by a seller or organiser."
+                  "Proven fraudulent activity by a seller"
                 ]} />
               </Sub>
 
