@@ -183,8 +183,13 @@ class AuthService {
      * @param {string} type 
      */
     static async register(data, type) {
-        const { email, password } = data;
+        const { email, password, termsAccepted } = data;
         const normalizedEmail = (email || '').trim().toLowerCase();
+
+        // 0. Validate terms acceptance
+        if (termsAccepted !== true) {
+            throw new Error('You must accept the terms and conditions to create an account.');
+        }
 
         // 1. Check if user already exists in unified users table
         const existingUser = await User.findByEmail(normalizedEmail);
@@ -197,7 +202,7 @@ class AuthService {
                     if (existingSeller) throw new Error('A seller account with this email already exists.');
 
                     // Add seller profile to existing user
-                    const seller = await SellerService.register(data);
+                    const seller = await SellerService.register({ ...data, termsAccepted });
                     return { status: 'created', user: seller };
                 }
                 case 'buyer': {
@@ -205,7 +210,7 @@ class AuthService {
                     if (existingBuyer) throw new Error('A buyer account with this email already exists.');
 
                     // Add buyer profile to existing user
-                    const buyer = await BuyerService.register(data);
+                    const buyer = await BuyerService.register({ ...data, termsAccepted });
                     return { status: 'created', user: buyer };
                 }
                 default:
@@ -234,7 +239,8 @@ class AuthService {
             latitude: data.latitude,
             longitude: data.longitude,
             verificationToken: hashedToken,
-            expiresAt
+            expiresAt,
+            termsAccepted: true // We already validated it above
         });
 
         // 3. Send verification email
@@ -382,7 +388,8 @@ class AuthService {
                 physicalAddress: pending.physical_address || regData.physicalAddress || regData.physical_address || regData.location,
                 latitude: pending.latitude !== null && pending.latitude !== undefined ? Number(pending.latitude) : (regData.latitude || null),
                 longitude: pending.longitude !== null && pending.longitude !== undefined ? Number(pending.longitude) : (regData.longitude || null),
-                userId: newUser.id
+                userId: newUser.id,
+                termsAccepted: pending.terms_accepted
             };
             let profile = null;
 

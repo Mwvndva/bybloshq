@@ -1,15 +1,14 @@
 import { pool } from '../config/database.js';
 
 class PendingRegistration {
-    /**
-     * Create a new pending registration
-     * @param {Object} param0 
-     * @returns {Promise<Object>}
-     */
-    static async create({ email, passwordHash, role, registrationData, physicalAddress, latitude, longitude, verificationToken, expiresAt }) {
+    static async create({ email, passwordHash, role, registrationData, physicalAddress, latitude, longitude, verificationToken, expiresAt, termsAccepted = false }) {
         const query = `
-            INSERT INTO pending_registrations (email, password_hash, role, registration_data, physical_address, latitude, longitude, verification_token, expires_at)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            INSERT INTO pending_registrations (
+                email, password_hash, role, registration_data, 
+                physical_address, latitude, longitude, verification_token, 
+                expires_at, terms_accepted, terms_accepted_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CASE WHEN $10 = true THEN NOW() ELSE NULL END)
             ON CONFLICT (email) DO UPDATE SET
                 password_hash = EXCLUDED.password_hash,
                 role = EXCLUDED.role,
@@ -19,6 +18,8 @@ class PendingRegistration {
                 longitude = EXCLUDED.longitude,
                 verification_token = EXCLUDED.verification_token,
                 expires_at = EXCLUDED.expires_at,
+                terms_accepted = EXCLUDED.terms_accepted,
+                terms_accepted_at = EXCLUDED.terms_accepted_at,
                 created_at = NOW()
             RETURNING *
         `;
@@ -32,7 +33,8 @@ class PendingRegistration {
             latitude || null,
             longitude || null,
             verificationToken,
-            expiresAt
+            expiresAt,
+            termsAccepted
         ]);
 
         return result.rows[0];

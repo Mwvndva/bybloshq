@@ -302,6 +302,7 @@ export const sellerApi = {
     latitude?: number;
     longitude?: number;
     referralCode?: string;
+    termsAccepted: boolean;
   }): Promise<{ seller?: Seller; status?: string; message?: string }> => {
     try {
       const response = await sellerApiInstance.post<RegisterResponse>('/sellers/register', {
@@ -317,6 +318,7 @@ export const sellerApi = {
         latitude: data.latitude,
         longitude: data.longitude,
         referral_code: (data as any).referralCode || undefined,
+        termsAccepted: data.termsAccepted
       });
 
       const responseBody = response.data;

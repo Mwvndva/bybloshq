@@ -81,6 +81,7 @@ export interface BuyerRegistrationData {
     confirmPassword: string;
     city: string;
     location: string;
+    termsAccepted: boolean;
 }
 
 export interface SellerRegistrationData {
@@ -96,6 +97,7 @@ export interface SellerRegistrationData {
     latitude?: number;
     longitude?: number;
     referralCode?: string;
+    termsAccepted: boolean;
 }
 
 export type RegistrationData =

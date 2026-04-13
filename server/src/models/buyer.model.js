@@ -6,37 +6,42 @@ import { toCamelCase } from '../utils/caseUtils.js';
 
 class Buyer {
   // Create a new buyer
-  static async create({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress, userId = null }, externalClient = null) {
+  static async create({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress, userId = null, termsAccepted = false }, externalClient = null) {
     const query = `
       INSERT INTO buyers (
         full_name, email, mobile_payment, whatsapp_number, 
         city, location, latitude, longitude, full_address, user_id, 
+        terms_accepted, terms_accepted_at,
         created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CASE WHEN $11 = true THEN NOW() ELSE NULL END, NOW(), NOW())
       RETURNING *
     `;
     const values = [
       fullName, email, mobilePayment, whatsappNumber,
-      city, location, latitude, longitude, fullAddress, userId
+      city, location, latitude, longitude, fullAddress, userId,
+      termsAccepted
     ];
     const result = await (externalClient || pool).query(query, values);
     return toCamelCase(result.rows[0]);
   }
 
-  static async createGuest({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress, userId = null }, externalClient = null) {
+  static async createGuest({ fullName, email, mobilePayment, whatsappNumber, city, location, latitude, longitude, fullAddress, userId = null, termsAccepted = false }, externalClient = null) {
     const query = `
       INSERT INTO buyers (
         full_name, email, mobile_payment, whatsapp_number, 
-        city, location, latitude, longitude, full_address, user_id, created_at, updated_at
+        city, location, latitude, longitude, full_address, user_id, 
+        terms_accepted, terms_accepted_at,
+        created_at, updated_at
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CASE WHEN $11 = true THEN NOW() ELSE NULL END, NOW(), NOW())
       RETURNING *
     `;
 
     const values = [
       fullName, email, mobilePayment, whatsappNumber,
-      city, location, latitude, longitude, fullAddress, userId
+      city, location, latitude, longitude, fullAddress, userId,
+      termsAccepted
     ];
     const result = await (externalClient || pool).query(query, values);
     return toCamelCase(result.rows[0]);
