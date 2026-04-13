@@ -558,7 +558,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     {updatingId === product.id ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <span>{product.status === 'sold' ? 'Mark Available' : 'Sold Out'}</span>
+                      <span>{product.status === 'sold' ? 'Mark Available' : 'Mark as Sold Out'}</span>
                     )}
                   </Button>
                 </div>
@@ -675,7 +675,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                         {updatingId === product.id ? (
                           <Loader2 className="h-3 w-3 animate-spin mr-1" />
                         ) : (
-                          <span>{product.status === 'sold' ? 'Mark Available' : 'Sold Out'}</span>
+                          <span>{product.status === 'sold' ? 'Mark Available' : 'Mark as Sold Out'}</span>
                         )}
                       </Button>
                     )}
