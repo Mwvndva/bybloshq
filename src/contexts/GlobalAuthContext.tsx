@@ -227,12 +227,14 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         // Optimization: if already authenticated for this role, skip check unless forced
         if (!force && user && user.role === currentRole && user.isAuthenticated) {
             setIsLoading(false);
+            setInitializing(false);
             return;
         }
 
         // Skip auth check if we're on a public route or homepage
         if (!currentRole || isPublicRoute(currentPath)) {
             setIsLoading(false);
+            setInitializing(false);
             return;
         }
 
