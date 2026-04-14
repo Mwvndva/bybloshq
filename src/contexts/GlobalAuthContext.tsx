@@ -145,6 +145,9 @@ const GlobalAuthContext = createContext<GlobalAuthContextType | undefined>(undef
 export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<GlobalUser | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    // Separate flag: only true during the very first page-load auth check.
+    // Unlike isLoading, this does NOT become true again during login/register.
+    const [initializing, setInitializing] = useState<boolean>(true);
     const navigate = useNavigate();
     const location = useLocation();
 
@@ -286,6 +289,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             // CRITICAL: Always set isLoading to false and clear rehydration state
             authStateManager.setRehydrating(false);
             setIsLoading(false);
+            setInitializing(false); // Mark first-load complete — never goes true again
             authCheckInProgress.current = false;
         }
     }, [user]); // Add user to deps to allow the optimization check
@@ -683,10 +687,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // RENDER GATING (Prevents Flickering)
     // ============================================================================
 
-    // Show loading screen during the very first auth check to prevent 
-    // flickers between authenticated/unauthenticated UI states.
-    if (isLoading && !user) {
-        return <LoadingScreen message="Identifying identity..." />;
+    // Only gate on the FIRST page-load auth check.
+    // Using `initializing` (not `isLoading`) so login/register do NOT unmount the active page.
+    if (initializing) {
+        return <LoadingScreen message="Loading..." />;
     }
 
     return (
