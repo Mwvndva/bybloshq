@@ -13,10 +13,10 @@ const Footer = () => {
           {/* Contact & Socials - Minimal Stack */}
           <div className="flex flex-wrap items-center gap-6">
             <a
-              href="mailto:official@bybloshq.com"
+              href="mailto:bybloshqke@zohomail.com"
               className="text-zinc-400 hover:text-white transition-all text-sm font-medium tracking-tight"
             >
-              official@bybloshq.com
+              bybloshqke@zohomail.com
             </a>
 
             <a
