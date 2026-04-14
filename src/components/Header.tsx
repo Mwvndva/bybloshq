@@ -27,7 +27,7 @@ const Header = () => {
             {/* Sell / Dashboard */}
             <Link to={isSellerAuthenticated ? "/seller/dashboard" : "/seller/register"}>
               <Button
-                className="bg-yellow/40 hover:bg-white text-black rounded-full px-6 transition-all duration-300 border border-white/10 hover:border-white/20 shadow-lg backdrop-blur-md"
+                className="bg-yellow-400 hover:bg-white text-black rounded-full px-6 transition-all duration-300 border border-white/10 hover:border-white/20 shadow-lg backdrop-blur-md"
                 aria-label={isSellerAuthenticated ? "Seller Dashboard" : "Sell Products"}
               >
                 {isSellerAuthenticated ? (
