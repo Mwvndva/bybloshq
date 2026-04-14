@@ -1,77 +1,69 @@
 import { Link } from 'react-router-dom';
-import { Mail, Phone, MapPin, Instagram } from 'lucide-react';
-import { useState } from 'react';
-import TermsModal from './TermsModal';
+import { Instagram } from 'lucide-react';
 
 const Footer = () => {
-  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   return (
-    <footer className="bg-zinc-950 border-t border-white/5 pt-16 pb-8 overflow-hidden relative">
-      {/* Subtle bottom glow */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-px bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent shadow-[0_0_50px_rgba(250,204,21,0.1)]" />
+    <footer className="bg-black border-t border-white/5 py-12 relative overflow-hidden">
+      {/* Sleek accent line */}
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-yellow-400/20 to-transparent" />
 
       <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-16">
-          {/* Brand & Location */}
-          <div className="space-y-6">
-            <h2 className="font-serif text-2xl font-bold text-white tracking-tight">Byblos</h2>
-            <div className="space-y-2">
-              <p className="text-white/70 text-sm font-light flex items-center gap-2">
-                <MapPin className="h-4 w-4 opacity-70" />
-                Nairobi, Kenya
-              </p>
-              <p className="text-white/50 text-xs font-light tracking-wide">© 2025 BYBLOS EXPERIENCE. ALL RIGHTS RESERVED.</p>
-            </div>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 md:gap-4">
+
+          {/* Contact & Socials - Minimal Stack */}
+          <div className="flex flex-wrap items-center gap-6">
+            <a
+              href="mailto:official@bybloshq.com"
+              className="text-zinc-400 hover:text-white transition-all text-sm font-medium tracking-tight"
+            >
+              official@bybloshq.com
+            </a>
+
+            <a
+              href="tel:+254111548797"
+              className="text-zinc-400 hover:text-white transition-all text-sm font-medium tracking-tight"
+            >
+              +254 111 548 797
+            </a>
+
+            <a
+              href="https://www.instagram.com/bybloshq"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-zinc-400 hover:text-pink-500 transition-all text-sm font-medium"
+            >
+              <Instagram className="h-4 w-4" />
+              <span>Instagram</span>
+            </a>
           </div>
 
-          {/* Contact */}
-          <div className="space-y-6">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">Contact</h3>
-            <div className="space-y-3">
-              <a href="mailto:official@bybloshq.com" className="block text-white/80 hover:text-white transition-colors text-sm font-light underline-offset-4 hover:underline">official@bybloshq.com</a>
-              <div className="flex flex-wrap items-center gap-4">
-                <a href="tel:+254111548797" className="text-white/80 hover:text-white transition-colors text-sm font-light">+254 111 548 797</a>
-                <div className="w-1 h-1 bg-white/10 rounded-full" />
-                <a href="https://www.instagram.com/bybloshq" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-white/80 hover:text-pink-400 transition-all">
-                  <Instagram className="h-4 w-4" />
-                  <span className="text-sm">@bybloshq</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Navigation */}
-          <div className="space-y-6">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">Explore</h3>
-            <div className="space-y-3">
-              <button
-                onClick={() => setIsTermsModalOpen(true)}
-                className="block text-left text-white/80 hover:text-white transition-colors text-sm font-light"
-              >
-                Terms & Conditions
-              </button>
-              <div className="flex flex-wrap items-center gap-4">
-                <Link to="/seller" className="text-white/80 hover:text-white transition-colors text-sm font-light">Sell on Byblos</Link>
-              </div>
-            </div>
-          </div>
-
-          {/* Powered & Partners */}
-          <div className="space-y-6">
-            <h3 className="text-xs uppercase tracking-[0.2em] font-bold text-white/80">Partners</h3>
-            <div className="flex flex-wrap gap-4 items-center">
-              <span className="text-white/70 text-sm font-serif italic">Mzigoego</span>
-              <div className="w-1 h-1 bg-white/10 rounded-full" />
-              <span className="text-white/70 text-sm font-serif italic tracking-widest uppercase">Payd</span>
-            </div>
-            <div className="pt-4 border-t border-white/5">
-              <p className="text-[10px] text-white/40 tracking-tighter uppercase font-bold">Powered by EVOLVE System</p>
-            </div>
+          {/* Action links */}
+          <div className="flex items-center gap-6">
+            <Link
+              to="/seller"
+              className="text-zinc-400 hover:text-yellow-400 transition-all text-sm font-medium border border-white/10 px-4 py-1.5 rounded-full hover:border-yellow-400/30"
+            >
+              Sell on Byblos
+            </Link>
           </div>
         </div>
-      </div>
 
-      <TermsModal isOpen={isTermsModalOpen} onClose={() => setIsTermsModalOpen(false)} />
+        {/* Bottom Bar: Partners & Copyright */}
+        <div className="mt-12 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-4 text-[10px] uppercase tracking-widest font-bold">
+            <span className="text-zinc-600">Partners:</span>
+            <span className="text-zinc-400 italic font-serif">Mzigoego</span>
+            <div className="w-1 h-1 bg-white/10 rounded-full" />
+            <span className="text-zinc-400 italic">Payd</span>
+            <div className="w-1 h-1 bg-white/10 rounded-full" />
+            <span className="text-zinc-500">EVOLVE</span>
+          </div>
+
+          <p className="text-[10px] text-zinc-600 tracking-widest font-medium uppercase">
+            © 2025 BYBLOS. ALL RIGHTS RESERVED.
+          </p>
+        </div>
+      </div>
     </footer>
   );
 };
