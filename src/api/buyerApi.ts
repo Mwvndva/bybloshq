@@ -171,7 +171,8 @@ const buyerApi = {
         password: data.password,
         confirmPassword: data.confirmPassword,
         city: data.city,
-        location: data.location
+        location: data.location,
+        termsAccepted: (data as any).termsAccepted === true
       };
 
       const response = await buyerApiInstance.post<RegisterResponse>('/buyers/register', payload);
