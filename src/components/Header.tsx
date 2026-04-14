@@ -36,7 +36,7 @@ const Header = () => {
                   <ShoppingBag className="h-4 w-4 mr-2" />
                 )}
                 <span className="hidden sm:inline text-sm font-semibold tracking-wide uppercase">
-                  {isSellerAuthenticated ? "Dashboard" : "Launch Your Brand"}
+                  {isSellerAuthenticated ? "Dashboard" : "Become a Trusted Business"}
                 </span>
               </Button>
             </Link>
