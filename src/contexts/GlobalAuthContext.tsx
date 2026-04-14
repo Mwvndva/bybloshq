@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback, useMemo } from 'react';
+import { LoadingScreen } from '@/components/LoadingScreen';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import buyerApi from '@/api/buyerApi';
@@ -677,6 +678,16 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         getProfile,
         updateProfile,
     }), [user, isLoading, login, loginWithToken, loginAdmin, register, logout, refreshRole, forgotPassword, resetPassword, getProfile, updateProfile]);
+
+    // ============================================================================
+    // RENDER GATING (Prevents Flickering)
+    // ============================================================================
+
+    // Show loading screen during the very first auth check to prevent 
+    // flickers between authenticated/unauthenticated UI states.
+    if (isLoading && !user) {
+        return <LoadingScreen message="Identifying identity..." />;
+    }
 
     return (
         <GlobalAuthContext.Provider value={value}>
