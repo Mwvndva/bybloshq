@@ -1,11 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { User, Mail, Phone, Lock, Loader2, Eye, EyeOff, ArrowLeft, Store, MapPin, Check, X, Globe } from 'lucide-react';
+import { User, Mail, Phone, Lock, Loader2, Eye, EyeOff, ArrowLeft, Store, MapPin, Check, X, Globe, RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { sellerApi, checkShopNameAvailability } from '@/api/sellerApi';
@@ -57,6 +57,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  // Resend verification state
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
 
   // Ensure body and html have black background and no margins/padding
@@ -404,16 +407,38 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                     Please click the link to activate your shop.
                   </p>
                 </div>
-                <div className="pt-4 space-y-4">
+                <div className="pt-4 space-y-3">
                   <Button
                     onClick={() => navigate('/seller/login')}
                     className="w-full bg-yellow-400 text-black hover:bg-yellow-500 font-bold h-12 rounded-xl shadow-lg transition-all"
                   >
                     Go to Login
                   </Button>
-                  <p className="text-xs text-gray-500">
-                    Didn't receive the email? Check your spam folder or try logging in to resend.
-                  </p>
+                  <Button
+                    onClick={async () => {
+                      if (resendCooldown > 0 || isResending) return;
+                      setIsResending(true);
+                      try {
+                        await sellerApi.resendVerification(formData.email);
+                        toast({ title: 'Email Sent', description: 'A new verification link has been sent to your inbox.' });
+                        setResendCooldown(60);
+                        const interval = setInterval(() => {
+                          setResendCooldown(prev => { if (prev <= 1) { clearInterval(interval); return 0; } return prev - 1; });
+                        }, 1000);
+                      } catch (err: any) {
+                        toast({ title: 'Error', description: err.message || 'Failed to resend email.', variant: 'destructive' });
+                      } finally {
+                        setIsResending(false);
+                      }
+                    }}
+                    disabled={resendCooldown > 0 || isResending}
+                    variant="ghost"
+                    className="w-full text-gray-400 hover:text-white border border-white/10 hover:border-white/30 h-11 rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    {isResending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Didn't receive it? Resend"}
+                  </Button>
+                  <p className="text-[10px] text-gray-600">Also check your spam / junk folder.</p>
                 </div>
               </div>
             ) : (

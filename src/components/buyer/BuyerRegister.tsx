@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Loader2, Mail, User, Phone, Lock, ArrowLeft, ShoppingBag, MapPin, Check, X } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, User, Phone, Lock, ArrowLeft, ShoppingBag, MapPin, Check, X, RefreshCw } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { locationData } from '@/lib/constants';
 import TermsModal from '@/components/TermsModal';
+import buyerApi from '@/api/buyerApi';
 
 export function BuyerRegister() {
   const { toast } = useToast();
@@ -48,6 +49,33 @@ export function BuyerRegister() {
   const [isRegistered, setIsRegistered] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  // Resend verification state
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+
+  const startResendCooldown = useCallback(() => {
+    setResendCooldown(60);
+    const interval = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(interval); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const handleResend = async () => {
+    if (resendCooldown > 0 || isResending) return;
+    setIsResending(true);
+    try {
+      await buyerApi.resendVerification(formData.email);
+      toast({ title: 'Email Sent', description: 'A new verification link has been sent to your inbox.' });
+      startResendCooldown();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to resend email.', variant: 'destructive' });
+    } finally {
+      setIsResending(false);
+    }
+  };
 
   // Password strength checker function
   const checkPasswordStrength = (password: string) => {
@@ -276,19 +304,31 @@ export function BuyerRegister() {
                     Please click the link in your email to activate your account.
                   </p>
                 </div>
-                <div className="pt-4 space-y-4">
+                <div className="pt-4 space-y-3">
                   <Button
                     onClick={() => navigate('/buyer/login')}
                     className="w-full bg-yellow-400 text-black hover:bg-yellow-500 font-bold h-12 rounded-xl shadow-lg transition-all"
                   >
                     Go to Login
                   </Button>
-                  <p className="text-[10px] text-gray-500">
-                    Didn't receive the email? Check your spam folder.
-                  </p>
+                  <Button
+                    onClick={handleResend}
+                    disabled={resendCooldown > 0 || isResending}
+                    variant="ghost"
+                    className="w-full text-gray-400 hover:text-white border border-white/10 hover:border-white/30 h-11 rounded-xl transition-all flex items-center justify-center gap-2"
+                  >
+                    {isResending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : "Didn't receive it? Resend"}
+                  </Button>
+                  <p className="text-[10px] text-gray-600">Also check your spam / junk folder.</p>
                 </div>
               </div>
             ) : (
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Step 1: Personal Details */}
                 {currentStep === 1 && (

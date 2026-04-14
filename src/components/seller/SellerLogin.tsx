@@ -8,7 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
-import { Eye, EyeOff, Loader2, Mail, ArrowLeft, Store, Lock } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, ArrowLeft, Store, Lock, RefreshCw } from 'lucide-react';
+import { sellerApi } from '@/api/sellerApi';
 
 export function SellerLogin() {
   const { toast } = useToast();
@@ -25,6 +26,9 @@ export function SellerLogin() {
   const [isSendingResetLink, setIsSendingResetLink] = useState(false);
   const [infoMessage, setInfoMessage] = useState('');
   const [error, setError] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
 
   // Ensure body and html have black background and no margins/padding
   useEffect(() => {
@@ -66,8 +70,10 @@ export function SellerLogin() {
       const apiError = error?.response?.data;
       const errorMessage = apiError?.message || error?.message || 'Invalid email or password';
 
-      if (apiError?.code === 'PENDING_VERIFICATION') {
-        setInfoMessage(`Your account isn't verified yet. We've sent a new link to ${apiError.email || formData.email}. Check your inbox.`);
+      if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED') {
+        const email = apiError.email || formData.email;
+        setUnverifiedEmail(email);
+        setInfoMessage(`Your email isn't verified. Click below to resend the verification link to ${email}.`);
         setError('');
         return;
       }
@@ -200,8 +206,36 @@ export function SellerLogin() {
               )}
 
               {infoMessage && (
-                <Alert className="py-2 px-3 border-amber-500/50 bg-amber-500/10 text-amber-200">
-                  <AlertDescription className="text-xs">{infoMessage}</AlertDescription>
+                <Alert className="py-3 px-3 border-amber-500/50 bg-amber-500/10">
+                  <AlertDescription className="text-xs text-amber-200 space-y-2">
+                    <p>{infoMessage}</p>
+                    {unverifiedEmail && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (resendCooldown > 0 || isResending) return;
+                          setIsResending(true);
+                          try {
+                            await sellerApi.resendVerification(unverifiedEmail);
+                            toast({ title: 'Email Sent', description: 'Check your inbox for the new link.' });
+                            setResendCooldown(60);
+                            const timer = setInterval(() => {
+                              setResendCooldown(p => { if (p <= 1) { clearInterval(timer); return 0; } return p - 1; });
+                            }, 1000);
+                          } catch (err: any) {
+                            toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                          } finally {
+                            setIsResending(false);
+                          }
+                        }}
+                        disabled={resendCooldown > 0 || isResending}
+                        className="flex items-center gap-1 text-yellow-400 hover:text-yellow-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isResending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend verification email'}
+                      </button>
+                    )}
+                  </AlertDescription>
                 </Alert>
               )}
 

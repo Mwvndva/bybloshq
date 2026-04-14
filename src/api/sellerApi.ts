@@ -356,6 +356,18 @@ export const sellerApi = {
     }
   },
 
+  resendVerification: async (email: string): Promise<{ message: string }> => {
+    try {
+      const response = await sellerApiInstance.post<{ message: string }>(
+        '/sellers/resend-verification',
+        { email: email.trim().toLowerCase() }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to resend verification email');
+    }
+  },
+
   // Products
   createProduct: async (product: Omit<Product, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'isSold'>): Promise<Product> => {
     const response = await sellerApiInstance.post('/sellers/products', product);

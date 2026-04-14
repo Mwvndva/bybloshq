@@ -207,6 +207,19 @@ const buyerApi = {
     }
   },
 
+
+  resendVerification: async (email: string): Promise<{ message: string }> => {
+    try {
+      const response = await buyerApiInstance.post<{ message: string }>(
+        '/buyers/resend-verification',
+        { email: email.trim().toLowerCase() }
+      );
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to resend verification email');
+    }
+  },
+
   forgotPassword: async (email: string): Promise<{ message: string }> => {
     try {
       const response = await apiClient.post<{ message: string }>(
