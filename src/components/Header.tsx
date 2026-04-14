@@ -22,25 +22,20 @@ const Header = () => {
             </h1>
           </Link>
 
-          {/* Navigation - Always visible, responsive sizing */}
-          <div className="flex items-center gap-3 md:gap-6">
-            {/* Sell / Dashboard */}
-            <Link to={isSellerAuthenticated ? "/seller/dashboard" : "/seller/register"}>
-              <Button
-                className="bg-yellow-400 hover:bg-white text-black rounded-full px-6 transition-all duration-300 border border-white/10 hover:border-white/20 shadow-lg backdrop-blur-md"
-                aria-label={isSellerAuthenticated ? "Seller Dashboard" : "Sell Products"}
-              >
-                {isSellerAuthenticated ? (
+          {/* Navigation — only show dashboard link when authenticated */}
+          {isSellerAuthenticated && (
+            <div className="flex items-center gap-3 md:gap-6">
+              <Link to="/seller/dashboard">
+                <Button
+                  className="bg-yellow-400 hover:bg-white text-black rounded-full px-6 transition-all duration-300 border border-white/10 hover:border-white/20 shadow-lg backdrop-blur-md"
+                  aria-label="Seller Dashboard"
+                >
                   <LayoutDashboard className="h-4 w-4 mr-2" />
-                ) : (
-                  <ShoppingBag className="h-4 w-4 mr-2" />
-                )}
-                <span className="hidden sm:inline text-sm font-semibold tracking-wide uppercase">
-                  {isSellerAuthenticated ? "Dashboard" : "Become a Trusted Business"}
-                </span>
-              </Button>
-            </Link>
-          </div>
+                  <span className="hidden sm:inline text-sm font-semibold tracking-wide uppercase">Dashboard</span>
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </header>
