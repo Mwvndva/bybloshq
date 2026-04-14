@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, ShoppingBag } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, ShoppingBag, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
-// import buyerApi from '@/api/buyerApi'; // Removed direct API usage
+import buyerApi from '@/api/buyerApi';
 
 interface LoginFormData {
   email: string;
@@ -23,6 +23,9 @@ export function BuyerLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const [isResending, setIsResending] = useState(false);
 
   const { toast } = useToast();
   const navigate = useNavigate(); // Kept for Back button
@@ -74,8 +77,10 @@ export function BuyerLogin() {
       const apiError = error?.response?.data;
       const errorMessage = apiError?.message || error?.message || 'Invalid email or password. Please check your credentials and try again.';
 
-      if (apiError?.code === 'PENDING_VERIFICATION') {
-        setInfoMessage(`Your account isn't verified yet. We've sent a new link to ${apiError.email || formData.email}. Check your inbox.`);
+      if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED') {
+        const email = apiError.email || formData.email;
+        setUnverifiedEmail(email);
+        setInfoMessage(`Your email isn't verified. Click below to resend the verification link to ${email}.`);
         setError('');
         return;
       }
@@ -167,8 +172,36 @@ export function BuyerLogin() {
               )}
 
               {infoMessage && (
-                <Alert className="py-2 px-3 border-amber-500/50 bg-amber-500/10 text-amber-200">
-                  <AlertDescription className="text-xs">{infoMessage}</AlertDescription>
+                <Alert className="py-3 px-3 border-amber-500/50 bg-amber-500/10">
+                  <AlertDescription className="text-xs text-amber-200 space-y-2">
+                    <p>{infoMessage}</p>
+                    {unverifiedEmail && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (resendCooldown > 0 || isResending) return;
+                          setIsResending(true);
+                          try {
+                            await buyerApi.resendVerification(unverifiedEmail);
+                            toast({ title: 'Email Sent', description: 'Check your inbox for the new link.' });
+                            setResendCooldown(60);
+                            const timer = setInterval(() => {
+                              setResendCooldown(p => { if (p <= 1) { clearInterval(timer); return 0; } return p - 1; });
+                            }, 1000);
+                          } catch (err: any) {
+                            toast({ title: 'Error', description: err.message, variant: 'destructive' });
+                          } finally {
+                            setIsResending(false);
+                          }
+                        }}
+                        disabled={resendCooldown > 0 || isResending}
+                        className="flex items-center gap-1 text-yellow-400 hover:text-yellow-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isResending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend verification email'}
+                      </button>
+                    )}
+                  </AlertDescription>
                 </Alert>
               )}
 
