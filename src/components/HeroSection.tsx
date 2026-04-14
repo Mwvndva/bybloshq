@@ -52,10 +52,10 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
             </Link>
             <Link to="/seller/register">
               <Button
-                className="bg-yellow-400 hover:bg-yellow-300 text-black rounded-full px-10 py-6 text-lg font-semibold transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] group"
+                className="bg-yellow-400 hover:bg-yellow-300 text-black rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_0_20px_rgba(250,204,21,0.2)] hover:shadow-[0_0_30px_rgba(250,204,21,0.4)] group"
               >
-                <ChevronRight className="mr-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                 Become a Trusted Business
+                <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
           </div>
