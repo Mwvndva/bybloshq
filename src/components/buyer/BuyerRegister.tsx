@@ -150,7 +150,7 @@ export function BuyerRegister() {
         confirmPassword: formData.confirmPassword,
         city: formData.city,
         location: formData.location,
-        termsAccepted: true
+        termsAccepted: termsAccepted
       });
 
       if ((result as any)?.status === 'pending_verification') {
@@ -574,6 +574,32 @@ export function BuyerRegister() {
                       {errors.confirmPassword && <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 ml-1">{errors.confirmPassword}</p>}
                     </div>
                   </>
+                )}
+
+                {/* Terms & Conditions Checkbox - Step 3 only */}
+                {currentStep === 3 && (
+                  <div className="pt-2">
+                    <div className="flex items-start space-x-2 bg-gray-900/40 p-3 rounded-xl border border-gray-800">
+                      <input
+                        type="checkbox"
+                        id="termsAccepted"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-gray-700 bg-gray-800 text-yellow-500 focus:ring-yellow-500"
+                      />
+                      <Label htmlFor="termsAccepted" className="text-xs text-gray-400 leading-tight">
+                        I agree to the{' '}
+                        <button
+                          type="button"
+                          onClick={() => setIsTermsModalOpen(true)}
+                          className="text-yellow-400 hover:text-yellow-300 font-medium underline underline-offset-2"
+                        >
+                          Terms & Conditions
+                        </button>
+                        {' '}and have read the Privacy Policy.
+                      </Label>
+                    </div>
+                  </div>
                 )}
 
                 {/* Navigation Buttons */}
