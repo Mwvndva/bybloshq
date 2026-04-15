@@ -13,7 +13,6 @@ import { mkdir } from 'fs/promises';
 
 import logger from '../utils/logger.js';
 import routes from '../routes/index.js';
-import dddRoutes from '../api/routes/index.js';
 import { globalErrorHandler, notFoundHandler } from '../utils/errorHandler.js';
 import requestId from '../middleware/requestId.js';
 import fixApiPrefix from '../middleware/fixApiPrefix.js';
@@ -185,12 +184,7 @@ export default async (app) => {
 
     // 7. Routes
     app.use(fixApiPrefix);
-
-    // Legacy Routes
     app.use('/api', routes);
-
-    // DDD Refactored Routes (V2)
-    app.use('/api/v2', dddRoutes);
 
     // 8. Error Handling
     app.all('*', notFoundHandler);
