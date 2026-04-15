@@ -3,6 +3,7 @@ import cronLoader from './cron.js';
 import servicesLoader from './services.js';
 import { testConnection } from '../config/database.js';
 import logger from '../utils/logger.js';
+import { container } from '../container.js';
 
 /**
  * Main Loader
@@ -11,6 +12,9 @@ import logger from '../utils/logger.js';
  */
 export default async (app) => {
     logger.info('🚀 Base loaders initializing...');
+
+    // 0. Container Initialization (Composition Root)
+    logger.info('📦 Container initialized');
 
     // 1. Database
     try {
