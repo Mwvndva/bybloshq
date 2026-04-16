@@ -1,16 +1,27 @@
-import { useState, ChangeEvent, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, ChangeEvent, FormEvent, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { isSellerShopless } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { aestheticCategories } from '../AestheticCategories';
-import { ArrowLeft, X, ImagePlus } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  X,
+  ImagePlus,
+  Package,
+  FileText,
+  Sparkles,
+  Info,
+  CheckCircle2,
+  Clock,
+  MapPin
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ServiceOptions {
   availability_days: string[];
@@ -60,148 +71,63 @@ const formDataDefaults: FormData = {
   }
 };
 
-export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
-  const navigate = useNavigate();
+export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; onClose?: () => void }) => {
   const { toast } = useToast();
+  const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState('');
-  // Multi-image state (up to 3 images total including the primary)
   const [extraFiles, setExtraFiles] = useState<File[]>([]);
   const [extraPreviews, setExtraPreviews] = useState<string[]>([]);
-  const [formData, setFormData] = useState<FormData>({
-    ...formDataDefaults
-  });
+  const [formData, setFormData] = useState<FormData>({ ...formDataDefaults });
   const [sellerProfile, setSellerProfile] = useState<any>(null);
   const [uploadProgress, setUploadProgress] = useState<number>(0);
   const [fileError, setFileError] = useState<string>('');
 
-  // Get the current seller ID from the API
-  const getSellerId = async () => {
-    try {
-      const seller = await sellerApi.getProfile();
-      if (!seller?.id) {
-        throw new Error('Invalid seller data. Please log in again.');
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const seller = await sellerApi.getProfile();
+        setSellerProfile(seller);
+      } catch (error) {
+        console.error('Error getting seller profile:', error);
       }
-      setSellerProfile(seller); // Save profile for shop address logic
-      return String(seller.id);
-    } catch (error) {
-      console.error('Error getting seller profile:', error);
-      toast({
-        title: 'Authentication Error',
-        description: 'Please log in to add products.',
-        variant: 'destructive',
-      });
-      navigate('/seller/login');
-      throw error; // Re-throw to stop further execution
-    }
-  };
-
-  // Effect to fetch seller profile on mount
-  useState(() => {
-    getSellerId();
-  });
+    };
+    fetchProfile();
+  }, []);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-
-    // Enforce 300 character limit for description
-    if (name === 'description' && value.length > 300) {
-      return;
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    if (name === 'description' && value.length > 300) return;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const processImage = async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-
       reader.onload = (event) => {
-        try {
-          const img = new Image();
-
-          img.onload = () => {
-            try {
-              const canvas = document.createElement('canvas');
-              const MAX_WIDTH = 1200;
-              const MAX_HEIGHT = 1200;
-              const MAX_SIZE_KB = 500; // Max file size in KB
-
-              // Calculate new dimensions while maintaining aspect ratio
-              let width = img.width;
-              let height = img.height;
-
-              if (width > height) {
-                if (width > MAX_WIDTH) {
-                  height = Math.round((height * MAX_WIDTH) / width);
-                  width = MAX_WIDTH;
-                }
-              } else {
-                if (height > MAX_HEIGHT) {
-                  width = Math.round((width * MAX_HEIGHT) / height);
-                  height = MAX_HEIGHT;
-                }
-              }
-
-              canvas.width = width;
-              canvas.height = height;
-
-              // Draw image on canvas
-              const ctx = canvas.getContext('2d');
-              if (!ctx) {
-                throw new Error('Could not get canvas context');
-              }
-
-              // Set white background for transparent images
-              ctx.fillStyle = '#FFFFFF';
-              ctx.fillRect(0, 0, width, height);
-
-              // Draw the image
-              ctx.drawImage(img, 0, 0, width, height);
-
-              // Convert to jpeg with quality adjustment to meet size constraints
-              let quality = 0.9;
-              let imageDataUrl: string;
-
-              // Try to keep the image under MAX_SIZE_KB
-              do {
-                imageDataUrl = canvas.toDataURL('image/jpeg', quality);
-                const sizeKB = (imageDataUrl.length * 0.75) / 1024; // Approximate size in KB
-
-                if (sizeKB <= MAX_SIZE_KB || quality <= 0.5) {
-                  break;
-                }
-
-                quality -= 0.1;
-              } while (quality >= 0.5);
-
-              resolve(imageDataUrl);
-            } catch (error) {
-              reject(error);
-            }
-          };
-
-          img.onerror = () => {
-            reject(new Error('Failed to load image'));
-          };
-
-          if (event.target?.result) {
-            img.src = event.target.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
+          if (width > height) {
+            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
           } else {
-            reject(new Error('Failed to read file'));
+            if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
           }
-        } catch (error) {
-          reject(error);
-        }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return reject(new Error('Canvas error'));
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.8));
+        };
+        img.src = event.target?.result as string;
       };
-
-      reader.onerror = () => {
-        reject(new Error('Failed to read file'));
-      };
-
       reader.readAsDataURL(file);
     });
   };
@@ -209,690 +135,390 @@ export const AddProductForm = ({ onSuccess }: { onSuccess: () => void }) => {
   const handleImageChange = async (e: ChangeEvent<HTMLInputElement>, slot: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    // Check file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please upload an image file (JPEG, PNG, etc.)',
-        variant: 'destructive',
-      });
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum image size is 10MB', variant: 'destructive' });
       return;
     }
-
-    // Check file size (max 50MB)
-    const MAX_SIZE = 50 * 1024 * 1024;
-    if (file.size > MAX_SIZE) {
-      setFileError('Image exceeds 50MB limit');
-      toast({
-        title: 'File too large',
-        description: 'Maximum image size is 50MB',
-        variant: 'destructive',
-      });
-      e.target.value = ''; // Reset input
-      return;
-    }
-    setFileError('');
 
     try {
       const processedImage = await processImage(file);
-
       if (slot === 0) {
-        // Primary image
         setImagePreview(processedImage);
         setFormData(prev => ({ ...prev, image: file, image_url: processedImage }));
       } else {
-        // Additional images (slots 1 and 2)
         const idx = slot - 1;
-        setExtraFiles(prev => {
-          const updated = [...prev];
-          updated[idx] = file;
-          return updated;
-        });
-        setExtraPreviews(prev => {
-          const updated = [...prev];
-          updated[idx] = processedImage;
-          return updated;
-        });
+        setExtraFiles(prev => { const n = [...prev]; n[idx] = file; return n; });
+        setExtraPreviews(prev => { const n = [...prev]; n[idx] = processedImage; return n; });
       }
     } catch (error) {
-      console.error('Error processing image:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to process image',
-        variant: 'destructive',
-      });
+      toast({ title: 'Error', description: 'Failed to process image', variant: 'destructive' });
     }
   };
 
-  const removeImage = (slot: number) => {
-    if (slot === 0) {
-      setImagePreview('');
-      setFormData(prev => ({ ...prev, image: null, image_url: '' }));
-    } else {
-      const idx = slot - 1;
-      setExtraFiles(prev => prev.filter((_, i) => i !== idx));
-      setExtraPreviews(prev => prev.filter((_, i) => i !== idx));
-    }
-  };
+  const allPreviewsCombined = () => [imagePreview, ...extraPreviews].filter(Boolean);
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      // Get seller ID first
-      const sellerId = await getSellerId();
-
-      if (!formData.name.trim() || !formData.price || !formData.description.trim()) {
-        toast({
-          title: 'Missing required fields',
-          description: 'Please fill in all required fields',
-          variant: 'destructive',
-        });
+  const nextStep = () => {
+    if (step === 1) {
+      if (!formData.name.trim() || !formData.product_type) {
+        toast({ title: 'Missing Info', description: 'Please name your product and select a type.', variant: 'destructive' });
         return;
       }
-
-      let imageUrl = formData.image_url;
-
-      // If there's a new image file, process it first
-      if (formData.image) {
-        try {
-          imageUrl = await processImage(formData.image);
-        } catch (error) {
-          console.error('Error processing image:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to process image. Please try another image.',
-            variant: 'destructive',
-          });
-          setIsLoading(false);
-          return;
-        }
+    }
+    if (step === 2) {
+      if (!imagePreview) {
+        toast({ title: 'Photo Required', description: 'Please add at least one photo.', variant: 'destructive' });
+        return;
       }
+      if (!formData.description.trim()) {
+        toast({ title: 'Description Required', description: 'Please add a short description.', variant: 'destructive' });
+        return;
+      }
+    }
+    setStep(s => s + 1);
+  };
 
+  const prevStep = () => setStep(s => s - 1);
+
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    try {
       let digitalFilePath = formData.digital_file_path;
       let digitalFileName = formData.digital_file_name;
+      let digitalFileSize = formData.digital_file_size;
 
-      if (formData.is_digital) {
-        if (formData.digital_file) {
-          try {
-            setUploadProgress(0);
-            const uploadResult = await sellerApi.uploadDigitalProduct(
-              formData.digital_file,
-              (progress) => setUploadProgress(progress)
-            );
-            digitalFilePath = uploadResult.filePath;
-            digitalFileName = uploadResult.fileName;
-            const digitalFileSize = uploadResult.size;
-
-            setFormData(prev => ({
-              ...prev,
-              digital_file_path: digitalFilePath,
-              digital_file_name: digitalFileName,
-              digital_file_size: digitalFileSize
-            }));
-
-            setUploadProgress(100);
-            // Small delay to show 100% completion
-            await new Promise(resolve => setTimeout(resolve, 500));
-          } catch (error) {
-            console.error('Error uploading digital file:', error);
-            setUploadProgress(0);
-            toast({
-              title: `Upload Error (${error.response?.status || 'Network'})`,
-              description: error.response?.data?.message || error.message || 'Failed to upload digital file. Please try again.',
-              variant: 'destructive',
-            });
-            setIsLoading(false);
-            return;
-          } finally {
-            setUploadProgress(0);
-          }
-        } else if (!digitalFilePath) {
-          toast({
-            title: 'Digital File Required',
-            description: 'Please upload a file for your digital product.',
-            variant: 'destructive',
-          });
-          setIsLoading(false);
-          return;
-        }
+      if (formData.is_digital && formData.digital_file) {
+        const res = await sellerApi.uploadDigitalProduct(formData.digital_file, setUploadProgress);
+        digitalFilePath = res.filePath;
+        digitalFileName = res.fileName;
+        digitalFileSize = res.size;
       }
 
-      // Prepare the product data
       const productData = {
         name: formData.name,
-        price: parseFloat(formData.price),
+        price: parseFloat(formData.price || '0'),
         description: formData.description,
-        image_url: imageUrl,
-        images: extraPreviews.length > 0 ? extraPreviews : undefined, // Up to 2 extra images
+        image_url: formData.image_url,
+        images: extraPreviews,
         aesthetic: formData.aesthetic,
-        sellerId: sellerId,
-        is_digital: formData.is_digital,
-        digital_file_path: formData.is_digital ? (digitalFilePath || formData.digital_file_path) : undefined,
-        digital_file_name: formData.is_digital ? (digitalFileName || formData.digital_file_name) : undefined,
-        digital_file_size: formData.is_digital ? (formData.digital_file_size) : undefined,
+        sellerId: sellerProfile?.id,
+        is_digital: formData.product_type === 'digital',
         product_type: formData.product_type,
+        digital_file_path: digitalFilePath,
+        digital_file_name: digitalFileName,
+        digital_file_size: digitalFileSize,
         service_locations: formData.product_type === 'service' ? formData.service_locations : undefined,
         service_options: formData.product_type === 'service' ? formData.service_options : undefined,
       };
 
-      // Call the API to create the product
       await sellerApi.createProduct(productData);
-
-      toast({
-        title: 'Success',
-        description: 'Product created successfully!',
-      });
-
-      // Reset form with default values
-      setFormData({
-        name: '',
-        price: '',
-        description: '',
-        image: null,
-        image_url: '',
-        aesthetic: 'noir',
-        is_digital: false,
-        digital_file: null,
-        digital_file_name: '',
-        digital_file_path: '',
-        digital_file_size: null,
-        product_type: 'physical',
-        service_locations: '',
-        service_options: {
-          availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-          location_type: 'buyer_visits_seller',
-          price_type: 'fixed',
-          start_time: '09:00',
-          end_time: '17:00'
-        }
-      });
-      setImagePreview('');
-      setExtraFiles([]);
-      setExtraPreviews([]);
+      toast({ title: 'Success', description: 'Product launched successfully!' });
       onSuccess();
-    } catch (error) {
-      console.error('Error creating product:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to create product. Please try again.',
-        variant: 'destructive',
-      });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.response?.data?.message || 'Failed to create product', variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const resetImages = () => {
-    setImagePreview('');
-    setFormData(prev => ({ ...prev, image: null, image_url: '' }));
-    setExtraFiles([]);
-    setExtraPreviews([]);
-  };
+  const renderStep1 = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="space-y-2 text-center sm:text-left">
+        <h2 className="text-xl font-bold text-white">Let's start with the basics</h2>
+        <p className="text-gray-400 text-sm">What are you selling today?</p>
+      </div>
 
-  // Build the list of all image slots [primary, extra1, extra2]
-  const allPreviews = [imagePreview, ...extraPreviews];
-  const MAX_IMAGES = 3;
-  const canAddMore = allPreviews.filter(Boolean).length < MAX_IMAGES;
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { id: 'physical', label: 'Physical', icon: Package, desc: 'Shippable goods' },
+          { id: 'digital', label: 'Digital', icon: FileText, desc: 'Downloads, Keys' },
+          { id: 'service', label: 'Service', icon: Sparkles, desc: 'Bookings, Tasks' }
+        ].map(type => (
+          <button
+            key={type.id}
+            type="button"
+            onClick={() => setFormData(p => ({ ...p, product_type: type.id as any, is_digital: type.id === 'digital' }))}
+            className={cn(
+              "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 text-center group",
+              formData.product_type === type.id
+                ? "bg-yellow-400/10 border-yellow-400 text-white shadow-[0_0_20px_rgba(250,204,21,0.1)]"
+                : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10"
+            )}
+          >
+            <type.icon className={cn("h-8 w-8 mb-2 group-hover:scale-110 transition-transform", formData.product_type === type.id ? "text-yellow-400" : "text-gray-500")} />
+            <span className="font-bold text-sm">{type.label}</span>
+            <span className="text-[10px] opacity-60 mt-1">{type.desc}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-4 pt-4">
+        <div className="space-y-2">
+          <Label className="text-xs font-bold text-gray-400 uppercase">Product Name</Label>
+          <Input
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            placeholder="e.g. Vintage Leather Watch"
+            className="h-12 bg-white/5 border-white/10 text-white rounded-xl focus:ring-yellow-400"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs font-bold text-gray-400 uppercase">Category</Label>
+          <Select value={formData.aesthetic} onValueChange={v => setFormData(p => ({ ...p, aesthetic: v }))}>
+            <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {aestheticCategories.map(c => <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep2 = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="space-y-2 text-center sm:text-left">
+        <h2 className="text-xl font-bold text-white">Visuals & Story</h2>
+        <p className="text-gray-400 text-sm">Make your product stand out with photos.</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        {[0, 1, 2].map(slot => {
+          const preview = slot === 0 ? imagePreview : extraPreviews[slot - 1];
+          const combined = allPreviewsCombined();
+          const isDisabled = slot > 0 && !combined[slot - 1];
+          return (
+            <div key={slot} className="relative aspect-square">
+              {preview ? (
+                <div className="relative h-full w-full">
+                  <img src={preview} alt="slot" className="h-full w-full object-cover rounded-2xl border-2 border-yellow-400/50" />
+                  <button onClick={() => {
+                    if (slot === 0) { setImagePreview(''); setFormData(p => ({ ...p, image: null, image_url: '' })); }
+                    else { setExtraPreviews(p => p.filter((_, i) => i !== slot - 1)); setExtraFiles(p => p.filter((_, i) => i !== slot - 1)); }
+                  }} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1"><X className="h-3 w-3 text-white" /></button>
+                </div>
+              ) : (
+                <label className={cn(
+                  "flex flex-col items-center justify-center h-full border-2 border-dashed rounded-2xl cursor-pointer transition-all",
+                  isDisabled ? "opacity-30 cursor-not-allowed border-white/5" : "border-white/10 hover:border-yellow-400/50 hover:bg-white/5"
+                )}>
+                  {!isDisabled && <input type="file" className="hidden" onChange={e => handleImageChange(e, slot)} accept="image/*" />}
+                  <ImagePlus className="h-6 w-6 text-gray-500 mb-1" />
+                  <span className="text-[10px] text-gray-500">{slot === 0 ? "Main" : "Extra"}</span>
+                </label>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <Label className="text-xs font-bold text-gray-400 uppercase">Description</Label>
+            <span className="text-[10px] text-gray-500">{formData.description.length}/300</span>
+          </div>
+          <Textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="Describe what makes this product special..."
+            className="bg-white/5 border-white/10 text-white rounded-xl min-h-[100px] focus:ring-yellow-400"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderStep3 = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="space-y-2 text-center sm:text-left">
+        <h2 className="text-xl font-bold text-white">{formData.product_type.charAt(0).toUpperCase() + formData.product_type.slice(1)} Details</h2>
+        <p className="text-gray-400 text-sm">Specific information for this type of product.</p>
+      </div>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label className="text-xs font-bold text-gray-400 uppercase">Price (KES)</Label>
+          <Input
+            type="number"
+            name="price"
+            value={formData.price}
+            onChange={handleChange}
+            placeholder="0.00"
+            className="h-12 bg-white/5 border-white/10 text-white rounded-xl focus:ring-yellow-400"
+          />
+        </div>
+
+        {formData.product_type === 'digital' && (
+          <div className="p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
+            <Label className="text-xs font-bold text-yellow-400 uppercase">Upload Digital Content</Label>
+            <div className="relative">
+              <Input
+                type="file"
+                onChange={e => {
+                  const file = e.target.files?.[0];
+                  if (file) setFormData(p => ({ ...p, digital_file: file }));
+                }}
+                className="bg-white/5 border-white/10 text-white h-12 pt-2.5 rounded-xl"
+              />
+              {uploadProgress > 0 && (
+                <div className="mt-2 h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                  <div className="h-full bg-yellow-400 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {formData.product_type === 'service' && (
+          <div className="space-y-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase">Start Time</Label>
+                <Input type="time" value={formData.service_options.start_time} onChange={e => setFormData(p => ({ ...p, service_options: { ...p.service_options, start_time: e.target.value } }))} className="bg-white/5 border-white/10 text-white rounded-xl" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-gray-400 uppercase">End Time</Label>
+                <Input type="time" value={formData.service_options.end_time} onChange={e => setFormData(p => ({ ...p, service_options: { ...p.service_options, end_time: e.target.value } }))} className="bg-white/5 border-white/10 text-white rounded-xl" />
+              </div>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => {
+                    const days = formData.service_options.availability_days;
+                    const newDays = days.includes(day) ? days.filter(d => d !== day) : [...days, day];
+                    setFormData(p => ({ ...p, service_options: { ...p.service_options, availability_days: newDays } }));
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                    formData.service_options.availability_days.includes(day) ? "bg-yellow-400 text-black" : "bg-white/5 text-gray-400 border border-white/10"
+                  )}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {formData.product_type === 'digital' && (
+        <div className="flex items-start gap-3 p-3 bg-yellow-400/5 border border-yellow-400/20 rounded-xl">
+          <Info className="h-4 w-4 text-yellow-400 mt-0.5" />
+          <p className="text-[10px] text-yellow-100 opacity-80 leading-relaxed">
+            Note: <strong>Digital products</strong> are typically assets like PDFs, Music, or Software. If you are selling a Physical Item (e.g. Headphones), please use the Physical type.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderStep4 = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+      <div className="space-y-2 text-center sm:text-left">
+        <h2 className="text-xl font-bold text-white">Review & Publish</h2>
+        <p className="text-gray-400 text-sm">Everything look correct?</p>
+      </div>
+
+      <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden">
+        <div className="aspect-video relative">
+          <img src={imagePreview} alt="preview" className="w-full h-full object-cover" />
+          <div className="absolute top-3 left-3 flex gap-2">
+            <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-lg uppercase tracking-wider">{formData.product_type}</span>
+          </div>
+        </div>
+        <div className="p-5 space-y-3">
+          <div className="flex justify-between items-start">
+            <h3 className="text-xl font-bold text-white">{formData.name}</h3>
+            <span className="text-xl font-black text-yellow-400">KES {formData.price}</span>
+          </div>
+          <p className="text-sm text-gray-400 line-clamp-2">{formData.description}</p>
+          <div className="flex items-center gap-2 pt-2 text-[10px] text-gray-500 uppercase font-bold">
+            <MapPin className="h-3 w-3" />
+            <span>{sellerProfile?.city || 'Your Shop'}</span>
+            <span>•</span>
+            <CheckCircle2 className="h-3 w-3 text-green-500" />
+            <span>Safe Checkout</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-black">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
-        <div className="mb-8">
+    <div className="flex flex-col h-full bg-black sm:bg-transparent overflow-hidden">
+      {/* Header with Progress Bar */}
+      <div className="px-6 pt-6 pb-4 space-y-4">
+        <div className="flex justify-between items-center">
+          <div>
+            <span className="text-[10px] font-black uppercase text-yellow-400 tracking-widest bg-yellow-400/10 px-2 py-1 rounded">Step {step} of 4</span>
+          </div>
+          {onClose && (
+            <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+              <X className="h-5 w-5 text-gray-400" />
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {[1, 2, 3, 4].map(s => (
+            <div key={s} className={cn(
+              "h-1.5 flex-1 rounded-full transition-all duration-500",
+              step >= s ? "bg-yellow-400 shadow-[0_0_10px_rgba(250,204,21,0.3)]" : "bg-white/10"
+            )} />
+          ))}
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
+        {step === 1 && renderStep1()}
+        {step === 2 && renderStep2()}
+        {step === 3 && renderStep3()}
+        {step === 4 && renderStep4()}
+      </div>
+
+      {/* Footer Navigation */}
+      <div className="p-6 border-t border-white/10 flex justify-between items-center gap-4 bg-black/40 backdrop-blur-xl">
+        {step > 1 ? (
           <Button
             variant="outline"
-            onClick={() => navigate('/seller/dashboard')}
-            className="inline-flex items-center gap-2 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 rounded-xl px-4 py-2"
+            onClick={prevStep}
+            className="flex-1 h-12 bg-transparent border-white/10 text-white rounded-xl hover:bg-white/5"
           >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Dashboard
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back
           </Button>
-        </div>
+        ) : (
+          <div className="flex-1" />
+        )}
 
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-black text-white mb-4">Add New Product</h1>
-          <p className="text-gray-300 text-lg font-medium">Create a new product listing for your store</p>
-        </div>
-
-        <Card className="sm:bg-[rgba(20,20,20,0.7)] sm:backdrop-blur-[12px] sm:border sm:border-white/10 sm:shadow-xl bg-transparent border-0 shadow-none">
-          <CardHeader className="pb-6 px-0 sm:px-6">
-            <CardTitle className="text-2xl font-black text-white flex items-center">
-              <div className="w-12 h-12 bg-yellow-500/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-2xl flex items-center justify-center mr-4">
-                <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              Product Information
-            </CardTitle>
-            <CardDescription className="text-gray-300 font-medium">
-              Fill in the details below to create your product listing
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-0 sm:px-6">
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Form Fields... */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Columns content unchanged for now, will flow naturally */}
-                <div className="space-y-6">
-                  {/* ... Left Column ... */}
-                  <div className="space-y-3">
-                    <Label htmlFor="name" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Name</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      placeholder="Enter product name"
-                      required
-                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="price" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Price (KES)</Label>
-                    <Input
-                      id="price"
-                      name="price"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={formData.price}
-                      onChange={handleChange}
-                      onKeyDown={(e) => {
-                        if (['e', 'E', '+', '-'].includes(e.key)) {
-                          e.preventDefault();
-                        }
-                      }}
-                      placeholder="Enter price"
-                      required
-                      className="h-12 bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
-                    />
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Type</Label>
-                    <div className="flex space-x-2 relative">
-                      <Button
-                        type="button"
-                        variant={formData.product_type === 'physical' ? "default" : "outline"}
-                        onClick={() => setFormData(prev => ({ ...prev, product_type: 'physical', is_digital: false }))}
-                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'physical' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white'}`}
-                      >
-                        Physical
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={formData.product_type === 'digital' ? "default" : "outline"}
-                        onClick={() => setFormData(prev => ({ ...prev, product_type: 'digital', is_digital: true }))}
-                        className={`flex-1 h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'digital' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-300 hover:bg-white/5 hover:text-white'}`}
-                      >
-                        Digital
-                      </Button>
-                      <div className="flex-1 relative group">
-                        <Button
-                          type="button"
-                          variant={formData.product_type === 'service' ? "default" : "outline"}
-                          onClick={() => {
-                            const shopless = isSellerShopless(sellerProfile);
-                            setFormData(prev => ({
-                              ...prev,
-                              product_type: 'service',
-                              is_digital: false,
-                              service_locations: shopless ? '' : (sellerProfile?.physicalAddress || ''),
-                              service_options: {
-                                ...prev.service_options,
-                                location_type: shopless ? 'seller_visits_buyer' : 'buyer_visits_seller'
-                              }
-                            }));
-                          }}
-                          className={`w-full h-12 rounded-xl text-xs sm:text-sm ${formData.product_type === 'service' ? 'bg-white/5 border border-white/10 text-white' : 'bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:text-white'}`}
-                        >
-                          Service
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {formData.product_type === 'digital' && (
-                    <div className="space-y-3 animate-in fade-in zoom-in duration-300">
-                      <Label htmlFor="digital_file" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Digital File</Label>
-                      <div className="relative">
-                        <Input
-                          id="digital_file"
-                          type="file"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              const MAX_SIZE = 50 * 1024 * 1024; // 50MB
-                              if (file.size > MAX_SIZE) {
-                                setFileError('File exceeds 50MB limit');
-                                setFormData(prev => ({ ...prev, digital_file: null }));
-                                e.target.value = ''; // Reset input
-                              } else {
-                                setFileError('');
-                                setFormData(prev => ({ ...prev, digital_file: file }));
-                              }
-                            }
-                          }}
-                          accept=".pdf,.zip,.rar,.epub,.mobi"
-                          className={`h-12 bg-gray-800 border-gray-700 text-white file:text-gray-200 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl pt-2.5 ${fileError ? 'border-red-500 ring-1 ring-red-500' : ''}`}
-                        />
-                        {fileError && (
-                          <div className="absolute -bottom-6 left-0 text-xs font-bold text-red-500 animate-pulse">
-                            ⚠️ {fileError}
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-300 mt-2">Allowed: PDF, ZIP, RAR, EPUB, MOBI (Max 50MB)</p>
-
-                      {/* Upload Progress Indicator */}
-                      {uploadProgress > 0 && (
-                        <div className="space-y-2 mt-4 bg-white/5 p-3 rounded-lg border border-white/10">
-                          <div className="flex justify-between text-xs font-black text-white uppercase tracking-wider">
-                            <span>Uploading digital asset...</span>
-                            <span>{uploadProgress}%</span>
-                          </div>
-                          <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden">
-                            <div
-                              className="bg-yellow-400 h-full transition-all duration-300 ease-out shadow-[0_0_10px_rgba(250,204,21,0.5)]"
-                              style={{ width: `${uploadProgress}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-
-                      {formData.digital_file && !fileError && (
-                        <p className="text-sm text-green-200 font-medium pt-2">Selected: {formData.digital_file.name}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {formData.product_type === 'service' && (
-                    <div className="space-y-6 animate-in fade-in zoom-in duration-300 bg-white/5 p-4 rounded-xl border border-dashed border-white/10">
-                      {/* Pricing Model */}
-                      <div className="space-y-3">
-                        <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Pricing Model</Label>
-                        <div className="flex space-x-2">
-                          <Button
-                            type="button"
-                            variant={formData.service_options.price_type === 'hourly' ? "default" : "outline"}
-                            onClick={() => setFormData(prev => ({
-                              ...prev,
-                              service_options: { ...prev.service_options, price_type: 'hourly' }
-                            }))}
-                            className={`flex-1 ${formData.service_options.price_type === 'hourly' ? 'bg-yellow-400/10 text-yellow-200 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.12)]' : 'bg-transparent border border-white/10 text-gray-200 hover:bg-white/5'}`}
-                          >
-                            Hourly Rate
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={formData.service_options.price_type === 'fixed' ? "default" : "outline"}
-                            onClick={() => setFormData(prev => ({
-                              ...prev,
-                              service_options: { ...prev.service_options, price_type: 'fixed' }
-                            }))}
-                            className={`flex-1 ${formData.service_options.price_type === 'fixed' ? 'bg-yellow-400/10 text-yellow-200 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.12)]' : 'bg-transparent border border-white/10 text-gray-200 hover:bg-white/5'}`}
-                          >
-                            Fixed Price
-                          </Button>
-                        </div>
-                      </div>
-
-                      {/* Availability Days */}
-                      <div className="space-y-3">
-                        <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Available Days</Label>
-                        <div className="grid grid-cols-4 gap-2">
-                          {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-                            <Button
-                              key={day}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const currentDays = formData.service_options.availability_days || [];
-                                const newDays = currentDays.includes(day)
-                                  ? currentDays.filter(d => d !== day)
-                                  : [...currentDays, day];
-                                setFormData(prev => ({
-                                  ...prev,
-                                  service_options: { ...prev.service_options, availability_days: newDays }
-                                }));
-                              }}
-                              className={`rounded-lg transition-all ${(formData.service_options.availability_days || []).includes(day)
-                                ? 'bg-yellow-400/10 text-yellow-200 border border-yellow-400/20 shadow-[0_0_14px_rgba(250,204,21,0.12)]'
-                                : 'bg-transparent border border-white/10 text-gray-200 hover:bg-white/5'
-                                }`}
-                            >
-                              {day}
-                            </Button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Time Availability */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-3">
-                          <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Start Time</Label>
-                          <Input
-                            type="time"
-                            value={formData.service_options.start_time || '09:00'}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              service_options: { ...prev.service_options, start_time: e.target.value }
-                            }))}
-                            className="h-12 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
-                          />
-                        </div>
-                        <div className="space-y-3">
-                          <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">End Time</Label>
-                          <Input
-                            type="time"
-                            value={formData.service_options.end_time || '17:00'}
-                            onChange={(e) => setFormData(prev => ({
-                              ...prev,
-                              service_options: { ...prev.service_options, end_time: e.target.value }
-                            }))}
-                            className="h-12 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 rounded-xl"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Location Type */}
-                      <div className="bg-yellow-500/10 p-4 rounded-xl border border-yellow-400/20">
-                        <div className="flex items-start gap-3">
-                          <div className="mt-1 bg-yellow-500/10 border border-yellow-400/20 p-2 rounded-lg">
-                            <svg className="h-5 w-5 text-yellow-200" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-yellow-100 text-sm">Service Location</h4>
-                            {!isSellerShopless(sellerProfile) ? (
-                              <p className="text-yellow-200/80 text-sm mt-1">
-                                All services will be performed at your shop address:
-                                <br />
-                                <span className="font-medium text-white">{sellerProfile?.physicalAddress}</span>
-                              </p>
-                            ) : (
-                              <p className="text-yellow-200/80 text-sm mt-1">
-                                You do not have a registered shop address.
-                                <br />
-                                <span className="font-medium text-white underline decoration-yellow-400/50">Home Service: You will visit the buyer.</span>
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <Label htmlFor="description" className="text-sm font-bold text-gray-300 uppercase tracking-wide">Description</Label>
-                      <span className={`text-[10px] font-bold tracking-wider uppercase ${formData.description.length >= 280 ? 'text-yellow-400' : 'text-gray-500'}`}>
-                        {formData.description.length} / 300
-                      </span>
-                    </div>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      value={formData.description}
-                      onChange={handleChange}
-                      placeholder="Enter product description (Max 300 characters)"
-                      rows={4}
-                      required
-                      maxLength={300}
-                      className={`bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 rounded-xl transition-all ${formData.description.length >= 300 ? 'ring-1 ring-yellow-400/50' : ''}`}
-                    />
-                    {formData.description.length >= 300 && (
-                      <p className="text-[10px] text-yellow-400 font-bold uppercase animate-pulse">Maximum length reached</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Category</Label>
-                    <Select
-                      value={formData.aesthetic}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, aesthetic: value }))}
-                      required
-                    >
-                      <SelectTrigger className="w-full h-12 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 rounded-xl">
-                        <SelectValue placeholder="Select an aesthetic" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {aestheticCategories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.title}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-6">
-                  {/* Multi-Image Upload – up to 3 photos */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-bold text-gray-300 uppercase tracking-wide">Product Photos</Label>
-                      <span className="text-xs text-gray-400">{allPreviews.filter(Boolean).length} / {MAX_IMAGES} photos</span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-3">
-                      {/* Render up to MAX_IMAGES slots */}
-                      {Array.from({ length: MAX_IMAGES }).map((_, slot) => {
-                        const preview = allPreviews[slot];
-                        const isFirst = slot === 0;
-                        const isDisabled = slot > 0 && !allPreviews[slot - 1]; // must fill in order
-                        return (
-                          <div key={slot} className="relative aspect-square">
-                            {preview ? (
-                              <>
-                                <img
-                                  src={preview}
-                                  alt={`Photo ${slot + 1}`}
-                                  className="w-full h-full object-cover rounded-xl border-2 border-white/10"
-                                />
-                                {isFirst && (
-                                  <span className="absolute bottom-1 left-1 text-[10px] font-bold bg-yellow-400/90 text-black px-1.5 py-0.5 rounded-md">Main</span>
-                                )}
-                                <button
-                                  type="button"
-                                  onClick={() => removeImage(slot)}
-                                  className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full h-6 w-6 flex items-center justify-center shadow-md transition-colors z-10"
-                                >
-                                  <X className="h-3.5 w-3.5" />
-                                </button>
-                              </>
-                            ) : (
-                              <label
-                                className={`w-full h-full flex flex-col items-center justify-center rounded-xl border-2 border-dashed transition-colors duration-200 ${isDisabled
-                                  ? 'border-white/5 bg-white/[0.02] cursor-not-allowed opacity-40'
-                                  : 'border-white/20 bg-white/5 hover:border-yellow-400/40 hover:bg-yellow-400/5 cursor-pointer'
-                                  }`}
-                              >
-                                <ImagePlus className={`h-6 w-6 mb-1 ${isDisabled ? 'text-gray-600' : 'text-gray-400'}`} />
-                                <span className={`text-[10px] font-medium ${isDisabled ? 'text-gray-600' : 'text-gray-400'}`}>
-                                  {isFirst ? 'Main photo' : `Photo ${slot + 1}`}
-                                </span>
-                                {!isDisabled && (
-                                  <>
-                                    <input
-                                      type="file"
-                                      accept="image/*"
-                                      className="sr-only"
-                                      onChange={(e) => handleImageChange(e, slot)}
-                                    />
-                                    {fileError && (
-                                      <div className="absolute -bottom-6 left-0 right-0 text-center text-[10px] font-bold text-red-500 animate-pulse whitespace-nowrap overflow-hidden text-ellipsis">
-                                        ⚠️ {fileError}
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </label>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-gray-400">PNG, JPG up to 50MB each. First photo is shown as the main image.</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 pt-8 border-t border-white/10">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFormData({
-                      name: '',
-                      price: '',
-                      description: '',
-                      image: null,
-                      image_url: '',
-                      aesthetic: 'noir',
-                      is_digital: false,
-                      digital_file: null,
-                      digital_file_name: '',
-                      digital_file_path: '',
-                      product_type: 'physical',
-                      service_locations: '',
-                      service_options: {
-                        availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-                        location_type: 'buyer_visits_seller',
-                        price_type: 'fixed',
-                        start_time: '09:00',
-                        end_time: '17:00'
-                      },
-                      digital_file_size: null
-                    });
-                    resetImages();
-                  }}
-                  disabled={isLoading}
-                  className="w-full sm:w-auto h-12 px-8 bg-transparent border-white/10 text-gray-200 hover:bg-white/5 hover:border-yellow-400/30 transition-all duration-200 rounded-xl font-semibold sm:mr-4"
-                >
-                  Reset
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full sm:w-auto h-12 px-8 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg rounded-xl font-semibold"
-                >
-                  {isLoading ? 'Adding...' : 'Add Product'}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        {step < 4 ? (
+          <Button
+            onClick={nextStep}
+            className="flex-[2] h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold rounded-xl shadow-lg shadow-yellow-500/20"
+          >
+            Continue
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
+        ) : (
+          <Button
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="flex-[2] h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold rounded-xl shadow-lg shadow-yellow-500/20"
+          >
+            {isLoading ? "Launching..." : "Launch Product"}
+            <Sparkles className="h-4 w-4 ml-2 fill-current" />
+          </Button>
+        )}
       </div>
-    </div >
+    </div>
   );
-}
+};
 
 export default AddProductForm;

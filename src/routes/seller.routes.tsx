@@ -79,14 +79,6 @@ export const sellerRoutes: RouteObject[] = [
           </Suspense>
         ),
       },
-      {
-        path: 'add-product',
-        element: (
-          <Suspense fallback={<RouteFallback />}>
-            <AddProductForm onSuccess={() => { }} />
-          </Suspense>
-        ),
-      },
       // Redirects for protected routes
       {
         index: true,
