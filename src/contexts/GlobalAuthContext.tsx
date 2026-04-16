@@ -216,6 +216,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const authCheckInProgress = useRef(false);
     // Using a ref to ensure we only run the initial auth check once
     const initialized = useRef(false);
+    // FIX (Task 8): 5-minute TTL for auth re-validation to prevent stale sessions and reduce API load
+    const lastCheckRef = useRef<number>(0);
+    const AUTH_TTL = 5 * 60 * 1000; // 5 minutes
 
     const checkAuth = useCallback(async (force = false) => {
         // If already checking, don't start another one unless forced
@@ -224,8 +227,11 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         const currentPath = globalThis.location.pathname;
         const currentRole = getRoleFromRoute(currentPath);
 
-        // Optimization: if already authenticated for this role, skip check unless forced
-        if (!force && user && user.role === currentRole && user.isAuthenticated) {
+        // Optimization (Task 8): 5-minute TTL for auth re-validation
+        const isStale = Date.now() - lastCheckRef.current > AUTH_TTL;
+
+        // Optimization: if already authenticated for this role, skip check unless forced or stale
+        if (!force && user && user.role === currentRole && user.isAuthenticated && !isStale) {
             setIsLoading(false);
             setInitializing(false);
             return;
@@ -276,8 +282,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: true
             });
 
-            // Mark session as active
+            // Mark session as active and update TTL
             localStorage.setItem(sessionKey, 'true');
+            lastCheckRef.current = Date.now();
         } catch (error: any) {
             // CROSS-ROLE FIX: Don't fail if we're trying buyer access and user has seller session
             // This prevents the "Split Identity" 404 from blocking access
@@ -322,8 +329,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: true
             });
 
-            // Mark session as active
+            // Mark session as active and update TTL
             localStorage.setItem(`${role}SessionActive`, 'true');
+            lastCheckRef.current = Date.now();
 
             toast.success('Welcome back!', {
                 description: 'You have successfully logged in.',
@@ -369,6 +377,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             });
 
             localStorage.setItem(`${role}SessionActive`, 'true');
+            lastCheckRef.current = Date.now();
         } catch (error: any) {
             throw error;
         } finally {
@@ -399,8 +408,9 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                     isAuthenticated: true
                 });
 
-                // Mark session as active
+                // Mark session as active and update TTL
                 localStorage.setItem('adminSessionActive', 'true');
+                lastCheckRef.current = Date.now();
 
                 toast.success('Welcome Admin', {
                     description: 'You have successfully logged in.',

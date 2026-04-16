@@ -39,10 +39,6 @@ export default function RefundRequestsPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusFilter, setStatusFilter] = useState('pending');
 
-  useEffect(() => {
-    fetchRefundRequests();
-  }, [fetchRefundRequests]);
-
   const fetchRefundRequests = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -56,14 +52,26 @@ export default function RefundRequestsPage() {
     }
   }, [statusFilter]);
 
+  useEffect(() => {
+    fetchRefundRequests();
+  }, [fetchRefundRequests]);
+
   const handleConfirmRefund = async () => {
     if (!selectedRequest) return;
 
     setIsProcessing(true);
     try {
+      // FIX (Task 7): Add idempotency key to prevent double approval
+      const idempotencyKey = `refund-confirm-${selectedRequest.id}`;
+
       await axios.patch(
         `${API_URL}/refunds/${selectedRequest.id}/confirm`,
-        { adminNotes }
+        { adminNotes },
+        {
+          headers: {
+            'Idempotency-Key': idempotencyKey
+          }
+        }
       );
 
       toast.success('Refund confirmed and processed successfully!');
@@ -84,9 +92,17 @@ export default function RefundRequestsPage() {
 
     setIsProcessing(true);
     try {
+      // FIX (Task 7): Add idempotency key to prevent double rejection
+      const idempotencyKey = `refund-reject-${selectedRequest.id}`;
+
       await axios.patch(
         `${API_URL}/refunds/${selectedRequest.id}/reject`,
-        { adminNotes }
+        { adminNotes },
+        {
+          headers: {
+            'Idempotency-Key': idempotencyKey
+          }
+        }
       );
 
       toast.success('Refund request rejected');

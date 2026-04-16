@@ -55,6 +55,7 @@ import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
 import NewClientOrderModal from './NewClientOrderModal';
 import ReferralPanel from './ReferralPanel';
+import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 
 
@@ -258,8 +259,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     mpesaNumber: '',
     mpesaName: ''
   });
-  const [isRequestingWithdrawal, setIsRequestingWithdrawal] = useState(false);
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
+  // FIX (Task 15): Prevent duplicate withdrawal requests via synchronous lock
+  const { runWithLock, isLocked: isRequestingWithdrawal } = useAsyncLock();
 
   // Date filter state for withdrawals
   const [startDate, setStartDate] = useState('');
@@ -664,43 +666,42 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       return;
     }
 
-    setIsRequestingWithdrawal(true);
+    // FIX (Task 15): Prevents duplicate payout requests and invalid amounts
+    await runWithLock(async () => {
+      try {
+        await sellerApi.requestWithdrawal({
+          amount,
+          mpesaNumber: withdrawalForm.mpesaNumber,
+          mpesaName: withdrawalForm.mpesaName
+        });
 
-    try {
-      await sellerApi.requestWithdrawal({
-        amount,
-        mpesaNumber: withdrawalForm.mpesaNumber,
-        mpesaName: withdrawalForm.mpesaName
-      });
+        toast({
+          title: 'Withdrawal Initiated',
+          description: 'Your withdrawal has been successfully initiated. Funds should reflect shortly.',
+          className: 'bg-green-50 border-green-200 text-green-900',
+        });
 
-      toast({
-        title: 'Withdrawal Initiated',
-        description: 'Your withdrawal has been successfully initiated. Funds should reflect shortly.',
-        className: 'bg-green-50 border-green-200 text-green-900',
-      });
+        // Reset form and hide it
+        setWithdrawalForm({
+          amount: '',
+          mpesaNumber: '',
+          mpesaName: ''
+        });
+        setShowWithdrawalForm(false);
 
-      // Reset form and hide it
-      setWithdrawalForm({
-        amount: '',
-        mpesaNumber: '',
-        mpesaName: ''
-      });
-      setShowWithdrawalForm(false);
+        // Refresh withdrawal requests
+        await fetchWithdrawalRequests();
+      } catch (error: any) {
+        console.error('Error requesting withdrawal:', error);
+        const errorMessage = error.response?.data?.message || 'Failed to submit withdrawal request. Please try again.';
 
-      // Refresh withdrawal requests
-      await fetchWithdrawalRequests();
-    } catch (error: any) {
-      console.error('Error requesting withdrawal:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to submit withdrawal request. Please try again.';
-
-      toast({
-        title: 'Withdrawal Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsRequestingWithdrawal(false);
-    }
+        toast({
+          title: 'Withdrawal Failed',
+          description: errorMessage,
+          variant: 'destructive',
+        });
+      }
+    });
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
 
   const handleClientOrderSubmit = useCallback(async (data: {

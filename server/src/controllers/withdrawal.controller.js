@@ -24,19 +24,9 @@ function validateWithdrawalBody(body) {
         return 'mpesaName must be a non-empty string';
     }
 
-    // Validate proper Kenyan mobile number format (0XXXXXXXXX — 10 digits, 07XX or 01XX)
-    const digits = String(mpesaNumber).replace(/\D/g, '');
-    let normalized = digits;
-
-    // Normalize: 254XXXXXXXXX → 0XXXXXXXXX
-    if (normalized.startsWith('254') && normalized.length === 12) {
-        normalized = '0' + normalized.substring(3);
-    }
-
-    // Must be 10 digits starting with 07 or 01
-    if (!/^0[17]\d{8}$/.test(normalized)) {
-        return 'mpesaNumber must be a valid Kenyan mobile number (e.g. 0712345678 or 0112345678)';
-    }
+    // Note: Phone normalization and validation are handled in the service layer 
+    // by PayoutService.normalizePhoneForPayout() to ensure consistency.
+    if (!mpesaNumber) return 'mpesaNumber is required';
 
     return null;
 }
@@ -58,10 +48,7 @@ export const createWithdrawal = async (req, res, next) => {
 
     const { amount, mpesaNumber, mpesaName } = req.body;
     try {
-        // Standardize phone normalization for Kenyan mobile numbers (v2026/02/08 standard)
-        let normalizedPhone = mpesaNumber.replace(/\s+/g, '');
-        if (normalizedPhone.startsWith('0')) normalizedPhone = '254' + normalizedPhone.substring(1);
-        if (normalizedPhone.startsWith('+')) normalizedPhone = normalizedPhone.substring(1);
+        const normalizedPhone = mpesaNumber; // Pass through to service for authoritative normalization
 
         const request = await WithdrawalService.createWithdrawalRequest({
             entityId: sellerId,

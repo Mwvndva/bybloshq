@@ -2,6 +2,8 @@ import fs from 'fs';
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import os from 'os';
+import whatsappService from './whatsapp.service.js';
+import tokenBlacklist from './tokenBlacklist.service.js';
 
 /**
  * Enhanced Health Check Service (P1-006)
@@ -125,9 +127,8 @@ class HealthCheckService {
 
         // Check if WhatsApp service is available
         try {
-            const whatsappService = await import('./whatsapp.service.js');
             services.whatsapp = {
-                status: whatsappService.default.isClientReady() ? 'connected' : 'disconnected',
+                status: whatsappService.isClientReady() ? 'connected' : 'disconnected',
                 available: true
             };
         } catch (error) {
@@ -139,8 +140,7 @@ class HealthCheckService {
 
         // Check token blacklist service
         try {
-            const tokenBlacklist = await import('./tokenBlacklist.service.js');
-            const stats = tokenBlacklist.default.getStats();
+            const stats = tokenBlacklist.getStats();
             services.tokenBlacklist = {
                 status: 'healthy',
                 stats

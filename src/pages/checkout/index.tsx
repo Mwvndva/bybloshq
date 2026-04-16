@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useGlobalAuth } from '@/contexts/GlobalAuthContext';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -28,8 +29,8 @@ interface StatusData {
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { loginWithToken } = useGlobalAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [isFinalStatus, setIsFinalStatus] = useState(false);
   const [statusData, setStatusData] = useState<StatusData>({
     title: 'Processing Payment',
@@ -40,6 +41,11 @@ export default function CheckoutPage() {
 
   // Use a ref for the interval so cleanup always has the current value
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // FIX (Task 1 & 10): Using refs for guards and counts to avoid stale closures in React state
+  const isCheckingRef = useRef(false);
+  const pollCountRef = useRef(0);
+  const MAX_POLLS = 36; // 3 minutes at 5s intervals (or 6 mins at 10s)
 
   const stopPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
@@ -79,6 +85,15 @@ export default function CheckoutPage() {
         icon: <XCircle className="h-12 w-12 text-red-500" />,
         isError: true,
       });
+    } else if (normalized === 'timeout') {
+      setIsFinalStatus(true);
+      stopPolling();
+      setStatusData({
+        title: 'Payment Verification Timeout',
+        description: 'We haven\'t received confirmation yet. Please check your orders page in a few minutes.',
+        icon: <Clock className="h-12 w-12 text-yellow-500" />,
+        isError: true,
+      });
     }
   }, [stopPolling]);
 
@@ -91,18 +106,33 @@ export default function CheckoutPage() {
         { autoLoginToken },
         { withCredentials: true }
       );
-      // Cookie is now set by the server — navigate directly to orders
+
+      // FIX (Task 2): Never trust cookie set — must rehydrate auth context
+      // This ensures the application state is consistent before navigation
+      await loginWithToken(autoLoginToken, 'buyer');
+
+      // Only navigate AFTER auth context confirms login
       navigate('/buyer/orders', { replace: true });
     } catch (err) {
       // Auto-login failed — navigate to buyer dashboard login instead
       console.warn('[CHECKOUT] Auto-login failed, redirecting to login:', err);
       navigate('/buyer/login', { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, loginWithToken]);
 
   const checkPaymentStatus = useCallback(async (reference: string) => {
-    if (isCheckingStatus) return;
-    setIsCheckingStatus(true);
+    // FIX (Task 1): Guard using isCheckingRef.current to prevent overlapping polling requests
+    // caused by stale React state in intervals
+    if (isCheckingRef.current) return;
+
+    // Stop if we reached max polls
+    if (pollCountRef.current >= MAX_POLLS) {
+      updateStatusUI('timeout');
+      return;
+    }
+
+    isCheckingRef.current = true;
+    pollCountRef.current += 1;
 
     try {
       const response = await axios.get<{ data: PaymentStatusResponse }>(
@@ -127,15 +157,11 @@ export default function CheckoutPage() {
       }
     } catch (error) {
       console.error('[CHECKOUT] Error checking payment status:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to check payment status. Please refresh to try again.',
-        variant: 'destructive',
-      });
+      // We don't stop polling on single network error, unless it's a structural failure
     } finally {
-      setIsCheckingStatus(false);
+      isCheckingRef.current = false;
     }
-  }, [isCheckingStatus, stopPolling, updateStatusUI, handleAutoLogin]);
+  }, [stopPolling, updateStatusUI, handleAutoLogin]);
 
   useEffect(() => {
     const status = searchParams.get('status');

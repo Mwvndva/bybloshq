@@ -1,13 +1,29 @@
 import express from 'express';
-import { body, param } from 'express-validator';
+import { validate } from '../middleware/validate.js';
+import { z } from 'zod';
 import paymentController from '../controllers/payment.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
 import { verifyPaydWebhook } from '../middleware/paydWebhookSecurity.js';
-import validate from '../middleware/validation.middleware.js';
 import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
 import { paymentRateLimiter } from '../middleware/rateLimiting.js';
 
 const router = express.Router();
+
+const initiateProductSchema = z.object({
+  phone: z.string().min(1, 'Phone number is required'),
+  email: z.string().email().optional().or(z.literal('')),
+  amount: z.coerce.number().positive('Valid amount is required'),
+  productId: z.string().min(1, 'Product ID is required'),
+  sellerId: z.string().optional(),
+  productName: z.string().optional(),
+  customerName: z.string().optional(),
+  narrative: z.string().optional(),
+  paymentMethod: z.enum(['paystack', 'payd']).optional(),
+});
+
+const checkStatusSchema = z.object({
+  invoiceId: z.string().min(1, 'Invoice ID is required'),
+});
 
 // Public routes (no authentication required)
 const publicRouter = express.Router();
@@ -20,22 +36,7 @@ publicRouter.use(paymentRequestLogger);
 publicRouter.post(
   '/initiate-product',
   paymentRateLimiter,
-  [
-    body('phone').trim().notEmpty().withMessage('Phone number is required'),
-    // Email is optional here because authenticated users might not send it (we fallback to DB)
-    // However, if provided, it must be valid.
-    // Use checkFalsy: true to ignore empty strings or null
-    body('email').optional({ checkFalsy: true }).isEmail().normalizeEmail().withMessage('Valid email is required'),
-    body('amount').isNumeric().withMessage('Valid amount is required'),
-    body('productId').notEmpty().withMessage('Product ID is required'),
-    // Optional metadata
-    body('sellerId').optional(),
-    body('productName').optional(),
-    body('customerName').optional(),
-    body('narrative').optional(),
-    body('paymentMethod').optional().isIn(['paystack', 'payd']).withMessage('Invalid payment method'),
-    validate
-  ],
+  validate(initiateProductSchema),
   paymentController.initiateProductPayment
 );
 
@@ -59,10 +60,7 @@ publicRouter.post(
 // Check payment status (public)
 publicRouter.get(
   '/status/:invoiceId',
-  [
-    param('invoiceId').notEmpty().withMessage('Invoice ID is required'),
-    validate
-  ],
+  validate(checkStatusSchema),
   (req, res, next) => {
     // Map invoiceId to paymentId for backward compatibility
     req.params.paymentId = req.params.invoiceId;

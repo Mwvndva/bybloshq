@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Loader2, CheckCircle2, XCircle, Smartphone, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,15 @@ export default function PaymentLoadingModal({
 }: PaymentLoadingModalProps) {
     const [status, setStatus] = useState<'loading' | 'success' | 'failed'>('loading');
     const [countdown, setCountdown] = useState(120); // 2 minutes timeout
+
+    // FIX (Task 19): Polling guards and cleanup
+    const isMounted = useRef(true);
+    const isPollingRef = useRef(false);
+
+    useEffect(() => {
+        isMounted.current = true;
+        return () => { isMounted.current = false; };
+    }, []);
 
     useEffect(() => {
         if (!isOpen) {
@@ -51,10 +60,16 @@ export default function PaymentLoadingModal({
         if (!isOpen || !paymentReference) return;
 
         const pollInterval = setInterval(async () => {
+            // FIX (Task 19): Prevent overlapping polling requests
+            if (isPollingRef.current) return;
+            isPollingRef.current = true;
+
             try {
                 // Check payment status via API
                 const response = await fetch(`/api/payments/status/${paymentReference}`);
                 const data = await response.json();
+
+                if (!isMounted.current) return;
 
                 if (data.status === 'success' && data.data) {
                     const paymentStatus = data.data.status;
@@ -74,6 +89,8 @@ export default function PaymentLoadingModal({
                 }
             } catch (error) {
                 console.error('Error polling payment status:', error);
+            } finally {
+                isPollingRef.current = false;
             }
         }, 3000); // Poll every 3 seconds
 

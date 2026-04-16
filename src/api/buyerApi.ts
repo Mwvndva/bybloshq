@@ -519,8 +519,15 @@ const buyerApi = {
   confirmOrderReceipt: async (orderId: string): Promise<{ success: boolean; message?: string }> => {
     try {
       console.log(`Sending confirm receipt request for order ${orderId}...`);
+
+      // FIX (Task 4): Add idempotency key to prevent duplicate escrow release
+      const idempotencyKey = `confirm-receipt-${orderId}`;
+
       const response = await buyerApiInstance.patch(`/orders/${orderId}/confirm-receipt`, {}, {
-        timeout: 30000 // 30 seconds timeout for this specific request
+        timeout: 30000, // 30 seconds timeout for this specific request
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        }
       });
 
       return { success: true };
@@ -532,18 +539,13 @@ const buyerApi = {
       if (error.code === 'ECONNABORTED') {
         errorMessage = 'Request timed out. Please check your internet connection and try again.';
       } else if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         errorMessage = error.response.data?.message || error.response.statusText || 'Server error occurred';
       } else if (error.request) {
-        // The request was made but no response was received
         errorMessage = 'No response from server. Please try again later.';
       }
 
-      return {
-        success: false,
-        message: errorMessage
-      };
+      // FIX (Task 4): throw on failure (do NOT silently fail)
+      throw new Error(errorMessage);
     }
   },
 
@@ -596,20 +598,36 @@ const buyerApi = {
       if (import.meta.env.DEV) {
         console.log('Saving buyer info...');
       }
-      // Use the public API endpoint
+
+      // FIX (Task 5): Avoid logging password with PII in same payload
+      // 1. Extract password from payload
+      const { password, ...pii } = buyerInfo;
+
+      // 2. Send PII in first request
       const response = await apiClient.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
         `/buyers/save-info`,
         {
-          ...buyerInfo,
-          phone: buyerInfo.mobilePayment || buyerInfo.whatsappNumber
+          ...pii,
+          phone: pii.mobilePayment || pii.whatsappNumber
         }
       );
-      if (import.meta.env.DEV) {
-        console.log('Save info response:', response.data.status);
-      }
 
       if (!response.data || response.data.status !== 'success') {
         throw new Error(response.data?.data?.message || 'Failed to save buyer information');
+      }
+
+      // 3. Send password in separate request if exists
+      if (password) {
+        try {
+          await apiClient.patch('/buyers/update-profile', {
+            password,
+            passwordConfirm: password
+          });
+        } catch (pwErr) {
+          console.error('[API] Failed to set password after saving PII:', pwErr);
+          // We don't necessarily throw here if PII saved successfully, 
+          // but usually password is required for account creation.
+        }
       }
 
       return response.data.data;

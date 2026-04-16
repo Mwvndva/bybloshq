@@ -31,6 +31,8 @@ const apiClient = axios.create({
 
 // Request Interceptor: Logging & CSRF
 let csrfTokenCache: string | null = null;
+let lastFetchedAt: number = 0;
+const CSRF_TTL = 10 * 60 * 1000; // 10 minutes
 
 /**
  * Fetch a fresh CSRF token from the backend
@@ -39,6 +41,7 @@ export const getFreshCsrfToken = async () => {
     try {
         const response = await axios.get(`${baseURL}/public/csrf-token`, { withCredentials: true });
         csrfTokenCache = (response as any).data?.data?.csrfToken || null;
+        lastFetchedAt = Date.now();
         return csrfTokenCache;
     } catch (error) {
         console.error('Failed to fetch CSRF token:', error);
@@ -51,6 +54,7 @@ export const getFreshCsrfToken = async () => {
  */
 export const setCachedCsrfToken = (token: string | null) => {
     csrfTokenCache = token;
+    if (token) lastFetchedAt = Date.now();
 };
 
 /**
@@ -62,13 +66,15 @@ apiClient.interceptors.request.use(
     (config: any) => {
         // Attach CSRF token to non-GET requests
         if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
-            // If we have a token, use it
-            if (csrfTokenCache) {
+            // FIX (Task 11): Use cached CSRF token if it's not stale (10-minute TTL)
+            const isFresh = csrfTokenCache && (Date.now() - lastFetchedAt < CSRF_TTL);
+
+            if (isFresh) {
                 config.headers['X-CSRF-Token'] = csrfTokenCache;
                 return config;
             }
 
-            // If we don't have a token, fetch one and then proceed
+            // If we don't have a token or it's stale, fetch one and then proceed
             return getFreshCsrfToken().then((token) => {
                 if (token) {
                     config.headers['X-CSRF-Token'] = token;

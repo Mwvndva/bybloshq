@@ -11,6 +11,13 @@ import { sellerHasPhysicalShop } from '../utils/sellerUtils.js';
 import ReferralService from './referral.service.js';
 import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../utils/email.js';
 
+/**
+ * OrderService — Order lifecycle orchestrator.
+ * 
+ * KNOWN TECHNICAL DEBT: This class handles too many concerns.
+ * Planned refactor: Extract InventoryService, NotificationService, DebtService.
+ * Do not add new business logic here without first evaluating extraction.
+ */
 class OrderService {
   /**
    * Create a new order with fee calculations and status determination
@@ -608,9 +615,9 @@ class OrderService {
   }
 
   static _determineInitialStatus(items) {
-    const initialStatus = OrderStatus.PENDING;
-    logger.info(`[OrderService] Initial status set to ${initialStatus} for new order`);
-    return initialStatus;
+    // All orders start as PENDING regardless of type.
+    // Status is resolved to the appropriate fulfillment state in completeOrder() after payment.
+    return OrderStatus.PENDING;
   }
 
 
@@ -637,12 +644,14 @@ class OrderService {
       if (orderResult.rows.length === 0) throw new Error('Order not found');
       const order = orderResult.rows[0];
 
-      // 2. Atomic idempotency check AFTER acquiring the lock
-      if (['COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status) &&
+      // 2. Atomic idempotency check AFTER acquiring the lock.
+      // We check if the order is already in a terminal state OR if the payment is already marked as completed.
+      // This prevents double-payouts/fulfillment if multiple webhooks/polls hit the same order.
+      if (['COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status) ||
         order.payment_status === 'completed') {
         if (shouldManageTransaction) await client.query('ROLLBACK')
-        logger.info(`[ORDER] Order ${orderId} already in terminal state ${order.status}. Skipping.`)
-        return { success: true, message: 'Order already in terminal state', alreadyProcessed: true }
+        logger.info(`[ORDER] Order ${orderId} already in terminal state (${order.status}) or already paid (${order.payment_status}). Skipping.`)
+        return { success: true, message: 'Order already processed', alreadyProcessed: true }
       }
 
       // 3. Mark as Paid & Completed
@@ -1432,8 +1441,9 @@ class OrderService {
     } catch (paymentError) {
       await client.query('ROLLBACK');
       logger.error('[ORDER] STK Push failed:', paymentError.message);
-      await pool.query("UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1", [order.id]).catch(() => { });
-      await pool.query("UPDATE payments SET status = 'failed' WHERE metadata->>'order_id' = $1", [order.id]).catch(() => { });
+
+      // IMPORTANT: Records created within the rolled-back transaction (Order/Payment)
+      // do not exist in the database after ROLLBACK. Attempting to update them is invalid.
       throw new Error(`Failed to initiate payment: ${paymentError.message}`);
     }
   }

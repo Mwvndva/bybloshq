@@ -51,10 +51,22 @@ export const clearAllAuthData = () => {
         }
     });
 
-    // 3. Clear session storage just in case
+    // 3. Clear session storage selectively (Task 12)
     try {
-        sessionStorage.clear();
+        const sessionKeys = [
+            'redirectAfterLogin',
+            'checkout_state',
+            'mpesa_request_id',
+            'cart'
+        ];
+
+        // FIX (Task 12): Preserve non-auth keys (like preferences or analytics) during selective cleanup
+        sessionKeys.forEach(key => {
+            if (sessionStorage.getItem(key)) {
+                sessionStorage.removeItem(key);
+            }
+        });
     } catch (e) {
-        console.error('[AuthCleanup] Could not clear sessionStorage', e);
+        console.error('[AuthCleanup] Could not selectively clear sessionStorage', e);
     }
 };

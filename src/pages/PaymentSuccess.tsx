@@ -15,9 +15,12 @@ export default function PaymentSuccess() {
   useEffect(() => {
     const verifyPayment = async () => {
       const reference = searchParams.get('reference');
-      if (!reference) {
+
+      // FIX (Task 3): Strict reference validation to prevent probing and injection attacks
+      const referenceRegex = /^[A-Za-z0-9_-]{8,64}$/;
+      if (!reference || !referenceRegex.test(reference)) {
         setStatus('error');
-        setMessage('Payment reference not found');
+        setMessage('Invalid payment reference format');
         return;
       }
 

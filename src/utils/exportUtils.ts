@@ -15,6 +15,19 @@ interface WithdrawalRequest {
 }
 
 /**
+ * Sanitize a cell value to prevent CSV Formula Injection
+ */
+const sanitizeCell = (value: any): string => {
+    const str = '' + value;
+    // If the value starts with a symbol that could be interpreted as a formula
+    // (=, +, -, @), prepend a single quote to neutralize it
+    if (str.length > 0 && ['=', '+', '-', '@'].includes(str[0])) {
+        return `'${str}`;
+    }
+    return str;
+};
+
+/**
  * Convert array of objects to CSV string
  */
 const convertToCSV = (data: any[], headers: string[]): string => {
@@ -29,8 +42,10 @@ const convertToCSV = (data: any[], headers: string[]): string => {
     for (const row of data) {
         const values = headers.map(header => {
             const value = row[header];
+            // FIX (Task 9): Sanitize cell to prevent formula injection
+            const sanitized = sanitizeCell(value);
             // Escape quotes and wrap in quotes if contains comma
-            const escaped = ('' + value).replace(/"/g, '""');
+            const escaped = sanitized.replace(/"/g, '""');
             return `"${escaped}"`;
         });
         csvRows.push(values.join(','));

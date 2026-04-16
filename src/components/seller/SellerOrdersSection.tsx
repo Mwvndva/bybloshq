@@ -23,12 +23,15 @@ import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User,
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
+import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 export default function SellerOrdersSection() {
     // Force TS re-check
     const [orders, setOrders] = useState<Order[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
+    // FIX (Task 18): Prevent duplicate order mutations via synchronous lock
+    const { runWithLock } = useAsyncLock();
     const [showPickupDialog, setShowPickupDialog] = useState(false);
     const [showCancelDialog, setShowCancelDialog] = useState(false);
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -81,133 +84,146 @@ export default function SellerOrdersSection() {
     const markAsReadyForPickup = async () => {
         if (!selectedOrderId) return;
 
-        try {
-            setIsUpdating(true);
-            setShowPickupDialog(false);
+        setShowPickupDialog(false);
+        // FIX (Task 18): Prevent duplicate order mutations
+        await runWithLock(async () => {
+            try {
+                setIsUpdating(true);
 
-            // Update order status to DELIVERY_COMPLETE
-            const updatedOrder = await sellerApi.updateOrderStatus(selectedOrderId, 'DELIVERY_COMPLETE' as OrderStatus);
+                // Update order status to DELIVERY_COMPLETE
+                const updatedOrder = await sellerApi.updateOrderStatus(selectedOrderId, 'DELIVERY_COMPLETE' as OrderStatus);
 
-            setOrders(prevOrders =>
-                prevOrders.map(order =>
-                    order.id === selectedOrderId ? {
-                        ...order,
-                        status: 'DELIVERY_COMPLETE' as const,
-                        paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
-                        updatedAt: new Date().toISOString()
-                    } : order
-                )
-            );
+                setOrders(prevOrders =>
+                    prevOrders.map(order =>
+                        order.id === selectedOrderId ? {
+                            ...order,
+                            status: 'DELIVERY_COMPLETE' as const,
+                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
+                            updatedAt: new Date().toISOString()
+                        } : order
+                    )
+                );
 
-            toast({
-                title: 'Order Ready for Pickup',
-                description: 'The buyer has been notified that their order is ready for pickup.',
-            });
-        } catch (err) {
-            console.error('Failed to update order status:', err);
-            toast({
-                title: 'Error',
-                description: 'Failed to mark order as ready for pickup. Please try again.',
-                variant: 'destructive',
-            });
-        } finally {
-            setIsUpdating(false);
-            setSelectedOrderId(null);
-        }
+                toast({
+                    title: 'Order Ready for Pickup',
+                    description: 'The buyer has been notified that their order is ready for pickup.',
+                });
+            } catch (err) {
+                console.error('Failed to update order status:', err);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to mark order as ready for pickup. Please try again.',
+                    variant: 'destructive',
+                });
+            } finally {
+                setIsUpdating(false);
+                setSelectedOrderId(null);
+            }
+        });
     };
 
     const markAsDelivered = async (orderId: string) => {
-        try {
-            setIsUpdating(true);
-            const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'DELIVERY_COMPLETE' as OrderStatus);
+        // FIX (Task 18): Prevent duplicate order mutations
+        await runWithLock(async () => {
+            try {
+                setIsUpdating(true);
+                const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'DELIVERY_COMPLETE' as OrderStatus);
 
-            setOrders(prevOrders =>
-                prevOrders.map(order =>
-                    order.id === orderId ? {
-                        ...updatedOrder,
-                        status: 'DELIVERY_COMPLETE' as const,
-                        paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'completed') as PaymentStatus
-                    } : order
-                )
-            );
+                setOrders(prevOrders =>
+                    prevOrders.map(order =>
+                        order.id === orderId ? {
+                            ...updatedOrder,
+                            status: 'DELIVERY_COMPLETE' as const,
+                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'completed') as PaymentStatus
+                        } : order
+                    )
+                );
 
-            toast({
-                title: 'Order Delivered',
-                description: 'The order has been marked as delivered.',
-            });
-        } catch (err) {
-            console.error('Failed to update order status:', err);
-            toast({
-                title: 'Error',
-                description: 'Failed to mark order as delivered. Please try again.',
-                variant: 'destructive',
-            });
-            setIsUpdating(false);
-        }
+                toast({
+                    title: 'Order Delivered',
+                    description: 'The order has been marked as delivered.',
+                });
+            } catch (err) {
+                console.error('Failed to update order status:', err);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to mark order as delivered. Please try again.',
+                    variant: 'destructive',
+                });
+            } finally {
+                setIsUpdating(false);
+            }
+        });
     };
 
     const markAsServiceCompleted = async (orderId: string) => {
-        try {
-            setIsUpdating(true);
-            // Use COMPLETED status for services
-            const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'COMPLETED' as OrderStatus);
+        // FIX (Task 18): Prevent duplicate order mutations
+        await runWithLock(async () => {
+            try {
+                setIsUpdating(true);
+                // Use COMPLETED status for services
+                const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'COMPLETED' as OrderStatus);
 
-            setOrders(prevOrders =>
-                prevOrders.map(order =>
-                    order.id === orderId ? {
-                        ...updatedOrder,
-                        status: 'COMPLETED' as const,
-                        paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'completed') as PaymentStatus
-                    } : order
-                )
-            );
+                setOrders(prevOrders =>
+                    prevOrders.map(order =>
+                        order.id === orderId ? {
+                            ...updatedOrder,
+                            status: 'COMPLETED' as const,
+                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'completed') as PaymentStatus
+                        } : order
+                    )
+                );
 
-            toast({
-                title: 'Service Completed',
-                description: 'The service booking has been marked as completed.',
-            });
-        } catch (err) {
-            console.error('Failed to update order status:', err);
-            toast({
-                title: 'Error',
-                description: 'Failed to mark service as completed. Please try again.',
-                variant: 'destructive',
-            });
-        } finally {
-            setIsUpdating(false);
-        }
+                toast({
+                    title: 'Service Completed',
+                    description: 'The service booking has been marked as completed.',
+                });
+            } catch (err) {
+                console.error('Failed to update order status:', err);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to mark service as completed. Please try again.',
+                    variant: 'destructive',
+                });
+            } finally {
+                setIsUpdating(false);
+            }
+        });
     };
 
     const confirmBooking = async (orderId: string) => {
-        try {
-            setIsUpdating(true);
-            const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'CONFIRMED' as OrderStatus);
+        // FIX (Task 18): Prevent duplicate order mutations
+        await runWithLock(async () => {
+            try {
+                setIsUpdating(true);
+                const updatedOrder = await sellerApi.updateOrderStatus(orderId, 'CONFIRMED' as OrderStatus);
 
-            setOrders(prevOrders =>
-                prevOrders.map(order =>
-                    order.id === orderId ? {
-                        ...order,
-                        status: 'CONFIRMED' as const,
-                        paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
-                        updatedAt: new Date().toISOString()
-                    } : order
-                )
-            );
+                setOrders(prevOrders =>
+                    prevOrders.map(order =>
+                        order.id === orderId ? {
+                            ...order,
+                            status: 'CONFIRMED' as const,
+                            paymentStatus: (updatedOrder.paymentStatus?.toLowerCase() || 'paid') as PaymentStatus,
+                            updatedAt: new Date().toISOString()
+                        } : order
+                    )
+                );
 
-            toast({
-                title: 'Booking Confirmed',
-                description: 'The service booking has been confirmed and the buyer has been notified.',
-            });
-        } catch (err) {
-            console.error('Failed to confirm booking:', err);
-            toast({
-                title: 'Error',
-                description: 'Failed to confirm booking. Please try again.',
-                variant: 'destructive',
-            });
-        } finally {
-            setIsUpdating(false);
-        }
+                toast({
+                    title: 'Booking Confirmed',
+                    description: 'The service booking has been confirmed and the buyer has been notified.',
+                });
+            } catch (err) {
+                console.error('Failed to confirm booking:', err);
+                toast({
+                    title: 'Error',
+                    description: 'Failed to confirm booking. Please try again.',
+                    variant: 'destructive',
+                });
+            } finally {
+                setIsUpdating(false);
+            }
+        });
     };
 
     const handleCancelClick = (orderId: string) => {
@@ -220,35 +236,38 @@ export default function SellerOrdersSection() {
 
         setShowCancelDialog(false);
 
-        try {
-            setIsUpdating(true);
-            const result = await sellerApi.cancelOrder(cancellingOrderId);
+        // FIX (Task 18): Prevent duplicate order mutations
+        await runWithLock(async () => {
+            try {
+                setIsUpdating(true);
+                const result = await sellerApi.cancelOrder(cancellingOrderId);
 
-            // Update the order status in the list
-            setOrders(prevOrders =>
-                prevOrders.map(order =>
-                    order.id === cancellingOrderId ? {
-                        ...order,
-                        status: 'CANCELLED' as const,
-                        paymentStatus: 'reversed' as const
-                    } : order
-                )
-            );
+                // Update the order status in the list
+                setOrders(prevOrders =>
+                    prevOrders.map(order =>
+                        order.id === cancellingOrderId ? {
+                            ...order,
+                            status: 'CANCELLED' as const,
+                            paymentStatus: 'reversed' as const
+                        } : order
+                    )
+                );
 
-            toast({
-                title: 'Order Cancelled',
-                description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount?.toLocaleString() || '0'}.`,
-            });
-        } catch (err: any) {
-            console.error('Failed to cancel order:', err);
-            toast({
-                title: 'Error',
-                description: err.response?.data?.message || 'Failed to cancel order. Please try again.',
-                variant: 'destructive',
-            });
-        } finally {
-            setIsUpdating(false);
-        }
+                toast({
+                    title: 'Order Cancelled',
+                    description: `The order has been cancelled. Buyer will receive a refund of KSh ${result.refundAmount?.toLocaleString() || '0'}.`,
+                });
+            } catch (err: any) {
+                console.error('Failed to cancel order:', err);
+                toast({
+                    title: 'Error',
+                    description: err.response?.data?.message || 'Failed to cancel order. Please try again.',
+                    variant: 'destructive',
+                });
+            } finally {
+                setIsUpdating(false);
+            }
+        });
     };
 
     if (isLoading) {

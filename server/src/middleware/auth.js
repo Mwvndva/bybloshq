@@ -14,12 +14,11 @@ const policies = {
   order: OrderPolicy
 };
 
-// Short-lived in-memory cache for auth results to reduce DB load under concurrent requests
+// Short-lived in-memory cache for auth results to reduce DB load under concurrent requests.
 // Key: JWT token, Value: { user, expiresAt }
-// 30 seconds is safe — permissions don't change frequently, and logout
-// invalidates the token in the blacklist (still checked before cache)
+// 5 seconds is used to mitigate risk of stale cache in multi-instance environments.
 const _authCache = new Map();
-const AUTH_CACHE_TTL_MS = 30 * 1000;
+const AUTH_CACHE_TTL_MS = 5 * 1000;
 const MAX_AUTH_CACHE_SIZE = 500;
 
 // Cleanup stale entries every 2 minutes

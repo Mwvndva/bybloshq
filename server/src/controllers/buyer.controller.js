@@ -569,7 +569,7 @@ const buyerInfoSchema = z.object({
   whatsappNumber: z.string().optional(),
   city: z.string().min(2, 'City is required'),
   location: z.string().optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters').optional(),
 }).refine(data => data.phone || data.mobilePayment || data.whatsappNumber, {
   message: "At least one contact method (phone, mobilePayment, or whatsappNumber) is required",
   path: ["phone"]

@@ -55,4 +55,14 @@ export default async () => {
             logger.error('❌ Failed to start completion retry cron:', err.message);
         }
     }
+    // 6. Cleanup Job (daily)
+    if (process.env.ENABLE_CLEANUP_CRON !== 'false') {
+        try {
+            const { scheduleCleanupJobs } = await import('../cron/cleanupCron.js');
+            scheduleCleanupJobs();
+            logger.info('✅ Cleanup cron started');
+        } catch (err) {
+            logger.error('❌ Failed to start cleanup cron:', err.message);
+        }
+    }
 };

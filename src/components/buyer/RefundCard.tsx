@@ -7,6 +7,7 @@ import { DollarSign, Loader2, Clock, Wallet, TrendingUp, CheckCircle2, AlertCirc
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import buyerApi from '@/api/buyerApi';
+import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 interface RefundCardProps {
   refundAmount: number;
@@ -22,7 +23,8 @@ interface PendingRequest {
 
 export default function RefundCard({ refundAmount, onRefundRequested }: RefundCardProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  // FIX (Task 16): Prevent duplicate refund submissions via synchronous lock
+  const { runWithLock, isLocked: isSubmitting } = useAsyncLock();
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [isLoadingPending, setIsLoadingPending] = useState(true);
 
@@ -61,28 +63,28 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
   };
 
   const handleConfirmWithdraw = async () => {
-    setIsSubmitting(true);
-    try {
-      await buyerApi.requestRefund({
-        amount: refundAmount
-      });
+    // FIX (Task 16): Prevents duplicate refund submission
+    await runWithLock(async () => {
+      try {
+        await buyerApi.requestRefund({
+          amount: refundAmount
+        });
 
-      toast.success('Refund request submitted successfully! Admin will review it shortly.');
-      setIsDialogOpen(false);
-      
-      // Refresh pending requests
-      await fetchPendingRequests();
-      
-      // Notify parent to refresh data
-      if (onRefundRequested) {
-        onRefundRequested();
+        toast.success('Refund request submitted successfully! Admin will review it shortly.');
+        setIsDialogOpen(false);
+
+        // Refresh pending requests
+        await fetchPendingRequests();
+
+        // Notify parent to refresh data
+        if (onRefundRequested) {
+          onRefundRequested();
+        }
+      } catch (error: any) {
+        console.error('Error requesting refund:', error);
+        toast.error(error.message || 'Failed to submit refund request');
       }
-    } catch (error: any) {
-      console.error('Error requesting refund:', error);
-      toast.error(error.message || 'Failed to submit refund request');
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
   return (
@@ -90,11 +92,11 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
       <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" />
-        
+
         {/* Decorative elements */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-200/20 to-transparent rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-200/20 to-transparent rounded-full blur-2xl" />
-        
+
         <CardContent className="relative p-6 space-y-5">
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -158,9 +160,9 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
               ))}
             </div>
           )}
-          
+
           {/* Action Button */}
-          <Button 
+          <Button
             onClick={handleWithdrawClick}
             disabled={pendingRequests.length > 0 || isLoadingPending || refundAmount <= 0}
             className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed h-12 text-base group/btn"
@@ -188,7 +190,7 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
             <DialogTitle className="text-2xl">Confirm Refund Withdrawal</DialogTitle>
             <p className="text-sm text-gray-600">Review the details before confirming your withdrawal request</p>
           </DialogHeader>
-          
+
           <div className="space-y-4 py-4">
             {/* Amount display */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 text-center">
@@ -220,7 +222,7 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
                 <div>
                   <p className="text-xs font-semibold text-amber-900 mb-1">Processing time</p>
                   <p className="text-xs text-amber-800">
-                    Once submitted, your request will be reviewed by our admin team. 
+                    Once submitted, your request will be reviewed by our admin team.
                     The refund will be processed within 1-3 business days.
                   </p>
                 </div>
