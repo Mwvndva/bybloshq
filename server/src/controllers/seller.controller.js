@@ -328,8 +328,6 @@ export const updateProfile = async (req, res) => {
   }
 };
 
-import { sendPasswordResetEmail } from '../utils/email.js'; // Might generally be handled by AuthService now
-import { createPasswordResetToken } from '../models/seller.model.js'; // Deprecated in favor of User model by AuthService
 
 /**
  * @desc    Reset password
