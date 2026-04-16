@@ -3,11 +3,10 @@
  * Read-only analytics endpoints for the marketing admin dashboard.
  * All queries are optimised for read performance — no writes happen here.
  */
-import bcrypt from 'bcrypt'
-import jwt from 'jsonwebtoken'
 import { pool } from '../config/database.js'
 import { AppError } from '../utils/errorHandler.js'
 import logger from '../utils/logger.js'
+import AuthService from '../services/auth.service.js'
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
 
@@ -24,32 +23,11 @@ export const marketingLogin = async (req, res, next) => {
       return next(new AppError('Email and password are required', 400))
     }
 
-    const MARKETING_EMAIL = process.env.MARKETING_EMAIL || 'adminmarketing@bybloshq.space'
-    if (email.toLowerCase().trim() !== MARKETING_EMAIL) {
+    const { user, token } = await AuthService.login(email, password, 'marketing')
+
+    if (!user) {
       return next(new AppError('Invalid credentials', 401))
     }
-
-    const { rows } = await pool.query(
-      'SELECT id, email, password_hash, role, is_active FROM users WHERE email = $1',
-      [email.toLowerCase().trim()]
-    )
-
-    const user = rows[0]
-    if (!user || !user.is_active) {
-      return next(new AppError('Invalid credentials', 401))
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password_hash)
-    if (!passwordMatch) {
-      return next(new AppError('Invalid credentials', 401))
-    }
-
-    // Issue a short-lived token specifically for the marketing dashboard
-    const token = jwt.sign(
-      { id: user.id, role: 'marketing', email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '8h' }  // 8-hour session — a working day
-    )
 
     logger.info(`[MARKETING-AUTH] Login successful: ${user.email}`)
 

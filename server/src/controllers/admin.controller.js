@@ -1,9 +1,8 @@
-import bcrypt from 'bcrypt';
-import jwt from 'jsonwebtoken';
 import { promisify } from 'util';
 import dotenv from 'dotenv';
 import { AppError } from '../utils/errorHandler.js';
 import AdminService from '../services/admin.service.js';
+import AuthService from '../services/auth.service.js';
 import { pool } from '../config/database.js';
 import whatsappService from '../services/whatsapp.service.js';
 import payoutService from '../services/payout.service.js';
@@ -24,28 +23,14 @@ const adminLogin = async (req, res, next) => {
       return next(new AppError('Please provide email and password', 400));
     }
 
-    // Reuse shared auth logic directly or via service
-    // For now, simpler to query user and check role
-    const result = await pool.query('SELECT * FROM users WHERE email = $1 AND role = \'admin\' AND is_active = true', [email]);
-    const user = result.rows[0];
+    const { user, token } = await AuthService.login(email, password, 'admin');
 
-    if (!user || user.role !== 'admin' || !(await bcrypt.compare(password, user.password_hash))) {
+    if (!user) {
       return next(new AppError('Invalid email or password', 401));
     }
 
-    const token = jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '24h' });
-
-    // Set BOTH cookies for forward compatibility
+    // Set JWT cookie (standardized)
     res.cookie('jwt', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      maxAge: 24 * 60 * 60 * 1000,
-      path: '/',
-      domain: process.env.COOKIE_DOMAIN || undefined
-    });
-    // Keep 'token' for any legacy code that reads it:
-    res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
