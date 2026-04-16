@@ -53,6 +53,7 @@ import PaymentLoadingModal from './PaymentLoadingModal';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
+import { AddProductForm } from './AddProductForm';
 import NewClientOrderModal from './NewClientOrderModal';
 import ReferralPanel from './ReferralPanel';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
@@ -169,8 +170,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [products, setProducts] = useState<Product[]>([]);
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
 
   const initialPhysicalAddress = sellerProfile?.physicalAddress === 'Nairobi, Kenya' ? '' : (sellerProfile?.physicalAddress || '');
   const initialLat = sellerProfile?.latitude;
@@ -1561,14 +1563,28 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Manage inventory and track stock levels</p>
                 </div>
 
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/seller/add-product')}
-                  className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-lg font-semibold text-xs w-full sm:w-auto h-8"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Product
-                </Button>
+                <Dialog open={isAddProductModalOpen} onOpenChange={setIsAddProductModalOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-lg font-semibold text-xs w-full sm:w-auto h-8"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add Product
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none">
+                    <div className="bg-zinc-950 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                      <AddProductForm
+                        onSuccess={() => {
+                          fetchProducts();
+                          setIsAddProductModalOpen(false);
+                        }}
+                        onClose={() => setIsAddProductModalOpen(false)}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               <ProductsList

@@ -8,10 +8,13 @@ import { useNavigate } from 'react-router-dom';
 import { ProductsList } from '@/components/seller/ProductsList';
 import { sellerApi } from '@/api/sellerApi';
 import { toast } from '@/components/ui/sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AddProductForm } from '@/components/seller/AddProductForm';
 
 export default function SellerProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   // Toast is imported directly from sonner
@@ -132,13 +135,28 @@ export default function SellerProductsPage() {
             <h1 className="text-3xl font-bold text-white">My Products</h1>
             <p className="text-zinc-400">Manage your product listings</p>
           </div>
-          <Button
-            onClick={() => navigate('/seller/products/new')}
-            className="bg-emerald-500 text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] px-6 py-3 hover:scale-105 active:scale-95 transition-all duration-200"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
+
+          <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <DialogTrigger asChild>
+              <Button
+                className="bg-emerald-500 text-black font-bold rounded-full hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] px-6 py-3 hover:scale-105 active:scale-95 transition-all duration-200"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Product
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none">
+              <div className="bg-zinc-950 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                <AddProductForm
+                  onSuccess={() => {
+                    fetchProducts();
+                    setIsAddModalOpen(false);
+                  }}
+                  onClose={() => setIsAddModalOpen(false)}
+                />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
         <div className="bg-zinc-900/30 backdrop-blur-xl border border-white/5 rounded-2xl">
@@ -188,7 +206,7 @@ export default function SellerProductsPage() {
                 <p className="text-zinc-400 mb-6">Add your first product to get started</p>
                 <Button
                   variant="link"
-                  onClick={() => navigate('/seller/products/new')}
+                  onClick={() => setIsAddModalOpen(true)}
                   className="text-emerald-400 hover:text-emerald-300"
                 >
                   Add Product
