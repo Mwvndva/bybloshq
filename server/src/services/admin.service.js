@@ -125,32 +125,46 @@ class AdminService {
       const productStatusQuery = `
               SELECT 
                 CASE 
-                  WHEN status = 'available' THEN 'Available'
-                  WHEN status = 'sold' THEN 'Sold'
+                  WHEN status IN ('available', 'active', 'In Stock') THEN 'Available'
+                  WHEN status IN ('sold', 'Out of Stock') THEN 'Sold'
                   ELSE INITCAP(status)
                 END as name,
                 COUNT(*) as value
               FROM products 
               WHERE status != 'draft'
-              GROUP BY status;
+              GROUP BY 1;
             `;
 
-      // 4. Geographic Distribution (Top 5 Areas in Nairobi)
+      // 4. Geographic Distribution (Top 5 Cities)
       const geoQuery = `
-              SELECT COALESCE(NULLIF(location, ''), 'Unknown') as name, COUNT(*) as value
+              SELECT COALESCE(NULLIF(city, ''), 'Unknown City') as name, COUNT(*) as value
               FROM buyers 
-              WHERE city = 'Nairobi' OR city IS NULL OR city = ''
-              GROUP BY COALESCE(NULLIF(location, ''), 'Unknown')
+              GROUP BY 1
               ORDER BY value DESC 
               LIMIT 5;
             `;
 
       const [userGrowth, revenueTrends, salesTrends, productStatus, geoDist] = await Promise.all([
-        pool.query(userGrowthQuery).catch(e => ({ rows: [] })),
-        pool.query(revenueQuery).catch(e => ({ rows: [] })),
-        pool.query(salesQuery).catch(e => ({ rows: [] })),
-        pool.query(productStatusQuery).catch(e => ({ rows: [] })),
-        pool.query(geoQuery).catch(e => ({ rows: [] }))
+        pool.query(userGrowthQuery).catch(e => {
+          logger.error('Analytics: userGrowthQuery failed', e);
+          return { rows: [] };
+        }),
+        pool.query(revenueQuery).catch(e => {
+          logger.error('Analytics: revenueQuery failed', e);
+          return { rows: [] };
+        }),
+        pool.query(salesQuery).catch(e => {
+          logger.error('Analytics: salesQuery failed', e);
+          return { rows: [] };
+        }),
+        pool.query(productStatusQuery).catch(e => {
+          logger.error('Analytics: productStatusQuery failed', e);
+          return { rows: [] };
+        }),
+        pool.query(geoQuery).catch(e => {
+          logger.error('Analytics: geoQuery failed', e);
+          return { rows: [] };
+        })
       ]);
 
       return {
