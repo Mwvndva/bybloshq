@@ -148,6 +148,7 @@ export const adminApi = {
         ...data.data,
         userGrowth: data.data?.userGrowth || [],
         revenueTrends: data.data?.revenueTrends || [],
+        salesTrends: data.data?.salesTrends || [],
         productStatus: data.data?.productStatus || [],
         geoDistribution: data.data?.geoDistribution || []
       };
@@ -156,6 +157,7 @@ export const adminApi = {
       return {
         userGrowth: [],
         revenueTrends: [],
+        salesTrends: [],
         productStatus: [],
         geoDistribution: []
       };

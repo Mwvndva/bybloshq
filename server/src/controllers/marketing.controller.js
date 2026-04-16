@@ -58,7 +58,7 @@ export const getOverview = async (req, res, next) => {
         -- Platform totals
         (SELECT COUNT(*)  FROM sellers WHERE is_active = true)                          AS total_sellers,
         (SELECT COUNT(*)  FROM buyers  WHERE user_id IS NOT NULL)                       AS total_buyers,
-        (SELECT COUNT(*)  FROM products WHERE status = 'available')                     AS active_products,
+        (SELECT COUNT(*)  FROM products WHERE status IN ('available', 'active', 'In Stock')) AS active_products,
 
         -- GMV and revenue
         (SELECT COALESCE(SUM(total_amount), 0)
@@ -333,34 +333,33 @@ export const getGeography = async (req, res, next) => {
     const [buyerLocations, sellerLocations, gmvLocations] = await Promise.all([
       pool.query(`
         SELECT
-          COALESCE(NULLIF(TRIM(location), ''), 'Unknown') AS location,
+          COALESCE(NULLIF(TRIM(city), ''), 'Unknown City') AS location,
           COUNT(*) AS buyer_count
         FROM buyers
-        WHERE city = 'Nairobi' OR city IS NULL OR city = ''
-        GROUP BY location
+        GROUP BY 1
         ORDER BY buyer_count DESC
         LIMIT 10
       `),
       pool.query(`
         SELECT
-          COALESCE(NULLIF(TRIM(location), ''), 'Unknown') AS location,
+          COALESCE(NULLIF(TRIM(city), ''), 'Unknown City') AS location,
           COUNT(*) AS seller_count,
           COALESCE(SUM(total_sales), 0) AS location_gmv
         FROM sellers
-        WHERE is_active = true AND (city = 'Nairobi' OR city IS NULL OR city = '')
-        GROUP BY location
+        WHERE is_active = true
+        GROUP BY 1
         ORDER BY seller_count DESC
         LIMIT 10
       `),
       pool.query(`
         SELECT
-          COALESCE(NULLIF(TRIM(s.location), ''), 'Unknown') AS location,
+          COALESCE(NULLIF(TRIM(s.city), ''), 'Unknown City') AS location,
           COALESCE(SUM(o.total_amount), 0) AS gmv,
           COUNT(o.id) AS order_count
         FROM product_orders o
         JOIN sellers s ON o.seller_id = s.id
-        WHERE o.payment_status = 'completed' AND (s.city = 'Nairobi' OR s.city IS NULL OR s.city = '')
-        GROUP BY s.location
+        WHERE o.payment_status = 'completed'
+        GROUP BY 1
         ORDER BY gmv DESC
         LIMIT 10
       `)
