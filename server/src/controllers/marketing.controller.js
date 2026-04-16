@@ -23,11 +23,13 @@ export const marketingLogin = async (req, res, next) => {
       return next(new AppError('Email and password are required', 400))
     }
 
-    const { user, token } = await AuthService.login(email, password, 'marketing')
+    const authResult = await AuthService.login(email, password, 'marketing')
 
-    if (!user) {
+    if (!authResult || !authResult.user) {
       return next(new AppError('Invalid credentials', 401))
     }
+
+    const { user, token } = authResult
 
     logger.info(`[MARKETING-AUTH] Login successful: ${user.email}`)
 

@@ -183,7 +183,7 @@ class AuthService {
 
         if (!profile && targetType !== 'admin') return null;
 
-        const token = signToken(user.id, targetType);
+        const token = signToken(user.id, targetType, user.email);
         return { user, profile, token };
     }
 
