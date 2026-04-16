@@ -11,18 +11,18 @@ const router = express.Router();
 
 const initiateProductSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
-  email: z.string().email().optional().or(z.literal('')),
+  email: z.string().email().optional().nullable().or(z.literal('')),
   amount: z.coerce.number().positive('Valid amount is required'),
-  productId: z.string().min(1, 'Product ID is required'),
-  sellerId: z.string().optional(),
-  productName: z.string().optional(),
-  customerName: z.string().optional(),
-  narrative: z.string().optional(),
+  productId: z.coerce.string().min(1, 'Product ID is required'),
+  sellerId: z.coerce.string().optional().nullable(),
+  productName: z.string().optional().nullable(),
+  customerName: z.string().optional().nullable(),
+  narrative: z.string().optional().nullable(),
   paymentMethod: z.enum(['paystack', 'payd']).optional(),
 });
 
 const checkStatusSchema = z.object({
-  invoiceId: z.string().min(1, 'Invoice ID is required'),
+  invoiceId: z.coerce.string().min(1, 'Invoice ID is required'),
 });
 
 // Public routes (no authentication required)
