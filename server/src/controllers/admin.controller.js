@@ -23,11 +23,13 @@ const adminLogin = async (req, res, next) => {
       return next(new AppError('Please provide email and password', 400));
     }
 
-    const { user, token } = await AuthService.login(email, password, 'admin');
+    const authResult = await AuthService.login(email, password, 'admin');
 
-    if (!user) {
+    if (!authResult || !authResult.user) {
       return next(new AppError('Invalid email or password', 401));
     }
+
+    const { user, token } = authResult;
 
     // Set JWT cookie (standardized)
     res.cookie('jwt', token, {

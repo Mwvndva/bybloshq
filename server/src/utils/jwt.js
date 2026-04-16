@@ -7,9 +7,9 @@ import { AppError } from './errorHandler.js';
  * @param {string} role - User role (buyer, seller, organizer, admin)
  * @returns {string} JWT token
  */
-const VALID_ROLES = ['buyer', 'seller', 'admin'];
+const VALID_ROLES = ['buyer', 'seller', 'admin', 'marketing'];
 
-export const signToken = (id, role = 'buyer') => {
+export const signToken = (id, role = 'buyer', email = null) => {
   if (!id) {
     throw new Error('User ID is required to sign a token');
   }
@@ -22,8 +22,11 @@ export const signToken = (id, role = 'buyer') => {
     throw new Error(`Invalid role: "${role}". Must be one of: ${VALID_ROLES.join(', ')}`);
   }
 
+  const payload = { id, role };
+  if (email) payload.email = email;
+
   return jwt.sign(
-    { id, role },
+    payload,
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
