@@ -29,67 +29,43 @@ export const handlePaydPayoutCallback = async (req, res) => {
     // RESPOND 200 IMMEDIATELY as required by Payd docs
     res.status(200).json({ received: true });
 
-    // Process asynchronously
+    // NOTE: We do NOT open a transaction here. updateStatusWithSideEffects
+    // manages its own atomic transaction internally with row-level locking.
+    // Opening an outer transaction here would create lock contention.
     setImmediate(async () => {
-        const client = await pool.connect();
         try {
             const transactionReference = payload.transaction_reference;
-            logger.info(`[PAYOUT-CALLBACK] Matching webhook transaction_reference: ${transactionReference}`);
-            const resultCode = payload.result_code;
-            const paydStatus = payload.status;
-            const mpesaReceipt = payload.third_party_trans_id || null;
-
             if (!transactionReference) {
                 logger.warn('[PAYOUT-CALLBACK] Missing transaction_reference');
                 return;
             }
 
-            // Payd docs: SUCCESS = result_code===0 AND (status==="success" OR success===true)
-            // Both result_code AND status/success must confirm success
-            const resultCodeNum = Number.parseInt(resultCode, 10);
+            const resultCodeNum = Number.parseInt(payload.result_code, 10);
             const isSuccess = resultCodeNum === 0 &&
-                (paydStatus === 'success' || payload.success === true);
+                (payload.status === 'success' || payload.success === true);
+            const finalStatus = isSuccess ? 'completed' : 'failed';
 
-            let finalStatus = isSuccess ? 'completed' : 'failed';
-
-            await client.query('BEGIN');
-
-            const { rows: [request] } = await client.query(
-                `SELECT wr.id, wr.status, wr.amount, wr.seller_id,
-                  s.whatsapp_number AS entity_phone
-           FROM withdrawal_requests wr
-           LEFT JOIN sellers s ON wr.seller_id = s.id
-           WHERE wr.provider_reference = $1
-           FOR UPDATE OF wr`,
+            // Transaction and locking are handled in the service layer to ensure atomicity
+            // across status updates and wallet refunds. We only fetch the ID here.
+            const { rows: [request] } = await pool.query(
+                `SELECT id FROM withdrawal_requests WHERE provider_reference = $1`,
                 [transactionReference]
             );
 
             if (!request) {
                 logger.warn(`[PAYOUT-CALLBACK] No request found for: ${transactionReference}`);
-                await client.query('ROLLBACK');
                 return;
             }
 
-            if (['completed', 'failed'].includes(request.status)) {
-                await client.query('ROLLBACK');
-                logger.info(`[PAYOUT-CALLBACK] Already processed: ${request.id}`);
-                return;
-            }
-
-            const updated = await WithdrawalService.updateStatusWithSideEffects(request.id, finalStatus, {
+            await WithdrawalService.updateStatusWithSideEffects(request.id, finalStatus, {
                 remarks: payload.remarks,
-                mpesa_receipt: mpesaReceipt,
+                mpesa_receipt: payload.third_party_trans_id || null,
                 provider_reference: transactionReference
             });
 
-            logger.info(`[PAYOUT-CALLBACK] Processed request ${request.id} using WithdrawalService. Status: ${finalStatus}`);
-            await client.query('COMMIT');
-
+            logger.info(`[PAYOUT-CALLBACK] Processed request ${request.id}. Status: ${finalStatus}`);
         } catch (error) {
-            await client.query('ROLLBACK').catch(() => { });
             logger.error('[PAYOUT-CALLBACK] Processing error:', error);
-        } finally {
-            if (client) client.release();
         }
     });
 };

@@ -1,5 +1,11 @@
 import { pool } from '../config/database.js';
 
+const PRODUCT_UPDATABLE_FIELDS = new Set([
+    'name', 'price', 'description', 'image_url', 'images', 'aesthetic',
+    'status', 'sold_at', 'is_sold', 'service_options', 'service_locations',
+    'track_inventory', 'quantity', 'low_stock_threshold', 'updated_at'
+]);
+
 class ProductModel {
     static async create(client, data) {
         const {
@@ -67,7 +73,7 @@ class ProductModel {
     }
 
     static async update(client, id, sellerId, updateData) {
-        const keys = Object.keys(updateData);
+        const keys = Object.keys(updateData).filter(k => PRODUCT_UPDATABLE_FIELDS.has(k));
         if (keys.length === 0) return null;
 
         const setClause = keys.map((key, i) => `${key} = $${i + 1}`).join(', ');

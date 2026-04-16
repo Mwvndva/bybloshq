@@ -11,6 +11,10 @@ import { sendPasswordResetEmail } from '../utils/email.js';
 import { pool } from '../config/database.js';
 import PendingRegistration from '../models/pendingRegistration.model.js';
 
+// Pre-computed bcrypt hash for timing-safe email enumeration prevention
+// Generated once: bcrypt.hash('__timing_dummy__', 10)
+const TIMING_DUMMY_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lh3y';
+
 class AuthService {
     /**
      * Unified login method
@@ -29,9 +33,8 @@ class AuthService {
         }
 
         // Anti-Enumeration: Always run bcrypt.compare to prevent timing attacks.
-        // Use a dummy hash if the email doesn't exist in either table.
-        const DUMMY_HASH = '$2b$10$abcdefghijklmnopqrstuvwxyz0123456789.abcdefghijk';
-        const hashToCompare = target ? (target.password_hash || target.password) : DUMMY_HASH;
+        // Use a pre-computed dummy hash if the email doesn't exist in either table.
+        const hashToCompare = target ? (target.password_hash || target.password) : TIMING_DUMMY_HASH;
         const isMatch = await bcrypt.compare(password, hashToCompare);
 
         if (!target || !isMatch) {

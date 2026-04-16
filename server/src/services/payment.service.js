@@ -9,6 +9,7 @@ import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
 import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
 import Buyer from '../models/buyer.model.js';
+import cacheService from './cache.service.js';
 
 export class PaymentService {
     constructor() {
@@ -471,11 +472,16 @@ export class PaymentService {
                     });
                     logger.info('[PAYD-WEBHOOK] Order completion successful', { payment_id: payment.id });
                 } catch (completionErr) {
-                    logger.error('[CRITICAL] handlePaydCallback completeOrder failed:', completionErr);
-                    await pool.query(
-                        "UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb) WHERE id = $1",
-                        [payment.id]
-                    );
+                    logger.error(`[CRITICAL] handlePaydCallback completeOrder failed for payment ${payment.id}:`, completionErr);
+                    try {
+                        await pool.query(
+                            "UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb) WHERE id = $1",
+                            [payment.id]
+                        );
+                        logger.info(`[RECOVERY] Marked payment ${payment.id} as needs_completion=true`);
+                    } catch (flagErr) {
+                        logger.error(`[CRITICAL] FAILED TO SET needs_completion FLAG for payment ${payment.id}:`, flagErr);
+                    }
                 }
             }
 
@@ -721,15 +727,20 @@ export class PaymentService {
             logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
             return { status: 'success', message: 'Payment processed and Order completion triggered' };
         } catch (completionErr) {
-            logger.error('[PAYD-PAYIN] CRITICAL: Order completion failed after payment was confirmed.', {
+            logger.error(`[PAYD-PAYIN] CRITICAL: Order completion failed after payment was confirmed. Payment ID: ${payment.id}`, {
                 paymentId: payment.id,
                 orderId: metadata.order_id,
                 error: completionErr.message
             });
-            await pool.query(
-                `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{needs_completion}', 'true'::jsonb) WHERE id = $1`,
-                [payment.id]
-            );
+            try {
+                await pool.query(
+                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{needs_completion}', 'true'::jsonb) WHERE id = $1`,
+                    [payment.id]
+                );
+                logger.info(`[RECOVERY] Marked payment ${payment.id} as needs_completion=true`);
+            } catch (flagErr) {
+                logger.error(`[CRITICAL] FAILED TO SET needs_completion FLAG for payment ${payment.id}:`, flagErr);
+            }
             return {
                 status: 'payment_confirmed_completion_pending',
                 message: 'Payment received. Order completion will be retried.',
@@ -798,15 +809,27 @@ export class PaymentService {
 
                     // If this is a pending order, trigger completion now instead of waiting for webhook
                     const paymentMeta = payment.metadata || {};
-                    if (paymentMeta.order_id || paymentMeta.product_id) {
+                    const orderId = paymentMeta.order_id || paymentMeta.product_id;
+
+                    if (orderId) {
+                        const lockKey = `lock:order_completion:${orderId}`;
                         try {
+                            // DISTRIBUTED LOCK: Prevent race conditions between webhooks and polling
+                            // ioredis set command with 'NX' ensures only one caller acquires the lock
+                            const acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 30, 'NX');
+
+                            if (!acquired) {
+                                logger.info(`[ORDER-LOCK] Order ${orderId} completion already in progress. Skipping polling path.`);
+                                return;
+                            }
+
                             await OrderService.completeOrder({
                                 ...payment,
-                                status: PaymentStatus.COMPLETED
+                                metadata: paymentMeta
                             });
-                            logger.info('[PaymentService] In-poll fulfillment triggered successfully', { payment_id: payment.id });
-                        } catch (fulfillErr) {
-                            logger.warn('[PaymentService] In-poll fulfillment deferred (already processed or failed)', fulfillErr.message);
+                            logger.info('[PAYMENT-POLL] Order completion triggered successfully via polling', { orderId });
+                        } catch (completionErr) {
+                            logger.error('[PAYMENT-POLL] Failed to complete order via polling path:', completionErr);
                         }
                     }
                 }
@@ -1378,9 +1401,17 @@ export class PaymentService {
         // Verify Price
         const dbPrice = Number.parseFloat(product.price);
         const clientAmount = Number.parseFloat(amount);
-        if (Math.abs(dbPrice - clientAmount) > 0.01) {
-            logger.warn('Price mismatch', { dbPrice, clientAmount });
-            throw new Error('Price verification failed');
+        // SECURITY: Verify price x quantity to prevent client-side total price injection.
+        const expectedAmount = dbPrice * (Number.parseInt(quantity) || 1);
+        if (Math.abs(expectedAmount - clientAmount) > 0.01) {
+            logger.warn('[PAYMENT-SECURITY] Price verification failed', {
+                productId,
+                dbPrice,
+                quantity,
+                expectedAmount,
+                clientAmount
+            });
+            throw new Error('Price verification failed. The price or quantity may have changed.');
         }
 
         // 3. Create Order

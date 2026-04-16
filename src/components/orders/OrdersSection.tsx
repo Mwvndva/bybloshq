@@ -58,6 +58,7 @@ import buyerApi from '@/api/buyerApi';
 import { publicApiService } from '@/api/publicApi';
 import { toast } from 'sonner';
 import { getImageUrl, cn } from '@/lib/utils';
+import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 const glassCardStyle: React.CSSProperties = {
   background: 'rgba(20, 20, 20, 0.7)',
@@ -266,6 +267,8 @@ export default function OrdersSection() {
 
 
   const [isConfirming, setIsConfirming] = useState<string | null>(null);
+  // FIX (Task 17): Prevent duplicate order confirmation via synchronous lock
+  const { runWithLock } = useAsyncLock();
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showCollectionDialog, setShowCollectionDialog] = useState(false);
@@ -338,87 +341,39 @@ export default function OrdersSection() {
   const handleConfirmReceipt = async () => {
     if (!currentOrderId) return;
 
-
-
-
     setShowReceiptDialog(false);
 
-    setIsConfirming(currentOrderId);
-    const loadingToast = toast.loading('Confirming order receipt...');
+    // FIX (Task 17): Avoid premature completion state before backend confirmation
+    await runWithLock(async () => {
+      setIsConfirming(currentOrderId);
+      const loadingToast = toast.loading('Confirming order receipt...');
 
-    try {
+      try {
+        const result = await buyerApi.confirmOrderReceipt(currentOrderId);
 
-      const result = await buyerApi.confirmOrderReceipt(currentOrderId);
+        if (result.success) {
+          toast.success('Order marked as received. Thank you for your purchase!', { id: loadingToast });
 
-
-      if (result.success) {
-        toast.success('Order marked as received. Thank you for your purchase!', { id: loadingToast });
-
-        // Optimistically update the UI
-        setOrders(prevOrders => {
-
-          const updatedOrders = prevOrders.map(order => {
-            if (order.id === currentOrderId) {
-
-              // Create a new order object with the updated properties
-              const updatedOrder: Order = {
-                id: order.id,
-                orderNumber: order.orderNumber,
-                status: 'COMPLETED',
-                totalAmount: order.totalAmount,
-                currency: order.currency,
-                createdAt: order.createdAt,
-                updatedAt: new Date().toISOString(),
-                paymentStatus: 'success',
-                items: [...order.items],
-                customer: { ...order.customer },
-                seller: { ...order.seller },
-                shippingAddress: order.shippingAddress ? { ...order.shippingAddress } : undefined
-              };
-              return updatedOrder;
-            }
-            return order;
-          });
-
-          return updatedOrders;
-        });
-
-        // Fetch fresh data from the server to ensure consistency
-
-        try {
+          // FIX (Task 17): Update UI only AFTER API resolves (removed optimistic update)
           await fetchOrders();
-
-        } catch (fetchError) {
-          console.error('Error refreshing orders:', fetchError);
-          // Don't show error to user since we've already updated optimistically
+        } else {
+          const errorMsg = result.message || 'Failed to confirm order receipt';
+          console.error('Failed to confirm order receipt:', errorMsg);
+          toast.error(errorMsg, { id: loadingToast });
         }
-      } else {
-        const errorMsg = result.message || 'Failed to confirm order receipt';
-        console.error('Failed to confirm order receipt:', errorMsg);
-        toast.error(errorMsg, { id: loadingToast });
-      }
-    } catch (error: any) {
-      console.error('Error in handleConfirmReceipt:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'An error occurred while confirming order receipt';
-      console.error('Error details:', errorMsg);
+      } catch (error: any) {
+        console.error('Error in handleConfirmReceipt:', error);
+        const errorMsg = error.response?.data?.message || error.message || 'An error occurred while confirming order receipt';
 
-      // More specific error handling
-      if (error.code === 'ECONNABORTED') {
-        toast.error('Request timed out. Please check your internet connection and try again.', { id: loadingToast });
-      } else if (error.response) {
-        // Server responded with an error status code
-        toast.error(`Server error: ${errorMsg}`, { id: loadingToast });
-      } else if (error.request) {
-        // No response received
-        toast.error('No response from server. Please check your internet connection.', { id: loadingToast });
-      } else {
-        // Something else went wrong
-        toast.error(`Error: ${errorMsg}`, { id: loadingToast });
+        if (error.code === 'ECONNABORTED') {
+          toast.error('Request timed out. Please check your internet connection and try again.', { id: loadingToast });
+        } else {
+          toast.error(`Error: ${errorMsg}`, { id: loadingToast });
+        }
+      } finally {
+        setIsConfirming(null);
       }
-    } finally {
-      setIsConfirming(null);
-
-    }
+    });
   };
 
   const handleCollectionClick = (orderId: string) => {
@@ -430,22 +385,26 @@ export default function OrdersSection() {
     if (!currentOrderId) return;
 
     setShowCollectionDialog(false);
-    setIsConfirming(currentOrderId);
-    const loadingToast = toast.loading('Marking as collected...');
 
-    try {
-      await buyerApi.markOrderAsCollected(currentOrderId);
-      toast.success('Order completed! Funds released to seller.', { id: loadingToast });
+    // FIX (Task 17): Prevent duplicate collection Confirmation 
+    await runWithLock(async () => {
+      setIsConfirming(currentOrderId);
+      const loadingToast = toast.loading('Marking as collected...');
 
-      // Refresh orders
-      await fetchOrders();
-    } catch (error: any) {
-      console.error('Error marking as collected:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Failed to mark as collected';
-      toast.error(errorMsg, { id: loadingToast });
-    } finally {
-      setIsConfirming(null);
-    }
+      try {
+        await buyerApi.markOrderAsCollected(currentOrderId);
+        toast.success('Order completed! Funds released to seller.', { id: loadingToast });
+
+        // Refresh orders
+        await fetchOrders();
+      } catch (error: any) {
+        console.error('Error marking as collected:', error);
+        const errorMsg = error.response?.data?.message || error.message || 'Failed to mark as collected';
+        toast.error(errorMsg, { id: loadingToast });
+      } finally {
+        setIsConfirming(null);
+      }
+    });
   };
 
   const [clientStatus, setClientStatus] = useState<Record<string, boolean>>({});

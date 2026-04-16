@@ -234,6 +234,18 @@ export const updateSeller = async (id, updates) => {
     values.push(facebookLinkToUpdate);
   }
 
+  if (updates.bio !== undefined) {
+    paramCount++;
+    updatesList.push(`bio = $${paramCount}`);
+    values.push(updates.bio);
+  }
+
+  if (updates.avatarUrl !== undefined || updates.avatar_url !== undefined) {
+    paramCount++;
+    updatesList.push(`avatar_url = $${paramCount}`);
+    values.push(updates.avatarUrl || updates.avatar_url);
+  }
+
   // Handle physical shop fields. If no physical address, coordinates MUST be null (not Nairobi sentinel)
   const hasShop = !!updates.physicalAddress;
   const lat = hasShop ? parseFloat(updates.latitude || 0) : null;
@@ -289,6 +301,8 @@ export const updateSeller = async (id, updates) => {
       physical_address AS "physicalAddress",
       latitude,
       longitude,
+      bio,
+      avatar_url AS "avatarUrl",
       created_at AS "createdAt"
     `;
 
@@ -312,73 +326,6 @@ export const updateSeller = async (id, updates) => {
   }
 };
 
-export const generateAuthToken = (seller) => {
-  return jwt.sign(
-    {
-      id: seller.id,
-      email: seller.email,
-      role: 'seller' // Add role to the token payload
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: '24h' } // 24 hours expiration
-  );
-};
-
-export const verifyPassword = async (candidatePassword, hashedPassword) => {
-  return await bcrypt.compare(candidatePassword, hashedPassword);
-};
-
-export const createPasswordResetToken = async (email) => {
-  // Generate a random token
-  const token = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-
-  // Hash the token before saving to database
-  const hashedToken = await bcrypt.hash(token, SALT_ROUNDS);
-
-  // Set token expiration (1 hour from now)
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 1);
-
-  // Save the hashed token and expiration to the database
-  await query(
-    `UPDATE sellers 
-     SET password_reset_token = $1, 
-         password_reset_expires = $2 
-     WHERE email = $3`,
-    [hashedToken, expiresAt, email]
-  );
-
-  // Return the unhashed token (to be sent via email)
-  return token;
-};
-
-export const verifyPasswordResetToken = async (email, token) => {
-  // Find the seller with the given email and a valid reset token
-  const result = await query(
-    `SELECT password_reset_token, password_reset_expires 
-     FROM sellers 
-     WHERE email = $1 AND password_reset_expires > NOW()`,
-    [email]
-  );
-
-  if (!result.rows[0]) {
-    return false;
-  }
-
-  const { password_reset_token: hashedToken } = result.rows[0];
-
-  // Verify the token matches the hashed version in the database
-  return await bcrypt.compare(token, hashedToken);
-};
-
-export const updatePassword = async (email, newPassword) => {
-  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
-  await query(
-    'UPDATE users SET password_hash = $1, reset_password_token = NULL, reset_password_expires = NULL WHERE email = $2',
-    [hashedPassword, email]
-  );
-  return true;
-};
 
 export const becomeClient = async (sellerId, userId) => {
   const client = await pool.connect();

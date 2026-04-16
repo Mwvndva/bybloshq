@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { Check, X, Percent, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,13 +24,14 @@ export const DiscountCodeInput = ({
   onDiscountRemoved
 }: DiscountCodeInputProps) => {
   const [code, setCode] = useState('');
-  const [isValidating, setIsValidating] = useState(false);
   const [appliedDiscount, setAppliedDiscount] = useState<{
     code: string;
     discountAmount: number;
     finalAmount: number;
     description: string;
   } | null>(null);
+  // FIX (Task 20): Prevent duplicate discount validation via synchronous lock
+  const { runWithLock, isLocked: isValidating } = useAsyncLock();
   const { toast } = useToast();
 
   const validateDiscountCode = async () => {
@@ -42,47 +44,46 @@ export const DiscountCodeInput = ({
       return;
     }
 
-    setIsValidating(true);
-
-    try {
-      const response = await apiClient.post('/discount-codes/validate', {
-        code: code.trim().toUpperCase(),
-        order_amount: orderAmount
-      });
-
-      const validation = (response.data as any)?.data;
-
-      if ((response.data as any)?.success && validation.valid) {
-        setAppliedDiscount({
+    // FIX (Task 20): Prevents duplicate validation requests
+    await runWithLock(async () => {
+      try {
+        const response = await apiClient.post('/discount-codes/validate', {
           code: code.trim().toUpperCase(),
-          discountAmount: validation.discount_amount,
-          finalAmount: validation.final_amount,
-          description: validation.discount_code.description || ''
+          order_amount: orderAmount
         });
 
-        onDiscountApplied(validation.discount_amount, validation.final_amount, code.trim().toUpperCase());
+        const validation = (response.data as any)?.data;
 
+        if ((response.data as any)?.success && validation.valid) {
+          setAppliedDiscount({
+            code: code.trim().toUpperCase(),
+            discountAmount: validation.discount_amount,
+            finalAmount: validation.final_amount,
+            description: validation.discount_code.description || ''
+          });
+
+          onDiscountApplied(validation.discount_amount, validation.final_amount, code.trim().toUpperCase());
+
+          toast({
+            title: 'Discount Applied!',
+            description: `You've saved ${formatCurrency(validation.discount_amount)} on your order`,
+          });
+        } else {
+          toast({
+            title: 'Invalid Discount Code',
+            description: validation.message || 'This discount code is not valid',
+            variant: 'destructive'
+          });
+        }
+      } catch (error: any) {
+        console.error('Error validating discount code:', error);
         toast({
-          title: 'Discount Applied!',
-          description: `You've saved ${formatCurrency(validation.discount_amount)} on your order`,
-        });
-      } else {
-        toast({
-          title: 'Invalid Discount Code',
-          description: validation.message || 'This discount code is not valid',
+          title: 'Error',
+          description: error.response?.data?.message || 'Failed to validate discount code',
           variant: 'destructive'
         });
       }
-    } catch (error: any) {
-      console.error('Error validating discount code:', error);
-      toast({
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to validate discount code',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsValidating(false);
-    }
+    });
   };
 
   const removeDiscount = () => {

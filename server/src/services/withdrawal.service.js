@@ -22,11 +22,24 @@ class WithdrawalService {
 
     /**
      * Update withdrawal status with side effects (refunds, notifications)
+     * 
+     * @param {number} requestId
+     * @param {string} newStatus
+     * @param {Object} opts
+     * @param {Object} externalClient - Optional external DB client for transaction management
      */
-    async updateStatusWithSideEffects(requestId, newStatus, { remarks = null, provider_reference = null, mpesa_receipt = null } = {}) {
-        const client = await pool.connect();
+    async updateStatusWithSideEffects(requestId, newStatus, opts = {}, externalClient = null) {
+        const { remarks = null, provider_reference = null, mpesa_receipt = null } = opts;
+
+        // If an externalClient is provided, we use it and let the caller manage COMMIT/ROLLBACK.
+        // Otherwise, we obtain a new client from the pool and manage our own transaction.
+        const client = externalClient || await pool.connect();
+        const isInternalTransaction = !externalClient;
+
         try {
-            await client.query('BEGIN');
+            if (isInternalTransaction) {
+                await client.query('BEGIN');
+            }
 
             const { rows: [request] } = await client.query(
                 `SELECT wr.*, s.whatsapp_number as entity_phone 
@@ -40,7 +53,9 @@ class WithdrawalService {
 
             // Prevent re-processing terminal states
             if (['completed', 'failed'].includes(request.status)) {
-                await client.query('ROLLBACK');
+                if (isInternalTransaction) {
+                    await client.query('ROLLBACK');
+                }
                 return request;
             }
 
@@ -62,13 +77,16 @@ class WithdrawalService {
 
             let newBalance = null;
             if (newStatus === 'failed') {
+                // ENSURE: refundToWallet uses the SAME client for atomicity
                 newBalance = await payoutService.refundToWallet(client, request);
                 logger.info(`[WithdrawalService] Request ${requestId} failed. Refunded KES ${request.amount} to seller ${request.seller_id}`);
             }
 
-            await client.query('COMMIT');
+            if (isInternalTransaction) {
+                await client.query('COMMIT');
+            }
 
-            // Notify via WhatsApp
+            // Notify via WhatsApp (Non-blocking)
             if (request.entity_phone) {
                 whatsappService.notifySellerWithdrawalUpdate(request.entity_phone, {
                     amount: request.amount,
@@ -83,11 +101,15 @@ class WithdrawalService {
 
             return { ...request, status: newStatus };
         } catch (error) {
-            await client.query('ROLLBACK');
+            if (isInternalTransaction) {
+                await client.query('ROLLBACK');
+            }
             logger.error(`[WithdrawalService] updateStatusWithSideEffects failed for ${requestId}:`, error.message);
             throw error;
         } finally {
-            client.release();
+            if (isInternalTransaction) {
+                client.release();
+            }
         }
     }
 
@@ -190,6 +212,26 @@ class WithdrawalService {
      */
     async _callPaydAndUpdate(request, entity, amount, phone) {
         try {
+            // IDEMPOTENCY CHECK: Before initiating a new payout, check if we already have a reference
+            // and if that payout was already successfully processed by the provider.
+            if (request.provider_reference) {
+                try {
+                    const statusCheck = await payoutService.checkPayoutStatus(request.provider_reference);
+                    // Status strings may vary, 'success' and 'completed' are terminal success states
+                    if (statusCheck.success && (statusCheck.status === 'success' || statusCheck.status === 'completed')) {
+                        logger.info(`[WithdrawalService] Request ${request.id} already successful on Payd (${statusCheck.status}). Syncing state.`);
+                        await this.updateStatusWithSideEffects(request.id, 'completed', {
+                            provider_reference: request.provider_reference,
+                            remarks: 'Payout confirmed via status check'
+                        });
+                        return; // Exit early, no need to re-initiate
+                    }
+                } catch (statusError) {
+                    // Status check might fail if endpoint is unavailable; log and proceed cautiously
+                    logger.warn(`[WithdrawalService] Status check failed for request ${request.id}: ${statusError.message}`);
+                }
+            }
+
             logger.info(`[WithdrawalService] Calling Payd for request ${request.id}`);
 
             const paydResponse = await payoutService.initiatePayout({

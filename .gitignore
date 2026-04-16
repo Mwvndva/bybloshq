@@ -128,3 +128,13 @@ public
 
 # Vercel
 .vercel
+
+# Byblos Specific
+outputs/
+scripts/dev/
+baileys_auth_info/
+uploads/
+tsc_errors.txt
+remove_console_logs.ps1
+frontend.nginx.conf
+nginx.conf

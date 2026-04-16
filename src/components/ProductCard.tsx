@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import apiClient from '@/lib/apiClient';
 import { clearAllAuthData } from '@/lib/authCleanup';
 import ProductImage from '@/components/common/ProductImage';
+import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 type Theme = 'default' | 'black' | 'pink' | 'orange' | 'green' | 'red' | 'yellow' | 'brown';
 
@@ -57,16 +58,36 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
   const [isCheckingPhone, setIsCheckingPhone] = useState(false);
 
+  // FIX (Task 14): Prevent duplicate payment triggers and race conditions
+  const { runWithLock, isLocked } = useAsyncLock();
+
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isMounted = useRef(true); // FIX (Task 14): Prevent memory leaks / state updates on unmounted component
 
   // Add cleanup on unmount
   useEffect(() => {
+    isMounted.current = true;
     return () => {
+      isMounted.current = false;
       if (pollingIntervalRef.current) {
         clearInterval(pollingIntervalRef.current);
       }
     };
   }, []);
+
+  /**
+   * FIX (Task 21): Normalize phone numbers before API calls
+   * Converts +2547... to 07... and removes spaces
+   */
+  const normalizePhone = (phone: string): string => {
+    let normalized = phone.replace(/\s+/g, '');
+    if (normalized.startsWith('+254')) {
+      normalized = '0' + normalized.slice(4);
+    } else if (normalized.startsWith('254')) {
+      normalized = '0' + normalized.slice(3);
+    }
+    return normalized;
+  };
 
   // Derived state
   const displaySeller = seller || product.seller;
@@ -192,12 +213,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
     // 2. Authenticated? -> Direct Payment
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
-      await executePayment({
-        fullName: userData.fullName,
-        email: userData.email,
-        mobilePayment: userData.mobilePayment,
-        city: userData.city,
-        location: userData.location
+      await runWithLock(async () => {
+        // Prevents duplicate payment requests via synchronous lock (Task 14)
+        await executePayment({
+          fullName: userData.fullName,
+          email: userData.email,
+          mobilePayment: userData.mobilePayment,
+          city: userData.city,
+          location: userData.location
+        });
       });
     } else {
       // 3. Not Authenticated? -> Phone Check
@@ -217,13 +241,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setIsBookingModalOpen(false);
 
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
-      await executePayment({
-        fullName: userData.fullName,
-        email: userData.email,
-        mobilePayment: userData.mobilePayment,
-        city: userData.city,
-        location: userData.location
-      }, data);
+      await runWithLock(async () => {
+        // Prevents duplicate payment requests via synchronous lock (Task 14)
+        await executePayment({
+          fullName: userData.fullName,
+          email: userData.email,
+          mobilePayment: userData.mobilePayment,
+          city: userData.city,
+          location: userData.location
+        }, data);
+      });
     } else {
       setIsPhoneCheckModalOpen(true);
     }
@@ -232,11 +259,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const handlePhoneSubmit = async (phone: string) => {
     setIsCheckingPhone(true);
     try {
-      // Use buyerApi (which uses the old axios instance? No, let's just use it as is for now, it works)
-      // Actually, let's verify buyerApi uses the same base logic.
-      const result = await buyerApi.checkBuyerByPhone(phone);
+      // FIX (Task 21): Normalize phone number before checking status
+      const normalizedPhone = normalizePhone(phone);
+      const result = await buyerApi.checkBuyerByPhone(normalizedPhone);
 
-      setCurrentPhone(phone);
+      setCurrentPhone(normalizedPhone);
       setIsPhoneCheckModalOpen(false);
 
       if (result.exists && result.buyer) {
@@ -245,13 +272,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         if (result.buyer.hasEmail || (result.buyer.email && result.buyer.email.trim() !== '')) {
           // Has Email -> PROCEED TO PAYMENT
           // We pass empty email if we only have the flag; backend will resolve it from DB
-          await executePayment({
-            fullName: result.buyer.fullName || '',
-            email: result.buyer.email || '', // Can be empty if we have hasEmail=true
-            mobilePayment: result.buyer.mobilePayment || phone,
-            city: result.buyer.city,
-            location: result.buyer.location
-          }, null, result.buyer.id);
+          await runWithLock(async () => {
+            // Prevents duplicate payment requests via synchronous lock (Task 14)
+            await executePayment({
+              fullName: result.buyer!.fullName || '',
+              email: result.buyer!.email || '', // Can be empty if we have hasEmail=true
+              mobilePayment: result.buyer!.mobilePayment || normalizedPhone,
+              city: result.buyer!.city,
+              location: result.buyer!.location
+            }, null, result.buyer!.id);
+          });
         } else {
           // Missing Email -> Prompt to Complete Profile
           toast({
@@ -312,10 +342,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
 
         // Proceed with new ID (or let backend infer from cookie)
-        await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
+        await runWithLock(async () => {
+          // Prevents duplicate payment requests via synchronous lock (Task 14)
+          await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
+        });
       } else {
         // Existing user (skipped save) -> Proceed using backend lookup
-        await executePayment(buyerInfo, explicitBookingData);
+        await runWithLock(async () => {
+          // Prevents duplicate payment requests via synchronous lock (Task 14)
+          await executePayment(buyerInfo, explicitBookingData);
+        });
       }
 
     } catch (error: any) {
@@ -414,31 +450,57 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
 
     pollingIntervalRef.current = setInterval(async () => {
+      // FIX (Task 14): Prevent state updates after unmount
+      if (!isMounted.current) {
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        return;
+      }
+
       attempts++;
       if (attempts > 24) {
-        clearInterval(pollingIntervalRef.current!);
-        pollingIntervalRef.current = null;
-        setIsProcessingPurchase(false);
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+        // Set state only if still mounted
+        if (isMounted.current) {
+          // No longer using isProcessingPurchase setter directly, isLocked from useAsyncLock handles it
+        }
         return;
       }
 
       try {
         const response = await apiClient.get(`/payments/status/${invoiceId}`);
+
+        // Final check before updating state or complex logic
+        if (!isMounted.current) {
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
+          return;
+        }
+
         const data: any = response.data;
         const status = data.data?.status || data.status;
 
         if (status === 'success' || status === 'completed') {
-          clearInterval(pollingIntervalRef.current!);
-          pollingIntervalRef.current = null;
-          setIsProcessingPurchase(false);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
           toast({ title: 'Payment Successful', description: 'Your purchase has been confirmed! Redirecting...' });
           setTimeout(() => {
-            navigate(`/payment/success?reference=${invoiceId}&status=success`, { replace: true });
+            if (isMounted.current) navigate(`/payment/success?reference=${invoiceId}&status=success`, { replace: true });
           }, 1500);
         } else if (status === 'failed') {
-          clearInterval(pollingIntervalRef.current!);
-          pollingIntervalRef.current = null;
-          setIsProcessingPurchase(false);
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+          }
           toast({ title: 'Payment Failed', description: 'Transaction declined.', variant: 'destructive' });
         }
       } catch (e) {
@@ -744,10 +806,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             }
             handleBuyClick(e);
           }}
-          disabled={isSold || isProcessingPurchase}
-          aria-busy={isProcessingPurchase}
+          disabled={isSold || isLocked}
+          aria-busy={isLocked}
         >
-          {isProcessingPurchase ? (
+          {isLocked ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Processing...</span>

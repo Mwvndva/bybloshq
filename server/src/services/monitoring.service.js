@@ -50,9 +50,7 @@ class MonitoringService {
 
         } catch (error) {
             logger.error('[SECURITY-ALERT] Failed to store security alert:', error);
-            if (process.env.NODE_ENV !== 'production') {
-                throw error; // Surface in dev/staging so missing tables are caught early
-            }
+            throw error; // Always surface — missing security_alerts table must be caught early
         }
     }
 

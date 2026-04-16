@@ -654,7 +654,24 @@ export const sellerApi = {
     mpesaNumber: string;
     mpesaName: string;
   }): Promise<WithdrawalRequest> {
-    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>('/sellers/withdrawal-request', data);
+    // FIX (Task 6): Validate amount to prevent invalid payout requests
+    if (data.amount <= 0 || data.amount > 1_000_000) {
+      throw new Error('Invalid withdrawal amount. Must be between 1 and 1,000,000.');
+    }
+
+    // FIX (Task 6): Add idempotency key to prevent duplicate payout requests
+    // Format: withdrawal-{timestamp}-{random}
+    const idempotencyKey = `withdrawal-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+
+    const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>(
+      '/sellers/withdrawal-request',
+      data,
+      {
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        }
+      }
+    );
     return response.data.data;
   },
 
@@ -773,7 +790,23 @@ export const sellerApi = {
 
 export const withdrawalService = {
   createRequest: async (data: { amount: string; mpesaNumber: string; mpesaName: string }) => {
-    const response = await sellerApiInstance.post('/sellers/withdrawal-request', data);
+    const amount = parseFloat(data.amount);
+
+    // FIX (Task 6): Prevents duplicate payout requests via idempotency key
+    const idempotencyKey = `withdrawal-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+
+    if (isNaN(amount) || amount <= 0 || amount > 1_000_000) {
+      throw new Error('Invalid withdrawal amount');
+    }
+
+    const response = await sellerApiInstance.post('/sellers/withdrawal-request',
+      { ...data, amount },
+      {
+        headers: {
+          'Idempotency-Key': idempotencyKey
+        }
+      }
+    );
     return response.data;
   },
 

@@ -1,5 +1,10 @@
 import { pool } from '../config/database.js';
 
+const PAYMENT_UPDATABLE_FIELDS = new Set([
+  'status', 'metadata', 'provider_reference', 'api_ref',
+  'mpesa_receipt', 'raw_response', 'updated_at'
+]);
+
 class Payment {
   /**
    * Insert a new payment record
@@ -81,7 +86,7 @@ class Payment {
 
 
   static async update(client, id, updateData) {
-    const fields = Object.keys(updateData);
+    const fields = Object.keys(updateData).filter(f => PAYMENT_UPDATABLE_FIELDS.has(f));
     if (fields.length === 0) return null;
 
     const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
