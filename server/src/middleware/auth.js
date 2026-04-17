@@ -178,6 +178,13 @@ export const protect = async (req, res, next) => {
       }
     }
 
+    if (userType !== 'admin' && !userData.is_verified) {
+      const error = new AppError('Please verify your email address to access this feature.', 403);
+      error.code = 'EMAIL_NOT_VERIFIED';
+      error.email = userData.email;
+      return next(error);
+    }
+
     // Standardize user identity to prevent overlap between roles
     user = {
       id: userData.user_table_id || decoded.id, // PRIMARY ID: Users Table ID (global)
@@ -185,6 +192,7 @@ export const protect = async (req, res, next) => {
       email: userData.email,
       userType: userType,
       role: userData.role,
+      is_verified: userData.is_verified,
 
       // Profile IDs for current and cross-roles
       profileId: userData.profile_id, // The ID of the profile used for this login

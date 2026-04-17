@@ -19,6 +19,7 @@ export type UserRole = 'buyer' | 'seller' | 'admin';
 interface BaseUser {
     id: number;
     email: string;
+    is_verified: boolean;
     createdAt: string;
     updatedAt?: string;
 }
@@ -403,6 +404,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
                     profile: {
                         id: adminId,
                         email: email,
+                        is_verified: true,
                         createdAt: new Date().toISOString()
                     },
                     isAuthenticated: true

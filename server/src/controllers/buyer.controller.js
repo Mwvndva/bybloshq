@@ -623,12 +623,27 @@ export const saveBuyerInfo = async (req, res, next) => {
     }
 
     // 4. Handle immediate creation (e.g. if user already existed)
-    const buyer = result.buyer || result.user;
-    if (!buyer) {
+    const buyerProfile = result.buyer || result.user;
+    if (!buyerProfile) {
       throw new Error('Failed to create or retrieve buyer profile');
     }
 
-    const token = BuyerService.signToken(buyer);
+    // SECURITY FIX: Ensure the user is verified before issuing a token
+    const userId = buyerProfile.user_id || buyerProfile.userId;
+    const user = await User.findById(userId);
+
+    if (user && !user.is_verified) {
+      return res.status(200).json({
+        status: 'success',
+        data: {
+          emailVerificationRequired: true,
+          email: user.email,
+          message: 'Your account is pending verification. Please check your email to complete your account setup.'
+        }
+      });
+    }
+
+    const token = BuyerService.signToken(buyerProfile);
 
     // 5. Set auth cookie
     const cookieOptions = {

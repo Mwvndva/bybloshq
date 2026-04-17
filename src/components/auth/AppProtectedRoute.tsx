@@ -53,6 +53,17 @@ export function AppProtectedRoute({
         );
     }
 
+    // ─── Verification Check ───────────────────────────────────────────────────
+    if (role !== 'admin' && user && !user.profile.is_verified) {
+        return (
+            <Navigate
+                to={`/verify-email?email=${encodeURIComponent(user.profile.email)}&type=${role}`}
+                state={{ from: location }}
+                replace
+            />
+        );
+    }
+
     // Wrong role → redirect to own dashboard
     if (role && !allowedRoles.includes(role)) {
         // Explicit cross-role check: a seller with a buyerProfile may access buyer routes
