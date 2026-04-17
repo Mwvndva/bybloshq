@@ -464,19 +464,26 @@ class AuthService {
             const expiresHours = Number.parseInt(process.env.EMAIL_VERIFICATION_EXPIRES_HOURS || '24', 10);
             const expiresAt = new Date(Date.now() + expiresHours * 60 * 60 * 1000);
 
+            // Explicit mapping to prevent data loss and fix termsAccepted bug
+            const registrationData = pending.registration_data || {};
+
             await PendingRegistration.create({
-                ...pending,
+                email: normalizedEmail,
                 passwordHash: pending.password_hash,
-                registrationData: pending.registration_data,
+                role: pending.role,
+                registrationData: registrationData.registrationData || registrationData,
                 physicalAddress: pending.physical_address,
                 latitude: pending.latitude,
                 longitude: pending.longitude,
                 verificationToken: hashedToken,
-                expiresAt
+                expiresAt,
+                termsAccepted: pending.terms_accepted
             });
 
+            // Use the original role from registration for the link to ensure consistency
+            const linkRole = pending.role || userType;
             const { sendVerificationEmail } = await import('../utils/email.js');
-            await sendVerificationEmail(normalizedEmail, rawToken, userType);
+            await sendVerificationEmail(normalizedEmail, rawToken, linkRole);
         }
 
         return true;

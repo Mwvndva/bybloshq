@@ -65,27 +65,11 @@ class SellerService {
                 return seller;
             }
 
-            // 2. Create new User + Profile atomically
-            const newUser = await User.create({ email, password, role: 'seller', is_verified: false }, client);
-            const seller = await SellerModel.createSeller({
-                fullName, shopName, email, whatsappNumber: whatsapp_number, city, location, physicalAddress, latitude, longitude, userId: newUser.id
-            }, client);
-
-            await client.query('COMMIT');
-
-            // Invalidate cross-role cache for this user
-            try {
-                const CacheService = (await import('./cache.service.js')).default;
-                const userId = newUser?.id;
-                if (userId) {
-                    await CacheService.delete(`user:${userId}:cross-roles`);
-                }
-            } catch (cacheErr) {
-                // Non-critical — cache will expire naturally
-                logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
+            if (!existingUser) {
+                // IMPORTANT: New users must go through AuthService.register to utilize 
+                // the pending_registrations table and email verification flow.
+                throw new Error('User account must be created through AuthService for email verification.');
             }
-
-            return seller;
         } catch (error) {
             await client.query('ROLLBACK');
             throw error;

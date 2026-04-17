@@ -46,9 +46,28 @@ const VerifyEmail = () => {
         verify();
     }, [token, email, type]);
 
+    const [resending, setResending] = useState(false);
+
     const handleBackToLogin = () => {
         const loginPath = type === 'seller' ? '/seller/login' : '/buyer/login';
         navigate(loginPath);
+    };
+
+    const handleResend = async () => {
+        if (!email || !type) return;
+        setResending(true);
+        try {
+            if (type === 'seller') {
+                await sellerApi.resendVerification(email);
+            } else {
+                await buyerApi.resendVerification(email);
+            }
+            toast.success('Email Sent', { description: 'A new verification link has been sent to your inbox.' });
+        } catch (error: any) {
+            toast.error('Resend Failed', { description: error.message });
+        } finally {
+            setResending(false);
+        }
     };
 
     return (
@@ -110,12 +129,26 @@ const VerifyEmail = () => {
                         <Button
                             onClick={handleBackToLogin}
                             className={`w-full h-12 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${status === 'success'
-                                    ? 'bg-white text-black hover:bg-gray-200'
-                                    : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
+                                ? 'bg-white text-black hover:bg-gray-200'
+                                : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
                                 }`}
                         >
                             {status === 'success' ? 'Go to Login' : 'Try Again'}
                             <ArrowRight className="w-5 h-5" />
+                        </Button>
+                    )}
+
+                    {status !== 'success' && email && type && (
+                        <Button
+                            onClick={handleResend}
+                            disabled={resending}
+                            variant="ghost"
+                            className="w-full text-blue-400 hover:text-blue-300 hover:bg-blue-500/5"
+                        >
+                            {resending ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                            ) : null}
+                            Resend verification email
                         </Button>
                     )}
 
