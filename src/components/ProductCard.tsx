@@ -289,7 +289,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             setInitialBuyerLocation({
               latitude: Number(result.buyer.latitude),
               longitude: Number(result.buyer.longitude),
-              fullAddress: result.buyer.location || ''
+              fullAddress: result.buyer.fullAddress || result.buyer.location || ''
             });
           } else {
             setInitialBuyerLocation(null);
