@@ -6,6 +6,7 @@ import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
 import CacheService from '../services/cache.service.js';
 import logger from '../utils/logger.js';
+import TokenBlacklistService from '../services/tokenBlacklist.service.js';
 
 
 // Maps for easy lookup in req.user.can
@@ -62,16 +63,15 @@ export const protect = async (req, res, next) => {
       return next(new AppError('You are not logged in! Please log in to get access.', 401));
     }
 
-    // Check token blacklist BEFORE verifying (fast path — Redis lookup)
+    // Check token Blacklist BEFORE verifying (fast path — Redis lookup)
     try {
-      const tokenBlacklist = (await import('../services/tokenBlacklist.service.js')).default;
-      const isBlacklisted = await tokenBlacklist.isBlacklisted(token);
+      const isBlacklisted = await TokenBlacklistService.isBlacklisted(token);
       if (isBlacklisted) {
         return next(new AppError('Your session has been invalidated. Please log in again.', 401));
       }
     } catch (blacklistErr) {
       // Redis unavailable — fall through (fail open, log the issue)
-      logger.warn('[AUTH] Token blacklist check failed (Redis unavailable):', blacklistErr.message);
+      logger.warn(`[AUTH][Request ID: ${req.id || 'N/A'}] Token blacklist check failed (Redis unavailable):`, blacklistErr.message);
     }
 
     // 2) Verify token
@@ -250,7 +250,7 @@ export const protect = async (req, res, next) => {
     next();
 
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
+    if (error.name === 'JsonWebTokenError' || error.message?.includes('Invalid token')) {
       logger.warn('[SECURITY-ALERT] Invalid JWT attempt', {
         error: error.message,
         ip: req.ip,
@@ -259,16 +259,12 @@ export const protect = async (req, res, next) => {
       });
       return next(new AppError('Invalid token. Please log in again!', 401));
     }
-    if (error.name === 'TokenExpiredError') {
+    if (error.name === 'TokenExpiredError' || error.message?.includes('expired')) {
       return next(new AppError('Your token has expired! Please log in again.', 401));
     }
 
-    logger.error('[AUTH-ERROR] Authentication failed:', {
-      error: error.message,
-      ip: req.ip,
-      url: req.originalUrl
-    });
-    return next(new AppError('Authentication failed', 401));
+    logger.error(`[AUTH-ERROR][Request ID: ${req.id || 'N/A'}] Authentication failed:`, error);
+    return next(new AppError(error.message || 'Authentication failed', 401));
   }
 };
 

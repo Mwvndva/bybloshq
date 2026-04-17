@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import { AppError } from './errorHandler.js';
+import logger from './logger.js';
 
 /**
  * Sign a JWT token with user ID and role
@@ -74,7 +75,7 @@ export const verifyToken = (token) => {
     if (error.name === 'TokenExpiredError') {
       throw new AppError('Your token has expired! Please log in again.', 401);
     }
-    console.error('JWT Verification Error:', error.message);
+    logger.error('JWT Verification Error:', error.message);
     throw new AppError('Invalid token. Please log in again!', 401);
   }
 };
