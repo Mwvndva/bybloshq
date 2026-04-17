@@ -606,17 +606,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Product Image — always renders, shows placeholder when no image */}
       <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
-        <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-          <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
-            <FileText className="h-3 w-3 mr-1" />
-            Digital
-          </Badge>
-          {product.digital_file_size && (
-            <Badge className="bg-black/60 text-white border-0 text-[9px] py-0 px-1.5 backdrop-blur-md">
-              {formatFileSize(product.digital_file_size)}
+        {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
+          <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
+            <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
+              <FileText className="h-3 w-3 mr-1" />
+              Digital
             </Badge>
-          )}
-        </div>
+            {product.digital_file_size && (
+              <Badge className="bg-black/60 text-white border-0 text-[10px] py-0.5 px-2 backdrop-blur-md rounded-full">
+                {formatFileSize(product.digital_file_size)}
+              </Badge>
+            )}
+          </div>
+        )}
 
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
