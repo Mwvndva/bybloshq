@@ -171,36 +171,32 @@ export function getImageUrl(path: string | undefined | null): string {
  * Standardized check to determine if a seller is "Shopless"
  * (Missing physical shop flag, missing address, or using default placeholder coordinates)
  */
-export function isSellerShopless(seller: any | null | undefined): boolean {
-  if (!seller) return true;
+export function isSellerShopless(input: any | null | undefined): boolean {
+  if (!input) return true;
 
-  // Flatten object to handle both seller details and joined product fields
-  // Some API responses return coordinates flat on the product object
-  const data = seller.seller ? { ...seller.seller, ...seller } : seller;
+  // 1. Identify the core seller data (prioritize nested seller object)
+  const seller = input.seller || input;
 
-  // Check for presence of coordinates first as they are the primary "shop" indicator
-  // Handle both naming conventions: latitude/longitude and lat/lng
-  const latField = data.latitude !== undefined ? data.latitude : data.lat;
-  const lngField = data.longitude !== undefined ? data.longitude : data.lng;
+  // 2. Extract coordinates with all common naming conventions
+  const latValue = seller.latitude ?? seller.lat ?? input.latitude ?? input.lat;
+  const lngValue = seller.longitude ?? seller.lng ?? input.longitude ?? input.lng;
 
-  const lat = Number(latField);
-  const lng = Number(lngField);
+  const lat = Number(latValue);
+  const lng = Number(lngValue);
 
-  const hasCoords = lat && lng && lat !== 0 && lng !== 0;
+  // 3. Validate coordinates (must be non-zero numbers)
+  const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
 
-  // If they have valid coords and it's NOT the default Nairobi sentinel, they have a shop
+  // 4. If they have valid coords, check if it's the Nairobi sentinel
   if (hasCoords) {
     const isDefaultNairobi = Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001;
-    if (!isDefaultNairobi) return false;
+    if (!isDefaultNairobi) return false; // Has a real shop
   }
 
-  // Strictly require hasPhysicalShop to be true if coords are missing
-  if (data.hasPhysicalShop === true) return false;
+  // 5. Check for explicit shop flag
+  if (seller.hasPhysicalShop === true || input.hasPhysicalShop === true) return false;
 
-  // Fallback to address check ONLY for very basic presence, but don't consider it a "shop"
-  // if it's just a city name or vague string. For Service bookings, accuracy (coords) is key.
-  // REMOVED: Vague address strings like "CBD" should NOT bypass the buyer-location input.
-
+  // 6. Otherwise, they are shopless (Mobile Service only)
   return true;
 }
 
