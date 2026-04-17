@@ -56,7 +56,7 @@ class WhatsAppService {
                 auth: state,
                 printQRInTerminal: false,
                 logger: mockLogger,
-                browser: ['Byblos', 'Chrome', '121.0.6167.160'], // More modern browser ID
+                browser: ['Ubuntu', 'Chrome', '20.0.04'], // More standardized browser ID to avoid filtering
                 connectTimeoutMs: 60000,
                 keepAliveIntervalMs: 30000, // Keep connection alive
                 syncFullHistory: false,
@@ -140,11 +140,23 @@ class WhatsAppService {
                 // Add tiny delay to ensure order and avoid rate limits
                 await new Promise(resolve => setTimeout(resolve, 500));
 
-                await this.sock.sendMessage(jid, { text: message });
-                logger.info(`✅ WhatsApp message sent successfully to ${phone}`);
+                // Verify recipient exists on WhatsApp before sending (optional but helpful for debugging)
+                try {
+                    const [result] = await this.sock.onWhatsApp(jid);
+                    if (!result || !result.exists) {
+                        logger.warn(`[WHATSAPP] Recipient ${jid} does not appear to be on WhatsApp. Message may not deliver.`);
+                    }
+                } catch (e) {
+                    logger.debug(`[WHATSAPP] onWhatsApp check failed for ${jid}: ${e.message}`);
+                }
+
+                const sentMsg = await this.sock.sendMessage(jid, { text: message });
+                logger.info(`✅ WhatsApp message sent successfully to ${jid} (Original: ${phone})`, {
+                    messageId: sentMsg?.key?.id
+                });
                 return true;
             } catch (error) {
-                logger.error(`❌ Failed to send WhatsApp message to ${phone}:`, error.message);
+                logger.error(`❌ Failed to send WhatsApp message to ${phone} (JID: ${jid}):`, error.message);
                 throw error;
             } finally {
                 // M-12 FIX: Remove map entry when this task completes to prevent unbounded growth.
@@ -164,10 +176,37 @@ class WhatsAppService {
      */
     formatToJid(phone) {
         if (!phone) return null;
-        let p = phone.replace(/\D/g, ''); // Strip non-digits
-        if (p.startsWith('0')) p = '254' + p.substring(1);
-        if (!p.startsWith('254')) p = '254' + p;
-        return p + '@s.whatsapp.net';
+        let p = phone.toString().replace(/\D/g, ''); // Strip non-digits
+
+        // 1. Remove common redundant prefixes (2540... -> 0...)
+        if (p.startsWith('2540')) {
+            p = p.substring(3);
+        }
+
+        // 2. Handle 07... or 01... -> 7... or 1...
+        if (p.startsWith('0')) {
+            p = p.substring(1);
+        }
+
+        // 3. Handle numbers that already start with 254 (e.g. 2547...)
+        if (p.startsWith('254') && p.length > 10) {
+            p = p.substring(3);
+        }
+
+        // 4. Final normalization: Must be 254 + (9 core digits)
+        if (p.length === 9) {
+            p = '254' + p;
+        } else if (p.length === 12 && p.startsWith('254')) {
+            // Already correct
+        } else {
+            // Fallback: if it's longer/shorter, just try to keep it as is if it looks like a JID
+            // but log a warning
+            logger.debug(`[WHATSAPP] Non-standard phone length: ${p} for input: ${phone}`);
+        }
+
+        const jid = p + '@s.whatsapp.net';
+        logger.debug(`[WHATSAPP] Formatted JID: ${jid} from: ${phone}`);
+        return jid;
     }
 
     /**
