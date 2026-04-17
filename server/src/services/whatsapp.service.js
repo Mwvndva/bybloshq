@@ -25,15 +25,23 @@ class WhatsAppService {
     async initialize() {
         logger.info('🔄 Initializing WhatsApp Client (Baileys)...');
 
-        // Block 14 Fix: Clean up existing socket before re-initializing to prevent leaks
+        // Prevent concurrent initialization
+        if (this._initializing) {
+            logger.warn('[WHATSAPP] Initialization already in progress, skipping');
+            return;
+        }
+        this._initializing = true;
+
+        // Clean up existing socket before re-initializing to prevent leaks
         if (this.sock) {
             try {
-                this.sock.ev.removeAllListeners('connection.update');
-                this.sock.ev.removeAllListeners('creds.update');
+                this.sock.ev.removeAllListeners(); // Remove ALL listeners before ending
                 this.sock.end(undefined);
             } catch (e) {
                 logger.warn('Error closing existing socket during re-init:', e.message);
             }
+            this.sock = null;
+            this.isReady = false;
         }
 
         try {
@@ -61,8 +69,8 @@ class WhatsAppService {
                 keepAliveIntervalMs: 30000, // Keep connection alive
                 syncFullHistory: false,
                 markOnlineOnConnect: true,
+                retryRequestDelayMs: 2000, // Add retry delay
             });
-
 
             // Credential updates
             this.sock.ev.on('creds.update', saveCreds);
@@ -80,12 +88,18 @@ class WhatsAppService {
                 }
 
                 if (connection === 'close') {
-                    const shouldReconnect = (lastDisconnect?.error)?.output?.statusCode !== DisconnectReason.loggedOut;
-                    logger.warn('🔌 Connection closed due to ', lastDisconnect?.error, ', reconnecting: ', shouldReconnect);
-
                     this.isReady = false;
-                    // Auto-reconnect if not strictly logged out
+                    this._initializing = false; // Reset flag on close
+
+                    const statusCode = lastDisconnect?.error?.output?.statusCode;
+                    const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
+
+                    logger.warn(`🔌 Connection closed (code: ${statusCode}), reconnecting: ${shouldReconnect}`);
+
                     if (shouldReconnect) {
+                        // Drain the message queue before reconnecting
+                        if (this.messageQueues) this.messageQueues.clear();
+
                         logger.info('Reconnecting to WhatsApp...');
                         // Delay reconnection to prevent rapid spinning
                         setTimeout(() => {
@@ -100,11 +114,13 @@ class WhatsAppService {
                     logger.info('✅ WhatsApp (Baileys) is READY and CONNECTED!');
                     this.isReady = true;
                     this.qrCode = null;
+                    this._initializing = false;
                 }
             });
 
         } catch (error) {
             logger.error('❌ Failed to initialize Baileys:', error);
+            this._initializing = false;
         }
     }
 
@@ -113,9 +129,8 @@ class WhatsAppService {
      */
     async sendMessage(phone, message) {
         if (!this.isReady || !this.sock) {
-            const error = new Error('WhatsApp client not ready or not connected');
             logger.error(`[WHATSAPP] Cannot send message to ${phone}: Client not ready`);
-            throw error;
+            throw new Error('WhatsApp client not ready or not connected');
         }
 
         const jid = this.formatToJid(phone);
@@ -138,22 +153,25 @@ class WhatsAppService {
         const currentTask = previousTask.then(async () => {
             try {
                 // Add tiny delay to ensure order and avoid rate limits
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
 
-                // Verify recipient exists on WhatsApp before sending (optional but helpful for debugging)
-                try {
-                    const [result] = await this.sock.onWhatsApp(jid);
-                    if (!result || !result.exists) {
-                        logger.warn(`[WHATSAPP] Recipient ${jid} does not appear to be on WhatsApp. Message may not deliver.`);
-                    }
-                } catch (e) {
-                    logger.debug(`[WHATSAPP] onWhatsApp check failed for ${jid}: ${e.message}`);
+                // REMOVED: this.sock.onWhatsApp(jid) check
+                // This call hangs intermittently on degraded connections and stalls the entire per-JID queue.
+                // Baileys handles non-existent numbers gracefully — the message just won't be delivered.
+
+                const sentMsg = await Promise.race([
+                    this.sock.sendMessage(jid, { text: message }),
+                    new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('sendMessage timeout after 30s')), 30000)
+                    )
+                ]);
+
+                if (sentMsg?.key?.id) {
+                    logger.info(`✅ WhatsApp message queued to ${jid} (Original: ${phone})`, {
+                        messageId: sentMsg.key.id,
+                        status: sentMsg.status
+                    });
                 }
-
-                const sentMsg = await this.sock.sendMessage(jid, { text: message });
-                logger.info(`✅ WhatsApp message sent successfully to ${jid} (Original: ${phone})`, {
-                    messageId: sentMsg?.key?.id
-                });
                 return true;
             } catch (error) {
                 logger.error(`❌ Failed to send WhatsApp message to ${phone} (JID: ${jid}):`, error.message);
