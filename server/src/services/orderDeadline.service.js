@@ -166,6 +166,90 @@ class OrderDeadlineService {
     }
 
     /**
+     * PIN-06: RESCUE EXPIRED RESERVATIONS
+     * Releases inventory for orders that weren't paid within 10 minutes
+     */
+    async checkExpiredReservations() {
+        try {
+            const result = await pool.query(
+                `SELECT po.id, po.order_number, po.status, po.order_type,
+                        json_agg(json_build_object('productId', oi.product_id, 'quantity', oi.quantity, 'trackInventory', (p.track_inventory = true))) as items
+                 FROM product_orders po
+                 JOIN order_items oi ON po.id = oi.order_id
+                 JOIN products p ON oi.product_id = p.id
+                 WHERE po.status = 'RESERVED'
+                   AND po.reservation_expires_at < NOW()
+                 GROUP BY po.id`
+            );
+
+            const expiredOrders = result.rows;
+            if (expiredOrders.length === 0) return { processedCount: 0, orders: [] };
+
+            logger.info(`Found ${expiredOrders.length} expired reservations to release`);
+
+            for (const order of expiredOrders) {
+                const client = await pool.connect();
+                try {
+                    await client.query('BEGIN');
+
+                    // 1. Release Inventory
+                    for (const item of order.items) {
+                        if (item.trackInventory) {
+                            await client.query(
+                                `UPDATE products 
+                                 SET quantity = quantity + $1,
+                                     reserved_quantity = GREATEST(0, reserved_quantity - $1),
+                                     updated_at = NOW()
+                                 WHERE id = $2`,
+                                [item.quantity, item.productId]
+                            );
+                        }
+                    }
+
+                    // 2. Release Service Slots (if any)
+                    if (order.order_type === 'SERVICE') {
+                        await client.query(
+                            `UPDATE service_slots 
+                             SET status = 'AVAILABLE',
+                                 reserved_by_order_id = NULL,
+                                 expires_at = NULL,
+                                 updated_at = NOW()
+                             WHERE reserved_by_order_id = $1`,
+                            [order.id]
+                        );
+                    }
+
+                    // 3. Update Order Status
+                    await client.query(
+                        `UPDATE product_orders 
+                         SET status = 'EXPIRED',
+                             metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window (10 min) exceeded"}'::jsonb,
+                             updated_at = NOW()
+                         WHERE id = $1`,
+                        [order.id]
+                    );
+
+                    await client.query('COMMIT');
+                    logger.info(`Released reservation for expired order ${order.order_number}`);
+                } catch (err) {
+                    await client.query('ROLLBACK');
+                    logger.error(`Failed to release reservation for order ${order.order_number}:`, err);
+                } finally {
+                    client.release();
+                }
+            }
+
+            return {
+                processedCount: expiredOrders.length,
+                orders: expiredOrders.map(o => o.order_number)
+            };
+        } catch (error) {
+            logger.error('Error checking expired reservations:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Cancel order and process refund
      * @param {any} order
      * @param {string} reason
@@ -386,24 +470,37 @@ If already collected, please contact the seller to arrange return.
 
     /**
      * Run all deadline checks
-     * @returns {Promise<{sellerDeadlines: {processedCount: number, orders: any[]}, buyerDeadlines: {processedCount: number, orders: any[]}, servicePayments: {processedCount: number, orders: any[]}}>}
+     * @returns {Promise<{
+     *   reservations: {processedCount: number, orders: any[]},
+     *   sellerDeadlines: {processedCount: number, orders: any[]},
+     *   buyerDeadlines: {processedCount: number, orders: any[]},
+     *   servicePayments: {processedCount: number, orders: any[]}
+     * }>}
      */
     async runAllChecks() {
         logger.info('🔄 Running order deadline checks...');
 
-        /** @type {{sellerDeadlines: {processedCount: number, orders: any[]}, buyerDeadlines: {processedCount: number, orders: any[]}, servicePayments: {processedCount: number, orders: any[]}}} */
+        /** @type {{
+         *  reservations: {processedCount: number, orders: any[]},
+         *  sellerDeadlines: {processedCount: number, orders: any[]},
+         *  buyerDeadlines: {processedCount: number, orders: any[]},
+         *  servicePayments: {processedCount: number, orders: any[]}
+         * }} */
         const results = {
+            reservations: { processedCount: 0, orders: [] },
             sellerDeadlines: { processedCount: 0, orders: [] },
             buyerDeadlines: { processedCount: 0, orders: [] },
             servicePayments: { processedCount: 0, orders: [] }
         };
 
         try {
+            results.reservations = await this.checkExpiredReservations();
             results.sellerDeadlines = await this.checkExpiredSellerDeadlines();
             results.buyerDeadlines = await this.checkExpiredBuyerDeadlines();
             results.servicePayments = await this.checkServicePaymentRelease();
 
             const totalProcessed =
+                results.reservations.processedCount +
                 results.sellerDeadlines.processedCount +
                 results.buyerDeadlines.processedCount +
                 results.servicePayments.processedCount;

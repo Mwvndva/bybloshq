@@ -24,9 +24,9 @@ interface ServiceBookingModalProps {
         location: string;
         locationType?: string;
         serviceRequirements?: string;
-        buyerLocation?: { latitude: number; longitude: number; fullAddress: string } | null
+        buyerLocation?: { lat: number; lng: number; address: string } | null
     }) => void;
-    initialBuyerLocation?: { latitude: number; longitude: number; fullAddress: string } | null;
+    initialBuyerLocation?: { lat: number; lng: number; address: string } | null;
 }
 
 export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initialBuyerLocation = null }: ServiceBookingModalProps) {
@@ -43,7 +43,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     const { updateProfile } = useGlobalAuth();
 
     const [isChangingLocation, setIsChangingLocation] = useState(false);
-    const [buyerLocation, setBuyerLocation] = useState<{ latitude: number; longitude: number; fullAddress: string } | null>(null);
+    const [buyerLocation, setBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
     const serviceOptions = product.service_options || (product as any).serviceOptions || {};
@@ -66,9 +66,9 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
             setServiceRequirements('');
 
             // PRE-FILL logic for coordinates
-            if (initialBuyerLocation && initialBuyerLocation.latitude && initialBuyerLocation.longitude) {
+            if (initialBuyerLocation && initialBuyerLocation.lat && initialBuyerLocation.lng) {
                 setBuyerLocation(initialBuyerLocation);
-                setCustomLocation(initialBuyerLocation.fullAddress || '');
+                setCustomLocation(initialBuyerLocation.address || '');
             } else {
                 // DON'T auto-fill buyer location from profile anymore to force explicit selection
                 // as requested by user ("should always ask buyer to input their location details")
@@ -84,7 +84,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
             }
 
             // Default based on product settings and shop availability
-            if (initialBuyerLocation && initialBuyerLocation.latitude && initialBuyerLocation.longitude) {
+            if (initialBuyerLocation && initialBuyerLocation.lat && initialBuyerLocation.lng) {
                 // If we have a pre-filled location, default to Home Service (buyer visits seller)
                 setSelectedLocationType('buyer');
             } else if (isShopless) {
@@ -135,9 +135,9 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
     const handleLocationPickerChange = (address: string, coords: { lat: number; lng: number } | null) => {
         const newLoc = {
-            latitude: coords?.lat || 0,
-            longitude: coords?.lng || 0,
-            fullAddress: address
+            lat: coords?.lat || 0,
+            lng: coords?.lng || 0,
+            address: address
         };
         setBuyerLocation(newLoc);
         setCustomLocation(address);
@@ -158,9 +158,9 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         setIsUpdatingProfile(true);
         try {
             await updateProfile({
-                fullAddress: buyerLocation.fullAddress,
-                latitude: buyerLocation.latitude,
-                longitude: buyerLocation.longitude
+                fullAddress: buyerLocation.address,
+                latitude: buyerLocation.lat,
+                longitude: buyerLocation.lng
             } as any, 'buyer');
             setIsChangingLocation(false);
             toast.success('Location updated', {
@@ -180,31 +180,30 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         let finalLocation = location;
 
         if (isShopless) {
-            finalLocation = buyerLocation?.fullAddress || 'Buyer Location';
+            finalLocation = buyerLocation?.address || 'Buyer Location';
         } else if (selectedLocationType === 'buyer') {
             finalLocation = customLocation;
         } else if (locations.length === 0 && !location) {
             finalLocation = 'Default Seller Location';
         }
 
-        if (date && time && finalLocation) {
+        if (date && time && isLocationValid()) {
             onConfirm({
                 date,
                 time,
                 location: finalLocation,
-                locationType: isShopless ? 'seller_visits_buyer' : (selectedLocationType === 'buyer' ? 'seller_visits_buyer' : 'buyer_visits_seller'),
                 serviceRequirements: serviceRequirements.trim() || '',
                 buyerLocation: (isShopless || selectedLocationType === 'buyer' || isSellerVisits) ? {
-                    latitude: buyerLocation?.latitude || 0,
-                    longitude: buyerLocation?.longitude || 0,
-                    fullAddress: finalLocation
+                    lat: buyerLocation?.lat || 0,
+                    lng: buyerLocation?.lng || 0,
+                    address: finalLocation
                 } : null
             });
         }
     };
 
     const isLocationValid = () => {
-        if (isShopless) return !!buyerLocation?.fullAddress;
+        if (isShopless) return !!buyerLocation?.address;
         if (selectedLocationType === 'buyer' || isSellerVisits) return customLocation.trim().length > 0;
         return location.length > 0 || locations.length === 0;
     };
@@ -215,7 +214,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         if (!date) return 'Please select a date';
         if (!time) return 'Please select a time';
         if (!isLocationValid()) {
-            if (isShopless && !buyerLocation?.fullAddress) return 'Please set your location';
+            if (isShopless && !buyerLocation?.address) return 'Please set your location';
             if (selectedLocationType === 'buyer' || isSellerVisits) return 'Please enter your address';
             return 'Please select a location';
         }
@@ -290,10 +289,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                             className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#000000] border border-yellow-400/20 cursor-pointer hover:bg-white/5 transition-colors group/loc"
                                         >
                                             <div className="flex items-center gap-3 overflow-hidden">
-                                                <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.fullAddress ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
+                                                <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.address ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
                                                 <div className="overflow-hidden">
-                                                    <p className={cn("text-sm font-bold truncate", !buyerLocation?.fullAddress ? "text-yellow-400" : "text-white")}>
-                                                        {buyerLocation?.fullAddress || 'Tap to set your location'}
+                                                    <p className={cn("text-sm font-bold truncate", !buyerLocation?.address ? "text-yellow-400" : "text-white")}>
+                                                        {buyerLocation?.address || 'Tap to set your location'}
                                                     </p>
                                                     <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location (Required)</p>
                                                 </div>
@@ -343,10 +342,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                                     className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-yellow-400/20 cursor-pointer hover:bg-white/10 transition-colors group/loc"
                                                 >
                                                     <div className="flex items-center gap-3 overflow-hidden">
-                                                        <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.fullAddress ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
+                                                        <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.address ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
                                                         <div className="overflow-hidden">
-                                                            <p className={cn("text-sm font-bold truncate", !buyerLocation?.fullAddress ? "text-yellow-400" : "text-white")}>
-                                                                {buyerLocation?.fullAddress || 'Tap to set your location'}
+                                                            <p className={cn("text-sm font-bold truncate", !buyerLocation?.address ? "text-yellow-400" : "text-white")}>
+                                                                {buyerLocation?.address || 'Tap to set your location'}
                                                             </p>
                                                             <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location (Required)</p>
                                                         </div>
@@ -416,19 +415,19 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
                     <div className="flex-1 overflow-y-auto px-6 py-4 no-scrollbar">
                         <LocationPicker
-                            initialAddress={buyerLocation?.fullAddress}
-                            initialCoordinates={buyerLocation ? { lat: buyerLocation.latitude, lng: buyerLocation.longitude } : null}
+                            initialAddress={buyerLocation?.address}
+                            initialCoordinates={buyerLocation ? { lat: buyerLocation.lat, lng: buyerLocation.lng } : null}
                             onLocationChange={handleLocationPickerChange}
                             label="Search Address"
                             autoPopulate={false}
-                            initialValue={buyerLocation?.fullAddress || ''}
+                            initialValue={buyerLocation?.address || ''}
                         />
                     </div>
 
                     <DialogFooter className="p-6 pt-2 pb-8 mt-auto shrink-0 flex flex-col gap-3">
                         <Button
                             onClick={saveLocationToProfile}
-                            disabled={isUpdatingProfile || !buyerLocation?.fullAddress}
+                            disabled={isUpdatingProfile || !buyerLocation?.address}
                             className="w-full h-12 rounded-xl bg-yellow-400 text-black font-bold text-sm hover:bg-yellow-500 shadow-[0_0_20px_rgba(250,204,21,0.1)] disabled:opacity-50 transition-all active:scale-[0.98]"
                         >
                             {isUpdatingProfile ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
