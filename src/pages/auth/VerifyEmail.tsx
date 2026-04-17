@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { CheckCircle, XCircle, Loader2, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Loader2, ArrowRight, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import buyerApi from '@/api/buyerApi';
@@ -10,7 +10,7 @@ import sellerApi from '@/api/sellerApi';
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+    const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'check-email'>('loading');
     const [message, setMessage] = useState('Verifying your email...');
 
     const token = searchParams.get('token');
@@ -19,9 +19,16 @@ const VerifyEmail = () => {
 
     useEffect(() => {
         const verify = async () => {
-            if (!token || !email || !type) {
+            if (!email || !type) {
                 setStatus('error');
-                setMessage('Invalid verification link. Token, email, and account type are required.');
+                setMessage('Invalid verification link. Email and account type are required.');
+                return;
+            }
+
+            if (!token) {
+                // If no token, it's a redirect from login, not a link click.
+                setStatus('check-email');
+                setMessage('Verification required. Please check your inbox for the verification link or resend it below.');
                 return;
             }
 
@@ -113,11 +120,22 @@ const VerifyEmail = () => {
                             <XCircle className="w-12 h-12 text-red-500" />
                         </motion.div>
                     )}
+                    {status === 'check-email' && (
+                        <motion.div
+                            initial={{ scale: 0.5, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ type: "spring", damping: 12 }}
+                            className="w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center"
+                        >
+                            <Mail className="w-12 h-12 text-blue-500" />
+                        </motion.div>
+                    )}
                 </div>
 
                 <h1 className="text-3xl font-bold text-white mb-4 tracking-tight">
                     {status === 'loading' ? 'Verifying Account' :
-                        status === 'success' ? 'Verification Success' : 'Verification Issue'}
+                        status === 'success' ? 'Verification Success' :
+                            status === 'check-email' ? 'Action Required' : 'Verification Issue'}
                 </h1>
 
                 <p className="text-gray-400 text-lg mb-8 leading-relaxed">
@@ -128,12 +146,12 @@ const VerifyEmail = () => {
                     {status !== 'loading' && (
                         <Button
                             onClick={handleBackToLogin}
-                            className={`w-full h-12 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${status === 'success'
+                            className={`w-full h-12 text-lg font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 ${status === 'success' || status === 'check-email'
                                 ? 'bg-white text-black hover:bg-gray-200'
                                 : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
                                 }`}
                         >
-                            {status === 'success' ? 'Go to Login' : 'Try Again'}
+                            {status === 'success' || status === 'check-email' ? 'Go to Login' : 'Try Again'}
                             <ArrowRight className="w-5 h-5" />
                         </Button>
                     )}

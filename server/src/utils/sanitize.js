@@ -31,6 +31,7 @@ export const sanitizeBuyer = (buyer) => {
         refunds: b.refunds ? Number.parseFloat(b.refunds) : 0,
         // Coordinates: boolean presence only — full coords not needed by the frontend profile UI
         hasLocation: !!(b.latitude && b.longitude),
+        is_verified: !!(b.is_verified || b.isVerified),
         role: 'buyer',
         createdAt: b.createdAt || b.created_at || null,
         // NEVER return: user_id, password, password_hash, full_address,
@@ -59,6 +60,7 @@ export const sanitizeSeller = (seller) => {
         tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
         facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
         hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
+        is_verified: !!(sellerObj.is_verified || sellerObj.isVerified),
         clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
         totalSales: Number.parseFloat(sellerObj.totalSales || sellerObj.total_sales || 0),
     };

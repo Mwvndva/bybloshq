@@ -36,6 +36,11 @@ const createSendToken = (data, statusCode, req, res, next) => {
   setAuthCookie(res, token);
   if (buyer.password) buyer.password = undefined;
 
+  // Ensure is_verified is attached to profile for sanitization
+  if (user && user.is_verified !== undefined) {
+    buyer.is_verified = user.is_verified;
+  }
+
   return res.status(statusCode).json({
     status: 'success',
     message: (statusCode === 201 && !user?.is_verified)
@@ -162,6 +167,16 @@ export const login = async (req, res, next) => {
         status: 'error',
         message: error.message,
         code: 'PENDING_VERIFICATION',
+        email: error.email,
+        userType: error.userType
+      });
+    }
+
+    if (error.code === 'TERMS_NOT_ACCEPTED') {
+      return res.status(403).json({
+        status: 'error',
+        message: error.message,
+        code: 'TERMS_NOT_ACCEPTED',
         email: error.email,
         userType: error.userType
       });
@@ -298,6 +313,9 @@ export const getProfile = async (req, res, next) => {
     if (!buyer) {
       return next(new AppError('No buyer profile found for this account', 404));
     }
+
+    // Add verification status from req.user (Task 10 fix)
+    buyer.is_verified = req.user.is_verified;
 
     res.status(200).json({
       status: 'success',
