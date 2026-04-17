@@ -339,6 +339,7 @@ class OrderService {
           };
           const sellerData = {
             name: fullOrder.seller_name,
+            whatsapp_number: fullOrder.seller_phone,
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
             physicalAddress: fullOrder.seller_address,
@@ -1071,6 +1072,7 @@ class OrderService {
           const buyerData = this._buildBuyerNotificationData(fullOrder);
           const sellerData = {
             name: fullOrder.seller_name,
+            whatsapp_number: fullOrder.seller_phone,
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
             physicalAddress: fullOrder.seller_address,
@@ -1177,6 +1179,7 @@ class OrderService {
           const buyerData = this._buildBuyerNotificationData(fullOrder);
           const sellerData = {
             name: fullOrder.seller_name,
+            whatsapp_number: fullOrder.seller_phone,
             phone: fullOrder.seller_phone,
             email: fullOrder.seller_email,
             physicalAddress: fullOrder.seller_address,
@@ -1550,11 +1553,19 @@ class OrderService {
       const fullOrder = fullOrderResult.rows[0];
       const buyerData = this._buildBuyerNotificationData(fullOrder);
       const sellerData = {
-        name: fullOrder.seller_name, phone: fullOrder.seller_phone, email: fullOrder.seller_email,
-        physicalAddress: fullOrder.seller_address, shopName: fullOrder.shop_name,
-        city: fullOrder.seller_city, location: fullOrder.seller_location,
-        latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude,
-        instagram_link: fullOrder.instagram_link, tiktok_link: fullOrder.tiktok_link, facebook_link: fullOrder.facebook_link
+        name: fullOrder.seller_name,
+        whatsapp_number: fullOrder.seller_phone,
+        phone: fullOrder.seller_phone,
+        email: fullOrder.seller_email,
+        physicalAddress: fullOrder.seller_address,
+        shopName: fullOrder.shop_name,
+        city: fullOrder.seller_city,
+        location: fullOrder.seller_location,
+        latitude: fullOrder.seller_latitude,
+        longitude: fullOrder.seller_longitude,
+        instagram_link: fullOrder.instagram_link,
+        tiktok_link: fullOrder.tiktok_link,
+        facebook_link: fullOrder.facebook_link
       };
 
       const isSellerInitiated = fullOrder.metadata?.seller_initiated === true ||

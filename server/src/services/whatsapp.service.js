@@ -114,7 +114,7 @@ class WhatsAppService {
     async sendMessage(phone, message) {
         if (!this.isReady || !this.sock) {
             const error = new Error('WhatsApp client not ready or not connected');
-            logger.error('⚠️ Cannot send message: Client not ready');
+            logger.error(`[WHATSAPP] Cannot send message to ${phone}: Client not ready`);
             throw error;
         }
 
@@ -305,10 +305,11 @@ class WhatsAppService {
 
     async notifySellerNewOrder(orderData) {
         const { seller, buyer, order, items } = orderData;
-        const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
-
         if (!sellerWhatsApp) {
-            logger.error('[WHATSAPP-SERVICE] ❌ Seller phone is missing!');
+            logger.warn('[WHATSAPP] notifySellerNewOrder: missing seller phone', {
+                orderId: order?.orderNumber,
+                sellerId: seller?.id || seller?.name
+            });
             return false;
         }
 
@@ -391,9 +392,13 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
     }
 
     async notifyBuyerOrderConfirmation(orderData) {
-        const { buyer, seller, order, items } = orderData;
         const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
-        if (!buyerWhatsApp) return false;
+        if (!buyerWhatsApp) {
+            logger.warn('[WHATSAPP] notifyBuyerOrderConfirmation: missing buyer phone', {
+                orderId: order?.orderNumber
+            });
+            return false;
+        }
 
         const itemsList = items.map((item, i) => {
             const name = item.name || item.product_name || 'Item';
@@ -488,9 +493,14 @@ ${this.formatSocialLinks(seller)}
     }
 
     async notifyBuyerStatusUpdate(updateData) {
-        const { buyer, order, newStatus, notes } = updateData;
         const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
-        if (!buyerWhatsApp) return false;
+        if (!buyerWhatsApp) {
+            logger.warn('[WHATSAPP] notifyBuyerStatusUpdate: missing buyer phone', {
+                orderId: order?.orderNumber,
+                newStatus
+            });
+            return false;
+        }
 
         const metadata = this._getMetadata(order);
         const productType = metadata?.product_type;
@@ -660,9 +670,14 @@ Order #${order.orderNumber} status changed to: *${newStatus}*`;
     }
 
     async notifySellerStatusUpdate(updateData) {
-        const { seller, order, newStatus } = updateData;
         const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
-        if (!sellerWhatsApp) return false;
+        if (!sellerWhatsApp) {
+            logger.warn('[WHATSAPP] notifySellerStatusUpdate: missing seller phone', {
+                orderId: order?.orderNumber,
+                newStatus
+            });
+            return false;
+        }
 
         const metadata = this._getMetadata(order);
         const productType = metadata?.product_type;

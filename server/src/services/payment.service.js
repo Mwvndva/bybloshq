@@ -570,7 +570,7 @@ export class PaymentService {
             if (isSuccess && paymentMeta.type === 'debt' && paymentMeta.debt_id) {
                 await dbClient.query(
                     'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                    [paymentMeta.debt_id]
+                    [Number.parseInt(paymentMeta.debt_id, 10)]
                 );
             }
 
@@ -762,7 +762,7 @@ export class PaymentService {
 
             await debtClient.query(
                 'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                [metadata.debt_id]
+                [Number.parseInt(metadata.debt_id, 10)]
             );
 
             await debtClient.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, payment.id]);
