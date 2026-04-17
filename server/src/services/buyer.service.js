@@ -107,6 +107,13 @@ class BuyerService {
             const existingUser = existingUserResult.rows[0];
 
             if (existingUser) {
+                // If user exists, they MUST provide a password to link/use this account (Task 11 fix)
+                if (!password) {
+                    const error = new Error('An account with this email already exists. Please login to proceed.');
+                    error.requiresLogin = true;
+                    throw error;
+                }
+
                 const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
                 if (!isPasswordCorrect) {
                     const error = new Error('An account with this email already exists. Please login or use the correct password.');
