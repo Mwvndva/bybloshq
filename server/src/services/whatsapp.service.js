@@ -305,6 +305,8 @@ class WhatsAppService {
 
     async notifySellerNewOrder(orderData) {
         const { seller, buyer, order, items } = orderData;
+        const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
+
         if (!sellerWhatsApp) {
             logger.warn('[WHATSAPP] notifySellerNewOrder: missing seller phone', {
                 orderId: order?.orderNumber,
@@ -392,6 +394,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
     }
 
     async notifyBuyerOrderConfirmation(orderData) {
+        const { buyer, seller, order, items } = orderData;
         const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
         if (!buyerWhatsApp) {
             logger.warn('[WHATSAPP] notifyBuyerOrderConfirmation: missing buyer phone', {
@@ -493,6 +496,7 @@ ${this.formatSocialLinks(seller)}
     }
 
     async notifyBuyerStatusUpdate(updateData) {
+        const { buyer, order, newStatus, notes } = updateData;
         const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
         if (!buyerWhatsApp) {
             logger.warn('[WHATSAPP] notifyBuyerStatusUpdate: missing buyer phone', {
@@ -670,6 +674,7 @@ Order #${order.orderNumber} status changed to: *${newStatus}*`;
     }
 
     async notifySellerStatusUpdate(updateData) {
+        const { seller, order, newStatus } = updateData;
         const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
         if (!sellerWhatsApp) {
             logger.warn('[WHATSAPP] notifySellerStatusUpdate: missing seller phone', {
