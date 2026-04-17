@@ -85,6 +85,30 @@ class AuthService {
             throw err;
         }
 
+        // NEW: Check terms acceptance (Task 10)
+        let termsAccepted = true;
+        if (user.role === 'seller') {
+            const profile = await SellerModel.findSellerByUserId(user.id);
+            termsAccepted = profile ? profile.terms_accepted : true;
+        } else if (user.role === 'buyer') {
+            const profile = await Buyer.findByUserId(user.id);
+            termsAccepted = profile ? profile.terms_accepted : true;
+        }
+
+        if (termsAccepted === false) {
+            // Treat unaccepted terms as a verification blocker for login
+            // 1. Resend verification email (standard procedure)
+            await AuthService.resendVerificationEmail(user.email, type || user.role);
+
+            // 2. Throw specific error for frontend redirection
+            const err = new Error('Please accept the terms and conditions and verify your account.');
+            err.statusCode = 403;
+            err.code = 'TERMS_NOT_ACCEPTED';
+            err.email = user.email;
+            err.userType = type || user.role;
+            throw err;
+        }
+
         // ── Role mismatch handling ──────────────────────────────────────────
         if (type && user.role !== type) {
 

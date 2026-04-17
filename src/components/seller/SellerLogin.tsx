@@ -70,11 +70,17 @@ export function SellerLogin() {
       const apiError = error?.response?.data;
       const errorMessage = apiError?.message || error?.message || 'Invalid email or password';
 
-      if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED') {
+      if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED' || apiError?.code === 'TERMS_NOT_ACCEPTED') {
         const email = apiError.email || formData.email;
-        setUnverifiedEmail(email);
-        setInfoMessage(`Your email isn't verified. Click below to resend the verification link to ${email}.`);
-        setError('');
+        const role = apiError.userType || 'seller';
+
+        toast({
+          title: 'Verification Required',
+          description: 'Redirecting to verification page...',
+        });
+
+        // Redirect to centralized verification landing page
+        navigate(`/verify-email?email=${encodeURIComponent(email)}&type=${role}`);
         return;
       }
 
