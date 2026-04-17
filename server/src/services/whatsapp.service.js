@@ -318,8 +318,9 @@ class WhatsAppService {
             return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
         }).join('\n');
 
+        const metadata = this._getMetadata(order);
         const total = Number.parseFloat(order.totalAmount || 0);
-        const productType = order.metadata?.product_type;
+        const productType = metadata?.product_type;
         const isService = productType === 'service';
         const isDigital = productType === 'digital';
 
@@ -327,16 +328,16 @@ class WhatsAppService {
         let bookingInfo = '';
 
         if (isService) {
-            const locationType = order.metadata?.location_type;
+            const locationType = metadata?.location_type;
             const isSellerVisitsBuyer = locationType === 'seller_visits_buyer';
             const sellerHasNoShop = !seller.latitude || !seller.longitude;
             const locationLabel = (isSellerVisitsBuyer || sellerHasNoShop) ? 'Client Location' : 'Service Location';
-            const locationVal = order.metadata?.service_location || seller.physicalAddress || buyer.location || 'Not specified';
+            const locationVal = metadata?.service_location || seller.physicalAddress || buyer.location || 'Not specified';
 
             let clientMapsLink = '';
             // If it's a home-visit service OR the seller has no shop coordinates, give the seller the buyer's map link
-            if ((isSellerVisitsBuyer || sellerHasNoShop) && (buyer.latitude || order.metadata?.buyer_location)) {
-                const bloc = order.metadata?.buyer_location || { latitude: buyer.latitude, longitude: buyer.longitude, fullAddress: buyer.location };
+            if ((isSellerVisitsBuyer || sellerHasNoShop) && (buyer.latitude || metadata?.buyer_location)) {
+                const bloc = metadata?.buyer_location || { latitude: buyer.latitude, longitude: buyer.longitude, fullAddress: buyer.location };
                 clientMapsLink = this._getGoogleMapsLink(buyer.name, bloc.fullAddress || buyer.location, bloc.latitude, bloc.longitude);
             } else {
                 // Otherwise use the service location/seller shop link
@@ -491,7 +492,8 @@ ${this.formatSocialLinks(seller)}
         const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
         if (!buyerWhatsApp) return false;
 
-        const productType = order.metadata?.product_type;
+        const metadata = this._getMetadata(order);
+        const productType = metadata?.product_type;
         const isService = productType === 'service';
         const isDigital = productType === 'digital';
 

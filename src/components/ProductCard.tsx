@@ -316,22 +316,22 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   };
 
   const handleBuyerInfoSubmit = async (
-    buyerInfo: {
-      fullName: string;
-      email: string;
-      mobilePayment: string;
-      whatsappNumber: string;
-      city?: string;
-      location?: string;
-      password?: string
-    },
+    buyerInfo: any,
     explicitBookingData?: any,
     isExistingUserUpdate: boolean = false
   ) => {
     try {
+      // FIX (Task 5): Merge booking coordinates into buyer profile if available
+      const activeBooking = explicitBookingData || bookingData;
+      const enrichedBuyerInfo = {
+        ...buyerInfo,
+        latitude: activeBooking?.buyerLocation?.latitude,
+        longitude: activeBooking?.buyerLocation?.longitude
+      };
+
       // If it's a new user (not just updating email for existing), save them first
       if (!isExistingUserUpdate && !shouldSkipSave) {
-        const saveResult = await buyerApi.saveBuyerInfo(buyerInfo);
+        const saveResult = await buyerApi.saveBuyerInfo(enrichedBuyerInfo);
 
         if (saveResult.requiresLogin) {
           // Save current location for redirect after login
@@ -344,13 +344,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         // Proceed with new ID (or let backend infer from cookie)
         await runWithLock(async () => {
           // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(buyerInfo, explicitBookingData, saveResult.buyer?.id);
+          await executePayment(enrichedBuyerInfo, explicitBookingData, saveResult.buyer?.id);
         });
       } else {
         // Existing user (skipped save) -> Proceed using backend lookup
         await runWithLock(async () => {
           // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(buyerInfo, explicitBookingData);
+          await executePayment(enrichedBuyerInfo, explicitBookingData);
         });
       }
 
