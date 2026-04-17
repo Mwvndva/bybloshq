@@ -49,7 +49,7 @@ export function BuyerInfoModal({
     email: initialData?.email || '',
     mobilePayment: initialData?.mobilePayment || phoneNumber || '',
     whatsappNumber: initialData?.whatsappNumber || phoneNumber || '',
-    city: initialData?.city || 'Nairobi',
+    city: initialData?.city || '',
     location: initialData?.location || '',
     password: '',
     confirmPassword: ''
@@ -65,7 +65,7 @@ export function BuyerInfoModal({
         ...initialData,
         firstName: initialData.fullName?.split(' ')[0] || prev.firstName,
         lastName: initialData.fullName?.split(' ').slice(1).join(' ') || prev.lastName,
-        city: initialData.city || 'Nairobi'
+        city: initialData.city || prev.city
       }) as BuyerInfo);
     }
   }, [initialData]);
@@ -143,7 +143,7 @@ export function BuyerInfoModal({
         email: '',
         mobilePayment: '',
         whatsappNumber: '',
-        city: 'Nairobi',
+        city: '',
         location: '',
         password: '',
         confirmPassword: ''
@@ -168,7 +168,7 @@ export function BuyerInfoModal({
         email: '',
         mobilePayment: '',
         whatsappNumber: '',
-        city: 'Nairobi',
+        city: '',
         location: '',
         password: '',
         confirmPassword: ''
@@ -351,6 +351,12 @@ export function BuyerInfoModal({
                     <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
                       <SelectItem value="Nairobi" className="text-white hover:bg-white/5 focus:bg-white/10">
                         Nairobi
+                      </SelectItem>
+                      <SelectItem value="Mombasa" className="text-white hover:bg-white/5 focus:bg-white/10">
+                        Mombasa
+                      </SelectItem>
+                      <SelectItem value="Kisumu" className="text-white hover:bg-white/5 focus:bg-white/10">
+                        Kisumu
                       </SelectItem>
                     </SelectContent>
                   </Select>

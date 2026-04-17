@@ -218,6 +218,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
     // 2. Service Product + Authenticated? -> Booking Flow
     if (isService) {
+      // For services, we always trigger the booking modal
       setIsBookingModalOpen(true);
       return;
     }
