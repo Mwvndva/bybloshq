@@ -79,21 +79,18 @@ export function BuyerLogin() {
 
       if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED') {
         const email = apiError.email || formData.email;
-        setUnverifiedEmail(email);
-        setInfoMessage(`Your email isn't verified. Click below to resend the verification link to ${email}.`);
-        setError('');
+        const role = apiError.userType || 'buyer';
+
+        toast({
+          title: 'Verification Required',
+          description: 'Redirecting to verification page...',
+        });
+
+        navigate(`/verify-email?email=${encodeURIComponent(email)}&type=${role}`);
         return;
       }
 
       setError(errorMessage);
-      setInfoMessage('');
-
-      // Also show a toast for better visibility
-      toast({
-        title: 'Login Failed',
-        description: errorMessage,
-        variant: 'destructive',
-      });
     } finally {
       setIsLoading(false);
     }
