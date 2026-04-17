@@ -1,15 +1,8 @@
-/* eslint-disable camelcase */
+export const up = (pgm) => {
+  // Fix case-sensitive enum values for order_status
+  // Add missing uppercase variants if not present
 
-exports.shorthands = undefined;
-
-exports.up = pgm => {
-    // Fix case-sensitive enum values for order_status
-    // Add missing uppercase variants if not present
-    // Note: ALTER TYPE ADD VALUE cannot run inside a transaction.
-    // node-pg-migrate handles this if we set transaction: false in the migration options,
-    // but we can also just run it as raw SQL.
-
-    pgm.sql(`
+  pgm.sql(`
     DO $$ 
     BEGIN
       -- These must match EXACTLY what the OrderStatus constants in enums.js define
@@ -33,6 +26,6 @@ exports.up = pgm => {
   `);
 };
 
-exports.down = pgm => {
-    // Enums cannot be easily rolled back without dropping them
+export const down = (pgm) => {
+  // Enums cannot be easily rolled back without dropping them
 };
