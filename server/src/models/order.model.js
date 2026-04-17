@@ -13,8 +13,9 @@ class Order {
       INSERT INTO product_orders (
         order_number, buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
         payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
-        notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+        notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
+        fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
       RETURNING *
     `;
 
@@ -38,7 +39,12 @@ class Order {
       data.service_requirements,
       data.is_debt || false,
       data.client_id || null,
-      data.is_seller_initiated || false
+      data.is_seller_initiated || false,
+      data.fulfillment_type || null,
+      data.delivery_location ? JSON.stringify(data.delivery_location) : null,
+      data.order_type || 'PHYSICAL',
+      data.total_quantity || 1,
+      data.reservation_expires_at || null
     ];
 
     const executor = client || pool;
@@ -169,6 +175,11 @@ class Order {
         o.paid_at as "paidAt",
         o.completed_at as "completedAt",
         o.cancelled_at as "cancelledAt",
+        o.fulfillment_type as "fulfillmentType",
+        o.delivery_location as "deliveryLocation",
+        o.order_type as "orderType",
+        o.total_quantity as "totalQuantity",
+        o.reservation_expires_at as "reservationExpiresAt",
         o.client_id as "clientId",
         o.is_seller_initiated as "isSellerInitiated",
         json_build_object(
@@ -237,6 +248,11 @@ class Order {
         o.paid_at as "paidAt",
         o.completed_at as "completedAt",
         o.cancelled_at as "cancelledAt",
+        o.fulfillment_type as "fulfillmentType",
+        o.delivery_location as "deliveryLocation",
+        o.order_type as "orderType",
+        o.total_quantity as "totalQuantity",
+        o.reservation_expires_at as "reservationExpiresAt",
         json_build_object(
           'id', s.id,
           'name', s.full_name,
@@ -309,6 +325,11 @@ class Order {
         o.paid_at as "paidAt",
         o.completed_at as "completedAt",
         o.cancelled_at as "cancelledAt",
+        o.fulfillment_type as "fulfillmentType",
+        o.delivery_location as "deliveryLocation",
+        o.order_type as "orderType",
+        o.total_quantity as "totalQuantity",
+        o.reservation_expires_at as "reservationExpiresAt",
         json_build_object(
           'id', s.id,
           'name', s.full_name,
@@ -411,6 +432,11 @@ class Order {
         o.paid_at as "paidAt",
         o.completed_at as "completedAt",
         o.cancelled_at as "cancelledAt",
+        o.fulfillment_type as "fulfillmentType",
+        o.delivery_location as "deliveryLocation",
+        o.order_type as "orderType",
+        o.total_quantity as "totalQuantity",
+        o.reservation_expires_at as "reservationExpiresAt",
         COALESCE(
           json_agg(
             json_build_object(

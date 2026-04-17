@@ -52,7 +52,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [initialBuyerData, setInitialBuyerData] = useState<{ fullName?: string; email?: string; city?: string; location?: string } | undefined>(undefined);
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
-  const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ latitude: number; longitude: number; fullAddress: string } | null>(null);
+  const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
@@ -247,7 +247,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     location: string;
     locationType?: string;
     serviceRequirements?: string;
-    buyerLocation?: { latitude: number; longitude: number; fullAddress: string } | null
+    buyerLocation?: { lat: number; lng: number; address: string } | null
   }) => {
     setBookingData(data);
     setIsBookingModalOpen(false);
@@ -287,9 +287,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         if (isBookingFlowActive) {
           if (result.buyer.latitude && result.buyer.longitude) {
             setInitialBuyerLocation({
-              latitude: Number(result.buyer.latitude),
-              longitude: Number(result.buyer.longitude),
-              fullAddress: result.buyer.fullAddress || result.buyer.location || ''
+              lat: Number(result.buyer.latitude),
+              lng: Number(result.buyer.longitude),
+              address: result.buyer.fullAddress || result.buyer.location || ''
             });
           } else {
             setInitialBuyerLocation(null);
@@ -363,8 +363,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       const activeBooking = explicitBookingData || bookingData;
       const enrichedBuyerInfo = {
         ...buyerInfo,
-        latitude: activeBooking?.buyerLocation?.latitude,
-        longitude: activeBooking?.buyerLocation?.longitude
+        latitude: activeBooking?.buyerLocation?.lat, // Profile still uses latitude/longitude for legacy reasons
+        longitude: activeBooking?.buyerLocation?.lng
       };
 
       // If it's a new user (not just updating email for existing), save them first
@@ -412,6 +412,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setIsProcessingPurchase(true);
     try {
       const activeBooking = bookingDetails || bookingData;
+      const isService = product.product_type === 'service' || (product as any).productType === 'service';
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
         mobilePayment: buyerDetails.mobilePayment,
@@ -423,13 +424,14 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         customerName: buyerDetails.fullName,
         narrative: `Purchase of ${product.name}`,
         paymentMethod: 'payd',
-        city: buyerDetails.city,
-        location: buyerDetails.location,
+        // Only send city/location if it's a service (Mobile Service)
+        // For Physical products, the backend handles logistics internally (Courier or Pickup)
+        city: isService ? buyerDetails.city : undefined,
+        location: isService ? buyerDetails.location : undefined,
         metadata: activeBooking ? {
           booking_date: format(activeBooking.date, 'yyyy-MM-dd'),
           booking_time: activeBooking.time,
           service_location: activeBooking.location,
-          location_type: activeBooking.locationType,
           service_requirements: activeBooking.serviceRequirements,
           buyer_location: activeBooking.buyerLocation,
           product_type: 'service'

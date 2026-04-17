@@ -5,17 +5,29 @@
  */
 export const OrderStatus = {
     PENDING: 'PENDING',
-    PROCESSING: 'PROCESSING', // Added to match DB
+    RESERVED: 'RESERVED', // Slot or inventory locked
+    PROCESSING: 'PROCESSING',
     SERVICE_PENDING: 'SERVICE_PENDING',
     DELIVERY_PENDING: 'DELIVERY_PENDING',
-    COLLECTION_PENDING: 'COLLECTION_PENDING', // Waiting for buyer pickup at shop
-    CLIENT_PAYMENT_PENDING: 'CLIENT_PAYMENT_PENDING', // Seller-initiated order awaiting client payment
-    DEBT_PENDING: 'DEBT_PENDING', // Seller-initiated order recorded as debt
+    COLLECTION_PENDING: 'COLLECTION_PENDING',
+    CLIENT_PAYMENT_PENDING: 'CLIENT_PAYMENT_PENDING',
+    DEBT_PENDING: 'DEBT_PENDING',
     DELIVERY_COMPLETE: 'DELIVERY_COMPLETE',
     CONFIRMED: 'CONFIRMED',
     COMPLETED: 'COMPLETED',
     CANCELLED: 'CANCELLED',
-    FAILED: 'FAILED'
+    FAILED: 'FAILED',
+    EXPIRED: 'EXPIRED' // For timed-out reservations
+};
+
+/**
+ * @readonly
+ * @enum {string}
+ */
+export const OrderType = {
+    PHYSICAL: 'PHYSICAL',
+    SERVICE: 'SERVICE',
+    DIGITAL: 'DIGITAL'
 };
 
 /**
@@ -27,7 +39,7 @@ export const PaymentStatus = {
     COMPLETED: 'completed',
     FAILED: 'failed',
     CANCELLED: 'cancelled',
-    SUCCESS: 'success' // Sometimes used interchangeably with completed
+    SUCCESS: 'success'
 };
 
 /**

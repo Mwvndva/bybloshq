@@ -3,7 +3,7 @@ import { pool } from '../config/database.js';
 const PRODUCT_UPDATABLE_FIELDS = new Set([
     'name', 'price', 'description', 'image_url', 'images', 'aesthetic',
     'status', 'sold_at', 'is_sold', 'service_options', 'service_locations',
-    'track_inventory', 'quantity', 'low_stock_threshold', 'updated_at'
+    'track_inventory', 'quantity', 'reserved_quantity', 'low_stock_threshold', 'updated_at'
 ]);
 
 class ProductModel {
