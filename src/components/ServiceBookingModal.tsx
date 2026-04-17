@@ -84,7 +84,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
             }
 
             // Default based on product settings and shop availability
-            if (isShopless) {
+            if (initialBuyerLocation && initialBuyerLocation.latitude && initialBuyerLocation.longitude) {
+                // If we have a pre-filled location, default to Home Service (buyer visits seller)
+                setSelectedLocationType('buyer');
+            } else if (isShopless) {
                 // If shopless, buyer MUST set their location (Home Service)
                 setSelectedLocationType('buyer');
             } else {
