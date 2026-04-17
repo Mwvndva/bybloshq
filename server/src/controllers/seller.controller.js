@@ -38,6 +38,11 @@ const sendTokenResponse = (data, statusCode, res, message) => {
     ? 'Account created! Please verify your email before listing products.'
     : message;
 
+  // Ensure is_verified is attached for sanitization (Task 10 fix)
+  if (user && profile) {
+    profile.is_verified = user.is_verified;
+  }
+
   res.status(statusCode).json({
     status: 'success',
     message: (statusCode === 201 && !user?.is_verified)
