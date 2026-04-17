@@ -445,9 +445,10 @@ export const checkBuyerByPhone = async (req, res, next) => {
             id: existingBuyer.id,
             fullName: existingBuyer.fullName || existingBuyer.full_name || '',
             city: existingBuyer.city || '',
-            location: existingBuyer.location || existingBuyer.physical_address || '',
+            location: existingBuyer.location || existingBuyer.physical_address || existingBuyer.full_address || '',
+            latitude: existingBuyer.latitude,
+            longitude: existingBuyer.longitude,
             hasEmail: !!existingBuyer.email,
-            // NEVER: email string, password, user_id, phone numbers, coordinates
           }
         }
       });

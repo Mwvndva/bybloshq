@@ -26,9 +26,10 @@ interface ServiceBookingModalProps {
         serviceRequirements?: string;
         buyerLocation?: { latitude: number; longitude: number; fullAddress: string } | null
     }) => void;
+    initialBuyerLocation?: { latitude: number; longitude: number; fullAddress: string } | null;
 }
 
-export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: ServiceBookingModalProps) {
+export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initialBuyerLocation = null }: ServiceBookingModalProps) {
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState<string>('');
     const [location, setLocation] = useState<string>('');
@@ -64,10 +65,16 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
             setTime('');
             setServiceRequirements('');
 
-            // DON'T auto-fill buyer location from profile anymore to force explicit selection
-            // as requested by user ("should always ask buyer to input their location details")
-            setBuyerLocation(null);
-            setCustomLocation('');
+            // PRE-FILL logic for coordinates
+            if (initialBuyerLocation && initialBuyerLocation.latitude && initialBuyerLocation.longitude) {
+                setBuyerLocation(initialBuyerLocation);
+                setCustomLocation(initialBuyerLocation.fullAddress || '');
+            } else {
+                // DON'T auto-fill buyer location from profile anymore to force explicit selection
+                // as requested by user ("should always ask buyer to input their location details")
+                setBuyerLocation(null);
+                setCustomLocation('');
+            }
 
             // Auto-select first location if available
             if (locations.length > 0) {
@@ -85,7 +92,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm }: Ser
                 setSelectedLocationType('seller');
             }
         }
-    }, [isOpen]); // Only trigger when modal opens/closes, not when profile updates
+    }, [isOpen, initialBuyerLocation]); // Only trigger when modal opens/closes or initial location data changes
 
     // Generate time slots
     useEffect(() => {

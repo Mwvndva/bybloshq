@@ -51,6 +51,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [currentPhone, setCurrentPhone] = useState('');
   const [initialBuyerData, setInitialBuyerData] = useState<{ fullName?: string; email?: string; city?: string; location?: string } | undefined>(undefined);
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
+  const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
+  const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ latitude: number; longitude: number; fullAddress: string } | null>(null);
 
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
@@ -205,13 +207,22 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     e?.preventDefault?.();
     e?.stopPropagation?.();
 
-    // 1. Service Product? -> Booking Flow
-    if (product.product_type === 'service' || (product as any).productType === 'service') {
+    const isService = product.product_type === 'service' || (product as any).productType === 'service';
+
+    // 1. Service Product + Not Authenticated? -> Verification First Flow
+    if (isService && !isAuthenticated) {
+      setIsBookingFlowActive(true);
+      setIsPhoneCheckModalOpen(true);
+      return;
+    }
+
+    // 2. Service Product + Authenticated? -> Booking Flow
+    if (isService) {
       setIsBookingModalOpen(true);
       return;
     }
 
-    // 2. Authenticated? -> Direct Payment
+    // 3. Authenticated? -> Direct Payment
     if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
       await runWithLock(async () => {
         // Prevents duplicate payment requests via synchronous lock (Task 14)
@@ -224,7 +235,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         });
       });
     } else {
-      // 3. Not Authenticated? -> Phone Check
+      // 4. Not Authenticated? -> Phone Check
+      setIsBookingFlowActive(false);
       setIsPhoneCheckModalOpen(true);
     }
   };
@@ -268,6 +280,24 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       if (result.exists && result.buyer) {
         // CASE A: Buyer Exists
+        setCurrentPhone(normalizedPhone);
+        setIsPhoneCheckModalOpen(false);
+
+        // If it's a booking flow, open ServiceBookingModal with pre-filled coords
+        if (isBookingFlowActive) {
+          if (result.buyer.latitude && result.buyer.longitude) {
+            setInitialBuyerLocation({
+              latitude: Number(result.buyer.latitude),
+              longitude: Number(result.buyer.longitude),
+              fullAddress: result.buyer.location || ''
+            });
+          } else {
+            setInitialBuyerLocation(null);
+          }
+          setIsBookingModalOpen(true);
+          return;
+        }
+
         // Check hasEmail flag instead of explicit email string to avoid PII leak
         if (result.buyer.hasEmail || (result.buyer.email && result.buyer.email.trim() !== '')) {
           // Has Email -> PROCEED TO PAYMENT
@@ -300,9 +330,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         }
       } else {
         // CASE B: New Buyer -> Registration Form
-        setInitialBuyerData(undefined);
-        setShouldSkipSave(false);
-        setIsBuyerModalOpen(true);
+        setCurrentPhone(normalizedPhone);
+        setIsPhoneCheckModalOpen(false);
+
+        if (isBookingFlowActive) {
+          setInitialBuyerLocation(null);
+          setIsBookingModalOpen(true);
+        } else {
+          setInitialBuyerData(undefined);
+          setShouldSkipSave(false);
+          setIsBuyerModalOpen(true);
+        }
       }
     } catch (error: any) {
       toast({
@@ -976,6 +1014,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         isOpen={isBookingModalOpen}
         onClose={() => setIsBookingModalOpen(false)}
         onConfirm={handleBookingConfirm}
+        initialBuyerLocation={initialBuyerLocation}
       />
     </Card>
   );
