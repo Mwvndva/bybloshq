@@ -32,9 +32,9 @@ interface ServiceBookingModalProps {
 export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initialBuyerLocation = null }: ServiceBookingModalProps) {
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState<string>('');
-    const [location, setLocation] = useState<string>('');
-    const [selectedLocationType, setSelectedLocationType] = useState<'seller' | 'buyer'>('seller');
-    const [customLocation, setCustomLocation] = useState<string>('');
+    const [location, setLocation] = useState<string | null>(null);
+    const [selectedLocationType, setSelectedLocationType] = useState<'seller' | 'buyer' | null>(null);
+    const [customLocation, setCustomLocation] = useState<string | null>(null);
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
     const [serviceRequirements, setServiceRequirements] = useState('');
 
@@ -80,7 +80,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
             if (locations.length > 0) {
                 setLocation(locations[0]);
             } else {
-                setLocation('');
+                setLocation(null);
             }
 
             // Default based on product settings and shop availability
@@ -91,7 +91,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                 // If shopless, buyer MUST set their location (Home Service)
                 setSelectedLocationType('buyer');
             } else {
-                // If seller HAS a shop, buyer MUST visit them (In-Store)
+                // If seller HAS a shop, default to In-Store
                 setSelectedLocationType('seller');
             }
         }
@@ -180,14 +180,15 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         let finalLocation = location;
 
         if (isShopless) {
-            finalLocation = buyerLocation?.address || 'Buyer Location';
+            finalLocation = buyerLocation?.address || null;
         } else if (selectedLocationType === 'buyer') {
             finalLocation = customLocation;
         } else if (locations.length === 0 && !location) {
-            finalLocation = 'Default Seller Location';
+            // No shop location and no custom selection
+            finalLocation = null;
         }
 
-        if (date && time && isLocationValid()) {
+        if (date && time && isLocationValid() && finalLocation) {
             onConfirm({
                 date,
                 time,
@@ -204,8 +205,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
 
     const isLocationValid = () => {
         if (isShopless) return !!buyerLocation?.address;
-        if (selectedLocationType === 'buyer' || isSellerVisits) return customLocation.trim().length > 0;
-        return location.length > 0 || locations.length === 0;
+        if (selectedLocationType === 'buyer' || isSellerVisits) return !!customLocation?.trim();
+        return (location && location.trim().length > 0) || locations.length === 0;
     };
 
     const isValid = date && time && isLocationValid() && wordCount <= maxWords;
@@ -331,7 +332,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                             <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
                                                 <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
                                                 <div>
-                                                    <p className="text-sm font-bold text-white line-clamp-1">{location || product.seller?.location || product.seller?.city || 'Main Shop'}</p>
+                                                    <p className="text-sm font-bold text-white line-clamp-1">{location || product.seller?.location || product.seller?.physical_address || 'Seller Location'}</p>
                                                     <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">Selected Location</p>
                                                 </div>
                                             </div>
