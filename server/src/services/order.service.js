@@ -26,27 +26,29 @@ class OrderService {
    */
   static async createOrder(orderData) {
     let sellerInfo = null;
+    const {
+      buyerId,
+      sellerId,
+      items: rawItems, // renamed to avoid conflict
+      paymentMethod,
+      buyerName,
+      buyerEmail,
+      buyerPhone,
+      buyerMobilePayment,
+      buyerWhatsApp,
+      shippingAddress,
+      notes,
+      metadata: rawMetadata = {},
+      buyerLocation = null,
+      idempotencyKey = null
+    } = orderData;
+
+    // --- PIN-01: DISTRIBUTED LOCK FOR ATOMIC ORDER CREATION ---
+    const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyerId}:seller:${sellerId}`;
+
     const client = await pool.connect();
     try {
-      const {
-        buyerId,
-        sellerId,
-        items, // Added back if missing from destructure earlier
-        paymentMethod,
-        buyerName,
-        buyerEmail,
-        buyerPhone, // older code might still pass this
-        buyerMobilePayment,
-        buyerWhatsApp,
-        shippingAddress,
-        notes,
-        metadata: rawMetadata = {},
-        buyerLocation = null, // { lat, lng, address }
-        idempotencyKey = null
-      } = orderData;
-
-      // --- PIN-01: DISTRIBUTED LOCK FOR ATOMIC ORDER CREATION ---
-      const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyerId}:seller:${sellerId}`;
+      // 1. Acquire Lock
       const acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 10, 'NX');
       if (!acquired) {
         const error = new Error('Order creation already in progress. Please wait.');
@@ -54,9 +56,9 @@ class OrderService {
         throw error;
       }
 
+      // 2. Transaction Start
       try {
-
-        // Block 11 fix: Whitelist allowed metadata keys to prevent internal state injection
+        // Whitelist allowed metadata keys to prevent internal state injection
         const metadata = {
           items: rawMetadata.items || [],
           seller_initiated: rawMetadata.seller_initiated || false,
@@ -66,12 +68,10 @@ class OrderService {
           product_type: rawMetadata.product_type,
           product_id: rawMetadata.product_id,
           narration: rawMetadata.narration,
-          // Booking specific keys
           booking_date: rawMetadata.booking_date,
           booking_time: rawMetadata.booking_time,
           service_location: rawMetadata.service_location,
           buyer_location: rawMetadata.buyer_location,
-          // Any other specific frontend keys needed for display
           customerName: rawMetadata.customerName,
           productName: rawMetadata.productName
         };
@@ -97,8 +97,6 @@ class OrderService {
         this._checkInventory(items);
 
         // 4c. Update Buyer Location if provided
-        // NOTE: For SELLER_TO_BUYER (Mobile Service), we MUST have these.
-        // For others, we might reject them later in validation.
         await this._handleLocationUpdate(buyerId, buyerLocation, metadata);
 
         // 4d. RESOLVE FULFILLMENT TYPE (SINGLE SOURCE OF TRUTH)
@@ -121,10 +119,10 @@ class OrderService {
           validateFulfillmentPayload(fulfillmentType, normalizedLocation);
         } catch (err) {
           logger.warn(`Fulfillment validation failed for Order: ${err.message}`);
-          throw err; // Bubble up as AppError/Error
+          throw err;
         }
 
-        // Shopless Service Logic: If seller has no physical_address and product is service, ensure location_type is set
+        // Shopless Service Logic
         if (!sellerInfo.physical_address) {
           const hasService = items.some(i => i.productType === ProductType.SERVICE || i.productType === 'service');
           if (hasService && !metadata.location_type) {
@@ -138,14 +136,13 @@ class OrderService {
 
         // 4f. RESOLVE ORDER TYPE
         const hasService = items.some(i => i.productType === ProductType.SERVICE || i.productType === 'service');
-        const hasDigital = items.every(i => i.isDigital === true); // If everything is digital
+        const hasDigital = items.every(i => i.isDigital === true);
         let orderType = OrderType.PHYSICAL;
         if (hasService) orderType = OrderType.SERVICE;
         else if (hasDigital) orderType = OrderType.DIGITAL;
 
         // 5. Determine initial status
         const initialStatus = this._determineInitialStatus(orderType);
-        logger.info(`OrderService: initial status determined: ${initialStatus} for type ${orderType}`);
 
         // 5b. Handle Inventory Reservation
         if (orderType === OrderType.PHYSICAL) {
@@ -160,10 +157,10 @@ class OrderService {
         // 5d. Calculate Total Quantity
         const totalQuantity = items.reduce((sum, item) => sum + (Number.parseInt(item.quantity, 10) || 1), 0);
 
-        // 5. Generate unique order number
+        // 5e. Generate unique order number
         const orderNumber = await this._generateOrderNumber(client);
 
-        // 5. Prepare Order Record
+        // 5f. Prepare Order Record
         const orderRecord = {
           order_number: orderNumber,
           buyer_id: buyerId,
@@ -189,17 +186,15 @@ class OrderService {
           reservation_expires_at: reservationExpiresAt
         };
 
-        // 6. Insert Order (Using Model as DAO)
-        // We will create a new 'create' method in Order model that is pure INSERT
+        // 6. Insert Order
         const order = await Order.insert(client, orderRecord);
 
-        // 7. Insert Order Items (Using Model as DAO)
+        // 7. Insert Order Items
         if (items.length > 0) {
-          // Pass the enriched items (with productType/isDigital) to avoid redundant queries in Model
           await Order.insertItems(client, order.id, items);
         }
 
-        // 7b. PIN-08: ATOMIC SLOT LOCKING (For Services)
+        // 7b. ATOMIC SLOT LOCKING (For Services)
         if (orderType === OrderType.SERVICE) {
           await this._reserveServiceSlot(client, order.id, metadata);
         }
@@ -207,20 +202,17 @@ class OrderService {
         await client.query('COMMIT');
         logger.info(`OrderService: Order ${order.id} created successfully`);
 
-        // 8. Notification removed from here - moved to completeOrder to ensure payment success first
-
         return order;
       } catch (dbError) {
         await client.query('ROLLBACK').catch(err => logger.error('Rollback failed:', err));
         throw dbError;
-      } finally {
-        client.release();
       }
     } catch (error) {
       logger.error('OrderService: Error creating order:', error);
       throw error;
     } finally {
-      // PIN-01: Always release the lock
+      client.release();
+      // Always release the lock
       await cacheService.redis.del(lockKey).catch(err => logger.error('Failed to release order lock:', err));
     }
   }
