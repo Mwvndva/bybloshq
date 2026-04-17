@@ -910,14 +910,6 @@ Your refund balance remains available for future withdrawal requests.
             return false
         }
 
-        // Skip if seller has their own shop (buyer collects directly)
-        const sHasShop = sellerHasPhysicalShop(seller);
-
-        if (sHasShop) {
-            logger.info(`[LOGISTICS] Skipping courier notification — seller has physical shop with coordinates, order #${order.orderNumber || order.id || order.order_number}`)
-            return false
-        }
-
         const COURIER_NUMBER = this.COURIER_NUMBER
         const DROPOFF_LOCATION = this.DROPOFF_LOCATION
 

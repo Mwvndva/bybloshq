@@ -961,8 +961,12 @@ class OrderService {
     // 1. Finalize Inventory (Convert Reserved to Sold)
     await this._finalizeInventory(client, items);
 
-    // 2. Determine and Update Status
-    const sellerHasShop = order.physical_address || order.latitude;
+    // 2. Determine and Update Status (Standardized Check)
+    const s_lat = Number(order.latitude || order.seller_latitude || 0);
+    const s_lng = Number(order.longitude || order.seller_longitude || 0);
+    const s_has_shop = sellerHasPhysicalShop({ latitude: s_lat, longitude: s_lng });
+    const sellerHasShop = s_has_shop && !!(order.physical_address || order.seller_address);
+
     const newStatus = this._determineCompletionStatus(items, sellerHasShop, order, payment.metadata);
 
     const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, newStatus, 'completed', payment.provider_reference);
