@@ -18,6 +18,7 @@ interface Buyer {
   updatedAt?: string;
   hasLocation?: boolean;
   hasEmail?: boolean;
+  is_verified: boolean;
 }
 
 interface ApiResponse<T> {
@@ -103,6 +104,7 @@ const transformBuyer = (data: any): Buyer => {
     location: buyer.location || '',
     hasLocation: buyer.hasLocation || false,
     hasEmail: buyer.hasEmail || false,
+    is_verified: !!(buyer.is_verified || buyer.isVerified),
     refunds: buyer.refunds || 0,
     createdAt: buyer.createdAt || new Date().toISOString(),
     updatedAt: buyer.updatedAt

@@ -208,6 +208,15 @@ export const login = async (req, res) => {
         userType: e.userType
       });
     }
+    if (e.code === 'TERMS_NOT_ACCEPTED') {
+      return res.status(403).json({
+        status: 'error',
+        message: e.message,
+        code: 'TERMS_NOT_ACCEPTED',
+        email: e.email,
+        userType: e.userType
+      });
+    }
     console.error('Seller login error:', e);
     res.status(500).json({ status: 'error', message: 'Login failed. Please try again.' });
   }
@@ -261,6 +270,9 @@ export const getProfile = async (req, res) => {
         message: 'Seller profile not found for this account.'
       });
     }
+
+    // Add verification status from req.user (Task 10 fix)
+    seller.is_verified = req.user.is_verified;
 
     return res.status(200).json({
       status: 'success',

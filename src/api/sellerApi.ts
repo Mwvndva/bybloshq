@@ -36,6 +36,7 @@ export interface Seller {
   instagramLink?: string;
   tiktokLink?: string;
   facebookLink?: string;
+  is_verified: boolean;
   clientCount?: number;
   client_count?: number;
 }
@@ -188,7 +189,8 @@ const transformSeller = (data: any): Seller => {
     instagramLink: seller.instagramLink || seller.instagram_link || '',
     tiktokLink: seller.tiktokLink || seller.tiktok_link || '',
     facebookLink: seller.facebookLink || seller.facebook_link || '',
-    clientCount: seller.clientCount || seller.client_count || 0,
+    is_verified: !!(seller.is_verified || seller.isVerified || seller.user?.is_verified),
+    clientCount: seller.clientCount !== undefined ? seller.clientCount : (seller.client_count || 0),
     totalSales: parseFloat(seller.totalSales || seller.total_sales || 0),
     createdAt: seller.createdAt || seller.created_at || new Date().toISOString(),
     updatedAt: seller.updatedAt || seller.updated_at || new Date().toISOString()
