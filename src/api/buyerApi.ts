@@ -601,35 +601,18 @@ const buyerApi = {
         console.log('Saving buyer info...');
       }
 
-      // FIX (Task 5): Avoid logging password with PII in same payload
-      // 1. Extract password from payload
-      const { password, ...pii } = buyerInfo;
-
-      // 2. Send PII in first request
+      // Unified request: Send all info including password (Task 12 fix)
+      // Previous split logic was causing backend crashes during account verification
       const response = await apiClient.post<{ status: string; data: { buyer?: Buyer; token?: string; message?: string } }>(
         `/buyers/save-info`,
         {
-          ...pii,
-          phone: pii.mobilePayment || pii.whatsappNumber
+          ...buyerInfo,
+          phone: buyerInfo.mobilePayment || buyerInfo.whatsappNumber
         }
       );
 
       if (!response.data || response.data.status !== 'success') {
         throw new Error(response.data?.data?.message || 'Failed to save buyer information');
-      }
-
-      // 3. Send password in separate request if exists
-      if (password) {
-        try {
-          await apiClient.patch('/buyers/update-profile', {
-            password,
-            passwordConfirm: password
-          });
-        } catch (pwErr) {
-          console.error('[API] Failed to set password after saving PII:', pwErr);
-          // We don't necessarily throw here if PII saved successfully, 
-          // but usually password is required for account creation.
-        }
       }
 
       return response.data.data;

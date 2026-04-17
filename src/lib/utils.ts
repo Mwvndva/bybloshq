@@ -194,11 +194,12 @@ export function isSellerShopless(seller: any | null | undefined): boolean {
     if (!isDefaultNairobi) return false;
   }
 
-  // Fallback to flag and address checks if coords are missing or default
+  // Strictly require hasPhysicalShop to be true if coords are missing
   if (data.hasPhysicalShop === true) return false;
 
-  const address = (data.physicalAddress || '').trim();
-  if (address && address.toLowerCase() !== 'nairobi' && address.toLowerCase() !== 'kenya') return false;
+  // Fallback to address check ONLY for very basic presence, but don't consider it a "shop"
+  // if it's just a city name or vague string. For Service bookings, accuracy (coords) is key.
+  // REMOVED: Vague address strings like "CBD" should NOT bypass the buyer-location input.
 
   return true;
 }
