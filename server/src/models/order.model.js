@@ -58,11 +58,13 @@ class Order {
       const result = await executor.query(query, values);
       return result.rows[0];
     } catch (error) {
-      logger.error('Database Insert Error in Order.insert:', {
-        errorMessage: error.message,
-        query: query.substring(0, 200) + '...', // Log start of query
-        values: values.map(v => typeof v === 'object' ? JSON.stringify(v) : v)
-      });
+      console.error('--- DATABASE INSERT ERROR ---');
+      console.error('Message:', error.message);
+      console.error('Values:', JSON.stringify(values.map(v => {
+        if (v === null) return 'SQL_NULL';
+        if (typeof v === 'object') return 'OBJECT:' + JSON.stringify(v);
+        return v;
+      }), null, 2));
       throw error;
     }
   }
