@@ -1509,8 +1509,8 @@ class OrderService {
     const city = fullOrder.buyer_city || (typeof shippingAddr === 'object' ? shippingAddr.city : null) || 'Nairobi';
     const location = fullOrder.buyer_location_text || (typeof shippingAddr === 'string' ? shippingAddr : (shippingAddr?.address || shippingAddr?.location));
     const full_address = fullOrder.buyer_full_address || buyerLocation.fullAddress || (typeof shippingAddr === 'string' ? shippingAddr : shippingAddr?.fullAddress);
-    const latitude = fullOrder.buyer_latitude || buyerLocation.latitude;
-    const longitude = fullOrder.buyer_longitude || buyerLocation.longitude;
+    const latitude = fullOrder.buyer_latitude || buyerLocation.latitude || buyerLocation.lat;
+    const longitude = fullOrder.buyer_longitude || buyerLocation.longitude || buyerLocation.lng;
 
     return {
       name: fullOrder.buyer_name || fullOrder.buyer_name_actual || 'Customer',

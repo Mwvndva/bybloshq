@@ -290,18 +290,26 @@ class WhatsAppService {
      */
     _getGoogleMapsLink(name, address, lat, lng) {
         try {
-            // Strict check: Only return a link if coordinates are provided
-            // do not include google maps links without longitude and latitude in notifications
-            if (lat !== null && lat !== undefined && lng !== null && lng !== undefined) {
-                const latitude = Number(lat);
-                const longitude = Number(lng);
+            // Robust coordinate extraction: handle parameters or object as first arg
+            let latitude = lat;
+            let longitude = lng;
 
-                if (!isNaN(latitude) && !isNaN(longitude)) {
-                    return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+            if (typeof name === 'object' && name !== null) {
+                const loc = name;
+                latitude = loc.latitude || loc.lat;
+                longitude = loc.longitude || loc.lng;
+            }
+
+            // Strict check: Only return a link if coordinates are provided
+            if (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) {
+                const finalLat = Number(latitude);
+                const finalLng = Number(longitude);
+
+                if (!isNaN(finalLat) && !isNaN(finalLng)) {
+                    return `https://www.google.com/maps/search/?api=1&query=${finalLat},${finalLng}`;
                 }
             }
 
-            // Fallback removed as per user request: "remove NAVIGATE and do not send google link of the pick up address"
             return null;
         } catch (e) {
             logger.error('[WHATSAPP-SERVICE] Error generating maps link:', e.message);
@@ -396,9 +404,14 @@ class WhatsAppService {
 
             let clientMapsLink = '';
             // If it's a home-visit service OR the seller has no shop coordinates, give the seller the buyer's map link
-            if ((isSellerVisitsBuyer || sellerHasNoShop) && (buyer.latitude || metadata?.buyer_location)) {
-                const bloc = metadata?.buyer_location || { latitude: buyer.latitude, longitude: buyer.longitude, fullAddress: buyer.location };
-                clientMapsLink = this._getGoogleMapsLink(buyer.name, bloc.fullAddress || buyer.location, bloc.latitude, bloc.longitude);
+            if ((isSellerVisitsBuyer || sellerHasNoShop) && (buyer.latitude || buyer.lat || metadata?.buyer_location)) {
+                const bloc = metadata?.buyer_location || { latitude: buyer.latitude, longitude: buyer.longitude, lat: buyer.lat, lng: buyer.lng, fullAddress: buyer.location };
+                clientMapsLink = this._getGoogleMapsLink(
+                    bloc.latitude || bloc.lat,
+                    bloc.longitude || bloc.lng,
+                    bloc.latitude || bloc.lat,
+                    bloc.longitude || bloc.lng
+                );
             } else {
                 // Otherwise use the service location/seller shop link
                 clientMapsLink = this._getGoogleMapsLink(seller.shopName || 'Service Provider', locationVal, seller.latitude, seller.longitude);
@@ -406,8 +419,8 @@ class WhatsAppService {
 
             bookingInfo = `
 📅 *SERVICE BOOKING*
-• Date: ${order.metadata?.booking_date || 'N/A'}
-• Time: ${order.metadata?.booking_time || 'N/A'}
+• Date: ${metadata?.booking_date || 'N/A'}
+• Time: ${metadata?.booking_time || 'N/A'}
 • ${locationLabel}: ${locationVal}${clientMapsLink ? `\n📍 *Navigate:* ${clientMapsLink}` : ''}
 `.trim();
 
@@ -494,8 +507,7 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
 ${mapsLink ? `\n📍 *Navigate to Provider:* ${mapsLink}` : ''}
 
 ⏰ *WHAT'S NEXT:*
-The provider has been notified. They will ${isHomeVisit ? 'come to your location' : 'see you at the scheduled time'}.
-🔒 Your payment is secure and will be held until the service is complete.`.trim();
+the buyer has been notified. wait for the seller to confirm the booking. we will notify you when booking is accepted, your money is safe`.trim();
 
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
