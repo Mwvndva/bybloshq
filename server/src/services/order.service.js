@@ -116,7 +116,7 @@ class OrderService {
 
         // 4e. VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
         try {
-          validateFulfillmentPayload(fulfillmentType, normalizedLocation);
+          validateFulfillmentPayload(fulfillmentType, normalizedLocation, metadata);
         } catch (err) {
           logger.warn(`Fulfillment validation failed for Order: ${err.message}`);
           throw err;

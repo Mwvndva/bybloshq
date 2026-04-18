@@ -26,8 +26,8 @@ export const sellerHasPhysicalShop = (seller) => {
     // Check against Nairobi sentinel placeholder (-1.2921, 36.8219)
     // We use a small epsilon for floating point comparison
     const NAIROBI_SENTINEL = { lat: -1.2921, lng: 36.8219 };
-    const isSentinel = Math.abs(lat - NAIROBI_SENTINEL.lat) < 0.001 &&
-        Math.abs(lng - NAIROBI_SENTINEL.lng) < 0.001;
+    const isSentinel = Math.abs(lat - NAIROBI_SENTINEL.lat) < 0.0001 &&
+        Math.abs(lng - NAIROBI_SENTINEL.lng) < 0.0001;
 
     return !isSentinel;
 };

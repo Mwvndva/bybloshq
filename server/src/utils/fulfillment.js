@@ -50,15 +50,13 @@ export const resolveFulfillmentType = (seller, productType) => {
     return FulfillmentType.COURIER;
 };
 
-/**
- * Validates if the provided payload matches the fulfillment requirements.
- * 
- * @param {string} type - Resolved FulfillmentType
- * @param {Object} location - Provided location {lat, lng, address}
- * @throws {Error} if validation fails
- */
-export const validateFulfillmentPayload = (type, location) => {
+export const validateFulfillmentPayload = (type, location, metadata = {}) => {
     if (type === FulfillmentType.SELLER_TO_BUYER) {
+        // Skip coordinate check if explicitly marked as Virtual/Online (Task BUG-BOOK-02)
+        if (metadata?.location_type === 'Virtual/Online' || metadata?.service_location === 'Virtual/Online') {
+            return;
+        }
+
         if (!location?.lat || !location?.lng) {
             const error = new Error('Booking must fail if coordinates are missing');
             error.code = 'INVALID_FULFILLMENT_FLOW';
