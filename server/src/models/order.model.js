@@ -9,50 +9,62 @@ class Order {
    * Expects client to be passed for transaction support
    */
   static async insert(client, data) {
+    // 1. Prepare structured data object for dynamic query building
+    const orderData = {
+      order_number: data.order_number,
+      buyer_id: data.buyer_id || null,
+      seller_id: data.seller_id,
+      total_amount: data.total_amount,
+      platform_fee_amount: data.platform_fee_amount,
+      seller_payout_amount: data.seller_payout_amount,
+      payment_method: data.payment_method || null,
+      buyer_name: data.buyer_name || null,
+      buyer_email: data.buyer_email || null,
+      buyer_mobile_payment: data.buyer_mobile_payment || null,
+      buyer_whatsapp_number: data.buyer_whatsapp_number || null,
+      shipping_address: data.shipping_address || null,
+      notes: data.notes || null,
+      metadata: data.metadata && typeof data.metadata === 'object'
+        ? JSON.stringify(data.metadata)
+        : (data.metadata || '{}'),
+      status: data.status || 'PENDING',
+      payment_status: data.payment_status || 'pending',
+      service_requirements: data.service_requirements || null,
+      is_debt: data.is_debt || false,
+      client_id: data.client_id || null,
+      is_seller_initiated: data.is_seller_initiated || false,
+      fulfillment_type: data.fulfillment_type || null,
+      delivery_location: data.delivery_location && typeof data.delivery_location === 'object'
+        ? JSON.stringify(data.delivery_location)
+        : (data.delivery_location || null),
+      order_type: data.order_type || 'PHYSICAL',
+      total_quantity: data.total_quantity || 1,
+      reservation_expires_at: data.reservation_expires_at instanceof Date
+        ? data.reservation_expires_at.toISOString()
+        : (data.reservation_expires_at || null),
+      location_address: data.location_address || null,
+      location_lat: data.location_lat || 0,
+      location_lng: data.location_lng || 0,
+      service_title: data.service_title || null,
+      notification_sent: data.notification_sent || false
+    };
+
+    // 2. Build Dynamic SQL
+    const columns = Object.keys(orderData);
+    const values = Object.values(orderData);
+    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+
     const query = `
-      INSERT INTO product_orders (
-        order_number, buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
-        payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
-        notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
-        fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
-        location_address, location_lat, location_lng, service_title, notification_sent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30)
+      INSERT INTO product_orders (${columns.join(', ')})
+      VALUES (${placeholders})
       RETURNING *
     `;
 
-    const values = [
-      data.order_number,
-      data.buyer_id,
-      data.seller_id,
-      data.total_amount,
-      data.platform_fee_amount,
-      data.seller_payout_amount,
-      data.payment_method,
-      data.buyer_name,
-      data.buyer_email,
-      data.buyer_mobile_payment,
-      data.buyer_whatsapp_number || null,
-      data.shipping_address || null,
-      data.notes || null,
-      data.metadata && typeof data.metadata === 'object' ? JSON.stringify(data.metadata) : (data.metadata || '{}'),
-      data.status || 'PENDING',
-      data.payment_status || 'pending',
-      data.service_requirements || null,
-      data.is_debt || false,
-      data.client_id || null,
-      data.delivery_location && typeof data.delivery_location === 'object' ? JSON.stringify(data.delivery_location) : (data.delivery_location || null),
-      data.order_type || 'PHYSICAL',
-      data.total_quantity || 1,
-      data.reservation_expires_at instanceof Date ? data.reservation_expires_at.toISOString() : (data.reservation_expires_at || null),
-      data.location_address || null,
-      data.location_lat || 0,
-      data.location_lng || 0,
-      data.service_title || null,
-      data.notification_sent || false
-    ];
-
     const executor = client || pool;
-    // Log before insert for transparency
+    // Log final state for absolute transparency as requested
+    console.log('--- FINAL INSERT PREPARATION ---');
+    console.log('Placeholder Count:', columns.length);
+    console.log('Value Count:', values.length);
     console.log('FINAL VALUES:', JSON.stringify(values, null, 2));
 
     try {
