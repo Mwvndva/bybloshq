@@ -77,23 +77,16 @@ export function normalizeOrderInput(req) {
     const isService = body.isService || metadata.product_type === 'service';
 
     if (!isDigital) {
-        // All non-digital orders MUST have an address
-        if (!location.address || location.address === 'Not specified') {
-            throw new Error("Valid delivery address is required for physical and service orders.");
+        // Strict validation is only for Services (which require coordinates for fulfillment)
+        // Physical orders can rely on address string or system courier
+        if (isService && (!location.address || location.address === 'Not specified')) {
+            throw new Error("Valid delivery address and coordinates are required for service bookings.");
         }
+    }
 
-        // SERVICES MUST have precise coordinates for fulfillment
-        // PHYSICAL orders can rely on address + phone for courier, but we log warning if missing coords
-        if (location.lat === 0 || location.lng === 0 || isNaN(location.lat) || isNaN(location.lng)) {
-            if (isService) {
-                throw new Error("Precise map coordinates are required for service bookings. Please select your location on the map.");
-            } else {
-                logger.warn('Physical order received without coordinates. Relying on address string.', {
-                    order_number: body.order_number,
-                    address: location.address
-                });
-            }
-        }
+    // SERVICES MUST have precise coordinates for fulfillment
+    if (isService && (location.lat === 0 || location.lng === 0 || isNaN(location.lat) || isNaN(location.lng))) {
+        throw new Error("Precise map coordinates are required for service bookings. Please select your location on the map.");
     }
 
     // 5. Final Assembly
