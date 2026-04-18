@@ -16,7 +16,7 @@ class Order {
         notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
         fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
         location_address, location_lat, location_lng, service_title, notification_sent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30)
       RETURNING *
     `;
 
