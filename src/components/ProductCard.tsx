@@ -49,6 +49,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isPhoneCheckModalOpen, setIsPhoneCheckModalOpen] = useState(false);
   const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
   const [currentPhone, setCurrentPhone] = useState('');
+  const [buyerId, setBuyerId] = useState<number | string | null>(null);
   const [initialBuyerData, setInitialBuyerData] = useState<{ fullName?: string; email?: string; city?: string; location?: string } | undefined>(undefined);
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
@@ -264,6 +265,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           location: userData.location
         }, data);
       });
+    } else if (currentPhone && buyerId) {
+      // CASE: Guest who just finished phone check (Task BUG-BOOK-04)
+      await runWithLock(async () => {
+        await executePayment({
+          fullName: 'Guest',
+          email: '',
+          mobilePayment: currentPhone,
+          city: data.location || '',
+          location: data.location || ''
+        }, data, buyerId);
+      });
     } else {
       setIsPhoneCheckModalOpen(true);
     }
@@ -282,6 +294,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       if (result.exists && result.buyer) {
         // CASE A: Buyer Exists
         setCurrentPhone(normalizedPhone);
+        setBuyerId(result.buyer.id);
         setIsPhoneCheckModalOpen(false);
 
         // If it's a booking flow, open ServiceBookingModal ONLY if we don't have booking data yet (Task BUG-BOOK-01)
@@ -338,6 +351,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           setInitialBuyerLocation(null);
           setIsBookingModalOpen(true);
         } else {
+          setBuyerId(null); // Reset ID for new guest record if needed? 
+          // Actually, checkBuyerByPhone for non-existent returns a fresh ID sometimes?
+          // If not exists, we'll get it during registration/payment
           setInitialBuyerData(undefined);
           setShouldSkipSave(false);
           setIsBuyerModalOpen(true);

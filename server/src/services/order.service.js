@@ -811,13 +811,21 @@ class OrderService {
     if (buyerId && buyerLocation) {
       try {
         const Buyer = (await import('../models/buyer.model.js')).default;
-        await Buyer.updateLocation(buyerId, {
-          latitude: buyerLocation.latitude,
-          longitude: buyerLocation.longitude,
-          fullAddress: buyerLocation.fullAddress
-        });
-        logger.info(`Updated buyer ${buyerId} location coordinates`);
-        metadata.buyer_location = buyerLocation;
+        // Map frontend lat/lng to backend latitude/longitude (Task BUG-GUEST-04)
+        const updateData = {
+          latitude: buyerLocation.latitude || buyerLocation.lat,
+          longitude: buyerLocation.longitude || buyerLocation.lng,
+          fullAddress: buyerLocation.fullAddress || buyerLocation.address
+        };
+
+        if (updateData.latitude && updateData.longitude) {
+          await Buyer.updateLocation(buyerId, updateData);
+          logger.info(`Updated buyer ${buyerId} location coordinates`);
+          metadata.buyer_location = {
+            ...buyerLocation,
+            ...updateData // Ensure both formats are in internal metadata
+          };
+        }
       } catch (locError) {
         logger.error('Error updating buyer location during order creation:', locError);
       }
