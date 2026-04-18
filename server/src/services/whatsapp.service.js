@@ -350,56 +350,56 @@ class WhatsAppService {
         // 1. INITIAL STATES (PENDING/PAID/CONFIRMED)
         if (['CONFIRMED', 'PAID', 'PENDING'].includes(status)) {
             if (isBuyer) {
-                if (isDigital) return "Your digital product is ready for download below.";
-                if (isSystemDelivery) return "Seller will drop off your item at our hub. Please wait for the hub arrival notification.";
-                if (isShopPickup) return "The seller is preparing your item for pickup. Wait for the 'Ready for Pickup' alert.";
-                if (isMobileService) return "Booking confirmed! The seller will arrive at your location at the scheduled time.";
-                if (isShopService) return "Booking confirmed! Please visit the shop at the scheduled time.";
+                if (isDigital) return "👉 *Next Step:* Your digital product is ready! Click the download link below.";
+                if (isSystemDelivery) return "⏳ *Next Step:* Please wait for our team to pack your item. Hub delivery usually takes 1-2 days. You'll be notified of arrival.";
+                if (isShopPickup) return "⏳ *Next Step:* The seller is preparing your item. Please wait for the 'Ready for Pickup' notification.";
+                if (isMobileService) return "⏳ *Next Step:* Booking confirmed! Please be at your location at the scheduled time.";
+                if (isShopService) return "⏳ *Next Step:* Booking confirmed! Please visit the shop at the scheduled time.";
             } else {
-                if (isSystemDelivery) return `Action Required: Please drop off the items at ${this.DROPOFF_LOCATION} within 48 hours.`;
-                if (isShopPickup) return "Action Required: Prepare the items for the buyer's pickup.";
-                if (isMobileService) return "Action Required: Prepare your tools and proceed to the buyer's location at the scheduled time.";
-                if (isShopService) return "Action Required: Prepare for the buyer's arrival at your shop.";
+                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 48 hours to avoid cancellation.`;
+                if (isShopPickup) return "👉 *Next Step:* Prepare the items for the buyer's pickup. Notify them when it's ready.";
+                if (isMobileService) return "👉 *Next Step:* Prepare your tools and proceed to the buyer's location at the scheduled time.";
+                if (isShopService) return "👉 *Next Step:* Prepare for the buyer's arrival at your shop.";
             }
         }
 
         // 2. PROCESSING
         if (status === 'PROCESSING') {
             if (isBuyer) {
-                return isService ? "The seller is preparing for your service." : "The seller is packing your items. Dispatch notification coming soon.";
+                return isService ? "⏳ *Next Step:* The seller is now preparing for your service." : "⏳ *Next Step:* The seller is currently packing your items. Stay tuned for dispatch!";
             }
-            return "Proceed with preparation. Update the status to 'Delivery Pending' or 'Ready for Collection' when done.";
+            return "👉 *Next Step:* Proceed with preparation. Update status to 'Delivery Pending' or 'Ready for Collection' when complete.";
         }
 
         // 3. DELIVERY / DISPATCH
         if (status === 'DELIVERY_PENDING') {
             if (isBuyer) {
-                if (isSystemDelivery) return "Your order is en route to our hub. We'll notify you the moment it's scanned in and ready for pickup.";
-                return "Your order is on its way to you!";
+                if (isSystemDelivery) return "🚚 *Next Step:* Your order is en route to our hub. Wait for the 'Arrived at Hub' notification before visiting.";
+                return "🚚 *Next Step:* Your order is on its way to you!";
             }
-            return isSystemDelivery ? "Item dispatched to hub. Logistics handling initiated." : "Item is out for delivery.";
+            return isSystemDelivery ? "👉 *Next Step:* Item dispatched to hub. Logistics handling initiated." : "🚚 *Next Step:* Proceed with the delivery.";
         }
 
         // 4. COLLECTION (READY)
         if (status === 'COLLECTION_PENDING' || status === 'READY_FOR_COLLECTION') {
             if (isBuyer) {
-                if (isShopPickup || isShopService) return "READY! Please visit the shop now to collect your order.";
-                if (isSystemDelivery) return `READY! Your order has arrived at the hub. Visit ${this.DROPOFF_LOCATION} to collect.`;
+                if (isShopPickup || isShopService) return "📍 *Next Step:* Your order is READY! Please visit the shop now to collect.";
+                if (isSystemDelivery) return `📍 *Next Step:* READY! Your order has arrived at the hub. Visit ${this.DROPOFF_LOCATION} now to collect.`;
             }
-            return "Buyer has been notified that the order is ready for collection.";
+            return "👉 *Next Step:* Buyer has been notified. Hand over the item and mark as 'Completed' once the buyer confirms.";
         }
 
         // 5. SERVICE EN ROUTE
         if (status === 'SERVICE_PENDING') {
             if (isBuyer) {
-                return isMobileService ? "The seller is currently en route to your location. See you soon!" : "The seller is ready for you at the shop.";
+                return isMobileService ? "🚚 *Next Step:* The seller is en route to your location. Please be available." : "📍 *Next Step:* The seller is ready. Visit the shop now!";
             }
-            return isMobileService ? "Time to go! Please proceed to the buyer's location." : "Prepare for the buyer's arrival.";
+            return isMobileService ? "🚚 *Next Step:* Proceed to the buyer's location now." : "👉 *Next Step:* Prepare for the buyer's arrival.";
         }
 
         // 6. COMPLETED
         if (status === 'COMPLETED') {
-            return isBuyer ? "Thank you for shopping with Byblos! Hope to see you again soon." : "Transaction successful. Funds have been released to your wallet.";
+            return isBuyer ? "🎉 *Next Step:* Order successful! We hope to see you again soon." : "✅ *Status:* Funds have been released to your wallet. Thank you!";
         }
 
         return "";
