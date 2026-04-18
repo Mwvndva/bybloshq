@@ -1514,7 +1514,7 @@ class OrderService {
         `SELECT o.*, 
                 b.full_name AS buyer_name, b.mobile_payment AS buyer_mobile_payment,
                 b.email AS buyer_email,
-                s.full_name AS seller_name, s.shop_name, s.phone AS seller_phone, 
+                s.full_name AS seller_name, s.shop_name, s.whatsapp_number AS seller_phone, 
                 s.email AS seller_email, s.address AS seller_address,
                 s.latitude AS seller_latitude, s.longitude AS seller_longitude,
                 s.instagram_link, s.tiktok_link, s.facebook_link,
