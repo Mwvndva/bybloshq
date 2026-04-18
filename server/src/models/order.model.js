@@ -24,9 +24,7 @@ class Order {
       buyer_whatsapp_number: data.buyer_whatsapp_number || null,
       shipping_address: data.shipping_address || null,
       notes: data.notes || null,
-      metadata: data.metadata && typeof data.metadata === 'object'
-        ? JSON.stringify(data.metadata)
-        : (data.metadata || '{}'),
+      metadata: data.metadata || {},
       status: data.status || 'PENDING',
       payment_status: data.payment_status || 'pending',
       service_requirements: data.service_requirements || null,
@@ -34,9 +32,7 @@ class Order {
       client_id: data.client_id || null,
       is_seller_initiated: data.is_seller_initiated || false,
       fulfillment_type: data.fulfillment_type || null,
-      delivery_location: data.delivery_location && typeof data.delivery_location === 'object'
-        ? JSON.stringify(data.delivery_location)
-        : (data.delivery_location || null),
+      delivery_location: data.delivery_location || null,
       order_type: data.order_type || 'PHYSICAL',
       total_quantity: data.total_quantity || 1,
       reservation_expires_at: data.reservation_expires_at instanceof Date
