@@ -284,8 +284,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         setCurrentPhone(normalizedPhone);
         setIsPhoneCheckModalOpen(false);
 
-        // If it's a booking flow, open ServiceBookingModal with pre-filled coords
-        if (isBookingFlowActive) {
+        // If it's a booking flow, open ServiceBookingModal ONLY if we don't have booking data yet (Task BUG-BOOK-01)
+        if (isBookingFlowActive && !bookingData) {
           if (result.buyer.latitude && result.buyer.longitude) {
             setInitialBuyerLocation({
               lat: Number(result.buyer.latitude),
@@ -334,7 +334,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         setCurrentPhone(normalizedPhone);
         setIsPhoneCheckModalOpen(false);
 
-        if (isBookingFlowActive) {
+        if (isBookingFlowActive && !bookingData) {
           setInitialBuyerLocation(null);
           setIsBookingModalOpen(true);
         } else {
