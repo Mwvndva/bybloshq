@@ -986,7 +986,25 @@ class OrderService {
     // 1. Finalize Service Slot (Convert Reserved to Booked)
     await this._finalizeServiceSlot(client, order.id);
 
-    // 2. Determine and Update Status
+    // 2. Persist Buyer Location (For Mobile Services only)
+    if (order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER && order.buyer_id) {
+      try {
+        const { location_lat, location_lng, location_address } = order;
+        if (location_lat && location_lng && location_address) {
+          logger.info(`Updating buyer ${order.buyer_id} profile with booking location details`);
+          await Buyer.updateLocation(order.buyer_id, {
+            latitude: location_lat,
+            longitude: location_lng,
+            fullAddress: location_address
+          });
+        }
+      } catch (err) {
+        logger.error(`Failed to persist buyer location: ${err.message}`);
+        // Don't fail the order completion if profile update fails
+      }
+    }
+
+    // 3. Determine and Update Status
     const newStatus = OrderStatus.SERVICE_PENDING; // Services move to SERVICE_PENDING after payment
     const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, newStatus, 'completed', payment.provider_reference);
 

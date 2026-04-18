@@ -389,12 +389,12 @@ class WhatsAppService {
             return "👉 *Next Step:* Buyer has been notified. Hand over the items/service and mark as 'Completed'.";
         }
 
-        // 5. SERVICE EN ROUTE
+        // 5. SERVICE EN ROUTE / PENDING CONFIRMATION
         if (status === 'SERVICE_PENDING') {
             if (isBuyer) {
-                return isMobileService ? "🚚 *Next Step:* The professional is now en route to your address. Please be available." : "📍 *Next Step:* The professional is ready for you at the shop. Please visit now!";
+                return "⏳ *Next Step:* Waiting for the professional to confirm your booking. You'll receive a notification once they are ready to proceed.";
             }
-            return isMobileService ? "🚚 *Next Step:* Proceed to the buyer's location now." : "👉 *Next Step:* Prepare for the buyer's arrival at your shop.";
+            return "👉 *Next Step:* YOU HAVE A NEW BOOKING! Please confirm the appointment in your dashboard to initiate the service.";
         }
 
         // 6. COMPLETED / DELIVERED

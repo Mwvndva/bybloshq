@@ -65,37 +65,32 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
             setTime('');
             setServiceRequirements('');
 
-            // PRE-FILL logic for coordinates
-            if (initialBuyerLocation && initialBuyerLocation.lat && initialBuyerLocation.lng) {
-                setBuyerLocation(initialBuyerLocation);
-                setCustomLocation(initialBuyerLocation.address || '');
-            } else {
-                // DON'T auto-fill buyer location from profile anymore to force explicit selection
-                // as requested by user ("should always ask buyer to input their location details")
-                setBuyerLocation(null);
-                setCustomLocation('');
+            // PRE-FILL logic for coordinates (Mobile Services / Home Service)
+            if (isShopless || initialBuyerLocation?.lat) {
+                if (initialBuyerLocation && initialBuyerLocation.lat && initialBuyerLocation.lng) {
+                    setBuyerLocation(initialBuyerLocation);
+                    setCustomLocation(initialBuyerLocation.address || '');
+                } else {
+                    setBuyerLocation(null);
+                    setCustomLocation('');
+                }
             }
 
-            // Auto-select first location if available
+            // Auto-select first shop location if available (In-Store)
             if (locations.length > 0) {
                 setLocation(locations[0]);
             } else {
                 setLocation(null);
             }
 
-            // Default based on product settings and shop availability
-            if (initialBuyerLocation && initialBuyerLocation.lat && initialBuyerLocation.lng) {
-                // If we have a pre-filled location, default to Home Service (buyer visits seller)
-                setSelectedLocationType('buyer');
-            } else if (isShopless) {
-                // If shopless, buyer MUST set their location (Home Service)
+            // Default selection based on product type
+            if (isShopless) {
                 setSelectedLocationType('buyer');
             } else {
-                // If seller HAS a shop, default to In-Store
                 setSelectedLocationType('seller');
             }
         }
-    }, [isOpen, initialBuyerLocation]); // Only trigger when modal opens/closes or initial location data changes
+    }, [isOpen, initialBuyerLocation, isShopless]); // Only trigger when modal opens/closes or initial location data changes
 
     // Generate time slots
     useEffect(() => {
