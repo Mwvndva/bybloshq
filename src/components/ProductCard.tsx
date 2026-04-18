@@ -429,6 +429,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setIsProcessingPurchase(true);
     try {
       const activeBooking = bookingDetails || bookingData;
+      console.log('[PAYLOAD-DEBUG] Outgoing Payment Payload:', {
+        buyerDetails,
+        bookingDetails,
+        bookingData,
+        resolvedBooking: activeBooking,
+        buyerLocation: activeBooking?.buyerLocation
+      });
       const isService = product.product_type === 'service' || (product as any).productType === 'service';
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
