@@ -182,14 +182,11 @@ class Order {
         o.location_lng as "locationLng",
         o.service_title as "serviceTitle",
         o.notification_sent as "notificationSent",
-        o.notification_sent as "notificationSent",
         json_build_object(
           'id', s.id,
           'name', s.full_name,
           'shopName', s.shop_name,
           'theme', s.theme,
-          'location', s.location,
-          'city', s.city,
           'clientCount', s.client_count
         ) as seller,
         COALESCE(
@@ -264,8 +261,6 @@ class Order {
           'name', s.full_name,
           'shopName', s.shop_name,
           'theme', s.theme,
-          'location', s.location,
-          'city', s.city,
           'clientCount', s.client_count
         ) as seller,
         COALESCE(
@@ -346,8 +341,6 @@ class Order {
           'name', s.full_name,
           'shopName', s.shop_name,
           'theme', s.theme,
-          'location', s.location,
-          'city', s.city,
           'clientCount', s.client_count,
           'isClient', (sc.user_id IS NOT NULL)
         ) as seller,

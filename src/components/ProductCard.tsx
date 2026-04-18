@@ -441,18 +441,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         customerName: buyerDetails.fullName,
         narrative: `Purchase of ${product.name}`,
         paymentMethod: 'payd',
-        // Only send city/location if it's a service (Mobile Service)
-        // For Physical products, the backend handles logistics internally (Courier or Pickup)
-        city: isService ? buyerDetails.city : undefined,
-        location: isService ? buyerDetails.location : undefined,
+        // Provide structured buyerLocation if it came from booking/map
+        // root city/location fields are deprecated and ignored by backend
+        buyerLocation: activeBooking?.buyerLocation || undefined,
         metadata: activeBooking ? {
           booking_date: format(activeBooking.date, 'yyyy-MM-dd'),
           booking_time: activeBooking.time,
           service_location: activeBooking.location,
           service_requirements: activeBooking.serviceRequirements,
           buyer_location: activeBooking.buyerLocation,
-          product_type: 'service'
-        } : undefined
+          product_type: isService ? 'service' : 'physical'
+        } : {
+          product_type: isService ? 'service' : 'physical'
+        }
       };
 
       // USE NEW API CLIENT
