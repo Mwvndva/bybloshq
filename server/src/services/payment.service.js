@@ -1375,11 +1375,10 @@ export class PaymentService {
 
         if (finalTotal <= 0) throw new Error('Invalid order amount after secure calculation');
 
-        // 4. Create Order
+        // 4. Create Order (PIN-02: UNIFIED ORDER CONTEXT)
         const orderData = {
             ...normalizedOrder,
             sellerId: Number.parseInt(product.seller_id),
-            // Update normalized fields with secure DB data
             service: {
                 ...service,
                 price: dbPrice,
@@ -1387,12 +1386,6 @@ export class PaymentService {
                 total: finalTotal,
                 title: product.name
             },
-            // Legacy mapping for backward compatibility in OrderService.createOrder
-            buyerId,
-            buyerName: buyer.name,
-            buyerEmail,
-            buyerMobilePayment,
-            buyerWhatsApp,
             metadata: {
                 ...metadata,
                 product_type: product.product_type,

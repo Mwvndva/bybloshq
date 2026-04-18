@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';
 import { OrderStatus, PaymentStatus, ProductType } from '../constants/enums.js';
+import { safeJson } from '../utils/order.utils.js';
 
 class Order {
   /**
@@ -28,9 +29,6 @@ class Order {
       )
       RETURNING *
     `;
-
-    // 3. Robust JSON handling (PIN-05: NO-NULL JSONB)
-    const safeJson = (val) => (val && typeof val === 'object') ? val : {};
 
     // 4. Strict Value Mapping (Native Types)
     const values = [

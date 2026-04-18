@@ -25,28 +25,17 @@ class OrderService {
    * Create a new order with fee calculations and status determination
    */
   static async createOrder(orderData, externalClient = null) {
-    let sellerInfo = null;
     const {
-      buyer,   // Unified Buyer Object
-      service, // Unified Service Object 
-      location, // Unified Location Object
-      buyerId,  // Legacy/Fallback
-      sellerId,
-      items: rawItems,
-      paymentMethod,
-      buyerName,
-      buyerEmail,
-      buyerMobilePayment,
-      buyerWhatsApp,
-      shippingAddress,
-      notes,
+      buyer,      // Unified Buyer Object { id, name, phone, email }
+      service,    // Unified Service Object { id, title, quantity, price, total }
+      location,   // Unified Location Object { address, lat, lng }
+      payment,    // Unified Payment Object { method, status, reference }
       metadata: rawMetadata = {},
-      buyerLocation = null,
       idempotencyKey = null
     } = orderData;
 
     // --- PIN-01: DISTRIBUTED LOCK FOR ATOMIC ORDER CREATION ---
-    const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyerId}:seller:${sellerId}`;
+    const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyer.id}:seller:${orderData.sellerId}`;
 
     const isManaged = !externalClient;
     const client = externalClient || await pool.connect();
@@ -61,10 +50,10 @@ class OrderService {
 
       // 2. Transaction Start
       try {
-        const metadata = rawMetadata;
-        // Metadata is now non-critical; we rely on flat columns for all core logic.
+        const metadata = { ...rawMetadata }; // Local clone to avoid mutation
+        const sellerId = orderData.sellerId;
 
-        logger.info('OrderService: Starting order creation', { buyerId, sellerId, hasLocation: !!buyerLocation });
+        logger.info('OrderService: Starting order creation', { buyerId: buyer.id, sellerId });
         if (isManaged) await client.query('BEGIN');
 
         // 1. Verify seller exists and is active
@@ -79,138 +68,105 @@ class OrderService {
         const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
         logger.info(`Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
 
-        // 4. Enrich items with product type and inventory data
+        // 4. Enrich items with product data and verify inventory
         await this._enrichItemsWithProductData(client, items);
-
-        // 4b. INVENTORY CHECK: Verify stock availability for tracked products
         this._checkInventory(items);
 
-        // 4c. Update Buyer Location if provided
-        await this._handleLocationUpdate(buyerId, buyerLocation, metadata);
-
-        // 4d. ENRICH PRODUCT TYPE & VIRTUAL STATUS (BEFORE VALIDATION) (Task BUG-BOOK-05)
+        // 4d. ENRICH PRODUCT TYPE & VIRTUAL STATUS
         const primaryProductType = items[0]?.productType || metadata.product_type || 'physical';
-
-        // Shopless Service Logic: Default to Virtual/Online if seller has no address/coords
         const isShopless = !sellerHasPhysicalShop(sellerInfo) && !sellerInfo.physical_address;
         const reflectsService = (primaryProductType === ProductType.SERVICE || primaryProductType === 'service');
 
         if (isShopless && reflectsService && !metadata.location_type && !metadata.service_location) {
           metadata.location_type = 'Virtual/Online';
-          logger.info(`Shopless service detected for buyer ${buyerId}, defaulting to Virtual/Online`);
+          logger.info(`Shopless service detected for buyer ${buyer.id}, defaulting to Virtual/Online`);
         }
 
         // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
         const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
 
-        // Standardize buyer location format for validation
-        const rawLoc = buyerLocation || metadata.buyer_location;
-        const normalizedLocation = (rawLoc && typeof rawLoc === 'object') ? {
-          lat: rawLoc.lat !== undefined ? Number(rawLoc.lat) : Number(rawLoc.latitude || 0),
-          lng: rawLoc.lng !== undefined ? Number(rawLoc.lng) : Number(rawLoc.longitude || 0),
-          address: rawLoc.address || rawLoc.fullAddress
-        } : null;
-
         // --- NEW LOCATION RESOLUTION LOGIC ---
-        // 1. Determine if seller has a physical shop
         const hasShop = sellerHasPhysicalShop(sellerInfo);
-
-        // 2. Resolve final location based on shop status and product type
         let finalLocationAddress = null;
         let finalLat = null;
         let finalLng = null;
 
         if (hasShop) {
-          // Rule: If seller has physical shop, use seller coordinates for both products and services
+          // Rule: If seller has physical shop, use seller coordinates
           finalLocationAddress = sellerInfo.physical_address;
           finalLat = sellerInfo.latitude;
           finalLng = sellerInfo.longitude;
-          logger.info(`Physical shop detected for Order. Using seller location: ${finalLocationAddress}`);
+          logger.info(`Physical shop detected for Order. Using seller location.`);
         } else {
-          // Online Shop / Shopless rules
           if (reflectsService) {
-            // Priority 3: Mobile Service (Online Shop) -> Use buyer coordinates collected during booking
-            finalLocationAddress = normalizedLocation?.address || null;
-            finalLat = normalizedLocation?.lat || null;
-            finalLng = normalizedLocation?.lng || null;
-            logger.info(`Online shop service detected for Order. Using buyer-provided location: ${finalLocationAddress}`);
+            // Service (Online Shop) -> Use buyer coordinates
+            finalLocationAddress = location.address;
+            finalLat = location.lat;
+            finalLng = location.lng;
+            logger.info(`Online shop service detected for Order. Using buyer-provided location.`);
           } else {
-            // Priority 1: Physical Product (Online Shop) -> Use System Delivery
-            // Rule: Buyer's delivery address is NOT needed in flat columns as courier handles it out-of-band
-            finalLocationAddress = null;
-            finalLat = null;
-            finalLng = null;
+            // Physical Product (Online Shop) -> System Delivery (NULL flat loc)
             logger.info(`Online shop physical order detected for Order. Setting location to NULL (System Delivery handling).`);
           }
         }
 
         try {
-          validateFulfillmentPayload(fulfillmentType, normalizedLocation, metadata);
+          validateFulfillmentPayload(fulfillmentType, location, metadata);
         } catch (err) {
           logger.warn(`Fulfillment validation failed for Order: ${err.message}`);
           throw err;
         }
 
-        logger.info('OrderService: items enriched', {
-          items: items.map(i => ({ id: i.productId, type: i.productType, digital: i.isDigital }))
-        });
-
         // 4f. RESOLVE ORDER TYPE
-        const hasService = items.some(i => i.productType === ProductType.SERVICE || i.productType === 'service');
         const hasDigital = items.every(i => i.isDigital === true);
         let orderType = OrderType.PHYSICAL;
-        if (hasService) orderType = OrderType.SERVICE;
+        if (reflectsService) orderType = OrderType.SERVICE;
         else if (hasDigital) orderType = OrderType.DIGITAL;
 
-        // 5. Determine initial status
+        // 5. Determine initial status and handle inventory reservation
         const initialStatus = this._determineInitialStatus(orderType);
-
-        // 5b. Handle Inventory Reservation
         if (orderType === OrderType.PHYSICAL) {
           await this._reserveInventory(client, items);
         }
 
-        // 5c. Set Reservation Expiry (10 minutes)
+        // 5c. Set Reservation Expiry
         const reservationExpiresAt = (orderType === OrderType.PHYSICAL || orderType === OrderType.SERVICE)
           ? new Date(Date.now() + 10 * 60 * 1000)
           : null;
 
-        // 5d. Calculate Total Quantity
         const totalQuantity = items.reduce((sum, item) => sum + (Number.parseInt(item.quantity, 10) || 1), 0);
-
-        // 5e. Generate unique order number
         const orderNumber = await this._generateOrderNumber(client);
 
         // 5f. Prepare Order Record (PIN-02: UNIFIED SCHEMA MAPPING)
         const orderRecord = {
           order_number: orderNumber,
-          buyer_id: buyer?.id || buyerId,
+          buyer_id: buyer.id,
           seller_id: sellerId,
-          total_amount: service?.total || totalAmount,
+          total_amount: service.total || totalAmount,
           platform_fee_amount: platformFee,
           seller_payout_amount: sellerPayout,
-          payment_method: paymentMethod,
-          buyer_name: buyer?.name || buyerName,
-          buyer_email: buyer?.email || buyerEmail,
-          buyer_mobile_payment: buyer?.phone || buyerMobilePayment,
-          buyer_whatsapp_number: buyer?.phone || buyerWhatsApp,
-          shipping_address: location?.address || null,
+          payment_method: payment.method,
+          buyer_name: buyer.name,
+          buyer_email: buyer.email,
+          buyer_mobile_payment: buyer.phone,
+          buyer_whatsapp_number: buyer.phone,
+          shipping_address: location.address || null,
 
           // Unified Flat Columns (New Schema)
-          location_address: finalLocationAddress || location?.address || null,
-          location_lat: finalLat || location?.lat || normalizedLocation?.lat || null,
-          location_lng: finalLng || location?.lng || normalizedLocation?.lng || null,
-          service_title: service?.title || items[0]?.name || 'Service',
+          location_address: finalLocationAddress || location.address || null,
+          location_lat: finalLat || location.lat || null,
+          location_lng: finalLng || location.lng || null,
+          service_title: service.title || items[0]?.name || 'Service',
 
-          notes: notes,
-          metadata: metadata, // Pass as object, DAO will serialize
+          notes: orderData.notes || null,
+          metadata: metadata,
           status: initialStatus,
           payment_status: 'pending',
           service_requirements: metadata.service_requirements || null,
           fulfillment_type: fulfillmentType,
-          delivery_location: fulfillmentType === FulfillmentType.SELLER_TO_BUYER ? (location || normalizedLocation) : null,
+          delivery_location: fulfillmentType === FulfillmentType.SELLER_TO_BUYER ? location : null,
           order_type: orderType,
-          total_quantity: service?.quantity || totalQuantity,
+          total_quantity: service.quantity || totalQuantity,
           reservation_expires_at: reservationExpiresAt
         };
 
