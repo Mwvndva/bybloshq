@@ -43,7 +43,6 @@ publicRouter.post(
 // Webhook endpoint (public) - Paystack
 publicRouter.post(
   '/webhook/payd',
-  express.json(),
   verifyPaydWebhook,
   paymentController.handlePaydWebhook // Updated method name
 );

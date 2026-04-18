@@ -154,18 +154,22 @@ class BuyerService {
                 return { buyer };
             }
 
-            // Use AuthService.register to handle the pending registration flow
-            // This ensures the user is NOT created in the main users table until verified
+            // FIXED BUG-GUEST-03: generate a random password for guests who don't provide one
+            // They can set a real password later via the reset-password flow
+            const { default: crypto } = await import('node:crypto');
+            const effectivePassword = password || crypto.randomBytes(16).toString('hex');
+
             const AuthService = (await import('./auth.service.js')).default;
 
             const result = await AuthService.register({
                 email,
-                password,
+                password: effectivePassword,
                 fullName,
                 mobilePayment: mobile_payment,
                 whatsappNumber: whatsapp_number,
                 city,
-                location
+                location: location || city || 'Not specified',
+                termsAccepted: data.termsAccepted !== undefined ? data.termsAccepted : true
             }, 'buyer');
 
             return result;

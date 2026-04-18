@@ -11,9 +11,9 @@ import { sendPasswordResetEmail } from '../utils/email.js';
 import { pool } from '../config/database.js';
 import PendingRegistration from '../models/pendingRegistration.model.js';
 
-// Pre-computed bcrypt hash for timing-safe email enumeration prevention
-// Generated once: bcrypt.hash('__timing_dummy__', 10)
-const TIMING_DUMMY_HASH = '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lh3y';
+// FIXED BUG-AUTH-02: cost factor must match bcrypt.hash(password, 12) used in user.model.js
+// Regenerate with: node -e "const b=require('bcrypt');b.hash('__timing_dummy__',12).then(console.log)"
+const TIMING_DUMMY_HASH = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TgxO7dCVS0VxMhUv8E1Y2d6PJHRW';
 
 class AuthService {
     /**
@@ -229,7 +229,14 @@ class AuthService {
         const existingUser = await User.findByEmail(normalizedEmail);
 
         if (existingUser) {
-            // Already a user - check if they already have this profile type
+            // Already a user - check if they are verified
+            if (!existingUser.is_verified) {
+                // Trigger verification resend and return pending status
+                await AuthService.resendVerificationEmail(normalizedEmail, type);
+                return { status: 'pending_verification', email: normalizedEmail };
+            }
+
+            // Already a verified user - check if they already have this profile type
             switch (type) {
                 case 'seller': {
                     const existingSeller = await SellerModel.findSellerByUserId(existingUser.id);
@@ -414,16 +421,21 @@ class AuthService {
             const rawRegData = pending.registration_data || {};
             const regData = rawRegData.registrationData || rawRegData;
 
+            // FIXED BUG-EMAIL-01: explicitly whitelist fields — do NOT spread untrusted regData
             const profileData = {
-                ...regData,
                 fullName: regData.fullName || regData.full_name || regData.name,
+                email: pending.email,
                 mobilePayment: regData.mobilePayment || regData.mobile_payment || regData.phone,
                 whatsappNumber: regData.whatsappNumber || regData.whatsapp_number || regData.phone,
-                physicalAddress: pending.physical_address || regData.physicalAddress || regData.physical_address || regData.location,
-                latitude: pending.latitude !== null && pending.latitude !== undefined ? Number(pending.latitude) : (regData.latitude || null),
-                longitude: pending.longitude !== null && pending.longitude !== undefined ? Number(pending.longitude) : (regData.longitude || null),
+                shopName: regData.shopName || regData.shop_name,
+                city: regData.city,
+                location: regData.location || regData.city || 'Not specified',
+                physicalAddress: pending.physical_address || regData.physicalAddress || regData.physical_address,
+                latitude: pending.latitude !== null && pending.latitude !== undefined ? Number(pending.latitude) : (regData.latitude ? Number(regData.latitude) : null),
+                longitude: pending.longitude !== null && pending.longitude !== undefined ? Number(pending.longitude) : (regData.longitude ? Number(regData.longitude) : null),
                 userId: newUser.id,
-                termsAccepted: pending.terms_accepted
+                termsAccepted: pending.terms_accepted !== undefined ? pending.terms_accepted : true,
+                referralCode: regData.referralCode || null
             };
             let profile = null;
 

@@ -20,15 +20,15 @@ const policies = {
 // 5 seconds is used to mitigate risk of stale cache in multi-instance environments.
 const _authCache = new Map();
 const AUTH_CACHE_TTL_MS = 5 * 1000;
-const MAX_AUTH_CACHE_SIZE = 500;
+const MAX_AUTH_CACHE_SIZE = 200; // FIXED BUG-AUTH-06: reduced from 500 to limit memory
 
-// Cleanup stale entries every 2 minutes
+// FIXED BUG-AUTH-06: cleanup every 15s to match 5s TTL, prevent stale entry buildup
 setInterval(() => {
   const now = Date.now();
   for (const [key, val] of _authCache.entries()) {
     if (val.expiresAt < now) _authCache.delete(key);
   }
-}, 2 * 60 * 1000).unref();
+}, 15 * 1000).unref();
 
 /**
  * Middleware to restrict access based on permissions

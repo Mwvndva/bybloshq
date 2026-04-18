@@ -6,10 +6,13 @@ import { sanitizePublicProduct, sanitizePublicSeller } from '../utils/sanitize.j
 // Get all products (public)
 export const getProducts = async (req, res) => {
   try {
-    const { aesthetic, city, location } = req.query;
+    const { aesthetic, city, location, page = 1, limit = 20 } = req.query;
+    const pageNum = Math.max(1, parseInt(page, 10));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10)));
+    const offset = (pageNum - 1) * limitNum;
 
-    // 1. Generate Cache Key based on filters
-    const cacheKey = `products:list:${aesthetic || 'all'}:${city || 'all'}:${location || 'all'}`;
+    // 1. Generate Cache Key based on filters and pagination
+    const cacheKey = `products:list:${aesthetic || 'all'}:${city || 'all'}:${location || 'all'}:${pageNum}:${limitNum}`;
 
     // 2. Try to get from Cache
     const cachedData = await cacheService.get(cacheKey);
@@ -65,7 +68,8 @@ export const getProducts = async (req, res) => {
       }
     }
 
-    query += ' ORDER BY p.created_at DESC';
+    query += ` LIMIT $${paramCount++} OFFSET $${paramCount++}`;
+    queryParams.push(limitNum, offset);
 
     const result = await pool.query(query, queryParams);
 

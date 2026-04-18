@@ -28,6 +28,8 @@ function validateWithdrawalBody(body) {
     // by PayoutService.normalizePhoneForPayout() to ensure consistency.
     if (!mpesaNumber) return 'mpesaNumber is required';
 
+    if (mpesaName.length > 100) return 'mpesaName is too long (max 100 characters)';
+
     return null;
 }
 
