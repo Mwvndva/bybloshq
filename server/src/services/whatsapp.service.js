@@ -269,21 +269,6 @@ class WhatsAppService {
         return '';
     }
 
-    /**
-     * Safely parse order metadata
-     */
-    _getMetadata(order) {
-        if (!order || !order.metadata) return {};
-        if (typeof order.metadata === 'string') {
-            try {
-                return JSON.parse(order.metadata);
-            } catch (e) {
-                logger.error('[WHATSAPP-SERVICE] Error parsing metadata:', e.message);
-                return {};
-            }
-        }
-        return order.metadata;
-    }
 
     /**
      * Standardized helper to generate Google Maps links
@@ -321,522 +306,158 @@ class WhatsAppService {
     // NOTIFICATION LOGIC (Business Logic)
     // ==========================================
 
+
     /**
-     * Extract service provider type from order data
+     * Strict validation of the normalized order payload
+     * Fails fast to prevent sending incomplete notifications
      */
-    getServiceProviderType(order) {
-        const productName = (order.items?.[0]?.name || order.items?.[0]?.product_name || '').toLowerCase();
+    _validateOrderPayload(order) {
+        if (!order) throw new Error("Missing order payload");
 
-        const serviceMap = {
-            'plumb': 'Plumber',
-            'electric': 'Electrician',
-            'clean': 'Cleaner',
-            'paint': 'Painter',
-            'carpenter': 'Carpenter',
-            'carpentry': 'Carpenter',
-            'mechanic': 'Mechanic',
-            'repair': 'Technician',
-            'hvac': 'HVAC Technician',
-            'garden': 'Gardener',
-            'landscap': 'Landscaper',
-            'chef': 'Chef',
-            'cook': 'Cook',
-            'cater': 'Caterer',
-            'photogra': 'Photographer',
-            'video': 'Videographer',
-            'tutor': 'Tutor',
-            'teacher': 'Teacher',
-            'driver': 'Driver',
-            'transport': 'Driver',
-            'security': 'Security Guard',
-            'massage': 'Massage Therapist',
-            'hair': 'Hairstylist',
-            'barber': 'Barber',
-            'makeup': 'Makeup Artist',
-            'nail': 'Nail Technician',
-            'tailor': 'Tailor',
-            'laundry': 'Laundry Service',
-            'pest': 'Pest Control Specialist',
-        };
+        const requiredBuyer = ['name', 'phone'];
+        const requiredService = ['title', 'price', 'quantity'];
+        const requiredLocation = ['address'];
 
-        for (const [keyword, type] of Object.entries(serviceMap)) {
-            if (productName.includes(keyword)) {
-                return type;
-            }
-        }
+        requiredBuyer.forEach(f => {
+            if (!order.buyer?.[f]) throw new Error(`Missing buyer.${f}`);
+        });
 
-        return 'Service Provider';
+        requiredService.forEach(f => {
+            if (order.service?.[f] === undefined) throw new Error(`Missing service.${f}`);
+        });
+
+        if (!order.location?.address) throw new Error("Missing location.address");
+
+        return true;
     }
 
-    async notifySellerNewOrder(orderData) {
-        const { seller, buyer, order, items } = orderData;
-        const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
+    /**
+     * Central message builder using the Normalized Order Payload (Single Source of Truth)
+     */
+    buildWhatsAppMessage(order, recipientRole) {
+        this._validateOrderPayload(order);
 
-        if (!sellerWhatsApp) {
-            logger.warn('[WHATSAPP] notifySellerNewOrder: missing seller phone', {
-                orderId: order?.orderNumber,
-                sellerId: seller?.id || seller?.name
-            });
-            return false;
+        const isBuyer = recipientRole === 'buyer';
+        const service = order.service;
+        const loc = order.location;
+        const buyer = order.buyer;
+        const seller = order.seller;
+        const booking = order.booking || {};
+
+        // 1. Header
+        const header = isBuyer ? '✅ *ORDER CONFIRMED!*' : '🎉 *NEW ORDER RECEIVED!*';
+
+        // 2. Items
+        const itemsList = order.items?.length > 0
+            ? order.items.map((i, idx) => `${idx + 1}. ${i.title} (x${i.quantity})`).join('\n')
+            : `• ${service.title} (x${service.quantity})`;
+
+        // 3. Specialized Detail (Booking/Location)
+        let specializedInfo = '';
+        if (booking.date) {
+            specializedInfo += `📅 *SERVICE BOOKING*\n• Date: ${booking.date}\n• Time: ${booking.time || 'N/A'}\n\n`;
         }
 
-        const itemsList = items.map((item, i) => {
-            const name = item.name || item.product_name || 'Item';
-            const price = Number.parseFloat(item.price || item.product_price || 0);
-            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
-        }).join('\n');
+        if (loc.address && loc.address !== 'Not specified') {
+            const mapsLink = (loc.lat && loc.lng) ? `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}` : null;
+            const label = booking.date ? 'Service Address' : 'Delivery Address';
+            specializedInfo += `📍 *${label.toUpperCase()}:* ${loc.address}${mapsLink ? `\n🔗 *Navigate:* ${mapsLink}` : ''}\n`;
+        }
 
-        const metadata = this._getMetadata(order);
-        const total = Number.parseFloat(order.totalAmount || 0);
-
-        // Robust service detection (Case-insensitive + items check)
-        const productType = (metadata?.product_type || '').toLowerCase();
-        const hasServiceItem = items?.some(i => (i.productType || i.product_type || '').toLowerCase() === 'service');
-        const isService = productType === 'service' || hasServiceItem;
-        const isDigital = productType === 'digital';
-
-        let actionText = '';
-        let bookingInfo = '';
-
-        if (isService) {
-            const locationType = metadata?.location_type;
-            const isSellerVisitsBuyer = locationType === 'seller_visits_buyer';
-            const sellerHasNoShop = !seller.latitude || !seller.longitude;
-            const locationLabel = (isSellerVisitsBuyer || sellerHasNoShop) ? 'Client Location' : 'Service Location';
-            const locationVal = metadata?.service_location || seller.physicalAddress || buyer.location || 'Not specified';
-
-            let clientMapsLink = '';
-            // If it's a home-visit service OR the seller has no shop coordinates, give the seller the buyer's map link
-            if ((isSellerVisitsBuyer || sellerHasNoShop) && (buyer.latitude || buyer.lat || metadata?.buyer_location)) {
-                const bloc = metadata?.buyer_location || { latitude: buyer.latitude, longitude: buyer.longitude, lat: buyer.lat, lng: buyer.lng, fullAddress: buyer.location };
-                clientMapsLink = this._getGoogleMapsLink(buyer.name, bloc.fullAddress || buyer.location, bloc.latitude || bloc.lat, bloc.longitude || bloc.lng);
-            } else {
-                // Otherwise use the service location/seller shop link
-                clientMapsLink = this._getGoogleMapsLink(seller.shopName || 'Service Provider', locationVal, seller.latitude, seller.longitude);
-            }
-
-            bookingInfo = `
-📅 *SERVICE BOOKING*
-• Date: ${metadata?.booking_date || 'N/A'}
-• Time: ${metadata?.booking_time || 'N/A'}
-• ${locationLabel}: ${locationVal}${clientMapsLink ? `\n📍 *Navigate:* ${clientMapsLink}` : ''}
-`.trim();
-
-            actionText = `⏰ *ACTION REQUIRED:*
-Please visit your dashboard to *Confirm* or *Cancel* this booking.
-🔒 Payment of KSh ${total.toLocaleString()} is secured.`;
-        } else if (isDigital) {
-            actionText = `✅ *INFO:* Digital order. Customer has received the download link.
-💰 Revenue added to your balance automatically.`;
+        // 4. Next Steps
+        let nextSteps = '';
+        if (isBuyer) {
+            nextSteps = `⏰ *WHAT'S NEXT:*
+The seller has been notified and will process your order soon.
+🔒 *Your money is safe:* Payment is held in escrow until you confirm completion.`.trim();
         } else {
-            // Physical Product
-            const sHasShop = sellerHasPhysicalShop(seller);
-            if (sHasShop) {
-                actionText = `📍 *SHOP COLLECTION:*
-The buyer will visit your shop to pick up the order.
-✅ *ACTION:* Please prepare the items for collection.`;
-            } else {
-                actionText = `🚚 *LOGISTICS DROP-OFF:*
-⚠️ *ACTION REQUIRED:*
-Please drop items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.
-⏰ *DEADLINE:* Order will auto-cancel if not delivered on time.`;
-            }
+            nextSteps = `🚚 *ACTION REQUIRED:*
+Please visit your dashboard to manage this order.`.trim();
         }
 
-        const header = isDigital ? '🎉 *NEW DIGITAL ORDER!*' : '🎉 *NEW ORDER RECEIVED!*';
-        const buyerInfo = isDigital ? '' : `👤 *BUYER:* ${buyer.name}\n📞 *PHONE:* ${buyer.phone || 'N/A'}\n`;
+        // 5. Assemble
+        const buyerSection = isBuyer ? '' : `👤 *BUYER:* ${buyer.name}\n📞 *PHONE:* ${buyer.phone}\n`;
+        const footer = isBuyer ? this.formatSocialLinks(seller) : '';
 
-        const msg = `
+        return `
 ${header}
 
-${buyerInfo}📦 *Order #${order.orderNumber}*
-💰 Total: KSh ${total.toLocaleString()}
+${buyerSection}📦 *Order #${order.orderNumber}*
+💰 Total: KSh ${service.total?.toLocaleString() || (service.price * service.quantity).toLocaleString()}
 
 📋 *Items:*
 ${itemsList}
 
-${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
+${specializedInfo}
+${nextSteps}
+
+${footer}
+`.trim();
+    }
+
+    async notifySellerNewOrder(order) {
+        const sellerWhatsApp = order.seller?.whatsapp_number || order.seller?.phone;
+        if (!sellerWhatsApp) return false;
+
+        try {
+            const msg = this.buildWhatsAppMessage(order, 'seller');
+            return this.sendMessage(sellerWhatsApp, msg);
+        } catch (err) {
+            logger.error(`[WHATSAPP] Failed to notify seller: ${err.message}`);
+            return false;
+        }
+    }
+
+    async notifyBuyerOrderConfirmation(order) {
+        const buyerWhatsApp = order.buyer?.phone;
+        if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
+
+        try {
+            const msg = this.buildWhatsAppMessage(order, 'buyer');
+            logger.info(`[WHATSAPP] Sending Order Confirmation to Buyer ${buyerWhatsApp}`);
+            return this.sendMessage(buyerWhatsApp, msg);
+        } catch (err) {
+            logger.error(`[WHATSAPP] Failed to notify buyer: ${err.message}`);
+            return false;
+        }
+    }
+
+    async notifyBuyerStatusUpdate(updateData) {
+        const { buyer, order, newStatus } = updateData;
+        const buyerWhatsApp = buyer?.phone;
+        if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
+
+        let statusText = newStatus;
+        if (newStatus === 'COLLECTION_PENDING') statusText = 'READY FOR COLLECTION';
+
+        const msg = `
+✅ *ORDER UPDATE: ${statusText}*
+
+📦 Order #${order.orderNumber}
+💰 Total: KSh ${order.totalAmount.toLocaleString()}
+
+Status updated to: *${statusText}*
+Check your dashboard for details.
+`.trim();
+
+        return this.sendMessage(buyerWhatsApp, msg);
+    }
+
+    async notifySellerStatusUpdate(updateData) {
+        const { seller, order, newStatus } = updateData;
+        const sellerWhatsApp = seller?.phone || seller?.whatsapp_number;
+        if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
+
+        const msg = `
+✅ *STATUS UPDATE: ${newStatus}*
+
+📦 Order #${order.orderNumber}
+Status: ${newStatus}
 `.trim();
 
         return this.sendMessage(sellerWhatsApp, msg);
     }
 
-    async notifyBuyerOrderConfirmation(orderData) {
-        const { buyer, seller, order, items } = orderData;
-        const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
-        if (!buyerWhatsApp) {
-            logger.warn('[WHATSAPP] notifyBuyerOrderConfirmation: missing buyer phone', {
-                orderId: order?.orderNumber
-            });
-            return false;
-        }
-
-        const itemsList = items.map((item, i) => {
-            const name = item.name || item.product_name || 'Item';
-            const price = Number.parseFloat(item.price || item.product_price || 0);
-            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
-        }).join('\n');
-
-        const total = Number.parseFloat(order.totalAmount || 0);
-        const metadata = this._getMetadata(order);
-
-        // Robust service detection (Case-insensitive + items check)
-        const productType = (metadata?.product_type || '').toLowerCase();
-        const hasServiceItem = items?.some(i => (i.productType || i.product_type || '').toLowerCase() === 'service');
-        const isService = productType === 'service' || hasServiceItem;
-        const isDigital = productType === 'digital';
-
-        const header = isDigital ? '🎉 *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
-        let body = '';
-
-        if (isService) {
-            const locationType = metadata?.location_type;
-            const sellerHasNoShop = !seller?.latitude || !seller?.longitude;
-            const isHomeVisit = locationType === 'seller_visits_buyer' || sellerHasNoShop;
-
-            const locationLabel = isHomeVisit ? 'Your Address (Home Visit)' : 'Service Location';
-            const locationVal = isHomeVisit ? (buyer.location || 'Your Registered Address') : (metadata?.service_location || seller?.physicalAddress || 'Not specified');
-
-            // For buyer, if it's a shop service, give them the shop map. If it's a home visit, no map needed for themselves.
-            const mapsLink = !isHomeVisit ? this._getGoogleMapsLink(seller?.shopName || 'Service Provider', locationVal, seller?.latitude, seller?.longitude) : null;
-
-            body = `
-📅 *SERVICE BOOKING*
-• Date: ${metadata?.booking_date || 'N/A'}
-• Time: ${metadata?.booking_time || 'N/A'}
-• ${locationLabel}: ${locationVal}
-${mapsLink ? `\n📍 *Navigate to Provider:* ${mapsLink}` : ''}
-
-⏰ *WHAT'S NEXT:*
-✅ *BOOKING SECURED*
-
-Great news! Your booking has been received. The service provider has been notified and will confirm your appointment shortly.
-
-🔒 *Your money is safe:* Your payment is held securely in escrow and will only be released once you confirm the service is completed.
-
-We will notify you as soon as the provider accepts!`.trim();
-
-        } else if (isDigital) {
-            const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
-            body = `
-✅ *YOUR DOWNLOAD IS READY!*
-🔗 *Access here:* ${dashboardUrl}
-
-Check your email for additional instructions.`.trim();
-
-        } else {
-            // Physical Product
-            const sHasShop = sellerHasPhysicalShop(seller);
-            if (sHasShop) {
-                const mapsLink = this._getGoogleMapsLink(seller.shopName, seller.physicalAddress, seller.latitude, seller.longitude);
-                body = `
-📍 *PICKUP AT SHOP:*
-*${seller.shopName || 'The Shop'}*
-${seller.physicalAddress}
-${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
-
-⏰ *WHAT'S NEXT:*
-Please proceed to the shop for collection. Show your order number *#${order.orderNumber}* at the counter.`.trim();
-            } else {
-                body = `
-🚚 *SYSTEM DELIVERY (COURIER):*
-Your order will be handled by our system delivery partner.
-
-⏰ *WHAT'S NEXT:*
-1. Seller drops items at *${this.DROPOFF_LOCATION}*
-2. We verify and notify you when it's ready for your collection.
-3. You will pick it up at the same central location (*${this.DROPOFF_LOCATION.split('|')[0].trim()}*).
-
-📍 *Delivery Address:* ${buyer.location || 'Your Address'}`.trim();
-            }
-        }
-
-        const msg = `
-${header}
-
-Thanks for ordering, ${buyer.name?.split(' ')[0] || 'valued customer'}!
-
-📦 *Order #${order.orderNumber}*
-💰 Total: KSh ${total.toLocaleString()}
-
-📋 *Items:*
-${itemsList}
-
-${body}
-
-${this.formatSocialLinks(seller)}
-`.trim();
-
-        logger.info(`[PURCHASE-FLOW] 9b. Sending Order Confirmation to Buyer ${buyerWhatsApp}`);
-        return this.sendMessage(buyerWhatsApp, msg);
-    }
-
-    async notifyBuyerStatusUpdate(updateData) {
-        const { buyer, order, newStatus, notes } = updateData;
-        const buyerWhatsApp = buyer?.whatsapp_number || buyer?.whatsappNumber || buyer?.phone || order.buyer_whatsapp_number;
-        if (!buyerWhatsApp) {
-            logger.warn('[WHATSAPP] notifyBuyerStatusUpdate: missing buyer phone', {
-                orderId: order?.orderNumber,
-                newStatus
-            });
-            return false;
-        }
-
-        const metadata = this._getMetadata(order);
-        const productType = metadata?.product_type;
-        const isService = productType === 'service';
-        const isDigital = productType === 'digital';
-
-        let msg = '';
-        if (newStatus === 'COLLECTION_PENDING') {
-            const amount = Number.parseFloat(order.totalAmount || 0);
-            const sellerAddr = updateData.seller?.physicalAddress || 'the shop';
-            const shopName = updateData.seller?.shopName || 'The Shop';
-            const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
-
-            msg = `✅ *READY FOR COLLECTION*
-
-💰 Amount: KSh ${amount.toLocaleString()}
-📦 Order #${order.orderNumber} is confirmed.
-
-📍 *PICKUP LOCATION:*
-*${shopName}*
-${sellerAddr}
-${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
-
-⏰ *INSTRUCTIONS:*
-Please proceed to the shop to collect your items. 
-
-*IMPORTANT:* Once you've collected the items, please visit your dashboard and click *'Mark as Collected'* to finalize the order.`;
-
-        } else if (newStatus === 'COMPLETED') {
-            msg = `🎉 *ORDER COMPLETED*
-
-Order #${order.orderNumber} has been marked as collected/completed.
-Thank you for shopping with Byblos!`;
-
-        } else if (newStatus === 'DELIVERY_PENDING') {
-            if (isService) {
-                const serviceType = this.getServiceProviderType(order);
-                const amount = Number.parseFloat(order.totalAmount || 0);
-                const metadata = this._getMetadata(order);
-                const locationType = metadata?.location_type;
-                const sHasShop = sellerHasPhysicalShop(updateData.seller);
-                const isHomeVisit = locationType === 'seller_visits_buyer' || !sHasShop;
-
-                const locationLabel = isHomeVisit ? 'Client Address (Home Visit)' : 'Provider Address';
-                const locationVal = isHomeVisit ? (buyer.location || 'Your Registered Address') : (metadata?.service_location || updateData.seller?.physicalAddress || 'Contact provider for details');
-                const mapsLink = !isHomeVisit ? this._getGoogleMapsLink(updateData.seller?.shopName || 'Service Provider', locationVal, updateData.seller?.latitude, updateData.seller?.longitude) : null;
-
-                msg = `✅ *BOOKING CONFIRMED*
-
-🎉 Payment received! Your ${serviceType} booking is confirmed.
-
-📍 *${locationLabel}:*
-${locationVal}
-${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
-
-⏰ *WHAT'S NEXT:*
-The provider has been notified. They will ${isHomeVisit ? 'come to your location' : 'see you at the scheduled time'}.
-🔒 Your payment is secure and will be held until the service is complete.
-
-Order #${order.orderNumber}`;
-            } else if (isDigital) {
-                msg = `✅ *PAYMENT SUCCESSFUL*\n\nOrder #${order.orderNumber} payment received. Your download is ready.`;
-            } else {
-                const amount = Number.parseFloat(order.totalAmount || 0);
-                msg = `✅ *PAYMENT SUCCESSFUL*
-
-💰 Amount: KSh ${amount.toLocaleString()}
-📦 Order #${order.orderNumber} is confirmed.
-
-⏰ *NEXT STEPS:*
-We are preparing your order for pickup. You'll be notified when it's ready at ${this.DROPOFF_LOCATION}.`;
-            }
-        } else if (newStatus === 'DELIVERY_COMPLETE') {
-            if (isService) {
-                const serviceType = this.getServiceProviderType(order);
-                const amount = Number.parseFloat(order.totalAmount || 0);
-                msg = `⚠️ *ACTION REQUIRED*
-
-Your ${serviceType} has marked the job as DONE.
-
-💰 Amount: KSh ${amount.toLocaleString()}
-⏰ Payment Release: We will release your payment to them in 24 hours.
-
-✅ If the work is satisfactory, no action needed.
-❌ If there are issues, please contact support immediately.`;
-            } else if (isDigital) {
-                msg = `✅ *DIGITAL ORDER COMPLETE*\n\nOrder #${order.orderNumber} is complete.`;
-            } else {
-                const amount = Number.parseFloat(order.totalAmount || 0);
-                const sellerHasShop = sellerHasPhysicalShop(updateData.seller);
-
-                const sellerAddr = sellerHasShop ? (updateData.seller?.physicalAddress || 'the shop') : this.DROPOFF_LOCATION;
-                const shopName = sellerHasShop ? (updateData.seller?.shopName || 'The Shop') : 'Byblos Pickup Point';
-                const mapsLink = sellerHasShop ?
-                    this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude) :
-                    this._getGoogleMapsLink('Byblos Pickup Point', this.DROPOFF_LOCATION, null, null);
-
-                msg = `⚠️ *ACTION REQUIRED: PICKUP READY*
-
-📦 Order #${order.orderNumber} is ready for pickup!
-💰 Amount: KSh ${amount.toLocaleString()}
-
-📍 *PICKUP LOCATION:*
-*${shopName}*
-${sellerAddr}
-
-⏰ *PICKUP DEADLINE:* 
-🚨 You have ${this.BUYER_PICKUP_HRS} hours to pick up or order will be auto-cancelled and refunded.
-
-*IMPORTANT:* 
-• Inspect items BEFORE accepting
-• Payment released to seller 24 hours after pickup
-• Report any issues immediately`;
-            }
-        } else if (newStatus === 'CONFIRMED' && isService) {
-            const serviceType = this.getServiceProviderType(order);
-            const sellerHasShop = sellerHasPhysicalShop(updateData.seller);
-
-            // Format address: show shop address if it exists, otherwise Location, City for online services
-            const sellerAddr = sellerHasShop
-                ? (updateData.seller?.physicalAddress || 'Contact provider for details')
-                : `${updateData.seller?.location || ''}${updateData.seller?.city ? ', ' + updateData.seller?.city : ''}`;
-
-            const shopName = updateData.seller?.shopName || 'Service Provider';
-            const mapsLink = this._getGoogleMapsLink(shopName, sellerAddr, updateData.seller?.latitude, updateData.seller?.longitude);
-
-            msg = `✅ *BOOKING ACCEPTED*
-
-Great news! Your ${serviceType} has accepted your booking.
-
-📍 *${sellerHasShop ? 'PROVIDER ADDRESS:' : 'SERVICE LOCATION (Online/Remote):'}*
-*${shopName}*
-${sellerAddr || 'Not specified'}
-${mapsLink ? `\n📍 *Navigate:* ${mapsLink}` : ''}
-
-📦 Order #${order.orderNumber}
-
-⏰ *WHAT'S NEXT:* Once the service is completed to your satisfaction, please visit your dashboard and click *'Mark as Done'* to release the funds to the provider.`;
-        } else if (newStatus === 'CLIENT_PAYMENT_PENDING') {
-            const amount = Number.parseFloat(order.totalAmount || 0);
-            msg = `💳 *PAYMENT REQUEST SENT*
-
-📦 Order #${order.orderNumber}
-💰 Amount: KSh ${amount.toLocaleString()}
-
-📱 *ACTION REQUIRED:*
-Please enter your M-Pesa PIN to complete payment.
-
-⏰ This payment request will expire in a few minutes.
-
-Thank you for shopping with us!`;
-        } else if (newStatus === 'PROCESSING') {
-            msg = `⏳ *ORDER BEING PROCESSED*
-
-Order #${order.orderNumber} is now being prepared by the seller. 
-We will notify you as soon as it's ready for the next step!`;
-        } else {
-            msg = `📋 *STATUS UPDATE*
-
-Order #${order.orderNumber} status changed to: *${newStatus}*`;
-        }
-
-        if (notes) msg += `\n\n📝 *NOTE:* ${notes}`;
-        msg += this.formatSocialLinks(updateData.seller || {});
-
-        return this.sendMessage(buyerWhatsApp, msg.trim());
-    }
-
-    async notifySellerStatusUpdate(updateData) {
-        const { seller, order, newStatus } = updateData;
-        const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
-        if (!sellerWhatsApp) {
-            logger.warn('[WHATSAPP] notifySellerStatusUpdate: missing seller phone', {
-                orderId: order?.orderNumber,
-                newStatus
-            });
-            return false;
-        }
-
-        const metadata = this._getMetadata(order);
-        const productType = metadata?.product_type;
-        const isService = productType === 'service';
-        const total = Number.parseFloat(order.totalAmount || 0);
-
-        let msg = `📋 Order #${order.orderNumber} status: ${newStatus}`;
-
-        if (newStatus === 'DELIVERY_PENDING') {
-            if (isService) {
-                msg = `💰 *PAYMENT RECEIVED*
-
-✅ Order #${order.orderNumber} is paid (KSh ${total.toLocaleString()}).
-
-⏰ *PAYMENT HOLD:*
-Funds will be held for 24 hours after job completion to ensure customer satisfaction.
-
-📋 Please prepare for the service appointment.`;
-            } else {
-                msg = `💰 *PAYMENT RECEIVED*
-
-✅ Order #${order.orderNumber} is paid (KSh ${total.toLocaleString()}).
-
-📦 *ACTION REQUIRED:*
-Please drop off items at ${this.DROPOFF_LOCATION} within ${this.SELLER_DEADLINE_HRS} hours.`;
-            }
-        } else if (newStatus === 'COLLECTION_PENDING') {
-            msg = `💰 *PAYMENT RECEIVED*
-
-✅ Order #${order.orderNumber} is confirmed.
-💰 Amount: KSh ${total.toLocaleString()}
-
-📍 *SHOP COLLECTION:*
-The buyer will visit your shop to pick up the items.
-✅ *ACTION:* Please ensure the items are ready for collection.`;
-
-        } else if (newStatus === 'SERVICE_PENDING') {
-            msg = `💰 *PAYMENT RECEIVED*
-
-✅ Order #${order.orderNumber} is paid (KSh ${total.toLocaleString()}).
-
-⏰ *SERVICE BOOKING:*
-Buyer has paid and is waiting for service. 
-Please contact the buyer if necessary and prepare for the appointment.`;
-
-        } else if (newStatus === 'CONFIRMED' && isService) {
-            msg = `✅ *BOOKING ACCEPTED*
-
-You have accepted the booking for Order #${order.orderNumber}.
-The buyer has been notified.`;
-
-        } else if (newStatus === 'COMPLETED') {
-            msg = `🎉 *ORDER COMPLETED*
-
-Order #${order.orderNumber} has been successfully completed.
-💰 Revenue of KSh ${total.toLocaleString()} will be added to your balance.
-
-You can withdraw your earnings from your dashboard. Thank you for using Byblos!`;
-
-        } else if (newStatus === 'PROCESSING') {
-            msg = `⏳ *PROCESSING ORDER*
-
-Order #${order.orderNumber} is now being processed. 
-Please update the status once the items are ready for collection or delivery.`;
-
-        } else if (newStatus === 'CANCELLED') {
-            msg = `❌ *ORDER CANCELLED*
-
-Order #${order.orderNumber} has been cancelled.
-📝 Note: ${updateData.notes || 'No reason provided'}`;
-        } else {
-            msg = `📋 *STATUS UPDATE*
-
-Order #${order.orderNumber} status: *${newStatus}*`;
-        }
-
-        return this.sendMessage(sellerWhatsApp, msg.trim());
-    }
 
     async notifyClientOrderCreated(clientPhone, orderData) {
         const { order, items, seller } = orderData;
@@ -918,74 +539,33 @@ Your refund balance remains available for future withdrawal requests.
         return this.sendMessage(buyerWhatsApp, message);
     }
 
-    async sendLogisticsNotification(order, buyer, seller, items = []) {
-        const metadata = this._getMetadata(order);
-        const productType = metadata?.product_type || order.productType;
-        const isService = productType === 'service';
-        const isDigital = productType === 'digital';
+    async sendLogisticsNotification(order) {
+        if (!this.COURIER_NUMBER) return false;
 
-        if (isService || isDigital) {
-            logger.info(`[LOGISTICS] Skipping courier notification — ${productType} order #${order.orderNumber || order.id || order.order_number}`)
-            return false
+        try {
+            const msg = `
+🚚 *NEW LOGISTICS REQUEST*
+
+📦 Order #${order.orderNumber}
+💰 Value: KSh ${order.totalAmount.toLocaleString()}
+
+👤 *Seller:* ${order.seller.name}
+📞 *Seller Phone:* ${order.seller.phone}
+
+👤 *Buyer:* ${order.buyer.name}
+📞 *Buyer Phone:* ${order.buyer.phone}
+📍 *Buyer Location:* ${order.location.address}
+
+⏰ Please coordinate pickup and delivery to ${this.DROPOFF_LOCATION}.
+`.trim();
+
+            return this.sendMessage(this.COURIER_NUMBER, msg);
+        } catch (err) {
+            logger.error(`[WHATSAPP] Failed to notify logistics: ${err.message}`);
+            return false;
         }
-
-        const COURIER_NUMBER = this.COURIER_NUMBER
-        const DROPOFF_LOCATION = this.DROPOFF_LOCATION
-
-        // Build items list
-        let itemsList = 'No items listed';
-        const rawItems = order.items || metadata?.items || items || [];
-
-        if (rawItems && rawItems.length > 0) {
-            itemsList = rawItems.map((item, i) => {
-                const name = item.product_name || item.name || 'Product';
-                const price = Number.parseFloat(item.product_price || item.product_price_actual || item.price || 0);
-                const qty = Number.parseInt(item.quantity || item.qty || 1, 10);
-                return `${i + 1}. ${name} × ${qty} — KSh ${price.toLocaleString()}`;
-            }).join('\n');
-        }
-
-        const total = Number.parseFloat(order.totalAmount || order.total_amount || 0)
-        const orderNum = order.orderNumber || order.order_number || order.id
-        const buyerName = buyer.fullName || buyer.full_name || buyer.name || 'N/A'
-        const buyerPhone = buyer.whatsapp_number || buyer.whatsappNumber || buyer.phone || 'N/A'
-        const buyerCity = buyer.city || buyer.location || 'N/A'
-        const shopName = seller.shop_name || seller.shopName || seller.full_name || seller.name || 'N/A'
-        const sellerPhone = seller.whatsapp_number || seller.whatsappNumber || seller.phone || 'N/A'
-        const sellerLocation = seller.city || seller.location || '';
-
-        const message = `
-🚚 *NEW DELIVERY ORDER*
-
-📦 *Order #${orderNum}*
-💰 *Amount:* KSh ${total.toLocaleString()}
-
-━━━━━━━━━━━━━━━━━━━━
-👤 *BUYER DETAILS*
-• Name:     ${buyerName}
-• Phone:    ${buyerPhone}
-• Location: ${buyerCity}
-
-━━━━━━━━━━━━━━━━━━━━
-🏪 *SELLER DETAILS*
-• Shop:     ${shopName}
-• Phone:    ${sellerPhone}${sellerLocation ? `\n• Area:     ${sellerLocation}` : ''}
-
-━━━━━━━━━━━━━━━━━━━━
-📋 *ORDER ITEMS*
-${itemsList}
-
-━━━━━━━━━━━━━━━━━━━━
-📍 *PICKUP / DROP-OFF POINT*
-${DROPOFF_LOCATION}
-
-⏰ Seller has ${this.SELLER_DEADLINE_HRS} hours to drop off.
-Please coordinate pickup and delivery to buyer within this window.
-    `.trim()
-
-        logger.info(`[LOGISTICS] Sending courier notification for order #${orderNum} to ${COURIER_NUMBER}`)
-        return this.sendMessage(COURIER_NUMBER, message)
     }
+
 
     async sendLogisticsCancellationNotification(order, buyer, seller, cancelledBy) {
         const COURIER_NUMBER = this.COURIER_NUMBER

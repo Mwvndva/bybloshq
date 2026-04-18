@@ -27,13 +27,15 @@ class OrderService {
   static async createOrder(orderData) {
     let sellerInfo = null;
     const {
-      buyerId,
+      buyer,   // Unified Buyer Object
+      service, // Unified Service Object 
+      location, // Unified Location Object
+      buyerId,  // Legacy/Fallback
       sellerId,
-      items: rawItems, // renamed to avoid conflict
+      items: rawItems,
       paymentMethod,
       buyerName,
       buyerEmail,
-      buyerPhone,
       buyerMobilePayment,
       buyerWhatsApp,
       shippingAddress,
@@ -58,30 +60,14 @@ class OrderService {
 
       // 2. Transaction Start
       try {
-        // Whitelist allowed metadata keys to prevent internal state injection
-        // Handles both snake_case (frontend) and camelCase (potential future use)
-        const metadata = {
-          items: rawMetadata.items || [],
-          seller_initiated: rawMetadata.seller_initiated || rawMetadata.sellerInitiated || false,
-          is_seller_initiated: rawMetadata.is_seller_initiated || rawMetadata.isSellerInitiated || false,
-          location_type: rawMetadata.location_type || rawMetadata.locationType,
-          service_requirements: rawMetadata.service_requirements || rawMetadata.serviceRequirements,
-          product_type: (rawMetadata.product_type || rawMetadata.productType || 'physical').toLowerCase(),
-          product_id: rawMetadata.product_id || rawMetadata.productId,
-          narration: rawMetadata.narration,
-          booking_date: rawMetadata.booking_date || rawMetadata.bookingDate,
-          booking_time: rawMetadata.booking_time || rawMetadata.bookingTime,
-          service_location: rawMetadata.service_location || rawMetadata.serviceLocation,
-          buyer_location: rawMetadata.buyer_location || rawMetadata.buyerLocation,
-          customerName: rawMetadata.customerName || rawMetadata.customer_name,
-          productName: rawMetadata.productName || rawMetadata.product_name
-        };
+        const metadata = rawMetadata;
+        // Metadata is now non-critical; we rely on flat columns for all core logic.
 
         logger.info('OrderService: Starting order creation', { buyerId, sellerId, hasLocation: !!buyerLocation });
-        await client.query('BEGIN');
+        if (isManaged) await client.query('BEGIN');
 
         // 1. Verify seller exists and is active
-        sellerInfo = await this._getSellerDetails(client, sellerId);
+        const sellerInfo = await this._getSellerDetails(client, sellerId);
 
         // 2. Process and validate order items
         const items = metadata.items || [];
@@ -161,29 +147,36 @@ class OrderService {
         // 5e. Generate unique order number
         const orderNumber = await this._generateOrderNumber(client);
 
-        // 5f. Prepare Order Record
+        // 5f. Prepare Order Record (PIN-02: UNIFIED SCHEMA MAPPING)
         const orderRecord = {
           order_number: orderNumber,
-          buyer_id: buyerId,
+          buyer_id: buyer?.id || buyerId,
           seller_id: sellerId,
-          total_amount: totalAmount,
+          total_amount: service?.total || totalAmount,
           platform_fee_amount: platformFee,
           seller_payout_amount: sellerPayout,
           payment_method: paymentMethod,
-          buyer_name: buyerName,
-          buyer_email: buyerEmail,
-          buyer_mobile_payment: buyerMobilePayment || buyerPhone,
-          buyer_whatsapp_number: buyerWhatsApp || buyerPhone,
-          shipping_address: shippingAddress ? JSON.stringify(shippingAddress) : null,
+          buyer_name: buyer?.name || buyerName,
+          buyer_email: buyer?.email || buyerEmail,
+          buyer_mobile_payment: buyer?.phone || buyerMobilePayment,
+          buyer_whatsapp_number: buyer?.phone || buyerWhatsApp,
+          shipping_address: location?.address || null,
+
+          // Unified Flat Columns (New Schema)
+          location_address: location?.address || null,
+          location_lat: location?.lat || normalizedLocation?.lat || null,
+          location_lng: location?.lng || normalizedLocation?.lng || null,
+          service_title: service?.title || items[0]?.name || 'Service',
+
           notes: notes,
           metadata: JSON.stringify(metadata),
           status: initialStatus,
           payment_status: 'pending',
           service_requirements: metadata.service_requirements || null,
           fulfillment_type: fulfillmentType,
-          delivery_location: fulfillmentType === FulfillmentType.SELLER_TO_BUYER ? normalizedLocation : null,
+          delivery_location: fulfillmentType === FulfillmentType.SELLER_TO_BUYER ? (location || normalizedLocation) : null,
           order_type: orderType,
-          total_quantity: totalQuantity,
+          total_quantity: service?.quantity || totalQuantity,
           reservation_expires_at: reservationExpiresAt
         };
 
@@ -200,19 +193,19 @@ class OrderService {
           await this._reserveServiceSlot(client, order.id, metadata);
         }
 
-        await client.query('COMMIT');
+        if (isManaged) await client.query('COMMIT');
         logger.info(`OrderService: Order ${order.id} created successfully`);
 
         return order;
       } catch (dbError) {
-        await client.query('ROLLBACK').catch(err => logger.error('Rollback failed:', err));
+        if (isManaged) await client.query('ROLLBACK').catch(err => logger.error('Rollback failed:', err));
         throw dbError;
       }
     } catch (error) {
       logger.error('OrderService: Error creating order:', error);
       throw error;
     } finally {
-      client.release();
+      if (isManaged) client.release();
       // Always release the lock
       await cacheService.redis.del(lockKey).catch(err => logger.error('Failed to release order lock:', err));
     }
@@ -1082,36 +1075,35 @@ class OrderService {
 
         if (fullOrderResult.rows.length > 0) {
           const fullOrder = fullOrderResult.rows[0];
-          const buyerData = this._buildBuyerNotificationData(fullOrder);
-          const sellerData = {
-            name: fullOrder.seller_name,
-            whatsapp_number: fullOrder.seller_phone,
-            phone: fullOrder.seller_phone,
-            email: fullOrder.seller_email,
-            physicalAddress: fullOrder.seller_address,
-            latitude: fullOrder.seller_latitude,
-            longitude: fullOrder.seller_longitude
-          };
 
-          const notificationPayload = {
-            buyer: buyerData,
-            seller: sellerData,
-            order: {
-              orderNumber: fullOrder.order_number,
-              totalAmount: fullOrder.total_amount,
-              status: OrderStatus.COMPLETED,
-              metadata: fullOrder.metadata
-            },
-            oldStatus: OrderStatus.COLLECTION_PENDING,
-            newStatus: OrderStatus.COMPLETED,
-            notes: 'Order collected by buyer'
-          };
+          // Re-fetch items for complete details
+          const itemsResult = await pool.query(
+            `SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.name as product_name
+             FROM order_items oi
+             LEFT JOIN products p ON oi.product_id = p.id
+             WHERE oi.order_id = $1`,
+            [orderId]
+          );
+          const items = itemsResult.rows;
 
-          whatsappService.notifySellerStatusUpdate(notificationPayload) // Notify Seller their item was collected
-            .catch(err => logger.error('Error sending collection notification to seller:', err));
+          const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
-          whatsappService.notifyBuyerStatusUpdate(notificationPayload) // Notify Buyer "Thanks for collecting"
-            .catch(err => logger.error('Error sending collection notification to buyer:', err));
+          // 3. Notify Stakeholders
+          whatsappService.notifySellerStatusUpdate({
+            seller: normalizedOrder.seller,
+            order: normalizedOrder,
+            newStatus,
+            oldStatus: OrderStatus.COLLECTION_PENDING, // Context-specific
+            notes: 'Status updated via dashboard'
+          }).catch(err => logger.error('Error sending status notification to seller:', err));
+
+          whatsappService.notifyBuyerStatusUpdate({
+            buyer: normalizedOrder.buyer,
+            order: normalizedOrder,
+            newStatus,
+            seller: normalizedOrder.seller,
+            notes: 'Status updated'
+          }).catch(err => logger.error('Error sending status notification to buyer:', err));
         }
       } catch (e) {
         logger.error('Error sending collection notifications:', e);
@@ -1497,31 +1489,15 @@ class OrderService {
   }
 
   static _buildBuyerNotificationData(fullOrder) {
-    const metadata = typeof fullOrder.metadata === 'string' ? JSON.parse(fullOrder.metadata) : (fullOrder.metadata || {});
-    const buyerLocation = metadata.buyer_location || {};
-
-    // Parse shipping address if it's a string
-    let shippingAddr = fullOrder.shipping_address;
-    if (typeof shippingAddr === 'string' && shippingAddr.startsWith('{')) {
-      try { shippingAddr = JSON.parse(shippingAddr); } catch (e) { /* ignore */ }
-    }
-
-    const city = fullOrder.buyer_city || (typeof shippingAddr === 'object' ? shippingAddr.city : null) || 'Nairobi';
-    const location = fullOrder.buyer_location_text || (typeof shippingAddr === 'string' ? shippingAddr : (shippingAddr?.address || shippingAddr?.location));
-    const full_address = fullOrder.buyer_full_address || buyerLocation.fullAddress || (typeof shippingAddr === 'string' ? shippingAddr : shippingAddr?.fullAddress);
-    const latitude = fullOrder.buyer_latitude || buyerLocation.latitude || buyerLocation.lat;
-    const longitude = fullOrder.buyer_longitude || buyerLocation.longitude || buyerLocation.lng;
-
+    // Legacy mapping preserved for non-WhatsApp flows if needed, but simplified
     return {
-      name: fullOrder.buyer_name || fullOrder.buyer_name_actual || 'Customer',
-      phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
-      whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-      email: fullOrder.buyer_email || fullOrder.buyer_email_actual,
-      city,
-      location: location || full_address || 'Not specified',
-      full_address: full_address || location || 'Not specified',
-      latitude,
-      longitude
+      name: fullOrder.buyer_name || 'Customer',
+      phone: fullOrder.buyer_mobile_payment || 'N/A',
+      whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_mobile_payment,
+      email: fullOrder.buyer_email || null,
+      location: fullOrder.location_address || 'Not specified',
+      latitude: fullOrder.location_lat,
+      longitude: fullOrder.location_lng
     };
   }
   static async _handleOrderCompletionSideEffects(order, items, payment) {
@@ -1548,12 +1524,9 @@ class OrderService {
                 b.whatsapp_number AS buyer_whatsapp_actual, b.email AS buyer_email_actual,
                 b.city AS buyer_city, b.location AS buyer_location_text, b.latitude AS buyer_latitude,
                 b.longitude AS buyer_longitude, b.full_address AS buyer_full_address,
-                COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
-                COALESCE(s.whatsapp_number, NULL) AS seller_phone, 
-                COALESCE(s.email, u.email) AS seller_email, 
-                s.physical_address AS seller_address, s.shop_name, s.city AS seller_city, s.location AS seller_location,
-                s.latitude AS seller_latitude, s.longitude AS seller_longitude,
-                s.instagram_link, s.tiktok_link, s.facebook_link
+                s.instagram_link, s.tiktok_link, s.facebook_link,
+                o.location_address, o.location_lat, o.location_lng, o.service_title,
+                o.notification_sent, o.payment_status
          FROM product_orders o
          LEFT JOIN buyers b ON o.buyer_id = b.id
          LEFT JOIN sellers s ON o.seller_id = s.id
@@ -1563,78 +1536,61 @@ class OrderService {
       );
 
       if (fullOrderResult.rows.length === 0) return;
-      const fullOrder = fullOrderResult.rows[0];
-      const buyerData = this._buildBuyerNotificationData(fullOrder);
-      const sellerData = {
-        name: fullOrder.seller_name,
-        whatsapp_number: fullOrder.seller_phone,
-        phone: fullOrder.seller_phone,
-        email: fullOrder.seller_email,
-        physicalAddress: fullOrder.seller_address,
-        shopName: fullOrder.shop_name,
-        city: fullOrder.seller_city,
-        location: fullOrder.seller_location,
-        latitude: fullOrder.seller_latitude,
-        longitude: fullOrder.seller_longitude,
-        instagram_link: fullOrder.instagram_link,
-        tiktok_link: fullOrder.tiktok_link,
-        facebook_link: fullOrder.facebook_link
-      };
+      let fullOrder = fullOrderResult.rows[0];
+
+      // 1. Idempotency Guard (Payment Status)
+      // If the webhook is a retry and we already processed this, skip.
+      if (payment && payment.status === 'success' && fullOrder.payment_status === 'paid' && fullOrder.notification_sent) {
+        return logger.info(`[ORDER] Side effects already processed for order ${orderId}. Skipping.`);
+      }
+
+      // 2. Legacy Fallback (Apply extracting only if flat columns are missing)
+      fullOrder = this.extractFromLegacy(fullOrder);
+
+      // 3. BUILD NORMALIZED PAYLOAD (Single Source of Truth)
+      const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
       const isSellerInitiated = fullOrder.metadata?.seller_initiated === true ||
         fullOrder.metadata?.is_seller_initiated === true ||
         fullOrder.is_seller_initiated === true;
 
       // Always notify Seller via Email
-      if (sellerData.email) {
-        sendNewOrderNotificationEmail(sellerData.email, {
+      if (fullOrder.seller_email) {
+        sendNewOrderNotificationEmail(fullOrder.seller_email, {
           ...fullOrder,
-          seller_name: sellerData.name,
+          seller_name: fullOrder.seller_name,
           items
         }).catch(e => logger.error('[ORDER] Seller notification email failed:', e));
-
-        // REMOVED (FIX-17): sendPaymentReceiptEmail is redundant with sendNewOrderNotificationEmail
-        // which already contains the order details and amount.
       }
 
       if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
 
-      const payload = {
-        buyer: buyerData, seller: sellerData,
-        order: {
-          orderNumber: fullOrder.order_number, totalAmount: fullOrder.total_amount,
-          status: fullOrder.status, metadata: fullOrder.metadata,
-          service_requirements: fullOrder.service_requirements
-        },
-        items
-      };
+      // WHATSAPP NOTIFICATIONS (Once-only)
+      if (!fullOrder.notification_sent) {
+        whatsappService.notifyBuyerOrderConfirmation(normalizedOrder).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
+        whatsappService.notifySellerNewOrder(normalizedOrder).catch(e => logger.error('[ORDER] Seller notification failed:', e));
 
-      whatsappService.notifyBuyerOrderConfirmation(payload).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
-      whatsappService.notifySellerNewOrder({ seller: sellerData, buyer: buyerData, order: payload.order, items })
-        .catch(e => logger.error('[ORDER] Seller notification failed:', e));
+        // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates/Address)
+        const hasPhysical = items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'physical');
+        const sHasShop = sellerHasPhysicalShop({ latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude });
+        const sellerHasShop = sHasShop && !!fullOrder.seller_address;
 
-      // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates/Address)
-      const hasPhysical = items.some(i => i.product_type === 'physical' || i.productType === 'physical');
-      const s_lat = Number(sellerData.latitude || sellerData.lat);
-      const s_lng = Number(sellerData.longitude || sellerData.lng);
-      const sHasShop = sellerHasPhysicalShop({ latitude: s_lat, longitude: s_lng });
-      const sellerHasShop = sHasShop && !!fullOrder.seller_address;
+        if (hasPhysical && !sellerHasShop) {
+          whatsappService.sendLogisticsNotification(normalizedOrder)
+            .catch(e => logger.error('[ORDER] Courier notification failed:', e));
+        }
 
-      if (hasPhysical && !sellerHasShop) {
-        whatsappService.sendLogisticsNotification(payload.order, payload.buyer, payload.seller, items)
-          .catch(e => logger.error('[ORDER] Courier notification failed:', e));
+        // Mark as sent
+        await pool.query('UPDATE product_orders SET notification_sent = true WHERE id = $1', [orderId]);
       }
 
       // Notify Buyer via Email if not seller-initiated
-      if (buyerData.email) {
-        sendProductOrderConfirmationEmail(buyerData.email, {
+      if (normalizedOrder.buyer.email) {
+        sendProductOrderConfirmationEmail(normalizedOrder.buyer.email, {
           ...fullOrder,
           items
         }).catch(e => logger.error('[ORDER] Buyer confirmation email failed:', e));
-
-        // REMOVED (FIX-17): sendPaymentReceiptEmail is redundant with sendProductOrderConfirmationEmail
       }
-
 
     } catch (e) {
       logger.error('[ORDER] Error triggering completion notifications:', e);
@@ -1733,6 +1689,85 @@ class OrderService {
 
     // Fallback to timestamp if random collisions occur
     return `BYB-${Date.now().toString().slice(-6)}`;
+  }
+
+  /**
+   * Constructs a single source of truth object for notifications
+   * This is M-R-1 / M-R-4 pattern from User Request
+   */
+  static _prepareNormalizedNotificationPayload(fullOrder, items) {
+    const metadata = typeof fullOrder.metadata === 'string' ? JSON.parse(fullOrder.metadata) : (fullOrder.metadata || {});
+
+    return {
+      id: fullOrder.id,
+      orderNumber: fullOrder.order_number,
+      status: fullOrder.status,
+      buyer: {
+        name: fullOrder.buyer_name || 'Customer',
+        phone: fullOrder.buyer_mobile_payment || 'N/A',
+        email: fullOrder.buyer_email || null,
+      },
+      seller: {
+        name: fullOrder.seller_name || 'Seller',
+        shopName: fullOrder.shop_name || 'Shop',
+        phone: fullOrder.seller_phone || 'N/A',
+        email: fullOrder.seller_email || null,
+        address: fullOrder.seller_address || null,
+        latitude: fullOrder.seller_latitude || null,
+        longitude: fullOrder.seller_longitude || null,
+        social: {
+          instagram: fullOrder.instagram_link,
+          tiktok: fullOrder.tiktok_link,
+          facebook: fullOrder.facebook_link
+        }
+      },
+      service: {
+        id: fullOrder.metadata?.product_id || (items?.[0]?.product_id || items?.[0]?.id),
+        title: fullOrder.service_title || 'Service',
+        price: Number.parseFloat(fullOrder.total_amount || 0) / Number.parseInt(fullOrder.total_quantity || 1),
+        quantity: Number.parseInt(fullOrder.total_quantity || 1),
+        total: Number.parseFloat(fullOrder.total_amount || 0)
+      },
+      location: {
+        address: fullOrder.location_address || fullOrder.shipping_address || 'Not specified',
+        lat: Number.parseFloat(fullOrder.location_lat || 0),
+        lng: Number.parseFloat(fullOrder.location_lng || 0),
+      },
+      booking: {
+        date: metadata.booking_date || metadata.bookingDate || null,
+        time: metadata.booking_time || metadata.bookingTime || null,
+        requirements: fullOrder.service_requirements || null,
+      },
+      payment: {
+        status: fullOrder.payment_status || 'pending',
+        method: fullOrder.payment_method || 'payd',
+        reference: fullOrder.payment_reference || null
+      },
+      items: items.map(i => ({
+        title: i.product_name || i.name || 'Item',
+        price: Number.parseFloat(i.product_price || i.price || 0),
+        quantity: Number.parseInt(i.quantity || 1, 10)
+      }))
+    };
+  }
+
+  /**
+   * Safe fallback for legacy orders missing new flat columns.
+   * This ensures backward compatibility for reads only.
+   */
+  static extractFromLegacy(order) {
+    if (order.location_address) return order;
+
+    const metadata = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
+    const buyerLocation = metadata.buyer_location || {};
+
+    return {
+      ...order,
+      location_address: order.buyer_full_address || buyerLocation.fullAddress || order.buyer_location_text || 'Not specified',
+      location_lat: order.buyer_latitude || buyerLocation.latitude || buyerLocation.lat || 0,
+      location_lng: order.buyer_longitude || buyerLocation.longitude || buyerLocation.lng || 0,
+      service_title: order.service_title || metadata.product_name || (order.items?.[0]?.product_name) || 'Service'
+    };
   }
 }
 

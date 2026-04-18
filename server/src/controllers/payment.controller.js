@@ -8,6 +8,7 @@ import OrderService from '../services/order.service.js';
 import Buyer from '../models/buyer.model.js';
 import Fees from '../config/fees.js';
 import { PaymentStatus, ProductType } from '../constants/enums.js';
+import { normalizeOrderInput } from '../utils/order.utils.js';
 
 class PaymentController {
   /**
@@ -50,11 +51,14 @@ class PaymentController {
    */
   async initiateProductPayment(req, res) {
     try {
+      const normalizedOrder = normalizeOrderInput(req);
       logger.info('=== PRODUCT PAYMENT INITIATION ===', {
-        body: req.body,
-        endpoint: '/api/payments/initiate-product'
+        orderId: normalizedOrder.service.id,
+        buyer: normalizedOrder.buyer.name,
+        total: normalizedOrder.service.total
       });
-      const result = await paymentService.initiateProductPayment(req.body, req.user);
+
+      const result = await paymentService.initiateProductPayment(normalizedOrder);
 
       res.status(200).json({
         status: 'success',

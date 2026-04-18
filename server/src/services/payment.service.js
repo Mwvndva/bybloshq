@@ -1345,53 +1345,21 @@ export class PaymentService {
     }
 
 
-    async initiateProductPayment(payload, user) {
-        const { phone, email, amount, productId, sellerId, productName, customerName, narration, narrative, city, location, quantity = 1 } = payload;
+    async initiateProductPayment(normalizedOrder) {
+        const { buyer, service, location, metadata } = normalizedOrder;
 
-        // 1. Resolve Buyer Info
-        let buyerId = user?.id || null;
-        // Fallback to user email/phone if not in payload
-        let buyerEmail = email || user?.email;
-        let buyerMobilePayment = phone || user?.mobile_payment || user?.mobilePayment || user?.phone;
-        let buyerWhatsApp = payload.whatsappNumber || user?.whatsapp_number || user?.whatsappNumber || buyerMobilePayment;
+        const buyerId = buyer.id;
+        const buyerEmail = buyer.email;
+        const buyerMobilePayment = buyer.phone;
+        const buyerWhatsApp = buyer.phone;
 
-        // Define fallback location info from User if authenticated and not provided
-        let shippingAddress = null;
-        if (city || location) {
-            shippingAddress = { city, location };
-        } else if (user?.city || user?.location) {
-            shippingAddress = { city: user.city, location: user.location };
-        }
-
-        // Fallback for Billing Address (Payd Requirement)
-        // Use provided location, user location, or default to Nairobi
-        const billingAddress = shippingAddress?.location || shippingAddress?.city || 'Nairobi, Kenya';
-
-        // Basic buyer cleanup if user is not authenticated
-        if (!buyerId) {
-            // Logic from controller: try to find buyer by phone if not auth
-            if (buyerMobilePayment) {
-                const buyer = await Buyer.findByPhone(buyerMobilePayment);
-                if (buyer) {
-                    buyerId = buyer.id;
-                    // If we found them in DB, we could prefer DB email if payload email is missing
-                    if (!buyerEmail) buyerEmail = buyer.email;
-                    if (!buyerWhatsApp) buyerWhatsApp = buyer.whatsapp_number || buyer.whatsappNumber;
-                }
-            }
-        }
-
-        if (!buyerMobilePayment) {
-            throw new Error('Mobile payment number is required for payment');
-        }
-
-        // 2. Validate Product (Replicating Controller Logic)
+        // 1. Resolve & Validate Product/Seller
         const productResult = await pool.query(
-            `SELECT p.*, s.status as seller_status 
+            `SELECT p.*, s.status as seller_status, s.full_name as seller_name, s.shop_name 
              FROM products p
              JOIN sellers s ON p.seller_id = s.id
              WHERE p.id = $1`,
-            [productId]
+            [service.id]
         );
 
         if (productResult.rows.length === 0) throw new Error('Product not found');
@@ -1400,124 +1368,121 @@ export class PaymentService {
         if (product.seller_status !== 'active') throw new Error('Seller is not accepting orders');
         if (product.status !== 'available') throw new Error('Product not available');
 
-        // Verify Price
-        const dbPrice = Number.parseFloat(product.price);
-        const clientAmount = Number.parseFloat(amount);
-        // SECURITY: Verify price x quantity to prevent client-side total price injection.
-        const expectedAmount = dbPrice * (Number.parseInt(quantity) || 1);
-        if (Math.abs(expectedAmount - clientAmount) > 0.01) {
-            logger.warn('[PAYMENT-SECURITY] Price verification failed', {
-                productId,
-                dbPrice,
-                quantity,
-                expectedAmount,
-                clientAmount
-            });
-            throw new Error('Price verification failed. The price or quantity may have changed.');
-        }
+        // 2. Security: Calculate Secure Total
+        const dbPrice = Number.parseFloat(product.price || 0);
+        const quantity = Number.parseInt(service.quantity || 1);
+        const finalTotal = dbPrice * quantity;
 
-        // 3. Create Order
-        // Need OrderService.createOrder logic.
-        // I will use direct DB insertion for Order if importing OrderService is tricky/circular 
-        // OR import OrderService dynamically.
-        // Dynamic import is safer for cyclic deps if OrderService also imports Payment (which verify).
-        // BUT Order.createOrder calls were refactored to OrderService.createOrder?
-        // Let's check OrderService.
-        // OrderService.createOrder was NOT implemented in my Phase 2 refactor?
-        // Wait, I refactored `OrderController.createOrder` to use `OrderService.createOrder`.
-        // So `OrderService.createOrder` EXISTS.
-        // Let's import it.
+        if (finalTotal <= 0) throw new Error('Invalid order amount after secure calculation');
 
-        // const OrderService = (await import('./order.service.js')).default; // Refactored to static import
-
+        // 4. Create Order
         const orderData = {
-            buyerId,
+            ...normalizedOrder,
             sellerId: Number.parseInt(product.seller_id),
-            paymentMethod: 'payd',
-            buyerName: customerName,
+            // Update normalized fields with secure DB data
+            service: {
+                ...service,
+                price: dbPrice,
+                quantity: quantity,
+                total: finalTotal,
+                title: product.name
+            },
+            // Legacy mapping for backward compatibility in OrderService.createOrder
+            buyerId,
+            buyerName: buyer.name,
             buyerEmail,
             buyerMobilePayment,
             buyerWhatsApp,
-            shippingAddress, // Pass the resolved address
-            buyerLocation: payload.metadata?.buyer_location, // Extract from metadata if provided by frontend
             metadata: {
-                ...payload.metadata, // Preserve all incoming metadata (booking_date, booking_time, etc)
+                ...metadata,
                 product_type: product.product_type,
                 is_digital: product.is_digital,
-                product_id: productId,
+                product_id: service.id,
                 product_name: product.name,
-                customer_name: customerName,
                 items: [{
-                    productId: productId,
+                    productId: service.id,
                     name: product.name,
                     price: dbPrice,
-                    quantity: Number.parseInt(quantity, 10),
-                    subtotal: dbPrice * Number.parseInt(quantity, 10),
+                    quantity: quantity,
+                    subtotal: finalTotal,
                     productType: product.product_type,
                     isDigital: product.is_digital,
-                    serviceLocations: product.service_locations // Pass location info
-                }],
-                paymentInitiation: true
+                    serviceLocations: product.service_locations
+                }]
             }
         };
 
-        const order = await OrderService.createOrder(orderData);
-
-        // 4. Create Payment Record (DAO style)
-        const paymentData = {
-            invoice_id: String(order.id),
-            amount,
-            currency: 'KES',
-            status: PaymentStatus.PENDING,
-            payment_method: 'payd',
-            phone_number: phone,
-            email,
-            metadata: {
-                order_id: order.id,
-                order_number: order.order_number,
-                product_id: productId,
-                seller_id: sellerId,
-                product_type: product.product_type,
-                buyer_id: buyerId, // buyers.id, may be null for anonymous
-                narration: narration || narrative || `Payment for ${productName}`
-            }
-        };
-
-        // Reuse initiateTicketPayment style insertion (DAO)
-        // Or create a generic insert DAO method?
-        // Just raw SQL here for now to be explicit.
-        const insertRes = await pool.query(
-            `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
-              VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6) RETURNING *`,
-            [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, amount, JSON.stringify(paymentData.metadata)]
-        );
-        const payment = insertRes.rows[0];
-
-        // 5. Initiate Gateway
+        const client = await pool.connect();
         try {
-            const gwPayload = {
-                ...paymentData,
-                // initiatePayment expects 'phone' key for the number to charge
-                phone: buyerMobilePayment,
-                firstName: customerName?.split(' ')[0],
-                narration: narration || narrative || `Payment for ${product.name} from ${product.shopName || 'Byblos'}`
+            await client.query('BEGIN');
+
+            const order = await OrderService.createOrder(orderData, client);
+
+            const paymentData = {
+                invoice_id: String(order.id),
+                amount: finalTotal,
+                currency: 'KES',
+                status: PaymentStatus.PENDING,
+                payment_method: 'payd',
+                phone_number: buyerMobilePayment,
+                email: buyerEmail,
+                metadata: {
+                    order_id: order.id,
+                    order_number: order.order_number,
+                    product_id: service.id,
+                    seller_id: product.seller_id,
+                    product_type: product.product_type,
+                    buyer_id: buyerId,
+                    narration: metadata.narration || `Payment for ${product.name}`
+                }
             };
 
-            const result = await this.initiatePayment(gwPayload);
+            const insertRes = await client.query(
+                `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
+                  VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6) RETURNING *`,
+                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, finalTotal, JSON.stringify(paymentData.metadata)]
+            );
+            const payment = insertRes.rows[0];
 
-            // 6. Update Payment with Reference
-            await pool.query("UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2", [result.reference, payment.id]);
+            await client.query('COMMIT');
 
-            return {
-                ...result,
-                order_id: order.id,
-                order_number: order.order_number
-            };
-        } catch (gwError) {
-            // Attach order and payment IDs to error for controller to mark as failed
-            gwError.orderId = order.id;
-            gwError.paymentId = payment.id;
-            throw gwError;
+            // 5. Initiate Gateway
+            try {
+                const gwPayload = {
+                    ...paymentData,
+                    phone: buyerMobilePayment,
+                    firstName: buyer.name?.split(' ')[0],
+                    narration: metadata.narration || `Payment for ${product.name}`
+                };
+
+                const result = await this.initiatePayment(gwPayload);
+
+                if (result.reference) {
+                    await pool.query("UPDATE payments SET provider_reference = $1 WHERE id = $2", [result.reference, payment.id]);
+                }
+
+                return {
+                    success: true,
+                    orderId: order.id,
+                    orderNumber: order.order_number,
+                    paymentId: payment.id,
+                    paymentResult: result
+                };
+            } catch (gwError) {
+                logger.error('[PAYMENT-GATEWAY] Gateway initiation failed:', gwError);
+                return {
+                    success: false,
+                    orderId: order.id,
+                    orderNumber: order.order_number,
+                    error: 'Payment initiation failed. Your order has been placed but payment was not triggered. Please try again from Order History.'
+                };
+            }
+        } catch (error) {
+            await client.query('ROLLBACK');
+            logger.error('[PAYMENT-INITIATE] Transaction failed:', error);
+            throw error;
+        } finally {
+            client.release();
         }
     }
 }
