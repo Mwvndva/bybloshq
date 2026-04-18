@@ -388,8 +388,11 @@ class WhatsAppService {
 
         const metadata = this._getMetadata(order);
         const total = Number.parseFloat(order.totalAmount || 0);
-        const productType = metadata?.product_type;
-        const isService = productType === 'service';
+
+        // Robust service detection (Case-insensitive + items check)
+        const productType = (metadata?.product_type || '').toLowerCase();
+        const hasServiceItem = items?.some(i => (i.productType || i.product_type || '').toLowerCase() === 'service');
+        const isService = productType === 'service' || hasServiceItem;
         const isDigital = productType === 'digital';
 
         let actionText = '';
@@ -406,12 +409,7 @@ class WhatsAppService {
             // If it's a home-visit service OR the seller has no shop coordinates, give the seller the buyer's map link
             if ((isSellerVisitsBuyer || sellerHasNoShop) && (buyer.latitude || buyer.lat || metadata?.buyer_location)) {
                 const bloc = metadata?.buyer_location || { latitude: buyer.latitude, longitude: buyer.longitude, lat: buyer.lat, lng: buyer.lng, fullAddress: buyer.location };
-                clientMapsLink = this._getGoogleMapsLink(
-                    bloc.latitude || bloc.lat,
-                    bloc.longitude || bloc.lng,
-                    bloc.latitude || bloc.lat,
-                    bloc.longitude || bloc.lng
-                );
+                clientMapsLink = this._getGoogleMapsLink(buyer.name, bloc.fullAddress || buyer.location, bloc.latitude || bloc.lat, bloc.longitude || bloc.lng);
             } else {
                 // Otherwise use the service location/seller shop link
                 clientMapsLink = this._getGoogleMapsLink(seller.shopName || 'Service Provider', locationVal, seller.latitude, seller.longitude);
@@ -481,8 +479,11 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
 
         const total = Number.parseFloat(order.totalAmount || 0);
         const metadata = this._getMetadata(order);
-        const productType = metadata?.product_type;
-        const isService = productType === 'service';
+
+        // Robust service detection (Case-insensitive + items check)
+        const productType = (metadata?.product_type || '').toLowerCase();
+        const hasServiceItem = items?.some(i => (i.productType || i.product_type || '').toLowerCase() === 'service');
+        const isService = productType === 'service' || hasServiceItem;
         const isDigital = productType === 'digital';
 
         const header = isDigital ? '🎉 *DIGITAL ORDER CONFIRMED!*' : '✅ *ORDER CONFIRMED!*';
@@ -507,7 +508,13 @@ ${bookingInfo ? bookingInfo + '\n\n' : ''}${actionText}
 ${mapsLink ? `\n📍 *Navigate to Provider:* ${mapsLink}` : ''}
 
 ⏰ *WHAT'S NEXT:*
-the buyer has been notified. wait for the seller to confirm the booking. we will notify you when booking is accepted, your money is safe`.trim();
+✅ *BOOKING SECURED*
+
+Great news! Your booking has been received. The service provider has been notified and will confirm your appointment shortly.
+
+🔒 *Your money is safe:* Your payment is held securely in escrow and will only be released once you confirm the service is completed.
+
+We will notify you as soon as the provider accepts!`.trim();
 
         } else if (isDigital) {
             const dashboardUrl = `${process.env.FRONTEND_URL || 'https://byblos.hq'}/dashboard/orders`;
