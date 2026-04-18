@@ -26,9 +26,7 @@ export const sanitizeBuyer = (buyer) => {
         // Phone numbers shown masked — full numbers only needed in order flow, not profile display
         whatsappNumber: b.whatsappNumber || b.whatsapp_number || null,
         mobilePayment: b.mobilePayment || b.mobile_payment || b.payment_phone || null,
-        city: b.city || null,
-        location: b.location || b.physical_address || null,
-        refunds: b.refunds ? Number.parseFloat(b.refunds) : 0,
+        mobilePayment: b.mobilePayment || b.mobile_payment || b.payment_phone || null,
         // Coordinates: boolean presence only — full coords not needed by the frontend profile UI
         hasLocation: !!(b.latitude && b.longitude),
         is_verified: !!(b.is_verified || b.isVerified),
@@ -49,8 +47,6 @@ export const sanitizeSeller = (seller) => {
         shopName: sellerObj.shopName || sellerObj.shop_name || '',
         email: sellerObj.email,
         whatsappNumber: sellerObj.whatsappNumber || sellerObj.whatsapp_number || sellerObj.phone || '',
-        city: sellerObj.city,
-        location: sellerObj.location,
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
         latitude: sellerObj.latitude ? Number.parseFloat(sellerObj.latitude) : null,
         longitude: sellerObj.longitude ? Number.parseFloat(sellerObj.longitude) : null,
@@ -141,8 +137,6 @@ export const sanitizePublicSeller = (seller) => {
     return {
         id: sellerObj.id || sellerObj.seller_id,
         shopName: sellerObj.shopName || sellerObj.shop_name || '',
-        city: sellerObj.city,
-        location: sellerObj.location,
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
         avatarUrl: sellerObj.avatarUrl || sellerObj.avatar_url,
         bio: sellerObj.bio,
@@ -195,7 +189,6 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
             id: orderObj.seller.id,
             shopName: orderObj.seller.shopName,
             theme: orderObj.seller.theme,
-            city: orderObj.seller.city,
             isClient: orderObj.seller.isClient || false,
         } : null,
     };

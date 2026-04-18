@@ -16,7 +16,7 @@ class Order {
         notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
         fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
         location_address, location_lat, location_lng, service_title, notification_sent
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15, $16, $17, $18, $19, $20, $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30)
       RETURNING *
     `;
 
@@ -31,18 +31,18 @@ class Order {
       data.buyer_name,
       data.buyer_email,
       data.buyer_mobile_payment,
-      data.buyer_whatsapp_number,
-      data.shipping_address,
-      data.notes,
-      typeof data.metadata === 'object' && data.metadata !== null ? JSON.stringify(data.metadata) : (data.metadata || null),
-      data.status,
+      data.buyer_whatsapp_number || null,
+      data.shipping_address || null,
+      data.notes || null,
+      data.metadata || {}, // Native object, driver handles serialization with ::jsonb cast
+      data.status || 'PENDING',
       data.payment_status || 'pending',
-      data.service_requirements,
+      data.service_requirements || null,
       data.is_debt || false,
       data.client_id || null,
       data.is_seller_initiated || false,
       data.fulfillment_type || null,
-      typeof data.delivery_location === 'object' && data.delivery_location !== null ? JSON.stringify(data.delivery_location) : (data.delivery_location || null),
+      data.delivery_location || null, // Native object or null
       data.order_type || 'PHYSICAL',
       data.total_quantity || 1,
       data.reservation_expires_at || null,
@@ -65,6 +65,19 @@ class Order {
         if (typeof v === 'object') return 'OBJECT:' + JSON.stringify(v);
         return v;
       }), null, 2));
+
+      try {
+        const schemaAudit = await executor.query(`
+          SELECT column_name, data_type, udt_name 
+          FROM information_schema.columns 
+          WHERE table_name = 'product_orders'
+          ORDER BY ordinal_position
+        `);
+        console.error('--- SCHEMA AUDIT ---');
+        console.table(schemaAudit.rows);
+      } catch (auditErr) {
+        console.error('Failed to perform schema audit:', auditErr.message);
+      }
       throw error;
     }
   }
