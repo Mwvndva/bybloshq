@@ -68,13 +68,13 @@ export function normalizeOrderInput(req) {
     // 4. Resolve & Strictly Validate Location
     const rawLocation = buyerLocation || metadata.buyer_location || {};
 
-    const lat = Number.parseFloat(rawLocation.lat || rawLocation.latitude || (user && !overrideContact ? user.latitude : 0) || 0);
-    const lng = Number.parseFloat(rawLocation.lng || rawLocation.longitude || (user && !overrideContact ? user.longitude : 0) || 0);
+    const lat = Number.parseFloat(rawLocation.lat || rawLocation.latitude || (user && !overrideContact ? user.latitude : null));
+    const lng = Number.parseFloat(rawLocation.lng || rawLocation.longitude || (user && !overrideContact ? user.longitude : null));
 
     const location = {
-        address: rawLocation.address || rawLocation.fullAddress || (user && !overrideContact ? user.location : null) || 'Not specified',
-        lat,
-        lng,
+        address: rawLocation.address || rawLocation.fullAddress || (user && !overrideContact ? user.location : null) || null,
+        lat: isNaN(lat) ? null : lat,
+        lng: isNaN(lng) ? null : lng,
     };
 
     // Strict Validation: Throw for invalid physical/service locations

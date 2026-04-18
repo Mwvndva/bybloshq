@@ -153,9 +153,9 @@ class OrderService {
           shipping_address: location.address || null,
 
           // Unified Flat Columns (New Schema)
-          location_address: finalLocationAddress || location.address || null,
-          location_lat: finalLat || location.lat || null,
-          location_lng: finalLng || location.lng || null,
+          location_address: finalLocationAddress || null,
+          location_lat: finalLat || null,
+          location_lng: finalLng || null,
           service_title: service.title || items[0]?.name || 'Service',
 
           notes: orderData.notes || null,
