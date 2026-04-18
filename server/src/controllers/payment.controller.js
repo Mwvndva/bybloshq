@@ -51,7 +51,7 @@ class PaymentController {
    */
   async initiateProductPayment(req, res) {
     try {
-      const normalizedOrder = normalizeOrderInput(req);
+      const normalizedOrder = await normalizeOrderInput(req);
       logger.info('=== PRODUCT PAYMENT INITIATION ===', {
         orderId: normalizedOrder.service.id,
         buyer: normalizedOrder.buyer.name,
