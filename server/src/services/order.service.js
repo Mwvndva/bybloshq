@@ -154,8 +154,6 @@ class OrderService {
           buyer_email: buyer.email,
           buyer_mobile_payment: buyer.phone,
           buyer_whatsapp_number: buyer.phone,
-          shipping_address: location.address || null,
-
           // Unified Flat Columns (New Schema)
           location_address: finalLocationAddress || null,
           location_lat: finalLat || null,
