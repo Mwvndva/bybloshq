@@ -89,34 +89,24 @@ class OrderService {
         // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
         const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
 
-        // --- NEW LOCATION RESOLUTION LOGIC ---
-        const hasShop = sellerHasPhysicalShop(sellerInfo);
+        // --- STRICT COORDINATE RESOLUTION ---
         let finalLocationAddress = null;
         let finalLat = null;
         let finalLng = null;
 
-        if (hasShop) {
-          // Rule: If seller has physical shop, use seller coordinates
+        if (fulfillmentType === FulfillmentType.BUYER_TO_SELLER) {
+          // Rule: In-Store -> Use Seller Shop Location
           finalLocationAddress = sellerInfo.physical_address;
           finalLat = sellerInfo.latitude;
           finalLng = sellerInfo.longitude;
-          logger.info(`Physical shop detected for Order. Using seller location.`);
-        } else {
-          if (reflectsService) {
-            // Service (Online Shop) -> Use buyer coordinates
-            finalLocationAddress = location.address;
-            finalLat = location.lat;
-            finalLng = location.lng;
-            logger.info(`Online shop service detected for Order. Using buyer-provided location.`);
-          } else {
-            // Physical Product (Online Shop) -> System Delivery (NULL flat loc)
-            logger.info(`Online shop physical order detected for Order. Setting location to NULL (System Delivery handling).`);
-          }
-        }
-
-        try {
-          validateFulfillmentPayload(fulfillmentType, location, metadata);
-        } catch (err) {
+          logger.info(`In-Store service detected. Using seller shop location.`);
+        } else if (fulfillmentType === FulfillmentType.SELLER_TO_BUYER) {
+          // Rule: Home Service -> Use Buyer Provided Location
+          finalLocationAddress = location.address;
+          finalLat = location.lat;
+          finalLng = location.lng;
+          logger.info(`Home Service detected. Using buyer-provided location.`);
+        } else if (orderType === OrderType.PHYSICAL && fulfillmentType === FulfillmentType.COURIER) {
           logger.warn(`Fulfillment validation failed for Order: ${err.message}`);
           throw err;
         }

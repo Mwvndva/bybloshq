@@ -53,6 +53,13 @@ export async function normalizeOrderInput(req) {
         throw new Error("Guest orders require a valid contact email address.");
     }
 
+    // CRITICAL: Resolve actual buyers.id if user is logged in (Task BUG-PERSIST-01)
+    let buyerId = existingBuyer?.id || null;
+    if (user && !buyerId) {
+        const loggedInBuyer = await Buyer.findByUserId(user.id);
+        buyerId = loggedInBuyer?.id || null;
+    }
+
     let finalName = customerName || existingBuyer?.fullName;
     let finalPhone = phone;
 
@@ -62,7 +69,7 @@ export async function normalizeOrderInput(req) {
     }
 
     const buyer = {
-        id: user?.id || existingBuyer?.id || null,
+        id: buyerId, // Correctly point to buyers.id
         name: finalName || 'Customer',
         phone: finalPhone || 'N/A',
         email,

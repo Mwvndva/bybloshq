@@ -39,16 +39,21 @@ export const resolveFulfillmentType = (seller, productType, metadata = {}) => {
         return FulfillmentType.DIGITAL;
     }
 
-    // Rule 1: Seller with shop coordinates
+    // Rule 1: Seller with physical shop coordinates
     if (hasCoordinates) {
-        return FulfillmentType.BUYER_TO_SELLER;
+        return FulfillmentType.BUYER_TO_SELLER; // Always In-Store if shop exists
     }
 
-    // Rule 2: Seller without coordinates
+    // Rule 2: Service with explicit 'seller_visits_buyer' type
+    if (metadata?.location_type === 'seller_visits_buyer') {
+        return FulfillmentType.SELLER_TO_BUYER;
+    }
+
+    // Rule 3: Defaults
     if (type === 'digital') return FulfillmentType.DIGITAL;
 
     if (type === 'service') {
-        return FulfillmentType.SELLER_TO_BUYER;
+        return FulfillmentType.SELLER_TO_BUYER; // Mobile Service if no shop
     }
 
     // Default for physical products from shopless sellers
