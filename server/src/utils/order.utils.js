@@ -82,17 +82,34 @@ export async function normalizeOrderInput(req) {
         quantity: Math.max(1, Number.parseInt(quantity) || 1),
     };
 
-    // 4. Resolve & Strictly Validate Location
+    // 4. Resolve & Strictly Validate Location (COORD-RESOLVE-V2)
     const rawLocation = rawBuyerLocation || metadata.buyer_location || {};
 
-    const lat = Number.parseFloat(rawLocation.lat || rawLocation.latitude || (user && !overrideContact ? user.latitude : existingBuyer?.latitude));
-    const lng = Number.parseFloat(rawLocation.lng || rawLocation.longitude || (user && !overrideContact ? user.longitude : existingBuyer?.longitude));
+    // Helper to resolve with nullish priority (PIN-COORD-FIX)
+    const resolveProp = (obj, props, fallback) => {
+        for (const prop of props) {
+            if (obj[prop] !== undefined && obj[prop] !== null) return obj[prop];
+        }
+        return fallback;
+    };
+
+    const rawLat = resolveProp(rawLocation, ['lat', 'latitude'], (user && !overrideContact ? user.latitude : existingBuyer?.latitude));
+    const rawLng = resolveProp(rawLocation, ['lng', 'longitude'], (user && !overrideContact ? user.longitude : existingBuyer?.longitude));
 
     const location = {
         address: rawLocation.address || rawLocation.fullAddress || (user && !overrideContact ? user.location : existingBuyer?.fullAddress || existingBuyer?.location) || null,
-        lat: isNaN(lat) ? null : lat,
-        lng: isNaN(lng) ? null : lng,
+        lat: (rawLat === undefined || rawLat === null) ? null : Number.parseFloat(rawLat),
+        lng: (rawLng === undefined || rawLng === null) ? null : Number.parseFloat(rawLng),
     };
+
+    logger.info('[COORD-DEBUG] Resolution Trace:', {
+        has_raw: !!rawBuyerLocation,
+        has_meta: !!metadata.buyer_location,
+        resolved_lat: location.lat,
+        resolved_lng: location.lng,
+        resolved_address: location.address,
+        source: rawBuyerLocation ? 'body' : (metadata.buyer_location ? 'metadata' : 'profile')
+    });
 
     // Strict Validation: Throw for invalid physical/service locations
     const isDigital = body.isDigital || metadata.product_type === 'digital';
