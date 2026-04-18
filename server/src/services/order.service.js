@@ -125,7 +125,7 @@ class OrderService {
           finalLocationAddress = sellerInfo.physical_address;
           finalLat = sellerInfo.latitude;
           finalLng = sellerInfo.longitude;
-          logger.info(`Physical shop detected for Order #${orderNumber}. Using seller location: ${finalLocationAddress}`);
+          logger.info(`Physical shop detected for Order. Using seller location: ${finalLocationAddress}`);
         } else {
           // Online Shop / Shopless rules
           if (reflectsService) {
@@ -133,14 +133,14 @@ class OrderService {
             finalLocationAddress = normalizedLocation?.address || null;
             finalLat = normalizedLocation?.lat || null;
             finalLng = normalizedLocation?.lng || null;
-            logger.info(`Online shop service detected for Order #${orderNumber}. Using buyer-provided location: ${finalLocationAddress}`);
+            logger.info(`Online shop service detected for Order. Using buyer-provided location: ${finalLocationAddress}`);
           } else {
             // Priority 1: Physical Product (Online Shop) -> Use System Delivery
             // Rule: Buyer's delivery address is NOT needed in flat columns as courier handles it out-of-band
             finalLocationAddress = null;
             finalLat = null;
             finalLng = null;
-            logger.info(`Online shop physical order detected for Order #${orderNumber}. Setting location to NULL (System Delivery handling).`);
+            logger.info(`Online shop physical order detected for Order. Setting location to NULL (System Delivery handling).`);
           }
         }
 
