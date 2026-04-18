@@ -54,8 +54,17 @@ class Order {
     ];
 
     const executor = client || pool;
-    const result = await executor.query(query, values);
-    return result.rows[0];
+    try {
+      const result = await executor.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      logger.error('Database Insert Error in Order.insert:', {
+        errorMessage: error.message,
+        query: query.substring(0, 200) + '...', // Log start of query
+        values: values.map(v => typeof v === 'object' ? JSON.stringify(v) : v)
+      });
+      throw error;
+    }
   }
 
   /**
