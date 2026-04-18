@@ -53,6 +53,10 @@ class OrderService {
         const metadata = { ...rawMetadata }; // Local clone to avoid mutation
         const sellerId = orderData.sellerId;
 
+        if (!buyer?.email) {
+          throw new Error('Buyer email is required for order creation.');
+        }
+
         logger.info('OrderService: Starting order creation', { buyerId: buyer.id, sellerId });
         if (isManaged) await client.query('BEGIN');
 

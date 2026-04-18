@@ -19,7 +19,6 @@ export function normalizeOrderInput(req) {
     const {
         customerName,
         phone,
-        email,
         quantity = 1,
         productId,
         productName,
@@ -41,21 +40,29 @@ export function normalizeOrderInput(req) {
     }
 
     // 2. Identity Protection & Resolve Buyer Info
+    const email =
+        req.user?.email ||
+        req.body.email ||
+        req.body.customerEmail ||
+        null;
+
+    if (!email) {
+        throw new Error("Guest orders require a valid contact email address.");
+    }
+
     let finalName = customerName;
     let finalPhone = phone;
-    let finalEmail = email;
 
     if (user && !overrideContact) {
         finalName = user.name || user.full_name;
         finalPhone = user.mobile_payment || user.phone;
-        finalEmail = user.email;
     }
 
     const buyer = {
         id: user?.id || null,
         name: finalName || 'Customer',
         phone: finalPhone || 'N/A',
-        email: finalEmail || null,
+        email,
     };
 
     // 3. Resolve Service/Product Info

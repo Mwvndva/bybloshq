@@ -13,6 +13,7 @@ class Order {
     // 1. Pre-insertion Validation
     if (!data.order_number) throw new Error('Order number is required');
     if (!data.seller_id) throw new Error('Seller ID is required');
+    if (!data.buyer_email) throw new Error('buyer_email is required for DB insert');
 
     // 2. Static SQL Query with Explicit Type Hints (PIN-04: SCHEMA HARDENING)
     const query = `
