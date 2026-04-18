@@ -443,7 +443,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         paymentMethod: 'payd',
         // Provide structured buyerLocation if it came from booking/map
         // root city/location fields are deprecated and ignored by backend
-        buyerLocation: activeBooking?.buyerLocation || undefined,
+        buyerLocation: activeBooking?.buyerLocation || (buyerDetails.city && buyerDetails.location ? {
+          address: `${buyerDetails.city}, ${buyerDetails.location}`,
+          lat: (buyerDetails as any).latitude || 0,
+          lng: (buyerDetails as any).longitude || 0
+        } : undefined),
         metadata: activeBooking ? {
           booking_date: format(activeBooking.date, 'yyyy-MM-dd'),
           booking_time: activeBooking.time,
