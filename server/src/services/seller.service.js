@@ -66,9 +66,13 @@ class SellerService {
             }
 
             if (!existingUser) {
-                // IMPORTANT: New users must go through AuthService.register to utilize 
-                // the pending_registrations table and email verification flow.
-                throw new Error('User account must be created through AuthService for email verification.');
+                // New users must go through AuthService.register (pending_registrations + email verification)
+                // This path should not be reached directly — AuthService.register() handles new users.
+                // If called directly, delegate to AuthService instead of throwing.
+                await client.query('ROLLBACK');
+                client.release();
+                const AuthSvc = (await import('./auth.service.js')).default;
+                return await AuthSvc.register(data, 'seller');
             }
         } catch (error) {
             await client.query('ROLLBACK');

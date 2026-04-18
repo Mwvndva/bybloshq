@@ -178,6 +178,19 @@ export const verifyPaydWebhook = (req, res, next) => {
         try {
             const webhookTime = new Date(webhookTimestamp);
             const now = new Date();
+
+            // FIXED BUG-PAY-SEC-02: Prevent replay attacks by rejecting old webhooks (>10 mins)
+            const MAX_STALE_MS = 10 * 60 * 1000;
+            if (process.env.NODE_ENV === 'production' && Math.abs(now - webhookTime) > MAX_STALE_MS) {
+                logger.warn('[WEBHOOK-SECURITY] ⛔ Rejecting stale webhook:', {
+                    timestamp: webhookTimestamp,
+                    ageSeconds: Math.floor(Math.abs(now - webhookTime) / 1000)
+                });
+                return res.status(403).json({
+                    status: 'error',
+                    message: 'Webhook timestamp expired or invalid'
+                });
+            }
             const ageInMinutes = (now - webhookTime) / 1000 / 60;
 
             // Warn if webhook is older than 5 minutes (but don't reject)

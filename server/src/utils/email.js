@@ -114,17 +114,22 @@ export const sendEmail = async (options, retryCount = 0) => {
       }
     };
 
+    let isVerified = false;
     try {
-      if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true') {
-        logger.debug('Verifying SMTP connection...');
+      if (!isVerified) {
+        if (process.env.NODE_ENV !== 'production' || process.env.DEBUG_EMAIL === 'true') {
+          logger.debug('Verifying SMTP connection...');
+        }
+        await transporter.verify();
+        isVerified = true;
       }
-      await transporter.verify();
     } catch (verifyError) {
       logger.error('SMTP connection verification failed', {
         message: verifyError.message,
         code: verifyError.code
       });
       transporter = null; // Reset cached transporter so next attempt triggers createTransporter
+      isVerified = false;
       throw new Error(`SMTP connection failed: ${verifyError.message}`);
     }
 

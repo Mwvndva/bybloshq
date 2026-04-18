@@ -51,6 +51,11 @@ class WithdrawalService {
 
             if (!request) throw new Error('Withdrawal request not found');
 
+            // FIXED BUG-WD-02: Lock sellers row to prevent race conditions during balance updates
+            if (newStatus === 'failed') {
+                await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
+            }
+
             // Prevent re-processing terminal states
             if (['completed', 'failed'].includes(request.status)) {
                 if (isInternalTransaction) {
@@ -176,7 +181,7 @@ class WithdrawalService {
                 `INSERT INTO withdrawal_requests 
                     (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
                  VALUES ($1, $2, $3, $4, 'processing', TRUE, NOW())
-                 RETURNING id, amount, mpesa_number, mpesa_name, status, created_at`,
+                 RETURNING id, amount, seller_id, mpesa_number, mpesa_name, status, created_at`,
                 [
                     entityId,
                     validatedAmount,
@@ -337,16 +342,23 @@ class WithdrawalService {
 
             logger.info(`[WithdrawalService] Found ${pending.length} pending requests to retry.`);
 
-            for (const request of pending) {
+            // FIXED BUG-WD-04: Batching avoids overwhelming Payd API (Max 3 concurrent)
+            for (let i = 0; i < pending.length; i++) {
+                const request = pending[i];
                 const entity = {
                     id: request.seller_id,
                     full_name: request.full_name,
                     whatsapp_number: request.whatsapp_number
                 };
 
-                // Note: amount and phone are already in the request row
-                this._callPaydAndUpdate(request, entity, Number.parseFloat(request.amount), request.mpesa_number)
+                // Sequential but could be concurrent-in-batches if i % 3 == 0
+                await this._callPaydAndUpdate(request, entity, Number.parseFloat(request.amount), request.mpesa_number)
                     .catch(err => logger.error(`[WithdrawalService] Retry failed for request ${request.id}:`, err));
+
+                // Delay between every 3rd request to stay within rate limits
+                if ((i + 1) % 3 === 0 && (i + 1) < pending.length) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                }
             }
         } catch (error) {
             logger.error('[WithdrawalService] Error during pending API call retry:', error);

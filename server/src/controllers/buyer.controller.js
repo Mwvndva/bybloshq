@@ -615,8 +615,9 @@ export const saveBuyerInfo = async (req, res, next) => {
         mobilePayment: mobilePayment || effectivePhone,
         whatsappNumber: whatsappNumber || effectivePhone,
         city,
-        location,
-        password
+        location: location || city || 'Not specified', // FIXED BUG-GUEST-02: fallback prevents null
+        password,
+        termsAccepted: true // FIXED BUG-GUEST-01: guests implicitly accept terms on checkout
       });
     } catch (err) {
       if (err.requiresLogin) {

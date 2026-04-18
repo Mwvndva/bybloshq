@@ -522,8 +522,9 @@ export class PaymentService {
         }
 
         const resultCodeNum = Number.parseInt(resultCode, 10);
+        // FIXED BUG-PAY-SEC-03: don't require 'success' boolean — result_code=0 is authoritative
         const isSuccess = (resultCodeNum === 0 || resultCodeNum === 200 || status === 'success') &&
-            (data.success === true || data.success === 'true');
+            (data.success === undefined || data.success === true || data.success === 'true');
 
         return { reference, isSuccess, amount, phone, mpesaReceipt, status };
     }
@@ -707,7 +708,8 @@ export class PaymentService {
      * @private
      */
     _mapPaydStatus(providerData) {
-        if (providerData.status === 'SUCCESS' || providerData.result_code == 200 || (providerData.result_code == 0 && providerData.success === true)) {
+        const resultCode = Number(providerData.result_code);
+        if (providerData.status === 'SUCCESS' || resultCode === 200 || resultCode === 0) {
             return 'success';
         }
         if (providerData.status === 'FAILED' || providerData.status === 'ERROR') {

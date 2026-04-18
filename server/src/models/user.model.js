@@ -9,7 +9,8 @@ class User {
      */
     static async findByEmail(email) {
         if (!email) return null;
-        const query = 'SELECT * FROM users WHERE LOWER(email) = $1';
+        // PERF-06: select only needed columns
+        const query = 'SELECT id, email, password_hash, role, is_verified FROM users WHERE LOWER(email) = $1';
         const result = await pool.query(query, [email.toLowerCase()]);
         return result.rows[0] || null;
     }
@@ -20,7 +21,8 @@ class User {
      * @returns {Promise<Object|null>}
      */
     static async findById(id) {
-        const query = 'SELECT * FROM users WHERE id = $1';
+        if (!id) return null;
+        const query = 'SELECT id, email, role, is_verified FROM users WHERE id = $1';
         const result = await pool.query(query, [id]);
         return result.rows[0] || null;
     }
