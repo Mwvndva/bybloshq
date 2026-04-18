@@ -1,10 +1,16 @@
 -- Migration: Hardening Order Schema
--- Description: Adds notification_sent flag and backfills legacy data.
+-- Description: Adds missing flat columns, notification_sent flag, and backfills legacy data.
 
--- 1. Add notification_sent flag
+-- 1. Add Location & Service Detail Columns (Flat)
+ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS location_address TEXT;
+ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS location_lat NUMERIC(10, 8);
+ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS location_lng NUMERIC(11, 8);
+ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS service_title TEXT;
+
+-- 2. Add notification_sent flag
 ALTER TABLE product_orders ADD COLUMN IF NOT EXISTS notification_sent BOOLEAN DEFAULT FALSE;
 
--- 2. Backfill flat columns for legacy orders (only if NULL)
+-- 3. Backfill flat columns for legacy orders (only if NULL)
 -- This ensures notifications and tracking work for historic data.
 UPDATE product_orders
 SET 
@@ -14,5 +20,5 @@ SET
   service_title = COALESCE(service_title, metadata->>'product_name', 'Service')
 WHERE location_address IS NULL OR service_title IS NULL;
 
--- 3. Ensure indexing for performance on notification lookups
+-- 4. Ensure indexing for performance on notification lookups
 CREATE INDEX IF NOT EXISTS idx_orders_notification_sent ON product_orders(notification_sent);
