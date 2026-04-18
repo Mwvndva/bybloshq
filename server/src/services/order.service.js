@@ -84,6 +84,7 @@ class OrderService {
 
         // 2. Process and validate order items
         const items = metadata.items || [];
+        metadata.items = items;
         this._validateItems(items);
 
         // 3. Calculate totals and fees
@@ -99,35 +100,34 @@ class OrderService {
         // 4c. Update Buyer Location if provided
         await this._handleLocationUpdate(buyerId, buyerLocation, metadata);
 
-        // 4d. RESOLVE FULFILLMENT TYPE (SINGLE SOURCE OF TRUTH)
+        // 4d. ENRICH PRODUCT TYPE & VIRTUAL STATUS (BEFORE VALIDATION) (Task BUG-BOOK-05)
         const primaryProductType = items[0]?.productType || metadata.product_type || 'physical';
-        const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType);
 
-        // Standardize buyer location format for validation
-        const normalizedLocation = buyerLocation ? {
-          lat: buyerLocation.lat || buyerLocation.latitude,
-          lng: buyerLocation.lng || buyerLocation.longitude,
-          address: buyerLocation.address || buyerLocation.fullAddress
-        } : (metadata.buyer_location ? {
-          lat: metadata.buyer_location.lat || metadata.buyer_location.latitude,
-          lng: metadata.buyer_location.lng || metadata.buyer_location.longitude,
-          address: metadata.buyer_location.address || metadata.buyer_location.fullAddress
-        } : null);
+        // Shopless Service Logic: Default to Virtual/Online if seller has no address/coords
+        const isShopless = !sellerHasPhysicalShop(sellerInfo) && !sellerInfo.physical_address;
+        const reflectsService = (primaryProductType === ProductType.SERVICE || primaryProductType === 'service');
 
-        // 4e. VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
+        if (isShopless && reflectsService && !metadata.location_type && !metadata.service_location) {
+          metadata.location_type = 'Virtual/Online';
+          logger.info(`Shopless service detected for buyer ${buyerId}, defaulting to Virtual/Online`);
+        }
+
+        // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
+        const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
+
+        // Standardize buyer location format for validation (Robust Extraction - Task BUG-BOOK-06)
+        const rawLoc = buyerLocation || metadata.buyer_location;
+        const normalizedLocation = (rawLoc && typeof rawLoc === 'object') ? {
+          lat: rawLoc.lat !== undefined ? rawLoc.lat : rawLoc.latitude,
+          lng: rawLoc.lng !== undefined ? rawLoc.lng : rawLoc.longitude,
+          address: rawLoc.address || rawLoc.fullAddress
+        } : null;
+
         try {
           validateFulfillmentPayload(fulfillmentType, normalizedLocation, metadata);
         } catch (err) {
           logger.warn(`Fulfillment validation failed for Order: ${err.message}`);
           throw err;
-        }
-
-        // Shopless Service Logic
-        if (!sellerInfo.physical_address) {
-          const hasService = items.some(i => i.productType === ProductType.SERVICE || i.productType === 'service');
-          if (hasService && !metadata.location_type) {
-            metadata.location_type = 'Virtual/Online';
-          }
         }
 
         logger.info('OrderService: items enriched', {
