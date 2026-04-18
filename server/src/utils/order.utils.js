@@ -1,4 +1,5 @@
 import logger from './logger.js';
+import Buyer from '../models/buyer.model.js';
 
 /**
  * PIN-05: NO-NULL JSONB
@@ -14,29 +15,30 @@ export const safeJson = (val) => (val && typeof val === 'object') ? val : {};
  * @param {Object} req - The Express request object
  * @returns {Object} Normalized order object
  */
-export function normalizeOrderInput(req) {
+export async function normalizeOrderInput(req) {
     const { body, user } = req;
     const {
         customerName,
-        phone,
+        phone: rawPhone,
         quantity = 1,
         productId,
         productName,
-        buyerLocation,
+        buyerLocation: rawBuyerLocation,
         metadata: rawMetadata = {},
         overrideContact = false
     } = body;
 
     const metadata = safeJson(rawMetadata);
 
-    // 1. Security: Zero-Trust Pricing
-    // We ignore client-provided amounts to prevent manipulation.
-    if (body.amount !== undefined || body.price !== undefined) {
-        logger.warn('Client provided price fields in order request. These will be ignored for security.', {
-            order_number: body.order_number
-        });
-        delete body.amount;
-        delete body.price;
+    // 1. Resolve Identity via Phone (PIN-10: IDENTITY RESOLUTION)
+    const phone = req.user?.phone || rawPhone;
+    let existingBuyer = null;
+
+    if (phone) {
+        existingBuyer = await Buyer.findByPhone(phone);
+        if (existingBuyer) {
+            logger.info('Buyer identity resolved from phone lookup', { buyer_id: existingBuyer.id });
+        }
     }
 
     // 2. Identity Protection & Resolve Buyer Info
@@ -44,13 +46,14 @@ export function normalizeOrderInput(req) {
         req.user?.email ||
         req.body.email ||
         req.body.customerEmail ||
+        existingBuyer?.email ||
         null;
 
     if (!email) {
         throw new Error("Guest orders require a valid contact email address.");
     }
 
-    let finalName = customerName;
+    let finalName = customerName || existingBuyer?.fullName;
     let finalPhone = phone;
 
     if (user && !overrideContact) {
@@ -59,7 +62,7 @@ export function normalizeOrderInput(req) {
     }
 
     const buyer = {
-        id: user?.id || null,
+        id: user?.id || existingBuyer?.id || null,
         name: finalName || 'Customer',
         phone: finalPhone || 'N/A',
         email,
@@ -73,13 +76,13 @@ export function normalizeOrderInput(req) {
     };
 
     // 4. Resolve & Strictly Validate Location
-    const rawLocation = buyerLocation || metadata.buyer_location || {};
+    const rawLocation = rawBuyerLocation || metadata.buyer_location || {};
 
-    const lat = Number.parseFloat(rawLocation.lat || rawLocation.latitude || (user && !overrideContact ? user.latitude : null));
-    const lng = Number.parseFloat(rawLocation.lng || rawLocation.longitude || (user && !overrideContact ? user.longitude : null));
+    const lat = Number.parseFloat(rawLocation.lat || rawLocation.latitude || (user && !overrideContact ? user.latitude : existingBuyer?.latitude));
+    const lng = Number.parseFloat(rawLocation.lng || rawLocation.longitude || (user && !overrideContact ? user.longitude : existingBuyer?.longitude));
 
     const location = {
-        address: rawLocation.address || rawLocation.fullAddress || (user && !overrideContact ? user.location : null) || null,
+        address: rawLocation.address || rawLocation.fullAddress || (user && !overrideContact ? user.location : existingBuyer?.fullAddress || existingBuyer?.location) || null,
         lat: isNaN(lat) ? null : lat,
         lng: isNaN(lng) ? null : lng,
     };
