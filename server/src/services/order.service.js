@@ -987,7 +987,7 @@ class OrderService {
     await this._finalizeServiceSlot(client, order.id);
 
     // 2. Determine and Update Status
-    const newStatus = OrderStatus.CONFIRMED; // Services go to CONFIRMED after payment
+    const newStatus = OrderStatus.SERVICE_PENDING; // Services move to SERVICE_PENDING after payment
     const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, newStatus, 'completed', payment.provider_reference);
 
     return { updatedOrder };
