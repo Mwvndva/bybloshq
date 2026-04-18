@@ -34,18 +34,16 @@ class Order {
       data.buyer_whatsapp_number || null,
       data.shipping_address || null,
       data.notes || null,
-      data.metadata || {}, // Native object, driver handles serialization with ::jsonb cast
+      data.metadata && typeof data.metadata === 'object' ? JSON.stringify(data.metadata) : (data.metadata || '{}'),
       data.status || 'PENDING',
       data.payment_status || 'pending',
       data.service_requirements || null,
       data.is_debt || false,
       data.client_id || null,
-      data.is_seller_initiated || false,
-      data.fulfillment_type || null,
-      data.delivery_location || null, // Native object or null
+      data.delivery_location && typeof data.delivery_location === 'object' ? JSON.stringify(data.delivery_location) : (data.delivery_location || null),
       data.order_type || 'PHYSICAL',
       data.total_quantity || 1,
-      data.reservation_expires_at || null,
+      data.reservation_expires_at instanceof Date ? data.reservation_expires_at.toISOString() : (data.reservation_expires_at || null),
       data.location_address || null,
       data.location_lat || 0,
       data.location_lng || 0,
@@ -54,17 +52,16 @@ class Order {
     ];
 
     const executor = client || pool;
+    // Log before insert for transparency
+    console.log('FINAL VALUES:', JSON.stringify(values, null, 2));
+
     try {
       const result = await executor.query(query, values);
       return result.rows[0];
     } catch (error) {
       console.error('--- DATABASE INSERT ERROR ---');
       console.error('Message:', error.message);
-      console.error('Values:', JSON.stringify(values.map(v => {
-        if (v === null) return 'SQL_NULL';
-        if (typeof v === 'object') return 'OBJECT:' + JSON.stringify(v);
-        return v;
-      }), null, 2));
+      console.error('Values (at failure):', JSON.stringify(values, null, 2));
 
       try {
         const schemaAudit = await executor.query(`
