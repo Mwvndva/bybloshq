@@ -106,9 +106,9 @@ class OrderService {
           finalLat = location.lat;
           finalLng = location.lng;
           logger.info(`Home Service detected. Using buyer-provided location.`);
-        } else if (orderType === OrderType.PHYSICAL && fulfillmentType === FulfillmentType.COURIER) {
-          logger.warn(`Fulfillment validation failed for Order: ${err.message}`);
-          throw err;
+        } else if (primaryProductType === ProductType.PHYSICAL && fulfillmentType === FulfillmentType.COURIER) {
+          // Standard System Delivery
+          logger.info(`System delivery detected. Coordinates managed by logistics.`);
         }
 
         // 4f. RESOLVE ORDER TYPE
