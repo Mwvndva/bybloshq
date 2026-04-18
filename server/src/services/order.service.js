@@ -344,7 +344,14 @@ class OrderService {
               orderNumber: fullOrder.order_number,
               totalAmount: fullOrder.total_amount,
               status: newStatus,
+              type: fullOrder.order_type,
+              fulfillmentType: fullOrder.fulfillment_type,
               metadata: fullOrder.metadata
+            },
+            location: {
+              address: fullOrder.location_address,
+              lat: fullOrder.location_lat,
+              lng: fullOrder.location_lng
             },
             oldStatus: currentStatus,
             newStatus: newStatus,
@@ -1695,6 +1702,9 @@ class OrderService {
       orderNumber: fullOrder.order_number,
       totalAmount: Number.parseFloat(fullOrder.total_amount || 0),
       status: fullOrder.status,
+      type: fullOrder.order_type,
+      fulfillmentType: fullOrder.fulfillment_type,
+      downloadUrl: metadata.download_url || metadata.downloadUrl || null,
       buyer: {
         name: fullOrder.buyer_name || 'Customer',
         phone: fullOrder.buyer_mobile_payment || 'N/A',
