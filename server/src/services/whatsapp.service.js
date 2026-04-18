@@ -350,56 +350,62 @@ class WhatsAppService {
         // 1. INITIAL STATES (PENDING/PAID/CONFIRMED/RESERVED)
         if (['CONFIRMED', 'PAID', 'PENDING', 'RESERVED'].includes(status)) {
             if (isBuyer) {
-                if (isDigital) return "👉 *Next Step:* Your digital product is ready! Click the download link below.";
-                if (isSystemDelivery) return "⏳ *Next Step:* Please wait for our team to pack your item. Hub delivery usually takes 1-2 days. You'll be notified of arrival.";
-                if (isShopPickup) return "⏳ *Next Step:* The seller is preparing your item. Please wait for the 'Ready for Pickup' notification.";
-                if (isMobileService) return "⏳ *Next Step:* Booking confirmed! Please be at your location at the scheduled time.";
-                if (isShopService) return "⏳ *Next Step:* Booking confirmed! Please visit the shop at the scheduled time.";
+                if (isDigital) return "👉 *Next Step:* Click the download link below to access your product.";
+                if (isSystemDelivery) return "⏳ *Next Step:* The seller is dropping off your item at our hub. Hub arrival takes 1-2 days. Please wait for the 'Arrived' notification.";
+                if (isShopPickup) return "⏳ *Next Step:* The seller is preparing your item. We'll notify you the moment it's ready for collection at the shop.";
+                if (isMobileService) return "⏳ *Next Step:* Booking confirmed! Please be at your location at the scheduled time to receive the service.";
+                if (isShopService) return "⏳ *Next Step:* Booking confirmed! Please visit the shop at the scheduled time for your service.";
             } else {
-                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 48 hours to avoid cancellation.`;
-                if (isShopPickup) return "👉 *Next Step:* Prepare the items for the buyer's pickup. Notify them when it's ready.";
+                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 48 hours to complete fulfillment.`;
+                if (isShopPickup) return "👉 *Next Step:* Prepare the items for the buyer's pickup. Update status to 'Ready for Collection' once packed.";
                 if (isMobileService) return "👉 *Next Step:* Prepare your tools and proceed to the buyer's location at the scheduled time.";
-                if (isShopService) return "👉 *Next Step:* Prepare for the buyer's arrival at your shop.";
+                if (isShopService) return "👉 *Next Step:* Prepare for the buyer's arrival at your shop at the scheduled time.";
             }
         }
 
         // 2. PROCESSING
         if (status === 'PROCESSING') {
             if (isBuyer) {
-                return isService ? "⏳ *Next Step:* The seller is now preparing for your service." : "⏳ *Next Step:* The seller is currently packing your items. Stay tuned for dispatch!";
+                return isService ? "⏳ *Next Step:* The seller is now preparing for your service appointment." : "⏳ *Next Step:* The seller is currently packing your items. Dispatch notification coming soon!";
             }
-            return "👉 *Next Step:* Proceed with preparation. Update status to 'Delivery Pending' or 'Ready for Collection' when complete.";
+            return "👉 *Next Step:* Proceed with preparation. Update status to 'Delivery Pending' or 'Ready for Collection' when done.";
         }
 
         // 3. DELIVERY / DISPATCH
         if (status === 'DELIVERY_PENDING') {
             if (isBuyer) {
-                if (isSystemDelivery) return "🚚 *Next Step:* Your order is en route to our hub. Wait for the 'Arrived at Hub' notification before visiting.";
-                return "🚚 *Next Step:* Your order is on its way to you!";
+                if (isSystemDelivery) return "🚚 *Next Step:* Your order is en route to our hub. Stay tuned for the 'Arrived at Hub' notification before visiting.";
+                return "🚚 *Next Step:* Your order is on its way! Please be ready to receive it.";
             }
-            return isSystemDelivery ? "👉 *Next Step:* Item dispatched to hub. Logistics handling initiated." : "🚚 *Next Step:* Proceed with the delivery.";
+            return isSystemDelivery ? "👉 *Next Step:* Item dispatched to hub. Logistics tracking initiated." : "🚚 *Next Step:* Proceed with the delivery to the buyer.";
         }
 
         // 4. COLLECTION (READY)
         if (status === 'COLLECTION_PENDING' || status === 'READY_FOR_COLLECTION') {
             if (isBuyer) {
-                if (isShopPickup || isShopService) return "📍 *Next Step:* Your order is READY! Please visit the shop now to collect.";
-                if (isSystemDelivery) return `📍 *Next Step:* READY! Your order has arrived at the hub. Visit ${this.DROPOFF_LOCATION} now to collect.`;
+                if (isShopPickup || isShopService) return "📍 *Next Step:* YOUR ORDER IS READY! Please visit the shop now to collect.";
+                if (isSystemDelivery) return `📍 *Next Step:* ARRIVED AT HUB! Your order is ready. Visit ${this.DROPOFF_LOCATION} now to collect.`;
             }
-            return "👉 *Next Step:* Buyer has been notified. Hand over the item and mark as 'Completed' once the buyer confirms.";
+            return "👉 *Next Step:* Buyer has been notified. Hand over the items/service and mark as 'Completed'.";
         }
 
         // 5. SERVICE EN ROUTE
         if (status === 'SERVICE_PENDING') {
             if (isBuyer) {
-                return isMobileService ? "🚚 *Next Step:* The seller is en route to your location. Please be available." : "📍 *Next Step:* The seller is ready. Visit the shop now!";
+                return isMobileService ? "🚚 *Next Step:* The professional is now en route to your address. Please be available." : "📍 *Next Step:* The professional is ready for you at the shop. Please visit now!";
             }
-            return isMobileService ? "🚚 *Next Step:* Proceed to the buyer's location now." : "👉 *Next Step:* Prepare for the buyer's arrival.";
+            return isMobileService ? "🚚 *Next Step:* Proceed to the buyer's location now." : "👉 *Next Step:* Prepare for the buyer's arrival at your shop.";
         }
 
         // 6. COMPLETED / DELIVERED
         if (status === 'COMPLETED' || status === 'DELIVERY_COMPLETE') {
-            return isBuyer ? "🎉 *Next Step:* Order successful! We hope to see you again soon." : "✅ *Status:* Funds have been released to your wallet. Thank you!";
+            if (isBuyer) {
+                if (isSystemDelivery && status === 'DELIVERY_COMPLETE') {
+                    return `📍 *Next Step:* YOUR ORDER HAS ARRIVED AT THE HUB! Visit ${this.DROPOFF_LOCATION} now to collect your package.`;
+                }
+                return "🎉 *Next Step:* Transaction successful! Thank you for choosing Byblos.";
+            }
+            return "✅ *Status:* Order finalized. Funds have been released to your wallet. Thank you!";
         }
 
         return "";
@@ -415,6 +421,9 @@ class WhatsAppService {
         const { orderNumber, totalAmount, buyer, seller, service, items, booking, location: loc, payment, type, fulfillmentType, downloadUrl, status } = order;
 
         // Context Flags
+        const isDigital = (type || '').toUpperCase() === 'DIGITAL';
+        const isService = (type || '').toUpperCase() === 'SERVICE';
+        const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
         const hasPhysicalShop = !!seller.latitude && !!seller.longitude && !!seller.address;
 
         const partyName = isSeller ? (seller.name || 'Seller') : (buyer.name || 'Customer');
@@ -423,10 +432,13 @@ class WhatsAppService {
             ? `Hello ${partyName}, a new order has been placed with your shop.`
             : `Hello ${partyName}, your order has been successfully processed.`;
 
+        const typeLabel = isDigital ? 'Digital Product' : (isService ? 'Service Booking' : 'Physical Product');
+
         let message = `
 ${headerText}
 ${bodyText}
 
+🏷️ *Type:* ${typeLabel}
 💰 *Total:* KSh ${totalAmount.toLocaleString()}
 
 *Order Details:*
@@ -443,9 +455,6 @@ ${bodyText}
         const instructions = this.getLifecycleInstruction(status || 'CONFIRMED', isSeller ? 'seller' : 'buyer', type, hasPhysicalShop);
         let locationDetails = '';
 
-        const isDigital = (type || '').toUpperCase() === 'DIGITAL';
-        const isService = (type || '').toUpperCase() === 'SERVICE';
-        const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
         const isShopService = isService && hasPhysicalShop;
         const isShopPickup = isPhysical && hasPhysicalShop;
         const isMobileService = isService && !hasPhysicalShop;
@@ -465,6 +474,9 @@ ${bodyText}
             const hasBuyerLoc = !!loc.lat && !!loc.lng && !!loc.address && loc.address !== 'Not specified';
             const mapsLink = hasBuyerLoc ? `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}` : null;
             locationDetails = `📍 *Buyer Location:* ${loc.address}${mapsLink ? `\n🔗 *Navigate:* ${mapsLink}` : ''}\n`;
+        }
+        else if (isMobileService && !isSeller) {
+            locationDetails = `📍 *Your Service Address:* ${loc.address}\n`;
         }
 
         // Add Requirements if any
@@ -515,31 +527,36 @@ ${bodyText}
         if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
 
         const { type } = order;
+        const isService = (type || '').toUpperCase() === 'SERVICE';
+        const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
         const hasPhysicalShop = !!seller.latitude && !!seller.longitude && !!seller.physicalAddress;
 
         const instructions = this.getLifecycleInstruction(newStatus, 'buyer', type, hasPhysicalShop);
         let locationDetails = '';
 
-        const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
-        const isService = (type || '').toUpperCase() === 'SERVICE';
         const isShopPickup = isPhysical && hasPhysicalShop;
         const isShopService = isService && hasPhysicalShop;
+        const isMobileService = isService && !hasPhysicalShop;
         const isSystemDelivery = isPhysical && !hasPhysicalShop;
 
-        if (newStatus === 'COLLECTION_PENDING' || newStatus === 'READY_FOR_COLLECTION') {
-            if (isShopPickup || isShopService) {
-                const mapsLink = `https://www.google.com/maps/search/?api=1&query=${seller.latitude},${seller.longitude}`;
-                locationDetails = `📍 *At Shop:* ${seller.physicalAddress || seller.shopName}\n🔗 *Navigate:* ${mapsLink}\n`;
-            } else if (isSystemDelivery) {
-                locationDetails = `📍 *At Hub:* ${this.DROPOFF_LOCATION}\n`;
-            }
+        // Always include location for Services or Collections
+        if (isShopPickup || isShopService) {
+            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${seller.latitude},${seller.longitude}`;
+            locationDetails = `📍 *At Shop:* ${seller.physicalAddress || seller.shopName}\n🔗 *Navigate:* ${mapsLink}\n`;
+        } else if (isSystemDelivery && (newStatus === 'COLLECTION_PENDING' || newStatus === 'DELIVERY_COMPLETE')) {
+            locationDetails = `📍 *At Hub:* ${this.DROPOFF_LOCATION}\n`;
+        } else if (isMobileService) {
+            locationDetails = `📍 *Your Service Address:* ${loc.address}\n`;
         }
+
+        const typeLabel = isService ? 'Service' : 'Product';
 
         const msg = `
 ✅ *Status Update: #${order.orderNumber}*
+Type: *${typeLabel}*
 New Status: *${newStatus.replace(/_/g, ' ')}*
 
-${locationDetails}${instructions ? `_${instructions}_\n` : ''}
+${locationDetails}${instructions ? `${instructions}\n` : ''}
 _Check your dashboard for full details._
 `.trim();
 
@@ -547,20 +564,33 @@ _Check your dashboard for full details._
     }
 
     async notifySellerStatusUpdate(updateData) {
-        const { seller, buyer, order, newStatus } = updateData;
+        const { seller, buyer, order, location: loc, newStatus } = updateData;
         const sellerWhatsApp = seller?.phone || seller?.whatsapp_number;
         if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
 
         const { type } = order;
+        const isService = (type || '').toUpperCase() === 'SERVICE';
+        const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
         const hasPhysicalShop = !!seller.latitude && !!seller.longitude && !!seller.physicalAddress;
 
         const instructions = this.getLifecycleInstruction(newStatus, 'seller', type, hasPhysicalShop);
+        let locationDetails = '';
+
+        const isMobileService = isService && !hasPhysicalShop;
+        const isSystemDelivery = isPhysical && !hasPhysicalShop;
+
+        if (isMobileService) {
+            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}`;
+            locationDetails = `📍 *Buyer Location:* ${loc.address}\n🔗 *Navigate:* ${mapsLink}\n`;
+        } else if (isSystemDelivery && newStatus === 'CONFIRMED') {
+            locationDetails = `📍 *Drop-off Point:* ${this.DROPOFF_LOCATION}\n`;
+        }
 
         const msg = `
 ✅ *Status Update: #${order.orderNumber}*
 New Status: *${newStatus.replace(/_/g, ' ')}*
 
-${instructions ? `_${instructions}_\n` : ''}
+${locationDetails}${instructions ? `${instructions}\n` : ''}
 _Managed via your dashboard._
 `.trim();
 
