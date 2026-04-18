@@ -15,7 +15,7 @@ class Order {
     if (!data.seller_id) throw new Error('Seller ID is required');
     if (!data.buyer_email) throw new Error('buyer_email is required for DB insert');
 
-    // 2. Static SQL Query with Explicit Type Hints (PIN-04: SCHEMA HARDENING)
+    // 2. Static SQL Query (NATIVE PARAMETERS - NO MANUAL CASTING)
     const query = `
       INSERT INTO product_orders (
         order_number, buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
@@ -25,28 +25,30 @@ class Order {
         location_address, location_lat, location_lng, service_title, notification_sent
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
-        $13, $14::jsonb, $15, $16, $17, $18, $19, $20, 
-        $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30
+        $13, $14, $15, $16, $17, $18, $19, $20, 
+        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
       )
       RETURNING *
     `;
 
-    // 3. Manual Serialization Helper (PIN-08: TOTAL CONTROL)
-    const toJson = (val) => {
-      if (val === null || val === undefined) return JSON.stringify({});
+    /**
+     * NATIVE OBJECT HANDLER (PIN-11: DRIVER TRUST)
+     * Ensures we pass REAL objects to the driver, allowing native serialization.
+     */
+    const toNativeObj = (val) => {
+      if (val === null || val === undefined) return null;
+      if (typeof val === 'object') return val;
       if (typeof val === 'string') {
         try {
-          JSON.parse(val);
-          return val; // It's already valid JSON
+          return JSON.parse(val);
         } catch (e) {
-          return JSON.stringify(val); // Raw string -> JSON string literal
+          return { raw_content: val };
         }
       }
-      if (typeof val === 'object') return JSON.stringify(val);
-      return JSON.stringify({});
+      return val;
     };
 
-    // 4. Strict Value Mapping (Manual Types)
+    // 4. Strict Value Mapping (Native JSONB Objects)
     const values = [
       data.order_number,                                     // $1
       data.buyer_id || null,                                 // $2
@@ -61,35 +63,36 @@ class Order {
       data.buyer_whatsapp_number || null,                    // $11
       data.shipping_address || null,                         // $12
       data.notes || null,                                    // $13
-      toJson(data.metadata),                                 // $14 (Manual JSON string)
+      toNativeObj(data.metadata),                            // $14 (Native JSONB)
       data.status || 'PENDING',                              // $15
       data.payment_status || 'pending',                      // $16
-      toJson(data.service_requirements),                     // $17 (Hardened JSON/TEXT)
+      toNativeObj(data.service_requirements),                // $17 (Fixed Native Support)
       data.is_debt || false,                                 // $18
       data.client_id || null,                                // $19
       data.is_seller_initiated || false,                    // $20
       data.fulfillment_type || null,                         // $21
-      toJson(data.delivery_location),                        // $22 (Manual JSON string)
+      toNativeObj(data.delivery_location),                   // $22 (Native JSONB)
       data.order_type || 'PHYSICAL',                         // $23
       data.total_quantity || 1,                              // $24
       data.reservation_expires_at instanceof Date            // $25
         ? data.reservation_expires_at
         : (data.reservation_expires_at ? new Date(data.reservation_expires_at) : null),
       data.location_address || null,                         // $26
-      data.location_lat || null,                             // $27 (Strict null)
-      data.location_lng || null,                             // $28 (Strict null)
+      data.location_lat || null,                             // $27
+      data.location_lng || null,                             // $28
       data.service_title || null,                            // $29
       data.notification_sent || false                       // $30
     ];
 
-    // 5. DEFENSIVE AUDITING (PIN-09: ZERO UNEXPECTED OBJECTS)
-    const jsonIndices = [13, 16, 21]; // 0-indexed: $14, $17, $22
+    // 5. DEFENSIVE AUDITING (MODIFIED)
+    // Now we allow objects for indices 13, 16, 21
+    const jsonIndices = [13, 16, 21]; // index: $14, $17, $22
     values.forEach((val, i) => {
       const colNum = i + 1;
       if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
         if (!jsonIndices.includes(i)) {
-          logger.error(`[CRITICAL] Unserialized object detected for non-JSON column $${colNum}: ${JSON.stringify(val)}`);
-          throw new Error(`Architectural Violation: Raw object passed to non-JSON column $${colNum}. Type: ${typeof val}`);
+          logger.error(`[CRITICAL] Unexpected object detected for non-JSON column $${colNum}:`, val);
+          throw new Error(`Architectural Violation: Raw object passed to non-JSON column $${colNum}.`);
         }
       }
     });
@@ -100,8 +103,11 @@ class Order {
       const result = await executor.query(query, values);
       return result.rows[0];
     } catch (error) {
-      const valueSummary = JSON.stringify(values.map(v => v instanceof Date ? v.toISOString() : v), null, 2);
-      logger.error(`--- DATABASE INSERT ERROR (STRICT) ---\nMessage: ${error.message}\nValues: ${valueSummary}`);
+      const valueSummary = JSON.stringify(values, (key, value) => {
+        if (value instanceof Date) return value.toISOString();
+        return value;
+      }, 2);
+      logger.error(`--- DATABASE INSERT ERROR (NATIVE) ---\nMessage: ${error.message}\nValues: ${valueSummary}`);
       throw error;
     }
   }
@@ -110,7 +116,7 @@ class Order {
    * Pure DAO method to insert order items
    */
   static async insertItems(client, orderId, items) {
-    // Fetch product details for type info - only for items that don't already have them
+    // ... items logic ...
     const itemsMissingDetails = items.filter(item => !item.productType && item.isDigital === undefined);
     const productIds = itemsMissingDetails.map(item => Number.parseInt(item.productId, 10));
 
@@ -138,7 +144,7 @@ class Order {
         parseFloat(item.price).toFixed(2),
         Number.parseInt(item.quantity, 10),
         parseFloat(subtotal).toFixed(2),
-        JSON.stringify({
+        {
           ...(item.metadata || {}),
           original_price: item.price,
           original_quantity: item.quantity,
@@ -146,7 +152,7 @@ class Order {
           isDigital: productDetails?.is_digital || item.isDigital || false,
           imageUrl: productDetails?.image_url || item.imageUrl,
           digitalFileName: productDetails?.digital_file_name || item.digitalFileName
-        })
+        }
       ];
     });
 
@@ -154,7 +160,7 @@ class Order {
       INSERT INTO order_items (
         order_id, product_id, product_name, product_price, quantity, subtotal, metadata
       ) VALUES ${itemValues.map((_, i) =>
-      `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}::numeric, $${i * 7 + 5}, $${i * 7 + 6}::numeric, $${i * 7 + 7}::jsonb)`
+      `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}::numeric, $${i * 7 + 5}, $${i * 7 + 6}::numeric, $${i * 7 + 7})`
     ).join(', ')}
       RETURNING *
     `;
