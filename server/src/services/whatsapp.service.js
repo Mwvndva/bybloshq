@@ -347,8 +347,8 @@ class WhatsAppService {
         const isMobileService = isService && !hasShop;
         const isShopService = isService && hasShop;
 
-        // 1. INITIAL STATES (PENDING/PAID/CONFIRMED)
-        if (['CONFIRMED', 'PAID', 'PENDING'].includes(status)) {
+        // 1. INITIAL STATES (PENDING/PAID/CONFIRMED/RESERVED)
+        if (['CONFIRMED', 'PAID', 'PENDING', 'RESERVED'].includes(status)) {
             if (isBuyer) {
                 if (isDigital) return "👉 *Next Step:* Your digital product is ready! Click the download link below.";
                 if (isSystemDelivery) return "⏳ *Next Step:* Please wait for our team to pack your item. Hub delivery usually takes 1-2 days. You'll be notified of arrival.";
@@ -397,8 +397,8 @@ class WhatsAppService {
             return isMobileService ? "🚚 *Next Step:* Proceed to the buyer's location now." : "👉 *Next Step:* Prepare for the buyer's arrival.";
         }
 
-        // 6. COMPLETED
-        if (status === 'COMPLETED') {
+        // 6. COMPLETED / DELIVERED
+        if (status === 'COMPLETED' || status === 'DELIVERY_COMPLETE') {
             return isBuyer ? "🎉 *Next Step:* Order successful! We hope to see you again soon." : "✅ *Status:* Funds have been released to your wallet. Thank you!";
         }
 
@@ -419,10 +419,13 @@ class WhatsAppService {
 
         const partyName = isSeller ? (seller.name || 'Seller') : (buyer.name || 'Customer');
         const headerText = isSeller ? `🔔 *New Order: #${orderNumber}*` : `✅ *Order Confirmed: #${orderNumber}*`;
+        const bodyText = isSeller
+            ? `Hello ${partyName}, a new order has been placed with your shop.`
+            : `Hello ${partyName}, your order has been successfully processed.`;
 
         let message = `
 ${headerText}
-Hello ${partyName}, your order has been successfully processed.
+${bodyText}
 
 💰 *Total:* KSh ${totalAmount.toLocaleString()}
 
@@ -470,7 +473,7 @@ Hello ${partyName}, your order has been successfully processed.
         }
 
         if (locationDetails) message += `\n${locationDetails}`;
-        if (instructions) message += `\n_${instructions}_\n`;
+        if (instructions) message += `\n${instructions}\n`;
 
         // Footer
         const footerText = isSeller ? 'Manage your orders on your dashboard.' : 'Thank you for shopping with Byblos!';
