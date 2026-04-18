@@ -24,7 +24,7 @@ class OrderService {
   /**
    * Create a new order with fee calculations and status determination
    */
-  static async createOrder(orderData) {
+  static async createOrder(orderData, externalClient = null) {
     let sellerInfo = null;
     const {
       buyer,   // Unified Buyer Object
@@ -48,7 +48,8 @@ class OrderService {
     // --- PIN-01: DISTRIBUTED LOCK FOR ATOMIC ORDER CREATION ---
     const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyerId}:seller:${sellerId}`;
 
-    const client = await pool.connect();
+    const isManaged = !externalClient;
+    const client = externalClient || await pool.connect();
     try {
       // 1. Acquire Lock
       const acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 10, 'NX');
