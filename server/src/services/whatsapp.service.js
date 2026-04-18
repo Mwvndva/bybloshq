@@ -344,60 +344,56 @@ class WhatsAppService {
         const seller = order.seller;
         const booking = order.booking || {};
 
-        // 1. Header
-        const header = isBuyer ? '✅ *ORDER CONFIRMED!*' : '🎉 *NEW ORDER RECEIVED!*';
+        // 1. Header & ID
+        const icon = isBuyer ? '✅' : '🎉';
+        const title = isBuyer ? 'Order Confirmed' : 'New Order';
+        const header = `${icon} *${title}: #${order.orderNumber}*`;
 
-        // 2. Items
+        // 2. Summary
+        const total = `*Total: KSh ${order.totalAmount?.toLocaleString() || (service.total?.toLocaleString() || (service.price * service.quantity).toLocaleString())}*`;
+
+        // 3. Items
         const itemsList = order.items?.length > 0
-            ? order.items.map((i, idx) => `${idx + 1}. ${i.title} (x${i.quantity})`).join('\n')
-            : `• ${service.title} (x${service.quantity})`;
+            ? order.items.map(i => `- ${i.title} (x${i.quantity})`).join('\n')
+            : `- ${service.title} (x${service.quantity})`;
 
-        // 3. Specialized Detail (Booking/Location)
-        let specializedInfo = '';
+        // 4. Specialized Info (Booking/Location)
+        let details = '';
         if (booking.date) {
-            specializedInfo += `📅 *SERVICE BOOKING*\n• Date: ${booking.date}\n• Time: ${booking.time || 'N/A'}\n\n`;
+            details += `📅 ${booking.date} | ${booking.time || 'N/A'}\n`;
         }
 
         if (loc.address && loc.address !== 'Not specified') {
             const mapsLink = (loc.lat && loc.lng) ? `https://www.google.com/maps/search/?api=1&query=${loc.lat},${loc.lng}` : null;
-            const label = booking.date ? 'Service Address' : 'Delivery Address';
-            specializedInfo += `📍 *${label.toUpperCase()}:* ${loc.address}${mapsLink ? `\n🔗 *Navigate:* ${mapsLink}` : ''}\n`;
+            details += `📍 ${loc.address}${mapsLink ? `\n🔗 Navigate: ${mapsLink}` : ''}\n`;
         }
 
-        // 4. Next Steps
-        let nextSteps = '';
+        // 5. Action/Context
+        let footerText = '';
         if (isBuyer) {
-            nextSteps = `⏰ *WHAT'S NEXT:*
-The seller has been notified and will process your order soon.
-🔒 *Your money is safe:* Payment is held in escrow until you confirm completion.`.trim();
+            footerText = `_The seller is preparing your order. Funds are held in escrow for your safety._`;
         } else {
-            nextSteps = `🚚 *ACTION REQUIRED:*
-Please visit your dashboard to manage this order.`.trim();
+            footerText = `👤 Buyer: ${buyer.name} (${buyer.phone})\n_Manage this order on your dashboard._`;
         }
 
-        // 5. Assemble
-        const buyerSection = isBuyer ? '' : `👤 *BUYER:* ${buyer.name}\n📞 *PHONE:* ${buyer.phone}\n`;
-        const footer = isBuyer ? this.formatSocialLinks(seller) : '';
+        const social = isBuyer ? this.formatSocialLinks(seller) : '';
 
         return `
 ${header}
+${total}
 
-${buyerSection}📦 *Order #${order.orderNumber}*
-💰 Total: KSh ${service.total?.toLocaleString() || (service.price * service.quantity).toLocaleString()}
-
-📋 *Items:*
+*Items:*
 ${itemsList}
 
-${specializedInfo}
-${nextSteps}
-
-${footer}
+${details}
+${footerText}
+${social}
 `.trim();
     }
 
     async notifySellerNewOrder(order) {
         const sellerWhatsApp = order.seller?.whatsapp_number || order.seller?.phone;
-        if (!sellerWhatsApp) return false;
+        if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
 
         try {
             const msg = this.buildWhatsAppMessage(order, 'seller');
@@ -431,13 +427,10 @@ ${footer}
         if (newStatus === 'COLLECTION_PENDING') statusText = 'READY FOR COLLECTION';
 
         const msg = `
-✅ *ORDER UPDATE: ${statusText}*
+✅ *Status Update: #${order.orderNumber}*
+${statusText}
 
-📦 Order #${order.orderNumber}
-💰 Total: KSh ${order.totalAmount.toLocaleString()}
-
-Status updated to: *${statusText}*
-Check your dashboard for details.
+_Check your dashboard for pickup details._
 `.trim();
 
         return this.sendMessage(buyerWhatsApp, msg);
@@ -449,10 +442,8 @@ Check your dashboard for details.
         if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
 
         const msg = `
-✅ *STATUS UPDATE: ${newStatus}*
-
-📦 Order #${order.orderNumber}
-Status: ${newStatus}
+✅ *Status Update: #${order.orderNumber}*
+New Status: *${newStatus}*
 `.trim();
 
         return this.sendMessage(sellerWhatsApp, msg);
@@ -463,32 +454,23 @@ Status: ${newStatus}
         const { order, items, seller } = orderData;
         if (!clientPhone) return false;
 
-        const itemsList = items.map((item, i) => {
+        const itemsList = items.map(item => {
             const name = item.name || item.product_name || 'Item';
-            const price = Number.parseFloat(item.price || item.product_price || 0);
-            return `${i + 1}. ${name} x${item.quantity} - KSh ${price.toLocaleString()}`;
+            return `- ${name} (x${item.quantity})`;
         }).join('\n');
 
         const total = Number.parseFloat(order.totalAmount || 0);
         const shopName = seller?.shop_name || seller?.businessName || 'Byblos Seller';
 
         const msg = `
-💳 *PAYMENT REQUEST*
+💳 *Payment Request: #${order.orderNumber}*
+Total: *KSh ${total.toLocaleString()}*
+From: ${shopName}
 
-Hello! ${shopName} has created an order for you.
-
-📦 *Order #${order.orderNumber}*
-💰 Total: KSh ${total.toLocaleString()}
-
-📋 *Items:*
+*Items:*
 ${itemsList}
 
-📱 *ACTION REQUIRED:*
-Please enter your M-Pesa PIN to complete payment on the prompt sent to this number.
-
-⏰ Payment request expires in a few minutes.
-
-Thank you!
+_Please enter your M-Pesa PIN on the prompt sent to this number to complete payment._
         `.trim();
 
         logger.info(`[CLIENT-ORDER] Sending payment request to client ${clientPhone}`);
@@ -500,18 +482,10 @@ Thank you!
         if (!buyerWhatsApp) return false;
 
         const message = `
-🎉 *REFUND APPROVED*
+🎉 *Refund Approved*
+Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*
 
-Your refund request has been approved!
-
-💰 *Refund Amount:* KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-
-✅ The refund will be processed to your registered M-Pesa number within 1-3 business days.
-
-Thank you for your patience!
-
----
-*Byblos Marketplace*
+_Processing to M-Pesa (1-3 business days). Thanks for your patience._
         `.trim();
 
         return this.sendMessage(buyerWhatsApp, message);
@@ -522,41 +496,28 @@ Thank you for your patience!
         if (!buyerWhatsApp) return false;
 
         const message = `
-❌ *REFUND REQUEST DECLINED*
+❌ *Refund Declined*
+Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}*
 
-Your refund request has been declined.
-
-💰 *Requested Amount:* KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-
-📝 *Reason:* ${reason || 'Please contact support for more information.'}
-
-Your refund balance remains available for future withdrawal requests.
-
----
-*Byblos Marketplace*
+*Reason:* ${reason || 'Please contact support.'}
         `.trim();
 
         return this.sendMessage(buyerWhatsApp, message);
     }
 
     async sendLogisticsNotification(order) {
-        if (!this.COURIER_NUMBER) return false;
+        if (!this.COURIER_NUMBER || this.COURIER_NUMBER === 'N/A') return false;
 
         try {
             const msg = `
-🚚 *NEW LOGISTICS REQUEST*
+🚚 *Logistics: #${order.orderNumber}*
+Value: *KSh ${order.totalAmount.toLocaleString()}*
 
-📦 Order #${order.orderNumber}
-💰 Value: KSh ${order.totalAmount.toLocaleString()}
+👤 *Seller:* ${order.seller.name} (${order.seller.phone})
+👤 *Buyer:* ${order.buyer.name} (${order.buyer.phone})
+📍 *Pick/Drop:* ${order.location.address}
 
-👤 *Seller:* ${order.seller.name}
-📞 *Seller Phone:* ${order.seller.phone}
-
-👤 *Buyer:* ${order.buyer.name}
-📞 *Buyer Phone:* ${order.buyer.phone}
-📍 *Buyer Location:* ${order.location.address}
-
-⏰ Please coordinate pickup and delivery to ${this.DROPOFF_LOCATION}.
+_Coordinate pickup and delivery to ${this.DROPOFF_LOCATION}._
 `.trim();
 
             return this.sendMessage(this.COURIER_NUMBER, msg);
@@ -568,42 +529,23 @@ Your refund balance remains available for future withdrawal requests.
 
 
     async sendLogisticsCancellationNotification(order, buyer, seller, cancelledBy) {
-        const COURIER_NUMBER = this.COURIER_NUMBER
+        const COURIER_NUMBER = this.COURIER_NUMBER;
 
-        // Skip if this was a shop-pickup order (no logistics involved)
-        if (sellerHasPhysicalShop(seller)) return false
+        if (sellerHasPhysicalShop(seller)) return false;
 
-        const orderNum = order.orderNumber || order.order_number || order.id
-        const buyerName = buyer?.fullName || buyer?.full_name || 'N/A'
-        const buyerPhone = buyer?.whatsapp_number || buyer?.phone || 'N/A'
-        const shopName = seller?.shop_name || seller?.full_name || 'N/A'
-        const sellerPhone = seller?.whatsapp_number || 'N/A'
-        const total = Number.parseFloat(order.total_amount || order.totalAmount || 0)
+        const orderNum = order.orderNumber || order.order_number || order.id;
+        const total = Number.parseFloat(order.total_amount || order.totalAmount || 0);
 
         const message = `
-❌ *ORDER CANCELLED — DELIVERY CANCELLED*
+❌ *Logistics Cancelled: #${orderNum}*
+Value: *KSh ${total.toLocaleString()}*
+By: ${cancelledBy || 'System'}
 
-📦 *Order #${orderNum}*
-💰 *Amount:* KSh ${total.toLocaleString()}
-🚫 *Cancelled by:* ${cancelledBy || 'System'}
+_Do NOT collect this order. If already collected, contact the seller for return._
+    `.trim();
 
-━━━━━━━━━━━━━━━━━━━━
-👤 *BUYER*
-• Name:  ${buyerName}
-• Phone: ${buyerPhone}
-
-🏪 *SELLER*
-• Shop:  ${shopName}
-• Phone: ${sellerPhone}
-
-━━━━━━━━━━━━━━━━━━━━
-⚠️ *ACTION REQUIRED:*
-Do NOT collect this order from the seller.
-If already collected, contact the seller to arrange return.
-    `.trim()
-
-        logger.info(`[LOGISTICS] Sending cancellation to courier for order #${orderNum}`)
-        return this.sendMessage(COURIER_NUMBER, message)
+        logger.info(`[LOGISTICS] Sending cancellation to courier for order #${orderNum}`);
+        return this.sendMessage(COURIER_NUMBER, message);
     }
 
     async sendBuyerOrderCancellationNotification(order, cancelledBy) {
@@ -611,18 +553,8 @@ If already collected, contact the seller to arrange return.
         if (!buyerWhatsApp) return false;
 
         const message = `
-❌ *ORDER CANCELLED*
-
-Your order has been cancelled ${cancelledBy === 'Seller' ? 'by the seller' : ''}.
-
-📦 *Order #${order.id || order.orderNumber}*
-💰 *Amount:* KSh ${order.totalAmount.toLocaleString()}
-
-💵 *REFUND INFORMATION*
-A full refund has been added to your account balance. You can withdraw it from your dashboard.
-
----
-*Byblos Marketplace*
+❌ *Order Cancelled: #${order.id || order.orderNumber}*
+_Refund added to your balance. View on your dashboard._
         `.trim();
 
         return this.sendMessage(buyerWhatsApp, message);
@@ -630,78 +562,36 @@ A full refund has been added to your account balance. You can withdraw it from y
 
     async sendSellerOrderCancellationNotification(order, seller, cancelledBy) {
         const sellerWhatsApp = seller?.whatsapp_number || seller?.whatsappNumber || seller?.phone;
-        if (!sellerWhatsApp) return false;
+        if (!sellerWhatsApp || sellerWhatsApp === 'N/A') return false;
 
-        let message = '';
-        if (cancelledBy === 'Seller') {
-            message = `
-❌ *ORDER CANCELLATION CONFIRMED*
-
-You have successfully cancelled Order #${order.id || order.orderNumber}.
-
-ℹ️ The buyer has been refunded. Do not ship this order.
+        const message = `
+❌ *Order Cancelled: #${order.id || order.orderNumber}*
+By: ${cancelledBy === 'Seller' ? 'Seller' : 'Buyer'}
+_Order refunded. Do not ship._
             `.trim();
-        } else {
-            message = `
-❌ *ORDER CANCELLED BY BUYER*
-
-The buyer has cancelled Order #${order.id || order.orderNumber}.
-
-ℹ️ The buyer has been refunded. Do not ship this order.
-            `.trim();
-        }
 
         return this.sendMessage(sellerWhatsApp, message);
     }
 
     async notifySellerWithdrawalUpdate(phone, withdrawalData) {
-        if (!phone) return false;
+        if (!phone || phone === 'N/A') return false;
 
         const { amount, status, reference, reason, newBalance, mpesaNumber, request_id } = withdrawalData;
-
-        let header = '';
-        let message = '';
         const fmtAmount = Number.parseFloat(amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         const idSuffix = request_id ? ` #${request_id}` : '';
 
+        let msg = '';
         if (status === 'completed') {
-            header = '✅ *WITHDRAWAL SUCCESSFUL*';
-            message = `
-${header}
-
-💰 *Amount:* KSh ${fmtAmount}
-🏦 *M-Pesa:* ${mpesaNumber || 'Registered Number'}
-🏦 *Ref:* ${reference || 'N/A'}${idSuffix}
-
-Your funds have been successfully sent to your M-Pesa.
-            `.trim();
+            msg = `✅ *Withdrawal Successful${idSuffix}*\nAmount: *KSh ${fmtAmount}*\nRef: ${reference || 'N/A'}`;
         } else if (status === 'failed') {
-            header = '❌ *WITHDRAWAL FAILED*';
-            message = `
-${header}
-
-💰 *Amount:* KSh ${fmtAmount}
-🏦 *Ref:* ${reference || 'N/A'}${idSuffix}
-⚠️ *Reason:* ${reason || 'Transaction failed'}
-
-The amount has been returned to your wallet.
-💵 *New Balance:* KSh ${Number.parseFloat(newBalance || 0).toLocaleString()}
-            `.trim();
+            msg = `❌ *Withdrawal Failed${idSuffix}*\nAmount: *KSh ${fmtAmount}*\nReason: ${reason || 'Failed'}\n_Refunded to wallet._`;
         } else if (status === 'processing') {
-            header = '⏳ *WITHDRAWAL PROCESSING*';
-            message = `
-${header}
-
-💰 *Amount:* KSh ${fmtAmount}
-🏦 *M-Pesa:* ${mpesaNumber || 'Registered Number'}${idSuffix}
-
-Your request has been received and is being processed. You will be notified once completed.
-            `.trim();
+            msg = `⏳ *Withdrawal Processing${idSuffix}*\nAmount: *KSh ${fmtAmount}*\n_We'll notify you once completed._`;
         } else {
             return false;
         }
 
-        return this.sendMessage(phone, message);
+        return this.sendMessage(phone, msg.trim());
     }
 }
 

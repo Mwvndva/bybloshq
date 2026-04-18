@@ -1693,6 +1693,7 @@ class OrderService {
     return {
       id: fullOrder.id,
       orderNumber: fullOrder.order_number,
+      totalAmount: Number.parseFloat(fullOrder.total_amount || 0),
       status: fullOrder.status,
       buyer: {
         name: fullOrder.buyer_name || 'Customer',
