@@ -30,9 +30,14 @@ export const FulfillmentType = {
  * @param {string} productType - 'physical', 'service', or 'digital'
  * @returns {string} FulfillmentType
  */
-export const resolveFulfillmentType = (seller, productType) => {
+export const resolveFulfillmentType = (seller, productType, metadata = {}) => {
     const hasCoordinates = sellerHasPhysicalShop(seller);
     const type = productType?.toLowerCase();
+
+    // Rule 0: Explicitly Virtual/Online (Bypasses location checks)
+    if (metadata?.location_type === 'Virtual/Online' || metadata?.service_location === 'Virtual/Online') {
+        return FulfillmentType.DIGITAL;
+    }
 
     // Rule 1: Seller with shop coordinates
     if (hasCoordinates) {
