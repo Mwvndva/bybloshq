@@ -203,7 +203,7 @@ class OrderService {
           service_title: service?.title || items[0]?.name || 'Service',
 
           notes: notes,
-          metadata: JSON.stringify(metadata),
+          metadata: metadata, // Pass as object, DAO will serialize
           status: initialStatus,
           payment_status: 'pending',
           service_requirements: metadata.service_requirements || null,
