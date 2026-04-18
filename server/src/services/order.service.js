@@ -102,13 +102,46 @@ class OrderService {
         // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
         const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
 
-        // Standardize buyer location format for validation (Robust Extraction - Task BUG-BOOK-06)
+        // Standardize buyer location format for validation
         const rawLoc = buyerLocation || metadata.buyer_location;
         const normalizedLocation = (rawLoc && typeof rawLoc === 'object') ? {
-          lat: rawLoc.lat !== undefined ? rawLoc.lat : rawLoc.latitude,
-          lng: rawLoc.lng !== undefined ? rawLoc.lng : rawLoc.longitude,
+          lat: rawLoc.lat !== undefined ? Number(rawLoc.lat) : Number(rawLoc.latitude || 0),
+          lng: rawLoc.lng !== undefined ? Number(rawLoc.lng) : Number(rawLoc.longitude || 0),
           address: rawLoc.address || rawLoc.fullAddress
         } : null;
+
+        // --- NEW LOCATION RESOLUTION LOGIC ---
+        // 1. Determine if seller has a physical shop
+        const hasShop = sellerHasPhysicalShop(sellerInfo);
+
+        // 2. Resolve final location based on shop status and product type
+        let finalLocationAddress = null;
+        let finalLat = null;
+        let finalLng = null;
+
+        if (hasShop) {
+          // Rule: If seller has physical shop, use seller coordinates for both products and services
+          finalLocationAddress = sellerInfo.physical_address;
+          finalLat = sellerInfo.latitude;
+          finalLng = sellerInfo.longitude;
+          logger.info(`Physical shop detected for Order #${orderNumber}. Using seller location: ${finalLocationAddress}`);
+        } else {
+          // Online Shop / Shopless rules
+          if (reflectsService) {
+            // Priority 3: Mobile Service (Online Shop) -> Use buyer coordinates collected during booking
+            finalLocationAddress = normalizedLocation?.address || null;
+            finalLat = normalizedLocation?.lat || null;
+            finalLng = normalizedLocation?.lng || null;
+            logger.info(`Online shop service detected for Order #${orderNumber}. Using buyer-provided location: ${finalLocationAddress}`);
+          } else {
+            // Priority 1: Physical Product (Online Shop) -> Use System Delivery
+            // Rule: Buyer's delivery address is NOT needed in flat columns as courier handles it out-of-band
+            finalLocationAddress = null;
+            finalLat = null;
+            finalLng = null;
+            logger.info(`Online shop physical order detected for Order #${orderNumber}. Setting location to NULL (System Delivery handling).`);
+          }
+        }
 
         try {
           validateFulfillmentPayload(fulfillmentType, normalizedLocation, metadata);
@@ -163,9 +196,9 @@ class OrderService {
           shipping_address: location?.address || null,
 
           // Unified Flat Columns (New Schema)
-          location_address: location?.address || null,
-          location_lat: location?.lat || normalizedLocation?.lat || null,
-          location_lng: location?.lng || normalizedLocation?.lng || null,
+          location_address: finalLocationAddress || location?.address || null,
+          location_lat: finalLat || location?.lat || normalizedLocation?.lat || null,
+          location_lng: finalLng || location?.lng || normalizedLocation?.lng || null,
           service_title: service?.title || items[0]?.name || 'Service',
 
           notes: notes,

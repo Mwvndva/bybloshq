@@ -62,6 +62,7 @@ export function normalizeOrderInput(req) {
 
     // 4. Resolve & Strictly Validate Location
     const rawLocation = buyerLocation || metadata.buyer_location || {};
+
     const lat = Number.parseFloat(rawLocation.lat || rawLocation.latitude || (user && !overrideContact ? user.latitude : 0) || 0);
     const lng = Number.parseFloat(rawLocation.lng || rawLocation.longitude || (user && !overrideContact ? user.longitude : 0) || 0);
 
@@ -71,14 +72,27 @@ export function normalizeOrderInput(req) {
         lng,
     };
 
-    // Strict Validation: Throw for invalid physical locations
+    // Strict Validation: Throw for invalid physical/service locations
     const isDigital = body.isDigital || metadata.product_type === 'digital';
+    const isService = body.isService || metadata.product_type === 'service';
+
     if (!isDigital) {
+        // All non-digital orders MUST have an address
         if (!location.address || location.address === 'Not specified') {
-            throw new Error("Valid delivery address is required for physical orders.");
+            throw new Error("Valid delivery address is required for physical and service orders.");
         }
+
+        // SERVICES MUST have precise coordinates for fulfillment
+        // PHYSICAL orders can rely on address + phone for courier, but we log warning if missing coords
         if (location.lat === 0 || location.lng === 0 || isNaN(location.lat) || isNaN(location.lng)) {
-            throw new Error("Valid coordinates are required for physical orders. Please use the map to select your location.");
+            if (isService) {
+                throw new Error("Precise map coordinates are required for service bookings. Please select your location on the map.");
+            } else {
+                logger.warn('Physical order received without coordinates. Relying on address string.', {
+                    order_number: body.order_number,
+                    address: location.address
+                });
+            }
         }
     }
 
