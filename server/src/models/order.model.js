@@ -32,7 +32,19 @@ class Order {
     `;
 
     // 3. Manual Serialization Helper (PIN-08: TOTAL CONTROL)
-    const toJson = (val) => (val && typeof val === 'object') ? JSON.stringify(val) : JSON.stringify({});
+    const toJson = (val) => {
+      if (val === null || val === undefined) return JSON.stringify({});
+      if (typeof val === 'string') {
+        try {
+          JSON.parse(val);
+          return val; // It's already valid JSON
+        } catch (e) {
+          return JSON.stringify(val); // Raw string -> JSON string literal
+        }
+      }
+      if (typeof val === 'object') return JSON.stringify(val);
+      return JSON.stringify({});
+    };
 
     // 4. Strict Value Mapping (Manual Types)
     const values = [
@@ -52,7 +64,7 @@ class Order {
       toJson(data.metadata),                                 // $14 (Manual JSON string)
       data.status || 'PENDING',                              // $15
       data.payment_status || 'pending',                      // $16
-      data.service_requirements || null,                     // $17 (TEXT field)
+      toJson(data.service_requirements),                     // $17 (Hardened JSON/TEXT)
       data.is_debt || false,                                 // $18
       data.client_id || null,                                // $19
       data.is_seller_initiated || false,                    // $20
@@ -71,13 +83,13 @@ class Order {
     ];
 
     // 5. DEFENSIVE AUDITING (PIN-09: ZERO UNEXPECTED OBJECTS)
-    const jsonIndices = [13, 21]; // 0-indexed: $14, $22
+    const jsonIndices = [13, 16, 21]; // 0-indexed: $14, $17, $22
     values.forEach((val, i) => {
       const colNum = i + 1;
       if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
         if (!jsonIndices.includes(i)) {
-          logger.error(`[CRITICAL] Unserialized object detected for non-JSON column $${colNum}`, val);
-          throw new Error(`Architectural Violation: Raw object passed to non-JSON column $${colNum}.`);
+          logger.error(`[CRITICAL] Unserialized object detected for non-JSON column $${colNum}: ${JSON.stringify(val)}`);
+          throw new Error(`Architectural Violation: Raw object passed to non-JSON column $${colNum}. Type: ${typeof val}`);
         }
       }
     });
@@ -88,9 +100,8 @@ class Order {
       const result = await executor.query(query, values);
       return result.rows[0];
     } catch (error) {
-      logger.error('--- DATABASE INSERT ERROR (STRICT) ---');
-      logger.error('Message:', error.message);
-      logger.error('Values:', JSON.stringify(values.map(v => v instanceof Date ? v.toISOString() : v)));
+      const valueSummary = JSON.stringify(values.map(v => v instanceof Date ? v.toISOString() : v), null, 2);
+      logger.error(`--- DATABASE INSERT ERROR (STRICT) ---\nMessage: ${error.message}\nValues: ${valueSummary}`);
       throw error;
     }
   }
