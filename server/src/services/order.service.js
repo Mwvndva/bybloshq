@@ -66,7 +66,7 @@ class OrderService {
           is_seller_initiated: rawMetadata.is_seller_initiated || rawMetadata.isSellerInitiated || false,
           location_type: rawMetadata.location_type || rawMetadata.locationType,
           service_requirements: rawMetadata.service_requirements || rawMetadata.serviceRequirements,
-          product_type: rawMetadata.product_type || rawMetadata.productType,
+          product_type: (rawMetadata.product_type || rawMetadata.productType || 'physical').toLowerCase(),
           product_id: rawMetadata.product_id || rawMetadata.productId,
           narration: rawMetadata.narration,
           booking_date: rawMetadata.booking_date || rawMetadata.bookingDate,
