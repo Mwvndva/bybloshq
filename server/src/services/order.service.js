@@ -543,13 +543,13 @@ class OrderService {
       let sellerCheck;
       try {
         sellerCheck = await client.query(
-          'SELECT id, user_id, physical_address, status FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+          'SELECT id, user_id, physical_address, latitude, longitude, city, location, status FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
           [sellerId, 'active']
         );
       } catch (schemaError) {
         logger.warn('Seller schema issue, trying minimal query:', schemaError);
         sellerCheck = await client.query(
-          'SELECT id, user_id FROM sellers WHERE id = $1 FOR UPDATE',
+          'SELECT id, user_id, latitude, longitude FROM sellers WHERE id = $1 FOR UPDATE',
           [sellerId]
         );
       }
