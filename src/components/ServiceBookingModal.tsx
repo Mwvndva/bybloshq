@@ -139,6 +139,13 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
             lng: coords?.lng || 0,
             address: address
         };
+
+        if (isShopless && (!newLoc.lat || !newLoc.lng)) {
+            toast.error('Search Precise Location', {
+                description: 'Please select a suggested location from the map to ensure we can reach you.'
+            });
+        }
+
         setBuyerLocation(newLoc);
         setCustomLocation(address);
     };
@@ -204,7 +211,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     };
 
     const isLocationValid = () => {
-        if (isShopless) return !!buyerLocation?.address;
+        // For shopless services, we CRITICALLY need coordinates (lat/lng) (Task BUG-BOOK-03)
+        if (isShopless) {
+            return !!buyerLocation?.address && !!buyerLocation?.lat && !!buyerLocation?.lng;
+        }
         if (selectedLocationType === 'buyer' || isSellerVisits) return !!customLocation?.trim();
         return (location && location.trim().length > 0) || locations.length === 0;
     };
@@ -215,7 +225,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
         if (!date) return 'Please select a date';
         if (!time) return 'Please select a time';
         if (!isLocationValid()) {
-            if (isShopless && !buyerLocation?.address) return 'Please set your location';
+            if (isShopless) {
+                if (!buyerLocation?.address) return 'Please set your location';
+                if (!buyerLocation?.lat || !buyerLocation?.lng) return 'Please select a specific location from suggestions';
+            }
             if (selectedLocationType === 'buyer' || isSellerVisits) return 'Please enter your address';
             return 'Please select a location';
         }
