@@ -29,7 +29,10 @@ class Order {
       RETURNING *
     `;
 
-    // 3. Strict Value Mapping (Native Types)
+    // 3. Robust JSON handling (PIN-05: NO-NULL JSONB)
+    const safeJson = (val) => (val && typeof val === 'object') ? val : {};
+
+    // 4. Strict Value Mapping (Native Types)
     const values = [
       data.order_number,                                     // $1
       data.buyer_id || null,                                 // $2
@@ -44,15 +47,15 @@ class Order {
       data.buyer_whatsapp_number || null,                    // $11
       data.shipping_address || null,                         // $12
       data.notes || null,                                    // $13
-      data.metadata || {},                                   // $14 (Native object for ::jsonb)
+      safeJson(data.metadata),                               // $14 (Zero-null JSONB)
       data.status || 'PENDING',                              // $15
       data.payment_status || 'pending',                      // $16
-      data.service_requirements || null,                     // $17
+      data.service_requirements || null,                     // $17 (TEXT field, allows null)
       data.is_debt || false,                                 // $18
       data.client_id || null,                                // $19
       data.is_seller_initiated || false,                    // $20
       data.fulfillment_type || null,                         // $21
-      data.delivery_location || null,                        // $22 (Native object for ::jsonb)
+      safeJson(data.delivery_location),                      // $22 (Zero-null JSONB)
       data.order_type || 'PHYSICAL',                         // $23
       data.total_quantity || 1,                              // $24
       data.reservation_expires_at instanceof Date            // $25
