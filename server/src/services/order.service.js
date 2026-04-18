@@ -59,21 +59,22 @@ class OrderService {
       // 2. Transaction Start
       try {
         // Whitelist allowed metadata keys to prevent internal state injection
+        // Handles both snake_case (frontend) and camelCase (potential future use)
         const metadata = {
           items: rawMetadata.items || [],
-          seller_initiated: rawMetadata.seller_initiated || false,
-          is_seller_initiated: rawMetadata.is_seller_initiated || false,
-          location_type: rawMetadata.location_type,
-          service_requirements: rawMetadata.service_requirements,
-          product_type: rawMetadata.product_type,
-          product_id: rawMetadata.product_id,
+          seller_initiated: rawMetadata.seller_initiated || rawMetadata.sellerInitiated || false,
+          is_seller_initiated: rawMetadata.is_seller_initiated || rawMetadata.isSellerInitiated || false,
+          location_type: rawMetadata.location_type || rawMetadata.locationType,
+          service_requirements: rawMetadata.service_requirements || rawMetadata.serviceRequirements,
+          product_type: rawMetadata.product_type || rawMetadata.productType,
+          product_id: rawMetadata.product_id || rawMetadata.productId,
           narration: rawMetadata.narration,
-          booking_date: rawMetadata.booking_date,
-          booking_time: rawMetadata.booking_time,
-          service_location: rawMetadata.service_location,
-          buyer_location: rawMetadata.buyer_location,
-          customerName: rawMetadata.customerName,
-          productName: rawMetadata.productName
+          booking_date: rawMetadata.booking_date || rawMetadata.bookingDate,
+          booking_time: rawMetadata.booking_time || rawMetadata.bookingTime,
+          service_location: rawMetadata.service_location || rawMetadata.serviceLocation,
+          buyer_location: rawMetadata.buyer_location || rawMetadata.buyerLocation,
+          customerName: rawMetadata.customerName || rawMetadata.customer_name,
+          productName: rawMetadata.productName || rawMetadata.product_name
         };
 
         logger.info('OrderService: Starting order creation', { buyerId, sellerId, hasLocation: !!buyerLocation });
@@ -195,7 +196,7 @@ class OrderService {
         }
 
         // 7b. ATOMIC SLOT LOCKING (For Services)
-        if (orderType === OrderType.SERVICE) {
+        if (orderType === OrderType.SERVICE && metadata.booking_date && metadata.booking_time) {
           await this._reserveServiceSlot(client, order.id, metadata);
         }
 
