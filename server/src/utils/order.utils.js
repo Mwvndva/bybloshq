@@ -22,9 +22,16 @@ export function normalizeOrderInput(req) {
     } = body;
 
     // 1. Security: Zero-Trust Pricing
-    // Reject requests with client-provided amounts to prevent manipulation
+    // We ignore client-provided amounts to prevent manipulation.
+    // The backend will perform a secure lookup using productId later in the flow.
     if (body.amount !== undefined || body.price !== undefined) {
-        throw new Error("Price must not be provided by client. Secure price lookup is mandatory.");
+        logger.warn('Client provided price fields in order request. These will be ignored for security.', {
+            order_number: body.order_number,
+            provided_amount: body.amount,
+            provided_price: body.price
+        });
+        delete body.amount;
+        delete body.price;
     }
 
     // 2. Identity Protection & Resolve Buyer Info
