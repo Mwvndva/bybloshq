@@ -1,6 +1,13 @@
 import logger from './logger.js';
 
 /**
+ * PIN-05: NO-NULL JSONB
+ * Ensures all JSON inputs are valid objects ({}), never null or undefined.
+ * This prevents PostgreSQL from rejecting 'NOT NULL' JSONB columns.
+ */
+export const safeJson = (val) => (val && typeof val === 'object') ? val : {};
+
+/**
  * Normalizes incoming order request data into a Unified Order Object.
  * This ensures consistency between authenticated and guest buyers.
  * 
@@ -17,25 +24,23 @@ export function normalizeOrderInput(req) {
         productId,
         productName,
         buyerLocation,
-        metadata = {},
+        metadata: rawMetadata = {},
         overrideContact = false
     } = body;
 
+    const metadata = safeJson(rawMetadata);
+
     // 1. Security: Zero-Trust Pricing
     // We ignore client-provided amounts to prevent manipulation.
-    // The backend will perform a secure lookup using productId later in the flow.
     if (body.amount !== undefined || body.price !== undefined) {
         logger.warn('Client provided price fields in order request. These will be ignored for security.', {
-            order_number: body.order_number,
-            provided_amount: body.amount,
-            provided_price: body.price
+            order_number: body.order_number
         });
         delete body.amount;
         delete body.price;
     }
 
     // 2. Identity Protection & Resolve Buyer Info
-    // Authenticated users' details are locked unless explicit override is requested
     let finalName = customerName;
     let finalPhone = phone;
     let finalEmail = email;
@@ -77,19 +82,16 @@ export function normalizeOrderInput(req) {
     const isService = body.isService || metadata.product_type === 'service';
 
     if (!isDigital) {
-        // Strict validation is only for Services (which require coordinates for fulfillment)
-        // Physical orders can rely on address string or system courier
         if (isService && (!location.address || location.address === 'Not specified')) {
             throw new Error("Valid delivery address and coordinates are required for service bookings.");
         }
     }
 
-    // SERVICES MUST have precise coordinates for fulfillment
     if (isService && (location.lat === 0 || location.lng === 0 || isNaN(location.lat) || isNaN(location.lng))) {
         throw new Error("Precise map coordinates are required for service bookings. Please select your location on the map.");
     }
 
-    // 5. Final Assembly
+    // 5. Final Assembly (PIN-02: UNIFIED ORDER CONTEXT)
     return {
         buyer,
         service,
@@ -103,7 +105,8 @@ export function normalizeOrderInput(req) {
             ...metadata,
             product_id: service.id,
             product_name: service.title,
-            customer_name: buyer.name
+            customer_name: buyer.name,
+            items: metadata.items || [] // Ensure items array exists for downstream logic
         }
     };
 }
