@@ -28,6 +28,8 @@ export async function normalizeOrderInput(req) {
         overrideContact = false
     } = body;
 
+    logger.info('[RAW-LOCATION-DEBUG] Extracted Data:', { rawBuyerLocation, metadata: rawMetadata });
+
     const metadata = safeJson(rawMetadata);
 
     // 1. Resolve Identity via Phone (PIN-10: IDENTITY RESOLUTION)
