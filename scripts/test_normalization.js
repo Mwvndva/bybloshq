@@ -1,73 +1,123 @@
 
-// Mocking the environment to test normalizeOrderInput logic
+// Mocking the environment to test robust normalizeOrderInput logic
 const ProductType = { SERVICE: 'service', DIGITAL: 'digital', PHYSICAL: 'physical' };
 
-function safeJson(val) {
-    return (val && typeof val === 'object') ? val : {};
-}
-
 async function testNormalization(body, user, existingBuyer) {
-    console.log("\n--- TESTING PAYLOAD ---");
-    console.log("Input Body:", JSON.stringify(body));
-
+    console.log(`\n--- TESTING PAYLOAD [${body.testName || 'Unnamed'}] ---`);
     const {
-        productId,
-        productName,
         buyerLocation: rawBuyerLocation,
         metadata: rawMetadata = {},
     } = body;
 
-    const metadata = safeJson(rawMetadata);
+    const metadata = (rawMetadata && typeof rawMetadata === 'object') ? rawMetadata : {};
 
-    // Simulating the resolution logic I want to implement
-    const rawLocation = rawBuyerLocation || metadata.buyer_location || {};
+    /**
+     * TRIPLE-SHIELD LOCATION CRAWLER (PIN-COORD-ROBUST)
+     */
+    const crawlLocation = () => {
+        const candidates = [
+            body.buyerLocation,
+            body.buyer_location,
+            metadata.buyer_location,
+            metadata.buyerLocation
+        ];
 
-    // THE FIX: Use nullish coalescing or explicit undefined check
-    const resolveProp = (obj, props, fallback) => {
-        for (const prop of props) {
-            if (obj[prop] !== undefined && obj[prop] !== null) return obj[prop];
+        const result = { lat: null, lng: null, address: null, source: 'none' };
+
+        for (let i = 0; i < candidates.length; i++) {
+            let candidate = candidates[i];
+            if (!candidate) continue;
+
+            // Defensive: Parse stringified JSON if it arrived as a string
+            if (typeof candidate === 'string') {
+                try {
+                    candidate = JSON.parse(candidate);
+                } catch (e) {
+                    continue; // Not JSON string, skip
+                }
+            }
+
+            if (typeof candidate !== 'object') continue;
+
+            // Property Scanning (lat/latitude/lng/longitude)
+            const lat = candidate.lat ?? candidate.latitude ?? candidate.location_lat;
+            const lng = candidate.lng ?? candidate.longitude ?? candidate.location_lng;
+            const addr = candidate.address || candidate.fullAddress || candidate.full_address || candidate.location_address;
+
+            if (lat !== undefined && lat !== null) result.lat = Number.parseFloat(lat);
+            if (lng !== undefined && lng !== null) result.lng = Number.parseFloat(lng);
+            if (addr) result.address = addr;
+
+            if (result.lat !== null && result.lng !== null) {
+                result.source = ['body.buyerLocation', 'body.buyer_location', 'metadata.buyer_location', 'metadata.buyerLocation'][i];
+                break; // Found complete coordinates
+            }
         }
-        return fallback;
+
+        // Profile Fallback
+        if (result.lat === null || result.lng === null) {
+            if (user) {
+                result.lat = result.lat ?? user.latitude;
+                result.lng = result.lng ?? user.longitude;
+                result.address = result.address ?? user.location;
+                result.source = 'user_profile';
+            } else if (existingBuyer) {
+                result.lat = result.lat ?? existingBuyer.latitude;
+                result.lng = result.lng ?? existingBuyer.longitude;
+                result.address = result.address ?? (existingBuyer.fullAddress || existingBuyer.location);
+                result.source = 'buyer_profile';
+            }
+        }
+
+        return result;
     };
 
-    const lat = resolveProp(rawLocation, ['lat', 'latitude'], (user ? user.latitude : existingBuyer?.latitude));
-    const lng = resolveProp(rawLocation, ['lng', 'longitude'], (user ? user.longitude : existingBuyer?.longitude));
-
+    const resolved = crawlLocation();
     const location = {
-        address: rawLocation.address || rawLocation.fullAddress || (user ? user.location : existingBuyer?.fullAddress || existingBuyer?.location) || null,
-        lat: (lat === undefined || lat === null) ? null : Number.parseFloat(lat),
-        lng: (lng === undefined || lng === null) ? null : Number.parseFloat(lng),
+        address: resolved.address || null,
+        lat: resolved.lat,
+        lng: resolved.lng
     };
 
     console.log("Resolved Location:", location);
-
-    if (location.address === 'CBD' && !body.buyerLocation) {
-        console.log("⚠️ WARNING: Defaulted to CBD!");
-    }
+    console.log("Source:", resolved.source);
 
     return location;
 }
 
 async function runTests() {
-    // Case 1: Guest Mobile Service Booking with Map Coordinates (0.1, 36.8)
+    // Case 1: Normal Object
     await testNormalization({
+        testName: 'Normal Object',
         productId: 1,
         buyerLocation: { lat: 0.1, lng: 36.8, address: "My Home" },
         metadata: { product_type: 'service' }
-    }, null, { location: 'CBD', latitude: -1.2, longitude: 36.8 });
+    });
 
-    // Case 2: Guest Mobile Service Booking with 0,0 (Equator/Meridian edge case)
+    // Case 2: Stringified JSON (The suspected failure mode on VPS)
     await testNormalization({
+        testName: 'Stringified JSON',
         productId: 1,
-        buyerLocation: { lat: 0, lng: 0, address: "Equator Point" },
+        buyerLocation: JSON.stringify({ lat: -1.2, lng: 36.9, address: "JSON String Home" }),
         metadata: { product_type: 'service' }
-    }, null, { location: 'CBD', latitude: -1.2, longitude: 36.8 });
+    });
 
-    // Case 3: Guest with NO buyerLocation (Should fallback to CBD if profile has it)
+    // Case 3: Proper fallback to Profile
     await testNormalization({
+        testName: 'Profile Fallback',
         productId: 1,
         metadata: { product_type: 'service' }
-    }, null, { location: 'CBD', latitude: -1.2, longitude: 36.8 });
+    }, { latitude: -1.2921, longitude: 36.8219, location: 'Nairobi HQ' });
+
+    // Case 4: Misnamed snake_case in metadata
+    await testNormalization({
+        testName: 'Snake Case in Metadata',
+        productId: 1,
+        metadata: {
+            product_type: 'service',
+            buyer_location: { latitude: -4.0, longitude: 39.0, full_address: "Mombasa Port" }
+        }
+    });
 }
 
 runTests();

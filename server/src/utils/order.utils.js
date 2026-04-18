@@ -28,7 +28,7 @@ export async function normalizeOrderInput(req) {
         overrideContact = false
     } = body;
 
-    logger.info('[RAW-LOCATION-DEBUG] Extracted Data:', { rawBuyerLocation, metadata: rawMetadata });
+    logger.info('[RAW-LOCATION-DEBUG] Extracted Data: ' + JSON.stringify({ rawBuyerLocation, metadata: rawMetadata }));
 
     const metadata = safeJson(rawMetadata);
 
@@ -93,44 +93,94 @@ export async function normalizeOrderInput(req) {
     const isDigital = body.isDigital || metadata.product_type === 'digital';
     const isService = body.isService || metadata.product_type === 'service';
 
-    const rawLocation = rawBuyerLocation || metadata.buyer_location || {};
+    /**
+     * TRIPLE-SHIELD LOCATION CRAWLER (PIN-COORD-ROBUST)
+     * Scans body.buyerLocation, metadata.buyer_location, and metadata.buyerLocation
+     * Defensively handles stringified JSON and diverse naming conventions (lat/latitude).
+     */
+    const crawlLocation = () => {
+        const candidates = [
+            body.buyerLocation,
+            body.buyer_location,
+            metadata.buyer_location,
+            metadata.buyerLocation
+        ];
 
-    // Helper to resolve with nullish priority (PIN-COORD-FIX)
-    const resolveProp = (obj, props, fallback) => {
-        for (const prop of props) {
-            if (obj[prop] !== undefined && obj[prop] !== null) return obj[prop];
+        const result = { lat: null, lng: null, address: null, source: 'none' };
+
+        for (let i = 0; i < candidates.length; i++) {
+            let candidate = candidates[i];
+            if (!candidate) continue;
+
+            // Defensive: Parse stringified JSON if it arrived as a string
+            if (typeof candidate === 'string') {
+                try {
+                    candidate = JSON.parse(candidate);
+                } catch (e) {
+                    continue; // Not JSON string, skip
+                }
+            }
+
+            if (typeof candidate !== 'object') continue;
+
+            // Property Scanning (lat/latitude/lng/longitude)
+            const lat = candidate.lat ?? candidate.latitude ?? candidate.location_lat;
+            const lng = candidate.lng ?? candidate.longitude ?? candidate.location_lng;
+            const addr = candidate.address || candidate.fullAddress || candidate.full_address || candidate.location_address;
+
+            if (lat !== undefined && lat !== null) result.lat = Number.parseFloat(lat);
+            if (lng !== undefined && lng !== null) result.lng = Number.parseFloat(lng);
+            if (addr) result.address = addr;
+
+            if (result.lat !== null && result.lng !== null) {
+                result.source = ['body.buyerLocation', 'body.buyer_location', 'metadata.buyer_location', 'metadata.buyerLocation'][i];
+                break; // Found complete coordinates
+            }
         }
-        return fallback;
+
+        // Profile Fallback (PIN-15: PROFILE-COORDS)
+        if (result.lat === null || result.lng === null) {
+            if (user && !overrideContact) {
+                result.lat = result.lat ?? user.latitude;
+                result.lng = result.lng ?? user.longitude;
+                result.address = result.address ?? user.location;
+                result.source = 'user_profile';
+            } else if (existingBuyer) {
+                result.lat = result.lat ?? existingBuyer.latitude;
+                result.lng = result.lng ?? existingBuyer.longitude;
+                result.address = result.address ?? (existingBuyer.fullAddress || existingBuyer.location);
+                result.source = 'buyer_profile';
+            }
+        }
+
+        return result;
     };
 
-    const rawLat = resolveProp(rawLocation, ['lat', 'latitude'], (user && !overrideContact ? user.latitude : existingBuyer?.latitude));
-    const rawLng = resolveProp(rawLocation, ['lng', 'longitude'], (user && !overrideContact ? user.longitude : existingBuyer?.longitude));
-
+    const resolved = crawlLocation();
     const location = {
-        address: rawLocation.address || rawLocation.fullAddress || (user && !overrideContact ? user.location : existingBuyer?.fullAddress || existingBuyer?.location) || null,
-        lat: (rawLat === undefined || rawLat === null) ? null : Number.parseFloat(rawLat),
-        lng: (rawLng === undefined || rawLng === null) ? null : Number.parseFloat(rawLng),
+        address: resolved.address || null,
+        lat: resolved.lat,
+        lng: resolved.lng
     };
 
     const logPayload = {
         order_number: body.order_number || 'NEW',
         is_service: isService,
-        source: rawBuyerLocation ? 'request_body' : (metadata.buyer_location ? 'metadata' : 'profile_fallback'),
+        source: resolved.source,
         resolved_lat: location.lat,
         resolved_lng: location.lng,
         resolved_address: location.address,
         raw_received: {
-            body_lat: rawBuyerLocation?.lat ?? rawBuyerLocation?.latitude,
-            body_lng: rawBuyerLocation?.lng ?? rawBuyerLocation?.longitude,
-            meta_lat: metadata.buyer_location?.lat,
-            profile_lat: user?.latitude || existingBuyer?.latitude
+            body_type: typeof body.buyerLocation,
+            meta_type: typeof metadata.buyer_location,
+            body_preview: typeof body.buyerLocation === 'string' ? body.buyerLocation.substring(0, 50) : 'object'
         }
     };
 
     if (isService && (location.lat === null || location.lat === 0)) {
-        logger.warn('[COORD-DEBUG] ⚠️ SERVICE WITHOUT COORDINATES:', logPayload);
+        logger.warn('[COORD-DEBUG] ⚠️ SERVICE WITHOUT COORDINATES: ' + JSON.stringify(logPayload));
     } else {
-        logger.info('[COORD-DEBUG] Resolution Trace:', logPayload);
+        logger.info('[COORD-DEBUG] Resolution Trace: ' + JSON.stringify(logPayload));
     }
 
     // Strict Validation: Throw for invalid physical/service locations
