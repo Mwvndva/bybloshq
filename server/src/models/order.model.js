@@ -30,7 +30,10 @@ class Order {
       RETURNING *
     `;
 
-    // 4. Strict Value Mapping (Native Types)
+    // 3. Manual Serialization Helper (PIN-08: TOTAL CONTROL)
+    const toJson = (val) => (val && typeof val === 'object') ? JSON.stringify(val) : JSON.stringify({});
+
+    // 4. Strict Value Mapping (Manual Types)
     const values = [
       data.order_number,                                     // $1
       data.buyer_id || null,                                 // $2
@@ -45,44 +48,48 @@ class Order {
       data.buyer_whatsapp_number || null,                    // $11
       data.shipping_address || null,                         // $12
       data.notes || null,                                    // $13
-      safeJson(data.metadata),                               // $14 (Zero-null JSONB)
+      toJson(data.metadata),                                 // $14 (Manual JSON string)
       data.status || 'PENDING',                              // $15
       data.payment_status || 'pending',                      // $16
-      data.service_requirements || null,                     // $17 (TEXT field, allows null)
+      data.service_requirements || null,                     // $17 (TEXT field)
       data.is_debt || false,                                 // $18
       data.client_id || null,                                // $19
       data.is_seller_initiated || false,                    // $20
       data.fulfillment_type || null,                         // $21
-      safeJson(data.delivery_location),                      // $22 (Zero-null JSONB)
+      toJson(data.delivery_location),                        // $22 (Manual JSON string)
       data.order_type || 'PHYSICAL',                         // $23
       data.total_quantity || 1,                              // $24
       data.reservation_expires_at instanceof Date            // $25
         ? data.reservation_expires_at
         : (data.reservation_expires_at ? new Date(data.reservation_expires_at) : null),
       data.location_address || null,                         // $26
-      data.location_lat || 0,                                // $27
-      data.location_lng || 0,                                // $28
+      data.location_lat || null,                             // $27 (Strict null)
+      data.location_lng || null,                             // $28 (Strict null)
       data.service_title || null,                            // $29
       data.notification_sent || false                       // $30
     ];
 
-    const executor = client || pool;
+    // 5. DEFENSIVE AUDITING (PIN-09: ZERO UNEXPECTED OBJECTS)
+    const jsonIndices = [13, 21]; // 0-indexed: $14, $22
+    values.forEach((val, i) => {
+      const colNum = i + 1;
+      if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
+        if (!jsonIndices.includes(i)) {
+          logger.error(`[CRITICAL] Unserialized object detected for non-JSON column $${colNum}`, val);
+          throw new Error(`Architectural Violation: Raw object passed to non-JSON column $${colNum}.`);
+        }
+      }
+    });
 
-    // Log final preparation for transparency
-    console.log('--- FINAL INSERT PREPARATION (STRICT) ---');
-    console.log('SQL Columns: 30 | VALUES: 30');
-    console.log('FINAL VALUES:', JSON.stringify(values, (key, value) => {
-      if (value instanceof Date) return value.toISOString();
-      return value;
-    }, 2));
+    const executor = client || pool;
 
     try {
       const result = await executor.query(query, values);
       return result.rows[0];
     } catch (error) {
-      console.error('--- DATABASE INSERT ERROR (STRICT) ---');
-      console.error('Message:', error.message);
-      console.error('Trace:', error.stack);
+      logger.error('--- DATABASE INSERT ERROR (STRICT) ---');
+      logger.error('Message:', error.message);
+      logger.error('Values:', JSON.stringify(values.map(v => v instanceof Date ? v.toISOString() : v)));
       throw error;
     }
   }
