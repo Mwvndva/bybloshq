@@ -144,9 +144,9 @@ class OrderService {
           buyer_mobile_payment: buyer.phone,
           buyer_whatsapp_number: buyer.phone,
           // Unified Flat Columns (New Schema)
-          location_address: finalLocationAddress || null,
-          location_lat: finalLat || null,
-          location_lng: finalLng || null,
+          location_address: finalLocationAddress ?? null,
+          location_lat: finalLat ?? null,
+          location_lng: finalLng ?? null,
           service_title: service.title || items[0]?.name || 'Service',
 
           notes: orderData.notes || null,

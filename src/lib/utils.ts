@@ -177,26 +177,29 @@ export function isSellerShopless(input: any | null | undefined): boolean {
   // 1. Identify the core seller data (prioritize nested seller object)
   const seller = input.seller || input;
 
-  // 2. Extract coordinates with all common naming conventions
-  const latValue = seller.latitude ?? seller.lat ?? input.latitude ?? input.lat;
-  const lngValue = seller.longitude ?? seller.lng ?? input.longitude ?? input.lng;
+  // 2. Extract coordinates and address (Strict Backend Parity)
+  const latValue = seller.latitude ?? seller.lat;
+  const lngValue = seller.longitude ?? seller.lng;
+  const address = seller.physicalAddress ?? seller.physical_address ?? seller.location;
 
   const lat = Number(latValue);
   const lng = Number(lngValue);
 
-  // 3. Validate coordinates (must be non-zero numbers)
+  // 3. Validate coordinates (must be non-zero numbers and not the Nairobi sentinel)
   const hasCoords = !isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0;
 
-  // 4. If they have valid coords, check if it's the Nairobi sentinel
-  if (hasCoords) {
-    const isDefaultNairobi = Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001;
-    if (!isDefaultNairobi) return false; // Has a real shop
-  }
+  // 4. Check for Nairobi sentinel (the default placeholder)
+  const isDefaultNairobi = hasCoords && (Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001);
 
-  // 5. Check for explicit shop flag
-  if (seller.hasPhysicalShop === true || input.hasPhysicalShop === true) return false;
+  // 5. BACKEND ALIGNMENT: To have a shop, you MUST have coordinates AND an address
+  // Coordinates cannot be the Nairobi sentinel.
+  const hasShop = hasCoords && !isDefaultNairobi && !!address;
 
-  // 6. Otherwise, they are shopless (Mobile Service only)
+  // 6. Support for the explicit flag as a secondary check if coords/address exist
+  // but prioritize the rigorous "hasShop" check for fulfillment routing.
+  if (hasShop) return false;
+
+  // 7. Otherwise, they are shopless (Mobile Service only)
   return true;
 }
 

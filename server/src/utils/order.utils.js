@@ -49,6 +49,9 @@ export async function normalizeOrderInput(req) {
         existingBuyer?.email ||
         null;
 
+    const buyerCity = body.buyerCity || body.city || (user && !overrideContact ? user.city : existingBuyer?.city) || null;
+    const buyerArea = body.buyerArea || body.location || (user && !overrideContact ? user.location : existingBuyer?.location) || null;
+
     if (!email) {
         throw new Error("Guest orders require a valid contact email address.");
     }
@@ -73,6 +76,8 @@ export async function normalizeOrderInput(req) {
         name: finalName || 'Customer',
         phone: finalPhone || 'N/A',
         email,
+        city: buyerCity,
+        location: buyerArea
     };
 
     // 3. Resolve Service/Product Info
@@ -102,14 +107,26 @@ export async function normalizeOrderInput(req) {
         lng: (rawLng === undefined || rawLng === null) ? null : Number.parseFloat(rawLng),
     };
 
-    logger.info('[COORD-DEBUG] Resolution Trace:', {
-        has_raw: !!rawBuyerLocation,
-        has_meta: !!metadata.buyer_location,
+    const logPayload = {
+        order_number: body.order_number || 'NEW',
+        is_service: isService,
+        source: rawBuyerLocation ? 'request_body' : (metadata.buyer_location ? 'metadata' : 'profile_fallback'),
         resolved_lat: location.lat,
         resolved_lng: location.lng,
         resolved_address: location.address,
-        source: rawBuyerLocation ? 'body' : (metadata.buyer_location ? 'metadata' : 'profile')
-    });
+        raw_received: {
+            body_lat: rawBuyerLocation?.lat ?? rawBuyerLocation?.latitude,
+            body_lng: rawBuyerLocation?.lng ?? rawBuyerLocation?.longitude,
+            meta_lat: metadata.buyer_location?.lat,
+            profile_lat: user?.latitude || existingBuyer?.latitude
+        }
+    };
+
+    if (isService && (location.lat === null || location.lat === 0)) {
+        logger.warn('[COORD-DEBUG] ⚠️ SERVICE WITHOUT COORDINATES:', logPayload);
+    } else {
+        logger.info('[COORD-DEBUG] Resolution Trace:', logPayload);
+    }
 
     // Strict Validation: Throw for invalid physical/service locations
     const isDigital = body.isDigital || metadata.product_type === 'digital';
