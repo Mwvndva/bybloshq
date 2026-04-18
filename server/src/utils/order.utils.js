@@ -88,6 +88,9 @@ export async function normalizeOrderInput(req) {
     };
 
     // 4. Resolve & Strictly Validate Location (COORD-RESOLVE-V2)
+    const isDigital = body.isDigital || metadata.product_type === 'digital';
+    const isService = body.isService || metadata.product_type === 'service';
+
     const rawLocation = rawBuyerLocation || metadata.buyer_location || {};
 
     // Helper to resolve with nullish priority (PIN-COORD-FIX)
@@ -129,8 +132,6 @@ export async function normalizeOrderInput(req) {
     }
 
     // Strict Validation: Throw for invalid physical/service locations
-    const isDigital = body.isDigital || metadata.product_type === 'digital';
-    const isService = body.isService || metadata.product_type === 'service';
 
     if (!isDigital) {
         if (isService && (!location.address || location.address === 'Not specified')) {
