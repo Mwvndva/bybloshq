@@ -167,7 +167,7 @@ class WhatsAppService {
                 ]);
 
                 if (sentMsg?.key?.id) {
-                    logger.info(`✅ WhatsApp message queued to ${jid} (Original: ${phone})`, {
+                    logger.info(`✅ WhatsApp message sent to ${jid} (Original: ${phone})`, {
                         messageId: sentMsg.key.id,
                         status: sentMsg.status
                     });

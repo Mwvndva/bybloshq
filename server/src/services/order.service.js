@@ -1512,17 +1512,17 @@ class OrderService {
     try {
       const fullOrderResult = await pool.query(
         `SELECT o.*, 
-                b.full_name AS buyer_name_actual, b.mobile_payment AS buyer_phone_actual,
-                b.whatsapp_number AS buyer_whatsapp_actual, b.email AS buyer_email_actual,
-                b.city AS buyer_city, b.location AS buyer_location_text, b.latitude AS buyer_latitude,
-                b.longitude AS buyer_longitude, b.full_address AS buyer_full_address,
+                b.full_name AS buyer_name, b.mobile_payment AS buyer_mobile_payment,
+                b.email AS buyer_email,
+                s.full_name AS seller_name, s.shop_name, s.phone AS seller_phone, 
+                s.email AS seller_email, s.address AS seller_address,
+                s.latitude AS seller_latitude, s.longitude AS seller_longitude,
                 s.instagram_link, s.tiktok_link, s.facebook_link,
                 o.location_address, o.location_lat, o.location_lng, o.service_title,
                 o.notification_sent, o.payment_status
          FROM product_orders o
          LEFT JOIN buyers b ON o.buyer_id = b.id
          LEFT JOIN sellers s ON o.seller_id = s.id
-         LEFT JOIN users u ON s.user_id = u.id
          WHERE o.id = $1`,
         [orderId]
       );
