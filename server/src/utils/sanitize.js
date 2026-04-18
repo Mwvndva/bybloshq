@@ -173,7 +173,6 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         paymentStatus: orderObj.paymentStatus || orderObj.payment_status,
         totalAmount: Number.parseFloat(orderObj.totalAmount || orderObj.total_amount || 0),
         paymentMethod: orderObj.paymentMethod || orderObj.payment_method,
-        shippingAddress: orderObj.shippingAddress || orderObj.shipping_address || {},
         notes: orderObj.notes || '',
         createdAt: orderObj.createdAt || orderObj.created_at,
         updatedAt: orderObj.updatedAt || orderObj.updated_at,

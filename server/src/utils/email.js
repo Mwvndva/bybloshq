@@ -289,7 +289,6 @@ export const sendNewOrderNotificationEmail = async (email, orderData) => {
       items: orderData.items || [],
       buyerName: orderData.buyer_name,
       buyerPhone: orderData.buyer_whatsapp_number || orderData.buyer_phone,
-      shippingAddress: orderData.shipping_address,
       totalAmount: orderData.total_amount,
       platformFee: orderData.platform_fee_amount,
       sellerPayout: orderData.seller_payout_amount,

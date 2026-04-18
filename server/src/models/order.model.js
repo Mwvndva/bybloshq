@@ -15,40 +15,42 @@ class Order {
     if (!data.seller_id) throw new Error('Seller ID is required');
     if (!data.buyer_email) throw new Error('buyer_email is required for DB insert');
 
-    // 2. Static SQL Query (NATIVE PARAMETERS - NO MANUAL CASTING)
+    // 2. Static SQL Query (EXPLICIT CASTING - PIN-12: UNBREAKABLE)
     const query = `
       INSERT INTO product_orders (
         order_number, buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
-        payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
+        payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number,
         notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
         fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
         location_address, location_lat, location_lng, service_title, notification_sent
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
-        $13, $14, $15, $16, $17, $18, $19, $20, 
-        $21, $22, $23, $24, $25, $26, $27, $28, $29, $30
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 
+        $12, $13::jsonb, $14, $15, $16::jsonb, $17, $18, $19, 
+        $20, $21::jsonb, $22, $23, $24, $25, $26, $27, $28, $29
       )
       RETURNING *
     `;
 
     /**
-     * NATIVE OBJECT HANDLER (PIN-11: DRIVER TRUST)
-     * Ensures we pass REAL objects to the driver, allowing native serialization.
+     * TRIPLE-LOCK SERIALIZATION (PIN-13: ABSOLUTE CERTAINTY)
+     * 1. Manual stringification (safe for driver)
+     * 2. Double-serialization protection
+     * 3. Explicit SQL Casting (safe for Postgres)
      */
-    const toNativeObj = (val) => {
+    const toStrictJson = (val) => {
       if (val === null || val === undefined) return null;
-      if (typeof val === 'object') return val;
       if (typeof val === 'string') {
         try {
-          return JSON.parse(val);
+          JSON.parse(val);
+          return val; // Trust already-json string
         } catch (e) {
-          return { raw_content: val };
+          return JSON.stringify(val); // Wrap raw string
         }
       }
-      return val;
+      return JSON.stringify(val); // Object to string
     };
 
-    // 4. Strict Value Mapping (Native JSONB Objects)
+    // 4. Strict Value Mapping (Fixed Indices)
     const values = [
       data.order_number,                                     // $1
       data.buyer_id || null,                                 // $2
@@ -61,39 +63,36 @@ class Order {
       data.buyer_email || null,                              // $9
       data.buyer_mobile_payment || null,                     // $10
       data.buyer_whatsapp_number || null,                    // $11
-      data.shipping_address || null,                         // $12
-      data.notes || null,                                    // $13
-      toNativeObj(data.metadata),                            // $14 (Native JSONB)
-      data.status || 'PENDING',                              // $15
-      data.payment_status || 'pending',                      // $16
-      toNativeObj(data.service_requirements),                // $17 (Fixed Native Support)
-      data.is_debt || false,                                 // $18
-      data.client_id || null,                                // $19
-      data.is_seller_initiated || false,                    // $20
-      data.fulfillment_type || null,                         // $21
-      toNativeObj(data.delivery_location),                   // $22 (Native JSONB)
-      data.order_type || 'PHYSICAL',                         // $23
-      data.total_quantity || 1,                              // $24
-      data.reservation_expires_at instanceof Date            // $25
+      data.notes || null,                                    // $12
+      toStrictJson(data.metadata),                           // $13 (Forced String -> SQL Cast)
+      data.status || 'PENDING',                              // $14
+      data.payment_status || 'pending',                      // $15
+      toStrictJson(data.service_requirements),               // $16 (Hardened Fallback)
+      data.is_debt || false,                                 // $17
+      data.client_id || null,                                // $18
+      data.is_seller_initiated || false,                    // $19
+      data.fulfillment_type || null,                         // $20
+      toStrictJson(data.delivery_location),                  // $21 (Forced String -> SQL Cast)
+      data.order_type || 'PHYSICAL',                         // $22
+      data.total_quantity || 1,                              // $23
+      data.reservation_expires_at instanceof Date            // $24
         ? data.reservation_expires_at
         : (data.reservation_expires_at ? new Date(data.reservation_expires_at) : null),
-      data.location_address || null,                         // $26
-      data.location_lat || null,                             // $27
-      data.location_lng || null,                             // $28
-      data.service_title || null,                            // $29
-      data.notification_sent || false                       // $30
+      data.location_address || null,                         // $25
+      data.location_lat || null,                             // $26
+      data.location_lng || null,                             // $27
+      data.service_title || null,                            // $28
+      data.notification_sent || false                       // $29
     ];
 
-    // 5. DEFENSIVE AUDITING (MODIFIED)
-    // Now we allow objects for indices 13, 16, 21
-    const jsonIndices = [13, 16, 21]; // index: $14, $17, $22
+    // 5. DEFENSIVE AUDITING (FINAL)
+    // Only strings or null should reach JSON columns now ($13, $16, $21)
+    const jsonIndices = [12, 15, 20]; // index: $13, $16, $21
     values.forEach((val, i) => {
       const colNum = i + 1;
       if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
-        if (!jsonIndices.includes(i)) {
-          logger.error(`[CRITICAL] Unexpected object detected for non-JSON column $${colNum}:`, val);
-          throw new Error(`Architectural Violation: Raw object passed to non-JSON column $${colNum}.`);
-        }
+        logger.error(`[CRITICAL] Unexpected object detected at $${colNum}:`, val);
+        throw new Error(`Architectural Violation: Raw object passed to $${colNum}. Every JSON field must be stringified before insert.`);
       }
     });
 
@@ -107,7 +106,7 @@ class Order {
         if (value instanceof Date) return value.toISOString();
         return value;
       }, 2);
-      logger.error(`--- DATABASE INSERT ERROR (NATIVE) ---\nMessage: ${error.message}\nValues: ${valueSummary}`);
+      logger.error(`--- DATABASE INSERT ERROR (TRIPLE-LOCK) ---\nMessage: ${error.message}\nValues: ${valueSummary}`);
       throw error;
     }
   }
@@ -223,7 +222,6 @@ class Order {
         o.buyer_email as "buyerEmail",
         o.buyer_mobile_payment as "buyerMobilePayment",
         o.buyer_whatsapp_number as "buyerWhatsappNumber",
-        o.shipping_address as "shippingAddress",
         o.notes,
         o.metadata,
         o.status,
@@ -294,7 +292,6 @@ class Order {
         o.buyer_email as "buyerEmail",
         o.buyer_mobile_payment as "buyerMobilePayment",
         o.buyer_whatsapp_number as "buyerWhatsappNumber",
-        o.shipping_address as "shippingAddress",
         o.notes,
         o.metadata,
         o.status,
@@ -374,7 +371,6 @@ class Order {
         o.total_amount as "totalAmount",
         o.payment_method as "paymentMethod",
         o.buyer_name as "buyerName",
-        o.shipping_address as "shippingAddress",
         o.notes,
         o.metadata,
         o.status,
@@ -484,7 +480,6 @@ class Order {
         o.buyer_email as "buyerEmail",
         o.buyer_mobile_payment as "buyerMobilePayment",
         o.buyer_whatsapp_number as "buyerWhatsappNumber",
-        o.shipping_address as "shippingAddress",
         o.notes,
         o.metadata,
         o.status,
