@@ -14,8 +14,9 @@ class Order {
         order_number, buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
         payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
         notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
-        fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
+        fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
+        location_address, location_lat, location_lng, service_title, notification_sent
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
       RETURNING *
     `;
 
@@ -33,7 +34,7 @@ class Order {
       data.buyer_whatsapp_number,
       data.shipping_address,
       data.notes,
-      data.metadata,
+      data.metadata ? JSON.stringify(data.metadata) : null,
       data.status,
       data.payment_status || 'pending',
       data.service_requirements,
@@ -44,7 +45,12 @@ class Order {
       data.delivery_location ? JSON.stringify(data.delivery_location) : null,
       data.order_type || 'PHYSICAL',
       data.total_quantity || 1,
-      data.reservation_expires_at || null
+      data.reservation_expires_at || null,
+      data.location_address || null,
+      data.location_lat || 0,
+      data.location_lng || 0,
+      data.service_title || null,
+      data.notification_sent || false
     ];
 
     const executor = client || pool;
