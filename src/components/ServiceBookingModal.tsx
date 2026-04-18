@@ -33,7 +33,6 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     const [date, setDate] = useState<Date | undefined>(undefined);
     const [time, setTime] = useState<string>('');
     const [location, setLocation] = useState<string | null>(null);
-    const [selectedLocationType, setSelectedLocationType] = useState<'seller' | 'buyer' | null>(null);
     const [customLocation, setCustomLocation] = useState<string | null>(null);
     const [availableTimeSlots, setAvailableTimeSlots] = useState<string[]>([]);
     const [serviceRequirements, setServiceRequirements] = useState('');
@@ -54,9 +53,8 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     const maxWords = 50;
 
     const locationType = serviceOptions.location_type || 'buyer_visits_seller';
-    const isHybrid = locationType === 'hybrid';
     const isSellerVisits = locationType === 'seller_visits_buyer';
-    const isShopless = isSellerShopless(product) || isSellerVisits;
+    const isShopless = isSellerShopless(product);
 
     // Reset state when modal opens
     useEffect(() => {
@@ -83,12 +81,6 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                 setLocation(null);
             }
 
-            // Default selection based on product type
-            if (isShopless) {
-                setSelectedLocationType('buyer');
-            } else {
-                setSelectedLocationType('seller');
-            }
         }
     }, [isOpen, initialBuyerLocation, isShopless]); // Only trigger when modal opens/closes or initial location data changes
 
@@ -179,16 +171,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     };
 
     const handleConfirm = () => {
-        let finalLocation = location;
-
-        if (isShopless) {
-            finalLocation = buyerLocation?.address || null;
-        } else if (selectedLocationType === 'buyer') {
-            finalLocation = customLocation;
-        } else if (locations.length === 0 && !location) {
-            // No shop location and no custom selection
-            finalLocation = null;
-        }
+        const finalLocation = isShopless ? (buyerLocation?.address || null) : location;
 
         if (date && time && isLocationValid() && finalLocation) {
             onConfirm({
@@ -196,7 +179,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                 time,
                 location: finalLocation,
                 serviceRequirements: serviceRequirements.trim() || '',
-                buyerLocation: (isShopless || selectedLocationType === 'buyer' || isSellerVisits) ? {
+                buyerLocation: isShopless ? {
                     lat: buyerLocation?.lat || 0,
                     lng: buyerLocation?.lng || 0,
                     address: finalLocation
@@ -206,12 +189,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     };
 
     const isLocationValid = () => {
-        // For shopless services, we CRITICALLY need coordinates (lat/lng) (Task BUG-BOOK-03)
         if (isShopless) {
             return !!buyerLocation?.address && !!buyerLocation?.lat && !!buyerLocation?.lng;
         }
-        if (selectedLocationType === 'buyer' || isSellerVisits) return !!customLocation?.trim();
-        return (location && location.trim().length > 0) || locations.length === 0;
+        return !!location;
     };
 
     const isValid = date && time && isLocationValid() && wordCount <= maxWords;
@@ -224,7 +205,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                 if (!buyerLocation?.address) return 'Please set your location';
                 if (!buyerLocation?.lat || !buyerLocation?.lng) return 'Please select a specific location from suggestions';
             }
-            if (selectedLocationType === 'buyer' || isSellerVisits) return 'Please enter your address';
+            if (isSellerVisits) return 'Please enter your address';
             return 'Please select a location';
         }
         if (wordCount > maxWords) return 'Service requirements too long';
@@ -300,7 +281,7 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                         {isChangingLocation ? (
                                             <div className="space-y-4 bg-white/5 p-4 rounded-3xl border border-white/10">
                                                 <LocationPicker
-                                                    onLocationSelect={handleLocationPickerChange}
+                                                    onLocationChange={handleLocationPickerChange}
                                                     initialAddress={customLocation || buyerProfile?.fullAddress}
                                                 />
                                                 <Button

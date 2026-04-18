@@ -81,10 +81,7 @@ class OrderService {
         const isShopless = !sellerHasPhysicalShop(sellerInfo) && !sellerInfo.physical_address;
         const reflectsService = (primaryProductType === ProductType.SERVICE || primaryProductType === 'service');
 
-        if (isShopless && reflectsService && !metadata.location_type && !metadata.service_location) {
-          metadata.location_type = 'Virtual/Online';
-          logger.info(`Shopless service detected for buyer ${buyer.id}, defaulting to Virtual/Online`);
-        }
+        // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
 
         // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
         const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
@@ -980,7 +977,7 @@ class OrderService {
     if (order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER && order.buyer_id) {
       try {
         const { location_lat, location_lng, location_address } = order;
-        if (location_lat && location_lng && location_address) {
+        if (location_lat !== null && location_lng !== null && location_address) {
           logger.info(`Updating buyer ${order.buyer_id} profile with booking location details`);
           await Buyer.updateLocation(order.buyer_id, {
             latitude: location_lat,

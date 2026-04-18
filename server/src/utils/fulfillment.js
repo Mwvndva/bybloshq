@@ -35,25 +35,18 @@ export const resolveFulfillmentType = (seller, productType, metadata = {}) => {
     const type = productType?.toLowerCase();
 
     // Rule 0: Explicitly Virtual/Online (Bypasses location checks)
-    if (metadata?.location_type === 'Virtual/Online' || metadata?.service_location === 'Virtual/Online') {
+    if (metadata?.is_virtual === true || metadata?.is_digital === true) {
         return FulfillmentType.DIGITAL;
     }
 
-    // Rule 1: Seller with physical shop coordinates
+    // Rule 1: Professional with Physical Shop -> ALWAYS In-Store (Task BUG-SHIP-09)
     if (hasCoordinates) {
-        return FulfillmentType.BUYER_TO_SELLER; // Always In-Store if shop exists
+        return FulfillmentType.BUYER_TO_SELLER;
     }
 
-    // Rule 2: Service with explicit 'seller_visits_buyer' type
-    if (metadata?.location_type === 'seller_visits_buyer') {
+    // Rule 2: Professional without Shop -> Service is ALWAYS Mobile (Task BUG-SHIP-10)
+    if (type === ProductType.SERVICE || type === 'service') {
         return FulfillmentType.SELLER_TO_BUYER;
-    }
-
-    // Rule 3: Defaults
-    if (type === 'digital') return FulfillmentType.DIGITAL;
-
-    if (type === 'service') {
-        return FulfillmentType.SELLER_TO_BUYER; // Mobile Service if no shop
     }
 
     // Default for physical products from shopless sellers
