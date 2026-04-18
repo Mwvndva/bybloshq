@@ -108,6 +108,8 @@ class OrderService {
           logger.info(`System delivery detected. Coordinates managed by logistics.`);
         }
 
+        logger.info(`[ORDER-DEBUG] Final Resolve: type=${fulfillmentType}, lat=${finalLat}, lng=${finalLng}, addr=${finalLocationAddress}`);
+
         // 4f. RESOLVE ORDER TYPE
         const hasDigital = items.every(i => i.isDigital === true);
         let orderType = OrderType.PHYSICAL;
