@@ -9,80 +9,79 @@ class Order {
    * Expects client to be passed for transaction support
    */
   static async insert(client, data) {
-    // 1. Prepare structured data object for dynamic query building
-    const orderData = {
-      order_number: data.order_number,
-      buyer_id: data.buyer_id || null,
-      seller_id: data.seller_id,
-      total_amount: data.total_amount,
-      platform_fee_amount: data.platform_fee_amount,
-      seller_payout_amount: data.seller_payout_amount,
-      payment_method: data.payment_method || null,
-      buyer_name: data.buyer_name || null,
-      buyer_email: data.buyer_email || null,
-      buyer_mobile_payment: data.buyer_mobile_payment || null,
-      buyer_whatsapp_number: data.buyer_whatsapp_number || null,
-      shipping_address: data.shipping_address || null,
-      notes: data.notes || null,
-      metadata: data.metadata || {},
-      status: data.status || 'PENDING',
-      payment_status: data.payment_status || 'pending',
-      service_requirements: data.service_requirements || null,
-      is_debt: data.is_debt || false,
-      client_id: data.client_id || null,
-      is_seller_initiated: data.is_seller_initiated || false,
-      fulfillment_type: data.fulfillment_type || null,
-      delivery_location: data.delivery_location || null,
-      order_type: data.order_type || 'PHYSICAL',
-      total_quantity: data.total_quantity || 1,
-      reservation_expires_at: data.reservation_expires_at instanceof Date
-        ? data.reservation_expires_at.toISOString()
-        : (data.reservation_expires_at || null),
-      location_address: data.location_address || null,
-      location_lat: data.location_lat || 0,
-      location_lng: data.location_lng || 0,
-      service_title: data.service_title || null,
-      notification_sent: data.notification_sent || false
-    };
+    // 1. Pre-insertion Validation
+    if (!data.order_number) throw new Error('Order number is required');
+    if (!data.seller_id) throw new Error('Seller ID is required');
 
-    // 2. Build Dynamic SQL
-    const columns = Object.keys(orderData);
-    const values = Object.values(orderData);
-    const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-
+    // 2. Static SQL Query with Explicit Type Hints (PIN-04: SCHEMA HARDENING)
     const query = `
-      INSERT INTO product_orders (${columns.join(', ')})
-      VALUES (${placeholders})
+      INSERT INTO product_orders (
+        order_number, buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
+        payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number, shipping_address,
+        notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
+        fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
+        location_address, location_lat, location_lng, service_title, notification_sent
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 
+        $13, $14::jsonb, $15, $16, $17, $18, $19, $20, 
+        $21, $22::jsonb, $23, $24, $25, $26, $27, $28, $29, $30
+      )
       RETURNING *
     `;
 
+    // 3. Strict Value Mapping (Native Types)
+    const values = [
+      data.order_number,                                     // $1
+      data.buyer_id || null,                                 // $2
+      data.seller_id,                                        // $3
+      data.total_amount || 0,                                // $4
+      data.platform_fee_amount || 0,                         // $5
+      data.seller_payout_amount || 0,                        // $6
+      data.payment_method || 'payd',                         // $7
+      data.buyer_name || null,                               // $8
+      data.buyer_email || null,                              // $9
+      data.buyer_mobile_payment || null,                     // $10
+      data.buyer_whatsapp_number || null,                    // $11
+      data.shipping_address || null,                         // $12
+      data.notes || null,                                    // $13
+      data.metadata || {},                                   // $14 (Native object for ::jsonb)
+      data.status || 'PENDING',                              // $15
+      data.payment_status || 'pending',                      // $16
+      data.service_requirements || null,                     // $17
+      data.is_debt || false,                                 // $18
+      data.client_id || null,                                // $19
+      data.is_seller_initiated || false,                    // $20
+      data.fulfillment_type || null,                         // $21
+      data.delivery_location || null,                        // $22 (Native object for ::jsonb)
+      data.order_type || 'PHYSICAL',                         // $23
+      data.total_quantity || 1,                              // $24
+      data.reservation_expires_at instanceof Date            // $25
+        ? data.reservation_expires_at
+        : (data.reservation_expires_at ? new Date(data.reservation_expires_at) : null),
+      data.location_address || null,                         // $26
+      data.location_lat || 0,                                // $27
+      data.location_lng || 0,                                // $28
+      data.service_title || null,                            // $29
+      data.notification_sent || false                       // $30
+    ];
+
     const executor = client || pool;
-    // Log final state for absolute transparency as requested
-    console.log('--- FINAL INSERT PREPARATION ---');
-    console.log('Placeholder Count:', columns.length);
-    console.log('Value Count:', values.length);
-    console.log('FINAL VALUES:', JSON.stringify(values, null, 2));
+
+    // Log final preparation for transparency
+    console.log('--- FINAL INSERT PREPARATION (STRICT) ---');
+    console.log('SQL Columns: 30 | VALUES: 30');
+    console.log('FINAL VALUES:', JSON.stringify(values, (key, value) => {
+      if (value instanceof Date) return value.toISOString();
+      return value;
+    }, 2));
 
     try {
       const result = await executor.query(query, values);
       return result.rows[0];
     } catch (error) {
-      console.error('--- DATABASE INSERT ERROR ---');
+      console.error('--- DATABASE INSERT ERROR (STRICT) ---');
       console.error('Message:', error.message);
-      console.error('Values (at failure):', JSON.stringify(values, null, 2));
-
-      try {
-        const schemaAudit = await executor.query(`
-          SELECT column_name, data_type, udt_name 
-          FROM information_schema.columns 
-          WHERE table_name = 'product_orders'
-          ORDER BY ordinal_position
-        `);
-        console.error('--- SCHEMA AUDIT ---');
-        console.table(schemaAudit.rows);
-      } catch (auditErr) {
-        console.error('Failed to perform schema audit:', auditErr.message);
-      }
+      console.error('Trace:', error.stack);
       throw error;
     }
   }
