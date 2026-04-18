@@ -289,81 +289,68 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                 </Select>
                             </div>
 
-                            <div className="space-y-2">
-                                <Label className="text-[10px] font-bold uppercase tracking-wider text-[#666]">Location</Label>
-                                {isShopless ? (
-                                    <div className="space-y-3">
-                                        <div
-                                            onClick={() => setIsChangingLocation(true)}
-                                            className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#000000] border border-yellow-400/20 cursor-pointer hover:bg-white/5 transition-colors group/loc"
-                                        >
-                                            <div className="flex items-center gap-3 overflow-hidden">
-                                                <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.address ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
-                                                <div className="overflow-hidden">
-                                                    <p className={cn("text-sm font-bold truncate", !buyerLocation?.address ? "text-yellow-400" : "text-white")}>
-                                                        {buyerLocation?.address || 'Tap to set your location'}
-                                                    </p>
-                                                    <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location (Required)</p>
-                                                </div>
-                                            </div>
-                                            <Edit2 className="w-4 h-4 text-yellow-400 shrink-0 opacity-50 group-hover/loc:opacity-100 transition-opacity" />
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <>
-                                        {isHybrid && (
-                                            <div className="flex p-0.5 bg-white/5 rounded-xl mb-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelectedLocationType('seller')}
-                                                    className={cn(
-                                                        "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
-                                                        selectedLocationType === 'seller' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
-                                                    )}
-                                                >
-                                                    In-Store
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setSelectedLocationType('buyer')}
-                                                    className={cn(
-                                                        "flex-1 py-1.5 rounded-[10px] text-[11px] font-bold transition-all",
-                                                        selectedLocationType === 'buyer' ? "bg-white/10 text-white shadow-sm" : "text-[#666] hover:text-[#999]"
-                                                    )}
-                                                >
-                                                    Home Service
-                                                </button>
-                                            </div>
-                                        )}
+                            {/* Location Selection - STRICT MODE */}
+                            <div className="space-y-4">
+                                <Label className="text-[10px] font-black uppercase text-yellow-400/80 tracking-widest pl-1">
+                                    {isShopless ? "Your Service Address / My Location" : "Service Location"}
+                                </Label>
 
-                                        {selectedLocationType === 'seller' ? (
-                                            <div className="px-4 py-3 rounded-xl bg-white/5 border border-white/5 flex items-center gap-3">
-                                                <MapPin className="w-5 h-5 text-yellow-400 shrink-0" />
-                                                <div>
-                                                    <p className="text-sm font-bold text-white line-clamp-1">{location || product.seller?.location || (product.seller as any)?.physical_address || product.seller?.physicalAddress || 'Seller Location'}</p>
-                                                    <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">Selected Location</p>
-                                                </div>
+                                {isShopless ? (
+                                    <div className="space-y-4 animate-in fade-in duration-500">
+                                        {isChangingLocation ? (
+                                            <div className="space-y-4 bg-white/5 p-4 rounded-3xl border border-white/10">
+                                                <LocationPicker
+                                                    onLocationSelect={handleLocationPickerChange}
+                                                    initialAddress={customLocation || buyerProfile?.fullAddress}
+                                                />
+                                                <Button
+                                                    onClick={saveLocationToProfile}
+                                                    disabled={isUpdatingProfile || !buyerLocation}
+                                                    className="w-full h-12 bg-yellow-400 hover:bg-yellow-500 text-black font-bold rounded-2xl shadow-lg shadow-yellow-400/20"
+                                                >
+                                                    {isUpdatingProfile ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Confirm Precise Address'}
+                                                </Button>
                                             </div>
                                         ) : (
-                                            <div className="space-y-3">
-                                                <div
-                                                    onClick={() => setIsChangingLocation(true)}
-                                                    className="flex items-center justify-between px-4 py-3 rounded-xl bg-white/5 border border-yellow-400/20 cursor-pointer hover:bg-white/10 transition-colors group/loc"
-                                                >
-                                                    <div className="flex items-center gap-3 overflow-hidden">
-                                                        <MapPin className={cn("w-5 h-5 shrink-0", !buyerLocation?.address ? "text-yellow-400 animate-pulse" : "text-yellow-400")} />
-                                                        <div className="overflow-hidden">
-                                                            <p className={cn("text-sm font-bold truncate", !buyerLocation?.address ? "text-yellow-400" : "text-white")}>
-                                                                {buyerLocation?.address || 'Tap to set your location'}
-                                                            </p>
-                                                            <p className="text-[10px] text-[#666] uppercase tracking-wider font-bold">My Location (Required)</p>
-                                                        </div>
-                                                    </div>
-                                                    <Edit2 className="w-4 h-4 text-yellow-400 shrink-0 opacity-50 group-hover/loc:opacity-100 transition-opacity" />
+                                            <div className="flex items-start gap-4 p-4 bg-white/5 rounded-3xl border border-white/5 hover:border-white/20 transition-all group">
+                                                <div className="w-10 h-10 bg-white/5 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-yellow-400/10 transition-colors">
+                                                    <MapPin className="h-5 w-5 text-[#666] group-hover:text-yellow-400" />
+                                                </div>
+                                                <div className="flex-1 space-y-1">
+                                                    <p className="text-sm font-medium text-white/90">
+                                                        {customLocation || buyerProfile?.fullAddress || 'Search Precise Location...'}
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setIsChangingLocation(true)}
+                                                        className="text-[10px] font-bold text-yellow-400 hover:text-yellow-300 uppercase tracking-wider flex items-center gap-1.5"
+                                                    >
+                                                        <Edit2 className="h-3 w-3" />
+                                                        Edit Address
+                                                    </button>
                                                 </div>
                                             </div>
                                         )}
-                                    </>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {locations.length > 0 ? (
+                                            locations.map((loc, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="flex items-center gap-4 p-4 bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.1)] rounded-3xl border-2 border-yellow-400 transition-all"
+                                                >
+                                                    <div className="w-10 h-10 bg-black/10 rounded-2xl flex items-center justify-center shrink-0">
+                                                        <MapPin className="h-5 w-5 text-black" />
+                                                    </div>
+                                                    <p className="text-sm font-bold text-black">{loc}</p>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="p-4 bg-white/5 rounded-3xl border border-white/5 text-center italic text-[#666] text-xs">
+                                                Visit my shop or I'll come to you!
+                                            </div>
+                                        )}
+                                    </div>
                                 )}
                             </div>
 
