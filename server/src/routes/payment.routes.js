@@ -19,6 +19,9 @@ const initiateProductSchema = z.object({
   customerName: z.string().optional().nullable(),
   narrative: z.string().optional().nullable(),
   paymentMethod: z.enum(['paystack', 'payd']).optional(),
+  // PIN-12: PERSISTENCE SHIELD (Do not strip these fields)
+  buyerLocation: z.any().optional(),
+  metadata: z.any().optional(),
 });
 
 const checkStatusSchema = z.object({
