@@ -343,7 +343,7 @@ class Order {
              o.service_title, o.service_requirements, o.payment_status, o.payment_method, o.payment_reference,
              o.notification_sent, o.total_quantity,
              b.full_name AS buyer_name, b.mobile_payment AS buyer_mobile_payment,
-             b.email AS buyer_email,
+             b.whatsapp_number AS buyer_phone, b.email AS buyer_email,
              s.full_name AS seller_name, s.shop_name, s.whatsapp_number AS seller_phone, 
              s.email AS seller_email, s.physical_address AS seller_address,
              s.latitude AS seller_latitude, s.longitude AS seller_longitude,

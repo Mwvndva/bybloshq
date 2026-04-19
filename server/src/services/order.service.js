@@ -1355,7 +1355,11 @@ class OrderService {
       }
 
       // 4. Logistics / Courier Notification (Always attempt for Physical and no Shop)
-      const hasPhysical = items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'physical');
+      const hasPhysical = items.some(i => {
+        const type = (i.product_type || i.productType || i.metadata?.product_type || '').toLowerCase();
+        return type === 'physical';
+      }) || (resolvedOrder.order_type === 'PHYSICAL');
+
       const isCourier = resolvedOrder.fulfillment_type === 'COURIER';
 
       logger.info(`[COURIER-CHECK] Order #${resolvedOrder.order_number}: hasPhysical=${hasPhysical}, isCourier=${isCourier}, type=${resolvedOrder.fulfillment_type}`);
@@ -1506,7 +1510,7 @@ class OrderService {
       downloadUrl: metadata.download_url || metadata.downloadUrl || null,
       buyer: {
         name: fullOrder.buyer_name || 'Customer',
-        phone: fullOrder.buyer_mobile_payment || 'N/A',
+        phone: fullOrder.buyer_phone || fullOrder.buyer_mobile_payment || 'N/A',
         email: fullOrder.buyer_email || null,
       },
       seller: {
@@ -1550,7 +1554,8 @@ class OrderService {
       items: items.map(i => ({
         title: i.product_name || i.name || 'Item',
         price: Number.parseFloat(i.product_price || i.price || 0),
-        quantity: Number.parseInt(i.quantity || 1, 10)
+        quantity: Number.parseInt(i.quantity || 1, 10),
+        product_type: i.product_type || i.productType || i.metadata?.product_type || 'physical'
       }))
     };
   }
