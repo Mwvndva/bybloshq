@@ -94,8 +94,18 @@ export async function normalizeOrderInput(req) {
     };
 
     // 4. Resolve & Strictly Validate Location (COORD-RESOLVE-V2)
-    const isDigital = body.isDigital || metadata.product_type === 'digital';
-    const isService = body.isService || metadata.product_type === 'service';
+    // Deep-scan for product type to avoid missing it in nested metadata
+    const isService =
+        body.isService === true ||
+        body.product_type === 'service' ||
+        metadata.product_type === 'service' ||
+        body.metadata?.product_type === 'service';
+
+    const isDigital =
+        body.isDigital === true ||
+        body.product_type === 'digital' ||
+        metadata.product_type === 'digital' ||
+        body.metadata?.product_type === 'digital';
 
     /**
      * TRIPLE-SHIELD LOCATION CRAWLER (PIN-COORD-ROBUST)
@@ -103,12 +113,29 @@ export async function normalizeOrderInput(req) {
      * Defensively handles stringified JSON and diverse naming conventions (lat/latitude).
      */
     const crawlLocation = () => {
+        // Broad scan of all potential locations where coordinates might hide
         const candidates = [
             body.buyerLocation,
-            body.bookingDetails?.buyerLocation,
             body.buyer_location,
+            body.bookingDetails?.buyerLocation,
+            body.metadata?.buyer_location,
+            body.metadata?.buyerLocation,
             metadata.buyer_location,
-            metadata.buyerLocation
+            metadata.buyerLocation,
+            body.locationData, // Sometimes used by specific payment gateways
+            body.customFields?.location
+        ];
+
+        const sources = [
+            'body.buyerLocation',
+            'body.buyer_location',
+            'body.bookingDetails.buyerLocation',
+            'body.metadata.buyer_location',
+            'body.metadata.buyerLocation',
+            'metadata.buyer_location',
+            'metadata.buyerLocation',
+            'body.locationData',
+            'body.customFields.location'
         ];
 
         const result = { lat: null, lng: null, address: null, source: 'none' };
@@ -129,30 +156,36 @@ export async function normalizeOrderInput(req) {
             if (typeof candidate !== 'object') continue;
 
             // Property Scanning (lat/latitude/lng/longitude)
-            const lat = candidate.lat ?? candidate.latitude ?? candidate.location_lat;
-            const lng = candidate.lng ?? candidate.longitude ?? candidate.location_lng;
-            const addr = candidate.address || candidate.fullAddress || candidate.full_address || candidate.location_address;
+            const lat = candidate.lat ?? candidate.latitude ?? candidate.location_lat ?? candidate.latitude_coordinate;
+            const lng = candidate.lng ?? candidate.longitude ?? candidate.location_lng ?? candidate.longitude_coordinate;
+            const addr = candidate.address || candidate.fullAddress || candidate.full_address || candidate.location_address || candidate.displayName;
 
-            if (lat !== undefined && lat !== null) result.lat = Number.parseFloat(lat);
-            if (lng !== undefined && lng !== null) result.lng = Number.parseFloat(lng);
+            if (lat !== undefined && lat !== null && !isNaN(Number.parseFloat(lat))) {
+                result.lat = Number.parseFloat(lat);
+            }
+            if (lng !== undefined && lng !== null && !isNaN(Number.parseFloat(lng))) {
+                result.lng = Number.parseFloat(lng);
+            }
             if (addr) result.address = addr;
 
-            if (result.lat !== null && result.lng !== null) {
-                result.source = ['body.buyerLocation', 'body.buyer_location', 'metadata.buyer_location', 'metadata.buyerLocation'][i];
-                break; // Found complete coordinates
+            // If we found valid coordinates, stop crawling
+            if (result.lat !== null && result.lng !== null && result.lat !== 0) {
+                result.source = sources[i];
+                break;
             }
         }
 
         // Profile Fallback (PIN-15: PROFILE-COORDS)
-        if (result.lat === null || result.lng === null) {
-            if (user && !overrideContact) {
-                result.lat = result.lat ?? user.latitude;
-                result.lng = result.lng ?? user.longitude;
+        // Only if we still haven't found valid coordinates
+        if (result.lat === null || result.lng === null || result.lat === 0) {
+            if (user && !overrideContact && user.latitude) {
+                result.lat = user.latitude;
+                result.lng = user.longitude;
                 result.address = result.address ?? user.location;
                 result.source = 'user_profile';
-            } else if (existingBuyer) {
-                result.lat = result.lat ?? existingBuyer.latitude;
-                result.lng = result.lng ?? existingBuyer.longitude;
+            } else if (existingBuyer && existingBuyer.latitude) {
+                result.lat = existingBuyer.latitude;
+                result.lng = existingBuyer.longitude;
                 result.address = result.address ?? (existingBuyer.fullAddress || existingBuyer.location);
                 result.source = 'buyer_profile';
             }
@@ -177,8 +210,10 @@ export async function normalizeOrderInput(req) {
         resolved_address: location.address,
         raw_received: {
             body_type: typeof body.buyerLocation,
-            meta_type: typeof metadata.buyer_location,
-            body_preview: typeof body.buyerLocation === 'string' ? body.buyerLocation.substring(0, 50) : 'object'
+            body_keys: Object.keys(body),
+            meta_keys: metadata ? Object.keys(metadata) : [],
+            is_service_raw: body.isService,
+            prod_type_raw: metadata?.product_type || body.product_type
         }
     };
 
