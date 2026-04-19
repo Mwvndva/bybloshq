@@ -486,15 +486,16 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           duration: 10000
         });
 
-        // Trigger Payment Status Modal (FIX 3)
+        // Trigger Payment Status Modal (FIX 5)
+        const orderId = data.data?.orderId;
         const orderNumber = data.data?.orderNumber;
-        const paymentId = data.data?.paymentId || data.data?.orderId || data.data?.reference;
+        const paymentReference = data.data?.paymentId || data.data?.reference || data.data?.orderId;
 
         if (orderNumber) {
           setPaymentModalData({
             isOpen: true,
             orderNumber: orderNumber,
-            invoiceId: String(paymentId),
+            invoiceId: String(orderId || orderNumber),
             isGuest: !isAuthenticated,
             email: buyerDetails.email
           });
