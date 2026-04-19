@@ -59,7 +59,7 @@ import { publicApiService } from '@/api/publicApi';
 import { toast } from 'sonner';
 import { getImageUrl, cn } from '@/lib/utils';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
-import { getOrderInstruction, getInstructionColorClass } from '@/utils/orderInstructions';
+import { getOrderInstruction } from '@/utils/orderInstructions';
 
 const glassCardStyle: React.CSSProperties = {
   background: 'rgba(20, 20, 20, 0.7)',
@@ -588,16 +588,21 @@ export default function OrdersSection() {
 
                 {/* NEW: Instruction Banner */}
                 {(() => {
-                  const instruction = getOrderInstruction(
-                    order.status,
-                    'buyer',
-                    order.items[0]?.productType?.toUpperCase() || 'PHYSICAL',
-                    !!(order.seller?.latitude || order.seller?.physicalAddress)
-                  );
+                  const productType = order.items[0]?.productType || 'PHYSICAL';
+                  const instruction = getOrderInstruction({
+                    status: order.status,
+                    userRole: 'buyer',
+                    orderType: productType.toUpperCase(),
+                    sellerHasShop: !!(order.seller?.physicalAddress || (order.seller as any)?.latitude),
+                  });
                   if (!instruction) return null;
                   return (
-                    <div className={`mx-4 sm:mx-6 mt-4 p-3 rounded-xl border text-[11px] sm:text-xs font-bold leading-relaxed shadow-inner ${getInstructionColorClass(order.status)}`}>
-                      {instruction}
+                    <div className={`mx-4 sm:mx-6 mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-900/40 text-blue-300 border border-blue-800' :
+                      instruction.color === 'amber' ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-800' :
+                        instruction.color === 'green' ? 'bg-green-900/40 text-green-300 border border-green-800' :
+                          'bg-red-900/40 text-red-300 border border-red-800'
+                      }`}>
+                      {instruction.text}
                     </div>
                   );
                 })()}

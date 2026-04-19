@@ -731,7 +731,7 @@ export const useGlobalAuth = (): GlobalAuthContextType => {
 // ============================================================================
 
 export const useBuyerAuth = () => {
-    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
+    const { user, isAuthenticated, isLoading, login, loginWithToken, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
 
     return {
         user: user?.role === 'buyer' ? user.profile as BuyerProfile : null,
@@ -742,6 +742,7 @@ export const useBuyerAuth = () => {
         logout,
         forgotPassword: (email: string) => forgotPassword(email, 'buyer'),
         resetPassword: (token: string, newPassword: string) => resetPassword(token, newPassword, 'buyer'),
+        loginWithToken: (token: string) => loginWithToken(token, 'buyer'),
         updateBuyerProfile: (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer'),
     };
 };

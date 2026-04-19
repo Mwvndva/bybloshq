@@ -24,7 +24,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
-import { getOrderInstruction, getInstructionColorClass } from '@/utils/orderInstructions';
+import { getOrderInstruction } from '@/utils/orderInstructions';
 
 export default function SellerOrdersSection() {
     // Force TS re-check
@@ -437,16 +437,20 @@ export default function SellerOrdersSection() {
                                                 {/* NEW: Instruction Banner */}
                                                 {(() => {
                                                     const productType = order.metadata?.product_type || (order.items?.some(i => i.productType === 'service') ? 'service' : 'physical');
-                                                    const instruction = getOrderInstruction(
-                                                        order.status,
-                                                        'seller',
-                                                        productType.toUpperCase(),
-                                                        !!(order.seller?.latitude || order.seller?.physicalAddress)
-                                                    );
+                                                    const instruction = getOrderInstruction({
+                                                        status: order.status,
+                                                        userRole: 'seller',
+                                                        orderType: productType.toUpperCase(),
+                                                        sellerHasShop: !!(order.seller?.physicalAddress || (order.seller as any)?.latitude),
+                                                    });
                                                     if (!instruction) return null;
                                                     return (
-                                                        <div className={`mt-4 p-3 rounded-xl border text-[11px] sm:text-xs font-bold leading-relaxed shadow-inner ${getInstructionColorClass(order.status)}`}>
-                                                            {instruction}
+                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-900/40 text-blue-300 border border-blue-800' :
+                                                            instruction.color === 'amber' ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-800' :
+                                                                instruction.color === 'green' ? 'bg-green-900/40 text-green-300 border border-green-800' :
+                                                                    'bg-red-900/40 text-red-300 border border-red-800'
+                                                            }`}>
+                                                            {instruction.text}
                                                         </div>
                                                     );
                                                 })()}

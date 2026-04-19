@@ -71,6 +71,15 @@ export function BuyerInfoModal({
     }
   }, [initialData]);
 
+  // FIX (Task 1): Reset ALL state when modal opens to prevent auto-save or carry-over errors
+  useEffect(() => {
+    if (isOpen) {
+      setTermsAccepted(false);
+      setErrors({});
+      // Note: we don't reset buyerInfo here to allow pre-filling from initialData
+    }
+  }, [isOpen]);
+
   // Password strength checker function
   const checkPasswordStrength = (password: string) => {
     return {
@@ -168,17 +177,7 @@ export function BuyerInfoModal({
 
   const handleClose = () => {
     if (!isLoading) {
-      setBuyerInfo({
-        firstName: '',
-        lastName: '',
-        email: '',
-        mobilePayment: '',
-        whatsappNumber: '',
-        city: '',
-        location: '',
-        password: '',
-        confirmPassword: ''
-      });
+      setTermsAccepted(false); // Reset terms on close
       setErrors({});
       onClose();
     }
