@@ -31,12 +31,7 @@ export const FulfillmentType = {
  * @returns {string} FulfillmentType
  */
 export const resolveFulfillmentType = (seller, productType, metadata = {}) => {
-    // FIX 1: Robust Shop Detection
-    // Allow metadata to explicitly override shop status (e.g. for forced mobile services)
-    const hasShopOverride = metadata?._sellerHasShop === true;
     const hasCoordinates = sellerHasPhysicalShop(seller);
-    const hasShop = hasCoordinates || hasShopOverride;
-
     const type = productType?.toLowerCase();
 
     // Rule 0: Explicitly Virtual/Online (Bypasses location checks)
@@ -45,7 +40,7 @@ export const resolveFulfillmentType = (seller, productType, metadata = {}) => {
     }
 
     // Rule 1: Professional with Physical Shop -> ALWAYS In-Store (Task BUG-SHIP-09)
-    if (hasShop) {
+    if (hasCoordinates) {
         return FulfillmentType.BUYER_TO_SELLER;
     }
 
