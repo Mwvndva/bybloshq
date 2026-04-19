@@ -497,7 +497,11 @@ export class PaymentService {
             };
 
         } catch (error) {
-            logger.error('[PAYD-WEBHOOK] Webhook processing failed', { error: error.message });
+            logger.error('[PAYD-WEBHOOK] Webhook processing failed', {
+                error: error.message,
+                stack: error.stack,
+                reference: callbackData?.data?.transaction_reference || callbackData?.transaction_reference
+            });
             throw error;
         }
     }

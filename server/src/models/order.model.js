@@ -16,7 +16,7 @@ export function validateOrderRecord(record) {
   }
 
   // Ensure JSONB destined fields are stringified if present
-  const jsonbFields = ['metadata', 'delivery_location', 'service_requirements', 'mpesa_receipt'];
+  const jsonbFields = ['metadata', 'delivery_location'];
   for (const field of jsonbFields) {
     if (record[field] && typeof record[field] === 'object') {
       throw new Error(`Order Record Integrity Violation: Raw object detected in JSONB position "${field}". Use toJsonb() or stringify before binding.`);
@@ -42,7 +42,7 @@ class Order {
         notification_sent
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 
-        $12, $13::jsonb, $14, $15, $16::jsonb, $17, $18, $19, 
+        $12, $13::jsonb, $14, $15, $16, $17, $18, $19, 
         $20, $21::jsonb, $22, $23, $24, $25, $26, $27, $28, $29
       )
       RETURNING *

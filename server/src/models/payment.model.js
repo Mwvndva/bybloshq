@@ -14,7 +14,7 @@ class Payment {
         provider_reference, api_ref, mpesa_receipt, raw_response, 
         created_at, updated_at
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12::jsonb, $13::jsonb, NOW(), NOW()
+        $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12, $13::jsonb, NOW(), NOW()
       )
       RETURNING *
     `;
@@ -31,7 +31,7 @@ class Payment {
       toJsonb(data.metadata || {}),                     // $9 (JSONB)
       data.provider_reference || null,                   // $10
       data.api_ref || null,                             // $11
-      toJsonb(data.mpesa_receipt || null),              // $12 (JSONB)
+      data.mpesa_receipt || null,                       // $12 (VARCHAR)
       toJsonb(data.raw_response || null)                // $13 (JSONB)
     ];
 
@@ -116,7 +116,7 @@ class Payment {
         metadata = COALESCE($2::jsonb, metadata),
         provider_reference = COALESCE($3, provider_reference),
         api_ref = COALESCE($4, api_ref),
-        mpesa_receipt = COALESCE($5::jsonb, mpesa_receipt),
+        mpesa_receipt = COALESCE($5, mpesa_receipt),
         raw_response = COALESCE($6::jsonb, raw_response),
         updated_at = NOW()
       WHERE id = $7
@@ -128,7 +128,7 @@ class Payment {
       data.metadata ? toJsonb(data.metadata) : null,   // $2
       data.provider_reference ?? null,                 // $3
       data.api_ref ?? null,                           // $4
-      data.mpesa_receipt ? toJsonb(data.mpesa_receipt) : null, // $5
+      data.mpesa_receipt ?? null,                      // $5 (VARCHAR)
       data.raw_response ? toJsonb(data.raw_response) : null,   // $6
       id                                              // $7
     ];
