@@ -142,6 +142,8 @@ export const sanitizePublicSeller = (seller) => {
         bio: sellerObj.bio,
         theme: sellerObj.theme || 'black',
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
+        latitude: sellerObj.latitude ? Number.parseFloat(sellerObj.latitude) : null,
+        longitude: sellerObj.longitude ? Number.parseFloat(sellerObj.longitude) : null,
         hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
         clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
         // STRICTLY REMOVED: email, phone, whatsappNumber, fullName, balance, revenue, internal IDs, coordinates

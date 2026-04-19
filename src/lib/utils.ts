@@ -191,9 +191,9 @@ export function isSellerShopless(input: any | null | undefined): boolean {
   // 4. Check for Nairobi sentinel (the default placeholder)
   const isDefaultNairobi = hasCoords && (Math.abs(lat - (-1.2921)) < 0.0001 && Math.abs(lng - (36.8219)) < 0.0001);
 
-  // 5. BACKEND ALIGNMENT: To have a shop, you MUST have coordinates AND an address
-  // Coordinates cannot be the Nairobi sentinel.
-  const hasShop = hasCoords && !isDefaultNairobi && !!address;
+  // 5. BACKEND ALIGNMENT: To have a shop, you MUST have valid non-sentinel coordinates.
+  // Address is highly recommended but coordinates are the primary SOT for fulfillment resolution.
+  const hasShop = hasCoords && !isDefaultNairobi;
 
   // 6. Support for the explicit flag as a secondary check if coords/address exist
   // but prioritize the rigorous "hasShop" check for fulfillment routing.
