@@ -178,7 +178,7 @@ const getAllProducts = async (req, res, next) => {
       data: result.rows.map(product => ({
         ...product,
         stock: hasStock ? (product.stock || 0) : 0,
-        status: hasStatus ? (product.status || 'active') : 'active',
+        status: hasStatus ? (product.status || 'available') : 'available',
         createdAt: product.created_at
       }))
     });
@@ -240,7 +240,7 @@ const getSellerProducts = async (req, res, next) => {
       data: result.rows.map(product => ({
         ...product,
         stock: hasStock ? (product.stock || 0) : 0,
-        status: hasStatus ? (product.status || 'active') : 'active',
+        status: hasStatus ? (product.status || 'available') : 'available',
         createdAt: product.created_at
       }))
     });

@@ -125,9 +125,9 @@ class AdminService {
       const productStatusQuery = `
               SELECT 
                 CASE 
-                  WHEN status IN ('available', 'active', 'In Stock') THEN 'Available'
-                  WHEN status IN ('sold', 'Out of Stock') THEN 'Sold'
-                  ELSE INITCAP(status)
+                  WHEN status = 'available' THEN 'Available'
+                  WHEN status = 'sold' THEN 'Sold'
+                  ELSE INITCAP(status::text)
                 END as name,
                 COUNT(*) as value
               FROM products 

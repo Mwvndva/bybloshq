@@ -58,7 +58,7 @@ export const getOverview = async (req, res, next) => {
         -- Platform totals
         (SELECT COUNT(*)  FROM sellers WHERE is_active = true)                          AS total_sellers,
         (SELECT COUNT(*)  FROM buyers  WHERE user_id IS NOT NULL)                       AS total_buyers,
-        (SELECT COUNT(*)  FROM products WHERE status IN ('available', 'active', 'In Stock')) AS active_products,
+        (SELECT COUNT(*)  FROM products WHERE status = 'available')                       AS active_products,
 
         -- GMV and revenue
         (SELECT COALESCE(SUM(total_amount), 0)
@@ -240,7 +240,7 @@ export const getProductMix = async (req, res, next) => {
         FROM products p
         LEFT JOIN order_items oi ON oi.product_id = p.id
         LEFT JOIN product_orders po ON oi.order_id = po.id AND po.payment_status = 'completed'
-        WHERE p.status = 'available' OR p.status = 'sold'
+        WHERE p.status IN ('available', 'sold')
         GROUP BY product_type
         ORDER BY count DESC
       `),
