@@ -491,6 +491,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         const orderNumber = data.data?.orderNumber;
         const paymentReference = data.data?.paymentId || data.data?.reference || data.data?.orderId;
 
+        console.log('[PAYMENT-DEBUG] Initiation Result:', { orderId, orderNumber, paymentReference });
+
         if (orderNumber) {
           setPaymentModalData({
             isOpen: true,
