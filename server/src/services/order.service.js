@@ -1675,12 +1675,12 @@ class OrderService {
       }
 
       // 4. Logistics / Courier Notification (Always attempt for Physical and no Shop)
-      // Decoupled from notification_sent flag to allow retries
       const hasPhysical = items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'physical');
-      const sHasShop = sellerHasPhysicalShop({ latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude });
-      const sellerHasShop = sHasShop && !!fullOrder.seller_address;
+      const isCourier = fullOrder.fulfillment_type === 'COURIER';
 
-      if (hasPhysical && !sellerHasShop) {
+      logger.info(`[COURIER-CHECK] Order #${fullOrder.order_number}: hasPhysical=${hasPhysical}, isCourier=${isCourier}, type=${fullOrder.fulfillment_type}`);
+
+      if (hasPhysical && isCourier) {
         logger.info(`[COURIER-NOTIFY] Sending logistics notification for order #${fullOrder.order_number}`);
         whatsappService.sendLogisticsNotification(normalizedOrder)
           .catch(e => logger.error('[ORDER] Courier notification failed:', e.message));

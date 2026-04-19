@@ -52,7 +52,11 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                 const status = (res.paymentStatus || '').toLowerCase();
                 const orderStatus = res.status;
 
-                if (['completed', 'success'].includes(status) || (orderStatus && orderStatus !== 'PENDING')) {
+                // SUCCESS: Payment is confirmed OR order has moved to a post-payment state
+                const isPaymentSuccess = ['completed', 'success'].includes(status);
+                const isOrderProgressed = orderStatus && !['PENDING', 'RESERVED'].includes(orderStatus);
+
+                if (isPaymentSuccess || isOrderProgressed) {
                     setState('SUCCESS');
                     if (intervalRef.current) clearInterval(intervalRef.current);
 

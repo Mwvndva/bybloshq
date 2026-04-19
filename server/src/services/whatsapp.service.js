@@ -711,7 +711,7 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
         const sellerPhone = order.seller?.phone || order.seller?.whatsapp_number || 'N/A';
         const buyerPhone = order.buyer?.phone || order.buyer?.whatsapp_number || 'N/A';
 
-        logger.info(`[LOGISTICS] Attempting courier notification to: ${this.COURIER_NUMBER} for order #${order.orderNumber}`);
+        logger.info(`[LOGISTICS] Attempting courier notification: target=${this.COURIER_NUMBER}, order=#${order.orderNumber}, seller=${order.seller.name}, buyer=${order.buyer.name}`);
 
         const itemsList = order.items?.length > 0
             ? order.items.map(i => `- ${i.title} (x${i.quantity})`).join('\n')
