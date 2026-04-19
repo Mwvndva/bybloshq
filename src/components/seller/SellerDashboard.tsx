@@ -1610,7 +1610,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
             <div className="w-full max-w-7xl mx-auto space-y-4 sm:space-y-6">
               {/* Banner Upload Section */}
-              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-2.5 sm:p-3 lg:p-5 xl:p-6 shadow-lg border border-white/10">
+              <div className="unified-card p-4 sm:p-6 shadow-xl border-white/5">
                 <BannerUpload
                   currentBannerUrl={sellerProfile?.bannerImage}
                   onBannerUploaded={(bannerUrl) => {
@@ -1620,7 +1620,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               {/* Store Information */}
-              <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-2.5 sm:p-3 lg:p-5 xl:p-6 shadow-lg border border-white/10">
+              <div className="unified-card p-4 sm:p-6 shadow-xl border-white/5">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
                   <div className="mb-2 sm:mb-0 flex-1 min-w-0">
                     <h3 className="text-sm sm:text-lg lg:text-xl font-black text-white truncate">Store Information</h3>
@@ -1941,7 +1941,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               {/* Theme Settings */}
-              <div className="bg-black/40 backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
+              <div className="unified-card p-4 sm:p-8 shadow-xl border-white/5">
                 <ThemeSelector
                   currentTheme={(sellerProfile?.theme as Theme) || 'default'}
                   onThemeChange={(theme) => {
