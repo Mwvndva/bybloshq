@@ -184,6 +184,10 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
         metadata: {
             product_type: orderObj.metadata?.product_type || null,
         },
+        fulfillment_type: orderObj.fulfillment_type || orderObj.fulfillmentType || null,
+        location_address: orderObj.location_address || orderObj.locationAddress || null,
+        location_lat: orderObj.location_lat || orderObj.locationLat || null,
+        location_lng: orderObj.location_lng || orderObj.locationLng || null,
         seller: orderObj.seller ? {
             id: orderObj.seller.id,
             shopName: orderObj.seller.shopName,

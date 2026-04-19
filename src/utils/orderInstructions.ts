@@ -6,7 +6,7 @@ export interface OrderInstructionConfig {
     status: string;
     userRole: 'buyer' | 'seller';
     orderType?: string;
-    sellerHasShop?: boolean;
+    fulfillmentType?: string;
 }
 
 export interface OrderInstructionResult {
@@ -18,14 +18,14 @@ export const getOrderInstruction = ({
     status,
     userRole,
     orderType = 'PHYSICAL',
-    sellerHasShop = false,
+    fulfillmentType,
 }: OrderInstructionConfig): OrderInstructionResult | null => {
 
     const isPhysical = orderType === 'PHYSICAL';
     const isService = orderType === 'SERVICE';
     const isDigital = orderType === 'DIGITAL';
-    const isCourier = isPhysical && !sellerHasShop;
-    const isShopPickup = isPhysical && sellerHasShop;
+    const isShopPickup = fulfillmentType === 'BUYER_TO_SELLER';
+    const isCourier = isPhysical && !isShopPickup;
 
     const instructions: Record<string, Record<string, OrderInstructionResult>> = {
         buyer: {

@@ -593,7 +593,7 @@ export default function OrdersSection() {
                     status: order.status,
                     userRole: 'buyer',
                     orderType: productType.toUpperCase(),
-                    sellerHasShop: !!(order.seller?.physicalAddress || (order.seller as any)?.latitude),
+                    fulfillmentType: order.fulfillment_type,
                   });
                   if (!instruction) return null;
                   return (
