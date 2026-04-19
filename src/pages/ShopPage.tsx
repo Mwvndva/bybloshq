@@ -197,7 +197,7 @@ const ShopPage = () => {
   return (
     <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
       {/* Modern Hero Section */}
-      <div className="relative h-[clamp(260px,35vh,450px)] w-full overflow-hidden">
+      <div className="relative h-[30dvh] min-h-[260px] sm:h-[40dvh] lg:h-[50dvh] w-full overflow-hidden">
         {sellerInfo?.bannerImage ? (
           <img
             src={getImageUrl(sellerInfo.bannerImage)}
@@ -306,7 +306,7 @@ const ShopPage = () => {
       </div>
 
       {/* Products */}
-      <main className="max-w-[var(--container-2xl)] mx-auto px-[var(--space-4)] py-[var(--space-8)]">
+      <main className="max-w-[1920px] mx-auto px-3 sm:px-6 py-6 sm:py-8 lg:px-8">
         <div className="mb-8">
           <div className="relative max-w-md mx-auto">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -322,7 +322,7 @@ const ShopPage = () => {
             <input
               type="text"
               className={cn(
-                "block w-full pl-10 pr-3 h-[var(--touch-lg)] border border-[var(--theme-border)] rounded-[var(--radius-xl)] transition-all duration-300",
+                "block w-full pl-10 pr-3 py-3 border border-[var(--theme-border)] rounded-2xl transition-all duration-300",
                 "bg-[var(--theme-card-bg)] text-[var(--theme-text)] placeholder:text-[var(--theme-text)]/50",
                 "focus:outline-none focus:ring-2 focus:ring-[var(--theme-accent)]/50 focus:border-[var(--theme-accent)] shadow-xl"
               )}
@@ -335,7 +335,7 @@ const ShopPage = () => {
 
         {filteredProducts.length > 0 ? (
           <div className={cn(
-            "backdrop-blur-md rounded-[var(--radius-2xl)] p-6 md:p-[var(--space-8)] shadow-2xl border transition-all duration-500",
+            "backdrop-blur-md rounded-[2.5rem] p-5 sm:p-10 shadow-2xl border transition-all duration-500",
             themeClasses.cardBg,
             themeClasses.borderColor,
             "shadow-[var(--theme-accent)]/5"

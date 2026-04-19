@@ -930,11 +930,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       </div>
     );
   }
+
   // Loading state - show skeleton while auth is loading OR data is being fetched
   if (isAuthLoading || isLoading) {
     return (
       <div className="min-h-screen bg-black">
-        <div className="flex-1 space-y-[var(--space-8)] px-[var(--space-4)] py-[var(--space-5)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
           <div className="flex justify-center mb-8">
             <Skeleton className="h-32 w-96" />
@@ -986,7 +987,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     <>
       {/* Header */}
       <div className="hidden">
-        <div className="flex-1 space-y-[var(--space-8)] px-[var(--space-4)] py-[var(--space-5)]">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="py-2 md:py-0">
             {/* Mobile: 2-row layout to prevent overlap */}
             <div className="md:hidden">
@@ -1719,7 +1720,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       {sellerProfile?.email || 'Not set'}
                     </p>
                   </div>
-                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl">
+                  <div className="p-3 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl">
                     <p className="text-[10px] sm:text-xs font-medium text-gray-300 mb-1">WhatsApp Number</p>
                     {isEditing ? (
                       <Input
@@ -1951,10 +1952,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
           </div>
         )}
-      </div >
+      </div>
 
       {/* Delete Confirmation Dialog */}
-      < Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog} >
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
           <DialogHeader>
             <DialogTitle className="text-white">Delete Product</DialogTitle>
@@ -1990,19 +1991,18 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog >
+      </Dialog>
 
       {/* New Client OrderModal */}
-      < NewClientOrderModal
+      <NewClientOrderModal
         isOpen={showClientOrderModal}
-        onClose={() => setShowClientOrderModal(false)
-        }
+        onClose={() => setShowClientOrderModal(false)}
         products={products as any}
         onSubmit={handleClientOrderSubmit}
       />
 
       {/* Payment Loading Modal */}
-      < PaymentLoadingModal
+      <PaymentLoadingModal
         isOpen={showPaymentLoadingModal}
         onClose={() => setShowPaymentLoadingModal(false)}
         paymentReference={paymentReference}
