@@ -246,9 +246,7 @@ export async function normalizeOrderInput(req) {
         }
     }
 
-    if (isService && (location.lat === null || location.lat === 0 || isNaN(location.lat) || isNaN(location.lng))) {
-        throw new Error("Precise map coordinates are required for service bookings. Please select your location on the map.");
-    }
+
 
     // 5. Final Assembly (PIN-02: UNIFIED ORDER CONTEXT)
     return {
