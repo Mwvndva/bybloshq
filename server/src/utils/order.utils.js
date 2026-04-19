@@ -167,33 +167,28 @@ export async function normalizeOrderInput(req) {
             if (typeof candidate !== 'object') continue;
 
             // Property Scanning (lat/latitude/lng/longitude)
-            const rawLat = candidate.lat ?? candidate.latitude ?? candidate.location_lat ?? candidate.latitude_coordinate;
-            const rawLng = candidate.lng ?? candidate.longitude ?? candidate.location_lng ?? candidate.longitude_coordinate;
-            const addr = candidate.address || candidate.fullAddress || candidate.full_address || candidate.location_address || candidate.displayName;
+            const rawLat = candidate.lat ?? candidate.latitude ??
+                candidate.location_lat ?? candidate.latitude_coordinate;
+            const rawLng = candidate.lng ?? candidate.longitude ??
+                candidate.location_lng ?? candidate.longitude_coordinate;
+            const addr = candidate.address || candidate.fullAddress ||
+                candidate.full_address || candidate.location_address ||
+                candidate.displayName;
 
-            const lat = rawLat !== undefined && rawLat !== null ? Number.parseFloat(rawLat) : null;
-            const lng = rawLng !== undefined && rawLng !== null ? Number.parseFloat(rawLng) : null;
+            const parsedLat = Number.parseFloat(rawLat);
+            const parsedLng = Number.parseFloat(rawLng);
 
-            // FIX 2: COORDINATE VALIDITY CHECK
-            // Latitude 0 is technically valid (Equator) but in Kenya context, 
-            // the Nairobi sentinel often arrives as -1.2921. 
-            // We treat absolute 0 as uninitialized/invalid.
-            const isValid = lat !== null && lng !== null &&
-                !isNaN(lat) && !isNaN(lng) &&
-                lat !== 0 && lng !== 0;
+            // 0 means unset (DB numeric default). NaN means non-numeric. Both invalid.
+            const isValidLat = !isNaN(parsedLat) && parsedLat !== 0;
+            const isValidLng = !isNaN(parsedLng) && parsedLng !== 0;
 
-            if (isValid) {
-                // Kenya Bounding Box Check (Defensive)
-                const isInKenya = lat >= -5.0 && lat <= 5.0 && lng >= 33.0 && lng <= 42.0;
-                if (isInKenya) {
-                    result.lat = lat;
-                    result.lng = lng;
-                    result.address = addr || result.address;
-                    result.source = sources[i];
-                    break;
-                }
-            } else if (addr && !result.address) {
-                result.address = addr;
+            if (isValidLat) result.lat = parsedLat;
+            if (isValidLng) result.lng = parsedLng;
+            if (addr) result.address = addr;
+
+            if (result.lat && result.lng) {
+                result.source = sources[i];
+                break;
             }
         }
 

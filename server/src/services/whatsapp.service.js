@@ -480,9 +480,16 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
             locationDetails = `📍 *Your Service Address:* ${loc.address}\n`;
         }
 
-        // Add Requirements if any
-        if (booking?.requirements) {
-            message += `\n📝 *Requirements:* ${booking.requirements}\n`;
+        // Render full booking details for service orders
+        const hasDate = booking?.date && booking.date !== 'null' && booking.date !== 'undefined';
+        const hasTime = booking?.time && booking.time !== 'null' && booking.time !== 'undefined';
+
+        if (hasDate || hasTime || booking?.requirements) {
+            message += '\n📋 *Booking Details:*\n';
+            if (hasDate) message += `📅 *Date:* ${booking.date}\n`;
+            if (hasTime) message += `⏰ *Time:* ${booking.time}\n`;
+            if (booking?.duration) message += `⏱ *Duration:* ${booking.duration}\n`;
+            if (booking?.requirements) message += `📝 *Specifications:* ${booking.requirements}\n`;
         }
 
         if (locationDetails) message += `\n${locationDetails}`;
@@ -542,8 +549,14 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
 
         // Always include location for Services or Collections
         if (isShopPickup || isShopService) {
-            const mapsLink = `https://www.google.com/maps/search/?api=1&query=${seller.latitude},${seller.longitude}`;
-            locationDetails = `📍 *At Shop:* ${seller.physicalAddress || seller.shopName}\n🔗 *Navigate:* ${mapsLink}\n`;
+            const shopLat = seller.latitude || seller.seller_latitude;
+            const shopLng = seller.longitude || seller.seller_longitude;
+            const shopAddr = seller.physicalAddress || seller.physical_address || seller.shopName;
+            const mapsLink = (shopLat && shopLng)
+                ? `https://www.google.com/maps/search/?api=1&query=${shopLat},${shopLng}`
+                : null;
+            locationDetails = `📍 *At Shop:* ${shopAddr}\n`;
+            if (mapsLink) locationDetails += `🔗 *Navigate:* ${mapsLink}\n`;
         } else if (isSystemDelivery && (newStatus === 'COLLECTION_PENDING' || newStatus === 'DELIVERY_COMPLETE')) {
             locationDetails = `📍 *At Hub:* ${this.DROPOFF_LOCATION}\n`;
         } else if (isMobileService) {
@@ -563,10 +576,17 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
             : '';
         const reqInfo = requirements ? `\n📝 *Requirements:* ${requirements}` : '';
 
+        // Booking details shown for service order status updates
+        const buMeta = order.metadata || {};
+        const buBooking = (isService && (buMeta.booking_date || buMeta.bookingDate))
+            ? `\n📋 *Booking:* ${buMeta.booking_date || buMeta.bookingDate}` +
+            `${buMeta.booking_time || buMeta.bookingTime ? ' at ' + (buMeta.booking_time || buMeta.bookingTime) : ''}\n`
+            : '';
+
         const msg = `
-✅ *Status Update: #${order.orderNumber}*
+✅ *Status Update: #${order.orderNumber}*${buBooking}
 Type: *${typeLabel}*
-New Status: *${newStatus.replace(/_/g, ' ')}*${bookingInfo}${reqInfo}
+New Status: *${newStatus.replace(/_/g, ' ')}*
 
 ${locationDetails}${instructions ? `${instructions}\n` : ''}
 _Check your dashboard for full details._
@@ -609,9 +629,15 @@ _Check your dashboard for full details._
             : '';
         const reqInfo = requirements ? `\n📝 *Requirements:* ${requirements}` : '';
 
+        const suMeta = order.metadata || {};
+        const suBooking = (isService && (suMeta.booking_date || suMeta.bookingDate))
+            ? `\n📋 *Booking:* ${suMeta.booking_date || suMeta.bookingDate}` +
+            `${suMeta.booking_time || suMeta.bookingTime ? ' at ' + (suMeta.booking_time || suMeta.bookingTime) : ''}\n`
+            : '';
+
         const msg = `
-✅ *Status Update: #${order.orderNumber}*
-New Status: *${newStatus.replace(/_/g, ' ')}*${bookingInfo}${reqInfo}
+✅ *Status Update: #${order.orderNumber}*${suBooking}
+New Status: *${newStatus.replace(/_/g, ' ')}*
 
 ${locationDetails}${instructions ? `${instructions}\n` : ''}
 _Managed via your dashboard._

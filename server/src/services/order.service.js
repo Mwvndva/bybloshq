@@ -81,42 +81,47 @@ class OrderService {
         const isShopless = !sellerHasPhysicalShop(sellerInfo) && !sellerInfo.physical_address;
         const reflectsService = (primaryProductType === ProductType.SERVICE || primaryProductType === 'service');
 
-        // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
-        const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
-
-        // --- STRICT COORDINATE RESOLUTION ---
+        // ── COORDINATE RESOLUTION ────────────────────────────────────────────────
+        // Physical shop seller (has coords): use seller location for everything.
+        // Online shop seller (no coords):
+        //   - Courier: no coords needed (logistics handles delivery address).
+        //   - Mobile service: use buyer-provided coords from booking form.
+        // ─────────────────────────────────────────────────────────────────────────
         let finalLocationAddress = null;
         let finalLat = null;
         let finalLng = null;
 
         if (fulfillmentType === FulfillmentType.BUYER_TO_SELLER) {
-          // Rule: In-Store -> Use Seller Shop Location
-          finalLocationAddress = sellerInfo.physical_address;
-          finalLat = sellerInfo.latitude;
-          finalLng = sellerInfo.longitude;
-          logger.info(`In-Store service detected. Using seller shop location.`);
-        } else if (fulfillmentType === FulfillmentType.SELLER_TO_BUYER) {
-          // Rule: Home Service -> Use Buyer Provided Location
-          finalLocationAddress = location.address;
-          finalLat = location.lat;
-          finalLng = location.lng;
-          logger.info(`Home Service detected. Using buyer-provided location.`);
+          // Physical shop: buyer comes to seller. Use seller's shop coordinates.
+          finalLocationAddress = sellerInfo.physical_address || null;
+          finalLat = sellerInfo.latitude ? Number.parseFloat(sellerInfo.latitude) : null;
+          finalLng = sellerInfo.longitude ? Number.parseFloat(sellerInfo.longitude) : null;
+          logger.info(`[ORDER] Fulfillment: BUYER_TO_SELLER. Seller shop: ${finalLocationAddress}`);
 
-          // Persistence Bug Fix: Ensure location is actually saved to buyer profile immediately
+        } else if (fulfillmentType === FulfillmentType.SELLER_TO_BUYER) {
+          // Mobile service: seller visits buyer. Use buyer-provided location.
+          finalLocationAddress = location.address || null;
+          finalLat = location.lat || null;
+          finalLng = location.lng || null;
+          logger.info(`[ORDER] Fulfillment: SELLER_TO_BUYER. Buyer location: lat=${finalLat}, lng=${finalLng}, addr=${finalLocationAddress}`);
+
+          // Persist buyer location immediately if buyer profile exists.
+          // For guest checkouts buyer.id may be null — that is fine, the location
+          // is still stored on the order row (location_lat, location_lng columns).
           if (buyer.id && finalLat && finalLng) {
-            await Buyer.updateLocation(buyer.id, {
+            Buyer.updateLocation(buyer.id, {
               latitude: finalLat,
               longitude: finalLng,
-              fullAddress: finalLocationAddress
-            }).catch(err => logger.warn('[createOrder] Failed to persist buyer location:', err.message));
+              fullAddress: finalLocationAddress,
+            }).catch(err =>
+              logger.warn('[ORDER] Non-fatal: could not persist buyer location to profile:', err.message)
+            );
           }
-        } else if (primaryProductType === ProductType.PHYSICAL && fulfillmentType === FulfillmentType.COURIER) {
-          // Standard System Delivery (COURIER)
-          // Ensure buyer coordinates are NOT stored on the order to prevent logistics confusion
-          finalLocationAddress = location.address;
-          finalLat = null;
-          finalLng = null;
-          logger.info(`System delivery detected. Coordinates excluded from order record.`);
+
+        } else {
+          // COURIER: online seller, physical product. No specific coords needed here.
+          // Delivery address is stored in buyer_mobile_payment / shipping metadata.
+          logger.info(`[ORDER] Fulfillment: COURIER. Platform logistics handles delivery.`);
         }
 
         // VALIDATION: Fail fast if coordinates are required but missing
@@ -989,29 +994,27 @@ class OrderService {
     // 1. Finalize Service Slot (Convert Reserved to Booked)
     await this._finalizeServiceSlot(client, order.id);
 
-    // 2. Persist Buyer Location (For Mobile Services only)
-    // FIX 4: Robust persistence for mobile services
-    const isMobileService = order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER ||
-      (order.order_type === 'SERVICE' && !order.seller_address);
+    // Mobile service: seller visits buyer. Persist buyer's location.
+    // In-store service (BUYER_TO_SELLER): buyer visits seller, no buyer location to save.
+    if (order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER && order.buyer_id) {
+      const lat = Number.parseFloat(order.location_lat);
+      const lng = Number.parseFloat(order.location_lng);
+      const addr = order.location_address;
 
-    if (isMobileService && order.buyer_id) {
-      try {
-        const { location_lat, location_lng, location_address } = order;
-        // Fix: Allow 0 for lat/lng (Equator) but ensure they are actually present
-        const hasCoords = (location_lat !== null && location_lat !== undefined) &&
-          (location_lng !== null && location_lng !== undefined);
-
-        if (hasCoords && location_address) {
-          logger.info(`Updating buyer ${order.buyer_id} profile with booking location details`);
-          await Buyer.updateLocation(order.buyer_id, {
-            latitude: location_lat,
-            longitude: location_lng,
-            fullAddress: location_address
-          });
-        }
-      } catch (err) {
-        logger.error(`Failed to persist buyer location: ${err.message}`);
-        // Don't fail the order completion if profile update fails
+      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+        logger.info(`[ORDER] Persisting buyer location at completion: buyer=${order.buyer_id}`);
+        await Buyer.updateLocation(order.buyer_id, {
+          latitude: lat,
+          longitude: lng,
+          fullAddress: addr || null,
+        }).catch(err =>
+          logger.error(`[ORDER] Buyer location persistence failed:`, err.message)
+        );
+      } else {
+        logger.warn(
+          `[ORDER] Mobile service ${order.id} missing buyer coordinates ` +
+          `(lat=${order.location_lat}, lng=${order.location_lng})`
+        );
       }
     }
 
@@ -1764,8 +1767,10 @@ class OrderService {
         name: fullOrder.seller_name || 'Seller',
         shopName: fullOrder.shop_name || 'Shop',
         phone: fullOrder.seller_phone || 'N/A',
+        whatsapp_number: fullOrder.seller_phone || null,
         email: fullOrder.seller_email || null,
-        address: fullOrder.seller_address || null,
+        address: fullOrder.seller_address || fullOrder.physical_address || null,
+        physicalAddress: fullOrder.seller_address || fullOrder.physical_address || null,
         latitude: fullOrder.seller_latitude || null,
         longitude: fullOrder.seller_longitude || null,
         social: {
