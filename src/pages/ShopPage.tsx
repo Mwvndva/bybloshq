@@ -197,7 +197,7 @@ const ShopPage = () => {
   return (
     <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
       {/* Modern Hero Section */}
-      <div className="relative h-[30vh] min-h-[260px] sm:h-[40vh] lg:h-[50vh] w-full overflow-hidden">
+      <div className="relative h-[30dvh] min-h-[260px] sm:h-[40dvh] lg:h-[50dvh] w-full overflow-hidden">
         {sellerInfo?.bannerImage ? (
           <img
             src={getImageUrl(sellerInfo.bannerImage)}

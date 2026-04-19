@@ -8,7 +8,7 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-[75vh] flex items-center justify-center overflow-hidden bg-black">
+    <section className="relative min-h-[75dvh] flex items-center justify-center overflow-hidden bg-black">
       {/* Background with deep blur and subtle movement */}
       <div
         className="absolute inset-0 z-0 opacity-40 scale-110 bg-black"

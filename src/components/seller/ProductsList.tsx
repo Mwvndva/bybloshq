@@ -860,7 +860,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
       {/* Edit Product Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>
-        <DialogContent className="bg-[#000000] border border-white/10 text-white w-[95vw] max-w-md max-h-[85vh] overflow-y-auto p-3 sm:p-4 rounded-xl">
+        <DialogContent className="bg-[#000000] border border-white/10 text-white w-[95vw] max-w-md max-h-[85dvh] overflow-y-auto p-3 sm:p-4 rounded-xl">
           <DialogHeader className="flex flex-row items-center gap-2 space-y-0 text-left mb-2">
             <Button
               variant="ghost"

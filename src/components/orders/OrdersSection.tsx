@@ -777,7 +777,7 @@ export default function OrdersSection() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-6 max-h-[60vh] overflow-y-auto pr-2">
+              <div className="space-y-6 max-h-[60dvh] overflow-y-auto pr-2">
                 {/* Items */}
                 {selectedOrderForDetails.items.map((item, idx) => (
                   <div key={idx} className="flex gap-4 items-start">
@@ -1050,7 +1050,7 @@ export default function OrdersSection() {
               <img
                 src={viewingImage}
                 alt="Full View"
-                className="max-h-[85vh] max-w-full object-contain rounded-lg shadow-2xl"
+                className="max-h-[85dvh] max-w-full object-contain rounded-lg shadow-2xl"
               />
             )}
           </div>
