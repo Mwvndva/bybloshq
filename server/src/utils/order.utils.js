@@ -39,7 +39,7 @@ export async function normalizeOrderInput(req) {
     if (phone) {
         existingBuyer = await Buyer.findByPhone(phone);
         if (existingBuyer) {
-            logger.info('Buyer identity resolved from phone lookup', { buyer_id: existingBuyer.id });
+            logger.info('Buyer identity resolved from phone lookup', { buyer_id: existingBuyer.id, name: existingBuyer.fullName });
         }
     }
 
@@ -65,7 +65,11 @@ export async function normalizeOrderInput(req) {
         buyerId = loggedInBuyer?.id || null;
     }
 
-    let finalName = customerName || existingBuyer?.fullName;
+    // Priority: DB Name > Request Name (if not 'Guest') > Fallback
+    let finalName = existingBuyer?.fullName || customerName;
+    if (customerName && customerName !== 'Guest' && !existingBuyer?.fullName) {
+        finalName = customerName;
+    }
     let finalPhone = phone;
 
     if (user && !overrideContact) {
@@ -101,6 +105,7 @@ export async function normalizeOrderInput(req) {
     const crawlLocation = () => {
         const candidates = [
             body.buyerLocation,
+            body.bookingDetails?.buyerLocation,
             body.buyer_location,
             metadata.buyer_location,
             metadata.buyerLocation
@@ -191,7 +196,7 @@ export async function normalizeOrderInput(req) {
         }
     }
 
-    if (isService && (location.lat === 0 || location.lng === 0 || isNaN(location.lat) || isNaN(location.lng))) {
+    if (isService && (location.lat === null || location.lat === 0 || isNaN(location.lat) || isNaN(location.lng))) {
         throw new Error("Precise map coordinates are required for service bookings. Please select your location on the map.");
     }
 
