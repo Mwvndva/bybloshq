@@ -57,10 +57,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
   const [paymentModalData, setPaymentModalData] = useState<{
     isOpen: boolean;
-    orderNumber: string;
+    orderNumber: string | null;
+    invoiceId: string | null;
     isGuest: boolean;
     email?: string;
-  }>({ isOpen: false, orderNumber: '', isGuest: false });
+  }>({ isOpen: false, orderNumber: null, invoiceId: null, isGuest: false });
 
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
@@ -485,12 +486,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           duration: 10000
         });
 
-        // Trigger Payment Status Modal (Issue 2)
-        const reference = data.data?.reference || data.data?.invoice_id;
-        if (reference) {
+        // Trigger Payment Status Modal (FIX 3)
+        const orderNumber = data.data?.orderNumber;
+        const paymentId = data.data?.paymentId || data.data?.orderId || data.data?.reference;
+
+        if (orderNumber) {
           setPaymentModalData({
             isOpen: true,
-            orderNumber: reference,
+            orderNumber: orderNumber,
+            invoiceId: String(paymentId),
             isGuest: !isAuthenticated,
             email: buyerDetails.email
           });

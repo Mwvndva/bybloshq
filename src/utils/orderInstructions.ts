@@ -1,99 +1,60 @@
-export const getOrderInstruction = (status: string, userRole: 'buyer' | 'seller', orderType: string, sellerHasShop: boolean) => {
-    const isBuyer = userRole === 'buyer';
+// src/utils/orderInstructions.ts
+
+const COURIER_LOCATION = 'Dynamic Mall, Tom Mboya St — Shop SL 32';
+
+export interface OrderInstructionConfig {
+    status: string;
+    userRole: 'buyer' | 'seller';
+    orderType?: string;
+    sellerHasShop?: boolean;
+}
+
+export interface OrderInstructionResult {
+    text: string;
+    color: 'blue' | 'amber' | 'green' | 'red';
+}
+
+export const getOrderInstruction = ({
+    status,
+    userRole,
+    orderType = 'PHYSICAL',
+    sellerHasShop = false,
+}: OrderInstructionConfig): OrderInstructionResult | null => {
+
     const isPhysical = orderType === 'PHYSICAL';
     const isService = orderType === 'SERVICE';
     const isDigital = orderType === 'DIGITAL';
-    const isSystemDelivery = isPhysical && !sellerHasShop;
+    const isCourier = isPhysical && !sellerHasShop;
     const isShopPickup = isPhysical && sellerHasShop;
 
-    const instructions: any = {
+    const instructions: Record<string, Record<string, OrderInstructionResult>> = {
         buyer: {
-            PENDING: isDigital
-                ? "⬇️ Your digital product will be available for download once payment is confirmed."
-                : isSystemDelivery
-                    ? "⏳ Payment confirmed! The seller will drop off your item at our hub. You'll be notified when it arrives."
-                    : isShopPickup
-                        ? "⏳ Payment confirmed! The seller is preparing your item. We'll notify you when it's ready for collection."
-                        : isService
-                            ? "✅ Booking confirmed! Be at your location at the scheduled time."
-                            : "⏳ Your order is being processed.",
-
-            RESERVED: "⏳ Your order slot is reserved. Awaiting payment confirmation.",
-
-            PROCESSING: isService
-                ? "⏳ The seller is preparing for your appointment."
-                : "📦 The seller is packing your items.",
-
-            SERVICE_PENDING: "📅 Booking confirmed! The professional will arrive at your location at the scheduled time. Please be ready.",
-
-            DELIVERY_PENDING: isSystemDelivery
-                ? "🚚 Your order is on its way to our hub. You'll be notified when it arrives for collection."
-                : "🚚 Your order is on its way to you!",
-
-            COLLECTION_PENDING: isShopPickup
-                ? "📍 YOUR ORDER IS READY! Please visit the shop to collect your items."
-                : `📍 YOUR ORDER HAS ARRIVED AT THE HUB! Visit our collection point to pick up your package.`,
-
-            DELIVERY_COMPLETE: `📍 Your order has arrived! Please visit the collection point to pick it up.`,
-
-            COMPLETED: "✅ Order complete! Thank you for shopping with Byblos.",
-
-            CANCELLED: "❌ This order has been cancelled. If you were charged, your refund has been added to your account balance.",
-
-            FAILED: "❌ Payment was not completed for this order.",
+            PENDING: { text: isDigital ? 'Your download will be available once payment confirms.' : isCourier ? 'Waiting for seller to drop off your item.' : isShopPickup ? 'Seller is preparing your item for shop pickup.' : 'Waiting for seller to confirm your booking.', color: 'blue' },
+            RESERVED: { text: 'Slot reserved. Complete payment to confirm.', color: 'blue' },
+            PROCESSING: { text: isService ? 'Seller is preparing for your appointment.' : 'Seller is packing your order.', color: 'blue' },
+            SERVICE_PENDING: { text: 'Booking confirmed. Be at your location at the scheduled time.', color: 'amber' },
+            DELIVERY_PENDING: { text: isCourier ? 'Your item is on its way to the collection hub.' : 'Your order is being delivered.', color: 'amber' },
+            COLLECTION_PENDING: { text: isShopPickup ? '✅ Ready! Visit the shop to collect your order.' : `✅ Arrived at hub! Collect at ${COURIER_LOCATION}.`, color: 'amber' },
+            DELIVERY_COMPLETE: { text: `Your order is at the hub. Collect at ${COURIER_LOCATION}.`, color: 'amber' },
+            COMPLETED: { text: 'Order complete. Thank you for shopping with Byblos!', color: 'green' },
+            CANCELLED: { text: 'Order cancelled. Any refund has been added to your balance.', color: 'red' },
+            FAILED: { text: 'Payment was not completed. No charges made.', color: 'red' },
+            CLIENT_PAYMENT_PENDING: { text: 'Check your phone for an M-Pesa payment prompt.', color: 'blue' },
         },
-
         seller: {
-            PENDING: isSystemDelivery
-                ? `📦 New order! Please drop off the items at the hub within 48 hours to avoid cancellation.`
-                : isShopPickup
-                    ? "🛍️ New order! Prepare the items for buyer collection. Update status when ready."
-                    : isService
-                        ? "📅 New booking! Confirm the appointment and prepare for the service."
-                        : "🔔 New order received! Begin processing.",
-
-            RESERVED: "⏳ Order slot reserved. Waiting for payment confirmation.",
-
-            PROCESSING: "⚙️ Order in progress. Update status when ready for delivery/collection.",
-
-            SERVICE_PENDING: "🔔 NEW SERVICE BOOKING! Confirm via your dashboard to begin the appointment.",
-
-            DELIVERY_PENDING: isSystemDelivery
-                ? "📦 Items dispatched to hub. Logistics tracking initiated."
-                : "🚚 Order dispatched. Update when delivered.",
-
-            COLLECTION_PENDING: "✅ Items ready for collection. Hand over to buyer and mark as complete.",
-
-            DELIVERY_COMPLETE: "✅ Delivery complete. Waiting for buyer confirmation.",
-
-            COMPLETED: "🎉 Order completed! Funds have been released to your wallet.",
-
-            CANCELLED: "❌ Order cancelled. Inventory has been restored.",
-
-            FAILED: "❌ Payment failed for this order.",
-        }
+            PENDING: { text: isCourier ? `Drop off item at ${COURIER_LOCATION} within 48 hours.` : isShopPickup ? 'Prepare item for buyer collection.' : isService ? 'New booking! Confirm the appointment.' : 'New order received.', color: 'blue' },
+            RESERVED: { text: 'Awaiting payment confirmation from buyer.', color: 'blue' },
+            PROCESSING: { text: 'Update status when item is ready for delivery/collection.', color: 'blue' },
+            SERVICE_PENDING: { text: 'Confirm this booking in your dashboard to proceed.', color: 'amber' },
+            DELIVERY_PENDING: { text: isCourier ? `Items dispatched to hub. Logistics tracking initiated.` : 'Order is being delivered to buyer.', color: 'amber' },
+            COLLECTION_PENDING: { text: isShopPickup ? 'Item is ready. Hand over to buyer when they arrive.' : 'Item is at the hub. Buyer has been notified.', color: 'amber' },
+            DELIVERY_COMPLETE: { text: 'Waiting for buyer to collect from hub.', color: 'amber' },
+            COMPLETED: { text: '✅ Order complete. Funds released to your wallet.', color: 'green' },
+            CANCELLED: { text: 'Order cancelled. Inventory has been restored.', color: 'red' },
+            FAILED: { text: 'Payment failed. No funds were collected.', color: 'red' },
+            CLIENT_PAYMENT_PENDING: { text: 'M-Pesa prompt sent to client. Awaiting payment.', color: 'blue' },
+        },
     };
 
-    return instructions[userRole]?.[status] || null;
-};
-
-export const getInstructionColorClass = (status: string) => {
-    switch (status.toUpperCase()) {
-        case 'PENDING':
-        case 'RESERVED':
-        case 'PROCESSING':
-            return 'bg-blue-500/10 border-blue-500/20 text-blue-400';
-        case 'SERVICE_PENDING':
-        case 'DELIVERY_PENDING':
-        case 'COLLECTION_PENDING':
-        case 'DELIVERY_COMPLETE':
-            return 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400';
-        case 'COMPLETED':
-            return 'bg-green-500/10 border-green-500/20 text-green-400';
-        case 'CANCELLED':
-        case 'FAILED':
-            return 'bg-red-500/10 border-red-500/20 text-red-400';
-        default:
-            return 'bg-white/5 border-white/10 text-white/60';
-    }
+    return instructions[userRole]?.[status] ?? null;
 };
