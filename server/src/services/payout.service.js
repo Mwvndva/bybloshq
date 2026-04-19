@@ -455,9 +455,11 @@ class PayoutService {
         let newBalance = null;
 
         if (request.seller_id) {
-            const Seller = (await import('../models/seller.model.js')).default;
-            const updated = await Seller.adjustWalletBalance(client, request.seller_id, amount);
-            newBalance = Number.parseFloat(updated?.balance ?? 0);
+            const { rows } = await client.query(
+                'UPDATE sellers SET balance = balance + $1, updated_at = NOW() WHERE id = $2 RETURNING balance',
+                [amount, request.seller_id]
+            );
+            newBalance = Number.parseFloat(rows[0]?.balance ?? 0);
             logger.info(`[PayoutService] Refunded KES ${amount} to seller ${request.seller_id}. New balance: ${newBalance}`);
         } else {
             logger.error('[PayoutService] Cannot refund: withdrawal has no seller_id', {

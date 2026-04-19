@@ -1,3 +1,4 @@
+import { query, pool } from '../config/database.js';
 import { invalidateAuthCache } from '../middleware/auth.js';
 import payoutService from '../services/payout.service.js';
 import whatsappService from '../services/whatsapp.service.js';
@@ -20,8 +21,6 @@ import {
   becomeClient,
   removeClient
 } from '../models/seller.model.js';
-import Product from '../models/product.model.js';
-import ClientDebt from '../models/clientDebt.model.js';
 
 import {
   sanitizeSeller,
@@ -482,7 +481,7 @@ export const searchSellers = async (req, res) => {
       });
     }
 
-    const sellers = await SellerModel.search(city, location);
+    const sellers = await searchSellersInDB(city, location);
 
     // Sanitize results to remove sensitive info
     // searchSellersInDB returns raw rows, so we map them to sanitized public objects
@@ -502,7 +501,33 @@ export const searchSellers = async (req, res) => {
   }
 };
 
-// searchSellersInDB removed - logic moved to Seller.search model method
+// Internal function to search sellers in database
+async function searchSellersInDB(city, location = null) {
+  let queryText = `
+    SELECT 
+      id, 
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      city, 
+      location,
+      theme,
+      created_at AS "createdAt"
+    FROM sellers 
+    WHERE LOWER(city) = LOWER($1)
+  `;
+
+  const queryParams = [city];
+
+  if (location) {
+    queryText += ' AND LOWER(location) LIKE LOWER($2)';
+    queryParams.push(`%${location}%`);
+  }
+
+  queryText += ' ORDER BY created_at DESC';
+
+  const result = await query(queryText, queryParams);
+  return result.rows;
+}
 
 // @desc    Get products for a specific seller
 // @route   GET /api/sellers/:sellerId/products
@@ -518,7 +543,7 @@ export const getSellerProducts = async (req, res) => {
       });
     }
 
-    const products = await Product.findBySellerId(sellerId);
+    const products = await getSellerProductsFromDB(sellerId);
 
     res.status(200).json({
       status: 'success',
@@ -534,7 +559,34 @@ export const getSellerProducts = async (req, res) => {
   }
 };
 
-// getSellerProductsFromDB removed - logic moved to Product.findBySellerId model method
+// Internal function to get products for a specific seller
+async function getSellerProductsFromDB(sellerId) {
+  const result = await query(
+    `SELECT 
+      p.id,
+      p.name,
+      p.description,
+      p.price,
+      p.image_url AS "imageUrl",
+      p.images,
+      p.aesthetic,
+      p.seller_id AS "sellerId",
+      p.status = 'sold' AS "isSold",
+      p.status,
+      p.created_at AS "createdAt",
+      p.updated_at AS "updatedAt",
+      p.is_digital AS "isDigital",
+      p.product_type AS "productType",
+      p.service_locations AS "serviceLocations",
+      p.service_options AS "serviceOptions",
+      s.shop_name AS "sellerName"
+    FROM products p
+    JOIN sellers s ON p.seller_id = s.id
+    WHERE p.seller_id = $1 AND p.status = 'available'`,
+    [sellerId]
+  );
+  return result.rows;
+}
 
 // @desc    Upload a banner image for the seller
 // @route   POST /api/sellers/upload-banner
@@ -565,10 +617,16 @@ export const uploadBanner = async (req, res) => {
     // Convert empty string to NULL for database (to remove the banner)
     const bannerValue = bannerImage === '' ? null : bannerImage;
 
-    // Update the seller's banner image (null removes it) via model
-    const updatedBanner = await SellerModel.updateBanner(sellerId, bannerValue);
+    // Update the seller's banner image (null removes it)
+    const result = await query(
+      `UPDATE sellers 
+       SET banner_image = $1 
+       WHERE id = $2 
+       RETURNING id, banner_image AS "bannerImage"`,
+      [bannerValue, sellerId]
+    );
 
-    if (!updatedBanner) {
+    if (!result.rows[0]) {
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
@@ -578,7 +636,7 @@ export const uploadBanner = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        bannerUrl: updatedBanner.bannerImage || ''
+        bannerUrl: result.rows[0].bannerImage || ''
       }
     });
   } catch (error) {
@@ -617,10 +675,13 @@ export const updateTheme = async (req, res) => {
       });
     }
 
-    // Update the seller's theme via model
-    const updatedTheme = await SellerModel.updateTheme(req.user.sellerId, theme);
+    // Update the seller's theme
+    const result = await query(
+      'UPDATE sellers SET theme = $1 WHERE id = $2 RETURNING theme',
+      [theme, req.user.sellerId]
+    );
 
-    if (!updatedTheme) {
+    if (!result.rows[0]) {
       return res.status(404).json({
         status: 'error',
         message: 'Seller not found'
@@ -630,7 +691,7 @@ export const updateTheme = async (req, res) => {
     res.status(200).json({
       status: 'success',
       data: {
-        theme: updatedTheme.theme
+        theme: result.rows[0].theme
       }
     });
   } catch (error) {
@@ -693,8 +754,17 @@ export const initiateDebtPayment = async (req, res) => {
   try {
     if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
 
-    // 1. Fetch Debt & Client Details via model
-    const debt = await ClientDebt.findById(debtId, sellerId);
+    // 1. Fetch Debt & Client Details
+    const { rows: debts } = await pool.query(
+      `SELECT cd.*, c.phone as client_phone, c.full_name as client_name, p.name as product_name, p.id as product_id, p.price
+       FROM client_debts cd
+       JOIN clients c ON cd.client_id = c.id
+       JOIN products p ON cd.product_id = p.id
+       WHERE cd.id = $1 AND cd.seller_id = $2 AND cd.is_paid = false`,
+      [debtId, sellerId]
+    );
+
+    const debt = debts[0];
     if (!debt) return res.status(404).json({ status: 'error', message: 'Debt record not found or already paid' });
     if (!debt.client_phone) return res.status(400).json({ status: 'error', message: 'Client has no phone number associated' });
 

@@ -111,23 +111,6 @@ class ClientModel {
             throw error;
         }
     }
-
-    static async deleteBySellerId(client, sellerId) {
-        const query = 'DELETE FROM clients WHERE seller_id = $1';
-        const executor = client || pool;
-        await executor.query(query, [sellerId]);
-    }
-
-    static async findAll() {
-        const query = `
-            SELECT c.*, s.full_name as seller_name, s.shop_name 
-            FROM clients c
-            LEFT JOIN sellers s ON c.seller_id = s.id
-            ORDER BY c.created_at DESC
-        `;
-        const { rows } = await pool.query(query);
-        return rows;
-    }
 }
 
 export default ClientModel;
