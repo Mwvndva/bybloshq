@@ -502,6 +502,6 @@ class Order {
   }
 }
 
-export { validateOrderRecord };
 export default Order;
+
 
