@@ -1,5 +1,6 @@
 import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import SecurityAlert from '../models/securityAlert.model.js';
+import WebhookLog from '../models/webhookLog.model.js';
 
 /**
  * Monitoring Service for Security Alerts and Webhook Pattern Analysis
@@ -23,12 +24,7 @@ class MonitoringService {
 
         try {
             // Store alert in database for review
-            await pool.query(
-                `INSERT INTO security_alerts 
-                 (alert_type, details, created_at) 
-                 VALUES ($1, $2, NOW())`,
-                [alertType, JSON.stringify(details)]
-            );
+            await SecurityAlert.insert(alertType, details);
 
             logger.info(`[SECURITY-ALERT] Alert stored in database: ${alertType}`);
 
@@ -67,15 +63,7 @@ class MonitoringService {
 
         try {
             // Count webhooks from this IP in the last hour
-            const { rows } = await pool.query(
-                `SELECT COUNT(*) as count 
-                 FROM webhook_logs 
-                 WHERE client_ip = $1 
-                 AND created_at > NOW() - INTERVAL '1 hour'`,
-                [clientIP]
-            );
-
-            const hourlyCount = Number.parseInt(rows[0]?.count || 0);
+            const hourlyCount = await WebhookLog.getIpCount(clientIP, 1);
 
             // Alert if unusual volume detected
             if (hourlyCount > 100) {
@@ -88,23 +76,10 @@ class MonitoringService {
             }
 
             // Log this webhook for pattern analysis
-            await pool.query(
-                `INSERT INTO webhook_logs 
-                 (reference, client_ip, payload, created_at) 
-                 VALUES ($1, $2, $3, NOW())`,
-                [reference, clientIP, JSON.stringify(webhookData)]
-            );
+            await WebhookLog.insert(reference, clientIP, webhookData);
 
             // Check for duplicate webhooks (possible replay attack)
-            const { rows: duplicates } = await pool.query(
-                `SELECT COUNT(*) as count 
-                 FROM webhook_logs 
-                 WHERE reference = $1 
-                 AND created_at > NOW() - INTERVAL '1 hour'`,
-                [reference]
-            );
-
-            const duplicateCount = Number.parseInt(duplicates[0]?.count || 0);
+            const duplicateCount = await WebhookLog.getReferenceCount(reference, 1);
 
             if (duplicateCount > 3) {
                 await this.alertSecurityTeam('Duplicate webhook detected (possible replay attack)', {
@@ -128,22 +103,12 @@ class MonitoringService {
      */
     async getAlertStats(hours = 24) {
         try {
-            const { rows } = await pool.query(
-                `SELECT
-    alert_type,
-    COUNT(*)        AS count,
-    MAX(created_at) AS last_occurrence
- FROM security_alerts
- WHERE created_at > NOW() - ($1 * INTERVAL '1 hour')
- GROUP BY alert_type
- ORDER BY count DESC`,
-                [hours]
-            );
+            const alerts = await SecurityAlert.getStats(hours);
 
             return {
                 period: `${hours} hours`,
-                alerts: rows,
-                total: rows.reduce((sum, row) => sum + Number.parseInt(row.count), 0)
+                alerts: alerts,
+                total: alerts.reduce((sum, row) => sum + Number.parseInt(row.count), 0)
             };
         } catch (error) {
             logger.error('[MONITORING] Failed to get alert stats:', error);
@@ -158,24 +123,11 @@ class MonitoringService {
      */
     async getWebhookPatterns(hours = 24) {
         try {
-            const { rows } = await pool.query(
-                `SELECT
-    client_ip,
-    COUNT(*)                  AS webhook_count,
-    COUNT(DISTINCT reference) AS unique_transactions,
-    MIN(created_at)           AS first_seen,
-    MAX(created_at)           AS last_seen
- FROM webhook_logs
- WHERE created_at > NOW() - ($1 * INTERVAL '1 hour')
- GROUP BY client_ip
- ORDER BY webhook_count DESC
- LIMIT 20`,
-                [hours]
-            );
+            const patterns = await WebhookLog.getPatterns(hours);
 
             return {
                 period: `${hours} hours`,
-                patterns: rows
+                patterns: patterns
             };
         } catch (error) {
             logger.error('[MONITORING] Failed to get webhook patterns:', error);
@@ -190,14 +142,7 @@ class MonitoringService {
      */
     async markAlertReviewed(alertId, reviewedBy) {
         try {
-            await pool.query(
-                `UPDATE security_alerts 
-                 SET reviewed = true, 
-                     reviewed_by = $1, 
-                     reviewed_at = NOW() 
-                 WHERE id = $2`,
-                [reviewedBy, alertId]
-            );
+            await SecurityAlert.markReviewed(alertId, reviewedBy);
 
             logger.info(`[MONITORING] Alert ${alertId} marked as reviewed by user ${reviewedBy}`);
         } catch (error) {
@@ -213,11 +158,7 @@ class MonitoringService {
      */
     async cleanupOldLogs(daysToKeep = 30) {
         try {
-            const { rowCount } = await pool.query(
-                `DELETE FROM webhook_logs
- WHERE created_at < NOW() - ($1 * INTERVAL '1 day')`,
-                [daysToKeep]
-            );
+            const rowCount = await WebhookLog.deleteOld(daysToKeep);
 
             logger.info(`[MONITORING] Cleaned up ${rowCount} old webhook logs (older than ${daysToKeep} days)`);
 
@@ -231,3 +172,4 @@ class MonitoringService {
 
 // Export singleton instance
 export default new MonitoringService();
+

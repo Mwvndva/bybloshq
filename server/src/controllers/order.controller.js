@@ -1,7 +1,7 @@
 import OrderService from '../services/order.service.js';
 import Order from '../models/order.model.js';
 import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import Buyer from '../models/buyer.model.js';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
@@ -207,11 +207,8 @@ export const getByReference = async (req, res) => {
         let autoLoginToken = null;
         if (['success', 'completed'].includes((order.paymentStatus || '').toLowerCase())) {
             try {
-                const { rows: buyerRows } = await pool.query(
-                    'SELECT user_id FROM buyers WHERE id = $1',
-                    [order.buyerId]
-                );
-                const userId = buyerRows[0]?.user_id;
+                const buyer = await Buyer.findById(order.buyerId);
+                const userId = buyer?.user_id || buyer?.userId;
 
                 if (userId) {
                     const { signAutoLoginToken } = await import('../utils/jwt.js');
@@ -335,36 +332,17 @@ export const downloadDigitalProduct = async (req, res) => {
         const { orderId, productId } = req.params;
         const buyerProfileId = req.user.buyerId;
 
-        // 1. Simple query to verify ownership and payment status
-        const verifyQuery = `
-            SELECT 
-                po.id as order_id, 
-                p.id as product_id, 
-                p.name as product_name,
-                p.digital_file_path, 
-                p.digital_file_name
-            FROM product_orders po
-            JOIN order_items oi ON po.id = oi.order_id
-            JOIN products p ON oi.product_id = p.id
-            WHERE po.id = $1 
-              AND po.buyer_id = $2 
-              AND oi.product_id = $3
-              AND po.payment_status = 'completed'
-              AND (p.product_type = 'digital' OR p.is_digital = true)
-        `;
+        // 1. Verify ownership and payment status via service
+        const digitalData = await OrderService.verifyDigitalProductOwnership(orderId, buyerProfileId, productId);
 
-        const { rows } = await pool.query(verifyQuery, [orderId, buyerProfileId, productId]);
-
-        if (rows.length === 0) {
+        if (!digitalData) {
             return res.status(404).json({
                 status: 'error',
                 message: 'Digital product not found in this completed order'
             });
         }
 
-        const data = rows[0];
-
-        const digitalFilePath = data.digital_file_path;
+        const digitalFilePath = digitalData.digital_file_path;
 
         if (!digitalFilePath) {
             return res.status(404).json({
@@ -375,7 +353,7 @@ export const downloadDigitalProduct = async (req, res) => {
 
         const absolutePath = path.resolve(process.cwd(), digitalFilePath.replace(/^\//, ''));
         const ext = path.extname(absolutePath).toLowerCase();
-        const fileName = data.digital_file_name || `download${ext}`;
+        const fileName = digitalData.digital_file_name || `download${ext}`;
 
         try {
             await fs.access(absolutePath);

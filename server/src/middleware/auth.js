@@ -1,4 +1,4 @@
-import { query } from '../config/database.js';
+import User from '../models/user.model.js';
 import { AppError } from '../utils/errorHandler.js';
 import { verifyToken, getTokenFromRequest, changedPasswordAfter } from '../utils/jwt.js';
 import AuthorizationService from '../services/authorization.service.js';
@@ -101,52 +101,12 @@ export const protect = async (req, res, next) => {
     }
 
     // Admin users authenticate via database (no special hardcoded bypass)
-    // Regular users → query unified users table with JOIN to role-specific table
-    let userQuery;
-    let queryParams = [decoded.id];
+    // Regular users → query unified users table with JOIN to role-specific table via User model
+    const userData = await User.findByIdWithProfile(decoded.id, userType);
 
-    switch (userType) {
-      case 'admin':
-        // Admin users are in the users table with role='admin'
-        userQuery = `
-          SELECT u.*, u.id as profile_id
-          FROM users u 
-          WHERE u.id = $1 AND u.role = 'admin' AND u.is_active = true
-        `;
-        break;
-      case 'buyer':
-        userQuery = `
-          SELECT
-            u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
-            b.id as profile_id, b.full_name, b.whatsapp_number,
-            COALESCE(b.status, 'active') as status
-          FROM users u
-          LEFT JOIN buyers b ON u.id = b.user_id
-          WHERE u.id = $1
-            AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
-        `;
-        break;
-      case 'seller':
-        userQuery = `
-            SELECT 
-                u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
-                s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings
-            FROM users u 
-            LEFT JOIN sellers s ON u.id = s.user_id 
-            WHERE u.id = $1
-          `;
-        break;
-      default:
-        return next(new AppError('Invalid user role', 401));
-    }
-
-    const userResult = await query(userQuery, queryParams);
-
-    if (!userResult.rows[0]) {
+    if (!userData) {
       return next(new AppError('The user belonging to this token no longer exists.', 401));
     }
-
-    const userData = userResult.rows[0];
 
     // 4) Check if password was changed after the token was issued
     if (userData.password_changed_at && changedPasswordAfter(userData.password_changed_at, decoded.iat)) {
@@ -165,13 +125,7 @@ export const protect = async (req, res, next) => {
       if (cachedRoles) {
         crossRoles = cachedRoles;
       } else {
-        const crossRoleQuery = `
-          SELECT 
-            (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
-            (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id
-        `;
-        const crossRoleResult = await query(crossRoleQuery, [decoded.id]);
-        crossRoles = crossRoleResult.rows[0];
+        crossRoles = await User.findCrossRoles(decoded.id);
 
         // Cache result for 5 minutes (300 seconds)
         await CacheService.set(cacheKey, crossRoles, 300);

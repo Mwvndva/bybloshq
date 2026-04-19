@@ -2,12 +2,28 @@ import logger from './logger.js';
 import Buyer from '../models/buyer.model.js';
 
 /**
+ * RULE 1 — JSONB SAFETY
+ * Ensures all values bound to JSONB columns are strings or null.
+ */
+export const toJsonb = (val) => {
+    if (val === null || val === undefined) return null;
+    if (typeof val === 'string') {
+        try {
+            JSON.parse(val);
+            return val;
+        } catch {
+            return JSON.stringify(val);
+        }
+    }
+    return JSON.stringify(val);
+};
+
+/**
  * PIN-05: NO-NULL JSONB / STRING-SAFE
- * Ensures all JSON inputs are valid objects ({}), never null or undefined.
- * Also defensively handles stringified JSON which may arrive from certain middlewares.
+ * Ensures all JSON inputs are valid objects ({}), never null or undefined for internal use.
  */
 export const safeJson = (val) => {
-    if (!val) return {};
+    if (val === null || val === undefined) return {};
     if (typeof val === 'object') return val;
     if (typeof val === 'string') {
         try {
@@ -34,27 +50,20 @@ export async function normalizeOrderInput(req) {
         quantity = 1,
         productId,
         productName,
-        buyerLocation: rawBuyerLocation,
         metadata: rawMetadata = {},
         overrideContact = false
     } = body;
 
-    logger.info('[RAW-LOCATION-DEBUG] Extracted Data: ' + JSON.stringify({ rawBuyerLocation, metadata: rawMetadata }));
-
     const metadata = safeJson(rawMetadata);
 
-    // 1. Resolve Identity via Phone (PIN-10: IDENTITY RESOLUTION)
+    // Identity Resolution
     const phone = req.user?.phone || rawPhone;
     let existingBuyer = null;
 
     if (phone) {
         existingBuyer = await Buyer.findByPhone(phone);
-        if (existingBuyer) {
-            logger.info('Buyer identity resolved from phone lookup', { buyer_id: existingBuyer.id, name: existingBuyer.fullName });
-        }
     }
 
-    // 2. Identity Protection & Resolve Buyer Info
     const email =
         req.user?.email ||
         req.body.email ||
@@ -62,21 +71,19 @@ export async function normalizeOrderInput(req) {
         existingBuyer?.email ||
         null;
 
-    const buyerCity = body.buyerCity || body.city || (user && !overrideContact ? user.city : existingBuyer?.city) || null;
-    const buyerArea = body.buyerArea || body.location || (user && !overrideContact ? user.location : existingBuyer?.location) || null;
-
     if (!email) {
         throw new Error("Guest orders require a valid contact email address.");
     }
 
-    // CRITICAL: Resolve actual buyers.id if user is logged in (Task BUG-PERSIST-01)
+    const buyerCity = body.buyerCity || body.city || (user && !overrideContact ? user.city : existingBuyer?.city) || null;
+    const buyerArea = body.buyerArea || body.location || (user && !overrideContact ? user.location : existingBuyer?.location) || null;
+
     let buyerId = existingBuyer?.id || null;
     if (user && !buyerId) {
         const loggedInBuyer = await Buyer.findByUserId(user.id);
         buyerId = loggedInBuyer?.id || null;
     }
 
-    // Priority: DB Name > Request Name (if not 'Guest') > Fallback
     let finalName = existingBuyer?.fullName || customerName;
     if (customerName && customerName !== 'Guest' && !existingBuyer?.fullName) {
         finalName = customerName;
@@ -89,7 +96,7 @@ export async function normalizeOrderInput(req) {
     }
 
     const buyer = {
-        id: buyerId, // Correctly point to buyers.id
+        id: buyerId,
         name: finalName || 'Customer',
         phone: finalPhone || 'N/A',
         email,
@@ -97,34 +104,30 @@ export async function normalizeOrderInput(req) {
         location: buyerArea
     };
 
-    // 3. Resolve Service/Product Info
     const service = {
         id: productId || body.serviceId,
         title: productName || body.serviceTitle || 'Product',
         quantity: Math.max(1, Number.parseInt(quantity) || 1),
     };
 
-    // 4. Resolve & Strictly Validate Location (COORD-RESOLVE-V2)
-    // Deep-scan for product type to avoid missing it in nested metadata
-    const isService =
-        body.isService === true ||
-        body.product_type === 'service' ||
-        metadata.product_type === 'service' ||
-        body.metadata?.product_type === 'service';
-
+    // Product Type Detection
     const isDigital =
         body.isDigital === true ||
         body.product_type === 'digital' ||
         metadata.product_type === 'digital' ||
         body.metadata?.product_type === 'digital';
 
+    const isService =
+        body.isService === true ||
+        body.product_type === 'service' ||
+        metadata.product_type === 'service' ||
+        body.metadata?.product_type === 'service';
+
     /**
-     * TRIPLE-SHIELD LOCATION CRAWLER (PIN-COORD-ROBUST)
-     * Scans body.buyerLocation, metadata.buyer_location, and metadata.buyerLocation
-     * Defensively handles stringified JSON and diverse naming conventions (lat/latitude).
+     * UNIFIED LOCATION RESOLVER
+     * Scans various body and metadata paths for coordinates and address.
      */
-    const crawlLocation = () => {
-        // Broad scan of all potential locations where coordinates might hide
+    const resolveLocation = () => {
         const candidates = [
             body.buyerLocation,
             body.buyer_location,
@@ -133,126 +136,59 @@ export async function normalizeOrderInput(req) {
             body.metadata?.buyerLocation,
             metadata.buyer_location,
             metadata.buyerLocation,
-            body.locationData, // Sometimes used by specific payment gateways
+            body.locationData,
             body.customFields?.location
         ];
 
-        const sources = [
-            'body.buyerLocation',
-            'body.buyer_location',
-            'body.bookingDetails.buyerLocation',
-            'body.metadata.buyer_location',
-            'body.metadata.buyerLocation',
-            'metadata.buyer_location',
-            'metadata.buyerLocation',
-            'body.locationData',
-            'body.customFields.location'
-        ];
+        const result = { lat: null, lng: null, address: null };
 
-        const result = { lat: null, lng: null, address: null, source: 'none' };
-
-        for (let i = 0; i < candidates.length; i++) {
-            let candidate = candidates[i];
+        for (const candidate of candidates) {
             if (!candidate) continue;
 
-            // Defensive: Parse stringified JSON if it arrived as a string
-            if (typeof candidate === 'string') {
-                try {
-                    candidate = JSON.parse(candidate);
-                } catch (e) {
-                    continue; // Not JSON string, skip
-                }
+            let data = candidate;
+            if (typeof data === 'string') {
+                try { data = JSON.parse(data); } catch { continue; }
             }
+            if (typeof data !== 'object') continue;
 
-            if (typeof candidate !== 'object') continue;
-
-            // Property Scanning (lat/latitude/lng/longitude)
-            const rawLat = candidate.lat ?? candidate.latitude ??
-                candidate.location_lat ?? candidate.latitude_coordinate;
-            const rawLng = candidate.lng ?? candidate.longitude ??
-                candidate.location_lng ?? candidate.longitude_coordinate;
-            const addr = candidate.address || candidate.fullAddress ||
-                candidate.full_address || candidate.location_address ||
-                candidate.displayName;
+            const rawLat = data.lat ?? data.latitude ?? data.location_lat ?? data.latitude_coordinate;
+            const rawLng = data.lng ?? data.longitude ?? data.location_lng ?? data.longitude_coordinate;
+            const addr = data.address || data.fullAddress || data.full_address || data.location_address || data.displayName;
 
             const parsedLat = Number.parseFloat(rawLat);
             const parsedLng = Number.parseFloat(rawLng);
 
-            // 0 means unset (DB numeric default). NaN means non-numeric. Both invalid.
-            const isValidLat = !isNaN(parsedLat) && parsedLat !== 0;
-            const isValidLng = !isNaN(parsedLng) && parsedLng !== 0;
-
-            if (isValidLat) result.lat = parsedLat;
-            if (isValidLng) result.lng = parsedLng;
+            if (!isNaN(parsedLat) && parsedLat !== 0) result.lat = parsedLat;
+            if (!isNaN(parsedLng) && parsedLng !== 0) result.lng = parsedLng;
             if (addr) result.address = addr;
 
-            if (result.lat && result.lng) {
-                result.source = sources[i];
-                break;
-            }
+            if (result.lat && result.lng) break;
         }
 
-        // Profile Fallback (PIN-15: PROFILE-COORDS)
-        // Only if we still haven't found valid coordinates
-        if (result.lat === null || result.lng === null || result.lat === 0) {
-            const profileLat = user?.latitude || existingBuyer?.latitude;
-            const profileLng = user?.longitude || existingBuyer?.longitude;
-
-            if (profileLat && profileLat !== 0) {
-                result.lat = profileLat;
-                result.lng = profileLng;
-                result.address = result.address ?? (user?.location || existingBuyer?.fullAddress || existingBuyer?.location);
-                result.source = user ? 'user_profile' : 'buyer_profile';
-            }
+        // Profile Fallback
+        if ((result.lat === null || result.lat === 0) && (user || existingBuyer)) {
+            result.lat = user?.latitude || existingBuyer?.latitude || null;
+            result.lng = user?.longitude || existingBuyer?.longitude || null;
+            result.address = result.address ?? (user?.location || existingBuyer?.location || null);
         }
 
         return result;
-    };
-
-    const resolved = crawlLocation();
-    const location = {
-        address: resolved.address || null,
-        lat: resolved.lat,
-        lng: resolved.lng
-    };
-
-    const logPayload = {
-        order_number: body.order_number || 'NEW',
-        is_service: isService,
-        source: resolved.source,
-        resolved_lat: location.lat,
-        resolved_lng: location.lng,
-        resolved_address: location.address,
-        raw_received: {
-            body_type: typeof body.buyerLocation,
-            body_keys: Object.keys(body),
-            meta_keys: metadata ? Object.keys(metadata) : [],
-            is_service_raw: body.isService,
-            prod_type_raw: metadata?.product_type || body.product_type
-        }
-    };
-
-    if (isService && (location.lat === null || location.lat === 0)) {
-        logger.warn('[COORD-DEBUG] ⚠️ SERVICE WITHOUT COORDINATES: ' + JSON.stringify(logPayload));
-    } else {
-        logger.info('[COORD-DEBUG] Resolution Trace: ' + JSON.stringify(logPayload));
     }
 
-    // Strict Validation: Throw for invalid physical/service locations
+    const location = resolveLocation();
 
-    if (!isDigital) {
-        if (isService && (!location.address || location.address === 'Not specified')) {
-            throw new Error("Valid delivery address and coordinates are required for service bookings.");
-        }
+    if (!isDigital && isService && (!location.address || location.address === 'Not specified')) {
+        throw new Error("Valid delivery address and coordinates are required for service bookings.");
     }
 
-
-
-    // 5. Final Assembly (PIN-02: UNIFIED ORDER CONTEXT)
     return {
         buyer,
         service,
-        location,
+        location: {
+            address: location.address || null,
+            lat: location.lat ?? null,
+            lng: location.lng ?? null
+        },
         payment: {
             status: 'pending',
             method: body.paymentMethod || 'payd',
@@ -263,7 +199,8 @@ export async function normalizeOrderInput(req) {
             product_id: service.id,
             product_name: service.title,
             customer_name: buyer.name,
-            items: metadata.items || [] // Ensure items array exists for downstream logic
+            items: Array.isArray(metadata.items) ? metadata.items : []
         }
     };
 }
+
