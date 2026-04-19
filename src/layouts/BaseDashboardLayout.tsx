@@ -175,16 +175,16 @@ export function BaseDashboardLayout({
                     className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30"
                     role="banner"
                 >
-                    <div className="unified-container">
-                        <div className="relative flex items-center justify-between h-16 sm:h-20">
+                    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="relative flex items-center justify-between h-20">
                             {/* Left: Menu/Back Button */}
-                            <div className="flex-1 flex items-center gap-4">
+                            <div className="flex-1 flex items-center gap-2">
                                 {showSidebar && (
                                     <Button
                                         variant="ghost"
-                                        size="icon"
+                                        size="sm"
                                         onClick={() => setSidebarOpen(true)}
-                                        className="lg:hidden text-zinc-400 hover:text-white"
+                                        className="lg:hidden text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 -ml-3"
                                         aria-label="Open sidebar"
                                     >
                                         <Menu className="h-5 w-5" />
@@ -195,34 +195,39 @@ export function BaseDashboardLayout({
                                         variant="ghost"
                                         size="sm"
                                         onClick={handleBack}
-                                        className="text-zinc-400 hover:text-white flex items-center gap-2 px-0"
+                                        className="text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
                                         aria-label={backButtonLabel}
                                     >
-                                        <ArrowLeft className="h-4 w-4" />
-                                        <span className="hidden sm:inline text-sm font-medium">{backButtonLabel}</span>
-                                        <span className="sm:hidden text-sm font-medium">Back</span>
+                                        <ArrowLeft className="h-4 w-4 mr-2" />
+                                        <span className="hidden sm:inline">{backButtonLabel}</span>
+                                        <span className="sm:hidden">Back</span>
                                     </Button>
                                 )}
                             </div>
 
                             {/* Center: Title */}
                             <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%]">
-                                <h1 className="text-lg sm:text-xl font-black text-white tracking-tight truncate uppercase">
+                                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
                                     {title}
                                 </h1>
+                                {subtitle && (
+                                    <p className="hidden sm:block text-xs sm:text-sm text-zinc-400 font-medium truncate">
+                                        {subtitle}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Right: Actions/Logout */}
-                            <div className="flex-1 flex items-center justify-end gap-3">
+                            <div className="flex-1 flex items-center justify-end gap-2">
                                 {headerActions}
                                 {!showSidebar && shouldShowLogout && (
                                     <Button
                                         variant="outline"
                                         onClick={handleLogout}
-                                        className="hidden sm:flex rounded-full border-white/10"
+                                        className="inline-flex items-center gap-2 border-white/10 text-white hover:bg-white/5 hover:border-white/20 rounded-xl h-9 sm:h-10 px-3 sm:px-4 -mr-3"
                                     >
-                                        <LogOut className="h-4 w-4 mr-2" />
-                                        Logout
+                                        <LogOut className="h-4 w-4" />
+                                        <span className="hidden sm:inline">Log out</span>
                                     </Button>
                                 )}
                             </div>
@@ -236,9 +241,7 @@ export function BaseDashboardLayout({
                     className="flex-1 relative overflow-y-auto focus:outline-none"
                     role="main"
                 >
-                    <div className="unified-container py-6 sm:py-8 lg:py-10">
-                        {children || <Outlet />}
-                    </div>
+                    {children || <Outlet />}
                 </main>
             </div>
         </div>

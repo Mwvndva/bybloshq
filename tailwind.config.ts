@@ -13,33 +13,12 @@ export default {
 	theme: {
 		container: {
 			center: true,
-			padding: {
-				DEFAULT: '1rem',
-				sm: '2rem',
-				lg: '4rem',
-				xl: '5rem',
-				'2xl': '6rem',
-			},
+			padding: '2rem',
 			screens: {
 				'2xl': '1400px'
 			}
 		},
 		extend: {
-			spacing: {
-				'0': '0',
-				'1': '4px',
-				'2': '8px',
-				'3': '12px',
-				'4': '16px',
-				'5': '20px',
-				'6': '24px',
-				'8': '32px',
-				'10': '40px',
-				'12': '48px',
-				'16': '64px',
-				'20': '80px',
-				'24': '96px',
-			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -93,23 +72,13 @@ export default {
 				display: ['Poppins', 'sans-serif'],
 				body: ['Poppins', 'sans-serif']
 			},
-			fontSize: {
-				'xs': ['0.75rem', { lineHeight: '1rem' }],
-				'sm': ['0.875rem', { lineHeight: '1.25rem' }],
-				'base': ['1rem', { lineHeight: '1.5rem' }],
-				'lg': ['1.125rem', { lineHeight: '1.75rem' }],
-				'xl': ['1.25rem', { lineHeight: '1.75rem' }],
-				'2xl': ['1.5rem', { lineHeight: '2rem' }],
-				'3xl': ['1.875rem', { lineHeight: '2.25rem' }],
-				'4xl': ['2.25rem', { lineHeight: '2.5rem' }],
-			},
 			borderRadius: {
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'
 			},
 			keyframes: {
-				' accordion-down': {
+				'accordion-down': {
 					from: { height: '0' },
 					to: { height: 'var(--radix-accordion-content-height)' }
 				},

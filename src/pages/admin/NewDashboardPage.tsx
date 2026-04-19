@@ -139,28 +139,34 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
 // Chart Components
 const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
-  <div className="relative group p-1">
-    <Card className="unified-card relative transition-all duration-300 hover:scale-[1.02] hover:bg-white/[0.07] border-white/5 shadow-2xl">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-        <CardTitle className="text-xs font-bold text-white/40 tracking-widest uppercase">
+  <div className="relative group">
+    {/* Glow pulse on hover */}
+    <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/0 to-yellow-500/0 rounded-[2rem] blur opacity-0 group-hover:opacity-30 group-hover:from-yellow-500/50 group-hover:to-orange-500/50 transition duration-500"></div>
+
+    <Card className="relative bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden transition-all duration-500 group-hover:bg-[#0A0A0A]/60 group-hover:scale-[1.02] group-hover:border-white/20">
+      <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none"></div>
+
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
+        <CardTitle className="text-sm font-semibold text-gray-400 tracking-wide uppercase">
           {title}
         </CardTitle>
-        <div className="h-10 w-10 rounded-xl bg-white/5 flex items-center justify-center text-yellow-400 group-hover:bg-yellow-400 group-hover:text-black transition-all duration-300">
+        <div className="h-12 w-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-yellow-500 group-hover:scale-110 group-hover:text-yellow-400 transition-all duration-500 shadow-inner">
           {icon}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
-        <div className="text-2xl font-black text-white tracking-tight tabular-nums">
+
+      <CardContent className="relative z-10 pt-0">
+        <div className="text-3xl font-black text-white tracking-tight tabular-nums group-hover:text-yellow-50 transition-colors duration-500">
           {value}
         </div>
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-3 flex items-center gap-2">
           {trend !== null && trend !== undefined && (
-            <div className={`flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${trend >= 0 ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+            <div className={`flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${trend >= 0 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
               {trend >= 0 ? <ArrowUpRight className="h-2.5 w-2.5 mr-0.5" /> : <ArrowDownRight className="h-2.5 w-2.5 mr-0.5" />}
               {Math.abs(trend)}%
             </div>
           )}
-          <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider truncate">{description}</span>
+          <span className="text-xs text-gray-500 font-medium truncate">{description}</span>
         </div>
       </CardContent>
     </Card>
@@ -168,12 +174,13 @@ const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) =
 );
 
 const ChartContainer = ({ title, description, children, className = "" }: { title: string, description: string, children: React.ReactNode, className?: string }) => (
-  <Card className={`${className} unified-card border-white/5 shadow-2xl transition-all duration-300 hover:bg-white/[0.04]`}>
-    <CardHeader className="pb-2">
-      <CardTitle className="text-lg font-bold text-white">{title}</CardTitle>
-      <CardDescription className="text-xs text-white/40 uppercase font-black tracking-widest">{description}</CardDescription>
+  <Card className={`${className} bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden group hover:border-white/20 transition-all duration-500`}>
+    <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
+    <CardHeader className="relative z-10 pb-2">
+      <CardTitle className="text-xl font-bold text-white group-hover:text-yellow-50 transition-colors">{title}</CardTitle>
+      <CardDescription className="text-gray-400 font-medium">{description}</CardDescription>
     </CardHeader>
-    <CardContent className="h-[350px] w-full pt-4">
+    <CardContent className="relative z-10 h-[350px] w-full pt-4">
       {children}
     </CardContent>
   </Card>
@@ -803,7 +810,7 @@ const NewAdminDashboard = () => {
           <div className="absolute top-[20%] right-[10%] w-[30%] h-[30%] rounded-full bg-blue-500/5 blur-[100px]" />
         </div>
 
-        <div className="relative z-10 unified-container py-8 space-y-8">
+        <div className="relative z-10 max-w-[1600px] mx-auto p-4 md:p-8 space-y-8">
           {/* Premium Header */}
           <header className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-[2.5rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-1000"></div>
