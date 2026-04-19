@@ -1,44 +1,60 @@
 import { pool } from '../config/database.js';
-
-const PAYMENT_UPDATABLE_FIELDS = new Set([
-  'status', 'metadata', 'provider_reference', 'api_ref',
-  'mpesa_receipt', 'raw_response', 'updated_at'
-]);
+import { toJsonb } from '../utils/order.utils.js';
 
 class Payment {
   /**
-   * Insert a new payment record
+   * RULE 2 — NO DYNAMIC SQL
+   * Static insert for payment records.
    */
   static async insert(client, data) {
-    const fields = Object.keys(data);
-    const placeholders = fields.map((_, i) => `$${i + 1}`).join(', ');
     const query = `
-      INSERT INTO payments (${fields.join(', ')})
-      VALUES (${placeholders})
+      INSERT INTO payments (
+        invoice_id, amount, currency, status, payment_method, 
+        mobile_payment, whatsapp_number, email, metadata, 
+        provider_reference, api_ref, mpesa_receipt, raw_response, 
+        created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11, $12::jsonb, $13::jsonb, NOW(), NOW()
+      )
       RETURNING *
     `;
-    const values = fields.map(f => typeof data[f] === 'object' && data[f] !== null ? JSON.stringify(data[f]) : data[f]);
 
-    // Support both pool and client (for transactions)
+    const values = [
+      data.invoice_id,                                  // $1
+      data.amount,                                      // $2
+      data.currency || 'KES',                           // $3
+      data.status || 'pending',                         // $4
+      data.payment_method || 'mpesa',                   // $5
+      data.mobile_payment || null,                      // $6
+      data.whatsapp_number || null,                     // $7
+      data.email || null,                               // $8
+      toJsonb(data.metadata || {}),                     // $9 (JSONB)
+      data.provider_reference || null,                   // $10
+      data.api_ref || null,                             // $11
+      toJsonb(data.mpesa_receipt || null),              // $12 (JSONB)
+      toJsonb(data.raw_response || null)                // $13 (JSONB)
+    ];
+
     const executor = client || pool;
     const { rows } = await executor.query(query, values);
     return rows[0];
   }
 
   static async findByInvoiceId(invoiceId) {
-    const { rows } = await pool.query(`
+    const query = `
       SELECT 
         id, invoice_id, amount, currency, status, 
         payment_method, mobile_payment, whatsapp_number, email,
         metadata, created_at, updated_at
       FROM payments 
       WHERE invoice_id = $1
-    `, [invoiceId]);
+    `;
+    const { rows } = await pool.query(query, [invoiceId]);
     return rows[0];
   }
 
   static async findByReference(reference) {
-    const { rows } = await pool.query(`
+    const query = `
       SELECT 
         id, invoice_id, amount, currency, status, 
         payment_method, mobile_payment, whatsapp_number, email,
@@ -46,70 +62,133 @@ class Payment {
         provider_reference, api_ref
       FROM payments 
       WHERE provider_reference = $1 OR api_ref = $1
-    `, [reference]);
+    `;
+    const { rows } = await pool.query(query, [reference]);
+    return rows[0];
+  }
+
+  static async findByOrderReference(client, orderNumber, orderId) {
+    const query = "SELECT id FROM payments WHERE invoice_id = $1 OR metadata->>'order_id' = $2::text LIMIT 1";
+    const executor = client || pool;
+    const { rows } = await executor.query(query, [orderNumber, String(orderId)]);
     return rows[0];
   }
 
   static async findById(id) {
-    const { rows } = await pool.query('SELECT * FROM payments WHERE id = $1', [id]);
+    const query = 'SELECT * FROM payments WHERE id = $1';
+    const { rows } = await pool.query(query, [id]);
     return rows[0];
   }
 
   static async updateStatus(invoiceId, status, metadata = null) {
-    let query;
-    let values;
+    const query = metadata ? `
+      UPDATE payments 
+      SET status = $1, 
+          metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+          updated_at = NOW()
+      WHERE invoice_id = $3
+      RETURNING *
+    ` : `
+      UPDATE payments 
+      SET status = $1, 
+          updated_at = NOW()
+      WHERE invoice_id = $2
+      RETURNING *
+    `;
 
-    if (metadata) {
-      query = `
-        UPDATE payments 
-        SET status = $1, 
-            metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-            updated_at = NOW()
-        WHERE invoice_id = $3
-        RETURNING *
-      `;
-      values = [status, typeof metadata === 'string' ? metadata : JSON.stringify(metadata), invoiceId];
-    } else {
-      query = `
-        UPDATE payments 
-        SET status = $1, 
-            updated_at = NOW()
-        WHERE invoice_id = $2
-        RETURNING *
-      `;
-      values = [status, invoiceId];
-    }
+    const values = metadata
+      ? [status, toJsonb(metadata), invoiceId]
+      : [status, invoiceId];
 
     const { rows } = await pool.query(query, values);
     return rows[0];
   }
 
-
-  static async update(client, id, updateData) {
-    const fields = Object.keys(updateData).filter(f => PAYMENT_UPDATABLE_FIELDS.has(f));
-    if (fields.length === 0) return null;
-
-    const setClause = fields.map((field, index) => `${field} = $${index + 1}`).join(', ');
-    const values = fields.map(field => {
-      if (field === 'metadata' && updateData[field] && typeof updateData[field] === 'object') {
-        return JSON.stringify(updateData[field]);
-      }
-      return updateData[field];
-    });
-
-    values.push(id);
-
+  /**
+   * RULE 2 — NO DYNAMIC SQL
+   * Static update for updatable payment fields.
+   */
+  static async update(client, id, data) {
     const query = `
       UPDATE payments 
-      SET ${setClause}, updated_at = NOW()
-      WHERE id = $${values.length}
+      SET 
+        status = COALESCE($1, status),
+        metadata = COALESCE($2::jsonb, metadata),
+        provider_reference = COALESCE($3, provider_reference),
+        api_ref = COALESCE($4, api_ref),
+        mpesa_receipt = COALESCE($5::jsonb, mpesa_receipt),
+        raw_response = COALESCE($6::jsonb, raw_response),
+        updated_at = NOW()
+      WHERE id = $7
       RETURNING *
     `;
+
+    const values = [
+      data.status ?? null,                             // $1
+      data.metadata ? toJsonb(data.metadata) : null,   // $2
+      data.provider_reference ?? null,                 // $3
+      data.api_ref ?? null,                           // $4
+      data.mpesa_receipt ? toJsonb(data.mpesa_receipt) : null, // $5
+      data.raw_response ? toJsonb(data.raw_response) : null,   // $6
+      id                                              // $7
+    ];
 
     const executor = client || pool;
     const { rows } = await executor.query(query, values);
     return rows[0];
   }
+
+  static async findByIdentifier(identifier) {
+    const query = `
+      SELECT * FROM payments 
+      WHERE id::text = $1 
+         OR provider_reference = $1 
+         OR invoice_id = $1 
+         OR api_ref = $1 
+      LIMIT 1
+    `;
+    const { rows } = await pool.query(query, [String(identifier)]);
+    return rows[0];
+  }
+
+  static async updateMetadata(id, metadataUpdate) {
+    const query = `
+      UPDATE payments 
+      SET metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb,
+          updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `;
+    const { rows } = await pool.query(query, [toJsonb(metadataUpdate), id]);
+    return rows[0];
+  }
+
+  static async updateReference(id, reference) {
+    const query = `
+      UPDATE payments 
+      SET provider_reference = $1, 
+          api_ref = $1,
+          updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `;
+    const { rows } = await pool.query(query, [reference, id]);
+    return rows[0];
+  }
+
+  static async findPending(hoursAgo = 24, limit = 50) {
+    const query = `
+      SELECT * FROM payments
+      WHERE status = 'pending'
+        AND created_at > NOW() - ($1 * INTERVAL '1 hour')
+        AND created_at < NOW() - INTERVAL '1 minute'
+      ORDER BY created_at ASC
+      LIMIT $2
+    `;
+    const { rows } = await pool.query(query, [hoursAgo, limit]);
+    return rows;
+  }
 }
 
 export default Payment;
+

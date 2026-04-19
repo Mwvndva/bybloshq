@@ -8,8 +8,14 @@ import { pool } from '../config/database.js';
 import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
 import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
-import Buyer from '../models/buyer.model.js';
+import Payment from '../models/payment.model.js';
+import Withdrawal from '../models/withdrawal.model.js';
+import ClientDebt from '../models/clientDebt.model.js';
+import Product from '../models/product.model.js';
+import Seller from '../models/seller.model.js';
+import Order from '../models/order.model.js';
 import cacheService from './cache.service.js';
+import { toJsonb } from '../utils/order.utils.js';
 
 export class PaymentService {
     constructor() {
@@ -438,18 +444,14 @@ export class PaymentService {
             const { reference, isSuccess, amount, phone, mpesaReceipt, status } = this._parseCallbackData(callbackData);
 
             // STEP 2: FIND PAYMENT RECORD (initial non-locking check)
-            const { rows: payments } = await pool.query(
-                'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1',
-                [reference]
-            );
+            const payment = await Payment.findByReference(reference);
 
-            if (!payments?.length) {
+            if (!payment) {
                 if (isSuccess) logger.warn('[PAYD-WEBHOOK] Payment not found - will be resolved by cron', { reference, amount });
                 else logger.warn('[PAYD-WEBHOOK] Failed webhook for unknown reference', { reference });
                 return { success: false, message: 'Payment record not found' };
             }
 
-            const payment = payments[0];
             const paymentMeta = payment.metadata || {};
 
             // STEP 3: IDEMPOTENCY CHECK (Fast path)
@@ -474,10 +476,7 @@ export class PaymentService {
                 } catch (completionErr) {
                     logger.error(`[CRITICAL] handlePaydCallback completeOrder failed for payment ${payment.id}:`, completionErr);
                     try {
-                        await pool.query(
-                            "UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb) WHERE id = $1",
-                            [payment.id]
-                        );
+                        await Payment.updateStatus(payment.invoice_id, payment.status, { needs_completion: true });
                         logger.info(`[RECOVERY] Marked payment ${payment.id} as needs_completion=true`);
                     } catch (flagErr) {
                         logger.error(`[CRITICAL] FAILED TO SET needs_completion FLAG for payment ${payment.id}:`, flagErr);
@@ -538,41 +537,20 @@ export class PaymentService {
         try {
             await dbClient.query('BEGIN');
 
-            const { rows: lockedRows } = await dbClient.query(
-                'SELECT id, status FROM payments WHERE id = $1 FOR UPDATE',
-                [payment.id]
-            );
+            const lockedPayment = await Payment.update(dbClient, payment.id, {
+                status: isSuccess ? PaymentStatus.COMPLETED : 'failed',
+                mpesa_receipt: mpesaReceipt,
+                metadata: { ...payment.metadata, webhook_received_at: new Date().toISOString() }
+            });
 
-            if (!lockedRows[0]) {
+            if (!lockedPayment) {
                 await dbClient.query('ROLLBACK');
-                return { success: false, message: 'Payment not found during lock' };
+                return { success: false, message: 'Payment not found during lock/update' };
             }
 
-            if (lockedRows[0].status === PaymentStatus.COMPLETED || lockedRows[0].status === PaymentStatus.SUCCESS) {
-                await dbClient.query('ROLLBACK');
-                return { success: true, message: 'Webhook already processed (concurrent)', duplicate: true };
-            }
-
-            await dbClient.query(
-                `UPDATE payments 
-                 SET status = $1, mpesa_receipt = $2,
-                     metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{webhook_received_at}', $3::jsonb),
-                     updated_at = NOW()
-                 WHERE id = $4`,
-                [
-                    isSuccess ? PaymentStatus.COMPLETED : 'failed',
-                    mpesaReceipt,
-                    JSON.stringify(new Date().toISOString()),
-                    payment.id
-                ]
-            );
-
-            const paymentMeta = payment.metadata || {};
+            const paymentMeta = lockedPayment.metadata || {};
             if (isSuccess && paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-                await dbClient.query(
-                    'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                    [Number.parseInt(paymentMeta.debt_id, 10)]
-                );
+                await ClientDebt.markAsPaid(dbClient, Number.parseInt(paymentMeta.debt_id, 10));
             }
 
             await dbClient.query('COMMIT');
@@ -594,29 +572,18 @@ export class PaymentService {
         logger.info(`[PAYMENT-SUCCESS] Processing Ref: ${reference}, Amount: ${amount}`);
 
         // 1. Find payment by provider_reference or api_ref
-        const { rows } = await pool.query(
-            'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 LIMIT 1',
-            [reference]
-        );
-        let payment = rows[0];
+        let payment = await Payment.findByReference(reference);
 
         // 2. Fallback: Check if it's a Withdrawal Request (Payout)
         if (!payment) {
-            const { rows: withdrawalRows } = await pool.query(
-                'SELECT * FROM withdrawal_requests WHERE provider_reference = $1',
-                [reference]
-            );
+            const withdrawal = await Withdrawal.findByReference(reference);
 
-            if (withdrawalRows.length > 0) {
-                const withdrawal = withdrawalRows[0];
+            if (withdrawal) {
                 if (withdrawal.status === PaymentStatus.COMPLETED || withdrawal.status === PaymentStatus.FAILED) {
                     return { status: 'success', message: 'Withdrawal already processed' };
                 }
 
-                await pool.query(
-                    "UPDATE withdrawal_requests SET status = 'completed', raw_response = COALESCE(raw_response, '{}'::jsonb) || $1::jsonb, processed_at = NOW() WHERE id = $2",
-                    [JSON.stringify(metadata || {}), withdrawal.id]
-                );
+                await Withdrawal.updateStatus(pool, withdrawal.id, 'completed', metadata || {});
                 logger.info(`[PAYMENT-SUCCESS] Withdrawal ${withdrawal.id} marked COMPLETED`);
                 return { status: 'success', message: 'Withdrawal processed successfully' };
             }
@@ -658,42 +625,22 @@ export class PaymentService {
         try {
             await dbClient.query('BEGIN');
 
-            const { rows: lockedRows } = await dbClient.query(
-                'SELECT * FROM payments WHERE id = $1 FOR UPDATE',
-                [payment.id]
-            );
-
-            if (!lockedRows.length) {
-                await dbClient.query('ROLLBACK');
-                throw new Error('Payment not found during lock');
-            }
-
-            const lockedPayment = lockedRows[0];
-            if (lockedPayment.status === PaymentStatus.COMPLETED || lockedPayment.status === PaymentStatus.SUCCESS) {
-                await dbClient.query('ROLLBACK');
-                return { status: 'already_processed', message: 'Payment processed by concurrent webhook' };
-            }
-
-            if (amount) {
-                const paidAmount = Number.parseFloat(amount);
-                if (Math.abs(paidAmount - Number.parseFloat(payment.amount)) > 1) {
-                    logger.warn(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
-                }
-            }
-
             const mpesaReceipt = metadata?.data?.third_party_trans_id || metadata?.third_party_trans_id || null;
 
-            const { rows: updatedRows } = await dbClient.query(
-                `UPDATE payments 
-                 SET status = $1, provider_reference = $4, mpesa_receipt = $5,
-                     metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-                     updated_at = NOW()
-                 WHERE id = $3 RETURNING *`,
-                [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id, reference, mpesaReceipt]
-            );
+            const updatedPayment = await Payment.update(dbClient, payment.id, {
+                status: PaymentStatus.COMPLETED,
+                provider_reference: reference,
+                mpesa_receipt: mpesaReceipt,
+                metadata: { ...payment.metadata, payd_confirmation: metadata }
+            });
+
+            if (!updatedPayment) {
+                await dbClient.query('ROLLBACK');
+                throw new Error('Payment not found during lock/update');
+            }
 
             await dbClient.query('COMMIT');
-            return { status: 'success', payment: updatedRows[0] };
+            return { status: 'success', payment: updatedPayment };
         } catch (error) {
             await dbClient.query('ROLLBACK').catch(e => logger.error('[LOCKING] Rollback failed:', e));
             throw error;
@@ -735,10 +682,7 @@ export class PaymentService {
                 error: completionErr.message
             });
             try {
-                await pool.query(
-                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{needs_completion}', 'true'::jsonb) WHERE id = $1`,
-                    [payment.id]
-                );
+                await Payment.updateMetadata(payment.id, { needs_completion: true });
                 logger.info(`[RECOVERY] Marked payment ${payment.id} as needs_completion=true`);
             } catch (flagErr) {
                 logger.error(`[CRITICAL] FAILED TO SET needs_completion FLAG for payment ${payment.id}:`, flagErr);
@@ -762,12 +706,9 @@ export class PaymentService {
             await debtClient.query('BEGIN');
             logger.info(`[PURCHASE-FLOW] 7. Marking debt ${metadata.debt_id} as paid`);
 
-            await debtClient.query(
-                'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                [Number.parseInt(metadata.debt_id, 10)]
-            );
+            await ClientDebt.markAsPaid(debtClient, Number.parseInt(metadata.debt_id, 10));
 
-            await debtClient.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, payment.id]);
+            await Payment.update(debtClient, payment.id, { status: PaymentStatus.COMPLETED });
 
             await debtClient.query('COMMIT');
             logger.info(`[PURCHASE-FLOW] 8. Debt ${metadata.debt_id} settled successfully`);
@@ -782,19 +723,7 @@ export class PaymentService {
     }
 
     async checkPaymentStatus(identifier) {
-        // Query by all possible identifiers in one go to avoid numeric collision bugs
-        // (Previously, purely numeric references were misidentified as internal payment IDs)
-        const query = `
-            SELECT * FROM payments 
-            WHERE id::text = $1 
-               OR provider_reference = $1 
-               OR invoice_id = $1 
-               OR api_ref = $1 
-            LIMIT 1
-        `;
-        const { rows } = await pool.query(query, [String(identifier)]);
-        const payment = rows[0];
-
+        const payment = await Payment.findByIdentifier(identifier);
         if (!payment) throw new Error('Payment not found');
 
         // If payment is pending and we have a provider_reference, check Payd status
@@ -804,9 +733,9 @@ export class PaymentService {
                 const normalizedStatus = paydStatus.status; // already lowercased in checkTransactionStatus
 
                 if (['success', 'completed', 'processed', 'paid'].includes(normalizedStatus)) {
-                    payment.status = PaymentStatus.COMPLETED;
                     // Persist status change immediately
-                    await pool.query('UPDATE payments SET status = $1, updated_at = NOW() WHERE id = $2', [PaymentStatus.COMPLETED, payment.id]);
+                    await Payment.updateStatus(payment.invoice_id, PaymentStatus.COMPLETED);
+                    payment.status = PaymentStatus.COMPLETED;
                     logger.info(`[PaymentService] In-poll sync: Payment ${payment.id} verified as ${normalizedStatus} -> COMPLETED (Persisted)`);
 
                     // If this is a pending order, trigger completion now instead of waiting for webhook
@@ -851,11 +780,8 @@ export class PaymentService {
         if ((payment.status === 'completed' || payment.status === 'success') && buyerProfileId) {
             try {
                 // Look up the users.id from buyers.id (signAutoLoginToken needs users.id)
-                const { rows: buyerRows } = await pool.query(
-                    'SELECT user_id FROM buyers WHERE id = $1',
-                    [buyerProfileId]
-                );
-                const userId = buyerRows[0]?.user_id;
+                const buyer = await Buyer.findById(buyerProfileId);
+                const userId = buyer?.user_id;
 
                 if (userId) {
                     const { signAutoLoginToken } = await import('../utils/jwt.js');
@@ -1220,15 +1146,7 @@ export class PaymentService {
 
         try {
             // 1. Fetch pending payments within time window
-            const { rows: pendingPayments } = await pool.query(
-                `SELECT * FROM payments
- WHERE status = 'pending'
-   AND created_at > NOW() - ($1 * INTERVAL '1 hour')
-   AND created_at < NOW() - INTERVAL '1 minute'
- ORDER BY created_at ASC
- LIMIT $2`,
-                [hoursAgo, limit]
-            );
+            const pendingPayments = await Payment.findPending(hoursAgo, limit);
 
             results.processedCount = pendingPayments.length;
 
@@ -1266,10 +1184,7 @@ export class PaymentService {
                             // Flag for manual review after 2 hours, but do NOT auto-fail.
                             if (ageMinutes > 120) {
                                 logger.warn(`[CRON] Payment ${payment.id} pending >2hr with no webhook received. Flag for manual review.`);
-                                await pool.query(
-                                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata,'{}'), '{needs_manual_review}', 'true') WHERE id = $1`,
-                                    [payment.id]
-                                );
+                                await Payment.updateMetadata(payment.id, { needs_manual_review: true });
                             }
                             continue;
                         } else {
@@ -1293,23 +1208,17 @@ export class PaymentService {
                             : (providerData?.remarks || providerData?.status_description || 'Payment failed');
 
                         logger.info(`Payment ${payment.id} verified as FAILED via Cron - Reason: ${failureReason}`);
-                        await pool.query(
-                            "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2",
-                            [JSON.stringify({
-                                failure_reason: failureReason,
-                                failed_by: 'cron_job',
-                                failed_at: new Date().toISOString(),
-                                provider_data: providerData || { error_code: 404 }
-                            }), payment.id]
-                        );
+                        await Payment.updateStatus(payment.invoice_id, 'failed', {
+                            failure_reason: failureReason,
+                            failed_by: 'cron_job',
+                            failed_at: new Date().toISOString(),
+                            provider_data: providerData || { error_code: 404 }
+                        });
 
                         // If linked to an order, mark the order as failed too
                         if (payment.metadata?.order_id) {
                             try {
-                                await pool.query(
-                                    "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
-                                    [payment.metadata.order_id]
-                                );
+                                await Order.updateStatus(payment.metadata.order_id, 'FAILED');
                                 logger.info(`[Cron] Marked Order ${payment.metadata.order_id} as FAILED due to payment failure`);
                             } catch (orderErr) {
                                 logger.error(`[Cron] Failed to mark order ${payment.metadata.order_id} as failed:`, orderErr);
@@ -1354,18 +1263,13 @@ export class PaymentService {
         const buyerWhatsApp = buyer.phone;
 
         // 1. Resolve & Validate Product/Seller
-        const productResult = await pool.query(
-            `SELECT p.*, s.status as seller_status, s.full_name as seller_name, s.shop_name 
-             FROM products p
-             JOIN sellers s ON p.seller_id = s.id
-             WHERE p.id = $1`,
-            [service.id]
-        );
+        const product = await Product.findById(service.id);
+        if (!product) throw new Error('Product not found');
 
-        if (productResult.rows.length === 0) throw new Error('Product not found');
-        const product = productResult.rows[0];
+        const seller = await Seller.findSellerById(product.seller_id);
+        if (!seller) throw new Error('Seller not found');
 
-        if (product.seller_status !== 'active') throw new Error('Seller is not accepting orders');
+        if (seller.status !== 'active') throw new Error('Seller is not accepting orders');
         if (product.status !== 'available') throw new Error('Product not available');
 
         // 2. Security: Calculate Secure Total
@@ -1430,12 +1334,16 @@ export class PaymentService {
                 }
             };
 
-            const insertRes = await client.query(
-                `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
-                  VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6) RETURNING *`,
-                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, finalTotal, JSON.stringify(paymentData.metadata)]
-            );
-            const payment = insertRes.rows[0];
+            const payment = await Payment.insert(client, {
+                invoice_id: paymentData.invoice_id,
+                email: buyerEmail,
+                mobile_payment: buyerMobilePayment,
+                whatsapp_number: buyerWhatsApp,
+                amount: finalTotal,
+                status: 'pending',
+                payment_method: 'payd',
+                metadata: paymentData.metadata
+            });
 
             await client.query('COMMIT');
 
@@ -1451,7 +1359,7 @@ export class PaymentService {
                 const result = await this.initiatePayment(gwPayload);
 
                 if (result.reference) {
-                    await pool.query("UPDATE payments SET provider_reference = $1 WHERE id = $2", [result.reference, payment.id]);
+                    await Payment.updateReference(payment.id, result.reference);
                 }
 
                 return {

@@ -8,6 +8,9 @@ import { pool } from '../config/database.js';
 import Fees from '../config/fees.js';
 import logger from '../utils/logger.js';
 import { AppError } from '../utils/errorHandler.js';
+import Seller from '../models/seller.model.js';
+import Order from '../models/order.model.js';
+import ReferralEarningsLog from '../models/referralEarningsLog.model.js';
 
 /**
  * ReferralService — all referral business logic.
@@ -23,27 +26,19 @@ class ReferralService {
      */
     static async generateReferralCode(sellerId) {
         // BUG 1: Enforce sales lock
-        const sellerCheck = await pool.query(
-            'SELECT total_sales FROM sellers WHERE id = $1',
-            [sellerId]
-        );
+        const seller = await Seller.findById(sellerId);
 
-        if (sellerCheck.rowCount === 0) {
+        if (!seller) {
             throw new AppError('Seller not found', 404);
         }
 
-        const totalSales = Number.parseFloat(sellerCheck.rows[0].total_sales || 0);
+        const totalSales = Number.parseFloat(seller.total_sales || 0);
 
         if (totalSales <= 0) {
             // Fallback: check if there's at least one paid order (even if not yet in total_sales/escrow release)
-            const orderCheck = await pool.query(
-                `SELECT 1 FROM product_orders 
-                 WHERE seller_id = $1 AND payment_status IN ('completed', 'paid')
-                 LIMIT 1`,
-                [sellerId]
-            );
+            const orders = await Order.findBySellerId(sellerId, { limit: 1, status: 'completed' });
 
-            if (orderCheck.rowCount === 0) {
+            if (orders.data.length === 0) {
                 throw new AppError('Complete your first sale to unlock referrals', 403);
             }
         }
@@ -63,20 +58,14 @@ class ReferralService {
             code = `BY${suffix}`;
 
             // Check uniqueness before saving
-            const existing = await pool.query(
-                'SELECT id FROM sellers WHERE referral_code = $1',
-                [code]
-            );
-            if (existing.rowCount === 0) break; // unique!
+            const existing = await Seller.findByReferralCode(code);
+            if (!existing) break; // unique!
             attempts++;
         }
 
         if (!code) throw new AppError('Failed to generate unique referral code', 500);
 
-        await pool.query(
-            'UPDATE sellers SET referral_code = $1 WHERE id = $2',
-            [code, sellerId]
-        );
+        await Seller.updateReferralCode(sellerId, code);
 
         logger.info(`[REFERRAL] Generated referral code ${code} for seller ${sellerId}`);
         return code;
@@ -103,24 +92,21 @@ class ReferralService {
      * @param {string} referralCode
      */
     static async applyReferral(newSellerId, referralCode) {
-        let referrerResult;
+        let referrer;
         try {
-            referrerResult = await pool.query(
-                'SELECT id FROM sellers WHERE referral_code = $1',
-                [referralCode]
-            );
+            referrer = await Seller.findByReferralCode(referralCode);
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
             logger.error(`[ReferralService] Error looking up referral code: ${errorMsg}`);
             return null;
         }
 
-        if (referrerResult.rowCount === 0) {
+        if (!referrer) {
             logger.warn(`[ReferralService] Invalid referral code used: ${referralCode}`);
             return null;
         }
 
-        const referrerId = referrerResult.rows[0].id;
+        const referrerId = referrer.id;
 
         // Guard: prevent self-referral
         if (referrerId === newSellerId) {
@@ -128,10 +114,7 @@ class ReferralService {
             return;
         }
 
-        await pool.query(
-            'UPDATE sellers SET referred_by_seller_id = $1 WHERE id = $2 AND referred_by_seller_id IS NULL',
-            [referrerId, newSellerId]
-        );
+        await Seller.setReferrer(newSellerId, referrerId);
 
         logger.info(`[REFERRAL] Seller ${newSellerId} referred by seller ${referrerId} (code: ${referralCode})`);
     }
@@ -144,19 +127,11 @@ class ReferralService {
      * @param {number} referredSellerId
      */
     static async activateReferral(referredSellerId) {
-        const result = await pool.query(
-            `UPDATE sellers
-       SET referral_active_until = NOW() + INTERVAL '6 months'
-       WHERE id = $1
-         AND referred_by_seller_id IS NOT NULL
-         AND referral_active_until IS NULL
-       RETURNING *`,
-            [referredSellerId]
-        );
+        const result = await Seller.activateReferral(referredSellerId);
 
-        if (result.rowCount > 0) {
-            logger.info(`[REFERRAL] Activated referral for seller ${referredSellerId} — expires ${result.rows[0].referral_active_until}`);
-            return result.rows[0];
+        if (result) {
+            logger.info(`[REFERRAL] Activated referral for seller ${referredSellerId} — expires ${result.referral_active_until}`);
+            return result;
         }
         return null;
     }
@@ -169,37 +144,21 @@ class ReferralService {
      */
     static async getReferralDashboard(referrerSellerId) {
         // 1. Fetch referrer's own code and total earnings
-        const referrerResult = await pool.query(
-            `SELECT referral_code, total_referral_earnings
-       FROM sellers WHERE id = $1`,
-            [referrerSellerId]
-        );
+        const referrer = await Seller.findById(referrerSellerId);
 
-        if (referrerResult.rowCount === 0) {
+        if (!referrer) {
             throw new AppError('Seller not found', 404);
         }
 
-        const { referral_code, total_referral_earnings } = referrerResult.rows[0];
+        const referral_code = referrer.referral_code;
+        const total_referral_earnings = referrer.total_referral_earnings;
         const referralLink = referral_code ? ReferralService.getReferralLink(referral_code) : null;
 
         // 2. Fetch referred sellers with aggregated earnings
-        const squadResult = await pool.query(
-            `SELECT
-         s.id,
-         s.shop_name,
-         s.referral_active_until,
-         COALESCE(SUM(rel.reward_amount), 0) AS total_earned
-       FROM sellers s
-       LEFT JOIN referral_earnings_log rel
-         ON rel.referred_seller_id = s.id AND rel.referrer_seller_id = $1
-       WHERE s.referred_by_seller_id = $1
-       GROUP BY s.id, s.shop_name, s.referral_active_until
-       ORDER BY total_earned DESC`,
-            [referrerSellerId]
-        );
+        const squad = await ReferralEarningsLog.findByReferrerId(referrerSellerId);
 
         const now = new Date();
-        const referred = squadResult.rows.map(/** @param {any} row */(row) => ({
+        const referred = squad.map(/** @param {any} row */(row) => ({
             id: row.id,
             shopName: row.shop_name,
             referralActiveUntil: row.referral_active_until,
@@ -228,22 +187,14 @@ class ReferralService {
         logger.info(`[REFERRAL-CRON] Processing referral rewards for ${year}-${String(month).padStart(2, '0')}`);
 
         // Fetch all active referral relationships
-        const activeReferrals = await pool.query(
-            `SELECT
-         s.id           AS referred_seller_id,
-         s.shop_name    AS referred_shop_name,
-         s.referred_by_seller_id AS referrer_seller_id
-       FROM sellers s
-       WHERE s.referred_by_seller_id IS NOT NULL
-         AND s.referral_active_until > NOW()`,
-        );
+        const activeReferrals = await Seller.findActiveReferrals();
 
-        if (activeReferrals.rowCount === 0) {
+        if (activeReferrals.length === 0) {
             logger.info('[REFERRAL-CRON] No active referrals found — nothing to process');
             return { processed: 0, totalCredited: 0 };
         }
 
-        logger.info(`[REFERRAL-CRON] Found ${activeReferrals.rowCount} active referrals to process`);
+        logger.info(`[REFERRAL-CRON] Found ${activeReferrals.length} active referrals to process`);
 
         let processed = 0;
         let totalCredited = 0;
@@ -252,21 +203,12 @@ class ReferralService {
         try {
             await client.query('BEGIN');
 
-            for (/** @type {any} */ const row of activeReferrals.rows) {
+            for (const row of activeReferrals) {
                 const { referred_seller_id, referred_shop_name, referrer_seller_id } = row;
 
                 // 1. Calculate Seller Payout GMV for the referred seller in the target month/year (Timezone aware)
-                const gmvResult = await client.query(
-                    `SELECT COALESCE(SUM(seller_payout_amount), 0) AS gmv
-           FROM product_orders
-           WHERE seller_id = $1
-             AND payment_status = 'completed'
-             AND EXTRACT(MONTH FROM paid_at AT TIME ZONE 'Africa/Nairobi') = $2
-             AND EXTRACT(YEAR FROM paid_at AT TIME ZONE 'Africa/Nairobi') = $3`,
-                    [referred_seller_id, month, year]
-                );
+                const gmv = await Order.calculateGmv(client, referred_seller_id, month, year);
 
-                const gmv = Number.parseFloat(gmvResult.rows[0].gmv);
                 logger.info(`[REFERRAL-CRON] Seller ${referred_seller_id} GMV (Seller Payout) for ${year}-${month}: ${gmv}`);
                 if (gmv <= 0) continue;
 
@@ -280,27 +222,22 @@ class ReferralService {
                 }
 
                 // 4. Insert log row (idempotent)
-                const insertResult = await client.query(
-                    `INSERT INTO referral_earnings_log
-             (referrer_seller_id, referred_seller_id, period_month, period_year, referred_gmv, reward_amount)
-           VALUES ($1, $2, $3, $4, $5, $6)
-           ON CONFLICT (referrer_seller_id, referred_seller_id, period_month, period_year) DO NOTHING`,
-                    [referrer_seller_id, referred_seller_id, month, year, gmv, reward]
-                );
+                const logEntry = await ReferralEarningsLog.insert(client, {
+                    referrer_seller_id,
+                    referred_seller_id,
+                    period_month: month,
+                    period_year: year,
+                    referred_gmv: gmv,
+                    reward_amount: reward
+                });
 
-                if (insertResult.rowCount === 0) {
+                if (!logEntry) {
                     logger.info(`[REFERRAL-CRON] Already processed referrer ${referrer_seller_id} / referred ${referred_seller_id} for ${year}-${month} — skipping`);
                     continue;
                 }
 
-                // 5. Credit referrer's balance with FOR UPDATE lock
-                await client.query(
-                    `UPDATE sellers
-                     SET balance = balance + $1,
-                         total_referral_earnings = total_referral_earnings + $1
-                     WHERE id = $2`,
-                    [reward, referrer_seller_id]
-                );
+                // 5. Credit referrer's balance
+                await Seller.adjustReferralEarnings(client, referrer_seller_id, reward);
 
                 processed++;
                 totalCredited = Number.parseFloat((totalCredited + reward).toFixed(2));
@@ -336,12 +273,9 @@ class ReferralService {
      * @param {number} amount
      */
     static async _notifyReferrer(referrerSellerId, referredShopName, amount) {
-        const sellerResult = await pool.query(
-            'SELECT whatsapp_number FROM sellers WHERE id = $1',
-            [referrerSellerId]
-        );
+        const seller = await Seller.findById(referrerSellerId);
 
-        const phone = sellerResult.rows[0]?.whatsapp_number;
+        const phone = seller?.whatsapp_number;
         if (!phone) return;
 
         // @ts-ignore

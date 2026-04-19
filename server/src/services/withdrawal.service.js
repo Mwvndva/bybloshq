@@ -2,6 +2,9 @@ import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import payoutService from './payout.service.js';
 import whatsappService from './whatsapp.service.js';
+import Withdrawal from '../models/withdrawal.model.js';
+import Seller from '../models/seller.model.js';
+import { toJsonb } from '../utils/order.utils.js';
 
 /**
  * WithdrawalService
@@ -41,19 +44,13 @@ class WithdrawalService {
                 await client.query('BEGIN');
             }
 
-            const { rows: [request] } = await client.query(
-                `SELECT wr.*, s.whatsapp_number as entity_phone 
-                 FROM withdrawal_requests wr 
-                 LEFT JOIN sellers s ON wr.seller_id = s.id
-                 WHERE wr.id = $1 FOR UPDATE OF wr`,
-                [requestId]
-            );
+            const request = await Withdrawal.findById(requestId);
 
             if (!request) throw new Error('Withdrawal request not found');
 
-            // FIXED BUG-WD-02: Lock sellers row to prevent race conditions during balance updates
+            // Lock sellers row to prevent race conditions during balance updates
             if (newStatus === 'failed') {
-                await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
+                await Seller.findByIdForUpdate(client, request.seller_id);
             }
 
             // Prevent re-processing terminal states
@@ -70,15 +67,10 @@ class WithdrawalService {
                 remarks
             };
 
-            await client.query(
-                `UPDATE withdrawal_requests 
-                 SET status = $1, 
-                     processed_at = NOW(),
-                     provider_reference = COALESCE($2, provider_reference),
-                     metadata = COALESCE(metadata, '{}'::jsonb) || $3::jsonb
-                 WHERE id = $4`,
-                [newStatus, provider_reference, JSON.stringify(metadataUpdate), requestId]
-            );
+            await Withdrawal.updateStatus(client, requestId, newStatus, metadataUpdate);
+            if (provider_reference) {
+                await Withdrawal.updateReference(client, requestId, provider_reference);
+            }
 
             let newBalance = null;
             if (newStatus === 'failed') {
@@ -92,8 +84,9 @@ class WithdrawalService {
             }
 
             // Notify via WhatsApp (Non-blocking)
-            if (request.entity_phone) {
-                whatsappService.notifySellerWithdrawalUpdate(request.entity_phone, {
+            const seller = await Seller.findById(request.seller_id);
+            if (seller?.whatsappNumber) {
+                whatsappService.notifySellerWithdrawalUpdate(seller.whatsappNumber, {
                     amount: request.amount,
                     status: newStatus,
                     reference: mpesa_receipt || provider_reference || request.provider_reference || `REQ-${request.id}`,
@@ -148,11 +141,7 @@ class WithdrawalService {
             await client.query('BEGIN');
 
             // Lock entity row and fetch current balance
-            const { rows } = await client.query(
-                'SELECT id, balance, full_name, whatsapp_number FROM sellers WHERE id = $1 FOR UPDATE',
-                [entityId]
-            );
-            const entityRow = rows[0];
+            const entityRow = await Seller.findByIdForUpdate(client, entityId);
 
             if (!entityRow) {
                 throw new Error(`${entityType} not found or unauthorized`);
@@ -171,26 +160,17 @@ class WithdrawalService {
             }
 
             // Deduct from entity balance
-            await client.query(
-                `UPDATE sellers SET balance = balance - $1, updated_at = NOW() WHERE id = $2`,
-                [deductionAmount, entityId]
-            );
+            await Seller.adjustWalletBalance(client, entityId, -deductionAmount);
 
             // Insert withdrawal request record
-            const insertResult = await client.query(
-                `INSERT INTO withdrawal_requests 
-                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
-                 VALUES ($1, $2, $3, $4, 'processing', TRUE, NOW())
-                 RETURNING id, amount, seller_id, mpesa_number, mpesa_name, status, created_at`,
-                [
-                    entityId,
-                    validatedAmount,
-                    normalizedPhone,
-                    mpesaName.trim()
-                ]
-            );
-
-            request = insertResult.rows[0];
+            request = await Withdrawal.insert(client, {
+                seller_id: entityId,
+                amount: validatedAmount,
+                mpesa_number: normalizedPhone,
+                mpesa_name: mpesaName.trim(),
+                status: 'processing',
+                api_call_pending: true
+            });
 
             await client.query('COMMIT');
             logger.info(`[WithdrawalService] Request ${request.id} created.Deducted KES ${deductionAmount} from ${entityType} ${entityId}`);
@@ -250,19 +230,11 @@ class WithdrawalService {
             const reference = paydResponse.correlator_id || paydResponse.transaction_reference
 
             if (reference) {
-                await pool.query(
-                    `UPDATE withdrawal_requests 
-                     SET provider_reference = $1, raw_response = $2, api_call_pending = FALSE
-                     WHERE id = $3`,
-                    [reference, JSON.stringify(paydResponse), request.id]
-                );
+                await Withdrawal.updateReference(pool, request.id, reference, paydResponse);
                 logger.info(`[WithdrawalService] Request ${request.id} → Payd correlator_id: ${reference}`);
             } else {
                 // Payd accepted but returned no reference — log raw response
-                await pool.query(
-                    'UPDATE withdrawal_requests SET raw_response = $1, api_call_pending = FALSE WHERE id = $2',
-                    [JSON.stringify(paydResponse), request.id]
-                );
+                await Withdrawal.updateMetadata(request.id, { raw_response: paydResponse, api_call_pending: false });
                 logger.warn(`[WithdrawalService] Request ${request.id}: Payd returned no transaction_reference`, paydResponse);
             }
 
@@ -287,15 +259,7 @@ class WithdrawalService {
 
                 const newBalance = await payoutService.refundToWallet(client, request);
 
-                await client.query(
-                    `UPDATE withdrawal_requests 
-                     SET status = 'failed',
-                         metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{api_error}', $1::jsonb),
-                         processed_at = NOW(),
-                         api_call_pending = FALSE
-                     WHERE id = $2`,
-                    [JSON.stringify(apiError.message), request.id]
-                );
+                await Withdrawal.updateStatus(client, request.id, 'failed', { api_error: apiError.message });
 
                 await client.query('COMMIT');
                 logger.info(`[WithdrawalService] Request ${request.id} marked failed.Balance refunded.`);
@@ -326,14 +290,7 @@ class WithdrawalService {
     async retryPendingApiCalls() {
         try {
             logger.info('[WithdrawalService] Checking for pending API calls to retry...');
-            const { rows: pending } = await pool.query(
-                `SELECT wr.*, s.full_name, s.whatsapp_number
-                 FROM withdrawal_requests wr
-                 JOIN sellers s ON wr.seller_id = s.id
-                 WHERE wr.status = 'processing' 
-                   AND wr.api_call_pending = TRUE 
-                   AND wr.created_at > NOW() - INTERVAL '7 days'`
-            );
+            const pending = await Withdrawal.findPending();
 
             if (pending.length === 0) {
                 logger.info('[WithdrawalService] No pending API calls found.');
@@ -374,16 +331,7 @@ class WithdrawalService {
     async reconcileStuckWithdrawals(hoursAgo = 2) {
         logger.info(`[WithdrawalService] Reconciling requests stuck > ${hoursAgo} hours`);
 
-        const { rows: stuck } = await pool.query(
-            `SELECT wr.*, s.full_name as seller_name, s.whatsapp_number
-             FROM withdrawal_requests wr
-             LEFT JOIN sellers s ON wr.seller_id = s.id
-             WHERE wr.status = 'processing'
-               AND wr.created_at < NOW() - ($1 * INTERVAL '1 hour')
-               AND wr.created_at > NOW() - INTERVAL '48 hours'
-             ORDER BY wr.created_at ASC`,
-            [hoursAgo]
-        );
+        const stuck = await Withdrawal.findStuck(hoursAgo);
 
         logger.info(`[WithdrawalService] Found ${stuck.length} stuck request(s)`);
 
@@ -391,27 +339,13 @@ class WithdrawalService {
             try {
                 if (!request.provider_reference) {
                     // No correlator_id stored — Payd API may have failed silently
-                    logger.warn(`[WithdrawalService] Request ${request.id} has no provider_reference.Marking needs_review.`);
-                    await pool.query(
-                        `UPDATE withdrawal_requests 
-                         SET metadata = jsonb_set(COALESCE(metadata, '{}':: jsonb), '{reconciliation_flag}', '"no_provider_reference"':: jsonb)
-                         WHERE id = $1`,
-                        [request.id]
-                    );
+                    logger.warn(`[WithdrawalService] Request ${request.id} has no provider_reference. Marking needs_review.`);
+                    await Withdrawal.updateMetadata(request.id, { reconciliation_flag: 'no_provider_reference' });
                     continue;
                 }
 
                 // Mark for manual review — Payd v2 has no status-check endpoint documented
-                await pool.query(
-                    `UPDATE withdrawal_requests 
-                     SET metadata = jsonb_set(
-                COALESCE(metadata, '{}':: jsonb),
-                '{reconciliation_flag}',
-                '"needs_manual_review"':: jsonb
-            )
-                     WHERE id = $1 AND metadata ->> 'reconciliation_flag' IS NULL`,
-                    [request.id]
-                );
+                await Withdrawal.updateMetadata(request.id, { reconciliation_flag: 'needs_manual_review' });
 
                 logger.info(`[WithdrawalService] Request ${request.id} (ref: ${request.provider_reference}) flagged for manual review`);
 
@@ -428,53 +362,7 @@ class WithdrawalService {
      * @returns {Promise<{ rows: Object[], total: number }>}
      */
     async getWithdrawalsForSeller(sellerId, { limit = 20, offset = 0, status = null } = {}) {
-        const params = [sellerId];
-        const clauses = ['wr.seller_id = $1'];
-
-        if (status) {
-            params.push(status);
-            clauses.push(`wr.status = $${params.length}`);
-        }
-
-        const where = clauses.join(' AND ');
-
-        const [dataResult, countResult] = await Promise.all([
-            pool.query(
-                `SELECT
-               wr.id,
-               wr.amount,
-               wr.mpesa_number,
-               wr.mpesa_name,
-               wr.status,
-               wr.provider_reference,
-               wr.created_at,
-               wr.processed_at,
-               CASE
-                 WHEN wr.status = 'failed'
-                 THEN COALESCE(wr.metadata->>'api_error', wr.metadata->'payd_callback'->>'remarks', 'Unknown error')
-                 ELSE NULL
-               END AS failure_reason,
-               CASE
-                 WHEN wr.status = 'completed'
-                 THEN wr.metadata->'payd_callback'->>'third_party_trans_id'
-                 ELSE NULL
-               END AS mpesa_receipt
-             FROM withdrawal_requests wr
-             WHERE ${where}
-             ORDER BY wr.created_at DESC
-             LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
-                [...params, limit, offset],
-            ),
-            pool.query(
-                `SELECT COUNT(*) AS total FROM withdrawal_requests wr WHERE ${where}`,
-                params,
-            ),
-        ]);
-
-        return {
-            rows: dataResult.rows,
-            total: Number.parseInt(countResult.rows[0].total, 10),
-        };
+        return await Withdrawal.findBySellerId(sellerId, { limit, offset, status });
     }
 
     /**
@@ -484,16 +372,11 @@ class WithdrawalService {
      * @returns {Promise<Object|null>}
      */
     async getWithdrawalById(requestId, sellerId) {
-        const { rows } = await pool.query(
-            `SELECT
-           wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name,
-           wr.status, wr.provider_reference, wr.created_at,
-           wr.processed_at, wr.metadata
-         FROM withdrawal_requests wr
-         WHERE wr.id = $1 AND wr.seller_id = $2`,
-            [requestId, sellerId],
-        );
-        return rows[0] ?? null;
+        const request = await Withdrawal.findById(requestId);
+        if (request && String(request.seller_id) === String(sellerId)) {
+            return request;
+        }
+        return null;
     }
 }
 

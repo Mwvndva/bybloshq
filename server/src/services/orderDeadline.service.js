@@ -5,6 +5,10 @@ import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
+import Order from '../models/order.model.js';
+import Buyer from '../models/buyer.model.js';
+import Product from '../models/product.model.js';
+import ServiceSlot from '../models/serviceSlot.model.js';
 
 class OrderDeadlineService {
     /**
@@ -16,12 +20,7 @@ class OrderDeadlineService {
             const deadline = new Date();
             deadline.setHours(deadline.getHours() + 48);
 
-            await pool.query(
-                `UPDATE product_orders 
-                 SET seller_dropoff_deadline = $1 
-                 WHERE id = $2`,
-                [deadline, orderId]
-            );
+            await Order.updateDeadline(pool, orderId, { sellerDropoff: deadline });
 
             logger.info(`Set seller drop-off deadline for order ${orderId}: ${deadline.toISOString()}`);
             return deadline;
@@ -41,13 +40,7 @@ class OrderDeadlineService {
             const deadline = new Date();
             deadline.setHours(deadline.getHours() + 24);
 
-            await pool.query(
-                `UPDATE product_orders 
-                 SET buyer_pickup_deadline = $1,
-                     ready_for_pickup_at = $2
-                 WHERE id = $3`,
-                [deadline, now, orderId]
-            );
+            await Order.updateDeadline(pool, orderId, { buyerPickup: deadline, readyForPickupAt: now });
 
             logger.info(`Set buyer pickup deadline for order ${orderId}: ${deadline.toISOString()}`);
             return deadline;
@@ -62,19 +55,7 @@ class OrderDeadlineService {
      */
     async checkExpiredSellerDeadlines() {
         try {
-            const result = await pool.query(
-                `SELECT po.*, 
-                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.physical_address as physical_address
-                 FROM product_orders po
-                 LEFT JOIN buyers b ON po.buyer_id = b.id
-                 LEFT JOIN sellers s ON po.seller_id = s.id
-                 WHERE po.seller_dropoff_deadline < NOW()
-                   AND po.status = 'DELIVERY_PENDING'
-                   AND po.auto_cancelled_reason IS NULL`
-            );
-
-            const expiredOrders = result.rows;
+            const expiredOrders = await Order.findExpiredSellerDeadlines();
             logger.info(`Found ${expiredOrders.length} orders with expired seller drop-off deadlines`);
 
             for (const order of expiredOrders) {
@@ -99,19 +80,7 @@ class OrderDeadlineService {
      */
     async checkExpiredBuyerDeadlines() {
         try {
-            const result = await pool.query(
-                `SELECT po.*, 
-                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.physical_address as physical_address
-                 FROM product_orders po
-                 LEFT JOIN buyers b ON po.buyer_id = b.id
-                 LEFT JOIN sellers s ON po.seller_id = s.id
-                 WHERE po.buyer_pickup_deadline < NOW()
-                   AND po.status = 'DELIVERY_COMPLETE'
-                   AND po.auto_cancelled_reason IS NULL`
-            );
-
-            const expiredOrders = result.rows;
+            const expiredOrders = await Order.findExpiredBuyerDeadlines();
             logger.info(`Found ${expiredOrders.length} orders with expired buyer pickup deadlines`);
 
             for (const order of expiredOrders) {
@@ -136,20 +105,7 @@ class OrderDeadlineService {
      */
     async checkServicePaymentRelease() {
         try {
-            const result = await pool.query(
-                `SELECT po.*, 
-                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.balance as seller_balance, s.physical_address as physical_address
-                 FROM product_orders po
-                 LEFT JOIN buyers b ON po.buyer_id = b.id
-                 LEFT JOIN sellers s ON po.seller_id = s.id
-                 WHERE po.status = 'DELIVERY_COMPLETE'
-                   AND po.payment_status != 'completed'
-                   AND po.metadata->>'product_type' = 'service'
-                   AND (po.metadata->>'booking_date')::timestamp < NOW() - INTERVAL '24 hours'`
-            );
-
-            const serviceOrders = result.rows;
+            const serviceOrders = await Order.findServiceOrdersForPaymentRelease();
             logger.info(`Found ${serviceOrders.length} service orders ready for payment release`);
 
             for (const order of serviceOrders) {
@@ -172,18 +128,7 @@ class OrderDeadlineService {
      */
     async checkExpiredReservations() {
         try {
-            const result = await pool.query(
-                `SELECT po.id, po.order_number, po.status, po.order_type,
-                        json_agg(json_build_object('productId', oi.product_id, 'quantity', oi.quantity, 'trackInventory', (p.track_inventory = true))) as items
-                 FROM product_orders po
-                 JOIN order_items oi ON po.id = oi.order_id
-                 JOIN products p ON oi.product_id = p.id
-                 WHERE po.status = 'RESERVED'
-                   AND po.reservation_expires_at < NOW()
-                 GROUP BY po.id`
-            );
-
-            const expiredOrders = result.rows;
+            const expiredOrders = await Order.findExpiredReservations();
             if (expiredOrders.length === 0) return { processedCount: 0, orders: [] };
 
             logger.info(`Found ${expiredOrders.length} expired reservations to release`);
@@ -194,41 +139,15 @@ class OrderDeadlineService {
                     await client.query('BEGIN');
 
                     // 1. Release Inventory
-                    for (const item of order.items) {
-                        if (item.trackInventory) {
-                            await client.query(
-                                `UPDATE products 
-                                 SET quantity = quantity + $1,
-                                     reserved_quantity = GREATEST(0, reserved_quantity - $1),
-                                     updated_at = NOW()
-                                 WHERE id = $2`,
-                                [item.quantity, item.productId]
-                            );
-                        }
-                    }
+                    await Product.releaseInventory(client, order.items);
 
                     // 2. Release Service Slots (if any)
                     if (order.order_type === 'SERVICE') {
-                        await client.query(
-                            `UPDATE service_slots 
-                             SET status = 'AVAILABLE',
-                                 reserved_by_order_id = NULL,
-                                 expires_at = NULL,
-                                 updated_at = NOW()
-                             WHERE reserved_by_order_id = $1`,
-                            [order.id]
-                        );
+                        await ServiceSlot.releaseByOrderId(client, order.id);
                     }
 
                     // 3. Update Order Status
-                    await client.query(
-                        `UPDATE product_orders 
-                         SET status = 'EXPIRED',
-                             metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window (10 min) exceeded"}'::jsonb,
-                             updated_at = NOW()
-                         WHERE id = $1`,
-                        [order.id]
-                    );
+                    await Order.updateStatusWithExpiry(client, order.id);
 
                     await client.query('COMMIT');
                     logger.info(`Released reservation for expired order ${order.order_number}`);
@@ -262,24 +181,11 @@ class OrderDeadlineService {
             await client.query('BEGIN');
 
             // Update order status
-            await client.query(
-                `UPDATE product_orders 
-                 SET status = 'CANCELLED',
-                     payment_status = 'failed',
-                     auto_cancelled_reason = $1,
-                     cancelled_at = NOW()
-                 WHERE id = $2`,
-                [reason, order.id]
-            );
+            await Order.updateStatusWithReason(client, order.id, 'CANCELLED', { auto_cancelled_reason: reason });
 
             // Refund buyer
             if (order.buyer_id) {
-                await client.query(
-                    `UPDATE buyers 
-                     SET refunds = refunds + $1 
-                     WHERE id = $2`,
-                    [order.total_amount, order.buyer_id]
-                );
+                await Buyer.adjustRefundBalance(client, order.buyer_id, order.total_amount);
             }
 
             await client.query('COMMIT');
@@ -310,15 +216,7 @@ class OrderDeadlineService {
             await client.query('BEGIN');
 
             // Update order to completed
-            await client.query(
-                `UPDATE product_orders 
-                 SET status = 'COMPLETED',
-                     payment_status = 'completed',
-                     payment_completed_at = NOW(),
-                     completed_at = NOW()
-                 WHERE id = $1`,
-                [order.id]
-            );
+            await Order.updateStatusWithSideEffects(client, order.id, 'completed', 'completed');
 
             // Release funds through EscrowManager — the single source of truth
             // for all seller balance/revenue/sales updates and payouts table entries.

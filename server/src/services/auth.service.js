@@ -4,8 +4,9 @@ import logger from '../utils/logger.js';
 import User from '../models/user.model.js';
 import BuyerService from './buyer.service.js';
 import SellerService from './seller.service.js';
-import * as SellerModel from '../models/seller.model.js';
+import Seller from '../models/seller.model.js';
 import Buyer from '../models/buyer.model.js';
+import Order from '../models/order.model.js';
 import { signToken } from '../utils/jwt.js';
 import { sendPasswordResetEmail } from '../utils/email.js';
 import { pool } from '../config/database.js';
@@ -88,7 +89,7 @@ class AuthService {
         // NEW: Check terms acceptance (Task 10)
         let termsAccepted = true;
         if (user.role === 'seller') {
-            const profile = await SellerModel.findSellerByUserId(user.id);
+            const profile = await Seller.findByUserId(user.id);
             termsAccepted = profile ? profile.terms_accepted : true;
         } else if (user.role === 'buyer') {
             const profile = await Buyer.findByUserId(user.id);
@@ -121,10 +122,7 @@ class AuthService {
                 if (!buyerProfile) {
                     buyerProfile = await Buyer.findByEmail(user.email);
                     if (buyerProfile && !buyerProfile.userId) {
-                        await pool.query(
-                            'UPDATE buyers SET user_id = $1 WHERE id = $2 AND user_id IS NULL',
-                            [user.id, buyerProfile.id]
-                        );
+                        await Buyer.updateUserId(buyerProfile.id, user.id);
                         buyerProfile.userId = user.id;
                         buyerProfile.user_id = user.id;
                     }
@@ -143,12 +141,9 @@ class AuthService {
 
                 // Lazy-link legacy seller profile if it exists by email
                 if (!sellerProfile) {
-                    sellerProfile = await SellerModel.findSellerByEmail(user.email);
+                    sellerProfile = await Seller.findByEmail(user.email);
                     if (sellerProfile && !sellerProfile.userId) {
-                        await pool.query(
-                            'UPDATE sellers SET user_id = $1 WHERE id = $2 AND user_id IS NULL',
-                            [user.id, sellerProfile.id]
-                        );
+                        await Seller.updateUserId(sellerProfile.id, user.id);
                         sellerProfile.userId = user.id;
                         sellerProfile.user_id = user.id;
                     }
@@ -175,7 +170,7 @@ class AuthService {
 
         switch (targetType) {
             case 'seller':
-                profile = await SellerModel.findSellerByUserId(user.id);
+                profile = await Seller.findByUserId(user.id);
                 break;
             case 'buyer':
                 profile = await Buyer.findByUserId(user.id);
@@ -184,10 +179,7 @@ class AuthService {
                     profile = await Buyer.findByEmail(user.email);
                     if (profile && !profile.userId) {
                         // Lazily link the legacy buyer to the unified users record
-                        await pool.query(
-                            'UPDATE buyers SET user_id = $1 WHERE id = $2 AND user_id IS NULL',
-                            [user.id, profile.id]
-                        );
+                        await Buyer.updateUserId(profile.id, user.id);
                         profile.userId = user.id;
                         profile.user_id = user.id;
                     }
@@ -239,7 +231,7 @@ class AuthService {
             // Already a verified user - check if they already have this profile type
             switch (type) {
                 case 'seller': {
-                    const existingSeller = await SellerModel.findSellerByUserId(existingUser.id);
+                    const existingSeller = await Seller.findByUserId(existingUser.id);
                     if (existingSeller) throw new Error('A seller account with this email already exists.');
 
                     // Add seller profile to existing user
@@ -394,27 +386,15 @@ class AuthService {
             await client.query('BEGIN');
 
             // a. Create base user record
-            // Use internal password hash from pending (no need to re-hash)
-            const userQuery = `
-                INSERT INTO users (email, password_hash, role, is_verified, created_at, updated_at)
-                VALUES ($1, $2, $3, true, NOW(), NOW())
-                RETURNING id, email, role, is_verified
-            `;
-            const userResult = await client.query(userQuery, [
-                pending.email.toLowerCase(),
-                pending.password_hash,
-                pending.role
-            ]);
-            const newUser = userResult.rows[0];
+            const newUser = await User.create({
+                email: pending.email,
+                password: pending.password_hash,
+                role: pending.role,
+                is_verified: true
+            }, client);
 
             // Assign role
-            const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', [pending.role]);
-            if (roleResult.rows[0]) {
-                await client.query(
-                    'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                    [newUser.id, roleResult.rows[0].id]
-                );
-            }
+            await User.linkRole(client, newUser.id, pending.role);
 
             // b. Create profile based on role
             // Handle potentially nested registrationData (FIX-19)
@@ -440,29 +420,16 @@ class AuthService {
             let profile = null;
 
             if (pending.role === 'seller') {
-                profile = await SellerModel.createSeller(profileData, client);
+                profile = await Seller.create(profileData, client);
             } else if (pending.role === 'buyer') {
                 profile = await Buyer.create(profileData, client);
 
                 // --- LATE BINDING OF ORDERS ---
-                // Search for any orders made with this email while it was pending and associate them
-                // This ensures checkout flow continues seamlessly for unregistered buyers
-                const linkResult = await client.query(
-                    'UPDATE product_orders SET buyer_id = $1 WHERE LOWER(buyer_email) = $2 AND buyer_id IS NULL',
-                    [profile.id, pending.email.toLowerCase()]
-                );
-
-                if (linkResult.rowCount > 0) {
-                    console.log(`[AUTH] Linked ${linkResult.rowCount} previous guest orders for new buyer: ${pending.email}`);
-                    logger.info(`[AUTH] Linked ${linkResult.rowCount} previous guest orders for new buyer: ${pending.email}`, {
-                        buyerId: profile.id,
-                        email: pending.email
-                    });
-                }
+                await Order.linkBuyerByEmail(client, profile.id, pending.email);
             }
 
             // c. Delete from pending
-            await client.query('DELETE FROM pending_registrations WHERE email = $1', [pending.email]);
+            await PendingRegistration.deleteByEmail(pending.email, client);
 
             await client.query('COMMIT');
 

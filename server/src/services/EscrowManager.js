@@ -1,6 +1,8 @@
-import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
-import Fees from '../config/fees.js';
+import Payout from '../models/payout.model.js';
+import Payment from '../models/payment.model.js';
+import Seller from '../models/seller.model.js';
+import Order from '../models/order.model.js';
 
 class EscrowManager {
     /**
@@ -17,10 +19,7 @@ class EscrowManager {
         // 1. DB-LEVEL IDEMPOTENCY CHECK: Ensure payouts table is the source of truth.
         // We check if a payout already exists for this order before proceeding.
         // Using FOR UPDATE on the payouts table (if record exists) to serialize concurrent releases.
-        const { rows: existingPayouts } = await client.query(
-            'SELECT id, status FROM payouts WHERE order_id = $1 FOR UPDATE',
-            [orderId]
-        );
+        const existingPayouts = await Payout.findByOrderIdForUpdate(client, orderId);
 
         if (existingPayouts.length > 0) {
             logger.info(`[EscrowManager] Payout for Order ${orderId} already exists (Status: ${existingPayouts[0].status}). Skipping.`);
@@ -28,11 +27,8 @@ class EscrowManager {
         }
 
         // 2. Fetch or resolve payment ID
-        const paymentResult = await client.query(
-            "SELECT id FROM payments WHERE invoice_id = $1 OR metadata->>'order_id' = $2::text LIMIT 1",
-            [order.order_number, String(orderId)]
-        );
-        const paymentId = paymentResult.rows[0]?.id;
+        const payment = await Payment.findByOrderReference(client, order.order_number, orderId);
+        const paymentId = payment?.id;
 
         // 3. Calculate amounts safely
         const rawPayout = Number.parseFloat(
@@ -73,46 +69,23 @@ class EscrowManager {
         }
 
         // 4. Update Seller Wallet
-        await client.query(
-            `UPDATE sellers
-             SET balance     = balance     + $1,
-                 net_revenue = net_revenue + $1,
-                 total_sales = total_sales + $2,
-                 updated_at  = NOW()
-             WHERE id = $3`,
-            [sellerPayoutAmount, totalAmount, sellerId],
-        );
+        await Seller.creditEscrowRelease(client, sellerId, sellerPayoutAmount, totalAmount);
 
         // 5. Create Payout Record (Source of truth for "processed")
         // We use ON CONFLICT as a safety net, but the primary check (step 1) should catch most cases.
-        await client.query(
-            `INSERT INTO payouts
-               (seller_id, order_id, payment_id, amount, platform_fee, status,
-                payment_method, processed_at, completed_at, metadata)
-             VALUES ($1, $2, $3, $4, $5, 'completed', 'wallet_credit', NOW(), NOW(), $6)
-             ON CONFLICT (order_id) DO UPDATE
-               SET status       = 'completed',
-                   processed_at = NOW(),
-                   completed_at = NOW(),
-                   payment_id   = EXCLUDED.payment_id,
-                   amount       = EXCLUDED.amount,
-                   platform_fee = EXCLUDED.platform_fee,
-                   metadata     = jsonb_set(
-                     COALESCE(payouts.metadata, '{}'::jsonb),
-                     '{processed_by}',
-                     $6::jsonb
-                   )`,
-            [sellerId, orderId, paymentId, sellerPayoutAmount, platformFeeAmount, JSON.stringify({ processed_by: source })],
-        );
+        await Payout.createPayout(client, {
+            seller_id: sellerId,
+            order_id: orderId,
+            payment_id: paymentId,
+            amount: sellerPayoutAmount,
+            platform_fee: platformFeeAmount,
+            status: 'completed',
+            payment_method: 'wallet_credit',
+            metadata: { processed_by: source }
+        });
 
         // 6. Optional: Update order metadata for visibility, but NOT as the source of truth for logic
-        await client.query(
-            `UPDATE product_orders 
-             SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{payout_processed}', 'true'::jsonb),
-                 updated_at = NOW()
-             WHERE id = $1`,
-            [orderId]
-        );
+        await Order.markPayoutProcessed(client, orderId);
 
         logger.info(
             `[EscrowManager] Released KES ${sellerPayoutAmount} to seller ${sellerId} for Order ${orderId} (source: ${source})`,
