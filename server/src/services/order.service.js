@@ -1018,13 +1018,8 @@ class OrderService {
     // 1. Finalize Inventory (Convert Reserved to Sold)
     await this._finalizeInventory(client, items);
 
-    // 2. Determine and Update Status (Standardized Check)
-    const s_lat = Number(order.latitude || order.seller_latitude || 0);
-    const s_lng = Number(order.longitude || order.seller_longitude || 0);
-    const s_has_shop = sellerHasPhysicalShop({ latitude: s_lat, longitude: s_lng });
-    const sellerHasShop = s_has_shop && !!(order.physical_address || order.seller_address);
-
-    const newStatus = this._determineCompletionStatus(items, sellerHasShop, order, payment.metadata);
+    // 2. Determine and Update Status (Standardized Source of Truth)
+    const newStatus = this._determineCompletionStatus(items, order.fulfillment_type, order, payment.metadata);
 
     const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, newStatus, 'completed', payment.provider_reference);
 
@@ -1066,8 +1061,8 @@ class OrderService {
       }
     }
 
-    // 3. Determine and Update Status
-    const newStatus = OrderStatus.SERVICE_PENDING; // Services move to SERVICE_PENDING after payment
+    // 3. Determine and Update Status (Standardized mapping)
+    const newStatus = this._determineCompletionStatus(items, order.fulfillment_type, order, payment.metadata);
     const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, newStatus, 'completed', payment.provider_reference);
 
     return { updatedOrder };
@@ -1540,30 +1535,35 @@ class OrderService {
     }
   }
 
-  static _determineCompletionStatus(items, sellerHasShop, order, metadata) {
+  static _determineCompletionStatus(items, fulfillmentType, order, metadata) {
     const isClientOrder = order.client_id !== null || order.is_seller_initiated === true;
     if (isClientOrder) return OrderStatus.COMPLETED;
 
-    const hasPhysical = items.some(i => i.product_type === ProductType.PHYSICAL || i.product_type === 'physical');
-    const hasService = items.some(i => i.product_type === ProductType.SERVICE || i.product_type === 'service');
-    const hasDigital = items.some(i => i.product_type === ProductType.DIGITAL || i.product_type === 'digital' || i.is_digital === true);
-
-    // Mixed orders: If they have physical, fulfillment is pending
-    if (hasPhysical) {
-      // If seller has no shop, it must be delivered by courier -> DELIVERY_PENDING
-      // If seller HAS a shop, it can be collected -> COLLECTION_PENDING
-      return sellerHasShop ? OrderStatus.COLLECTION_PENDING : OrderStatus.DELIVERY_PENDING;
-    }
-
-    if (hasService) {
-      return OrderStatus.SERVICE_PENDING;
-    }
-
-    // Purely digital orders are completed immediately
-    if (hasDigital) {
+    // 1. DIGITAL FLOW
+    if (fulfillmentType === FulfillmentType.DIGITAL ||
+      items.every(i => (i.product_type || i.productType || '').toLowerCase() === 'digital')) {
       return OrderStatus.COMPLETED;
     }
 
+    // 2. SERVICE FLOW
+    const isService = order.order_type === OrderType.SERVICE ||
+      fulfillmentType === FulfillmentType.SELLER_TO_BUYER ||
+      items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'service');
+
+    if (isService) {
+      return OrderStatus.SERVICE_PENDING;
+    }
+
+    // 3. PHYSICAL FLOW
+    if (fulfillmentType === FulfillmentType.BUYER_TO_SELLER) {
+      return OrderStatus.COLLECTION_PENDING; // Pickup at shop
+    }
+
+    if (fulfillmentType === FulfillmentType.COURIER) {
+      return OrderStatus.DELIVERY_PENDING; // Logistics handles it
+    }
+
+    // Fallback for legacy or unknown
     return OrderStatus.COMPLETED;
   }
 
