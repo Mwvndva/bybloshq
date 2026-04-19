@@ -44,17 +44,17 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
     const [isChangingLocation, setIsChangingLocation] = useState(false);
     const [buyerLocation, setBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
     const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
-
     const serviceOptions = product.service_options || (product as any).serviceOptions || {};
-    const rawLocations = product.service_locations || (product as any).serviceLocations;
-    const locations = rawLocations ? [rawLocations] : [];
+
 
     const wordCount = serviceRequirements.trim().split(/\s+/).filter(w => w.length > 0).length;
     const maxWords = 50;
 
-    const locationType = serviceOptions.location_type || 'buyer_visits_seller';
-    const isSellerVisits = locationType === 'seller_visits_buyer';
     const isShopless = isSellerShopless(product);
+    const seller = product.seller || (product as any).seller;
+
+    // Standardized Mode: If seller has a shop, we prioritize 'At Shop' (In-store)
+    const isSellerVisits = isShopless;
 
     // Reset state when modal opens
     useEffect(() => {
@@ -74,9 +74,10 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                 }
             }
 
-            // Auto-select first shop location if available (In-Store)
-            if (locations.length > 0) {
-                setLocation(locations[0]);
+            // AUTO-SELECT Shop location if In-Store (Task BUG-SHOP-12)
+            if (!isShopless) {
+                const shopAddress = seller?.physicalAddress || (seller as any)?.physical_address;
+                setLocation(shopAddress || 'Our Shop');
             } else {
                 setLocation(null);
             }
@@ -314,21 +315,21 @@ export function ServiceBookingModal({ product, isOpen, onClose, onConfirm, initi
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 gap-3">
-                                        {locations.length > 0 ? (
-                                            locations.map((loc, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    className="flex items-center gap-4 p-4 bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.1)] rounded-3xl border-2 border-yellow-400 transition-all"
-                                                >
-                                                    <div className="w-10 h-10 bg-black/10 rounded-2xl flex items-center justify-center shrink-0">
-                                                        <MapPin className="h-5 w-5 text-black" />
-                                                    </div>
-                                                    <p className="text-sm font-bold text-black">{loc}</p>
+                                        {!isShopless ? (
+                                            // Always use seller profile address for In-Store (Task BUG-SHOP-12)
+                                            <div
+                                                className="flex items-center gap-4 p-4 bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.1)] rounded-3xl border-2 border-yellow-400 transition-all cursor-default"
+                                            >
+                                                <div className="w-10 h-10 bg-black/10 rounded-2xl flex items-center justify-center shrink-0">
+                                                    <MapPin className="h-5 w-5 text-black" />
                                                 </div>
-                                            ))
+                                                <p className="text-sm font-bold text-black">
+                                                    {location || seller?.physicalAddress || 'Our Shop'}
+                                                </p>
+                                            </div>
                                         ) : (
                                             <div className="p-4 bg-white/5 rounded-3xl border border-white/5 text-center italic text-[#666] text-xs">
-                                                Visit my shop or I'll come to you!
+                                                Please select a location above!
                                             </div>
                                         )}
                                     </div>

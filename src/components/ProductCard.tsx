@@ -724,7 +724,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
               ) : (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') ? (
                 "In-store & Mobile"
               ) : (
-                (product.service_locations || (product as any).serviceLocations) || (isSellerShopless(displaySeller) ? "Mobile Service" : "In-store")
+                (isSellerShopless(displaySeller) ? "Mobile Service" : "In-store")
               )}
             </span>
           </div>

@@ -44,7 +44,6 @@ interface FormData {
   digital_file_path: string;
   digital_file_size: number | null;
   product_type: 'physical' | 'digital' | 'service';
-  service_locations: string;
   service_options: ServiceOptions;
 }
 
@@ -61,7 +60,6 @@ const formDataDefaults: FormData = {
   digital_file_path: '',
   digital_file_size: null,
   product_type: 'physical',
-  service_locations: '',
   service_options: {
     availability_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
     location_type: 'buyer_visits_seller',
@@ -206,7 +204,6 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         digital_file_path: digitalFilePath,
         digital_file_name: digitalFileName,
         digital_file_size: digitalFileSize,
-        service_locations: formData.product_type === 'service' ? formData.service_locations : undefined,
         service_options: formData.product_type === 'service' ? formData.service_options : undefined,
       };
 
