@@ -424,7 +424,9 @@ class WhatsAppService {
         const isDigital = (type || '').toUpperCase() === 'DIGITAL';
         const isService = (type || '').toUpperCase() === 'SERVICE';
         const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
-        const hasPhysicalShop = !!seller.latitude && !!seller.longitude && !!seller.address;
+
+        // SOT: Use fulfillmentType if available, fallback to seller coordinate check
+        const hasPhysicalShop = fulfillmentType === 'BUYER_TO_SELLER' || sellerHasPhysicalShop(seller);
 
         const partyName = isSeller ? (seller.name || 'Seller') : (buyer.name || 'Customer');
         const headerText = isSeller ? `🔔 *New Order: #${orderNumber}*` : `✅ *Order Confirmed: #${orderNumber}*`;
@@ -537,7 +539,7 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
         const { type } = order;
         const isService = (type || '').toUpperCase() === 'SERVICE';
         const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
-        const hasPhysicalShop = !!seller.latitude && !!seller.longitude && !!seller.physicalAddress;
+        const hasPhysicalShop = order.fulfillment_type === 'BUYER_TO_SELLER' || sellerHasPhysicalShop(seller);
 
         const instructions = this.getLifecycleInstruction(newStatus, 'buyer', type, hasPhysicalShop);
         let locationDetails = '';
@@ -603,7 +605,7 @@ _Check your dashboard for full details._
         const { type } = order;
         const isService = (type || '').toUpperCase() === 'SERVICE';
         const isPhysical = (type || '').toUpperCase() === 'PHYSICAL';
-        const hasPhysicalShop = !!seller.latitude && !!seller.longitude && !!seller.physicalAddress;
+        const hasPhysicalShop = order.fulfillment_type === 'BUYER_TO_SELLER' || sellerHasPhysicalShop(seller);
 
         const instructions = this.getLifecycleInstruction(newStatus, 'seller', type, hasPhysicalShop);
         let locationDetails = '';

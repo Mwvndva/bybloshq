@@ -62,4 +62,8 @@ export interface Order {
   buyerEmail?: string;
   buyerMobilePayment?: string;
   buyerWhatsappNumber?: string;
+  fulfillment_type?: string;
+  location_address?: string;
+  location_lat?: number;
+  location_lng?: number;
 }
