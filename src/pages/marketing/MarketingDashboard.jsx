@@ -113,9 +113,9 @@ export default function MarketingDashboard() {
     )
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white p-[var(--space-4)] md:p-[var(--space-8)] space-y-[var(--space-8)] md:space-y-[var(--space-12)] selection:bg-yellow-500/30">
+        <div className="min-h-screen bg-[#050505] text-white p-4 md:p-8 lg:p-12 space-y-8 md:space-y-12 selection:bg-yellow-500/30">
             {/* Header */}
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-[var(--space-6)] bg-white/5 backdrop-blur-3xl border border-white/10 rounded-[var(--radius-xl)] md:rounded-[var(--radius-2xl)] p-[var(--space-6)] md:p-[var(--space-10)] shadow-2xl relative overflow-hidden group">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white/5 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] p-6 md:p-10 shadow-2xl relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/[0.02] to-transparent pointer-events-none"></div>
                 <div className="relative z-10 flex items-center gap-5 md:gap-8">
                     <div className="w-12 h-12 md:w-20 md:h-20 bg-yellow-500 rounded-xl md:rounded-3xl flex items-center justify-center shadow-lg shadow-yellow-500/20 group-hover:scale-110 transition-transform duration-500">
@@ -145,7 +145,7 @@ export default function MarketingDashboard() {
 
             {/* KPI Cards */}
             {overview && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-[var(--space-4)] md:gap-[var(--space-6)]">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6">
                     <StatCard title="Total GMV" value={overview.totalGmv} prefix="KSh " color="yellow" />
                     <StatCard title="Platform Revenue" value={overview.totalRevenue} prefix="KSh " color="green" />
                     <StatCard title="Total Orders" value={overview.totalOrders} color="blue" />
@@ -154,7 +154,7 @@ export default function MarketingDashboard() {
                 </div>
             )}
 
-            <main className="max-w-[var(--container-2xl)] mx-auto space-y-[var(--space-8)] md:space-y-[var(--space-12)]">
+            <main className="max-w-[1600px] mx-auto space-y-8 md:space-y-12">
                 {/* Dashboard Subheader */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-white/5">
                     <div>

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -47,37 +46,54 @@ function ShopCard({ shop, onOpen }) {
 
   return (
     <div
-      className={cn(
-        "bg-[#141414]/90 backdrop-blur-xl rounded-[var(--radius-xl)] overflow-hidden cursor-pointer",
-        "transition-all duration-200 active:scale-95 group hover:bg-[#1C1C1C]"
-      )}
+      style={{
+        background: '#141414',
+        borderRadius: 14,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: 'transform 0.15s ease, background 0.15s ease',
+        willChange: 'transform',
+      }}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
     >
       {/* Card image area */}
-      <div className="h-[68px] flex items-center justify-center relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(145deg, ${color} 0%, transparent 100%)` }} />
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold border-2 transition-transform duration-300 group-hover:scale-110"
-          style={{
-            background: `${color}20`,
-            borderColor: `${color}40`,
-            color: color
-          }}
-        >
+      <div style={{
+        height: 68,
+        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 10,
+          background: `${color}20`,
+          border: `1.5px solid ${color}40`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, fontWeight: 700, color,
+        }}>
           {initial}
         </div>
       </div>
 
       {/* Card body */}
-      <div className="p-[var(--space-3)]">
-        <div className="text-[var(--text-xs)] font-bold text-white mb-[var(--space-1)] truncate">
+      <div style={{ padding: 10 }}>
+        <div style={{
+          fontSize: 12, fontWeight: 600, color: '#fff',
+          marginBottom: 5, overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
           {shop.shopName || shop.name}
         </div>
 
-        <div className="flex items-center justify-between mb-[var(--space-2)]">
-          <div className="flex items-center gap-[var(--space-1)] text-[10px] text-white/40">
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', marginBottom: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
             <Users size={10} /> {shop.clientCount ?? 0}
           </div>
-          <div className="flex items-center gap-[var(--space-1)] text-[10px] text-white/40">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
             <Heart size={10} /> {shop.wishlistCount ?? 0}
           </div>
         </div>
@@ -87,7 +103,14 @@ function ShopCard({ shop, onOpen }) {
             e.stopPropagation();
             onOpen(shop);
           }}
-          className="w-full h-[var(--touch-sm)] rounded-[var(--radius-md)] border-none bg-white/5 hover:bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider transition-colors duration-200"
+          style={{
+            width: '100%', height: 28, borderRadius: 7, border: 'none',
+            background: '#1C1C1C', color: '#fff',
+            fontSize: 11, fontWeight: 500, cursor: 'pointer',
+            transition: 'background 0.15s ease',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
         >
           Open Shop
         </button>
@@ -103,14 +126,28 @@ function FeaturedShopCard({ shop, onOpen }) {
   return (
     <div
       onClick={() => onOpen(shop)}
-      className={cn(
-        "bg-[#141414]/90 backdrop-blur-xl rounded-[var(--radius-xl)] flex items-stretch cursor-pointer h-[var(--touch-xl)] overflow-hidden",
-        "transition-all duration-200 active:scale-95 hover:bg-[#1C1C1C] border border-white/5"
-      )}
+      style={{
+        background: '#141414', borderRadius: 14,
+        display: 'flex', alignItems: 'stretch',
+        cursor: 'pointer', height: 64, overflow: 'hidden',
+        transition: 'transform 0.15s ease',
+        willChange: 'transform',
+      }}
+      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.98)'}
+      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
     >
-      <div className="w-[var(--touch-xl)] flex-shrink-0 flex items-center justify-center relative">
-        <div className="absolute inset-0 opacity-10" style={{ background: `linear-gradient(145deg, ${color} 0%, transparent 100%)` }} />
-        <div className="w-[var(--touch-md)] h-[var(--touch-md)] rounded-full bg-yellow-400/10 border border-yellow-400/30 flex items-center justify-center text-xs font-black text-yellow-400">
+      <div style={{
+        width: 64, flexShrink: 0,
+        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          background: 'rgba(245,197,24,0.12)',
+          border: '1.5px solid rgba(245,197,24,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 700, color: '#F5C518',
+        }}>
           {initial}
         </div>
       </div>
@@ -382,38 +419,73 @@ function BuyerDashboard() {
   };
 
   return (
-    <div className="page-enter flex flex-col h-[100dvh] overflow-hidden bg-[#0A0A0A]">
+    <div className="page-enter" style={{
+      display: 'flex', flexDirection: 'column',
+      height: '100dvh',
+      overflow: 'hidden',
+      background: '#0A0A0A',
+    }}>
       {/* Header */}
-      <div className="px-[var(--space-5)] py-[var(--space-2)] flex items-center justify-between flex-shrink-0 border-b border-white/[0.03]">
-        <button onClick={handleBack} className="flex items-center gap-1 bg-transparent border-none text-[var(--text-xs)] font-bold text-white/40 hover:text-white transition-colors duration-200">
+      <div style={{
+        padding: '8px 18px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexShrink: 0,
+      }}>
+        <button onClick={handleBack} style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          background: 'none', border: 'none', color: 'rgba(255,255,255,0.45)',
+          fontSize: 12, cursor: 'pointer', padding: '4px 0',
+        }}>
           <ChevronLeft size={14} /> Back
         </button>
-        <span className="text-[var(--text-lg)] font-black text-white tracking-tight italic uppercase">
-          DISCOVER<span className="text-yellow-500">.</span>
+        <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '-0.2px' }}>
+          Discover
         </span>
         <div
           onClick={handleLogout}
-          className="w-[var(--touch-sm)] h-[var(--touch-sm)] rounded-full bg-white/5 flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors"
+          style={{
+            width: 30, height: 30, borderRadius: '50%',
+            background: '#1C1C1C', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
         >
-          <LogOut size={13} className="text-white/60" />
+          <LogOut size={13} color="rgba(255,255,255,0.6)" />
         </div>
       </div>
 
       {/* Tab bar */}
-      <div className="px-[var(--space-5)] py-[var(--space-3)] flex-shrink-0">
-        <div className="flex bg-[#141414] rounded-[var(--radius-md)] p-1 gap-1">
+      <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
+        <div style={{
+          display: 'flex', background: '#141414',
+          borderRadius: 'var(--radius-md)', padding: 3, gap: 2,
+        }}>
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={cn(
-                "flex-1 h-[var(--touch-md)] rounded-[var(--radius-sm)] border-none transition-all duration-200 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider",
-                activeSection === tab.key ? "bg-yellow-500 text-black shadow-lg shadow-yellow-500/20" : "bg-transparent text-white/40 hover:text-white"
-              )}
+              style={{
+                flex: 1,
+                height: 34,
+                borderRadius: 9,
+                border: 'none',
+                background: activeSection === tab.key ? '#1C1C1C' : 'transparent',
+                color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.45)',
+                fontSize: 11,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.18s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                whiteSpace: 'nowrap',
+              }}
             >
               <tab.Icon
                 size={13}
-                className={cn(activeSection === tab.key ? "text-black" : "text-white/40")}
+                color={activeSection === tab.key ? '#F5C518' : 'rgba(255,255,255,0.45)'}
               />
               {tab.label}
             </button>
@@ -423,21 +495,36 @@ function BuyerDashboard() {
 
       {/* Search bar */}
       {(activeSection === 'shop' || activeSection === 'shops') && (
-        <div className="px-[var(--space-5)] pb-[var(--space-3)] flex-shrink-0">
-          <div className="flex items-center gap-2 bg-[#141414] rounded-[var(--radius-xl)] px-4 h-[var(--touch-lg)] border border-white/5 transition-all focus-within:border-yellow-500/30">
-            <Search size={14} className="text-white/40" />
+        <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: '#141414', borderRadius: 10,
+            padding: '0 12px', height: 36,
+          }}>
+            <Search size={14} color="rgba(255,255,255,0.45)" style={{ flexShrink: 0 }} />
             <input
               value={activeSection === 'shop' ? searchQuery : shopsSearchQuery}
               onChange={e => activeSection === 'shop' ? setSearchQuery(e.target.value) : setShopsSearchQuery(e.target.value)}
               placeholder={activeSection === 'shop' ? "Search products..." : "Search my shops..."}
-              className="flex-1 bg-transparent border-none outline-none text-white text-[var(--text-sm)] placeholder:text-white/20"
+              style={{
+                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                color: '#fff', fontSize: 13,
+              }}
             />
           </div>
         </div>
       )}
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto no-scrollbar px-[var(--space-5)] pb-[var(--space-10)] overscroll-contain">
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        padding: '0 18px 16px',
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth',
+        overscrollBehavior: 'contain',
+      }}>
         {activeSection === 'shop' && (
           <>
             <div style={{
@@ -515,34 +602,34 @@ function BuyerDashboard() {
 
         {activeSection === 'profile' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div className="flex items-center justify-between">
-              <span className="text-[var(--text-sm)] font-black text-white italic uppercase">Profile</span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Profile</span>
               <button
                 onClick={() => setIsEditingProfile(!isEditingProfile)}
-                className="bg-transparent border-none text-yellow-500 text-[10px] font-black uppercase tracking-widest hover:text-yellow-400 transition-colors"
+                style={{ background: 'none', border: 'none', color: '#F5C518', fontSize: 12, fontWeight: 600 }}
               >
-                {isEditingProfile ? '[ Cancel ]' : '[ Edit Protocol ]'}
+                {isEditingProfile ? 'Cancel' : 'Edit'}
               </button>
             </div>
 
             {/* Minimalist Profile Info */}
-            <div className="bg-[#141414] rounded-[var(--radius-xl)] p-[var(--space-5)] flex flex-col gap-[var(--space-4)] border border-white/5">
+            <div style={{ background: '#141414', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
-                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Identity</div>
-                <div className="text-[var(--text-sm)] text-white font-bold tracking-tight">{user?.fullName}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Full Name</div>
+                <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.fullName}</div>
               </div>
               <div>
-                <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Electronic Mail</div>
-                <div className="text-[var(--text-xs)] text-white/80 font-medium tracking-tight truncate">{user?.email}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email Address</div>
+                <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.email}</div>
               </div>
-              <div className="grid grid-cols-2 gap-[var(--space-5)]">
-                <div>
-                  <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">City</div>
-                  <div className="text-[var(--text-xs)] text-white/80 font-medium">{user?.city || '—'}</div>
+              <div style={{ display: 'flex', gap: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>City</div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.city || '—'}</div>
                 </div>
-                <div>
-                  <div className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none mb-1">Protocol Area</div>
-                  <div className="text-[var(--text-xs)] text-white/80 font-medium">{user?.location || '—'}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Area</div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.location || '—'}</div>
                 </div>
               </div>
             </div>
@@ -550,22 +637,18 @@ function BuyerDashboard() {
             {/* Edit mode placeholder - preserving existing logic would require more detailed injection, 
                  but keeping it functional by just showing the state for now or wrapping existing inputs */}
             {isEditingProfile && (
-              <div className="flex flex-col gap-[var(--space-3)] animate-in fade-in slide-in-from-top-2 duration-300">
-                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-[#141414] border-white/10 text-white h-[var(--touch-md)] rounded-[var(--radius-md)]" />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-[#141414] border-none text-white h-10" />
                 <Select value={city} onValueChange={setCity}>
-                  <SelectTrigger className="bg-[#141414] border-white/10 text-white h-[var(--touch-md)] rounded-[var(--radius-md)]">
+                  <SelectTrigger className="bg-[#141414] border-none text-white h-10">
                     <SelectValue placeholder="Select City" />
                   </SelectTrigger>
-                  <SelectContent className="bg-zinc-950 border-white/10 text-white">
+                  <SelectContent>
                     {Object.keys(locationData).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button
-                  onClick={handleSaveProfile}
-                  disabled={isSavingProfile}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-black h-[var(--touch-md)] font-black uppercase tracking-widest rounded-[var(--radius-md)]"
-                >
-                  {isSavingProfile ? 'Saving...' : 'Update Protocol'}
+                <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="bg-[#F5C518] text-black h-10 font-bold">
+                  {isSavingProfile ? 'Saving...' : 'Save Profile'}
                 </Button>
               </div>
             )}
@@ -576,25 +659,45 @@ function BuyerDashboard() {
       </div>
 
       {/* Bottom navigation bar */}
-      <div className="h-[var(--touch-xl)] bg-[#141414] border-t border-white/[0.06] flex items-stretch flex-shrink-0">
+      <div style={{
+        height: 56,
+        background: '#141414',
+        borderTop: '0.5px solid rgba(255,255,255,0.06)',
+        display: 'flex',
+        alignItems: 'stretch',
+        flexShrink: 0,
+      }}>
         {navItems.map(item => (
           <button
             key={item.key}
             onClick={() => navigate(item.path)}
-            className="flex-1 flex flex-col items-center justify-center gap-1 bg-transparent border-none cursor-pointer relative transition-opacity duration-200 active:opacity-50"
+            style={{
+              flex: 1,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 3, background: 'none', border: 'none',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'opacity 0.15s',
+            }}
           >
             <item.Icon
               size={18}
-              className={cn(activeNav === item.key ? "text-yellow-400" : "text-white/40")}
+              color={activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.45)'}
             />
-            <span className={cn(
-              "text-[9px] font-black uppercase tracking-tighter opacity-80",
-              activeNav === item.key ? "text-yellow-400" : "text-white/40"
-            )}>
+            <span style={{
+              fontSize: 9, fontWeight: 500,
+              color: activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.45)',
+            }}>
               {item.label}
             </span>
             {item.badge && (
-              <div className="absolute top-2 right-[35%] w-1.5 h-1.5 rounded-full bg-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.5)]" />
+              <div style={{
+                position: 'absolute', top: 6, right: '50%',
+                transform: 'translateX(10px)',
+                width: 5, height: 5, borderRadius: '50%',
+                background: '#F5C518',
+              }} />
             )}
           </button>
         ))}
