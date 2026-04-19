@@ -37,18 +37,14 @@ test('toJsonb: valid JSON array string passes through unchanged', () => {
     assert.equal(toJsonb(valid), valid);
 });
 
-test('toJsonb: invalid JSON string THROWS (not silently double-encodes)', () => {
-    assert.throws(
-        () => toJsonb('not-json-at-all'),
-        /Invalid JSON string passed to JSONB column/
-    );
+test('toJsonb: invalid JSON string is WRAPPED as JSON string scalar (not thrown)', () => {
+    // e.g. M-Pesa receipt code "NLJ7RT61SV" → '"NLJ7RT61SV"'
+    const result = toJsonb('NLJ7RT61SV');
+    assert.equal(result, '"NLJ7RT61SV"');
 });
 
-test('toJsonb: plain string "hello" THROWS', () => {
-    assert.throws(
-        () => toJsonb('hello'),
-        /Invalid JSON string passed to JSONB column/
-    );
+test('toJsonb: plain string "hello" is wrapped, not thrown', () => {
+    assert.equal(toJsonb('hello'), '"hello"');
 });
 
 test('toJsonb: number throws', () => {

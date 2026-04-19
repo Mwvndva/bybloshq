@@ -6,26 +6,40 @@ import Buyer from '../models/buyer.model.js';
  * Ensures all values bound to JSONB columns are null or a valid JSON string.
  *
  * Contract:
- *   null / undefined  → null
- *   valid JSON string → passes through unchanged
- *   invalid string    → THROWS (prevents silent double-encoding)
- *   object / array    → JSON.stringify()
+ *   null / undefined          → null
+ *   valid JSON string         → passes through unchanged
+ *   plain scalar string       → wrapped with JSON.stringify → '"value"' (valid JSONB string)
+ *   object / array            → JSON.stringify()
+ *   unsupported type (number) → throws
+ *
+ * NOTE: Plain strings (e.g. M-Pesa receipt codes "NLJ7RT61SV") are valid JSONB
+ * scalars when stored as '"NLJ7RT61SV"'. JSON.stringify wraps them correctly.
+ * We warn (not throw) if the string looks like a misencoded object.
  */
 export const toJsonb = (val) => {
     if (val === null || val === undefined) return null;
     if (typeof val === 'string') {
+        // Already a valid JSON value — pass through unchanged
         try {
             JSON.parse(val);
-            return val; // already a valid JSON string — pass through
+            return val;
         } catch {
-            // A bare non-JSON string (e.g. 'hello') must never be silently
-            // double-encoded into a JSON string — surface the error immediately.
-            throw new Error(`toJsonb: Invalid JSON string passed to JSONB column. Value: ${val.slice(0, 80)}`);
+            // Detect misencoded objects — surface loudly but don't crash
+            if (
+                val.includes('[object Object]') ||
+                val.startsWith('OBJECT:') ||
+                val.startsWith('[object ')
+            ) {
+                logger.warn(`[toJsonb] Suspicious string looks like a misencoded object — storing as JSON string. Value: ${val.slice(0, 120)}`);
+            }
+            // Wrap plain strings as valid JSONB string scalars: "NLJ7RT61SV" → '"NLJ7RT61SV"'
+            return JSON.stringify(val);
         }
     }
     if (typeof val === 'object') return JSON.stringify(val);
     throw new Error(`toJsonb: Unsupported type "${typeof val}" for JSONB column`);
 };
+
 
 /**
  * PIN-05: NO-NULL JSONB / STRING-SAFE
