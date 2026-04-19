@@ -594,7 +594,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-[2rem]',
+        'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-[var(--radius-2xl)]',
         isSold ? 'opacity-60' : 'hover:-translate-y-3 hover:scale-[1.03]',
         'cursor-pointer',
         themeClasses.card
@@ -670,17 +670,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <ProductImage
           src={product.image_url}
           alt={product.name}
-          className="w-full h-40 sm:h-56 md:h-64 lg:h-72 transition-transform duration-700 group-hover:scale-105"
+          className="w-full h-[clamp(180px,25vw,280px)] transition-transform duration-700 group-hover:scale-105"
         />
       </div>
 
-      <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg antialiased",
+      <CardContent className="p-[var(--space-3)] sm:p-[var(--space-4)]">
+        <h3 className={cn("font-bold mb-[var(--space-1)] line-clamp-1 text-[var(--text-lg)] md:text-[var(--text-xl)] antialiased",
           (theme === 'black' || forceWhiteText) ? 'text-white' : 'text-black'
         )}>
           {product.name}
         </h3>
-        <p className={cn("font-black mobile-text-lg mb-1 sm:mb-1.5 flex items-center gap-1.5 sm:gap-2",
+        <p className={cn("font-black text-[var(--text-lg)] md:text-[var(--text-xl)] mb-[var(--space-1)] flex items-center gap-[var(--space-2)]",
           (product.product_type === 'service' || (product as any).productType === 'service')
             ? 'text-purple-600'
             : (forceWhiteText && theme === 'default') ? 'text-yellow-400' : themeClasses.price

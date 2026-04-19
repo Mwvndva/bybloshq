@@ -1,3 +1,5 @@
+@import "./styles/design-tokens.css";
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -17,20 +19,21 @@ body,
 }
 
 :root {
-    --bg: #0A0A0A;
-    --surface: #141414;
-    --surface2: #1C1C1C;
-    --border: rgba(255, 255, 255, 0.06);
-    --accent: #F5C518;
-    --accent-dim: rgba(245, 197, 24, 0.12);
-    --text: #FFFFFF;
-    --text-muted: rgba(255, 255, 255, 0.45);
-    --text-sub: rgba(255, 255, 255, 0.28);
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 14px;
-    --nav-h: 56px;
-    --tab-h: 40px;
+    --bg: var(--color-bg);
+    --surface: var(--color-surface-1);
+    --surface2: var(--color-surface-2);
+    --border: var(--color-border);
+    --accent: var(--color-accent);
+    --accent-dim: var(--color-accent-dim);
+    --text: var(--color-text);
+    --text-muted: var(--color-text-muted);
+    --text-sub: var(--color-text-muted);
+    --radius-sm: var(--radius-sm);
+    --radius-md: var(--radius-md);
+    --radius-lg: var(--radius-lg);
+    --radius-xl: var(--radius-xl);
+    --nav-h: var(--touch-xl);
+    --tab-h: var(--touch-md);
 }
 
 .page-enter {
@@ -168,77 +171,65 @@ body,
     }
 
     html {
-        font-size: 14px;
-    }
-
-    @media (min-width: 768px) {
-        html {
-            font-size: 15px;
-        }
-    }
-
-    @media (min-width: 1024px) {
-        html {
-            font-size: 16px;
-        }
+        font-size: clamp(13px, 1.1vw, 16px);
     }
 }
 
 @layer utilities {
     .mobile-compact {
-        @apply p-3 sm:p-4 md:p-5 lg:p-6;
+        @apply p-[var(--space-3)] sm:p-[var(--space-4)] md:p-[var(--space-5)] lg:p-[var(--space-6)];
     }
 
     .mobile-compact-x {
-        @apply px-3 sm:px-4 md:px-5 lg:px-6;
+        @apply px-[var(--space-3)] sm:px-[var(--space-4)] md:px-[var(--space-5)] lg:px-[var(--space-6)];
     }
 
     .mobile-compact-y {
-        @apply py-3 sm:py-4 md:py-5 lg:py-6;
+        @apply py-[var(--space-3)] sm:py-[var(--space-4)] md:py-[var(--space-5)] lg:py-[var(--space-6)];
     }
 
     .mobile-text {
-        @apply text-xs sm:text-sm md:text-base;
+        @apply text-[var(--text-xs)] sm:text-[var(--text-sm)] md:text-[var(--text-base)];
     }
 
     .mobile-text-lg {
-        @apply text-sm sm:text-base md:text-lg;
+        @apply text-[var(--text-sm)] sm:text-[var(--text-base)] md:text-[var(--text-lg)];
     }
 
     .mobile-heading {
-        @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
+        @apply text-[var(--text-lg)] sm:text-[var(--text-xl)] md:text-[var(--text-2xl)] lg:text-[var(--text-3xl)];
     }
 
     .mobile-heading-sm {
-        @apply text-base sm:text-lg md:text-xl;
+        @apply text-[var(--text-base)] sm:text-[var(--text-lg)] md:text-[var(--text-xl)];
     }
 
     .grid-mobile {
-        @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 md:gap-5 lg:gap-6;
+        @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--space-3)] sm:gap-[var(--space-4)] md:gap-[var(--space-5)] lg:gap-[var(--space-6)];
     }
 
     .grid-mobile-2 {
-        @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:gap-5;
+        @apply grid grid-cols-1 sm:grid-cols-2 gap-[var(--space-3)] sm:gap-[var(--space-4)] md:gap-[var(--space-5)];
     }
 
     .grid-mobile-3 {
-        @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-5;
+        @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-[var(--space-3)] sm:gap-[var(--space-4)] md:gap-[var(--space-5)];
     }
 
     .card-mobile {
-        @apply rounded-lg p-3 sm:p-4 md:p-5 lg:p-6;
+        @apply rounded-[var(--radius-xl)] p-[var(--space-3)] sm:p-[var(--space-4)] md:p-[var(--space-5)] lg:p-[var(--space-6)];
     }
 
     .gap-mobile {
-        @apply gap-2 sm:gap-3 md:gap-4 lg:gap-5;
+        @apply gap-[var(--space-2)] sm:gap-[var(--space-3)] md:gap-[var(--space-4)] lg:gap-[var(--space-5)];
     }
 
     .input-mobile {
-        @apply h-10 sm:h-11 md:h-12 text-sm sm:text-base px-3 sm:px-4;
+        @apply h-[var(--touch-lg)] text-[var(--text-sm)] sm:text-[var(--text-base)] px-[var(--space-3)] sm:px-[var(--space-4)];
     }
 
     .button-mobile {
-        @apply h-10 sm:h-11 md:h-12 text-sm sm:text-base px-4 sm:px-5 md:px-6;
+        @apply h-[var(--touch-lg)] text-[var(--text-sm)] sm:text-[var(--text-base)] px-[var(--space-4)] sm:px-[var(--space-5)] md:px-[var(--space-6)];
     }
 
     .img-mobile {
@@ -246,28 +237,28 @@ body,
     }
 
     .img-mobile-sm {
-        @apply w-16 sm:w-20 md:w-24 h-16 sm:h-20 md:h-24;
+        @apply w-[var(--space-12)] h-[var(--space-12)];
     }
 
     .img-mobile-md {
-        @apply w-32 sm:w-40 md:w-48 h-32 sm:h-40 md:h-48;
+        @apply w-[calc(var(--space-12)*2)] h-[calc(var(--space-12)*2)];
     }
 
     .container-mobile {
-        @apply px-4 sm:px-6 md:px-8 lg:px-10;
+        @apply px-[var(--space-4)] sm:px-[var(--space-6)] md:px-[var(--space-8)] lg:px-[var(--space-10)];
     }
 
     .stat-card {
-        @apply p-3 sm:p-4 md:p-5 rounded-lg;
+        @apply p-[var(--space-3)] sm:p-[var(--space-4)] md:p-[var(--space-5)] rounded-[var(--radius-xl)];
     }
 
     .table-mobile {
-        @apply text-xs sm:text-sm md:text-base;
+        @apply text-[var(--text-sm)];
     }
 
     .table-mobile th,
     .table-mobile td {
-        @apply px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3;
+        @apply px-[var(--space-3)] py-[var(--space-3)];
     }
 
     .no-scrollbar::-webkit-scrollbar {
