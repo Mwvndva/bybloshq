@@ -89,61 +89,72 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
 
   return (
     <>
-      <Card className="relative overflow-hidden border border-white/5 bg-[#141414] rounded-2xl shadow-xl transition-all duration-300 group">
-        {/* Subtle Accent Glow */}
-        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl" />
+      <Card className="relative overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300 group">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50" />
+
+        {/* Decorative elements */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-200/20 to-transparent rounded-full blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-200/20 to-transparent rounded-full blur-2xl" />
 
         <CardContent className="relative p-6 space-y-5">
           {/* Header */}
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <Wallet className="h-4 w-4 text-emerald-500/60" />
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
+              <div className="flex items-center gap-2 mb-2">
+                <Wallet className="h-5 w-5 text-green-600" />
+                <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
                   Refund Balance
                 </p>
               </div>
               <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-black text-emerald-500">
-                  KES {refundAmount.toLocaleString()}
+                <p className="text-4xl font-black text-green-600">
+                  KSh {refundAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
-              <p className="text-[10px] font-bold mt-1 uppercase tracking-tight">
+              <p className="text-sm text-gray-600 font-medium mt-1">
                 {refundAmount > 0 ? (
-                  <span className="flex items-center gap-1.5 text-emerald-500/60">
-                    <CheckCircle2 className="h-3 w-3" />
+                  <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
                     Available for withdrawal
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1.5 text-white/20">
-                    <AlertCircle className="h-3 w-3" />
-                    No funds available
+                  <span className="flex items-center gap-1.5">
+                    <AlertCircle className="h-4 w-4 text-gray-300" />
+                    No refunds available
                   </span>
                 )}
               </p>
             </div>
-            <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center border border-white/5 group-hover:border-emerald-500/30 transition-all">
-              <DollarSign className="h-6 w-6 text-emerald-500/40 group-hover:text-emerald-500" />
+            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+              <DollarSign className="h-8 w-8 text-white" />
             </div>
           </div>
 
           {/* Pending requests alert */}
           {!isLoadingPending && pendingRequests.length > 0 && (
-            <div className="bg-amber-500/5 border border-amber-500/10 rounded-xl p-4 space-y-3 animate-in fade-in duration-300">
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 space-y-3 animate-in fade-in duration-300">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-amber-500 animate-pulse" />
-                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">Withdrawal Status</span>
+                <Clock className="h-5 w-5 text-amber-600 animate-pulse" />
+                <span className="text-sm font-bold text-amber-900">Pending Request</span>
               </div>
               {pendingRequests.map((request) => (
-                <div key={request.id} className="space-y-2 bg-black/20 rounded-lg p-3 border border-white/5">
+                <div key={request.id} className="space-y-2 bg-white/60 rounded-lg p-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-white/20 uppercase">Amount:</span>
-                    <span className="text-xs font-black text-emerald-500">
+                    <span className="text-xs font-medium text-gray-700">Amount:</span>
+                    <span className="text-sm font-bold text-green-600">
                       {formatCurrency(parseFloat(request.amount.toString()))}
                     </span>
                   </div>
-                  <Badge className="bg-amber-500/10 text-amber-500 border-amber-500/20 text-[9px] uppercase font-bold py-0 h-5">
-                    Awaiting Approval
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-gray-700">Requested:</span>
+                    <span className="text-xs text-gray-600">
+                      {format(new Date(request.requested_at), 'MMM d, yyyy h:mm a')}
+                    </span>
+                  </div>
+                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Awaiting Admin Approval
                   </Badge>
                 </div>
               ))}
@@ -154,20 +165,20 @@ export default function RefundCard({ refundAmount, onRefundRequested }: RefundCa
           <Button
             onClick={handleWithdrawClick}
             disabled={pendingRequests.length > 0 || isLoadingPending || refundAmount <= 0}
-            className="w-full bg-white/5 hover:bg-emerald-500 hover:text-black border border-white/10 text-white font-bold h-11 rounded-xl transition-all disabled:opacity-20"
+            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed h-12 text-base group/btn"
           >
             {pendingRequests.length > 0 ? (
               <>
                 <Clock className="h-4 w-4 mr-2 animate-pulse" />
-                PENDING REVIEW
+                Withdrawal Pending
               </>
             ) : refundAmount > 0 ? (
               <>
-                <TrendingUp className="h-3.5 w-3.5 mr-2" />
-                WITHDRAW FUNDS
+                <TrendingUp className="h-4 w-4 mr-2 group-hover/btn:translate-x-1 transition-transform" />
+                Request Withdrawal
               </>
             ) : (
-              'OUT OF CREDIT'
+              'No Refunds Available'
             )}
           </Button>
         </CardContent>

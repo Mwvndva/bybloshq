@@ -31,18 +31,10 @@ interface ProductCardProps {
   hideWishlist?: boolean;
   theme?: Theme;
   forceWhiteText?: boolean;
-  className?: string;
 }
 
 
-export function ProductCard({
-  product,
-  seller,
-  hideWishlist = false,
-  theme = 'default',
-  forceWhiteText = false,
-  className
-}: ProductCardProps) {
+export function ProductCard({ product, seller, hideWishlist = false, theme = 'default', forceWhiteText = false }: ProductCardProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -605,8 +597,7 @@ export function ProductCard({
         'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-[2rem]',
         isSold ? 'opacity-60' : 'hover:-translate-y-3 hover:scale-[1.03]',
         'cursor-pointer',
-        themeClasses.card,
-        className
+        themeClasses.card
       )}
       style={themedCardStyle}
       aria-label={`Product: ${product.name}`}

@@ -61,6 +61,13 @@ import { getImageUrl, cn } from '@/lib/utils';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { getOrderInstruction } from '@/utils/orderInstructions';
 
+const glassCardStyle: React.CSSProperties = {
+  background: 'rgba(20, 20, 20, 0.7)',
+  backdropFilter: 'blur(12px)',
+  WebkitBackdropFilter: 'blur(12px)',
+  border: '1px solid rgba(255, 255, 255, 0.1)',
+  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+};
 
 const badgeGlow = 'shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_10px_20px_rgba(0,0,0,0.35)]';
 
@@ -184,13 +191,10 @@ const getPaymentStatusBadge = (status?: string) => {
   }
 };
 
-interface OrdersSectionProps {
-  searchQuery?: string;
-}
-
-export default function OrdersSection({ searchQuery = '' }: OrdersSectionProps) {
+export default function OrdersSection() {
   const { user } = useBuyerAuth();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
@@ -513,17 +517,42 @@ export default function OrdersSection({ searchQuery = '' }: OrdersSectionProps) 
 
   return (
     <div className="space-y-6">
+      <div className="relative w-full max-w-md mx-auto mb-6">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
+        <Input
+          type="text"
+          placeholder="Search orders, shops, or products..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+        />
+      </div>
+
       {displayOrders.length === 0 && searchQuery ? (
-        <div className="text-center py-20 bg-[#141414] rounded-2xl border border-white/5">
-          <p className="text-sm text-white/30">No orders found matching "{searchQuery}"</p>
+        <div className="text-center py-12 px-4 bg-white/5 rounded-2xl border border-white/10">
+          <p className="text-gray-400">No orders found matching "{searchQuery}"</p>
+          <Button
+            variant="link"
+            onClick={() => setSearchQuery('')}
+            className="text-yellow-500 mt-2"
+          >
+            Clear search
+          </Button>
         </div>
       ) : displayOrders.length === 0 ? (
-        <div className="text-center py-20 bg-[#141414] rounded-2xl border border-white/5">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/10 to-yellow-500/10 rounded-2xl flex items-center justify-center mb-4 text-yellow-500/40">
-            <Package className="h-8 w-8" />
+        <div className="text-center py-12 px-4">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-4">
+            <Package className="h-8 w-8 text-yellow-500" />
           </div>
-          <h3 className="text-lg font-bold text-white mb-2">No orders yet</h3>
-          <p className="text-white/30 text-xs font-medium max-w-[240px] mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
+          <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
+          <p className="text-gray-300 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
+          <Button
+            onClick={() => (window.location.href = '/shop')}
+            className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+          >
+            Start Shopping
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Button>
         </div>
       ) : (
         displayOrders.map((order) => {
@@ -531,7 +560,7 @@ export default function OrdersSection({ searchQuery = '' }: OrdersSectionProps) 
           const mainImage = mainItem?.imageUrl ? getImageUrl(mainItem.imageUrl) : null;
 
           return (
-            <Card key={order.id} className="border border-white/5 bg-[#141414]/70 backdrop-blur-xl rounded-2xl overflow-hidden shadow-xl">
+            <Card key={order.id} className="border-0 overflow-hidden" style={glassCardStyle}>
               <CardContent className="p-0">
                 {/* Header Section */}
                 <div className="p-4 sm:p-6 border-b border-white/5">
@@ -1049,6 +1078,6 @@ export default function OrdersSection({ searchQuery = '' }: OrdersSectionProps) 
           </div>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   );
 }
