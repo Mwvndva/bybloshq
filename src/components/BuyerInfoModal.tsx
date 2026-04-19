@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, User, Mail, MapPin, Phone, CheckCircle2, Lock, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { locationData } from '@/lib/constants';
+import TermsModal from '@/components/TermsModal';
 
 export interface BuyerInfo {
   firstName: string;
@@ -56,6 +57,7 @@ export function BuyerInfoModal({
   });
 
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [errors, setErrors] = useState<Partial<BuyerInfo & { termsAccepted?: string }>>({});
 
   // Update state when initialData changes
@@ -507,23 +509,14 @@ export function BuyerInfoModal({
               />
               <label htmlFor="termsAccepted" className="text-sm text-[#a1a1a1] cursor-pointer leading-relaxed">
                 I agree to the{' '}
-                <a
-                  href="/terms"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white underline hover:text-yellow-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => setIsTermsModalOpen(true)}
+                  className="text-white underline font-medium hover:text-yellow-400 transition-colors"
                 >
                   Terms and Conditions
-                </a>
-                {' '}and{' '}
-                <a
-                  href="/privacy"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-white underline hover:text-yellow-400 transition-colors"
-                >
-                  Privacy Policy
-                </a>
+                </button>
+                {' '}and have read the Privacy Policy.
               </label>
             </div>
             {errors.termsAccepted && (
@@ -559,6 +552,14 @@ export function BuyerInfoModal({
             </Button>
           </div>
         </form>
+        <TermsModal
+          isOpen={isTermsModalOpen}
+          onClose={() => setIsTermsModalOpen(false)}
+          onAccept={() => {
+            setTermsAccepted(true);
+            setIsTermsModalOpen(false);
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
