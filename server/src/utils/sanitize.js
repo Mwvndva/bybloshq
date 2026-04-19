@@ -87,7 +87,6 @@ export const sanitizeProduct = (product) => {
         // digital_file_path: NEVER returned — server-side path only
         digital_file_name: p.digital_file_name || p.digitalFileName || null, // filename ok, path not ok
         product_type: p.product_type || p.productType || 'physical',
-        service_locations: p.service_locations || p.serviceLocations || null,
         service_options: p.service_options || p.serviceOptions || null,
         track_inventory: !!(p.track_inventory),          // boolean, not the quantity
         quantity: p.track_inventory ? (p.quantity ?? null) : null, // only show if tracking
@@ -121,7 +120,6 @@ export const sanitizePublicProduct = (product) => {
         status: p.status || 'available',
         is_digital: !!(p.is_digital || p.isDigital),
         product_type: p.product_type || p.productType || 'physical',
-        service_locations: p.service_locations || p.serviceLocations || null,
         service_options: p.service_options || p.serviceOptions || null,
         is_sold: !!(p.is_sold || p.isSold || p.status === 'sold'),
         created_at: p.created_at || p.createdAt,
