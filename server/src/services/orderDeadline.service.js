@@ -4,6 +4,7 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import whatsappService from './whatsapp.service.js';
+import escrowManager from './EscrowManager.js';
 
 class OrderDeadlineService {
     /**
@@ -319,15 +320,15 @@ class OrderDeadlineService {
                 [order.id]
             );
 
-            // Add revenue to seller balance
-            await client.query(
-                `UPDATE sellers 
-                 SET balance = balance + $1,
-                     total_sales = total_sales + $2,
-                     net_revenue = net_revenue + $1
-                 WHERE id = $3`,
-                [order.seller_payout_amount, order.total_amount, order.seller_id]
-            );
+            // Release funds through EscrowManager — the single source of truth
+            // for all seller balance/revenue/sales updates and payouts table entries.
+            const releaseResult = await escrowManager.releaseFunds(client, order, 'OrderDeadlineService');
+            if (!releaseResult.success && !releaseResult.alreadyReleased) {
+                throw new Error(
+                    `EscrowManager.releaseFunds failed for order ${order.id}: ` +
+                    `${releaseResult.reason || 'unknown reason'}`
+                );
+            }
 
             await client.query('COMMIT');
 

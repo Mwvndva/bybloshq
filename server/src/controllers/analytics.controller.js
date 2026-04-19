@@ -129,10 +129,9 @@ export const getSellerAnalytics = async (req, res, next) => {
 
     const analyticsData = {
       totalProducts: parseInt(productsResult.rows[0]?.total_products || 0),
-      totalSales: parseFloat(sellerStats.total_sales),
-      totalRevenue: parseFloat(sellerStats.net_revenue),
-      totalPayout: parseFloat(sellerStats.net_revenue),
-      balance: sellerBalance,
+      totalSales: parseFloat(sellerStats.total_sales || 0),  // Full GMV (SALES card)
+      totalRevenue: parseFloat(sellerStats.net_revenue || 0),  // After commission (REVENUE card)
+      balance: parseFloat(sellerStats.balance || 0),  // Withdrawable (BALANCE card)
       monthlySales: monthlySalesResult.rows.map(row => ({
         month: row.month,
         sales: parseFloat(row.sales || 0)

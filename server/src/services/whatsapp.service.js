@@ -239,6 +239,18 @@ class WhatsAppService {
     }
 
     /**
+     * Helper to get a friendly name for the service provider
+     * @param {Object} order - Normalized or DB order object
+     * @returns {string} - "Professional", "Seller", etc.
+     */
+    getServiceProviderType(order) {
+        if (!order) return 'Seller';
+        const metadata = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
+        const type = order.product_type || metadata.product_type || 'physical';
+        return type.toLowerCase() === 'service' ? 'Professional' : 'Seller';
+    }
+
+    /**
      * Clean logout
      */
     async logout() {

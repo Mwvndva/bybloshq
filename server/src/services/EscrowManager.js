@@ -35,11 +35,36 @@ class EscrowManager {
         const paymentId = paymentResult.rows[0]?.id;
 
         // 3. Calculate amounts safely
-        const sellerPayoutAmount = Math.round(Number.parseFloat(order.seller_payout_amount ?? order.sellerPayoutAmount ?? 0) * 100) / 100;
-        const totalAmount = Math.round(Number.parseFloat(order.total_amount ?? order.totalAmount ?? 0) * 100) / 100;
-        const platformFeeAmount = Math.round(Number.parseFloat(
-            order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount),
-        ) * 100) / 100;
+        const rawPayout = Number.parseFloat(
+            order.seller_payout_amount ?? order.sellerPayoutAmount ?? 0
+        );
+        const rawTotal = Number.parseFloat(
+            order.total_amount ?? order.totalAmount ?? 0
+        );
+
+        // Guard: if either value is NaN or 0, abort — something is wrong upstream
+        if (isNaN(rawPayout) || rawPayout <= 0) {
+            logger.error(
+                `[EscrowManager] Invalid seller_payout_amount for Order ${orderId}: ` +
+                `"${order.seller_payout_amount ?? order.sellerPayoutAmount}". Aborting release.`
+            );
+            return { success: false, reason: 'invalid_payout_amount' };
+        }
+        if (isNaN(rawTotal) || rawTotal <= 0) {
+            logger.error(
+                `[EscrowManager] Invalid total_amount for Order ${orderId}: ` +
+                `"${order.total_amount ?? order.totalAmount}". Aborting release.`
+            );
+            return { success: false, reason: 'invalid_total_amount' };
+        }
+
+        const sellerPayoutAmount = Math.round(rawPayout * 100) / 100;
+        const totalAmount = Math.round(rawTotal * 100) / 100;
+        const platformFeeAmount = Math.round(
+            Number.parseFloat(
+                order.platform_fee_amount ?? order.platformFeeAmount ?? (totalAmount - sellerPayoutAmount)
+            ) * 100
+        ) / 100;
         const sellerId = order.seller_id ?? order.sellerId;
 
         if (sellerPayoutAmount <= 0) {
