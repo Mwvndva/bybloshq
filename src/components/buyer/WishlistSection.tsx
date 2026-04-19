@@ -1,22 +1,14 @@
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Heart, Search } from 'lucide-react';
+
+import { Heart } from 'lucide-react';
 import { useWishlist } from '@/contexts/WishlistContext';
 import { ProductCard } from '@/components/ProductCard';
-import { Input } from '@/components/ui/input';
-import { useState } from 'react';
 
-export default function WishlistSection() {
+interface WishlistSectionProps {
+  searchQuery?: string;
+}
+
+export default function WishlistSection({ searchQuery = '' }: WishlistSectionProps) {
   const { wishlist } = useWishlist();
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const glassStyle: React.CSSProperties = {
-    background: 'rgba(17, 17, 17, 0.7)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
-  };
 
   const filteredWishlist = wishlist.filter(product => {
     const query = searchQuery.toLowerCase();
@@ -27,46 +19,32 @@ export default function WishlistSection() {
 
   if (wishlist.length === 0) {
     return (
-      <div className="text-center py-16 sm:py-20 lg:py-24">
-        <div className="max-w-2xl mx-auto rounded-3xl p-10 sm:p-12" style={glassStyle}>
-          <div className="w-20 h-20 sm:w-24 sm:h-24 lg:w-28 lg:h-28 mx-auto mb-6 sm:mb-8 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 border border-yellow-500/20 rounded-3xl flex items-center justify-center shadow-lg">
-            <Heart className="h-10 w-10 sm:h-12 sm:w-12 lg:h-14 lg:w-14 text-yellow-400 fill-current" />
-          </div>
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white mb-3 sm:mb-4">
-            Your wishlist is empty
-          </h3>
-          <p className="text-gray-300 text-sm sm:text-base lg:text-lg font-normal max-w-md mx-auto px-4">
-            Start adding items you love to your wishlist and they'll appear here
-          </p>
+      <div className="text-center py-20 bg-[#141414] rounded-2xl border border-white/5 shadow-xl animate-in fade-in zoom-in-95 duration-500 mt-4">
+        <div className="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-yellow-500/10 to-yellow-600/10 border border-yellow-500/10 rounded-2xl flex items-center justify-center">
+          <Heart className="h-10 w-10 text-yellow-500/40 fill-current" />
         </div>
+        <h3 className="text-lg font-bold text-white mb-2">Your wishlist is empty</h3>
+        <p className="text-white/30 text-xs font-medium max-w-[240px] mx-auto">
+          Start adding items you love to your wishlist and they'll appear here
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="relative w-full max-w-sm ml-auto mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
-        <Input
-          type="text"
-          placeholder="Search wishlist..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
-        />
-      </div>
-
       {filteredWishlist.length === 0 && searchQuery ? (
-        <div className="text-center py-12 px-4 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-gray-400">No items found matching "{searchQuery}"</p>
+        <div className="text-center py-20 bg-white/5 rounded-2xl border border-white/5">
+          <p className="text-sm text-white/30">No items found matching "{searchQuery}"</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {filteredWishlist.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
               forceWhiteText={true}
+              className="border border-white/5"
             />
           ))}
         </div>
