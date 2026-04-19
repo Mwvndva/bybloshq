@@ -97,15 +97,15 @@ export function BaseDashboardLayout({
                     {/* Sidebar */}
                     <aside
                         className={cn(
-                            'fixed lg:sticky top-0 left-0 h-screen w-64 bg-black/80 backdrop-blur-md border-r border-white/10 z-50 transition-transform duration-300 ease-in-out',
+                            'fixed lg:sticky top-0 left-0 h-screen w-[280px] bg-black/80 backdrop-blur-md border-r border-white/10 z-50 transition-transform duration-300 ease-in-out',
                             sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                         )}
                         aria-label={`${role} sidebar navigation`}
                     >
                         {/* Sidebar Header */}
-                        <div className="h-20 flex items-center justify-between px-6 border-b border-white/10">
+                        <div className="h-[var(--touch-xl)] flex items-center justify-between px-[var(--space-4)] border-b border-white/10">
                             {sidebarHeader || (
-                                <h2 className="text-xl font-black text-white tracking-tight">
+                                <h2 className="text-[var(--text-xl)] font-black text-white tracking-tight">
                                     {title}
                                 </h2>
                             )}
@@ -132,7 +132,7 @@ export function BaseDashboardLayout({
                                         to={item.path}
                                         onClick={() => setSidebarOpen(false)}
                                         className={cn(
-                                            'flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200',
+                                            'flex items-center gap-[var(--space-3)] px-[var(--space-4)] py-[var(--space-3)] rounded-[var(--radius-xl)] transition-all duration-200',
                                             isActive
                                                 ? 'bg-white/10 text-white font-semibold'
                                                 : 'text-white/60 hover:text-white hover:bg-white/5'
@@ -175,8 +175,8 @@ export function BaseDashboardLayout({
                     className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30"
                     role="banner"
                 >
-                    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="relative flex items-center justify-between h-20">
+                    <div className="max-w-[var(--container-2xl)] mx-auto px-[var(--space-4)] sm:px-[var(--space-6)] lg:px-[var(--space-8)]">
+                        <div className="relative flex items-center justify-between h-[var(--touch-xl)]">
                             {/* Left: Menu/Back Button */}
                             <div className="flex-1 flex items-center gap-2">
                                 {showSidebar && (
@@ -207,11 +207,11 @@ export function BaseDashboardLayout({
 
                             {/* Center: Title */}
                             <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%]">
-                                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
+                                <h1 className="text-[var(--text-xl)] md:text-[var(--text-3xl)] font-black text-white tracking-tight truncate">
                                     {title}
                                 </h1>
                                 {subtitle && (
-                                    <p className="hidden sm:block text-xs sm:text-sm text-zinc-400 font-medium truncate">
+                                    <p className="hidden sm:block text-[var(--text-xs)] sm:text-[var(--text-sm)] text-zinc-400 font-medium truncate">
                                         {subtitle}
                                     </p>
                                 )}

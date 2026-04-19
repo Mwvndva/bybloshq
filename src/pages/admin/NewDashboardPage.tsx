@@ -141,9 +141,9 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) => (
   <div className="relative group">
     {/* Glow pulse on hover */}
-    <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/0 to-yellow-500/0 rounded-[2rem] blur opacity-0 group-hover:opacity-30 group-hover:from-yellow-500/50 group-hover:to-orange-500/50 transition duration-500"></div>
+    <div className="absolute -inset-0.5 bg-gradient-to-r from-yellow-500/0 to-yellow-500/0 rounded-[var(--radius-2xl)] blur opacity-0 group-hover:opacity-30 group-hover:from-yellow-500/50 group-hover:to-orange-500/50 transition duration-500"></div>
 
-    <Card className="relative bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden transition-all duration-500 group-hover:bg-[#0A0A0A]/60 group-hover:scale-[1.02] group-hover:border-white/20">
+    <Card className="relative bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[var(--radius-2xl)] overflow-hidden transition-all duration-500 group-hover:bg-[#0A0A0A]/60 group-hover:scale-[1.02] group-hover:border-white/20">
       <div className="absolute inset-0 bg-gradient-to-br from-white/[0.05] to-transparent pointer-events-none"></div>
 
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3 relative z-10">
@@ -174,7 +174,7 @@ const StatsCard = ({ title, value, icon, description, trend }: StatsCardProps) =
 );
 
 const ChartContainer = ({ title, description, children, className = "" }: { title: string, description: string, children: React.ReactNode, className?: string }) => (
-  <Card className={`${className} bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[2rem] overflow-hidden group hover:border-white/20 transition-all duration-500`}>
+  <Card className={`${className} bg-[#0A0A0A]/40 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-[var(--radius-2xl)] overflow-hidden group hover:border-white/20 transition-all duration-500`}>
     <div className="absolute inset-0 bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none"></div>
     <CardHeader className="relative z-10 pb-2">
       <CardTitle className="text-xl font-bold text-white group-hover:text-yellow-50 transition-colors">{title}</CardTitle>
