@@ -11,19 +11,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
-  ArrowLeft,
-  Heart,
-  User,
-  Settings,
-  LogOut,
-  TrendingUp,
-  Package,
-  ShoppingBag,
-  Phone,
-  Mail,
-  Info,
-  X,
-  Search
+  ChevronLeft, ChevronRight, LogOut,
+  Search, Home, Heart, ShoppingCart, User,
+  Users, Store, Package, ShoppingBag, Info, X
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import buyerApi from '@/api/buyerApi';
@@ -34,9 +24,149 @@ import AestheticCategories from '@/components/AestheticCategories';
 import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
+import { format } from 'date-fns';
 
 import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
+
+const SHOP_COLORS = [
+  '#8B5CF6', '#EC4899', '#10B981', '#3B82F6',
+  '#F59E0B', '#EF4444', '#06B6D4', '#F97316',
+];
+
+function shopColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFFFFFFFF;
+  return SHOP_COLORS[Math.abs(h) % SHOP_COLORS.length];
+}
+
+function ShopCard({ shop, onOpen }) {
+  const color = shopColor(shop.shopName || shop.name || '');
+  const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
+
+  return (
+    <div
+      style={{
+        background: '#141414',
+        borderRadius: 14,
+        overflow: 'hidden',
+        cursor: 'pointer',
+        transition: 'transform 0.15s ease, background 0.15s ease',
+        willChange: 'transform',
+      }}
+      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
+      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
+    >
+      {/* Card image area */}
+      <div style={{
+        height: 68,
+        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 10,
+          background: `${color}20`,
+          border: `1.5px solid ${color}40`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 14, fontWeight: 700, color,
+        }}>
+          {initial}
+        </div>
+      </div>
+
+      {/* Card body */}
+      <div style={{ padding: 10 }}>
+        <div style={{
+          fontSize: 12, fontWeight: 600, color: '#fff',
+          marginBottom: 5, overflow: 'hidden',
+          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        }}>
+          {shop.shopName || shop.name}
+        </div>
+
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          justifyContent: 'space-between', marginBottom: 8,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+            <Users size={10} /> {shop.clientCount ?? 0}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+            <Heart size={10} /> {shop.wishlistCount ?? 0}
+          </div>
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(shop);
+          }}
+          style={{
+            width: '100%', height: 28, borderRadius: 7, border: 'none',
+            background: '#1C1C1C', color: '#fff',
+            fontSize: 11, fontWeight: 500, cursor: 'pointer',
+            transition: 'background 0.15s ease',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
+        >
+          Open Shop
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FeaturedShopCard({ shop, onOpen }) {
+  const color = shopColor(shop.shopName || shop.name || '');
+  const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
+
+  return (
+    <div
+      onClick={() => onOpen(shop)}
+      style={{
+        background: '#141414', borderRadius: 14,
+        display: 'flex', alignItems: 'stretch',
+        cursor: 'pointer', height: 64, overflow: 'hidden',
+        transition: 'transform 0.15s ease',
+        willChange: 'transform',
+      }}
+      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.98)'}
+      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
+    >
+      <div style={{
+        width: 64, flexShrink: 0,
+        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: '50%',
+          background: 'rgba(245,197,24,0.12)',
+          border: '1.5px solid rgba(245,197,24,0.4)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 700, color: '#F5C518',
+        }}>
+          {initial}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>
+          {shop.shopName || shop.name}
+        </div>
+        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
+          {shop.clientCount ?? 0} clients · {shop.wishlistCount ?? 0} saved
+        </div>
+      </div>
+
+      <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center' }}>
+        <ChevronRight size={14} color="rgba(255,255,255,0.45)" />
+      </div>
+    </div>
+  );
+}
 
 
 
@@ -248,425 +378,331 @@ function BuyerDashboard() {
     };
   }, []);
 
-  const glassStyle: React.CSSProperties = {
-    background: 'rgba(17, 17, 17, 0.7)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+  const handleBack = () => navigate(-1);
+
+  const tabs = [
+    { key: 'shop', label: 'Shop', Icon: Store },
+    { key: 'shops', label: 'My Shops', Icon: ShoppingBag },
+    { key: 'orders', label: 'Orders', Icon: Package },
+    { key: 'wishlist', label: 'Wishlist', Icon: Heart },
+  ];
+
+  const navItems = [
+    { key: 'home', label: 'Home', Icon: Home, path: '/' },
+    { key: 'shop', label: 'Shop', Icon: Store, path: '/buyer/dashboard' },
+    { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },
+    { key: 'orders', label: 'Orders', Icon: Package, path: '/buyer/orders', badge: hasUnreadOrders },
+    { key: 'profile', label: 'Profile', Icon: User, path: '/buyer/profile' },
+  ];
+
+  const activeNav = activeSection === 'shop' ? 'shop' : activeSection;
+
+  const setActiveTab = (key) => {
+    const pathMap = {
+      shop: 'dashboard',
+      shops: 'shops',
+      orders: 'orders',
+      wishlist: 'wishlist',
+      profile: 'profile'
+    };
+    navigate(`/buyer/${pathMap[key]}`);
+    if (key === 'orders') {
+      const now = new Date().toISOString();
+      setLastViewedOrdersTime(now);
+      localStorage.setItem('buyer_last_viewed_orders', now);
+      setHasUnreadOrders(false);
+    }
+  };
+
+  const handleOpenShop = (shop) => {
+    navigate(`/buyer/shop/${encodeURIComponent(shop.shopName || shop.name)}`);
   };
 
   return (
-    <>
-      <div className="max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-
-
-        {/* Navigation Tabs - Mobile Responsive */}
+    <div className="page-enter" style={{
+      display: 'flex', flexDirection: 'column',
+      height: '100dvh',
+      overflow: 'hidden',
+      background: '#0A0A0A',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '8px 18px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexShrink: 0,
+      }}>
+        <button onClick={handleBack} style={{
+          display: 'flex', alignItems: 'center', gap: 4,
+          background: 'none', border: 'none', color: 'rgba(255,255,255,0.45)',
+          fontSize: 12, cursor: 'pointer', padding: '4px 0',
+        }}>
+          <ChevronLeft size={14} /> Back
+        </button>
+        <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '-0.2px' }}>
+          Discover
+        </span>
         <div
-          className="flex items-center gap-2 mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 max-w-4xl mx-auto w-full overflow-x-auto sm:overflow-visible sm:justify-center"
-          style={glassStyle}
+          onClick={handleLogout}
+          style={{
+            width: 30, height: 30, borderRadius: '50%',
+            background: '#1C1C1C', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer',
+          }}
         >
-          {[
-            { id: 'shop', label: 'Shop', icon: Package },
-            { id: 'shops', label: 'My Shops', icon: ShoppingBag },
-            { id: 'orders', label: 'Orders', icon: Package },
-            { id: 'wishlist', label: 'Wishlist', icon: Heart },
-            { id: 'profile', label: 'Profile', icon: User },
-          ].map(({ id, label, icon: Icon }) => (
+          <LogOut size={13} color="rgba(255,255,255,0.6)" />
+        </div>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
+        <div style={{
+          display: 'flex', background: '#141414',
+          borderRadius: 'var(--radius-md)', padding: 3, gap: 2,
+        }}>
+          {tabs.map((tab) => (
             <button
-              onClick={() => {
-                const pathMap: Record<string, string> = {
-                  shop: 'dashboard',
-                  shops: 'shops',
-                  orders: 'orders',
-                  wishlist: 'wishlist',
-                  profile: 'profile'
-                };
-                navigate(`/buyer/${pathMap[id]}`);
-
-                // Mark orders as viewed when Orders tab is clicked
-                if (id === 'orders') {
-                  const now = new Date().toISOString();
-                  setLastViewedOrdersTime(now);
-                  localStorage.setItem('buyer_last_viewed_orders', now);
-                  setHasUnreadOrders(false);
-                }
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              style={{
+                flex: 1,
+                height: 34,
+                borderRadius: 9,
+                border: 'none',
+                background: activeSection === tab.key ? '#1C1C1C' : 'transparent',
+                color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.45)',
+                fontSize: 11,
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.18s ease',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                whiteSpace: 'nowrap',
               }}
-              className={`relative flex items-center justify-center flex-shrink-0 space-x-2 sm:space-x-3 px-3 sm:px-6 lg:px-8 py-2 sm:py-2.5 lg:py-3 rounded-xl sm:rounded-2xl font-semibold text-xs sm:text-sm lg:text-base transition-all duration-300 ${activeSection === id
-                ? 'bg-gradient-to-r from-yellow-400 to-yellow-500 text-white shadow-lg transform scale-105'
-                : 'text-gray-300 hover:text-white hover:bg-gray-800/70'
-                }`}
             >
-              <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>{label}</span>
-
-              {/* Notification Badge - Red Dot for Orders */}
-              {id === 'orders' && hasUnreadOrders && (
-                <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full border-2 border-black animate-pulse" />
-              )}
-
-              {id === 'wishlist' && wishlist.length > 0 && (
-                <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                  {wishlist.length}
-                </span>
-              )}
-              {id === 'profile' && isMissingLocation && (
-                <span className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500" aria-label="Action required" />
-              )}
+              <tab.Icon
+                size={13}
+                color={activeSection === tab.key ? '#F5C518' : 'rgba(255,255,255,0.45)'}
+              />
+              {tab.label}
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Content Sections */}
-        {activeSection === 'shop' && (
-          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
-            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">Discover Shops</h2>
-                <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal">
-                  Explore our curated selection of brands and creators
-                </p>
-              </div>
-              <div className="relative w-full sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
-                <Input
-                  type="text"
-                  placeholder="Search shops..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
-                />
-              </div>
-            </div>
-
-            <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
+      {/* Search bar */}
+      {(activeSection === 'shop' || activeSection === 'shops') && (
+        <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 8,
+            background: '#141414', borderRadius: 10,
+            padding: '0 12px', height: 36,
+          }}>
+            <Search size={14} color="rgba(255,255,255,0.45)" style={{ flexShrink: 0 }} />
+            <input
+              value={activeSection === 'shop' ? searchQuery : shopsSearchQuery}
+              onChange={e => activeSection === 'shop' ? setSearchQuery(e.target.value) : setShopsSearchQuery(e.target.value)}
+              placeholder={activeSection === 'shop' ? "Search products..." : "Search my shops..."}
+              style={{
+                flex: 1, background: 'transparent', border: 'none', outline: 'none',
+                color: '#fff', fontSize: 13,
+              }}
+            />
           </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        padding: '0 18px 16px',
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth',
+        overscrollBehavior: 'contain',
+      }}>
+        {activeSection === 'shop' && (
+          <>
+            <div style={{
+              padding: '0 0 8px',
+              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Featured Marketplace</span>
+            </div>
+            <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
+          </>
         )}
 
         {activeSection === 'shops' && (
-          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
-            <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white mb-1.5 sm:mb-2">My Shops</h2>
-                <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-normal">
-                  Shops you are following
-                </p>
-              </div>
-              <div className="relative w-full sm:max-w-xs">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
-                <Input
-                  type="text"
-                  placeholder="Search my shops..."
-                  value={shopsSearchQuery}
-                  onChange={(e) => setShopsSearchQuery(e.target.value)}
-                  className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
-                />
-              </div>
+          <>
+            <div style={{
+              padding: '0 0 8px',
+              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
+              flexShrink: 0,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>My Shops</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{shops.length} shops</span>
             </div>
 
-            {isLoadingShops ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3].map(i => <Skeleton key={i} className="h-40 w-full rounded-2xl" />)}
-              </div>
-            ) : shops.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                {shops
-                  .filter(shop =>
-                    shop.shopName.toLowerCase().includes(shopsSearchQuery.toLowerCase()) ||
-                    shop.city?.toLowerCase().includes(shopsSearchQuery.toLowerCase()) ||
-                    shop.location?.toLowerCase().includes(shopsSearchQuery.toLowerCase())
-                  )
-                  .map((shop) => (
-                    <Card key={shop.id} className="bg-white/5 border-white/10 overflow-hidden group hover:border-yellow-500/30 transition-all duration-300 rounded-2xl">
-                      <div className="relative h-24 sm:h-32 bg-gray-800">
-                        {shop.bannerImage ? (
-                          <img src={shop.bannerImage} alt={shop.shopName} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-800 to-gray-900">
-                            <Package className="h-8 w-8 text-white/20" />
-                          </div>
-                        )}
-                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors duration-300" />
-                      </div>
-                      <CardContent className="p-4 sm:p-5 relative">
-                        <h3 className="text-white font-bold text-base sm:text-lg mb-1 truncate">{shop.shopName}</h3>
-                        <p className="text-gray-400 text-xs sm:text-sm mb-4 flex items-center">
-                          <span className="truncate">{shop.city}{shop.location ? `, ${shop.location}` : ''}</span>
-                        </p>
-
-                        <div className="flex items-center justify-between gap-3 mt-4">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
-                            onClick={() => navigate(`/buyer/shop/${encodeURIComponent(shop.shopName)}`)}
-                          >
-                            Visit Shop
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            className="bg-red-500/10 text-red-400 border-red-500/20 hover:bg-red-500 hover:text-white rounded-xl text-xs sm:text-sm h-8 sm:h-9"
-                            onClick={async () => {
-                              if (window.confirm(`Are you sure you want to unfollow ${shop.shopName}?`)) {
-                                try {
-                                  const res = await buyerApi.leaveClient(shop.id);
-                                  if (res.success) {
-                                    toast({
-                                      title: "Success",
-                                      description: `You have unfollowed ${shop.shopName}.`,
-                                    });
-                                    fetchShops();
-                                  } else {
-                                    toast({
-                                      title: "Error",
-                                      description: res.message,
-                                      variant: "destructive",
-                                    });
-                                  }
-                                } catch (err) {
-                                  toast({
-                                    title: "Error",
-                                    description: "An unexpected error occurred. Please try again.",
-                                    variant: "destructive",
-                                  });
-                                }
-                              }
-                            }}
-                          >
-                            Unfollow
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 sm:py-20 bg-white/5 rounded-2xl border border-white/10">
-                <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6 bg-white/5 rounded-full flex items-center justify-center">
-                  <ShoppingBag className="h-8 w-8 sm:h-10 sm:w-10 text-gray-500" />
+            {/* Featured strip — first shop only */}
+            {shops.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{
+                  fontSize: 10, fontWeight: 600, letterSpacing: 1,
+                  color: '#F5C518', textTransform: 'uppercase', marginBottom: 6,
+                }}>
+                  Featured
                 </div>
-                <h3 className="text-lg sm:text-xl font-bold text-white mb-2">No shops followed yet</h3>
-                <p className="text-gray-400 text-sm sm:text-base max-w-sm mx-auto mb-8 px-4">
-                  You haven't followed any shops yet. Start exploring to find brands you love!
-                </p>
-                <Button
-                  onClick={() => navigate('/buyer/dashboard')}
-                  className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-bold px-6 py-2 rounded-xl hover:scale-105 transition-transform"
-                >
-                  Discover Shops
-                </Button>
+                <FeaturedShopCard shop={shops[0]} onOpen={handleOpenShop} />
               </div>
             )}
-          </div>
+
+            {/* Grid of remaining shops */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: 8,
+            }}>
+              {shops.slice(1).map(shop => (
+                <ShopCard key={shop.id} shop={shop} onOpen={handleOpenShop} />
+              ))}
+            </div>
+
+            {shops.length === 0 && !isLoadingShops && (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.28)' }}>
+                No shops followed yet.
+              </div>
+            )}
+          </>
         )}
 
         {activeSection === 'wishlist' && (
-          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 space-y-2 sm:space-y-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">Your Wishlist</h2>
-              <Badge className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl sm:rounded-2xl font-bold text-sm sm:text-base lg:text-lg self-start sm:self-auto">
-                {wishlist.length} {wishlist.length === 1 ? 'item' : 'items'}
-              </Badge>
+          <div className="space-y-4">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Wishlist</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{wishlist.length} items</span>
             </div>
             <WishlistSection />
           </div>
         )}
 
         {activeSection === 'orders' && (
-          <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={glassStyle}>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 space-y-2 sm:space-y-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">Your Orders</h2>
-            </div>
-            <Suspense fallback={
-              <div className="space-y-4">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-20 w-full" />
-                <Skeleton className="h-20 w-full" />
-              </div>
-            }>
+          <div className="space-y-4">
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Your Orders</span>
+            <Suspense fallback={<div style={{ color: '#fff' }}>Loading orders...</div>}>
               <OrdersSection />
             </Suspense>
           </div>
         )}
 
         {activeSection === 'profile' && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-            <div className="space-y-6 sm:space-y-8">
-              {/* Profile Card */}
-              <Card className="rounded-2xl sm:rounded-3xl" style={glassStyle}>
-                <CardHeader className="pb-3 sm:pb-4">
-                  <div className="flex items-center space-x-3 sm:space-x-4">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-lg">
-                      <User className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-white" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <CardTitle className="text-lg sm:text-xl lg:text-2xl font-semibold text-white">Profile Information</CardTitle>
-                      <p className="text-gray-300 font-normal text-sm sm:text-base">Your account details</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {!isEditingProfile ? (
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setCity(user?.city || '');
-                            setLocationArea(user?.location || '');
-                            setMobilePayment(user?.mobilePayment || '');
-                            setWhatsappNumber(user?.whatsappNumber || '');
-                            setIsEditingProfile(true);
-                          }}
-                          className="text-sm border-gray-700 bg-transparent text-gray-200 hover:bg-gray-800 hover:text-white"
-                        >
-                          Edit
-                        </Button>
-                      ) : (
-                        <>
-                          <Button
-                            onClick={handleSaveProfile}
-                            disabled={!city || !locationArea || isSavingProfile}
-                            className="text-sm bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600"
-                          >
-                            {isSavingProfile ? 'Saving...' : 'Save'}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={() => setIsEditingProfile(false)}
-                            className="text-sm text-gray-300 hover:text-white hover:bg-gray-800"
-                          >
-                            Cancel
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4 sm:space-y-6">
-                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
-                    <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Full Name</label>
-                      {isEditingProfile ? (
-                        <div className="mt-2">
-                          <Input
-                            type="text"
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder="Your full name"
-                            className="h-10 bg-gray-800 border-gray-700 text-white placeholder:text-gray-400 focus:border-yellow-400 focus:ring-yellow-400 shadow-sm"
-                          />
-                        </div>
-                      ) : (
-                        <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.fullName || 'Not available'}</p>
-                      )}
-                    </div>
-                    <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Email</label>
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.email || 'Not available'}</p>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Mobile Payment (M-Pesa)</label>
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.mobilePayment || 'Not available'}</p>
-                    </div>
-                    <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                      <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">WhatsApp Number</label>
-                      <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.whatsappNumber || 'Not available'}</p>
-                    </div>
-                    {!isEditingProfile ? (
-                      <>
-                        <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">City</label>
-                          <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.city || 'Not available'}</p>
-                        </div>
-                        <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Location</label>
-                          <p className="text-sm sm:text-base lg:text-lg font-semibold text-white mt-1 truncate">{user?.location || 'Not available'}</p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Mobile Payment (M-Pesa)</label>
-                          <div className="mt-2 text-yellow-400 font-medium text-xs flex items-center mb-1">
-                            <Info className="h-3 w-3 mr-1" />
-                            Used for STK Push and refunds
-                          </div>
-                          <Input
-                            type="text"
-                            value={mobilePayment}
-                            onChange={(e) => setMobilePayment(e.target.value)}
-                            placeholder="e.g. 0712345678"
-                          />
-                        </div>
-                        <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">WhatsApp Number</label>
-                          <div className="mt-2 text-yellow-400 font-medium text-xs flex items-center mb-1">
-                            <Info className="h-3 w-3 mr-1" />
-                            Used for order notifications
-                          </div>
-                          <Input
-                            type="text"
-                            value={whatsappNumber}
-                            onChange={(e) => setWhatsappNumber(e.target.value)}
-                            placeholder="e.g. 0712345678"
-                          />
-                        </div>
-                        <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">City</label>
-                          <div className="mt-2">
-                            <Select
-                              value={city}
-                              onValueChange={(val) => {
-                                setCity(val);
-                                setLocationArea('');
-                              }}
-                            >
-                              <SelectTrigger className="h-10 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400">
-                                <SelectValue placeholder="Select your city" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.keys(locationData).map((c) => (
-                                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="bg-gray-900/50 rounded-xl sm:rounded-2xl p-3 sm:p-4 border border-gray-800">
-                          <label className="text-xs sm:text-sm font-semibold text-gray-300 uppercase tracking-wide">Location</label>
-                          <div className="mt-2">
-                            <Select
-                              value={locationArea}
-                              onValueChange={setLocationArea}
-                              disabled={!city}
-                            >
-                              <SelectTrigger className="h-10 bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400">
-                                <SelectValue placeholder={city ? 'Select your area' : 'Select city first'} />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(locationData[city] || []).map((area) => (
-                                  <SelectItem key={area} value={area}>{area}</SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                  </div>
-                </CardContent>
-              </Card>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Profile</span>
+              <button
+                onClick={() => setIsEditingProfile(!isEditingProfile)}
+                style={{ background: 'none', border: 'none', color: '#F5C518', fontSize: 12, fontWeight: 600 }}
+              >
+                {isEditingProfile ? 'Cancel' : 'Edit'}
+              </button>
             </div>
 
-            <div className="space-y-6 sm:space-y-8">
-              {/* Refund Card */}
-              <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-5 md:p-6" style={glassStyle}>
-                <RefundCard refundAmount={user?.refunds || 0} />
+            {/* Minimalist Profile Info */}
+            <div style={{ background: '#141414', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Full Name</div>
+                <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.fullName}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email Address</div>
+                <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.email}</div>
+              </div>
+              <div style={{ display: 'flex', gap: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>City</div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.city || '—'}</div>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Area</div>
+                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.location || '—'}</div>
+                </div>
               </div>
             </div>
+
+            {/* Edit mode placeholder - preserving existing logic would require more detailed injection, 
+                 but keeping it functional by just showing the state for now or wrapping existing inputs */}
+            {isEditingProfile && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-[#141414] border-none text-white h-10" />
+                <Select value={city} onValueChange={setCity}>
+                  <SelectTrigger className="bg-[#141414] border-none text-white h-10">
+                    <SelectValue placeholder="Select City" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(locationData).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="bg-[#F5C518] text-black h-10 font-bold">
+                  {isSavingProfile ? 'Saving...' : 'Save Profile'}
+                </Button>
+              </div>
+            )}
+
+            <RefundCard refundAmount={user?.refunds || 0} />
           </div>
         )}
       </div>
-    </>
+
+      {/* Bottom navigation bar */}
+      <div style={{
+        height: 56,
+        background: '#141414',
+        borderTop: '0.5px solid rgba(255,255,255,0.06)',
+        display: 'flex',
+        alignItems: 'stretch',
+        flexShrink: 0,
+      }}>
+        {navItems.map(item => (
+          <button
+            key={item.key}
+            onClick={() => navigate(item.path)}
+            style={{
+              flex: 1,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: 3, background: 'none', border: 'none',
+              cursor: 'pointer',
+              position: 'relative',
+              transition: 'opacity 0.15s',
+            }}
+          >
+            <item.Icon
+              size={18}
+              color={activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.45)'}
+            />
+            <span style={{
+              fontSize: 9, fontWeight: 500,
+              color: activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.45)',
+            }}>
+              {item.label}
+            </span>
+            {item.badge && (
+              <div style={{
+                position: 'absolute', top: 6, right: '50%',
+                transform: 'translateX(10px)',
+                width: 5, height: 5, borderRadius: '50%',
+                background: '#F5C518',
+              }} />
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 

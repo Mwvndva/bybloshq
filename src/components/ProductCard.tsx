@@ -910,7 +910,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Image/Preview Dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="product-image-dialog w-[95vw] sm:max-w-4xl mx-auto max-h-[90vh] flex flex-col p-2 sm:p-6 bg-[#111] sm:bg-background border-white/10 border sm:border-border rounded-xl">
+        <DialogContent className="product-image-dialog w-[95vw] sm:max-w-4xl mx-auto max-h-[90dvh] flex flex-col p-2 sm:p-6 bg-[#111] sm:bg-background border-white/10 border sm:border-border rounded-xl">
           <DialogHeader className="pr-8 px-2 sm:px-0 mt-2 sm:mt-0">
             <DialogTitle className="text-sm sm:text-base flex items-center gap-2 text-white sm:text-foreground">
               {(product.product_type === 'digital' || (product as any).productType === 'digital') && (
@@ -930,7 +930,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           {/* We'll use CSS to target the internal close button since we don't want to change the global ui/dialog.tsx component. */}
 
           <div
-            className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50vh] relative group/modal cursor-pointer"
+            className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50dvh] relative group/modal cursor-pointer"
             onClick={() => setIsImageDialogOpen(false)}
           >
             <style>{`
@@ -947,11 +947,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                     style={{ scrollBehavior: 'smooth' }}
                   >
                     {allImages.map((img, idx) => (
-                      <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center min-h-[40vh]">
+                      <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center min-h-[40dvh]">
                         <img
                           src={getImageUrl(img)}
                           alt={`${product.name} - Image ${idx + 1}`}
-                          className="max-w-full w-full h-auto max-h-[75vh] object-contain rounded-lg shadow-sm"
+                          className="max-w-full w-full h-auto max-h-[75dvh] object-contain rounded-lg shadow-sm"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
@@ -1006,7 +1006,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
             {/* Full Product Description in Modal */}
             {product.description && (
-              <div className="px-4 sm:px-6 pb-6 pt-2 max-h-[30vh] overflow-y-auto custom-scrollbar">
+              <div className="px-4 sm:px-6 pb-6 pt-2 max-h-[30dvh] overflow-y-auto custom-scrollbar">
                 <h4 className="text-white/40 text-[10px] uppercase tracking-widest font-bold mb-2">Description</h4>
                 <p className="text-gray-200 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
                   {product.description}

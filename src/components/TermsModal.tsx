@@ -33,7 +33,7 @@ const TermsModal = ({ isOpen, onClose, onAccept }: TermsModalProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
-        className="max-w-5xl h-[92vh] flex flex-col p-0 overflow-hidden bg-[#faf9f6] border border-[#d4c9a8]"
+        className="max-w-5xl h-[92dvh] flex flex-col p-0 overflow-hidden bg-[#faf9f6] border border-[#d4c9a8]"
       >
         {/* Header */}
         <div className="flex-shrink-0 bg-[#1a1a1a] text-white px-8 py-6">

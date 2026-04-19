@@ -887,7 +887,7 @@ const NewAdminDashboard = () => {
                   aria-modal="true"
                   aria-labelledby="seller-modal-title"
                 >
-                  <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] w-full max-w-6xl max-h-[95vh] flex flex-col shadow-[0_0_50px_rgba(245,158,11,0.1)] scale-in-95 duration-300">
+                  <div className="bg-[#0A0A0A]/90 backdrop-blur-3xl border border-white/10 rounded-2xl md:rounded-[2.5rem] w-full max-w-6xl max-h-[95dvh] flex flex-col shadow-[0_0_50px_rgba(245,158,11,0.1)] scale-in-95 duration-300">
                     <div className="flex items-center justify-between p-5 md:p-8 border-b border-white/10 bg-white/[0.02]">
                       <div className="flex items-center gap-4">
                         <div className="h-14 w-14 rounded-2xl bg-yellow-500/10 flex items-center justify-center border border-yellow-500/20 shadow-inner">
