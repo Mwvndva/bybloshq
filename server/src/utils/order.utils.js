@@ -2,11 +2,22 @@ import logger from './logger.js';
 import Buyer from '../models/buyer.model.js';
 
 /**
- * PIN-05: NO-NULL JSONB
+ * PIN-05: NO-NULL JSONB / STRING-SAFE
  * Ensures all JSON inputs are valid objects ({}), never null or undefined.
- * This prevents PostgreSQL from rejecting 'NOT NULL' JSONB columns.
+ * Also defensively handles stringified JSON which may arrive from certain middlewares.
  */
-export const safeJson = (val) => (val && typeof val === 'object') ? val : {};
+export const safeJson = (val) => {
+    if (!val) return {};
+    if (typeof val === 'object') return val;
+    if (typeof val === 'string') {
+        try {
+            return JSON.parse(val);
+        } catch (e) {
+            return {};
+        }
+    }
+    return {};
+};
 
 /**
  * Normalizes incoming order request data into a Unified Order Object.
