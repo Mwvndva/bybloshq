@@ -16,6 +16,7 @@ import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendP
 import cacheService from './cache.service.js';
 import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../utils/fulfillment.js';
 import { toJsonb } from '../utils/order.utils.js';
+import { validateOrderInput } from '../validators/order.validator.js';
 import ServiceSlot from '../models/serviceSlot.model.js';
 import DigitalAccess from '../models/digitalAccess.model.js';
 
@@ -39,6 +40,9 @@ class OrderService {
       metadata: rawMetadata = {},
       idempotencyKey = null
     } = orderData;
+
+    // --- FAIL FAST: Validate required fields at entry point ---
+    validateOrderInput(orderData);
 
     // --- PIN-01: DISTRIBUTED LOCK FOR ATOMIC ORDER CREATION ---
     const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyer.id}:seller:${orderData.sellerId}`;
@@ -1301,48 +1305,48 @@ class OrderService {
       }
 
       // 2. Legacy Fallback (Apply extracting only if flat columns are missing)
-      fullOrder = this.extractFromLegacy(fullOrder);
+      const resolvedOrder = this.extractFromLegacy(fullOrder);
 
       // 3. BUILD NORMALIZED PAYLOAD (Single Source of Truth)
-      const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
+      const normalizedOrder = this._prepareNormalizedNotificationPayload(resolvedOrder, items);
 
-      const isSellerInitiated = fullOrder.metadata?.seller_initiated === true ||
-        fullOrder.metadata?.is_seller_initiated === true ||
-        fullOrder.is_seller_initiated === true;
+      const isSellerInitiated = resolvedOrder.metadata?.seller_initiated === true ||
+        resolvedOrder.metadata?.is_seller_initiated === true ||
+        resolvedOrder.is_seller_initiated === true;
 
       // Always notify Seller via Email
-      if (fullOrder.seller_email) {
-        sendNewOrderNotificationEmail(fullOrder.seller_email, {
-          ...fullOrder,
-          seller_name: fullOrder.seller_name,
+      if (resolvedOrder.seller_email) {
+        sendNewOrderNotificationEmail(resolvedOrder.seller_email, {
+          ...resolvedOrder,
+          seller_name: resolvedOrder.seller_name,
           items
         }).catch(e => logger.error('[ORDER] Seller notification email failed:', e));
       }
 
-      if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
+      if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${resolvedOrder.order_number}`);
 
       // Persist buyer location for mobile service orders
       // FIX 7: Robust parsing of metadata if it arrives as string
-      const ordMeta = typeof fullOrder.metadata === 'string'
-        ? JSON.parse(fullOrder.metadata)
-        : (fullOrder.metadata || {});
+      const ordMeta = typeof resolvedOrder.metadata === 'string'
+        ? JSON.parse(resolvedOrder.metadata)
+        : (resolvedOrder.metadata || {});
 
-      const isServiceOrder = fullOrder.order_type === 'SERVICE' || ordMeta.product_type === 'service';
+      const isServiceOrder = resolvedOrder.order_type === 'SERVICE' || ordMeta.product_type === 'service';
 
       // Fix: Relax check to allow lat=0
-      const hasBuyerCoords = (fullOrder.location_lat !== null && fullOrder.location_lat !== undefined) &&
-        (fullOrder.location_lng !== null && fullOrder.location_lng !== undefined);
+      const hasBuyerCoords = (resolvedOrder.location_lat !== null && resolvedOrder.location_lat !== undefined) &&
+        (resolvedOrder.location_lng !== null && resolvedOrder.location_lng !== undefined);
 
-      if (isServiceOrder && hasBuyerCoords && fullOrder.buyer_id) {
-        Buyer.updateLocation(fullOrder.buyer_id, {
-          latitude: fullOrder.location_lat,
-          longitude: fullOrder.location_lng,
-          fullAddress: fullOrder.location_address || null
+      if (isServiceOrder && hasBuyerCoords && resolvedOrder.buyer_id) {
+        Buyer.updateLocation(resolvedOrder.buyer_id, {
+          latitude: resolvedOrder.location_lat,
+          longitude: resolvedOrder.location_lng,
+          fullAddress: resolvedOrder.location_address ?? null
         }).catch(err => logger.warn('[ORDER] Failed to persist buyer location in side-effects:', err.message));
       }
 
       // WHATSAPP NOTIFICATIONS (Once-only for Buyer/Seller)
-      if (!fullOrder.notification_sent) {
+      if (!resolvedOrder.notification_sent) {
         whatsappService.notifyBuyerOrderConfirmation(normalizedOrder).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
         whatsappService.notifySellerNewOrder(normalizedOrder).catch(e => logger.error('[ORDER] Seller notification failed:', e));
 
@@ -1352,12 +1356,12 @@ class OrderService {
 
       // 4. Logistics / Courier Notification (Always attempt for Physical and no Shop)
       const hasPhysical = items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'physical');
-      const isCourier = fullOrder.fulfillment_type === 'COURIER';
+      const isCourier = resolvedOrder.fulfillment_type === 'COURIER';
 
-      logger.info(`[COURIER-CHECK] Order #${fullOrder.order_number}: hasPhysical=${hasPhysical}, isCourier=${isCourier}, type=${fullOrder.fulfillment_type}`);
+      logger.info(`[COURIER-CHECK] Order #${resolvedOrder.order_number}: hasPhysical=${hasPhysical}, isCourier=${isCourier}, type=${resolvedOrder.fulfillment_type}`);
 
       if (hasPhysical && isCourier) {
-        logger.info(`[COURIER-NOTIFY] Sending logistics notification for order #${fullOrder.order_number}`);
+        logger.info(`[COURIER-NOTIFY] Sending logistics notification for order #${resolvedOrder.order_number}`);
         whatsappService.sendLogisticsNotification(normalizedOrder)
           .catch(e => logger.error('[ORDER] Courier notification failed:', e.message));
       }
@@ -1365,7 +1369,7 @@ class OrderService {
       // Notify Buyer via Email if not seller-initiated
       if (normalizedOrder.buyer.email) {
         sendProductOrderConfirmationEmail(normalizedOrder.buyer.email, {
-          ...fullOrder,
+          ...resolvedOrder,
           items
         }).catch(e => logger.error('[ORDER] Buyer confirmation email failed:', e));
       }

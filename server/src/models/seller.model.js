@@ -260,6 +260,115 @@ class Seller {
     const executor = client || pool;
     await executor.query(query, [sellerId]);
   }
+
+  static async isShopNameAvailable(shopName) {
+    const query = 'SELECT 1 FROM sellers WHERE LOWER(shop_name) = $1 OR LOWER(slug) = $1';
+    const { rows } = await pool.query(query, [shopName.toLowerCase()]);
+    return rows.length === 0;
+  }
+
+  static async updateSeller(id, data, client) {
+    const fields = [];
+    const values = [];
+    let i = 1;
+
+    // Map camelCase to snake_case if necessary, or assume direct mapping
+    const mapping = {
+      fullName: 'full_name',
+      shopName: 'shop_name',
+      whatsappNumber: 'whatsapp_number',
+      physicalAddress: 'physical_address',
+      bannerImage: 'banner_image'
+    };
+
+    for (const [key, value] of Object.entries(data)) {
+      const dbKey = mapping[key] || key;
+      fields.push(`${dbKey} = $${i++}`);
+      values.push(value);
+    }
+
+    if (fields.length === 0) return null;
+
+    values.push(id);
+    const query = `UPDATE sellers SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${i} RETURNING *`;
+    const executor = client || pool;
+    const { rows } = await executor.query(query, values);
+    return rows[0] ? toCamelCase(rows[0]) : null;
+  }
+
+  static async becomeClient(sellerId, userId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Check if already a client
+      const checkQuery = 'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2';
+      const checkRes = await client.query(checkQuery, [sellerId, userId]);
+
+      if (checkRes.rows.length > 0) {
+        const { rows } = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
+        await client.query('COMMIT');
+        return {
+          alreadyClient: true,
+          clientCount: rows[0]?.client_count || 0
+        };
+      }
+
+      // Add to junction
+      await client.query(
+        'INSERT INTO seller_clients (seller_id, user_id, created_at) VALUES ($1, $2, NOW())',
+        [sellerId, userId]
+      );
+
+      // Increment count
+      const { rows } = await client.query(
+        'UPDATE sellers SET client_count = COALESCE(client_count, 0) + 1 WHERE id = $1 RETURNING client_count',
+        [sellerId]
+      );
+
+      await client.query('COMMIT');
+      return {
+        alreadyClient: false,
+        clientCount: rows[0]?.client_count || 0
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  static async removeClient(sellerId, userId) {
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      const { rowCount } = await client.query(
+        'DELETE FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+        [sellerId, userId]
+      );
+
+      if (rowCount > 0) {
+        await client.query(
+          'UPDATE sellers SET client_count = GREATEST(COALESCE(client_count, 0) - 1, 0) WHERE id = $1',
+          [sellerId]
+        );
+      }
+
+      const { rows } = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
+
+      await client.query('COMMIT');
+      return {
+        clientCount: rows[0]?.client_count || 0
+      };
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
 }
 
 // Legacy exports for backward compatibility
@@ -267,5 +376,10 @@ export const createSeller = Seller.create;
 export const findSellerById = Seller.findById;
 export const findSellerByUserId = Seller.findByUserId;
 export const findSellerByShopName = Seller.findByShopName;
+export const isShopNameAvailable = Seller.isShopNameAvailable;
+export const findSellerByEmail = Seller.findByEmail;
+export const updateSeller = Seller.updateSeller;
+export const becomeClient = Seller.becomeClient;
+export const removeClient = Seller.removeClient;
 
 export default Seller;
