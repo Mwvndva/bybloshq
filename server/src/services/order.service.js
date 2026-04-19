@@ -81,6 +81,9 @@ class OrderService {
         const isShopless = !sellerHasPhysicalShop(sellerInfo) && !sellerInfo.physical_address;
         const reflectsService = (primaryProductType === ProductType.SERVICE || primaryProductType === 'service');
 
+        // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
+        const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
+
         // ── COORDINATE RESOLUTION ────────────────────────────────────────────────
         // Physical shop seller (has coords): use seller location for everything.
         // Online shop seller (no coords):
