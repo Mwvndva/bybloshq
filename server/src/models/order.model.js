@@ -258,6 +258,14 @@ class Order {
     return rows[0];
   }
 
+  /**
+   * Thin alias for callers that use the generic name.
+   * Delegates to the canonical updateOrderStatus method.
+   */
+  static async updateStatus(orderId, status) {
+    return Order.updateOrderStatus(orderId, status);
+  }
+
   static async updateStatusWithSideEffects(client, orderId, status, paymentStatus, paymentReference = null) {
     const query = `
       UPDATE product_orders 
@@ -494,5 +502,6 @@ class Order {
   }
 }
 
+export { validateOrderRecord };
 export default Order;
 

@@ -3,24 +3,34 @@ import Buyer from '../models/buyer.model.js';
 
 /**
  * RULE 1 — JSONB SAFETY
- * Ensures all values bound to JSONB columns are strings or null.
+ * Ensures all values bound to JSONB columns are null or a valid JSON string.
+ *
+ * Contract:
+ *   null / undefined  → null
+ *   valid JSON string → passes through unchanged
+ *   invalid string    → THROWS (prevents silent double-encoding)
+ *   object / array    → JSON.stringify()
  */
 export const toJsonb = (val) => {
     if (val === null || val === undefined) return null;
     if (typeof val === 'string') {
         try {
             JSON.parse(val);
-            return val;
+            return val; // already a valid JSON string — pass through
         } catch {
-            return JSON.stringify(val);
+            // A bare non-JSON string (e.g. 'hello') must never be silently
+            // double-encoded into a JSON string — surface the error immediately.
+            throw new Error(`toJsonb: Invalid JSON string passed to JSONB column. Value: ${val.slice(0, 80)}`);
         }
     }
-    return JSON.stringify(val);
+    if (typeof val === 'object') return JSON.stringify(val);
+    throw new Error(`toJsonb: Unsupported type "${typeof val}" for JSONB column`);
 };
 
 /**
  * PIN-05: NO-NULL JSONB / STRING-SAFE
- * Ensures all JSON inputs are valid objects ({}), never null or undefined for internal use.
+ * Ensures all JSON inputs return a plain object ({}), never null or undefined.
+ * Logs a warning (instead of silently swallowing) when a parse fails.
  */
 export const safeJson = (val) => {
     if (val === null || val === undefined) return {};
@@ -29,6 +39,7 @@ export const safeJson = (val) => {
         try {
             return JSON.parse(val);
         } catch (e) {
+            logger.warn('[safeJson] Failed to parse JSON string — returning {}. Value:', val.slice(0, 80));
             return {};
         }
     }
@@ -75,33 +86,28 @@ export async function normalizeOrderInput(req) {
         throw new Error("Guest orders require a valid contact email address.");
     }
 
-    const buyerCity = body.buyerCity || body.city || (user && !overrideContact ? user.city : existingBuyer?.city) || null;
-    const buyerArea = body.buyerArea || body.location || (user && !overrideContact ? user.location : existingBuyer?.location) || null;
-
-    let buyerId = existingBuyer?.id || null;
+    let buyerId = existingBuyer?.id ?? null;
     if (user && !buyerId) {
         const loggedInBuyer = await Buyer.findByUserId(user.id);
-        buyerId = loggedInBuyer?.id || null;
+        buyerId = loggedInBuyer?.id ?? null;
     }
 
-    let finalName = existingBuyer?.fullName || customerName;
+    let finalName = existingBuyer?.fullName ?? customerName ?? null;
     if (customerName && customerName !== 'Guest' && !existingBuyer?.fullName) {
         finalName = customerName;
     }
-    let finalPhone = phone;
+    let finalPhone = phone ?? null;
 
     if (user && !overrideContact) {
-        finalName = user.name || user.full_name;
-        finalPhone = user.mobile_payment || user.phone;
+        finalName = user.name ?? user.full_name ?? null;
+        finalPhone = user.mobile_payment ?? user.phone ?? null;
     }
 
     const buyer = {
         id: buyerId,
-        name: finalName || 'Customer',
-        phone: finalPhone || 'N/A',
+        name: finalName ?? null,  // null reaches DB — never inject fake 'Customer' string
+        phone: finalPhone ?? null, // null reaches DB — never inject fake 'N/A' string
         email,
-        city: buyerCity,
-        location: buyerArea
     };
 
     const service = {
