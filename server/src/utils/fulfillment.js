@@ -1,5 +1,6 @@
 import { ProductType } from '../constants/enums.js';
 import { sellerHasPhysicalShop } from './sellerUtils.js';
+import logger from './logger.js';
 
 /**
  * Fulfillment types supported by the platform.
