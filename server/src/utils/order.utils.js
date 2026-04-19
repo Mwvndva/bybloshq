@@ -167,38 +167,47 @@ export async function normalizeOrderInput(req) {
             if (typeof candidate !== 'object') continue;
 
             // Property Scanning (lat/latitude/lng/longitude)
-            const lat = candidate.lat ?? candidate.latitude ?? candidate.location_lat ?? candidate.latitude_coordinate;
-            const lng = candidate.lng ?? candidate.longitude ?? candidate.location_lng ?? candidate.longitude_coordinate;
+            const rawLat = candidate.lat ?? candidate.latitude ?? candidate.location_lat ?? candidate.latitude_coordinate;
+            const rawLng = candidate.lng ?? candidate.longitude ?? candidate.location_lng ?? candidate.longitude_coordinate;
             const addr = candidate.address || candidate.fullAddress || candidate.full_address || candidate.location_address || candidate.displayName;
 
-            if (lat !== undefined && lat !== null && !isNaN(Number.parseFloat(lat))) {
-                result.lat = Number.parseFloat(lat);
-            }
-            if (lng !== undefined && lng !== null && !isNaN(Number.parseFloat(lng))) {
-                result.lng = Number.parseFloat(lng);
-            }
-            if (addr) result.address = addr;
+            const lat = rawLat !== undefined && rawLat !== null ? Number.parseFloat(rawLat) : null;
+            const lng = rawLng !== undefined && rawLng !== null ? Number.parseFloat(rawLng) : null;
 
-            // If we found valid coordinates, stop crawling
-            if (result.lat !== null && result.lng !== null && result.lat !== 0) {
-                result.source = sources[i];
-                break;
+            // FIX 2: COORDINATE VALIDITY CHECK
+            // Latitude 0 is technically valid (Equator) but in Kenya context, 
+            // the Nairobi sentinel often arrives as -1.2921. 
+            // We treat absolute 0 as uninitialized/invalid.
+            const isValid = lat !== null && lng !== null &&
+                !isNaN(lat) && !isNaN(lng) &&
+                lat !== 0 && lng !== 0;
+
+            if (isValid) {
+                // Kenya Bounding Box Check (Defensive)
+                const isInKenya = lat >= -5.0 && lat <= 5.0 && lng >= 33.0 && lng <= 42.0;
+                if (isInKenya) {
+                    result.lat = lat;
+                    result.lng = lng;
+                    result.address = addr || result.address;
+                    result.source = sources[i];
+                    break;
+                }
+            } else if (addr && !result.address) {
+                result.address = addr;
             }
         }
 
         // Profile Fallback (PIN-15: PROFILE-COORDS)
         // Only if we still haven't found valid coordinates
         if (result.lat === null || result.lng === null || result.lat === 0) {
-            if (user && !overrideContact && user.latitude) {
-                result.lat = user.latitude;
-                result.lng = user.longitude;
-                result.address = result.address ?? user.location;
-                result.source = 'user_profile';
-            } else if (existingBuyer && existingBuyer.latitude) {
-                result.lat = existingBuyer.latitude;
-                result.lng = existingBuyer.longitude;
-                result.address = result.address ?? (existingBuyer.fullAddress || existingBuyer.location);
-                result.source = 'buyer_profile';
+            const profileLat = user?.latitude || existingBuyer?.latitude;
+            const profileLng = user?.longitude || existingBuyer?.longitude;
+
+            if (profileLat && profileLat !== 0) {
+                result.lat = profileLat;
+                result.lng = profileLng;
+                result.address = result.address ?? (user?.location || existingBuyer?.fullAddress || existingBuyer?.location);
+                result.source = user ? 'user_profile' : 'buyer_profile';
             }
         }
 

@@ -440,6 +440,7 @@ ${bodyText}
 
 🏷️ *Type:* ${typeLabel}
 💰 *Total:* KSh ${totalAmount.toLocaleString()}
+${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 *Time:* ${booking.time}\n` : ''}
 
 *Order Details:*
 `.trim();
@@ -551,10 +552,21 @@ ${bodyText}
 
         const typeLabel = isService ? 'Service' : 'Product';
 
+        // FIX 5: Enriched Booking Details
+        const metadata = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
+        const bookingDate = metadata.booking_date || metadata.bookingDate;
+        const bookingTime = metadata.booking_time || metadata.bookingTime;
+        const requirements = order.service_requirements || metadata.service_requirements || metadata.requirements;
+
+        const bookingInfo = (bookingDate || bookingTime)
+            ? `\n🗓️ *Booking:* ${bookingDate || ''} ${bookingTime || ''}`.trim()
+            : '';
+        const reqInfo = requirements ? `\n📝 *Requirements:* ${requirements}` : '';
+
         const msg = `
 ✅ *Status Update: #${order.orderNumber}*
 Type: *${typeLabel}*
-New Status: *${newStatus.replace(/_/g, ' ')}*
+New Status: *${newStatus.replace(/_/g, ' ')}*${bookingInfo}${reqInfo}
 
 ${locationDetails}${instructions ? `${instructions}\n` : ''}
 _Check your dashboard for full details._
@@ -586,9 +598,20 @@ _Check your dashboard for full details._
             locationDetails = `📍 *Drop-off Point:* ${this.DROPOFF_LOCATION}\n`;
         }
 
+        // FIX 5: Enriched Booking Details
+        const metadata = typeof order.metadata === 'string' ? JSON.parse(order.metadata) : (order.metadata || {});
+        const bookingDate = metadata.booking_date || metadata.bookingDate;
+        const bookingTime = metadata.booking_time || metadata.bookingTime;
+        const requirements = order.service_requirements || metadata.service_requirements || metadata.requirements;
+
+        const bookingInfo = (bookingDate || bookingTime)
+            ? `\n🗓️ *Booking:* ${bookingDate || ''} ${bookingTime || ''}`.trim()
+            : '';
+        const reqInfo = requirements ? `\n📝 *Requirements:* ${requirements}` : '';
+
         const msg = `
 ✅ *Status Update: #${order.orderNumber}*
-New Status: *${newStatus.replace(/_/g, ' ')}*
+New Status: *${newStatus.replace(/_/g, ' ')}*${bookingInfo}${reqInfo}
 
 ${locationDetails}${instructions ? `${instructions}\n` : ''}
 _Managed via your dashboard._

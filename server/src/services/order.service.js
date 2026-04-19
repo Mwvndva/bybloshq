@@ -82,8 +82,6 @@ class OrderService {
         const reflectsService = (primaryProductType === ProductType.SERVICE || primaryProductType === 'service');
 
         // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
-
-        // 4e. RESOLVE & VALIDATE FULFILLMENT (STRICT ENFORCEMENT)
         const fulfillmentType = resolveFulfillmentType(sellerInfo, primaryProductType, metadata);
 
         // --- STRICT COORDINATE RESOLUTION ---
@@ -103,10 +101,26 @@ class OrderService {
           finalLat = location.lat;
           finalLng = location.lng;
           logger.info(`Home Service detected. Using buyer-provided location.`);
+
+          // Persistence Bug Fix: Ensure location is actually saved to buyer profile immediately
+          if (buyer.id && finalLat && finalLng) {
+            await Buyer.updateLocation(buyer.id, {
+              latitude: finalLat,
+              longitude: finalLng,
+              fullAddress: finalLocationAddress
+            }).catch(err => logger.warn('[createOrder] Failed to persist buyer location:', err.message));
+          }
         } else if (primaryProductType === ProductType.PHYSICAL && fulfillmentType === FulfillmentType.COURIER) {
-          // Standard System Delivery
-          logger.info(`System delivery detected. Coordinates managed by logistics.`);
+          // Standard System Delivery (COURIER)
+          // Ensure buyer coordinates are NOT stored on the order to prevent logistics confusion
+          finalLocationAddress = location.address;
+          finalLat = null;
+          finalLng = null;
+          logger.info(`System delivery detected. Coordinates excluded from order record.`);
         }
+
+        // VALIDATION: Fail fast if coordinates are required but missing
+        validateFulfillmentPayload(fulfillmentType, { lat: finalLat, lng: finalLng }, metadata);
 
         logger.info(`[ORDER-DEBUG] Final Resolve: type=${fulfillmentType}, lat=${finalLat}, lng=${finalLng}, addr=${finalLocationAddress}`);
 
@@ -976,13 +990,18 @@ class OrderService {
     await this._finalizeServiceSlot(client, order.id);
 
     // 2. Persist Buyer Location (For Mobile Services only)
+    // FIX 4: Robust persistence for mobile services
     const isMobileService = order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER ||
       (order.order_type === 'SERVICE' && !order.seller_address);
 
     if (isMobileService && order.buyer_id) {
       try {
         const { location_lat, location_lng, location_address } = order;
-        if (location_lat != null && location_lng != null && location_address) {
+        // Fix: Allow 0 for lat/lng (Equator) but ensure they are actually present
+        const hasCoords = (location_lat !== null && location_lat !== undefined) &&
+          (location_lng !== null && location_lng !== undefined);
+
+        if (hasCoords && location_address) {
           logger.info(`Updating buyer ${order.buyer_id} profile with booking location details`);
           await Buyer.updateLocation(order.buyer_id, {
             latitude: location_lat,
@@ -1525,18 +1544,19 @@ class OrderService {
       logger.warn('[ORDER] Cache invalidation failed:', cacheErr.message);
     }
 
-    // 3. Notifications
+    // 3. Notifications (FIX 7: Explicit Column Aliases & Robust Fetch)
     try {
       const fullOrderResult = await pool.query(
-        `SELECT o.*, 
+        `SELECT o.id, o.order_number, o.total_amount, o.status, o.order_type, o.fulfillment_type, 
+                o.metadata, o.buyer_id, o.seller_id, o.location_address, o.location_lat, o.location_lng,
+                o.service_title, o.service_requirements, o.payment_status, o.payment_method, o.payment_reference,
+                o.notification_sent, o.total_quantity,
                 b.full_name AS buyer_name, b.mobile_payment AS buyer_mobile_payment,
                 b.email AS buyer_email,
                 s.full_name AS seller_name, s.shop_name, s.whatsapp_number AS seller_phone, 
                 s.email AS seller_email, s.physical_address AS seller_address,
                 s.latitude AS seller_latitude, s.longitude AS seller_longitude,
-                s.instagram_link, s.tiktok_link, s.facebook_link,
-                o.location_address, o.location_lat, o.location_lng, o.service_title,
-                o.notification_sent, o.payment_status
+                s.instagram_link, s.tiktok_link, s.facebook_link
          FROM product_orders o
          LEFT JOIN buyers b ON o.buyer_id = b.id
          LEFT JOIN sellers s ON o.seller_id = s.id
@@ -1575,18 +1595,23 @@ class OrderService {
       if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
 
       // Persist buyer location for mobile service orders
+      // FIX 7: Robust parsing of metadata if it arrives as string
       const ordMeta = typeof fullOrder.metadata === 'string'
         ? JSON.parse(fullOrder.metadata)
         : (fullOrder.metadata || {});
+
       const isServiceOrder = fullOrder.order_type === 'SERVICE' || ordMeta.product_type === 'service';
-      const hasBuyerCoords = fullOrder.location_lat != null && fullOrder.location_lng != null;
+
+      // Fix: Relax check to allow lat=0
+      const hasBuyerCoords = (fullOrder.location_lat !== null && fullOrder.location_lat !== undefined) &&
+        (fullOrder.location_lng !== null && fullOrder.location_lng !== undefined);
 
       if (isServiceOrder && hasBuyerCoords && fullOrder.buyer_id) {
         Buyer.updateLocation(fullOrder.buyer_id, {
           latitude: fullOrder.location_lat,
           longitude: fullOrder.location_lng,
           fullAddress: fullOrder.location_address || null
-        }).catch(err => logger.warn('[ORDER] Failed to persist buyer location:', err.message));
+        }).catch(err => logger.warn('[ORDER] Failed to persist buyer location in side-effects:', err.message));
       }
 
       // WHATSAPP NOTIFICATIONS (Once-only)
@@ -1764,7 +1789,7 @@ class OrderService {
       booking: {
         date: metadata.booking_date || metadata.bookingDate || null,
         time: metadata.booking_time || metadata.bookingTime || null,
-        requirements: fullOrder.service_requirements || null,
+        requirements: fullOrder.service_requirements || metadata.service_requirements || metadata.requirements || null,
       },
       payment: {
         status: fullOrder.payment_status || 'pending',
