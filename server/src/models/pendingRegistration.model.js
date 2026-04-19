@@ -62,10 +62,9 @@ class PendingRegistration {
      * Delete a pending registration by email
      * @param {string} email 
      */
-    static async deleteByEmail(email, client = null) {
+    static async deleteByEmail(email) {
         const query = 'DELETE FROM pending_registrations WHERE LOWER(email) = $1';
-        const executor = client || pool;
-        await executor.query(query, [email.toLowerCase()]);
+        await pool.query(query, [email.toLowerCase()]);
     }
 
     /**

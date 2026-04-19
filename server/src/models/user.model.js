@@ -15,12 +15,6 @@ class User {
         return result.rows[0] || null;
     }
 
-    static async findByEmailForUpdate(client, email) {
-        const query = 'SELECT id, email, password_hash, role, is_verified FROM users WHERE LOWER(email) = $1 FOR UPDATE';
-        const result = await client.query(query, [email.toLowerCase()]);
-        return result.rows[0] || null;
-    }
-
     /**
      * Find user by ID
      * @param {number} id 
@@ -232,73 +226,6 @@ class User {
 
         const result = await pool.query(query, [hashedPassword, email.toLowerCase()]);
         return result.rows[0] || null;
-    }
-
-    static async linkRole(client, userId, roleSlug) {
-        const executor = client || pool;
-        const roleResult = await executor.query('SELECT id FROM roles WHERE slug = $1', [roleSlug]);
-        if (roleResult.rows[0]) {
-            await executor.query(
-                'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-                [userId, roleResult.rows[0].id]
-            );
-        }
-    }
-
-    static async findByIdWithProfile(id, role) {
-        let query;
-        switch (role) {
-            case 'admin':
-                query = `
-                    SELECT u.*, u.id as profile_id
-                    FROM users u 
-                    WHERE u.id = $1 AND u.role = 'admin' AND u.is_active = true
-                `;
-                break;
-            case 'buyer':
-                query = `
-                    SELECT
-                        u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
-                        b.id as profile_id, b.full_name, b.whatsapp_number,
-                        COALESCE(b.status, 'active') as status
-                    FROM users u
-                    LEFT JOIN buyers b ON u.id = b.user_id
-                    WHERE u.id = $1
-                        AND (b.status = 'active' OR b.status IS NULL OR b.id IS NULL)
-                `;
-                break;
-            case 'seller':
-                query = `
-                    SELECT 
-                        u.id as user_table_id, u.email, u.role, u.is_verified, u.is_active, u.password_changed_at,
-                        s.id as profile_id, s.full_name, s.shop_name, s.whatsapp_number, s.city, s.location, s.balance, s.total_sales, s.client_count, s.status, s.referral_code, s.total_referral_earnings
-                    FROM users u 
-                    LEFT JOIN sellers s ON u.id = s.user_id 
-                    WHERE u.id = $1
-                `;
-                break;
-            default:
-                return null;
-        }
-
-        const { rows } = await pool.query(query, [id]);
-        return rows[0] || null;
-    }
-
-    static async findCrossRoles(id) {
-        const query = `
-            SELECT 
-                (SELECT id FROM buyers WHERE user_id = $1 AND status = 'active' LIMIT 1) as buyer_id,
-                (SELECT id FROM sellers WHERE user_id = $1 LIMIT 1) as seller_id
-        `;
-        const { rows } = await pool.query(query, [id]);
-        return rows[0] || { buyer_id: null, seller_id: null };
-    }
-
-    static async delete(client, id) {
-        const query = 'DELETE FROM users WHERE id = $1';
-        const executor = client || pool;
-        await executor.query(query, [id]);
     }
 }
 

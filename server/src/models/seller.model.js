@@ -1,391 +1,430 @@
+// CRUD only
 import { pool } from '../config/database.js';
 import { toCamelCase } from '../utils/caseUtils.js';
 import logger from '../utils/logger.js';
 
-class Seller {
-  /**
-   * Static find by ID (Rule 10).
-   */
-  static async findById(id) {
-    const query = `
-      SELECT 
-        id, user_id AS "userId", full_name AS "fullName", shop_name AS "shopName", 
-        email, whatsapp_number AS "whatsappNumber", city, location, 
-        physical_address AS "physicalAddress", latitude, longitude,
-        banner_image AS "bannerImage", theme, balance, 
-        total_sales AS "totalSales", net_revenue AS "netRevenue", 
-        client_count AS "clientCount", status, created_at AS "createdAt"
-      FROM sellers 
-      WHERE id = $1
+const SALT_ROUNDS = 10;
+
+const query = (text, params) => pool.query(text, params);
+
+export const createSeller = async (sellerData, externalClient = null) => {
+  const { fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId = null, termsAccepted = false } = sellerData;
+
+  const result = await (externalClient || pool).query(
+    `INSERT INTO sellers (full_name, shop_name, email, whatsapp_number, city, location, physical_address, latitude, longitude, user_id, terms_accepted, terms_accepted_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CASE WHEN $11 = true THEN NOW() ELSE NULL END)
+     RETURNING *`,
+    [fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId, termsAccepted]
+  );
+  return toCamelCase(result.rows[0]);
+};
+
+export const findSellerByEmail = async (email) => {
+  if (!email) return null;
+  const result = await query(
+    `SELECT * FROM sellers WHERE LOWER(email) = $1`,
+    [email.toLowerCase()]
+  );
+  return toCamelCase(result.rows[0]);
+};
+
+export const findSellerByUserId = async (userId) => {
+  const result = await query(
+    `SELECT 
+      id, 
+      user_id AS "userId",
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      whatsapp_number AS "whatsappNumber", 
+      city,
+      location,
+      banner_image AS "bannerImage",
+      theme,
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      client_count AS "clientCount",
+      instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
+      physical_address AS "physicalAddress",
+      latitude,
+      longitude,
+      created_at AS "createdAt"
+     FROM sellers 
+     WHERE user_id = $1`,
+    [userId]
+  );
+  return result.rows[0];
+};
+
+export const findSellerByShopName = async (shopName) => {
+  logger.debug('Executing findSellerByShopName query', { shopName: shopName?.replace(/[\n\r]/g, '') });
+
+  const queryText = `
+    SELECT 
+      id, 
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      whatsapp_number AS "whatsappNumber", 
+      city, 
+      location, 
+      physical_address AS "physicalAddress",
+      latitude,
+      longitude,
+      banner_image AS "bannerImage",
+      theme,
+      instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      client_count AS "clientCount",
+      created_at AS "createdAt"
+    FROM sellers 
+    WHERE slug = $1 OR shop_name = $1
+  `;
+
+  // SQL Query log removed for security/cleanliness
+
+  const result = await query(queryText, [shopName.toLowerCase()]);
+
+  logger.debug('Query result details', {
+    rowCount: result.rowCount,
+    hasBannerImage: !!result.rows[0]?.banner_image
+  });
+
+  return result.rows[0];
+};
+
+export const isShopNameAvailable = async (shopName) => {
+  // Basic check
+  const result = await query("SELECT 1 FROM sellers WHERE LOWER(shop_name) = LOWER($1)", [shopName]);
+  return result.rowCount === 0;
+};
+
+export const findSellerById = async (id) => {
+  const result = await query(
+    `SELECT 
+      id, 
+      user_id AS "userId",
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      whatsapp_number AS "whatsappNumber", 
+      location, 
+      city, 
+      physical_address AS "physicalAddress",
+      latitude,
+      longitude,
+      banner_image AS "bannerImage",
+      theme, 
+      instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      client_count AS "clientCount",
+      created_at AS "createdAt", 
+      updated_at AS "updatedAt"
+     FROM sellers 
+     WHERE id = $1`,
+    [id]
+  );
+  return result.rows[0];
+};
+
+export const updateSeller = async (id, updates) => {
+  logger.info('Updating seller record', {
+    id,
+    updatedFields: Object.keys(updates || {}).filter(k => k !== 'password')
+  });
+
+  if (!id) {
+    logger.error('No ID provided for updateSeller');
+    throw new Error('Seller ID is required for update');
+  }
+
+  const { fullName, shopName, email, whatsappNumber, password, city, location, bannerImage, banner_image, theme, instagramLink, instagram_link, tiktokLink, tiktok_link, facebookLink, facebook_link } = updates || {};
+  const updatesList = [];
+  const values = [id];
+  let paramCount = 1;
+
+  if (fullName) {
+    paramCount++;
+    updatesList.push(`full_name = $${paramCount}`);
+    values.push(fullName);
+  }
+
+  if (shopName) {
+    paramCount++;
+    updatesList.push(`shop_name = $${paramCount}`);
+    values.push(shopName);
+  }
+
+  if (email) {
+    paramCount++;
+    updatesList.push(`email = $${paramCount}`);
+    values.push(email);
+  }
+
+  if (whatsappNumber) {
+    paramCount++;
+    updatesList.push(`whatsapp_number = $${paramCount}`);
+    values.push(whatsappNumber);
+  }
+
+  // Removed password update from here - it is handled by User model
+
+  if (city) {
+    paramCount++;
+    updatesList.push(`city = $${paramCount}`);
+    values.push(city);
+  }
+
+  if (location) {
+    paramCount++;
+    updatesList.push(`location = $${paramCount}`);
+    values.push(location);
+  }
+
+
+
+  // Handle banner image (accept both bannerImage and banner_image for backward compatibility)
+  const bannerImageToUpdate = bannerImage || banner_image;
+  if (bannerImageToUpdate) {
+    paramCount++;
+    updatesList.push(`banner_image = $${paramCount}`);
+    values.push(bannerImageToUpdate);
+  }
+
+  // Handle theme update
+  if (theme !== undefined) {
+    paramCount++;
+    updatesList.push(`theme = $${paramCount}`);
+    values.push(theme);
+  }
+
+  // Handle instagram link update (accept both camelCase and snake_case)
+  const instagramLinkToUpdate = instagramLink || instagram_link;
+  // Allow empty string to clear the link
+  if (instagramLinkToUpdate !== undefined) {
+    paramCount++;
+    updatesList.push(`instagram_link = $${paramCount}`);
+    values.push(instagramLinkToUpdate);
+  }
+
+  // Handle tiktok link update
+  const tiktokLinkToUpdate = tiktokLink || tiktok_link;
+  if (tiktokLinkToUpdate !== undefined) {
+    paramCount++;
+    updatesList.push(`tiktok_link = $${paramCount}`);
+    values.push(tiktokLinkToUpdate);
+  }
+
+  // Handle facebook link update
+  const facebookLinkToUpdate = facebookLink || facebook_link;
+  if (facebookLinkToUpdate !== undefined) {
+    paramCount++;
+    updatesList.push(`facebook_link = $${paramCount}`);
+    values.push(facebookLinkToUpdate);
+  }
+
+  if (updates.bio !== undefined) {
+    paramCount++;
+    updatesList.push(`bio = $${paramCount}`);
+    values.push(updates.bio);
+  }
+
+  if (updates.avatarUrl !== undefined || updates.avatar_url !== undefined) {
+    paramCount++;
+    updatesList.push(`avatar_url = $${paramCount}`);
+    values.push(updates.avatarUrl || updates.avatar_url);
+  }
+
+  // Handle physical shop fields. If no physical address, coordinates MUST be null (not Nairobi sentinel)
+  const hasShop = !!updates.physicalAddress;
+  const lat = hasShop ? parseFloat(updates.latitude || 0) : null;
+  const lng = hasShop ? parseFloat(updates.longitude || 0) : null;
+
+  // Handle physical address update
+  if (updates.physicalAddress !== undefined) {
+    paramCount++;
+    updatesList.push(`physical_address = $${paramCount}`);
+    values.push(updates.physicalAddress);
+  }
+
+  // Handle coordinates
+  if (updates.latitude !== undefined) {
+    paramCount++;
+    updatesList.push(`latitude = $${paramCount}`);
+    values.push(updates.latitude);
+  }
+
+  if (updates.longitude !== undefined) {
+    paramCount++;
+    updatesList.push(`longitude = $${paramCount}`);
+    values.push(updates.longitude);
+  }
+
+  if (updatesList.length === 0) {
+    logger.warn('No valid fields to updateSeller', { id });
+    throw new Error('No valid fields to update');
+  }
+
+  const queryText = `
+    UPDATE sellers
+    SET ${updatesList.join(', ')}, updated_at = NOW()
+    WHERE id = $1
+    RETURNING 
+      id, 
+      user_id AS "userId",
+      full_name AS "fullName", 
+      shop_name AS "shopName", 
+      email, 
+      whatsapp_number AS "whatsappNumber", 
+      city, 
+      location, 
+      banner_image AS "bannerImage",
+      theme, 
+      instagram_link AS "instagramLink",
+      tiktok_link AS "tiktokLink",
+      facebook_link AS "facebookLink",
+      total_sales AS "totalSales",
+      net_revenue AS "netRevenue",
+      balance,
+      client_count AS "clientCount",
+      physical_address AS "physicalAddress",
+      latitude,
+      longitude,
+      bio,
+      avatar_url AS "avatarUrl",
+      created_at AS "createdAt"
     `;
-    const { rows } = await pool.query(query, [id]);
-    return rows[0];
-  }
-
-  /** Alias — callers throughout the codebase use this name. */
-  static async findSellerById(id) {
-    return Seller.findById(id);
-  }
 
 
-  /**
-   * Find and lock seller row (Rule 10).
-   */
-  static async findByIdForUpdate(client, id) {
-    const query = `
-      SELECT id, balance, full_name, whatsapp_number, status
-      FROM sellers 
-      WHERE id = $1 
-      FOR UPDATE
-    `;
-    const { rows } = await client.query(query, [id]);
-    return rows[0];
-  }
+  try {
+    const result = await query(queryText, values);
 
-  /**
-   * Atomically adjust wallet balance.
-   */
-  static async adjustWalletBalance(client, sellerId, amount) {
-    const query = `
-      UPDATE sellers 
-      SET balance = balance + $1, 
-          updated_at = NOW() 
-      WHERE id = $2 
-      RETURNING balance
-    `;
-    const { rows } = await client.query(query, [amount, sellerId]);
-    return rows[0];
-  }
-
-  static async findByUserId(userId) {
-    const query = 'SELECT * FROM sellers WHERE user_id = $1';
-    const { rows } = await pool.query(query, [userId]);
-    return rows[0] ? toCamelCase(rows[0]) : null;
-  }
-
-  static async findByShopName(shopName) {
-    const query = 'SELECT * FROM sellers WHERE slug = $1 OR shop_name = $1';
-    const { rows } = await pool.query(query, [shopName.toLowerCase()]);
-    return rows[0] ? toCamelCase(rows[0]) : null;
-  }
-
-  /**
-   * For backward compatibility with exported functions
-   */
-  static async create(data, client) {
-    const { fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId = null, termsAccepted = false } = data;
-    const query = `
-      INSERT INTO sellers (full_name, shop_name, email, whatsapp_number, city, location, physical_address, latitude, longitude, user_id, terms_accepted, terms_accepted_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CASE WHEN $11 = true THEN NOW() ELSE NULL END)
-      RETURNING *
-    `;
-    const executor = client || pool;
-    const { rows } = await executor.query(query, [fullName, shopName, email, whatsappNumber, city, location, physicalAddress, latitude, longitude, userId, termsAccepted]);
-    return toCamelCase(rows[0]);
-  }
-
-  static async findByEmail(email) {
-    const query = 'SELECT * FROM sellers WHERE LOWER(email) = $1';
-    const { rows } = await pool.query(query, [email.toLowerCase()]);
-    return rows[0] ? toCamelCase(rows[0]) : null;
-  }
-
-  static async updateUserId(sellerId, userId) {
-    const query = 'UPDATE sellers SET user_id = $1 WHERE id = $2 AND user_id IS NULL';
-    await pool.query(query, [userId, sellerId]);
-  }
-
-  static async findByReferralCode(code) {
-    const query = 'SELECT id FROM sellers WHERE referral_code = $1';
-    const { rows } = await pool.query(query, [code]);
-    return rows[0];
-  }
-
-  static async updateReferralCode(sellerId, code) {
-    const query = 'UPDATE sellers SET referral_code = $1 WHERE id = $2';
-    await pool.query(query, [code, sellerId]);
-  }
-
-  static async setReferrer(sellerId, referrerId) {
-    const query = 'UPDATE sellers SET referred_by_seller_id = $1 WHERE id = $2 AND referred_by_seller_id IS NULL';
-    await pool.query(query, [referrerId, sellerId]);
-  }
-
-  static async activateReferral(sellerId) {
-    const query = `
-      UPDATE sellers
-      SET referral_active_until = NOW() + INTERVAL '6 months'
-      WHERE id = $1
-        AND referred_by_seller_id IS NOT NULL
-        AND referral_active_until IS NULL
-      RETURNING *
-    `;
-    const { rows } = await pool.query(query, [sellerId]);
-    return rows[0];
-  }
-
-  static async findActiveReferrals() {
-    const query = `
-      SELECT
-        id AS referred_seller_id,
-        shop_name AS referred_shop_name,
-        referred_by_seller_id AS referrer_seller_id
-      FROM sellers
-      WHERE referred_by_seller_id IS NOT NULL
-        AND referral_active_until > NOW()
-    `;
-    const { rows } = await pool.query(query);
-    return rows;
-  }
-
-  static async adjustReferralEarnings(client, referrerId, amount) {
-    const query = `
-      UPDATE sellers
-      SET balance = balance + $1,
-          total_referral_earnings = total_referral_earnings + $1
-      WHERE id = $2
-    `;
-    const executor = client || pool;
-    await executor.query(query, [amount, referrerId]);
-  }
-
-  static async creditEscrowRelease(client, sellerId, payoutAmount, totalAmount) {
-    const query = `
-      UPDATE sellers
-      SET balance     = balance     + $1,
-          net_revenue = net_revenue + $1,
-          total_sales = total_sales + $2,
-          updated_at  = NOW()
-      WHERE id = $3
-    `;
-    const executor = client || pool;
-    await executor.query(query, [payoutAmount, totalAmount, sellerId]);
-  }
-
-  static async search(city, location = null) {
-    let query = `
-      SELECT 
-        id, 
-        full_name AS "fullName", 
-        shop_name AS "shopName", 
-        city, 
-        location,
-        theme,
-        created_at AS "createdAt"
-      FROM sellers 
-      WHERE LOWER(city) = LOWER($1)
-    `;
-
-    const params = [city];
-
-    if (location) {
-      query += ' AND location ILIKE $2';
-      params.push(`%${location}%`);
+    if (!result.rows || result.rows.length === 0) {
+      logger.warn('No rows returned from updateSeller', { id });
+      throw new Error('No seller found with the given ID');
     }
 
-    query += ' ORDER BY created_at DESC';
-
-    const { rows } = await pool.query(query, params);
-    return rows;
+    logger.info('Successfully updated seller', { id: result.rows[0].id });
+    return result.rows[0];
+  } catch (error) {
+    logger.error('Database error in updateSeller', {
+      message: error.message,
+      code: error.code
+    });
+    throw error; // Re-throw to be caught by the controller
   }
+};
 
-  static async updateBanner(sellerId, bannerUrl) {
-    const query = 'UPDATE sellers SET banner_image = $1 WHERE id = $2 RETURNING id, banner_image AS "bannerImage"';
-    const { rows } = await pool.query(query, [bannerUrl, sellerId]);
-    return rows[0];
-  }
 
-  static async updateTheme(sellerId, theme) {
-    const query = 'UPDATE sellers SET theme = $1 WHERE id = $2 RETURNING theme';
-    const { rows } = await pool.query(query, [theme, sellerId]);
-    return rows[0];
-  }
+export const becomeClient = async (sellerId, userId) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  static async findAll() {
-    const query = `
-      SELECT id, user_id AS "userId", full_name as "name", email, whatsapp_number as "phone", status, city, location, created_at as "createdAt", shop_name as "shopName", balance
-      FROM sellers ORDER BY created_at DESC
-    `;
-    const { rows } = await pool.query(query);
-    return rows;
-  }
+    // 1. Check if relationship already exists
+    const check = await client.query(
+      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
 
-  static async updateStatus(id, status) {
-    const query = 'UPDATE sellers SET status = $1 WHERE id = $2 RETURNING *';
-    const { rows } = await pool.query(query, [status, id]);
-    return toCamelCase(rows[0]);
-  }
-
-  static async getMetrics(id) {
-    const query = `
-      SELECT 
-          COUNT(*) as total_orders,
-          COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN total_amount ELSE 0 END), 0) as total_sales,
-          COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN platform_fee_amount ELSE 0 END), 0) as total_commission,
-          COALESCE(SUM(CASE WHEN payment_status = 'completed' THEN seller_payout_amount ELSE 0 END), 0) as net_sales,
-          COUNT(CASE WHEN status = 'PENDING' THEN 1 END) as pending_orders,
-          COUNT(CASE WHEN status = 'COMPLETED' THEN 1 END) as completed_orders,
-          COUNT(CASE WHEN status = 'CANCELLED' THEN 1 END) as cancelled_orders
-      FROM product_orders WHERE seller_id = $1
-    `;
-    const { rows } = await pool.query(query, [id]);
-    return rows[0];
-  }
-
-  static async delete(client, id) {
-    const query = 'DELETE FROM sellers WHERE id = $1';
-    const executor = client || pool;
-    await executor.query(query, [id]);
-  }
-
-  static async decrementClientCount(client, sellerIds) {
-    const query = `
-      UPDATE sellers 
-      SET client_count = GREATEST(COALESCE(client_count, 0) - 1, 0)
-      WHERE id = ANY($1)
-    `;
-    const executor = client || pool;
-    await executor.query(query, [sellerIds]);
-  }
-
-  static async findSellersByClientUserId(client, userId) {
-    const query = 'SELECT seller_id FROM seller_clients WHERE user_id = $1';
-    const executor = client || pool;
-    const { rows } = await executor.query(query, [userId]);
-    return rows.map(r => r.seller_id);
-  }
-
-  static async deleteClientJunction(client, userId) {
-    const query = 'DELETE FROM seller_clients WHERE user_id = $1';
-    const executor = client || pool;
-    await executor.query(query, [userId]);
-  }
-
-  static async deleteSellerJunction(client, sellerId) {
-    const query = 'DELETE FROM seller_clients WHERE seller_id = $1';
-    const executor = client || pool;
-    await executor.query(query, [sellerId]);
-  }
-
-  static async isShopNameAvailable(shopName) {
-    const query = 'SELECT 1 FROM sellers WHERE LOWER(shop_name) = $1 OR LOWER(slug) = $1';
-    const { rows } = await pool.query(query, [shopName.toLowerCase()]);
-    return rows.length === 0;
-  }
-
-  static async updateSeller(id, data, client) {
-    const fields = [];
-    const values = [];
-    let i = 1;
-
-    // Map camelCase to snake_case if necessary, or assume direct mapping
-    const mapping = {
-      fullName: 'full_name',
-      shopName: 'shop_name',
-      whatsappNumber: 'whatsapp_number',
-      physicalAddress: 'physical_address',
-      bannerImage: 'banner_image'
-    };
-
-    for (const [key, value] of Object.entries(data)) {
-      const dbKey = mapping[key] || key;
-      fields.push(`${dbKey} = $${i++}`);
-      values.push(value);
-    }
-
-    if (fields.length === 0) return null;
-
-    values.push(id);
-    const query = `UPDATE sellers SET ${fields.join(', ')}, updated_at = NOW() WHERE id = $${i} RETURNING *`;
-    const executor = client || pool;
-    const { rows } = await executor.query(query, values);
-    return rows[0] ? toCamelCase(rows[0]) : null;
-  }
-
-  static async becomeClient(sellerId, userId) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      // Check if already a client
-      const checkQuery = 'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2';
-      const checkRes = await client.query(checkQuery, [sellerId, userId]);
-
-      if (checkRes.rows.length > 0) {
-        const { rows } = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
-        await client.query('COMMIT');
-        return {
-          alreadyClient: true,
-          clientCount: rows[0]?.client_count || 0
-        };
-      }
-
-      // Add to junction
-      await client.query(
-        'INSERT INTO seller_clients (seller_id, user_id, created_at) VALUES ($1, $2, NOW())',
-        [sellerId, userId]
-      );
-
-      // Increment count
-      const { rows } = await client.query(
-        'UPDATE sellers SET client_count = COALESCE(client_count, 0) + 1 WHERE id = $1 RETURNING client_count',
-        [sellerId]
-      );
-
-      await client.query('COMMIT');
-      return {
-        alreadyClient: false,
-        clientCount: rows[0]?.client_count || 0
-      };
-    } catch (error) {
+    if (check.rowCount > 0) {
+      // Already a client, just return current count or do nothing
       await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+      const countResult = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
+      return { clientCount: countResult.rows[0]?.client_count || 0, alreadyClient: true };
     }
+
+    // 2. Insert into seller_clients
+    await client.query(
+      'INSERT INTO seller_clients (seller_id, user_id) VALUES ($1, $2)',
+      [sellerId, userId]
+    );
+
+    // 3. Increment client_count in sellers
+    const updateResult = await client.query(
+      'UPDATE sellers SET client_count = COALESCE(client_count, 0) + 1 WHERE id = $1 RETURNING client_count',
+      [sellerId]
+    );
+
+    await client.query('COMMIT');
+    return { clientCount: updateResult.rows[0].client_count, alreadyClient: false };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
+};
 
-  static async removeClient(sellerId, userId) {
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
+export const removeClient = async (sellerId, userId) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-      const { rowCount } = await client.query(
-        'DELETE FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
-        [sellerId, userId]
-      );
+    // 1. Check if relationship exists
+    const check = await client.query(
+      'SELECT 1 FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
 
-      if (rowCount > 0) {
-        await client.query(
-          'UPDATE sellers SET client_count = GREATEST(COALESCE(client_count, 0) - 1, 0) WHERE id = $1',
-          [sellerId]
-        );
-      }
-
-      const { rows } = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
-
-      await client.query('COMMIT');
-      return {
-        clientCount: rows[0]?.client_count || 0
-      };
-    } catch (error) {
+    if (check.rowCount === 0) {
+      // Not a client, nothing to remove
       await client.query('ROLLBACK');
-      throw error;
-    } finally {
-      client.release();
+      const countResult = await client.query('SELECT client_count FROM sellers WHERE id = $1', [sellerId]);
+      return { clientCount: countResult.rows[0]?.client_count || 0, wasClient: false };
     }
+
+    // 2. Remove from seller_clients
+    await client.query(
+      'DELETE FROM seller_clients WHERE seller_id = $1 AND user_id = $2',
+      [sellerId, userId]
+    );
+
+    // 3. Decrement client_count in sellers
+    const updateResult = await client.query(
+      'UPDATE sellers SET client_count = GREATEST(COALESCE(client_count, 0) - 1, 0) WHERE id = $1 RETURNING client_count',
+      [sellerId]
+    );
+
+    await client.query('COMMIT');
+    return { clientCount: updateResult.rows[0].client_count, wasClient: true };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-}
+};
 
-// Legacy exports for backward compatibility
-export const createSeller = Seller.create;
-export const findSellerById = Seller.findById;
-export const findSellerByUserId = Seller.findByUserId;
-export const findSellerByShopName = Seller.findByShopName;
-export const isShopNameAvailable = Seller.isShopNameAvailable;
-export const findSellerByEmail = Seller.findByEmail;
-export const updateSeller = Seller.updateSeller;
-export const becomeClient = Seller.becomeClient;
-export const removeClient = Seller.removeClient;
-
-export default Seller;
+export const findSellersByUserId = async (userId) => {
+  const result = await query(
+    `SELECT 
+      s.id, 
+      s.full_name AS "fullName", 
+      s.shop_name AS "shopName", 
+      s.city, 
+      s.location, 
+      s.banner_image AS "bannerImage",
+      s.theme,
+      s.instagram_link AS "instagramLink",
+      s.client_count AS "clientCount",
+      s.created_at AS "createdAt"
+     FROM sellers s
+     JOIN seller_clients sc ON s.id = sc.seller_id
+     WHERE sc.user_id = $1
+     ORDER BY sc.created_at DESC`,
+    [userId]
+  );
+  return result.rows;
+};

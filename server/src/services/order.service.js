@@ -3,11 +3,8 @@ import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';
 import { OrderStatus, ProductType, OrderType } from '../constants/enums.js';
-import Order, { validateOrderRecord } from '../models/order.model.js';
+import Order from '../models/order.model.js';
 import Buyer from '../models/buyer.model.js';
-import Product from '../models/product.model.js';
-import Seller from '../models/seller.model.js';
-import Payout from '../models/payout.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
 import { sellerHasPhysicalShop } from '../utils/sellerUtils.js';
@@ -15,10 +12,6 @@ import ReferralService from './referral.service.js';
 import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../utils/email.js';
 import cacheService from './cache.service.js';
 import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../utils/fulfillment.js';
-import { toJsonb } from '../utils/order.utils.js';
-import { validateOrderInput } from '../validators/order.validator.js';
-import ServiceSlot from '../models/serviceSlot.model.js';
-import DigitalAccess from '../models/digitalAccess.model.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -40,9 +33,6 @@ class OrderService {
       metadata: rawMetadata = {},
       idempotencyKey = null
     } = orderData;
-
-    // --- FAIL FAST: Validate required fields at entry point ---
-    validateOrderInput(orderData);
 
     // --- PIN-01: DISTRIBUTED LOCK FOR ATOMIC ORDER CREATION ---
     const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyer.id}:seller:${orderData.sellerId}`;
@@ -154,16 +144,23 @@ class OrderService {
           const timeSlot = new Date(`${metadata.booking_date}T${startTime}`);
           const productId = Number.parseInt(service.id, 10);
 
-          const slotCheck = await ServiceSlot.findForUpdate(client, productId, timeSlot);
+          const slotCheck = await client.query(
+            `SELECT id, status, reserved_by_order_id, expires_at 
+             FROM service_slots 
+             WHERE service_id = $1 AND time_slot = $2
+             FOR UPDATE`,
+            [productId, timeSlot]
+          );
 
-          if (slotCheck) {
-            const isExpired = slotCheck.expires_at && new Date(slotCheck.expires_at) < new Date();
+          if (slotCheck.rows.length > 0) {
+            const slot = slotCheck.rows[0];
+            const isExpired = slot.expires_at && new Date(slot.expires_at) < new Date();
 
-            if (slotCheck.status === 'BOOKED') {
+            if (slot.status === 'BOOKED') {
               throw new Error('This time slot has already been booked. Please select a different time.');
             }
 
-            if (slotCheck.status === 'RESERVED' && !isExpired) {
+            if (slot.status === 'RESERVED' && !isExpired) {
               throw new Error('This time slot is currently being reserved by another customer. Please try again in a few minutes or select a different time.');
             }
           }
@@ -203,12 +200,12 @@ class OrderService {
           service_title: service.title || items[0]?.name || 'Service',
 
           notes: orderData.notes || null,
-          metadata: toJsonb(metadata),
+          metadata: metadata,
           status: initialStatus,
           payment_status: 'pending',
-          service_requirements: toJsonb(metadata.service_requirements || null),
+          service_requirements: metadata.service_requirements || null,
           fulfillment_type: fulfillmentType,
-          delivery_location: fulfillmentType === FulfillmentType.SELLER_TO_BUYER ? toJsonb(location) : null,
+          delivery_location: fulfillmentType === FulfillmentType.SELLER_TO_BUYER ? location : null,
           order_type: orderType,
           total_quantity: service.quantity || totalQuantity,
           reservation_expires_at: reservationExpiresAt
@@ -254,8 +251,17 @@ class OrderService {
       await client.query('BEGIN');
 
       // 1. Fetch Order and Lock
-      const order = await Order.findByIdForUpdate(client, orderId);
-      if (!order) throw new Error('Order not found');
+      const lockResult = await client.query(
+        `SELECT id FROM product_orders WHERE id = $1 FOR UPDATE`,
+        [orderId]
+      );
+      if (lockResult.rows.length === 0) throw new Error('Order not found');
+
+      const orderResult = await client.query(
+        `SELECT * FROM product_orders WHERE id = $1`,
+        [orderId]
+      );
+      const order = orderResult.rows[0];
 
       // 2. Permission Check
       const userSellerId = String(user.sellerId || user.profileId || '');
@@ -265,9 +271,11 @@ class OrderService {
 
       if (!isAdmin && !isSellerMatch) {
         // Last-resort fallback: cross-check via users table (handles old tokens)
-        const seller = await Seller.findSellerById(order.sellerId);
-        const isUnifiedMatch = seller &&
-          String(seller.userId) === String(user.userId || user.id);
+        const sellerCheck = await client.query(
+          'SELECT user_id FROM sellers WHERE id = $1', [order.seller_id]
+        );
+        const isUnifiedMatch = sellerCheck.rows.length > 0 &&
+          String(sellerCheck.rows[0].user_id) === String(user.userId || user.id);
 
         if (!isUnifiedMatch) {
           throw new Error('Unauthorized: You can only update your own orders');
@@ -325,14 +333,32 @@ class OrderService {
 
       // 7. Send Notification
       try {
-        const fullOrder = await Order.findFullDetailsForNotification(orderId);
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, 
+                  b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  b.latitude AS buyer_latitude, b.longitude AS buyer_longitude,
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
+                  COALESCE(s.whatsapp_number, NULL) as seller_phone, 
+                  COALESCE(s.email, u.email) as seller_email, 
+                  s.physical_address as seller_address, s.shop_name,
+                  s.latitude as seller_latitude, s.longitude as seller_longitude,
+                  s.instagram_link, s.tiktok_link, s.facebook_link
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           LEFT JOIN users u ON s.user_id = u.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
 
-        if (fullOrder) {
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
           const buyerData = {
-            name: fullOrder.buyer_name,
-            phone: fullOrder.buyer_mobile_payment,
-            whatsapp_number: fullOrder.buyer_whatsapp_number,
-            email: fullOrder.buyer_email,
+            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+            phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
+            whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual,
             latitude: fullOrder.buyer_latitude,
             longitude: fullOrder.buyer_longitude
           };
@@ -397,9 +423,11 @@ class OrderService {
       await client.query('BEGIN');
 
       // 1. Fetch Order
-      const order = await Order.findByIdForUpdate(client, orderId);
+      const orderQuery = 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE';
+      const orderResult = await client.query(orderQuery, [orderId]);
 
-      if (!order) throw new Error('Order not found');
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
 
       // 2. Validate Status
       if (order.status === OrderStatus.COMPLETED) throw new Error('Cannot cancel a completed order');
@@ -411,32 +439,66 @@ class OrderService {
       if (updatedOrder) {
         // 4. Update Buyer Refunds (Track cumulative refunds)
         const refundAmount = Number.parseFloat(order.total_amount);
-        await Buyer.updateBalance(client, order.buyer_id, { refundDelta: refundAmount });
+        await client.query(
+          `UPDATE buyers 
+           SET refunds = COALESCE(refunds, 0) + $1,
+               updated_at = NOW()
+           WHERE id = $2`,
+          [refundAmount, order.buyer_id]
+        );
       }
 
       await client.query('COMMIT');
 
       // 6. Send Notification
       try {
-        const fullOrder = await Order.findFullDetailsForNotification(orderId);
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
+                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, s.physical_address as seller_address
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
 
-        if (fullOrder) {
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+
           // Prepare minimal data for notification helper
           const orderData = {
             id: fullOrder.id,
             order_id: fullOrder.order_number || fullOrder.id, // match helper expectation
             total_amount: fullOrder.total_amount,
             amount: fullOrder.total_amount,
-            buyer_mobile_payment: fullOrder.buyer_mobile_payment,
-            buyer_whatsapp_number: fullOrder.buyer_whatsapp_number,
-            phone: fullOrder.buyer_whatsapp_number,
-            items: fullOrder.items
+            buyer_mobile_payment: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
+            buyer_whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+            phone: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+            // We might need items for detailed notification?
+            // Helper likely expects items. But we don't have them in 'fullOrder' unless we join.
+            // Let's rely on basic info for now or fetch items.
+            // fetching items is better.
           };
 
+          // Fetch items      // 3. WhatsApp Notifications
+          const { rows: items } = await pool.query(
+            `SELECT oi.*, p.product_type 
+             FROM order_items oi
+             JOIN products p ON oi.product_id = p.id
+             WHERE oi.order_id = $1`,
+            [orderId]
+          );
+          orderData.items = items.map(i => ({
+            product_name: i.product_name,
+            quantity: i.quantity,
+            product_price: i.product_price
+          }));
+
           const buyer = {
-            full_name: fullOrder.buyer_name,
-            phone: fullOrder.buyer_mobile_payment,
-            email: fullOrder.buyer_email
+            full_name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+            phone: fullOrder.buyer_phone || fullOrder.buyer_phone_actual, // Use normalized if possible
+            email: fullOrder.buyer_email || fullOrder.buyer_email_actual
           };
 
           const seller = {
@@ -447,6 +509,8 @@ class OrderService {
           };
 
           // Prepare notification calls
+          const notificationPromises = [];
+
           // 1. Notify Buyer "You cancelled"
           try {
             await whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Buyer');
@@ -470,9 +534,9 @@ class OrderService {
           if (wasDeliveryOrder) {
             try {
               const buyerForCancel = {
-                fullName: fullOrder.buyer_name,
-                whatsapp_number: fullOrder.buyer_whatsapp_number,
-                phone: fullOrder.buyer_mobile_payment
+                fullName: fullOrder.buyer_name || fullOrder.buyer_name_actual,
+                whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
+                phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual
               };
               const sellerForCancel = {
                 shop_name: fullOrder.seller_name,
@@ -483,7 +547,7 @@ class OrderService {
                 id: fullOrder.id,
                 orderNumber: fullOrder.order_number || fullOrder.id,
                 total_amount: fullOrder.total_amount,
-                items: fullOrder.items
+                items: items
               };
               await whatsappService.sendLogisticsCancellationNotification(
                 orderForCancel, buyerForCancel, sellerForCancel, 'Buyer'
@@ -508,26 +572,48 @@ class OrderService {
 
   static async _getSellerDetails(client, sellerId) {
     try {
-      const sellerInfo = await Seller.findSellerById(sellerId);
+      let sellerCheck;
+      try {
+        sellerCheck = await client.query(
+          'SELECT id, user_id, physical_address, latitude, longitude, city, location, status FROM sellers WHERE id = $1 AND status = $2 FOR UPDATE',
+          [sellerId, 'active']
+        );
+      } catch (schemaError) {
+        logger.warn('Seller schema issue, trying minimal query:', schemaError);
+        sellerCheck = await client.query(
+          'SELECT id, user_id, latitude, longitude FROM sellers WHERE id = $1 FOR UPDATE',
+          [sellerId]
+        );
+      }
 
-      if (!sellerInfo) {
+      if (sellerCheck.rows.length === 0) {
         throw new Error(`Seller with ID ${sellerId} not found or inactive`);
       }
 
-      if (sellerInfo.userId) {
-        const User = (await import('../models/user.model.js')).default;
-        const userInfo = await User.findById(sellerInfo.userId);
+      const sellerInfo = sellerCheck.rows[0];
 
-        if (userInfo) {
+      if (sellerInfo.user_id) {
+        const userCheck = await client.query(
+          'SELECT id, email, role FROM users WHERE id = $1',
+          [sellerInfo.user_id]
+        );
+
+        if (userCheck.rows.length > 0) {
+          const userInfo = userCheck.rows[0];
           sellerInfo.full_name = userInfo.role === 'seller' ? 'Seller' : userInfo.email;
           sellerInfo.email = userInfo.email;
           sellerInfo.whatsapp_number = null;
 
           try {
-            const buyer = await Buyer.findByUserId(sellerInfo.userId);
-            if (buyer) {
-              sellerInfo.full_name = sellerInfo.full_name || buyer.full_name;
-              sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || buyer.whatsapp_number;
+            const buyerContactCheck = await client.query(
+              'SELECT full_name, whatsapp_number FROM buyers WHERE user_id = $1 LIMIT 1',
+              [sellerInfo.user_id]
+            );
+
+            if (buyerContactCheck.rows.length > 0) {
+              const buyerInfo = buyerContactCheck.rows[0];
+              sellerInfo.full_name = sellerInfo.full_name || buyerInfo.full_name;
+              sellerInfo.whatsapp_number = sellerInfo.whatsapp_number || buyerInfo.whatsapp_number;
             }
           } catch (buyerError) {
             logger.debug('Could not fetch buyer contact info:', buyerError);
@@ -545,8 +631,11 @@ class OrderService {
 
   static async _enrichItemsWithProductData(client, items) {
     const productIds = items.map(item => Number.parseInt(item.productId, 10));
-    const products = await Product.findByIds(productIds, client);
-    const productsMap = new Map(products.map(p => [p.id, p]));
+    const productsResult = await client.query(
+      'SELECT id, price, product_type::text as product_type, is_digital, service_options, track_inventory, quantity, reserved_quantity FROM products WHERE id = ANY($1)',
+      [productIds]
+    );
+    const productsMap = new Map(productsResult.rows.map(p => [p.id, p]));
 
     items.forEach(item => {
       const prod = productsMap.get(Number.parseInt(item.productId, 10));
@@ -589,7 +678,30 @@ class OrderService {
    * Decrements quantity and increments reserved_quantity
    */
   static async _reserveInventory(client, items) {
-    await Product.decrementInventory(client, items);
+    for (const item of items) {
+      if (item.trackInventory === true) {
+        const requestedQty = Number.parseInt(item.quantity, 10) || 1;
+        const productId = Number.parseInt(item.productId, 10);
+
+        const query = `
+          UPDATE products 
+          SET 
+            quantity = quantity - $1,
+            reserved_quantity = reserved_quantity + $1,
+            updated_at = NOW()
+          WHERE id = $2 AND quantity >= $1
+          RETURNING id, quantity, reserved_quantity
+        `;
+
+        const { rows } = await client.query(query, [requestedQty, productId]);
+
+        if (rows.length === 0) {
+          throw new Error(`Inventory reservation failed for product ${productId}. It may have just sold out.`);
+        }
+
+        logger.info(`[RESERVATION] Reserved ${requestedQty} units for product ${productId}. New qty: ${rows[0].quantity}, Reserved: ${rows[0].reserved_quantity}`);
+      }
+    }
   }
 
   /**
@@ -597,7 +709,25 @@ class OrderService {
    * Restores quantity and decrements reserved_quantity (used for cancellation/timeout)
    */
   static async _releaseInventory(client, items) {
-    await Product.releaseInventory(client, items);
+    for (const item of items) {
+      if (item.trackInventory === true) {
+        const qty = Number.parseInt(item.quantity, 10) || 1;
+        const productId = Number.parseInt(item.productId, 10);
+
+        const query = `
+          UPDATE products 
+          SET 
+            quantity = quantity + $1,
+            reserved_quantity = GREATEST(0, reserved_quantity - $1),
+            updated_at = NOW()
+          WHERE id = $2
+          RETURNING id, quantity, reserved_quantity
+        `;
+
+        const { rows } = await client.query(query, [qty, productId]);
+        logger.info(`[RESERVATION-RELEASE] Released ${qty} units for product ${productId}. New qty: ${rows[0].quantity}, Reserved: ${rows[0].reserved_quantity}`);
+      }
+    }
   }
 
   /**
@@ -621,13 +751,31 @@ class OrderService {
       throw new Error('Invalid booking date or time format');
     }
 
-    // Try to insert with explicit conflict handling via ServiceSlot model
-    const slot = await ServiceSlot.reserve(client, { productId, timeSlot, orderId });
+    // Try to insert with explicit conflict handling
+    const result = await client.query(
+      `INSERT INTO service_slots (service_id, time_slot, status, reserved_by_order_id, expires_at)
+       VALUES ($1, $2, 'RESERVED', $3, NOW() + INTERVAL '15 minutes')
+       ON CONFLICT (service_id, time_slot) DO UPDATE
+         SET 
+           status = 'RESERVED',
+           reserved_by_order_id = $3,
+           expires_at = NOW() + INTERVAL '15 minutes',
+           updated_at = NOW()
+         WHERE 
+           service_slots.status = 'AVAILABLE' 
+           OR (service_slots.status = 'RESERVED' AND service_slots.expires_at < NOW())
+       RETURNING id, status`,
+      [productId, timeSlot, orderId]
+    );
 
-    if (!slot) {
-      const currentSlot = await ServiceSlot.findByServiceSlot(client, productId, timeSlot);
+    if (result.rows.length === 0) {
+      const currentSlot = await client.query(
+        `SELECT status, expires_at, reserved_by_order_id FROM service_slots 
+         WHERE service_id = $1 AND time_slot = $2`,
+        [productId, timeSlot]
+      );
 
-      if (currentSlot?.status === 'BOOKED') {
+      if (currentSlot.rows[0]?.status === 'BOOKED') {
         throw new Error('This time slot has already been booked. Please select a different time.');
       }
 
@@ -635,7 +783,7 @@ class OrderService {
     }
 
     logger.info(`[SLOT-RESERVATION] Reserved slot ${timeSlot.toISOString()} for service ${productId} (Order ${orderId})`);
-    return slot;
+    return result.rows[0];
   }
 
   /**
@@ -643,7 +791,24 @@ class OrderService {
    * Simply decrements reserved_quantity (used after successful payment)
    */
   static async _finalizeInventory(client, items) {
-    await Product.finalizeInventory(client, items);
+    for (const item of items) {
+      if (item.trackInventory === true) {
+        const qty = Number.parseInt(item.quantity, 10) || 1;
+        const productId = Number.parseInt(item.productId, 10);
+
+        const query = `
+          UPDATE products 
+          SET 
+            reserved_quantity = GREATEST(0, reserved_quantity - $1),
+            updated_at = NOW()
+          WHERE id = $2
+          RETURNING id, reserved_quantity
+        `;
+
+        await client.query(query, [qty, productId]);
+        logger.info(`[RESERVATION-FINALIZED] Finalized ${qty} units for product ${productId}.`);
+      }
+    }
   }
 
   /**
@@ -654,7 +819,18 @@ class OrderService {
     for (const item of items) {
       if (item.isDigital) {
         const productId = Number.parseInt(item.productId, 10);
-        await DigitalAccess.grant(client, { userId: buyerId, productId, orderId });
+
+        const query = `
+          INSERT INTO user_digital_access (user_id, product_id, order_id, access_status)
+          VALUES ($1, $2, $3, 'ACTIVE')
+          ON CONFLICT (user_id, product_id) DO UPDATE
+          SET 
+            access_status = 'ACTIVE',
+            updated_at = NOW()
+          RETURNING id
+        `;
+
+        await client.query(query, [buyerId, productId, orderId]);
         logger.info(`[DIGITAL-ACCESS] Granted access for product ${productId} to user ${buyerId} (Order ${orderId})`);
       }
     }
@@ -665,7 +841,16 @@ class OrderService {
    * Transitions slot from RESERVED to BOOKED
    */
   static async _finalizeServiceSlot(client, orderId) {
-    const rows = await ServiceSlot.finalize(client, orderId);
+    const query = `
+      UPDATE service_slots 
+      SET 
+        status = 'BOOKED',
+        updated_at = NOW()
+      WHERE reserved_by_order_id = $1 AND status = 'RESERVED'
+      RETURNING id
+    `;
+
+    const { rows } = await client.query(query, [orderId]);
     if (rows.length > 0) {
       logger.info(`[SLOT-FINALIZED] Finalized booking for Order ${orderId}`);
     }
@@ -763,19 +948,30 @@ class OrderService {
       if (shouldManageTransaction) await client.query('BEGIN');
 
       // 1. Fetch Order
-      const order = await Order.findById(orderId);
-      if (!order) throw new Error('Order not found');
+      const orderResult = await client.query(
+        'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE',
+        [orderId]
+      );
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
 
       // 2. Atomic idempotency check
       if (['COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status) ||
-        order.paymentStatus === 'completed') {
+        order.payment_status === 'completed') {
         if (shouldManageTransaction) await client.query('ROLLBACK');
         logger.info(`[ORDER] Order ${orderId} already in terminal state (${order.status}). Skipping.`);
         return { success: true, message: 'Order already processed' };
       }
 
       // 3. Fetch Items
-      const items = order.items;
+      const itemsQuery = `
+        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options, p.track_inventory, p.name as product_name
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1
+      `;
+      const itemsResult = await client.query(itemsQuery, [orderId]);
+      const items = itemsResult.rows;
 
       // 4. DISPATCH BY ORDER TYPE (PHASE 5: ISOLATION)
       let result;
@@ -792,10 +988,12 @@ class OrderService {
       }
 
       // 5. Shared Side Effects (Metadata update)
-      const PaymentModel = (await import('../models/payment.model.js')).default;
-      await PaymentModel.update(client, payment.id, {
-        metadata: { ...payment.metadata, order_completed_at: new Date() }
-      });
+      await client.query(
+        `UPDATE payments 
+         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{order_completed_at}', to_jsonb(NOW()))
+         WHERE id = $1`,
+        [payment.id]
+      );
 
       if (shouldManageTransaction) await client.query('COMMIT');
 
@@ -891,10 +1089,6 @@ class OrderService {
     return await escrowManager.releaseFunds(client, order, 'OrderService');
   }
 
-  static async verifyDigitalProductOwnership(orderId, buyerId, productId) {
-    return await Order.verifyDigitalOwnership(orderId, buyerId, productId);
-  }
-
   /**
    * Buyer marks order as collected
    */
@@ -904,11 +1098,14 @@ class OrderService {
       await client.query('BEGIN');
 
       // 1. Fetch Order and lock
-      const order = await Order.findByIdForUpdate(client, orderId);
-      if (!order) throw new Error('Order not found');
+      const orderQuery = 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE';
+      const orderResult = await client.query(orderQuery, [orderId]);
+
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
 
       // 2. Validate Ownership & Status
-      if (order.buyerId !== buyerId) {
+      if (order.buyer_id !== buyerId) {
         throw new Error('Unauthorized: You can only update your own orders');
       }
 
@@ -926,16 +1123,50 @@ class OrderService {
 
       // 5. Send Notification
       try {
-        const fullOrder = await Order.findFullDetailsForNotification(orderId);
+        // Re-fetch order details or reuse
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name          AS buyer_name_actual,
+                  b.mobile_payment     AS buyer_phone_actual,
+                  b.whatsapp_number    AS buyer_whatsapp_actual,
+                  b.email              AS buyer_email_actual,
+                  b.city               AS buyer_city,
+                  b.location           AS buyer_location_text,
+                  b.latitude           AS buyer_latitude,
+                  b.longitude          AS buyer_longitude,
+                  b.full_address       AS buyer_full_address,
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
+                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
+                  COALESCE(s.email, u.email)                       AS seller_email, 
+                  s.physical_address   AS seller_address, s.latitude AS seller_latitude, s.longitude AS seller_longitude
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           LEFT JOIN users u ON s.user_id = u.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
 
-        if (fullOrder) {
-          const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, fullOrder.items);
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
+
+          // Re-fetch items for complete details
+          const itemsResult = await pool.query(
+            `SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.name as product_name
+             FROM order_items oi
+             LEFT JOIN products p ON oi.product_id = p.id
+             WHERE oi.order_id = $1`,
+            [orderId]
+          );
+          const items = itemsResult.rows;
+
+          const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
           // 3. Notify Stakeholders
           whatsappService.notifySellerStatusUpdate({
             seller: normalizedOrder.seller,
             order: normalizedOrder,
-            newStatus: OrderStatus.COMPLETED,
+            newStatus,
             oldStatus: OrderStatus.COLLECTION_PENDING, // Context-specific
             notes: 'Status updated via dashboard'
           }).catch(err => logger.error('Error sending status notification to seller:', err));
@@ -943,7 +1174,7 @@ class OrderService {
           whatsappService.notifyBuyerStatusUpdate({
             buyer: normalizedOrder.buyer,
             order: normalizedOrder,
-            newStatus: OrderStatus.COMPLETED,
+            newStatus,
             seller: normalizedOrder.seller,
             notes: 'Status updated'
           }).catch(err => logger.error('Error sending status notification to buyer:', err));
@@ -969,10 +1200,13 @@ class OrderService {
     try {
       await client.query('BEGIN');
 
-      const order = await Order.findByIdForUpdate(client, orderId);
-      if (!order) throw new Error('Order not found');
+      const orderQuery = 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE';
+      const orderResult = await client.query(orderQuery, [orderId]);
 
-      if (order.buyerId !== buyerId) {
+      if (orderResult.rows.length === 0) throw new Error('Order not found');
+      const order = orderResult.rows[0];
+
+      if (order.buyer_id !== buyerId) {
         throw new Error('Unauthorized: You can only update your own orders');
       }
 
@@ -996,9 +1230,31 @@ class OrderService {
 
       // 6. Send Notifications
       try {
-        const fullOrder = await Order.findFullDetailsForNotification(orderId);
+        const fullOrderResult = await pool.query(
+          `SELECT o.*, 
+                  b.full_name          AS buyer_name_actual,
+                  b.mobile_payment     AS buyer_phone_actual,
+                  b.whatsapp_number    AS buyer_whatsapp_actual,
+                  b.email              AS buyer_email_actual,
+                  b.city               AS buyer_city,
+                  b.location           AS buyer_location_text,
+                  b.latitude           AS buyer_latitude,
+                  b.longitude          AS buyer_longitude,
+                  b.full_address       AS buyer_full_address,
+                  COALESCE(s.full_name, u.email, 'Unknown Seller') AS seller_name, 
+                  COALESCE(s.whatsapp_number, NULL)                AS seller_phone, 
+                  COALESCE(s.email, u.email)                       AS seller_email, 
+                  s.physical_address   AS seller_address, s.latitude AS seller_latitude, s.longitude AS seller_longitude
+           FROM product_orders o
+           LEFT JOIN buyers b ON o.buyer_id = b.id
+           LEFT JOIN sellers s ON o.seller_id = s.id
+           LEFT JOIN users u ON s.user_id = u.id
+           WHERE o.id = $1`,
+          [orderId]
+        );
 
-        if (fullOrder) {
+        if (fullOrderResult.rows.length > 0) {
+          const fullOrder = fullOrderResult.rows[0];
           const buyerData = this._buildBuyerNotificationData(fullOrder);
           const sellerData = {
             name: fullOrder.seller_name,
@@ -1050,8 +1306,17 @@ class OrderService {
    */
   static async _sendLowStockAlert(sellerId, productName, currentQuantity, threshold) {
     try {
-      const seller = await Seller.findSellerById(sellerId);
-      const sellerPhone = seller?.whatsapp_number;
+      const sellerResult = await pool.query(
+        'SELECT whatsapp_number FROM sellers WHERE id = $1',
+        [sellerId]
+      );
+
+      if (sellerResult.rows.length === 0) {
+        logger.warn(`[INVENTORY] Could not find seller ${sellerId} for low stock alert`);
+        return;
+      }
+
+      const sellerPhone = sellerResult.rows[0].whatsapp_number;
       if (!sellerPhone) {
         logger.warn(`[INVENTORY] Seller ${sellerId} has no phone number for low stock alert`);
         return;
@@ -1072,8 +1337,17 @@ class OrderService {
    */
   static async _sendOutOfStockAlert(sellerId, productName) {
     try {
-      const seller = await Seller.findSellerById(sellerId);
-      const sellerPhone = seller?.whatsapp_number;
+      const sellerResult = await pool.query(
+        'SELECT whatsapp_number FROM sellers WHERE id = $1',
+        [sellerId]
+      );
+
+      if (sellerResult.rows.length === 0) {
+        logger.warn(`[INVENTORY] Could not find seller ${sellerId} for out of stock alert`);
+        return;
+      }
+
+      const sellerPhone = sellerResult.rows[0].whatsapp_number;
       if (!sellerPhone) {
         logger.warn(`[INVENTORY] Seller ${sellerId} has no phone number for out of stock alert`);
         return;
@@ -1112,9 +1386,12 @@ class OrderService {
 
       // Prevent multiple STK pushes for the same debt
       if (debtId) {
-        const existing = await Order.findActiveByDebtId(client, debtId);
-        if (existing) {
-          throw new Error(`A payment request for this debt is already active (Order #${existing.order_number}). Please wait or cancel the previous order.`);
+        const { rows: existing } = await client.query(
+          "SELECT order_number, status FROM product_orders WHERE (metadata->>'debt_id')::int = $1 AND status != 'FAILED' AND status != 'CANCELLED'",
+          [debtId]
+        );
+        if (existing.length > 0) {
+          throw new Error(`A payment request for this debt is already active (Order #${existing[0].order_number}). Please wait or cancel the previous order.`);
         }
       }
 
@@ -1157,8 +1434,9 @@ class OrderService {
           buyer_email: `client_${clientRecord.id}@byblos.local`,
           buyer_mobile_payment: clientPhone,
           buyer_whatsapp_number: clientPhone,
+          shipping_address: null,
           notes: skipInventoryDecrement ? 'Debt payment order' : 'Seller-initiated client order',
-          metadata: toJsonb({
+          metadata: JSON.stringify({
             items,
             client_id: clientRecord.id,
             seller_initiated: true,
@@ -1170,8 +1448,7 @@ class OrderService {
           payment_status: 'pending',
           client_id: clientRecord.id,
           is_seller_initiated: true,
-          is_debt: false,
-          order_number: await this._generateOrderNumber(client)
+          is_debt: false
         };
 
         // 6. Insert Order
@@ -1211,13 +1488,39 @@ class OrderService {
     const trackedItems = items.map(item => ({
       productId: item.product_id || item.productId,
       quantity: Number.parseInt(item.quantity || 1, 10),
-      track_inventory: item.track_inventory || item.trackInventory || false
-    }));
+      track_inventory: item.track_inventory === true
+    })).filter(i => i.track_inventory && i.productId);
 
-    const results = await Product.decrementInventory(client, trackedItems);
+    if (trackedItems.length === 0) return;
+
+    // Lock rows to prevent race conditions
+    const productIds = trackedItems.map(i => i.productId);
+    await client.query(
+      `SELECT id, quantity, name FROM products
+       WHERE id = ANY($1::int[]) AND track_inventory = true
+       FOR UPDATE`,
+      [productIds]
+    );
+
+    const values = trackedItems.map(item => `(${item.productId}, ${item.quantity})`).join(',');
+    const bulkUpdateResult = await client.query(
+      `UPDATE products AS p
+       SET quantity = p.quantity - v.qty,
+           updated_at = NOW()
+       FROM (VALUES ${values}) AS v(id, qty)
+       WHERE p.id = v.id AND p.track_inventory = true AND p.quantity >= v.qty
+       RETURNING p.id, p.quantity, p.low_stock_threshold, p.name`,
+      []
+    );
+
+    if (bulkUpdateResult.rows.length !== trackedItems.length) {
+      const updatedIds = new Set(bulkUpdateResult.rows.map(r => r.id));
+      const failedItem = trackedItems.find(i => !updatedIds.has(i.productId));
+      throw new Error(`Insufficient stock for product ID ${failedItem?.productId}. Operation aborted.`);
+    }
 
     // Post-update alerts
-    for (const row of results) {
+    for (const row of bulkUpdateResult.rows) {
       const sellerId = order ? order.seller_id : null;
       if (sellerId) {
         // FIXED (FIX-13): Ensure alert fires if threshold is reached OR crossed
@@ -1294,9 +1597,26 @@ class OrderService {
 
     // 3. Notifications (FIX 7: Explicit Column Aliases & Robust Fetch)
     try {
-      const fullOrder = await Order.findFullDetailsForNotification(orderId);
+      const fullOrderResult = await pool.query(
+        `SELECT o.id, o.order_number, o.total_amount, o.status, o.order_type, o.fulfillment_type, 
+                o.metadata, o.buyer_id, o.seller_id, o.location_address, o.location_lat, o.location_lng,
+                o.service_title, o.service_requirements, o.payment_status, o.payment_method, o.payment_reference,
+                o.notification_sent, o.total_quantity,
+                b.full_name AS buyer_name, b.mobile_payment AS buyer_mobile_payment,
+                b.email AS buyer_email,
+                s.full_name AS seller_name, s.shop_name, s.whatsapp_number AS seller_phone, 
+                s.email AS seller_email, s.physical_address AS seller_address,
+                s.latitude AS seller_latitude, s.longitude AS seller_longitude,
+                s.instagram_link, s.tiktok_link, s.facebook_link
+         FROM product_orders o
+         LEFT JOIN buyers b ON o.buyer_id = b.id
+         LEFT JOIN sellers s ON o.seller_id = s.id
+         WHERE o.id = $1`,
+        [orderId]
+      );
 
-      if (!fullOrder) return;
+      if (fullOrderResult.rows.length === 0) return;
+      let fullOrder = fullOrderResult.rows[0];
 
       // 1. Idempotency Guard (Payment Status)
       // If the webhook is a retry and we already processed this, skip.
@@ -1305,67 +1625,63 @@ class OrderService {
       }
 
       // 2. Legacy Fallback (Apply extracting only if flat columns are missing)
-      const resolvedOrder = this.extractFromLegacy(fullOrder);
+      fullOrder = this.extractFromLegacy(fullOrder);
 
       // 3. BUILD NORMALIZED PAYLOAD (Single Source of Truth)
-      const normalizedOrder = this._prepareNormalizedNotificationPayload(resolvedOrder, items);
+      const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
-      const isSellerInitiated = resolvedOrder.metadata?.seller_initiated === true ||
-        resolvedOrder.metadata?.is_seller_initiated === true ||
-        resolvedOrder.is_seller_initiated === true;
+      const isSellerInitiated = fullOrder.metadata?.seller_initiated === true ||
+        fullOrder.metadata?.is_seller_initiated === true ||
+        fullOrder.is_seller_initiated === true;
 
       // Always notify Seller via Email
-      if (resolvedOrder.seller_email) {
-        sendNewOrderNotificationEmail(resolvedOrder.seller_email, {
-          ...resolvedOrder,
-          seller_name: resolvedOrder.seller_name,
+      if (fullOrder.seller_email) {
+        sendNewOrderNotificationEmail(fullOrder.seller_email, {
+          ...fullOrder,
+          seller_name: fullOrder.seller_name,
           items
         }).catch(e => logger.error('[ORDER] Seller notification email failed:', e));
       }
 
-      if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${resolvedOrder.order_number}`);
+      if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
 
       // Persist buyer location for mobile service orders
       // FIX 7: Robust parsing of metadata if it arrives as string
-      const ordMeta = typeof resolvedOrder.metadata === 'string'
-        ? JSON.parse(resolvedOrder.metadata)
-        : (resolvedOrder.metadata || {});
+      const ordMeta = typeof fullOrder.metadata === 'string'
+        ? JSON.parse(fullOrder.metadata)
+        : (fullOrder.metadata || {});
 
-      const isServiceOrder = resolvedOrder.order_type === 'SERVICE' || ordMeta.product_type === 'service';
+      const isServiceOrder = fullOrder.order_type === 'SERVICE' || ordMeta.product_type === 'service';
 
       // Fix: Relax check to allow lat=0
-      const hasBuyerCoords = (resolvedOrder.location_lat !== null && resolvedOrder.location_lat !== undefined) &&
-        (resolvedOrder.location_lng !== null && resolvedOrder.location_lng !== undefined);
+      const hasBuyerCoords = (fullOrder.location_lat !== null && fullOrder.location_lat !== undefined) &&
+        (fullOrder.location_lng !== null && fullOrder.location_lng !== undefined);
 
-      if (isServiceOrder && hasBuyerCoords && resolvedOrder.buyer_id) {
-        Buyer.updateLocation(resolvedOrder.buyer_id, {
-          latitude: resolvedOrder.location_lat,
-          longitude: resolvedOrder.location_lng,
-          fullAddress: resolvedOrder.location_address ?? null
+      if (isServiceOrder && hasBuyerCoords && fullOrder.buyer_id) {
+        Buyer.updateLocation(fullOrder.buyer_id, {
+          latitude: fullOrder.location_lat,
+          longitude: fullOrder.location_lng,
+          fullAddress: fullOrder.location_address || null
         }).catch(err => logger.warn('[ORDER] Failed to persist buyer location in side-effects:', err.message));
       }
 
       // WHATSAPP NOTIFICATIONS (Once-only for Buyer/Seller)
-      if (!resolvedOrder.notification_sent) {
+      if (!fullOrder.notification_sent) {
         whatsappService.notifyBuyerOrderConfirmation(normalizedOrder).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
         whatsappService.notifySellerNewOrder(normalizedOrder).catch(e => logger.error('[ORDER] Seller notification failed:', e));
 
         // Mark as sent
-        await Order.updateNotificationSent(pool, orderId);
+        await pool.query('UPDATE product_orders SET notification_sent = true WHERE id = $1', [orderId]);
       }
 
       // 4. Logistics / Courier Notification (Always attempt for Physical and no Shop)
-      const hasPhysical = items.some(i => {
-        const type = (i.product_type || i.productType || i.metadata?.product_type || '').toLowerCase();
-        return type === 'physical';
-      }) || (resolvedOrder.order_type === 'PHYSICAL');
+      const hasPhysical = items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'physical');
+      const isCourier = fullOrder.fulfillment_type === 'COURIER';
 
-      const isCourier = resolvedOrder.fulfillment_type === 'COURIER';
-
-      logger.info(`[COURIER-CHECK] Order #${resolvedOrder.order_number}: hasPhysical=${hasPhysical}, isCourier=${isCourier}, type=${resolvedOrder.fulfillment_type}`);
+      logger.info(`[COURIER-CHECK] Order #${fullOrder.order_number}: hasPhysical=${hasPhysical}, isCourier=${isCourier}, type=${fullOrder.fulfillment_type}`);
 
       if (hasPhysical && isCourier) {
-        logger.info(`[COURIER-NOTIFY] Sending logistics notification for order #${resolvedOrder.order_number}`);
+        logger.info(`[COURIER-NOTIFY] Sending logistics notification for order #${fullOrder.order_number}`);
         whatsappService.sendLogisticsNotification(normalizedOrder)
           .catch(e => logger.error('[ORDER] Courier notification failed:', e.message));
       }
@@ -1373,7 +1689,7 @@ class OrderService {
       // Notify Buyer via Email if not seller-initiated
       if (normalizedOrder.buyer.email) {
         sendProductOrderConfirmationEmail(normalizedOrder.buyer.email, {
-          ...resolvedOrder,
+          ...fullOrder,
           items
         }).catch(e => logger.error('[ORDER] Buyer confirmation email failed:', e));
       }
@@ -1384,16 +1700,13 @@ class OrderService {
   }
 
   static async _handleDebtFlow(client, sellerId, clientRecord, items, totalAmount) {
-    await this._reserveInventory(client, items);
+    await this._decrementInventory(client, items);
     for (const item of items) {
-      await ClientDebt.insert(client, {
-        seller_id: sellerId,
-        client_id: clientRecord.id,
-        product_id: Number.parseInt(item.productId, 10),
-        amount: item.price * item.quantity,
-        quantity: item.quantity,
-        is_paid: false
-      });
+      await client.query(
+        `INSERT INTO client_debts (seller_id, client_id, product_id, amount, quantity, is_paid)
+         VALUES ($1, $2, $3, $4, $5, false)`,
+        [sellerId, clientRecord.id, Number.parseInt(item.productId, 10), item.price * item.quantity, item.quantity]
+      );
     }
     await client.query('COMMIT');
     logger.info(`[ORDER] Debt recorded for client ${clientRecord.id}`);
@@ -1405,47 +1718,31 @@ class OrderService {
   }
 
   static async _handleStkPaymentFlow(client, sellerId, clientRecord, order, items, totalAmount, clientPhone, skipInventoryDecrement, debtId) {
-    const PaymentModel = (await import('../models/payment.model.js')).default;
-    const payment = await PaymentModel.insert(client, {
-      invoice_id: order.order_number,
-      amount: totalAmount,
-      currency: 'KES',
-      status: 'pending',
-      payment_method: 'mpesa',
-      mobile_payment: clientPhone,
-      whatsapp_number: clientPhone,
-      email: `client_${clientRecord.id}@byblos.local`,
-      metadata: {
-        order_id: order.id,
-        order_number: order.order_number,
-        client_id: clientRecord.id,
-        seller_initiated: true
-      }
-    });
+    const paymentService = (await import('./payment.service.js')).default;
+    const paymentData = {
+      invoice_id: order.order_number, amount: totalAmount, currency: 'KES', status: 'pending', payment_method: 'mpesa',
+      mobile_payment: clientPhone, whatsapp_number: clientPhone, email: `client_${clientRecord.id}@byblos.local`,
+      metadata: { order_id: order.id, order_number: order.order_number, client_id: clientRecord.id, seller_initiated: true }
+    };
+
+    const paymentInsert = await client.query(
+      `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
+       VALUES ($1, $2, $3, $4, $5, 'pending', 'mpesa', $6) RETURNING *`,
+      [paymentData.invoice_id, paymentData.email, paymentData.mobile_payment, paymentData.whatsapp_number, paymentData.amount, JSON.stringify(paymentData.metadata)]
+    );
+    const payment = paymentInsert.rows[0];
 
     try {
-      const paymentService = (await import('./payment.service.js')).default;
       const stkResult = await paymentService.initiatePayment({
-        invoice_id: payment.invoice_id,
-        amount: payment.amount,
-        phone: clientPhone,
-        narrative: `Payment for Order ${order.order_number}`,
-        billing_address: 'Kenya'
+        ...paymentData, phone: clientPhone, narrative: `Payment for Order ${order.order_number}`, billing_address: 'Kenya'
       });
 
-      await PaymentModel.update(client, payment.id, {
-        provider_reference: stkResult.reference,
-        api_ref: stkResult.reference
-      });
+      await client.query('UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2', [stkResult.reference, payment.id]);
 
       // Notification
       try {
-        const seller = await Seller.findSellerById(sellerId);
-        await whatsappService.notifyClientOrderCreated(clientPhone, {
-          seller,
-          order: { orderNumber: order.order_number, totalAmount },
-          items
-        });
+        const { rows } = await client.query('SELECT shop_name, full_name as businessName FROM sellers WHERE id = $1', [sellerId]);
+        await whatsappService.notifyClientOrderCreated(clientPhone, { seller: rows[0], order: { orderNumber: order.order_number, totalAmount }, items });
       } catch (waError) {
         logger.warn('[ORDER] Client notification failed:', waError.message);
       }
@@ -1481,9 +1778,12 @@ class OrderService {
       const orderNumber = `BYB-${suffix}`;
 
       // Check for uniqueness
-      const exists = await Order.checkOrderNumberExists(client, orderNumber);
+      const checkResult = await client.query(
+        'SELECT id FROM product_orders WHERE order_number = $1',
+        [orderNumber]
+      );
 
-      if (!exists) {
+      if (checkResult.rows.length === 0) {
         return orderNumber;
       }
       attempts++;
@@ -1510,7 +1810,7 @@ class OrderService {
       downloadUrl: metadata.download_url || metadata.downloadUrl || null,
       buyer: {
         name: fullOrder.buyer_name || 'Customer',
-        phone: fullOrder.buyer_phone || fullOrder.buyer_mobile_payment || 'N/A',
+        phone: fullOrder.buyer_mobile_payment || 'N/A',
         email: fullOrder.buyer_email || null,
       },
       seller: {
@@ -1537,7 +1837,7 @@ class OrderService {
         total: Number.parseFloat(fullOrder.total_amount || 0)
       },
       location: {
-        address: fullOrder.location_address || 'Not specified',
+        address: fullOrder.location_address || fullOrder.shipping_address || 'Not specified',
         lat: Number.parseFloat(fullOrder.location_lat || 0),
         lng: Number.parseFloat(fullOrder.location_lng || 0),
       },
@@ -1554,8 +1854,7 @@ class OrderService {
       items: items.map(i => ({
         title: i.product_name || i.name || 'Item',
         price: Number.parseFloat(i.product_price || i.price || 0),
-        quantity: Number.parseInt(i.quantity || 1, 10),
-        product_type: i.product_type || i.productType || i.metadata?.product_type || 'physical'
+        quantity: Number.parseInt(i.quantity || 1, 10)
       }))
     };
   }

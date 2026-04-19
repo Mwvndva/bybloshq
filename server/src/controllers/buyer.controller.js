@@ -3,7 +3,7 @@ import Buyer from '../models/buyer.model.js';
 import User from '../models/user.model.js';
 import { AppError } from '../utils/errorHandler.js';
 import { sanitizeBuyer, sanitizeOrder } from '../utils/sanitize.js';
-import Refund from '../models/refund.model.js';
+import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import AuthService from '../services/auth.service.js';
 import { setAuthCookie } from '../utils/cookie.utils.js';
@@ -492,13 +492,20 @@ export const getPendingRefundRequests = async (req, res, next) => {
   try {
     const buyerId = req.user.buyerId;
 
-    const result = await Refund.findPendingByBuyerId(buyerId);
+    const query = `
+      SELECT id, amount, status, requested_at
+      FROM refund_requests
+      WHERE buyer_id = $1 AND status = 'pending'
+      ORDER BY requested_at DESC
+    `;
+
+    const result = await pool.query(query, [buyerId]);
 
     res.status(200).json({
       status: 'success',
       data: {
-        pendingRequests: result,
-        hasPending: result.length > 0
+        pendingRequests: result.rows,
+        hasPending: result.rows.length > 0
       }
     });
   } catch (error) {
@@ -542,20 +549,27 @@ export const requestRefund = async (req, res, next) => {
     });
 
     // Create refund request
-    const result = await Refund.requestRefund({
-      buyer_id: buyerId,
-      amount,
-      payment_method: paymentMethod,
-      payment_details: paymentDetailsJson
-    });
+    const query = `
+      INSERT INTO refund_requests (
+        buyer_id, amount, status, payment_method, payment_details
+      ) VALUES ($1, $2, 'pending', $3, $4)
+      RETURNING *
+    `;
 
-    logger.info('Refund request created:', result.id);
+    const result = await pool.query(query, [
+      buyerId,
+      amount,
+      paymentMethod,
+      paymentDetailsJson
+    ]);
+
+    logger.info('Refund request created:', result.rows[0].id);
 
     res.status(201).json({
       status: 'success',
       message: 'Refund request submitted successfully',
       data: {
-        requestId: result.id
+        requestId: result.rows[0].id
       }
     });
   } catch (error) {

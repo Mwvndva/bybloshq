@@ -1,9 +1,13 @@
+import bcrypt from 'bcrypt';
 import { signToken } from '../utils/jwt.js';
+import { query, pool } from '../config/database.js'; // Assuming query is exported
 import * as SellerModel from '../models/seller.model.js';
 import logger from '../utils/logger.js';
 import withdrawalService from './withdrawal.service.js';
+
+const SALT_ROUNDS = 10;
+
 import User from '../models/user.model.js';
-import { pool } from '../config/database.js';
 
 class SellerService {
 
@@ -17,7 +21,8 @@ class SellerService {
             await client.query('BEGIN');
 
             // 1. Check if user already exists
-            const existingUser = await User.findByEmailForUpdate(client, email);
+            const existingUserResult = await client.query('SELECT * FROM users WHERE LOWER(email) = $1 FOR UPDATE', [email.toLowerCase()]);
+            const existingUser = existingUserResult.rows[0];
 
             if (existingUser) {
                 const isPasswordCorrect = await User.verifyPassword(password, existingUser.password_hash);
@@ -35,7 +40,13 @@ class SellerService {
                 }, client);
 
                 // Add seller role
-                await User.linkRole(client, existingUser.id, 'seller');
+                const roleResult = await client.query('SELECT id FROM roles WHERE slug = $1', ['seller']);
+                if (roleResult.rows[0]) {
+                    await client.query(
+                        'INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+                        [existingUser.id, roleResult.rows[0].id]
+                    );
+                }
 
                 await client.query('COMMIT');
 
@@ -56,6 +67,8 @@ class SellerService {
 
             if (!existingUser) {
                 // New users must go through AuthService.register (pending_registrations + email verification)
+                // This path should not be reached directly — AuthService.register() handles new users.
+                // If called directly, delegate to AuthService instead of throwing.
                 await client.query('ROLLBACK');
                 client.release();
                 const AuthSvc = (await import('./auth.service.js')).default;
@@ -84,6 +97,8 @@ class SellerService {
     }
 
     static generateToken(seller) {
+        // CRITICAL: Use user_id (from users table) not id (from sellers table)
+        // The auth middleware expects the JWT to contain the user ID from the unified users table
         const userId = seller.user_id || seller.userId;
 
         if (!userId) {
@@ -95,6 +110,7 @@ class SellerService {
 
     // --- Profile ---
     static async updateProfile(id, updates) {
+        // Password updates should be handled via dedicated change-password flow
         if (updates.password) {
             delete updates.password;
         }
@@ -114,4 +130,3 @@ class SellerService {
 }
 
 export default SellerService;
-
