@@ -976,10 +976,13 @@ class OrderService {
     await this._finalizeServiceSlot(client, order.id);
 
     // 2. Persist Buyer Location (For Mobile Services only)
-    if (order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER && order.buyer_id) {
+    const isMobileService = order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER ||
+      (order.order_type === 'SERVICE' && !order.seller_address);
+
+    if (isMobileService && order.buyer_id) {
       try {
         const { location_lat, location_lng, location_address } = order;
-        if (location_lat !== null && location_lng !== null && location_address) {
+        if (location_lat != null && location_lng != null && location_address) {
           logger.info(`Updating buyer ${order.buyer_id} profile with booking location details`);
           await Buyer.updateLocation(order.buyer_id, {
             latitude: location_lat,
@@ -1570,6 +1573,21 @@ class OrderService {
       }
 
       if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
+
+      // Persist buyer location for mobile service orders
+      const ordMeta = typeof fullOrder.metadata === 'string'
+        ? JSON.parse(fullOrder.metadata)
+        : (fullOrder.metadata || {});
+      const isServiceOrder = fullOrder.order_type === 'SERVICE' || ordMeta.product_type === 'service';
+      const hasBuyerCoords = fullOrder.location_lat != null && fullOrder.location_lng != null;
+
+      if (isServiceOrder && hasBuyerCoords && fullOrder.buyer_id) {
+        Buyer.updateLocation(fullOrder.buyer_id, {
+          latitude: fullOrder.location_lat,
+          longitude: fullOrder.location_lng,
+          fullAddress: fullOrder.location_address || null
+        }).catch(err => logger.warn('[ORDER] Failed to persist buyer location:', err.message));
+      }
 
       // WHATSAPP NOTIFICATIONS (Once-only)
       if (!fullOrder.notification_sent) {
