@@ -2,6 +2,7 @@ import { pool } from '../config/database.js';
 
 import cacheService from '../services/cache.service.js';
 import { sanitizePublicProduct, sanitizePublicSeller } from '../utils/sanitize.js';
+import { signAutoLoginToken } from '../utils/jwt.js';
 
 // Get all products (public)
 export const getProducts = async (req, res) => {
@@ -327,5 +328,55 @@ export const getServiceAvailability = async (req, res) => {
   } catch (error) {
     console.error('Error fetching availability:', error);
     res.status(500).json({ status: 'error', message: 'Failed to fetch availability' });
+  }
+};
+
+export const getOrderStatus = async (req, res) => {
+  try {
+    const { id } = req.params; // id could be numeric primary key or string order_number
+
+    const result = await pool.query(
+      `SELECT id, order_number, status, payment_status, buyer_id, buyer_email
+       FROM product_orders 
+       WHERE id::text = $1 OR order_number = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Order not found'
+      });
+    }
+
+    const order = result.rows[0];
+    let autoLoginToken = null;
+
+    // Generate auto-login token if this is a guest order and payment is completed
+    if (!order.buyer_id && (order.payment_status === 'completed' || order.status !== 'PENDING')) {
+      // Find the user_id via email since guest checkouts use users with guest flags or similar
+      // Or if we know the guest email, we can generate a token for that user
+      const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [order.buyer_email]);
+      if (userRes.rows.length > 0) {
+        autoLoginToken = signAutoLoginToken(userRes.rows[0].id, 'buyer');
+      }
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        id: order.id,
+        orderNumber: order.order_number,
+        status: order.status,
+        paymentStatus: order.payment_status,
+        autoLoginToken
+      }
+    });
+  } catch (error) {
+    console.error(`Error fetching status for order ${req.params.id}:`, error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to fetch order status'
+    });
   }
 };

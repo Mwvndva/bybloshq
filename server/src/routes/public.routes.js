@@ -17,5 +17,6 @@ router.get('/products/:id', publicController.getProduct);
 router.get('/sellers/active', publicController.getSellers);
 router.get('/sellers/:id/public', publicController.getSellerPublicInfo);
 router.get('/services/:productId/availability', publicController.getServiceAvailability);
+router.get('/orders/:id/status', publicController.getOrderStatus);
 
 export default router;
