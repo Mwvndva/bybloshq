@@ -702,7 +702,16 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
     }
 
     async sendLogisticsNotification(order) {
-        if (!this.COURIER_NUMBER || this.COURIER_NUMBER === 'N/A') return false;
+        if (!this.COURIER_NUMBER || this.COURIER_NUMBER === 'N/A') {
+            logger.warn('[LOGISTICS] No courier number configured. Set COURIER_WHATSAPP_NUMBER env var.');
+            return false;
+        }
+
+        // Add null safety for seller/buyer phone
+        const sellerPhone = order.seller?.phone || order.seller?.whatsapp_number || 'N/A';
+        const buyerPhone = order.buyer?.phone || order.buyer?.whatsapp_number || 'N/A';
+
+        logger.info(`[LOGISTICS] Attempting courier notification to: ${this.COURIER_NUMBER} for order #${order.orderNumber}`);
 
         const itemsList = order.items?.length > 0
             ? order.items.map(i => `- ${i.title} (x${i.quantity})`).join('\n')
@@ -716,8 +725,8 @@ Value: *KSh ${order.totalAmount.toLocaleString()}*
 *Items:*
 ${itemsList}
 
-👤 *Seller:* ${order.seller.name} (${order.seller.phone})
-👤 *Buyer:* ${order.buyer.name} (${order.buyer.phone})
+👤 *Seller:* ${order.seller.name} (${sellerPhone})
+👤 *Buyer:* ${order.buyer.name} (${buyerPhone})
 📍 *Pick/Drop:* ${order.location.address}
 
 _Coordinate pickup and delivery to ${this.DROPOFF_LOCATION}._

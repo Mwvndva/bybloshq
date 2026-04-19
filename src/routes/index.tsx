@@ -7,7 +7,6 @@ import { RouteFallback } from '@/components/common/RouteFallback';
 // Lazy load pages
 import IndexPage from '@/pages/Index';
 import ShopPage from '@/pages/ShopPage';
-const PaymentSuccessPage = safeLazy(() => import('@/pages/PaymentSuccess'));
 const MarketingLogin = safeLazy(() => import('@/pages/marketing/MarketingLogin'));
 const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
 const VerifyEmail = safeLazy(() => import('@/pages/auth/VerifyEmail'));
@@ -22,14 +21,6 @@ export const routes = [
   {
     path: '/shop/:shopName',
     element: <ShopPage />,
-  },
-  {
-    path: '/payment/success',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <PaymentSuccessPage />
-      </Suspense>
-    ),
   },
   {
     path: '/admin/marketing/login',

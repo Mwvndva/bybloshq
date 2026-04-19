@@ -13,19 +13,10 @@ const BuyerRegister = safeLazy(() => import('@/components/buyer/BuyerRegister').
 const BuyerForgotPassword = safeLazy(() => import('@/components/buyer/BuyerForgotPassword').then(m => m.BuyerForgotPassword));
 const BuyerResetPassword = safeLazy(() => import('@/components/buyer/BuyerResetPassword').then(m => m.BuyerResetPassword));
 const BuyerDashboard = safeLazy(() => import('@/components/buyer/BuyerDashboard'));
-const CheckoutPage = safeLazy(() => import('@/pages/checkout'));
 const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
 
 export const buyerRoutes = [
   // ─── Public routes ──────────────────────────────────────────────────────────
-  {
-    path: '/checkout',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <CheckoutPage />
-      </Suspense>
-    ),
-  },
   {
     path: '/buyer/register',
     element: (

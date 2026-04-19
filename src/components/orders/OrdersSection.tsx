@@ -59,6 +59,7 @@ import { publicApiService } from '@/api/publicApi';
 import { toast } from 'sonner';
 import { getImageUrl, cn } from '@/lib/utils';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
+import { getOrderInstruction, getInstructionColorClass } from '@/utils/orderInstructions';
 
 const glassCardStyle: React.CSSProperties = {
   background: 'rgba(20, 20, 20, 0.7)',
@@ -584,6 +585,22 @@ export default function OrdersSection() {
                     </div>
                   </div>
                 </div>
+
+                {/* NEW: Instruction Banner */}
+                {(() => {
+                  const instruction = getOrderInstruction(
+                    order.status,
+                    'buyer',
+                    order.items[0]?.productType?.toUpperCase() || 'PHYSICAL',
+                    !!(order.seller?.latitude || order.seller?.physicalAddress)
+                  );
+                  if (!instruction) return null;
+                  return (
+                    <div className={`mx-4 sm:mx-6 mt-4 p-3 rounded-xl border text-[11px] sm:text-xs font-bold leading-relaxed shadow-inner ${getInstructionColorClass(order.status)}`}>
+                      {instruction}
+                    </div>
+                  );
+                })()}
 
                 {/* Items Section */}
                 <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">

@@ -751,6 +751,26 @@ const buyerApi = {
       console.error('Email verification error:', error);
       throw new Error(error.response?.data?.message || 'Email verification failed');
     }
+  },
+
+  getOrderStatus: async (orderNumber: string): Promise<any> => {
+    try {
+      const response = await apiClient.get<any>(`/public/orders/${orderNumber}/status`);
+      return response.data.data;
+    } catch (error: any) {
+      console.error('Error fetching order status:', error);
+      throw error;
+    }
+  },
+
+  autoLogin: async (autoLoginToken: string): Promise<any> => {
+    try {
+      const response = await apiClient.post('/buyers/auto-login', { autoLoginToken });
+      return response.data;
+    } catch (error: any) {
+      console.error('Auto-login error:', error);
+      throw error;
+    }
   }
 };
 

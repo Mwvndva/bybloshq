@@ -289,3 +289,43 @@ export const getSellers = async (req, res) => {
     });
   }
 };
+
+export const getServiceAvailability = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { date } = req.query; // e.g. ?date=2026-04-19
+
+    if (!date) {
+      return res.status(400).json({ status: 'error', message: 'Date parameter required' });
+    }
+
+    // Get all booked/reserved (non-expired) slots for this service on this date
+    const { rows } = await pool.query(
+      `SELECT 
+         time_slot,
+         status,
+         CASE 
+           WHEN status = 'BOOKED' THEN true
+           WHEN status = 'RESERVED' AND expires_at > NOW() THEN true
+           ELSE false
+         END as is_unavailable
+       FROM service_slots
+       WHERE service_id = $1
+         AND DATE(time_slot AT TIME ZONE 'Africa/Nairobi') = $2::date
+         AND (status = 'BOOKED' OR (status = 'RESERVED' AND expires_at > NOW()))`,
+      [productId, date]
+    );
+
+    const unavailableSlots = rows
+      .filter(r => r.is_unavailable)
+      .map(r => r.time_slot);
+
+    res.status(200).json({
+      status: 'success',
+      data: { unavailableSlots, date }
+    });
+  } catch (error) {
+    console.error('Error fetching availability:', error);
+    res.status(500).json({ status: 'error', message: 'Failed to fetch availability' });
+  }
+};
