@@ -712,9 +712,14 @@ class OrderService {
     }
 
     const productId = Number.parseInt(metadata.product_id, 10);
-    const timeSlot = new Date(`${metadata.booking_date}T${metadata.booking_time}`);
+
+    // Fix: Robustly extract the start time if booking_time is a range (e.g. "10:00 - 11:00")
+    // Use the first 5 characters (HH:mm) or split by space
+    const startTime = metadata.booking_time.split(' ')[0].trim();
+    const timeSlot = new Date(`${metadata.booking_date}T${startTime}`);
 
     if (isNaN(timeSlot.getTime())) {
+      logger.error(`[RESERVATION-ERROR] Failed to parse slot: date=${metadata.booking_date}, time=${metadata.booking_time}, attempted=${startTime}`);
       throw new Error('Invalid booking date or time format');
     }
 
