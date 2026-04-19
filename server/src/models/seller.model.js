@@ -22,6 +22,12 @@ class Seller {
     return rows[0];
   }
 
+  /** Alias — callers throughout the codebase use this name. */
+  static async findSellerById(id) {
+    return Seller.findById(id);
+  }
+
+
   /**
    * Find and lock seller row (Rule 10).
    */
