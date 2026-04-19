@@ -29,144 +29,7 @@ import { format } from 'date-fns';
 import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
 
-const SHOP_COLORS = [
-  '#8B5CF6', '#EC4899', '#10B981', '#3B82F6',
-  '#F59E0B', '#EF4444', '#06B6D4', '#F97316',
-];
-
-function shopColor(name) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFFFFFFFF;
-  return SHOP_COLORS[Math.abs(h) % SHOP_COLORS.length];
-}
-
-function ShopCard({ shop, onOpen }) {
-  const color = shopColor(shop.shopName || shop.name || '');
-  const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
-
-  return (
-    <div
-      style={{
-        background: '#141414',
-        borderRadius: 14,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'transform 0.15s ease, background 0.15s ease',
-        willChange: 'transform',
-      }}
-      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
-      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
-      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
-    >
-      {/* Card image area */}
-      <div style={{
-        height: 68,
-        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <div style={{
-          width: 32, height: 32, borderRadius: 10,
-          background: `${color}20`,
-          border: `1.5px solid ${color}40`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 700, color,
-        }}>
-          {initial}
-        </div>
-      </div>
-
-      {/* Card body */}
-      <div style={{ padding: 10 }}>
-        <div style={{
-          fontSize: 12, fontWeight: 600, color: '#fff',
-          marginBottom: 5, overflow: 'hidden',
-          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {shop.shopName || shop.name}
-        </div>
-
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', marginBottom: 8,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-            <Users size={10} /> {shop.clientCount ?? 0}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-            <Heart size={10} /> {shop.wishlistCount ?? 0}
-          </div>
-        </div>
-
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen(shop);
-          }}
-          style={{
-            width: '100%', height: 28, borderRadius: 7, border: 'none',
-            background: '#1C1C1C', color: '#fff',
-            fontSize: 11, fontWeight: 500, cursor: 'pointer',
-            transition: 'background 0.15s ease',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
-        >
-          Open Shop
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function FeaturedShopCard({ shop, onOpen }) {
-  const color = shopColor(shop.shopName || shop.name || '');
-  const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
-
-  return (
-    <div
-      onClick={() => onOpen(shop)}
-      style={{
-        background: '#141414', borderRadius: 14,
-        display: 'flex', alignItems: 'stretch',
-        cursor: 'pointer', height: 64, overflow: 'hidden',
-        transition: 'transform 0.15s ease',
-        willChange: 'transform',
-      }}
-      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.98)'}
-      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
-    >
-      <div style={{
-        width: 64, flexShrink: 0,
-        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: '50%',
-          background: 'rgba(245,197,24,0.12)',
-          border: '1.5px solid rgba(245,197,24,0.4)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 700, color: '#F5C518',
-        }}>
-          {initial}
-        </div>
-      </div>
-
-      <div style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>
-          {shop.shopName || shop.name}
-        </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-          {shop.clientCount ?? 0} clients · {shop.wishlistCount ?? 0} saved
-        </div>
-      </div>
-
-      <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center' }}>
-        <ChevronRight size={14} color="rgba(255,255,255,0.45)" />
-      </div>
-    </div>
-  );
-}
+import { ShopCard } from '@/components/ui/ShopCard';
 
 
 
@@ -365,343 +228,214 @@ function BuyerDashboard() {
 
 
 
-  useEffect(() => {
-    const originalBodyStyle = document.body.style.cssText;
-    const originalHtmlStyle = document.documentElement.style.cssText;
-
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-
-    return () => {
-      document.body.style.cssText = originalBodyStyle;
-      document.documentElement.style.cssText = originalHtmlStyle;
-    };
-  }, []);
-
-  const handleBack = () => navigate(-1);
-
-  const tabs = [
-    { key: 'shop', label: 'Shop', Icon: Store },
-    { key: 'shops', label: 'My Shops', Icon: ShoppingBag },
-    { key: 'orders', label: 'Orders', Icon: Package },
-    { key: 'wishlist', label: 'Wishlist', Icon: Heart },
-  ];
-
-  const navItems = [
-    { key: 'home', label: 'Home', Icon: Home, path: '/' },
-    { key: 'shop', label: 'Shop', Icon: Store, path: '/buyer/dashboard' },
-    { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },
-    { key: 'orders', label: 'Orders', Icon: Package, path: '/buyer/orders', badge: hasUnreadOrders },
-    { key: 'profile', label: 'Profile', Icon: User, path: '/buyer/profile' },
-  ];
-
-  const activeNav = activeSection === 'shop' ? 'shop' : activeSection;
-
-  const setActiveTab = (key) => {
-    const pathMap = {
-      shop: 'dashboard',
-      shops: 'shops',
-      orders: 'orders',
-      wishlist: 'wishlist',
-      profile: 'profile'
-    };
-    navigate(`/buyer/${pathMap[key]}`);
-    if (key === 'orders') {
-      const now = new Date().toISOString();
-      setLastViewedOrdersTime(now);
-      localStorage.setItem('buyer_last_viewed_orders', now);
-      setHasUnreadOrders(false);
-    }
-  };
 
   const handleOpenShop = (shop) => {
     navigate(`/buyer/shop/${encodeURIComponent(shop.shopName || shop.name)}`);
   };
 
   return (
-    <div className="page-enter" style={{
-      display: 'flex', flexDirection: 'column',
-      height: '100dvh',
-      overflow: 'hidden',
-      background: '#0A0A0A',
-    }}>
-      {/* Header */}
-      <div style={{
-        padding: '8px 18px 10px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexShrink: 0,
-      }}>
-        <button onClick={handleBack} style={{
-          display: 'flex', alignItems: 'center', gap: 4,
-          background: 'none', border: 'none', color: 'rgba(255,255,255,0.45)',
-          fontSize: 12, cursor: 'pointer', padding: '4px 0',
-        }}>
-          <ChevronLeft size={14} /> Back
-        </button>
-        <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '-0.2px' }}>
-          Discover
-        </span>
-        <div
-          onClick={handleLogout}
-          style={{
-            width: 30, height: 30, borderRadius: '50%',
-            background: '#1C1C1C', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <LogOut size={13} color="rgba(255,255,255,0.6)" />
-        </div>
-      </div>
-
-      {/* Tab bar */}
-      <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
-        <div style={{
-          display: 'flex', background: '#141414',
-          borderRadius: 'var(--radius-md)', padding: 3, gap: 2,
-        }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                flex: 1,
-                height: 34,
-                borderRadius: 9,
-                border: 'none',
-                background: activeSection === tab.key ? '#1C1C1C' : 'transparent',
-                color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.45)',
-                fontSize: 11,
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.18s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                whiteSpace: 'nowrap',
-              }}
+    <div className="flex flex-col min-h-screen bg-black">
+      {/* Page Header */}
+      <header className="sticky top-0 z-40 bg-black/80 backdrop-blur-md border-b border-white/5 py-4">
+        <div className="unified-container flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBackToHome}
+              className="text-white/60 hover:text-white -ml-2"
             >
-              <tab.Icon
-                size={13}
-                color={activeSection === tab.key ? '#F5C518' : 'rgba(255,255,255,0.45)'}
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-xl font-black uppercase tracking-tight text-white">
+              {activeSection === 'shop' ? 'Marketplace' :
+                activeSection === 'shops' ? 'My Shops' :
+                  activeSection === 'orders' ? 'Orders' :
+                    activeSection === 'wishlist' ? 'Wishlist' : 'Profile'}
+            </h1>
+          </div>
+          <div className="flex items-center gap-3">
+            {activeSection === 'orders' && (
+              <Button variant="link" onClick={() => navigate('/buyer/orders/history')} className="text-yellow-400 text-xs font-bold">
+                History
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="rounded-full border-white/10 text-[10px] h-8"
+            >
+              <LogOut className="h-3 w-3 mr-2" />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Content Section */}
+      <main className="flex-1 overflow-x-hidden">
+        <div className="unified-container py-6 space-y-8 pb-24">
+
+          {/* Main Marketplace */}
+          {activeSection === 'shop' && (
+            <div className="space-y-10 animate-fade-in">
+              {/* Search & Filter Header */}
+              <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+                <div className="space-y-1">
+                  <h2 className="text-xl font-bold text-white">Discovery</h2>
+                  <p className="text-xs text-white/40">Explore shops and products</p>
+                </div>
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
+                  <Input
+                    placeholder="Search marketplace..."
+                    className="pl-10 h-10 bg-white/5 border-white/5 text-white placeholder:text-white/20 rounded-xl focus:ring-yellow-400/50"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Aesthetic Filter Chips */}
+              <AestheticCategories
+                selectedAesthetic={selectedAesthetic}
+                onAestheticChange={handleAestheticChange}
               />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Search bar */}
-      {(activeSection === 'shop' || activeSection === 'shops') && (
-        <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            background: '#141414', borderRadius: 10,
-            padding: '0 12px', height: 36,
-          }}>
-            <Search size={14} color="rgba(255,255,255,0.45)" style={{ flexShrink: 0 }} />
-            <input
-              value={activeSection === 'shop' ? searchQuery : shopsSearchQuery}
-              onChange={e => activeSection === 'shop' ? setSearchQuery(e.target.value) : setShopsSearchQuery(e.target.value)}
-              placeholder={activeSection === 'shop' ? "Search products..." : "Search my shops..."}
-              style={{
-                flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                color: '#fff', fontSize: 13,
-              }}
-            />
-          </div>
-        </div>
-      )}
+              {/* Discovery Grid */}
+              <ProductGrid
+                selectedAesthetic={selectedAesthetic}
+                searchQuery={searchQuery}
+                locationCity={filterCity}
+                locationArea={filterArea}
+                priceMin={priceMin ? Number(priceMin) : undefined}
+                priceMax={priceMax ? Number(priceMax) : undefined}
+              />
 
-      {/* Main Content Area */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        overflowX: 'hidden',
-        padding: '0 18px 16px',
-        WebkitOverflowScrolling: 'touch',
-        scrollBehavior: 'smooth',
-        overscrollBehavior: 'contain',
-      }}>
-        {activeSection === 'shop' && (
-          <>
-            <div style={{
-              padding: '0 0 8px',
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-              flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Featured Marketplace</span>
-            </div>
-            <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
-          </>
-        )}
-
-        {activeSection === 'shops' && (
-          <>
-            <div style={{
-              padding: '0 0 8px',
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-              flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>My Shops</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{shops.length} shops</span>
-            </div>
-
-            {/* Featured strip — first shop only */}
-            {shops.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <div style={{
-                  fontSize: 10, fontWeight: 600, letterSpacing: 1,
-                  color: '#F5C518', textTransform: 'uppercase', marginBottom: 6,
-                }}>
-                  Featured
+              {/* All Participating Shops */}
+              <section className="space-y-6 pt-6 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-white">Participating Sellers</h2>
+                  <span className="text-[10px] text-white/20 uppercase font-black tracking-widest">{shops.length} Active</span>
                 </div>
-                <FeaturedShopCard shop={shops[0]} onOpen={handleOpenShop} />
-              </div>
-            )}
-
-            {/* Grid of remaining shops */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 8,
-            }}>
-              {shops.slice(1).map(shop => (
-                <ShopCard key={shop.id} shop={shop} onOpen={handleOpenShop} />
-              ))}
-            </div>
-
-            {shops.length === 0 && !isLoadingShops && (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.28)' }}>
-                No shops followed yet.
-              </div>
-            )}
-          </>
-        )}
-
-        {activeSection === 'wishlist' && (
-          <div className="space-y-4">
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Wishlist</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{wishlist.length} items</span>
-            </div>
-            <WishlistSection />
-          </div>
-        )}
-
-        {activeSection === 'orders' && (
-          <div className="space-y-4">
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Your Orders</span>
-            <Suspense fallback={<div style={{ color: '#fff' }}>Loading orders...</div>}>
-              <OrdersSection />
-            </Suspense>
-          </div>
-        )}
-
-        {activeSection === 'profile' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Profile</span>
-              <button
-                onClick={() => setIsEditingProfile(!isEditingProfile)}
-                style={{ background: 'none', border: 'none', color: '#F5C518', fontSize: 12, fontWeight: 600 }}
-              >
-                {isEditingProfile ? 'Cancel' : 'Edit'}
-              </button>
-            </div>
-
-            {/* Minimalist Profile Info */}
-            <div style={{ background: '#141414', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Full Name</div>
-                <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.fullName}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email Address</div>
-                <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.email}</div>
-              </div>
-              <div style={{ display: 'flex', gap: 20 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>City</div>
-                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.city || '—'}</div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                  {shops.map(shop => (
+                    <ShopCard key={shop.id} shop={shop} onOpen={handleOpenShop} />
+                  ))}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Area</div>
-                  <div style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{user?.location || '—'}</div>
+              </section>
+            </div>
+          )}
+
+          {/* Subscribed Shops */}
+          {activeSection === 'shops' && (
+            <div className="space-y-8 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-yellow-400/10 rounded-lg">
+                  <Store className="h-5 w-5 text-yellow-400" />
                 </div>
+                <h2 className="text-2xl font-bold text-white">Subscriptions</h2>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {shops.length > 0 ? (
+                  shops.map(shop => (
+                    <ShopCard key={shop.id} shop={shop} onOpen={handleOpenShop} featured />
+                  ))
+                ) : (
+                  <div className="col-span-full py-12 text-center text-white/20">
+                    You haven't followed any shops yet.
+                  </div>
+                )}
               </div>
             </div>
+          )}
 
-            {/* Edit mode placeholder - preserving existing logic would require more detailed injection, 
-                 but keeping it functional by just showing the state for now or wrapping existing inputs */}
-            {isEditingProfile && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-[#141414] border-none text-white h-10" />
-                <Select value={city} onValueChange={setCity}>
-                  <SelectTrigger className="bg-[#141414] border-none text-white h-10">
-                    <SelectValue placeholder="Select City" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(locationData).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="bg-[#F5C518] text-black h-10 font-bold">
-                  {isSavingProfile ? 'Saving...' : 'Save Profile'}
+          {/* Wishlist */}
+          {activeSection === 'wishlist' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-white">Wishlist</h2>
+                <span className="text-sm text-white/40">{wishlist.length} Items</span>
+              </div>
+              <WishlistSection />
+            </div>
+          )}
+
+          {/* Orders */}
+          {activeSection === 'orders' && (
+            <div className="space-y-6 animate-fade-in">
+              <h2 className="text-2xl font-bold text-white">Active Orders</h2>
+              <Suspense fallback={<div className="py-20 text-center text-white/20">Syncing with blockchain...</div>}>
+                <OrdersSection />
+              </Suspense>
+            </div>
+          )}
+
+          {/* Profile */}
+          {activeSection === 'profile' && (
+            <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold text-white">Profile</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsEditingProfile(!isEditingProfile)}
+                  className="text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10 font-bold"
+                >
+                  {isEditingProfile ? 'Cancel' : 'Edit Info'}
                 </Button>
               </div>
-            )}
 
-            <RefundCard refundAmount={user?.refunds || 0} />
-          </div>
-        )}
-      </div>
+              <Card className="unified-card p-6 space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-white/20 tracking-widest">Identify</label>
+                    <p className="text-base font-bold text-white">{user?.fullName}</p>
+                    <p className="text-sm text-white/40">{user?.email}</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] uppercase font-black text-white/20 tracking-widest">Base</label>
+                    <p className="text-base font-bold text-white">{user?.city || '—'}</p>
+                    <p className="text-sm text-white/40">{user?.location || '—'}</p>
+                  </div>
+                </div>
 
-      {/* Bottom navigation bar */}
-      <div style={{
-        height: 56,
-        background: '#141414',
-        borderTop: '0.5px solid rgba(255,255,255,0.06)',
-        display: 'flex',
-        alignItems: 'stretch',
-        flexShrink: 0,
-      }}>
-        {navItems.map(item => (
-          <button
-            key={item.key}
-            onClick={() => navigate(item.path)}
-            style={{
-              flex: 1,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              gap: 3, background: 'none', border: 'none',
-              cursor: 'pointer',
-              position: 'relative',
-              transition: 'opacity 0.15s',
-            }}
-          >
-            <item.Icon
-              size={18}
-              color={activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.45)'}
-            />
-            <span style={{
-              fontSize: 9, fontWeight: 500,
-              color: activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.45)',
-            }}>
-              {item.label}
-            </span>
-            {item.badge && (
-              <div style={{
-                position: 'absolute', top: 6, right: '50%',
-                transform: 'translateX(10px)',
-                width: 5, height: 5, borderRadius: '50%',
-                background: '#F5C518',
-              }} />
-            )}
-          </button>
-        ))}
-      </div>
+                {isEditingProfile && (
+                  <div className="pt-8 border-t border-white/5 space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <Input
+                        value={fullName}
+                        onChange={e => setFullName(e.target.value)}
+                        placeholder="Full Name"
+                        className="bg-white/5 border-white/10 rounded-xl h-12"
+                      />
+                      <Select value={city} onValueChange={setCity}>
+                        <SelectTrigger className="bg-white/5 border-white/10 rounded-xl h-12">
+                          <SelectValue placeholder="City" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(locationData).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      onClick={handleSaveProfile}
+                      disabled={isSavingProfile}
+                      className="w-full bg-yellow-400 hover:bg-yellow-500 text-black font-black h-12 rounded-xl shadow-lg shadow-yellow-400/10"
+                    >
+                      {isSavingProfile ? 'Syncing...' : 'Save Profile Update'}
+                    </Button>
+                  </div>
+                )}
+              </Card>
+
+              <RefundCard refundAmount={user?.refunds || 0} />
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

@@ -15,7 +15,7 @@ export function StatCard({ title, value, subtitle, trend, color = 'yellow', pref
     }
 
     return (
-        <div className={`backdrop-blur-md border rounded-xl p-4 md:p-5 shadow-xl transition-all hover:bg-black/20 ${colors[color]}`}>
+        <div className={`unified-card p-4 transition-all hover:bg-white/[0.08] ${colors[color]}`}>
             <p className="text-gray-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest mb-1.5 md:mb-2 opacity-80">{title}</p>
             <p className="text-xl md:text-2xl font-black text-white tracking-tight">{formatValue(value)}</p>
             {subtitle && <p className="text-gray-400/60 text-[10px] md:text-xs mt-1 font-medium">{subtitle}</p>}
