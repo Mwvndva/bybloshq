@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { BuyerInfoModal, BuyerInfo } from '@/components/BuyerInfoModal';
 import PhoneCheckModal from '@/components/PhoneCheckModal';
 import { ServiceBookingModal } from '@/components/ServiceBookingModal';
+import { PaymentStatusModal } from '@/components/PaymentStatusModal';
 import buyerApi from '@/api/buyerApi';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -54,6 +55,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+  const [paymentModalData, setPaymentModalData] = useState<{
+    isOpen: boolean;
+    orderNumber: string;
+    isGuest: boolean;
+    email?: string;
+  }>({ isOpen: false, orderNumber: '', isGuest: false });
 
   // Loading states
   const [isImageLoading, setIsImageLoading] = useState(true);
@@ -478,10 +485,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           duration: 10000
         });
 
-        // Start Polling
-        const invoiceId = data.data?.reference || data.data?.invoice_id; // Payd returns reference
-        if (invoiceId) pollPaymentStatus(invoiceId);
-
+        // Trigger Payment Status Modal (Issue 2)
+        const reference = data.data?.reference || data.data?.invoice_id;
+        if (reference) {
+          setPaymentModalData({
+            isOpen: true,
+            orderNumber: reference,
+            isGuest: !isAuthenticated,
+            email: buyerDetails.email
+          });
+          setIsProcessingPurchase(false);
+        }
       } else {
         throw new Error(data.message);
       }
@@ -508,74 +522,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       });
       setIsProcessingPurchase(false);
     }
-  };
-
-  const pollPaymentStatus = (invoiceId: string) => {
-    let attempts = 0;
-
-    // Clear any existing poll
-    if (pollingIntervalRef.current) {
-      clearInterval(pollingIntervalRef.current);
-    }
-
-    pollingIntervalRef.current = setInterval(async () => {
-      // FIX (Task 14): Prevent state updates after unmount
-      if (!isMounted.current) {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-        return;
-      }
-
-      attempts++;
-      if (attempts > 24) {
-        if (pollingIntervalRef.current) {
-          clearInterval(pollingIntervalRef.current);
-          pollingIntervalRef.current = null;
-        }
-        // Set state only if still mounted
-        if (isMounted.current) {
-          // No longer using isProcessingPurchase setter directly, isLocked from useAsyncLock handles it
-        }
-        return;
-      }
-
-      try {
-        const response = await apiClient.get(`/payments/status/${invoiceId}`);
-
-        // Final check before updating state or complex logic
-        if (!isMounted.current) {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          return;
-        }
-
-        const data: any = response.data;
-        const status = data.data?.status || data.status;
-
-        if (status === 'success' || status === 'completed') {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          toast({ title: 'Payment Successful', description: 'Your purchase has been confirmed! Redirecting...' });
-          setTimeout(() => {
-            if (isMounted.current) navigate(`/payment/success?reference=${invoiceId}&status=success`, { replace: true });
-          }, 1500);
-        } else if (status === 'failed') {
-          if (pollingIntervalRef.current) {
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-          }
-          toast({ title: 'Payment Failed', description: 'Transaction declined.', variant: 'destructive' });
-        }
-      } catch (e) {
-        console.error('[POLL] Status check error:', e);
-      }
-    }, 5000);
   };
 
   const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -1046,6 +992,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         onClose={() => setIsBookingModalOpen(false)}
         onConfirm={handleBookingConfirm}
         initialBuyerLocation={initialBuyerLocation}
+      />
+
+      <PaymentStatusModal
+        {...paymentModalData}
+        onClose={() => setPaymentModalData(prev => ({ ...prev, isOpen: false }))}
       />
     </Card>
   );

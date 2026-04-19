@@ -138,6 +138,34 @@ class OrderService {
         if (reflectsService) orderType = OrderType.SERVICE;
         else if (hasDigital) orderType = OrderType.DIGITAL;
 
+        // Phase 1: Lock slot at order creation (Double Booking Prevention)
+        if (orderType === OrderType.SERVICE && metadata.booking_date && metadata.booking_time) {
+          const startTime = metadata.booking_time.split(' ')[0].trim();
+          const timeSlot = new Date(`${metadata.booking_date}T${startTime}`);
+          const productId = Number.parseInt(service.id, 10);
+
+          const slotCheck = await client.query(
+            `SELECT id, status, reserved_by_order_id, expires_at 
+             FROM service_slots 
+             WHERE service_id = $1 AND time_slot = $2
+             FOR UPDATE`,
+            [productId, timeSlot]
+          );
+
+          if (slotCheck.rows.length > 0) {
+            const slot = slotCheck.rows[0];
+            const isExpired = slot.expires_at && new Date(slot.expires_at) < new Date();
+
+            if (slot.status === 'BOOKED') {
+              throw new Error('This time slot has already been booked. Please select a different time.');
+            }
+
+            if (slot.status === 'RESERVED' && !isExpired) {
+              throw new Error('This time slot is currently being reserved by another customer. Please try again in a few minutes or select a different time.');
+            }
+          }
+        }
+
         // 5. Determine initial status and handle inventory reservation
         const initialStatus = this._determineInitialStatus(orderType);
         if (orderType === OrderType.PHYSICAL) {
@@ -723,27 +751,39 @@ class OrderService {
       throw new Error('Invalid booking date or time format');
     }
 
-    // Try to insert the reservation
-    const query = `
-      INSERT INTO service_slots (service_id, time_slot, status, reserved_by_order_id, expires_at)
-      VALUES ($1, $2, 'RESERVED', $3, NOW() + INTERVAL '10 minutes')
-      ON CONFLICT (service_id, time_slot) DO UPDATE
-      SET 
-        status = 'RESERVED',
-        reserved_by_order_id = $3,
-        expires_at = NOW() + INTERVAL '10 minutes',
-        updated_at = NOW()
-      WHERE service_slots.status = 'AVAILABLE' OR service_slots.expires_at < NOW()
-      RETURNING id
-    `;
+    // Try to insert with explicit conflict handling
+    const result = await client.query(
+      `INSERT INTO service_slots (service_id, time_slot, status, reserved_by_order_id, expires_at)
+       VALUES ($1, $2, 'RESERVED', $3, NOW() + INTERVAL '15 minutes')
+       ON CONFLICT (service_id, time_slot) DO UPDATE
+         SET 
+           status = 'RESERVED',
+           reserved_by_order_id = $3,
+           expires_at = NOW() + INTERVAL '15 minutes',
+           updated_at = NOW()
+         WHERE 
+           service_slots.status = 'AVAILABLE' 
+           OR (service_slots.status = 'RESERVED' AND service_slots.expires_at < NOW())
+       RETURNING id, status`,
+      [productId, timeSlot, orderId]
+    );
 
-    const { rows } = await client.query(query, [productId, timeSlot, orderId]);
+    if (result.rows.length === 0) {
+      const currentSlot = await client.query(
+        `SELECT status, expires_at, reserved_by_order_id FROM service_slots 
+         WHERE service_id = $1 AND time_slot = $2`,
+        [productId, timeSlot]
+      );
 
-    if (rows.length === 0) {
+      if (currentSlot.rows[0]?.status === 'BOOKED') {
+        throw new Error('This time slot has already been booked. Please select a different time.');
+      }
+
       throw new Error('This time slot is no longer available. Please select another slot.');
     }
 
     logger.info(`[SLOT-RESERVATION] Reserved slot ${timeSlot.toISOString()} for service ${productId} (Order ${orderId})`);
+    return result.rows[0];
   }
 
   /**
@@ -1625,23 +1665,25 @@ class OrderService {
         }).catch(err => logger.warn('[ORDER] Failed to persist buyer location in side-effects:', err.message));
       }
 
-      // WHATSAPP NOTIFICATIONS (Once-only)
+      // WHATSAPP NOTIFICATIONS (Once-only for Buyer/Seller)
       if (!fullOrder.notification_sent) {
         whatsappService.notifyBuyerOrderConfirmation(normalizedOrder).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
         whatsappService.notifySellerNewOrder(normalizedOrder).catch(e => logger.error('[ORDER] Seller notification failed:', e));
 
-        // 4. Logistics / Courier Notification (If Physical and no Shop Coordinates/Address)
-        const hasPhysical = items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'physical');
-        const sHasShop = sellerHasPhysicalShop({ latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude });
-        const sellerHasShop = sHasShop && !!fullOrder.seller_address;
-
-        if (hasPhysical && !sellerHasShop) {
-          whatsappService.sendLogisticsNotification(normalizedOrder)
-            .catch(e => logger.error('[ORDER] Courier notification failed:', e));
-        }
-
         // Mark as sent
         await pool.query('UPDATE product_orders SET notification_sent = true WHERE id = $1', [orderId]);
+      }
+
+      // 4. Logistics / Courier Notification (Always attempt for Physical and no Shop)
+      // Decoupled from notification_sent flag to allow retries
+      const hasPhysical = items.some(i => (i.product_type || i.productType || '').toLowerCase() === 'physical');
+      const sHasShop = sellerHasPhysicalShop({ latitude: fullOrder.seller_latitude, longitude: fullOrder.seller_longitude });
+      const sellerHasShop = sHasShop && !!fullOrder.seller_address;
+
+      if (hasPhysical && !sellerHasShop) {
+        logger.info(`[COURIER-NOTIFY] Sending logistics notification for order #${fullOrder.order_number}`);
+        whatsappService.sendLogisticsNotification(normalizedOrder)
+          .catch(e => logger.error('[ORDER] Courier notification failed:', e.message));
       }
 
       // Notify Buyer via Email if not seller-initiated

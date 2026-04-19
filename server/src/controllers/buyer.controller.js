@@ -605,6 +605,11 @@ export const saveBuyerInfo = async (req, res, next) => {
 
     const effectivePhone = phone || mobilePayment || whatsappNumber;
 
+    // Add validation:
+    if (!req.body.termsAccepted) {
+      return next(new AppError('You must accept the Terms and Conditions to continue.', 400));
+    }
+
     // 2. Register buyer immediately (follows pending registration flow)
     let result;
     try {
@@ -617,7 +622,7 @@ export const saveBuyerInfo = async (req, res, next) => {
         city,
         location: location || city || 'Not specified', // FIXED BUG-GUEST-02: fallback prevents null
         password,
-        termsAccepted: true // FIXED BUG-GUEST-01: guests implicitly accept terms on checkout
+        termsAccepted: req.body.termsAccepted === true // Explicitly from frontend
       });
     } catch (err) {
       if (err.requiresLogin) {

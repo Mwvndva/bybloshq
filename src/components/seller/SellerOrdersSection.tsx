@@ -24,6 +24,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
+import { getOrderInstruction, getInstructionColorClass } from '@/utils/orderInstructions';
 
 export default function SellerOrdersSection() {
     // Force TS re-check
@@ -432,6 +433,23 @@ export default function SellerOrdersSection() {
                                                         )}
                                                     </div>
                                                 </div>
+
+                                                {/* NEW: Instruction Banner */}
+                                                {(() => {
+                                                    const productType = order.metadata?.product_type || (order.items?.some(i => i.productType === 'service') ? 'service' : 'physical');
+                                                    const instruction = getOrderInstruction(
+                                                        order.status,
+                                                        'seller',
+                                                        productType.toUpperCase(),
+                                                        !!(order.seller?.latitude || order.seller?.physicalAddress)
+                                                    );
+                                                    if (!instruction) return null;
+                                                    return (
+                                                        <div className={`mt-4 p-3 rounded-xl border text-[11px] sm:text-xs font-bold leading-relaxed shadow-inner ${getInstructionColorClass(order.status)}`}>
+                                                            {instruction}
+                                                        </div>
+                                                    );
+                                                })()}
 
                                                 {/* Products Section */}
                                                 <div>

@@ -30,6 +30,8 @@ export interface OrderSeller {
   location?: string;
   city?: string;
   physicalAddress?: string;
+  latitude?: number | string;
+  longitude?: number | string;
   isClient?: boolean;
 }
 

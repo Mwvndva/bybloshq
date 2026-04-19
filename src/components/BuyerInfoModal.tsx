@@ -55,7 +55,8 @@ export function BuyerInfoModal({
     confirmPassword: ''
   });
 
-  const [errors, setErrors] = useState<Partial<BuyerInfo>>({});
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [errors, setErrors] = useState<Partial<BuyerInfo & { termsAccepted?: string }>>({});
 
   // Update state when initialData changes
   useEffect(() => {
@@ -82,7 +83,7 @@ export function BuyerInfoModal({
   };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<BuyerInfo> = {};
+    const newErrors: Partial<BuyerInfo & { termsAccepted?: string }> = {};
 
     if (!buyerInfo.firstName.trim()) {
       newErrors.firstName = 'First name is required';
@@ -120,6 +121,10 @@ export function BuyerInfoModal({
       newErrors.whatsappNumber = 'WhatsApp number is required';
     }
 
+    if (!termsAccepted) {
+      newErrors.termsAccepted = 'You must accept the Terms and Conditions to continue.';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -134,8 +139,9 @@ export function BuyerInfoModal({
     try {
       await onSubmit({
         ...buyerInfo,
-        fullName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim()
-      });
+        fullName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim(),
+        termsAccepted: true // Passed as true because validation passed
+      } as any);
       // Reset form on successful submission
       setBuyerInfo({
         firstName: '',
@@ -490,14 +496,49 @@ export function BuyerInfoModal({
                 <p className={`text-[10px] font-bold ${themeClasses.error}`}>{errors.confirmPassword}</p>
               )}
             </div>
+
+            {/* Terms and Conditions Checkout */}
+            <div className="flex items-start gap-3 mt-4 px-1">
+              <input
+                type="checkbox"
+                id="termsAccepted"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded border-white/10 bg-white/5 text-yellow-400 focus:ring-yellow-400 accent-yellow-400"
+              />
+              <label htmlFor="termsAccepted" className="text-sm text-[#a1a1a1] cursor-pointer leading-relaxed">
+                I agree to the{' '}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white underline hover:text-yellow-400 transition-colors"
+                >
+                  Terms and Conditions
+                </a>
+                {' '}and{' '}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-white underline hover:text-yellow-400 transition-colors"
+                >
+                  Privacy Policy
+                </a>
+              </label>
+            </div>
+            {errors.termsAccepted && (
+              <p className={`text-[10px] font-bold px-1 ${themeClasses.error}`}>{errors.termsAccepted}</p>
+            )}
           </div>
 
           <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
             <Button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !termsAccepted}
               variant="secondary-byblos"
-              className="w-full h-12 rounded-xl font-black text-base shadow-lg transition-all active:scale-[0.98]"
+              className={`w-full h-12 rounded-xl font-black text-base shadow-lg transition-all active:scale-[0.98] ${!termsAccepted ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
             >
               {isLoading ? (
                 <>
