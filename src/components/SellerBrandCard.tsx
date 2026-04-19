@@ -120,20 +120,20 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
             )}
 
             {/* Client Count Indicator - Top Left */}
-            <div className="absolute top-3 left-3 z-10">
-                <div className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 shadow-sm backdrop-blur-sm", styles.badge)}>
-                    <Users className={cn("h-3 w-3", styles.icon)} />
-                    <span className={cn("text-[10px] font-bold", styles.icon)}>
+            <div className="absolute top-2 left-2 z-10">
+                <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm", styles.badge)}>
+                    <Users className={cn("h-2.5 w-2.5", styles.icon)} />
+                    <span className={cn("text-[9px] font-bold", styles.icon)}>
                         {seller.clientCount || 0}
                     </span>
                 </div>
             </div>
 
             {/* Wishlist Indicator - Top Right */}
-            <div className="absolute top-3 right-3 z-10">
-                <div className={cn("flex items-center gap-1 rounded-full px-2.5 py-1 shadow-sm backdrop-blur-sm", styles.badge)}>
-                    <Heart className={cn("h-3 w-3 fill-current", styles.icon)} />
-                    <span className={cn("text-[10px] font-bold", styles.icon)}>
+            <div className="absolute top-2 right-2 z-10">
+                <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm", styles.badge)}>
+                    <Heart className={cn("h-2.5 w-2.5 fill-current", styles.icon)} />
+                    <span className={cn("text-[9px] font-bold", styles.icon)}>
                         {seller.totalWishlistCount || 0}
                     </span>
                 </div>
@@ -144,7 +144,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 <div className="flex flex-col items-center text-center">
 
                     {/* Shop Name */}
-                    <h3 className={cn("mb-3 text-lg font-black tracking-tight drop-shadow-lg", styles.text)}>
+                    <h3 className={cn("mb-2 text-sm font-black tracking-tight drop-shadow-lg", styles.text)}>
                         {seller.shopName || seller.shop_name}
                     </h3>
 
@@ -152,7 +152,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                     <Link
                         to={shopLink} // Using shop name as slug/link
                         className={cn(
-                            "rounded-full border px-6 py-2 text-xs font-bold backdrop-blur-md transition-all hover:scale-105 active:scale-95",
+                            "rounded-full border px-3 py-1 text-[10px] font-bold backdrop-blur-md transition-all hover:scale-105 active:scale-95",
                             styles.button
                         )}
                     >
