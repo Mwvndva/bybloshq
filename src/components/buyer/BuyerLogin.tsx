@@ -4,10 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, Eye, EyeOff, Mail, Lock, ArrowLeft, ShoppingBag, RefreshCw } from 'lucide-react';
+import { Eye, EyeOff, Loader2, Mail, ArrowLeft, ShoppingBag, Lock, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
-import buyerApi from '@/api/buyerApi';
+import { VerifyEmailModal } from '../auth/VerifyEmailModal';
 
 interface LoginFormData {
   email: string;
@@ -21,14 +21,12 @@ export function BuyerLogin() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [infoMessage, setInfoMessage] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [isVerifyModalOpen, setIsVerifyModalOpen] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [isResending, setIsResending] = useState(false);
 
   const { toast } = useToast();
-  const navigate = useNavigate(); // Kept for Back button
+  const navigate = useNavigate();
   const location = useLocation();
   const { login } = useBuyerAuth();
 
@@ -38,12 +36,10 @@ export function BuyerLogin() {
         title: 'Notification',
         description: location.state.message,
       });
-      // Clear the state so it doesn't show again on refresh
       window.history.replaceState({}, document.title);
     }
   }, [location.state, toast]);
 
-  // Ensure body and html have black background and no margins/padding
   useEffect(() => {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
@@ -63,9 +59,7 @@ export function BuyerLogin() {
       ...prev,
       [name]: value
     }));
-    // Clear error when user starts typing
-    if (error) setError('');
-    if (infoMessage) setInfoMessage('');
+    if (error) setError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -77,7 +71,7 @@ export function BuyerLogin() {
     }
 
     setIsLoading(true);
-    setError('');
+    setError(null);
 
     try {
       await login(
@@ -85,20 +79,13 @@ export function BuyerLogin() {
         formData.password
       );
     } catch (error: any) {
-      // Extract the actual error message and code from the SDK/API response
       const apiError = error?.response?.data;
       const errorMessage = apiError?.message || error?.message || 'Invalid email or password. Please check your credentials and try again.';
 
       if (apiError?.code === 'PENDING_VERIFICATION' || apiError?.code === 'EMAIL_NOT_VERIFIED') {
         const email = apiError.email || formData.email;
-        const role = apiError.userType || 'buyer';
-
-        toast({
-          title: 'Verification Required',
-          description: 'Redirecting to verification page...',
-        });
-
-        navigate(`/verify-email?email=${encodeURIComponent(email)}&type=${role}`);
+        setUnverifiedEmail(email);
+        setIsVerifyModalOpen(true);
         return;
       }
 
@@ -180,39 +167,6 @@ export function BuyerLogin() {
                 </Alert>
               )}
 
-              {infoMessage && (
-                <Alert className="py-3 px-3 border-amber-500/50 bg-amber-500/10">
-                  <AlertDescription className="text-xs text-amber-200 space-y-2">
-                    <p>{infoMessage}</p>
-                    {unverifiedEmail && (
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (resendCooldown > 0 || isResending) return;
-                          setIsResending(true);
-                          try {
-                            await buyerApi.resendVerification(unverifiedEmail);
-                            toast({ title: 'Email Sent', description: 'Check your inbox for the new link.' });
-                            setResendCooldown(60);
-                            const timer = setInterval(() => {
-                              setResendCooldown(p => { if (p <= 1) { clearInterval(timer); return 0; } return p - 1; });
-                            }, 1000);
-                          } catch (err: any) {
-                            toast({ title: 'Error', description: err.message, variant: 'destructive' });
-                          } finally {
-                            setIsResending(false);
-                          }
-                        }}
-                        disabled={resendCooldown > 0 || isResending}
-                        className="flex items-center gap-1 text-yellow-400 hover:text-yellow-300 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {isResending ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-                        {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend verification email'}
-                      </button>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              )}
 
               <div className="space-y-1.5">
                 <Label htmlFor="email" className="text-xs font-medium text-gray-200">
@@ -308,6 +262,13 @@ export function BuyerLogin() {
           </div>
         </div>
       </div>
+
+      <VerifyEmailModal
+        isOpen={isVerifyModalOpen}
+        onClose={() => setIsVerifyModalOpen(false)}
+        email={unverifiedEmail}
+        role="buyer"
+      />
     </div>
   );
 }
