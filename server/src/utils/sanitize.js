@@ -23,42 +23,46 @@ export const sanitizeBuyer = (buyer) => {
         id: b.id,
         fullName: b.fullName || b.full_name || b.name || '',
         email: b.email,
-        // Phone numbers shown masked — full numbers only needed in order flow, not profile display
         whatsappNumber: b.whatsappNumber || b.whatsapp_number || null,
         mobilePayment: b.mobilePayment || b.mobile_payment || b.payment_phone || null,
-        mobilePayment: b.mobilePayment || b.mobile_payment || b.payment_phone || null,
-        // Coordinates: boolean presence only — full coords not needed by the frontend profile UI
+        city: b.city,
+        location: b.location,
+        fullAddress: b.fullAddress || b.full_address,
+        latitude: b.latitude,
+        longitude: b.longitude,
+        refunds: b.refunds || 0,
         hasLocation: !!(b.latitude && b.longitude),
         is_verified: !!(b.is_verified || b.isVerified),
         role: 'buyer',
         createdAt: b.createdAt || b.created_at || null,
-        // NEVER return: user_id, password, password_hash, full_address,
-        // latitude, longitude, userId, reset tokens, internal flags
     };
 };
 
 export const sanitizeSeller = (seller) => {
     if (!seller) return null;
-    const sellerObj = seller.toJSON ? seller.toJSON() : seller;
+    const s = seller.toJSON ? seller.toJSON() : seller;
 
     return {
-        id: sellerObj.id,
-        fullName: sellerObj.fullName || sellerObj.full_name || '',
-        shopName: sellerObj.shopName || sellerObj.shop_name || '',
-        email: sellerObj.email,
-        whatsappNumber: sellerObj.whatsappNumber || sellerObj.whatsapp_number || sellerObj.phone || '',
-        physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
-        latitude: sellerObj.latitude ? Number.parseFloat(sellerObj.latitude) : null,
-        longitude: sellerObj.longitude ? Number.parseFloat(sellerObj.longitude) : null,
-        bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
-        theme: sellerObj.theme,
-        instagramLink: sellerObj.instagramLink || sellerObj.instagram_link,
-        tiktokLink: sellerObj.tiktokLink || sellerObj.tiktok_link,
-        facebookLink: sellerObj.facebookLink || sellerObj.facebook_link,
-        hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
-        is_verified: !!(sellerObj.is_verified || sellerObj.isVerified),
-        clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
-        totalSales: Number.parseFloat(sellerObj.totalSales || sellerObj.total_sales || 0),
+        id: s.id,
+        fullName: s.fullName || s.full_name || '',
+        shopName: s.shopName || s.shop_name || '',
+        email: s.email,
+        whatsappNumber: s.whatsappNumber || s.whatsapp_number || s.phone || '',
+        city: s.city,
+        location: s.location,
+        physicalAddress: s.physicalAddress || s.physical_address || null,
+        latitude: s.latitude ? Number.parseFloat(s.latitude) : null,
+        longitude: s.longitude ? Number.parseFloat(s.longitude) : null,
+        bannerImage: s.bannerImage || s.banner_image,
+        theme: s.theme,
+        instagramLink: s.instagramLink || s.instagram_link,
+        tiktokLink: s.tiktokLink || s.tiktok_link,
+        facebookLink: s.facebookLink || s.facebook_link,
+        hasPhysicalShop: !!(s.physicalAddress || s.physical_address),
+        is_verified: !!(s.is_verified || s.isVerified),
+        clientCount: Number.parseInt(s.clientCount || s.client_count || 0),
+        totalSales: Number.parseFloat(s.totalSales || s.total_sales || 0),
+        balance: Number.parseFloat(s.balance || 0),
     };
 };
 

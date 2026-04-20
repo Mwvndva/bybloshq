@@ -152,7 +152,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                     <Link
                         to={shopLink} // Using shop name as slug/link
                         className={cn(
-                            "rounded-full border px-3 py-1 text-[10px] font-bold backdrop-blur-md transition-all hover:scale-105 active:scale-95",
+                            "rounded-full border px-2.5 py-0.5 text-[9px] font-bold backdrop-blur-md transition-all hover:scale-105 active:scale-95",
                             styles.button
                         )}
                     >
