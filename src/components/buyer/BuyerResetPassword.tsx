@@ -10,6 +10,7 @@ import { Eye, EyeOff, Loader2, Lock, ArrowLeft, ShoppingBag, Check, X } from 'lu
 export function BuyerResetPassword() {
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
+    const email = searchParams.get('email') || '';
     const { toast } = useToast();
     const { resetPassword, isLoading } = useBuyerAuth();
     const navigate = useNavigate();
@@ -117,12 +118,21 @@ export function BuyerResetPassword() {
             return;
         }
 
+        if (!email) {
+            toast({
+                title: 'Missing Email',
+                description: 'Reset link is missing your email address. Please request a new link.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         if (!validatePasswords(formData.password, formData.confirmPassword)) {
             return;
         }
 
         try {
-            await resetPassword(token, formData.password);
+            await resetPassword(token, formData.password, email);
             toast({
                 title: 'Success',
                 description: 'Your password has been reset successfully.',
