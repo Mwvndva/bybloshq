@@ -594,7 +594,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-[2rem]',
+        'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-2xl sm:rounded-[2rem]',
         isSold ? 'opacity-60' : 'hover:-translate-y-3 hover:scale-[1.03]',
         'cursor-pointer',
         themeClasses.card
@@ -675,12 +675,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       </div>
 
       <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 h-6 mobile-text-lg antialiased",
+        <h3 className={cn("font-bold mb-0.5 sm:mb-1.5 line-clamp-1 h-5 sm:h-6 text-[13px] sm:text-base antialiased",
           (theme === 'black' || forceWhiteText) ? 'text-white' : 'text-black'
         )}>
           {product.name}
         </h3>
-        <p className={cn("font-black mobile-text-lg mb-1 sm:mb-1.5 flex items-center gap-1.5 sm:gap-2",
+        <p className={cn("font-black text-[13px] sm:text-base mb-0.5 sm:mb-1.5 flex items-center gap-1 sm:gap-2",
           (product.product_type === 'service' || (product as any).productType === 'service')
             ? 'text-purple-600'
             : (forceWhiteText && theme === 'default') ? 'text-yellow-400' : themeClasses.price
