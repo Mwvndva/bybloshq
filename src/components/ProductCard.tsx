@@ -569,12 +569,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       case 'red':
       case 'yellow':
       case 'brown':
+        // These themes generally have colored backgrounds where white/light text works better for descriptions
         return {
           card: 'bg-[var(--theme-card-bg, white)] text-black border-[var(--theme-border)] hover:shadow-xl hover:shadow-[var(--theme-accent)]/10',
           price: 'text-[var(--theme-accent)]',
           button: 'bg-[var(--theme-button-bg)] hover:opacity-90 text-[var(--theme-button-text)] shadow-md',
-          seller: 'text-gray-800',
-          description: 'text-gray-700',
+          seller: 'text-gray-800 opacity-80',
+          description: (theme === 'yellow' || theme === 'orange') ? 'text-gray-800' : 'text-gray-100', // Yellow/Orange use dark text, others use light
           icon: 'text-[var(--theme-accent)]',
         };
       default: // default/glass theme
@@ -630,7 +631,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
         {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-            <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-sm">
+            <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-md">
               <FileText className="h-3 w-3 mr-1" />
               Digital
             </Badge>
@@ -644,12 +645,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
         {(product.product_type === 'service' || (product as any).productType === 'service') && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
-            <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+            <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-md">
               <Handshake className="h-3 w-3 mr-1" />
               Service
             </Badge>
             {(product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') && (
-              <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-sm">
+              <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-md">
                 Hybrid
               </Badge>
             )}
@@ -705,7 +706,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
               {product.description}
             </p>
             {product.description.length > 60 && (
-              <span className="absolute bottom-0 right-0 bg-gradient-to-l from-[#111] via-[#111] to-transparent pl-4 text-[10px] sm:text-xs font-bold text-yellow-500/80 group-hover/desc:text-yellow-500 transition-colors">
+              <span className={cn(
+                "absolute bottom-0 right-0 pl-10 text-[10px] sm:text-xs font-bold transition-colors group-hover/desc:text-yellow-500",
+                (theme === 'black' || theme === 'default' || forceWhiteText)
+                  ? "bg-gradient-to-l from-[#111] via-[#111] to-transparent text-yellow-500/80"
+                  : "bg-gradient-to-l from-[var(--theme-card-bg)] via-[var(--theme-card-bg)] to-transparent text-yellow-600"
+              )}>
                 ...
               </span>
             )}
@@ -875,7 +881,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="product-image-dialog w-[95vw] sm:max-w-5xl mx-auto max-h-[95dvh] flex flex-col p-0 bg-[#0a0a0a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-          <DialogHeader className="absolute top-0 left-0 w-full z-40 p-6 pointer-events-none">
+          <DialogHeader className="absolute top-0 left-0 w-full z-40 p-6 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent">
             <DialogTitle className="text-lg sm:text-xl font-black flex items-center gap-2 text-white drop-shadow-md">
               {(product.product_type === 'digital' || (product as any).productType === 'digital') && (
                 <FileText className="h-5 w-5 text-red-500" />
