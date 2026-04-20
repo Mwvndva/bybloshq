@@ -916,18 +916,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                       className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full items-center"
                       style={{ scrollBehavior: 'smooth' }}
                     >
-                      <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center h-full">
-                        <img
-                          src={getImageUrl(img)}
-                          alt={`${product.name} - Image ${idx + 1}`}
-                          className="max-w-full w-full h-full object-contain shadow-2xl"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
-                          }}
-                        />
-                      </div>
-                    ))}
+                      {allImages.map((img, idx) => (
+                        <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center h-full">
+                          <img
+                            src={getImageUrl(img)}
+                            alt={`${product.name} - Image ${idx + 1}`}
+                            className="max-w-full w-full h-full object-contain shadow-2xl"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
+                            }}
+                          />
+                        </div>
+                      ))}
                     </div>
 
                     {allImages.length > 1 && (
