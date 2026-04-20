@@ -104,10 +104,10 @@ function ShopCard({ shop, onOpen }) {
             onOpen(shop);
           }}
           style={{
-            width: '100%', height: 28, borderRadius: 7, border: 'none',
+            width: '100%', height: 22, borderRadius: 6, border: 'none',
             background: '#1C1C1C', color: '#fff',
-            fontSize: 11, fontWeight: 500, cursor: 'pointer',
-            transition: 'background 0.15s ease',
+            fontSize: 10, fontWeight: 500, cursor: 'pointer',
+            transition: 'all 0.2s ease'
           }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
           onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
@@ -228,6 +228,17 @@ function BuyerDashboard() {
   const [mobilePayment, setMobilePayment] = useState<string>(user?.mobilePayment || '');
   const [whatsappNumber, setWhatsappNumber] = useState<string>(user?.whatsappNumber || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+
+  // Sync state when user object changes (Task: Profile Sync)
+  useEffect(() => {
+    if (user) {
+      setFullName(user.fullName || '');
+      setCity(user.city || '');
+      setLocationArea(user.location || '');
+      setMobilePayment(user.mobilePayment || '');
+      setWhatsappNumber(user.whatsappNumber || '');
+    }
+  }, [user]);
   const [shops, setShops] = useState<any[]>([]);
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
   const [isLoadingShops, setIsLoadingShops] = useState(false);
