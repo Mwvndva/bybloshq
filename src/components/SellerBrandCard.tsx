@@ -155,7 +155,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 <div className="flex flex-col items-center text-center">
 
                     {/* Shop Name */}
-                    <h3 className={cn("mb-2 text-sm font-black tracking-tight drop-shadow-lg", styles.text)}>
+                    <h3 className="mb-2 text-sm font-black tracking-tight text-white drop-shadow-lg">
                         {seller.shopName || seller.shop_name}
                     </h3>
 
