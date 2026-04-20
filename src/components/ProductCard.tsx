@@ -55,6 +55,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
   const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
+
+  // Helper variables for product types
+  const isDigital = product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital;
+  const isService = product.product_type === 'service' || (product as any).productType === 'service';
+  const isHybrid = isService && (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid');
+
   const [paymentModalData, setPaymentModalData] = useState<{
     isOpen: boolean;
     orderNumber: string | null;
@@ -629,7 +635,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       {/* Product Image — always renders, shows placeholder when no image */}
       <div className="relative overflow-hidden rounded-t-lg sm:rounded-t-xl">
-        {(product.product_type === 'digital' || (product as any).productType === 'digital' || product.is_digital || (product as any).isDigital) && (
+        {isDigital && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
             <Badge className="bg-red-600 hover:bg-red-700 text-white border-0 backdrop-blur-sm shadow-md">
               <FileText className="h-3 w-3 mr-1" />
@@ -643,13 +649,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           </div>
         )}
 
-        {(product.product_type === 'service' || (product as any).productType === 'service') && (
+        {isService && (
           <div className="absolute top-2 left-2 z-10 flex flex-col gap-1 items-start">
             <Badge className="bg-purple-500/90 hover:bg-purple-600/90 text-white border-0 backdrop-blur-sm shadow-md">
               <Handshake className="h-3 w-3 mr-1" />
               Service
             </Badge>
-            {(product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') && (
+            {isHybrid && (
               <Badge className="bg-blue-500/90 hover:bg-blue-600/90 text-white border-0 backdrop-blur-sm shadow-md">
                 Hybrid
               </Badge>
@@ -719,7 +725,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         )}
 
         {/* Service Location Info */}
-        {(product.product_type === 'service' || (product as any).productType === 'service') && (
+        {isService && (
           <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
             (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
           )}>
@@ -881,13 +887,13 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
         <DialogContent className="product-image-dialog w-[95vw] sm:max-w-5xl mx-auto max-h-[95dvh] flex flex-col p-0 bg-[#0a0a0a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-          <DialogHeader className="absolute top-0 left-0 w-full z-40 p-6 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent">
-            <DialogTitle className="text-lg sm:text-xl font-black flex items-center gap-2 text-white drop-shadow-md">
-              {(product.product_type === 'digital' || (product as any).productType === 'digital') && (
-                <FileText className="h-5 w-5 text-red-500" />
+          <DialogHeader className="absolute top-0 left-0 w-full z-40 p-4 sm:p-6 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent">
+            <DialogTitle className="text-base sm:text-lg md:text-xl font-black flex items-center gap-2 text-white drop-shadow-md opacity-0 md:opacity-100 transition-opacity">
+              {isDigital && (
+                <FileText className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
               )}
               <span className="pointer-events-auto">
-                {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0)
+                {(isDigital && product.images && product.images.length > 0)
                   ? `Document Preview: ${product.name}`
                   : product.name
                 }
@@ -902,11 +908,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           {/* We'll use CSS to target the internal close button since we don't want to change the global ui/dialog.tsx component. */}
 
           <div
-            className="flex-1 w-full overflow-hidden flex flex-col md:grid md:grid-cols-2 relative h-full"
+            className="flex-1 w-full overflow-y-auto md:overflow-hidden flex flex-col md:grid md:grid-cols-2 relative custom-scrollbar"
           >
             {/* Left/Top: Image section */}
             <div
-              className="relative flex flex-col justify-center bg-black/40 h-[45dvh] md:h-full group/modal cursor-pointer"
+              className="relative flex flex-col justify-center bg-black/40 min-h-[40dvh] md:h-full group/modal cursor-pointer shrink-0"
               onClick={() => setIsImageDialogOpen(false)}
             >
               <style>{`
@@ -982,9 +988,18 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
             </div>
 
             {/* Right/Bottom: Description section */}
-            <div className="flex flex-col h-[45dvh] md:h-full bg-[#0a0a0a] border-t md:border-t-0 md:border-l border-white/5 p-6 sm:p-8 overflow-y-auto custom-scrollbar">
-              <div className="mt-8 md:mt-12 space-y-6">
+            <div className="flex flex-col bg-[#0a0a0a] border-t md:border-t-0 md:border-l border-white/5 p-6 sm:p-8 md:overflow-y-auto custom-scrollbar">
+              <div className="space-y-6">
                 <div>
+                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mb-2 md:hidden">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-center gap-2 mb-6 md:hidden">
+                    <Badge variant="outline" className="bg-white/5 border-white/10 text-yellow-500/80 text-[10px] uppercase tracking-[0.2em] font-black px-3 py-1">
+                      {isDigital ? 'Digital Product' : isService ? 'Service' : 'Physical Product'}
+                    </Badge>
+                  </div>
+
                   <h4 className="text-yellow-500/60 text-[11px] uppercase tracking-[0.2em] font-black mb-4">Description</h4>
                   <p className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-line font-medium opacity-90">
                     {product.description || "No description provided."}
