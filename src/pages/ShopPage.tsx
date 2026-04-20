@@ -9,6 +9,7 @@ import type { Product as ProductType, Seller, Aesthetic } from '@/types';
 import type { Product as SellerApiProduct } from '@/api/sellerApi';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { useShopTheme, type Theme } from '@/hooks/useShopTheme';
+import { DEFAULT_BANNER } from '@/lib/constants';
 
 // Type guard to check if a string is a valid Aesthetic
 function isAesthetic(value: string): value is Aesthetic {
@@ -56,7 +57,6 @@ const ShopPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [sellerInfo, setSellerInfo] = useState<ShopSeller | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const defaultBanner = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
 
   const { isAuthenticated } = useBuyerAuth();
   const themeClasses = useShopTheme((sellerInfo?.theme as Theme) || 'black');
@@ -198,23 +198,15 @@ const ShopPage = () => {
     <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
       {/* Modern Hero Section */}
       <div className="relative h-[30dvh] min-h-[260px] sm:h-[40dvh] lg:h-[50dvh] w-full overflow-hidden">
-        {sellerInfo?.bannerImage ? (
-          <img
-            src={getImageUrl(sellerInfo.bannerImage)}
-            alt={`${sellerInfo.shopName || 'Shop'} Banner`}
-            className="w-full h-full object-cover animate-slow-zoom"
-            onError={(e) => {
-              console.error('Error loading banner image:', e);
-              e.currentTarget.src = defaultBanner;
-            }}
-          />
-        ) : (
-          <img
-            src={defaultBanner}
-            alt="Default Shop Banner"
-            className="w-full h-full object-cover"
-          />
-        )}
+        <img
+          src={sellerInfo?.bannerImage ? getImageUrl(sellerInfo.bannerImage) : DEFAULT_BANNER}
+          alt={`${sellerInfo?.shopName || 'Shop'} Banner`}
+          className="w-full h-full object-cover animate-slow-zoom"
+          onError={(e) => {
+            const target = e.target as HTMLImageElement;
+            target.src = DEFAULT_BANNER;
+          }}
+        />
 
         {/* Sleek Gradient Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10 transition-opacity duration-300" />

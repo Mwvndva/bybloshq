@@ -25,6 +25,7 @@ import ProductGrid from '@/components/ProductGrid';
 import type { Aesthetic, Product } from '@/types';
 import WishlistSection from './WishlistSection';
 import { format } from 'date-fns';
+import { DEFAULT_BANNER } from '@/lib/constants';
 
 import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
@@ -62,15 +63,23 @@ function ShopCard({ shop, onOpen }) {
       {/* Card image area */}
       <div style={{
         height: 68,
-        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
+        position: 'relative',
+        background: '#000',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
+        <img
+          src={shop.bannerImage || shop.banner_image || DEFAULT_BANNER}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4 }}
+        />
         <div style={{
+          position: 'relative',
           width: 32, height: 32, borderRadius: 10,
           background: `${color}20`,
           border: `1.5px solid ${color}40`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 14, fontWeight: 700, color,
+          backdropFilter: 'blur(4px)',
         }}>
           {initial}
         </div>
@@ -138,15 +147,23 @@ function FeaturedShopCard({ shop, onOpen }) {
     >
       <div style={{
         width: 64, flexShrink: 0,
-        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
+        position: 'relative',
+        background: '#000',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
+        <img
+          src={shop.bannerImage || shop.banner_image || DEFAULT_BANNER}
+          alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.4 }}
+        />
         <div style={{
+          position: 'relative',
           width: 28, height: 28, borderRadius: '50%',
           background: 'rgba(245,197,24,0.12)',
           border: '1.5px solid rgba(245,197,24,0.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 12, fontWeight: 700, color: '#F5C518',
+          backdropFilter: 'blur(4px)',
         }}>
           {initial}
         </div>
