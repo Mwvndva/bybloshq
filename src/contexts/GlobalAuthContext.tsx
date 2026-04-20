@@ -126,7 +126,7 @@ interface GlobalAuthContextType {
 
     // Password management
     forgotPassword: (email: string, role: UserRole) => Promise<boolean>;
-    resetPassword: (token: string, newPassword: string, role: UserRole) => Promise<void>;
+    resetPassword: (token: string, newPassword: string, email: string, role: UserRole) => Promise<void>;
 
     // Profile management
     getProfile: (role: UserRole) => Promise<void>;
@@ -599,10 +599,11 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // RESET PASSWORD
     // ============================================================================
 
-    const resetPassword = useCallback(async (token: string, newPassword: string, role: UserRole) => {
+    const resetPassword = useCallback(async (token: string, newPassword: string, email: string, role: UserRole) => {
         try {
+            setIsLoading(true);
             const api = getApiForRole(role);
-            await api.resetPassword(token, newPassword);
+            await api.resetPassword(token, newPassword, email);
 
             toast.success('Password updated', {
                 description: 'You can now log in with your new password.',
@@ -616,6 +617,8 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             toast.error('Reset Failed', { description: message });
 
             throw error;
+        } finally {
+            setIsLoading(false);
         }
     }, [navigate]);
 
@@ -741,7 +744,7 @@ export const useBuyerAuth = () => {
         register: (data: BuyerRegistrationData) => register(data, 'buyer'),
         logout,
         forgotPassword: (email: string) => forgotPassword(email, 'buyer'),
-        resetPassword: (token: string, newPassword: string) => resetPassword(token, newPassword, 'buyer'),
+        resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'buyer'),
         loginWithToken: (token: string) => loginWithToken(token, 'buyer'),
         updateBuyerProfile: (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer'),
     };
@@ -758,7 +761,7 @@ export const useSellerAuth = () => {
         register: (data: SellerRegistrationData) => register(data, 'seller'),
         logout,
         forgotPassword: (email: string) => forgotPassword(email, 'seller'),
-        resetPassword: (token: string, newPassword: string) => resetPassword(token, newPassword, 'seller'),
+        resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'seller'),
         updateSellerProfile: (updates: Partial<SellerProfile>) => updateProfile(updates, 'seller'),
     };
 };

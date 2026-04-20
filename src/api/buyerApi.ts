@@ -244,11 +244,11 @@ const buyerApi = {
     }
   },
 
-  resetPassword: async (token: string, newPassword: string): Promise<{ message: string }> => {
+  resetPassword: async (token: string, newPassword: string, email: string): Promise<{ message: string }> => {
     try {
       const response = await apiClient.post<{ message: string }>(
         `/buyers/reset-password`,
-        { token, newPassword }
+        { token, newPassword, email }
       );
 
       // Ensure the response has a message property
