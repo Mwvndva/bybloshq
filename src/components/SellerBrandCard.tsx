@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Seller } from '@/api/publicApi';
+import { DEFAULT_BANNER } from '@/lib/constants';
 
 interface SellerBrandCardProps {
     seller: Seller;
@@ -108,16 +109,11 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
     return (
         <div className={cn("group relative aspect-square overflow-hidden rounded-2xl bg-gray-900", className)}>
             {/* Background/Banner Image */}
-            {bannerUrl ? (
-                <img
-                    src={bannerUrl}
-                    alt={`${seller.shopName || seller.shop_name} banner`}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                />
-            ) : (
-                // Fallback gradient if no banner
-                <div className={`h-full w-full bg-gradient-to-br ${gradientClass}`} />
-            )}
+            <img
+                src={bannerUrl || DEFAULT_BANNER}
+                alt={`${seller.shopName || seller.shop_name} banner`}
+                className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+            />
 
             {/* Client Count Indicator - Top Left */}
             <div className="absolute top-2 left-2 z-10">
