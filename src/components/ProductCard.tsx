@@ -670,12 +670,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <ProductImage
           src={product.image_url}
           alt={product.name}
-          className="w-full h-40 sm:h-56 md:h-64 lg:h-72 transition-transform duration-700 group-hover:scale-105"
+          className="w-full aspect-[3/4] transition-transform duration-700 group-hover:scale-105"
         />
       </div>
 
       <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 mobile-text-lg antialiased",
+        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 h-6 mobile-text-lg antialiased",
           (theme === 'black' || forceWhiteText) ? 'text-white' : 'text-black'
         )}>
           {product.name}
@@ -698,15 +698,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </p>
 
         {product.description && (
-          <div className="relative group/desc">
-            <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2",
+          <div className="relative group/desc h-10 overflow-hidden">
+            <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2 h-full",
               (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
             )}>
               {product.description}
             </p>
             {product.description.length > 60 && (
-              <span className="text-[10px] sm:text-xs font-bold text-yellow-500/80 group-hover/desc:text-yellow-500 transition-colors">
-                Read more...
+              <span className="absolute bottom-0 right-0 bg-gradient-to-l from-[#111] via-[#111] to-transparent pl-4 text-[10px] sm:text-xs font-bold text-yellow-500/80 group-hover/desc:text-yellow-500 transition-colors">
+                ...
               </span>
             )}
           </div>
@@ -751,6 +751,18 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           >
             {displaySellerName}
           </span>
+          {/* Shop Type Indicator */}
+          <div className="shrink-0 flex items-center">
+            {isSellerShopless(displaySeller) ? (
+              <Badge variant="outline" className="h-4 px-1 text-[8px] border-zinc-500/30 text-zinc-400 bg-zinc-500/10 font-bold uppercase tracking-wider">
+                Online Only
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="h-4 px-1 text-[8px] border-emerald-500/30 text-emerald-400 bg-emerald-500/10 font-bold uppercase tracking-wider">
+                Physical Shop
+              </Badge>
+            )}
+          </div>
           {displaySeller && !isSellerShopless(displaySeller) && (product.product_type !== 'digital' && !(product as any).isDigital) && (
             <div onClick={(e) => e.stopPropagation()}>
               <Popover>

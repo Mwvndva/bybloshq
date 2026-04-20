@@ -462,8 +462,13 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
               <div className="flex items-start justify-between pr-8">
                 <div className="flex-1">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-white mb-1">{product.name}</CardTitle>
-                  <p className="text-[10px] text-zinc-400 capitalize">{product.aesthetic}</p>
+                  <CardTitle className="text-xs sm:text-sm font-medium text-white mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
+                  <p className="text-[9px] text-zinc-400 capitalize mb-1">{product.aesthetic}</p>
+                  {product.description && (
+                    <p className="text-[10px] text-zinc-500 line-clamp-2 h-6 leading-tight mb-2">
+                      {product.description}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex gap-1 mt-2 flex-wrap">
@@ -489,7 +494,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               </div>
             </CardHeader>
             <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 space-y-2">
-              <div className="h-12 w-12 bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden">
+              <div className="aspect-[4/5] w-full bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden mb-3">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -498,7 +503,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <EyeOff className="h-4 w-4 text-zinc-400" />
+                    <EyeOff className="h-6 w-6 text-zinc-400" />
                   </div>
                 )}
               </div>
