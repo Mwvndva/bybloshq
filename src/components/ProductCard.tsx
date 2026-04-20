@@ -873,18 +873,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </Button>
       </CardContent>
 
-      {/* Image/Preview Dialog */}
       <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="product-image-dialog w-[95vw] sm:max-w-4xl mx-auto max-h-[90dvh] flex flex-col p-2 sm:p-6 bg-[#111] sm:bg-background border-white/10 border sm:border-border rounded-xl">
-          <DialogHeader className="pr-8 px-2 sm:px-0 mt-2 sm:mt-0">
-            <DialogTitle className="text-sm sm:text-base flex items-center gap-2 text-white sm:text-foreground">
+        <DialogContent className="product-image-dialog w-[95vw] sm:max-w-5xl mx-auto max-h-[95dvh] flex flex-col p-0 bg-[#0a0a0a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
+          <DialogHeader className="absolute top-0 left-0 w-full z-40 p-6 pointer-events-none">
+            <DialogTitle className="text-lg sm:text-xl font-black flex items-center gap-2 text-white drop-shadow-md">
               {(product.product_type === 'digital' || (product as any).productType === 'digital') && (
-                <FileText className="h-4 w-4 text-red-500" />
+                <FileText className="h-5 w-5 text-red-500" />
               )}
-              {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0)
-                ? `Document Preview: ${product.name}`
-                : product.name
-              }
+              <span className="pointer-events-auto">
+                {((product.product_type === 'digital' || (product as any).productType === 'digital') && product.images && product.images.length > 0)
+                  ? `Document Preview: ${product.name}`
+                  : product.name
+                }
+              </span>
             </DialogTitle>
           </DialogHeader>
           <div className="absolute right-4 top-4">
@@ -895,28 +896,31 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           {/* We'll use CSS to target the internal close button since we don't want to change the global ui/dialog.tsx component. */}
 
           <div
-            className="flex-1 w-full overflow-hidden flex flex-col justify-center min-h-[50dvh] relative group/modal cursor-pointer"
-            onClick={() => setIsImageDialogOpen(false)}
+            className="flex-1 w-full overflow-hidden flex flex-col md:grid md:grid-cols-2 relative h-full"
           >
-            <style>{`
+            {/* Left/Top: Image section */}
+            <div
+              className="relative flex flex-col justify-center bg-black/40 h-[45dvh] md:h-full group/modal cursor-pointer"
+              onClick={() => setIsImageDialogOpen(false)}
+            >
+              <style>{`
               .hide-scrollbar::-webkit-scrollbar { display: none; }
               .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
             `}</style>
-            <div className="flex items-center justify-center w-full p-2 sm:p-4 pb-4">
-              {allImages.length > 0 && (
-                <div className="relative w-full max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                  <div
-                    ref={scrollRef}
-                    onScroll={handleScroll}
-                    className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full items-center"
-                    style={{ scrollBehavior: 'smooth' }}
-                  >
-                    {allImages.map((img, idx) => (
-                      <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center min-h-[40dvh]">
+              <div className="flex items-center justify-center w-full p-2 sm:p-4 pb-4">
+                {allImages.length > 0 && (
+                  <div className="relative w-full max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                    <div
+                      ref={scrollRef}
+                      onScroll={handleScroll}
+                      className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full items-center"
+                      style={{ scrollBehavior: 'smooth' }}
+                    >
+                      <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center h-full">
                         <img
                           src={getImageUrl(img)}
                           alt={`${product.name} - Image ${idx + 1}`}
-                          className="max-w-full w-full h-auto max-h-[75dvh] object-contain rounded-lg shadow-sm"
+                          className="max-w-full w-full h-full object-contain shadow-2xl"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
                             target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
@@ -924,60 +928,73 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
                         />
                       </div>
                     ))}
-                  </div>
-
-                  {allImages.length > 1 && (
-                    <>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
-                        onClick={handlePrevImage}
-                      >
-                        <ChevronLeft className="h-6 w-6" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
-                        onClick={handleNextImage}
-                      >
-                        <ChevronRight className="h-6 w-6" />
-                      </Button>
-                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-                        {allImages.map((img, idx) => (
-                          <div
-                            key={`indicator-${img}`}
-                            className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setCurrentImageIndex(idx);
-                              scrollToImage(idx);
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-
-                  {((product.product_type === 'digital' || (product as any).productType === 'digital') && allImages.length > 0) && (
-                    <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md z-20">
-                      Page {currentImageIndex + 1} of {allImages.length}
                     </div>
-                  )}
-                </div>
-              )}
+
+                    {allImages.length > 1 && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
+                          onClick={handlePrevImage}
+                        >
+                          <ChevronLeft className="h-6 w-6" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
+                          onClick={handleNextImage}
+                        >
+                          <ChevronRight className="h-6 w-6" />
+                        </Button>
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
+                          {allImages.map((img, idx) => (
+                            <div
+                              key={`indicator-${img}`}
+                              className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setCurrentImageIndex(idx);
+                                scrollToImage(idx);
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {((product.product_type === 'digital' || (product as any).productType === 'digital') && allImages.length > 0) && (
+                      <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md z-20">
+                        Page {currentImageIndex + 1} of {allImages.length}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
-            {/* Full Product Description in Modal */}
-            {product.description && (
-              <div className="px-4 sm:px-6 pb-6 pt-2 max-h-[30dvh] overflow-y-auto custom-scrollbar">
-                <h4 className="text-white/40 text-[10px] uppercase tracking-widest font-bold mb-2">Description</h4>
-                <p className="text-gray-200 text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                  {product.description}
-                </p>
+            {/* Right/Bottom: Description section */}
+            <div className="flex flex-col h-[45dvh] md:h-full bg-[#0a0a0a] border-t md:border-t-0 md:border-l border-white/5 p-6 sm:p-8 overflow-y-auto custom-scrollbar">
+              <div className="mt-8 md:mt-12 space-y-6">
+                <div>
+                  <h4 className="text-yellow-500/60 text-[11px] uppercase tracking-[0.2em] font-black mb-4">Description</h4>
+                  <p className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-line font-medium opacity-90">
+                    {product.description || "No description provided."}
+                  </p>
+                </div>
+
+                {/* Additional context or action can go here if needed */}
+                <div className="pt-6 border-t border-white/5 mt-auto">
+                  <Button
+                    className="w-full h-12 bg-white text-black hover:bg-gray-200 rounded-xl font-bold transition-all duration-300 shadow-lg shadow-white/5"
+                    onClick={() => setIsImageDialogOpen(false)}
+                  >
+                    Close Preview
+                  </Button>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>
