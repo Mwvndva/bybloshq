@@ -249,6 +249,11 @@ const ShopPage = () => {
                 <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
                 <span className="hidden xs:inline">Followers</span>
               </span>
+              <span className="opacity-40 shrink-0">·</span>
+              <span className="flex items-center gap-1 shrink-0">
+                <Store className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="font-bold">{(sellerInfo && (sellerInfo.physicalAddress || (sellerInfo.latitude && sellerInfo.longitude && sellerInfo.latitude !== 0))) ? 'Physical Shop' : 'Online Shop'}</span>
+              </span>
             </div>
 
             {/* Row 2: Social links — only if any exist, icon-only on mobile */}

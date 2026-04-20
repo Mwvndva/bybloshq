@@ -130,11 +130,22 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
             </div>
 
             {/* Wishlist Indicator - Top Right */}
-            <div className="absolute top-2 right-2 z-10">
+            <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1.5">
                 <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm", styles.badge)}>
                     <Heart className={cn("h-2.5 w-2.5 fill-current", styles.icon)} />
                     <span className={cn("text-[9px] font-bold", styles.icon)}>
                         {seller.totalWishlistCount || 0}
+                    </span>
+                </div>
+                {/* Shop Type Tag */}
+                <div className={cn(
+                    "rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm border",
+                    (seller.physicalAddress || (seller.latitude && seller.latitude !== 0))
+                        ? "bg-emerald-500/90 text-white border-emerald-400"
+                        : "bg-zinc-800/90 text-zinc-300 border-zinc-700"
+                )}>
+                    <span className="text-[8px] font-black uppercase tracking-tight">
+                        {(seller.physicalAddress || (seller.latitude && seller.latitude !== 0)) ? 'Physical' : 'Online'}
                     </span>
                 </div>
             </div>
