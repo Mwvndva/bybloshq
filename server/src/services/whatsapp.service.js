@@ -133,6 +133,12 @@ class WhatsAppService {
             throw new Error('WhatsApp client not ready or not connected');
         }
 
+        // PRE-FLIGHT CHECK: Avoid enqueuing messages for non-existent numbers
+        if (!phone || phone === 'N/A' || phone === 'null' || phone === 'undefined') {
+            logger.warn(`[WHATSAPP] Skipping message send: Invalid phone number "${phone}"`);
+            return false;
+        }
+
         const jid = this.formatToJid(phone);
         if (!jid) throw new Error(`Invalid phone number format: ${phone}`);
 
@@ -725,9 +731,9 @@ Amount: *KSh ${Number.parseFloat(refundAmount).toLocaleString(undefined, { minim
             return false;
         }
 
-        // Add null safety for seller/buyer phone
-        const sellerPhone = order.seller?.phone || order.seller?.whatsapp_number || 'N/A';
-        const buyerPhone = order.buyer?.phone || order.buyer?.whatsapp_number || 'N/A';
+        // Add null safety for seller/buyer whatsapp
+        const sellerPhone = order.seller?.whatsapp_number || order.seller?.phone || 'N/A';
+        const buyerPhone = order.buyer?.whatsapp_number || order.buyer?.phone || 'N/A';
 
         logger.info(`[LOGISTICS] Attempting courier notification: target=${this.COURIER_NUMBER}, order=#${order.orderNumber}, seller=${order.seller.name}, buyer=${order.buyer.name}`);
 

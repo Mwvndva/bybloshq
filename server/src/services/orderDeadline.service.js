@@ -64,8 +64,8 @@ class OrderDeadlineService {
         try {
             const result = await pool.query(
                 `SELECT po.*, 
-                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.physical_address as physical_address
+                        b.whatsapp_number as buyer_whatsapp, b.full_name as buyer_name, b.email as buyer_email,
+                        s.whatsapp_number as seller_whatsapp, s.full_name as seller_name, s.physical_address as physical_address
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -101,8 +101,8 @@ class OrderDeadlineService {
         try {
             const result = await pool.query(
                 `SELECT po.*, 
-                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.physical_address as physical_address
+                        b.whatsapp_number as buyer_whatsapp, b.full_name as buyer_name, b.email as buyer_email,
+                        s.whatsapp_number as seller_whatsapp, s.full_name as seller_name, s.physical_address as physical_address
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -138,8 +138,8 @@ class OrderDeadlineService {
         try {
             const result = await pool.query(
                 `SELECT po.*, 
-                        b.whatsapp_number as buyer_phone, b.full_name as buyer_name, b.email as buyer_email,
-                        s.whatsapp_number as seller_phone, s.full_name as seller_name, s.balance as seller_balance, s.physical_address as physical_address
+                        b.whatsapp_number as buyer_whatsapp, b.full_name as buyer_name, b.email as buyer_email,
+                        s.whatsapp_number as seller_whatsapp, s.full_name as seller_name, s.balance as seller_balance, s.physical_address as physical_address
                  FROM product_orders po
                  LEFT JOIN buyers b ON po.buyer_id = b.id
                  LEFT JOIN sellers s ON po.seller_id = s.id
@@ -335,7 +335,7 @@ class OrderDeadlineService {
             logger.info(`Released service payment for order ${order.order_number}: KSh ${order.seller_payout_amount}`);
 
             // Send notification to buyer
-            if (order.buyer_phone) {
+            if (order.buyer_whatsapp) {
                 const serviceType = whatsappService.getServiceProviderType(order);
                 const amount = Number.parseFloat(order.total_amount || 0);
 
@@ -350,7 +350,7 @@ Your service order is complete.
 
 Thank you for using Byblos!`;
 
-                await whatsappService.sendMessage(order.buyer_phone, msg);
+                await whatsappService.sendMessage(order.buyer_whatsapp, msg);
             }
 
             return true;
@@ -375,7 +375,7 @@ Thank you for using Byblos!`;
             const isSellerFault = reason.includes('Seller failed');
 
             // Notify buyer
-            if (order.buyer_phone) {
+            if (order.buyer_whatsapp) {
                 const buyerMsg = `❌ *ORDER AUTO-CANCELLED*
 
 Order #${order.order_number} has been automatically cancelled.
@@ -389,11 +389,11 @@ Your refund has been added to your account balance. You can withdraw it from you
 ---
 *Byblos Marketplace*`;
 
-                await whatsappService.sendMessage(order.buyer_phone, buyerMsg);
+                await whatsappService.sendMessage(order.buyer_whatsapp, buyerMsg);
             }
 
             // Notify seller
-            if (order.seller_phone) {
+            if (order.seller_whatsapp) {
                 let sellerMsg = '';
 
                 if (isSellerFault) {
@@ -426,7 +426,7 @@ Order #${order.order_number} has been automatically cancelled.
                 }
 
                 if (sellerMsg) {
-                    await whatsappService.sendMessage(order.seller_phone, sellerMsg);
+                    await whatsappService.sendMessage(order.seller_whatsapp, sellerMsg);
                 }
             }
 
@@ -451,9 +451,9 @@ Please do NOT collect this order from the seller.
 If already collected, please contact the seller to arrange return.
 
 👤 *Buyer:* ${order.buyer_name || 'N/A'}
-📞 *Buyer Phone:* ${order.buyer_phone || 'N/A'}
+📞 *Buyer Phone:* ${order.buyer_whatsapp || 'N/A'}
 🏪 *Seller:* ${order.seller_name || 'N/A'}
-📞 *Seller Phone:* ${order.seller_phone || 'N/A'}
+📞 *Seller Phone:* ${order.seller_whatsapp || 'N/A'}
       `.trim()
 
                 await whatsappService.sendMessage(COURIER_NUMBER, cancelMsg)
