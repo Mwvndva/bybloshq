@@ -540,7 +540,7 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
     }
 
     async notifyBuyerOrderConfirmation(order) {
-        const buyerWhatsApp = order.buyer?.phone;
+        const buyerWhatsApp = order.buyer?.whatsapp_number || order.buyer?.phone;
         if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
 
         try {
@@ -555,7 +555,7 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
 
     async notifyBuyerStatusUpdate(updateData) {
         const { buyer, seller, order, location: loc, newStatus } = updateData;
-        const buyerWhatsApp = buyer?.phone;
+        const buyerWhatsApp = buyer?.whatsapp_number || buyer?.phone;
         if (!buyerWhatsApp || buyerWhatsApp === 'N/A') return false;
 
         const { type } = order;

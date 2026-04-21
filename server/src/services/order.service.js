@@ -1617,7 +1617,7 @@ class OrderService {
     return {
       name: fullOrder.buyer_name || 'Customer',
       phone: fullOrder.buyer_mobile_payment || 'N/A',
-      whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_mobile_payment,
+      whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp || fullOrder.buyer_mobile_payment,
       email: fullOrder.buyer_email || null,
       location: fullOrder.location_address || 'Not specified',
       latitude: fullOrder.location_lat,
