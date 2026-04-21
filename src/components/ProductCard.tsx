@@ -475,9 +475,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           service_location: activeBooking.location,
           service_requirements: activeBooking.serviceRequirements,
           buyer_location: activeBooking.buyerLocation,
-          product_type: isService ? 'service' : 'physical'
+          product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical')
         } : {
-          product_type: isService ? 'service' : 'physical'
+          product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical')
         }
       };
 

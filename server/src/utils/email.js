@@ -261,7 +261,9 @@ export const sendProductOrderConfirmationEmail = async (email, orderData) => {
         time: orderData.metadata.booking_time,
         location: orderData.metadata.service_location,
         locationLabel: orderData.metadata.location_type === 'seller_visits_buyer' ? 'Client Location' : 'Service Location'
-      } : null
+      } : null,
+      downloadUrl: orderData.metadata?.download_url || null,
+      downloadUrls: orderData.metadata?.download_urls || []
     };
 
     const html = await readTemplate('product-order-confirmation', templateData);
