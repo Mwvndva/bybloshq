@@ -57,7 +57,7 @@ export function AppProtectedRoute({
     if (role !== 'admin' && user && !user.profile.is_verified) {
         return (
             <Navigate
-                to={`/verify-email?email=${encodeURIComponent(user.profile.email)}&type=${role}`}
+                to={`/verify-email?email=${encodeURIComponent(String(user.profile.email || ''))}&type=${String(role || '')}`}
                 state={{ from: location }}
                 replace
             />

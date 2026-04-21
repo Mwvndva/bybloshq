@@ -373,7 +373,17 @@ export const downloadDigitalProduct = async (req, res) => {
             });
         }
 
-        const absolutePath = path.resolve(process.cwd(), digitalFilePath.replace(/^\//, ''));
+        // Security: Robust path resolution and traversal prevention
+        const baseDir = path.join(process.cwd(), 'uploads', 'digital_products');
+        const fileNameOnly = path.basename(digitalFilePath);
+        const absolutePath = path.join(baseDir, fileNameOnly);
+
+        // Extra guard: Ensure the resolved path is still within baseDir
+        if (!absolutePath.startsWith(baseDir)) {
+            logger.warn(`[DOWNLOAD-SECURITY] Traversal attempt blocked: ${digitalFilePath}`);
+            return res.status(403).json({ status: 'error', message: 'Access denied: Invalid file path' });
+        }
+
         const ext = path.extname(absolutePath).toLowerCase();
         const fileName = data.digital_file_name || `download${ext}`;
 

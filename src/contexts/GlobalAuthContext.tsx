@@ -341,12 +341,17 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
             // Check for saved redirect location
             const redirectPath = sessionStorage.getItem('redirectAfterLogin');
-            if (redirectPath) {
+            if (redirectPath && typeof redirectPath === 'string') {
                 sessionStorage.removeItem('redirectAfterLogin');
                 navigate(redirectPath, { replace: true });
             } else {
-                // Navigate to dashboard
-                navigate(getDashboardPath(role), { replace: true });
+                const dashboardPath = getDashboardPath(role);
+                if (typeof dashboardPath === 'string') {
+                    navigate(dashboardPath, { replace: true });
+                } else {
+                    console.error('[Auth] Invalid dashboard path:', dashboardPath);
+                    navigate('/', { replace: true });
+                }
             }
         } catch (error: any) {
 

@@ -1,3 +1,4 @@
+import path from 'path';
 import ProductModel from '../models/product.model.js';
 import logger from '../utils/logger.js';
 import { pool } from '../config/database.js';
@@ -21,6 +22,12 @@ class ProductService {
 
         if (is_digital && !digital_file_path) {
             throw new Error('Digital file is required for digital products');
+        }
+
+        // Security: Sanitize digital file path if present
+        let sanitizedDigitalPath = digital_file_path;
+        if (is_digital && digital_file_path) {
+            sanitizedDigitalPath = this._sanitizeDigitalPath(digital_file_path);
         }
 
         const validProductTypes = ['physical', 'digital', 'service'];
@@ -93,7 +100,7 @@ class ProductService {
             seller_id: sellerId,
             aesthetic,
             is_digital: is_digital || false,
-            digital_file_path: digital_file_path || null,
+            digital_file_path: sanitizedDigitalPath || null,
             digital_file_name: digital_file_name || null,
             digital_file_size: digital_file_size || null,
             product_type: finalProductType,
@@ -275,6 +282,19 @@ class ProductService {
         await cacheService.clearPattern("products:*");
 
         return true;
+    }
+
+    /**
+     * Sanitize digital file path to prevent directory traversal
+     */
+    static _sanitizeDigitalPath(filePath) {
+        if (!filePath) return null;
+
+        // 1. Get only the basename to prevent directory traversal
+        const baseName = path.basename(filePath);
+
+        // 2. Restricted to designated directory
+        return `uploads/digital_products/${baseName}`;
     }
 }
 

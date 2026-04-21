@@ -430,7 +430,7 @@ class WhatsAppService {
         this._validateOrderPayload(order);
         const isSeller = recipientRole === 'seller';
 
-        const { orderNumber, totalAmount, buyer, seller, service, items, booking, location: loc, payment, type, fulfillmentType, downloadUrl, status } = order;
+        const { orderNumber, totalAmount, buyer, seller, service, items, booking, location: loc, payment, type, fulfillmentType, downloadUrl, downloadUrls, status } = order;
 
         // Context Flags
         const isDigital = (type || '').toUpperCase() === 'DIGITAL';
@@ -476,7 +476,11 @@ ${booking?.date ? `📅 *Date:* ${booking.date}\n` : ''}${booking?.time ? `🕒 
         const isSystemDelivery = isPhysical && !hasPhysicalShop;
 
         if (isDigital && !isSeller) {
-            locationDetails = `🔗 *Download:* ${downloadUrl || 'Link will be sent via email'}\n`;
+            if (downloadUrls && downloadUrls.length > 1) {
+                locationDetails = `🔗 *Downloads:*\n${downloadUrls.map(dl => `- ${dl.name}: ${dl.url}`).join('\n')}\n`;
+            } else {
+                locationDetails = `🔗 *Download:* ${downloadUrl || 'Link will be sent via email'}\n`;
+            }
         }
         else if (isSystemDelivery) {
             locationDetails = isSeller ? `📦 *Drop-off at:* ${this.DROPOFF_LOCATION}\n` : `📦 *Pick-up from:* ${this.DROPOFF_LOCATION}\n`;

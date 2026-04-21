@@ -1071,16 +1071,42 @@ class OrderService {
   static async _completeDigitalOrder(client, order, items, payment) {
     logger.info(`[_completeDigitalOrder] Finalizing Order #${order.order_number}`);
 
-    // 1. Grant Digital Entitlement (The core change)
+    // 1. Grant Digital Entitlement
     await this._grantDigitalAccess(client, order.id, order.buyer_id, items);
 
     // 2. Finalize Inventory (If any limited digital stock)
     await this._finalizeInventory(client, items);
 
-    // 3. Digital orders are COMPLETED immediately
+    // 3. Construct Download URLs for Digital Items
+    const baseUrl = process.env.FRONTEND_URL || 'https://bybloshq.space';
+    const downloadUrls = items
+      .filter(item => item.is_digital)
+      .map(item => ({
+        productId: item.product_id,
+        name: item.product_name,
+        url: `${baseUrl}/api/orders/${order.id}/download/${item.product_id}`
+      }));
+
+    // Update order metadata with download URLs
+    if (downloadUrls.length > 0) {
+      const existingMetadata = order.metadata || {};
+      const updatedMetadata = {
+        ...existingMetadata,
+        download_urls: downloadUrls,
+        download_url: downloadUrls[0].url
+      };
+
+      await client.query(
+        'UPDATE product_orders SET metadata = $1 WHERE id = $2',
+        [JSON.stringify(updatedMetadata), order.id]
+      );
+      order.metadata = updatedMetadata;
+    }
+
+    // 4. Digital orders are COMPLETED immediately
     const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.COMPLETED, 'completed', payment.provider_reference);
 
-    // 4. Process Payout immediately
+    // 5. Process Payout immediately
     await this._processSellerPayout(client, updatedOrder);
 
     return { updatedOrder };
@@ -1808,6 +1834,7 @@ class OrderService {
       type: fullOrder.order_type,
       fulfillmentType: fullOrder.fulfillment_type,
       downloadUrl: metadata.download_url || metadata.downloadUrl || null,
+      downloadUrls: metadata.download_urls || metadata.downloadUrls || [],
       buyer: {
         name: fullOrder.buyer_name || 'Customer',
         phone: fullOrder.buyer_mobile_payment || 'N/A',
