@@ -440,6 +440,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     bookingDetails: any = null,
     buyerId?: string | number
   ) => {
+    // 0. Minimum Amount Validation (Payd documentation requirement)
+    if (product.price < 10) {
+      toast({
+        title: "Minimum Amount Not Met",
+        description: `Payd payments must be at least 10 KES. Current price: ${product.price} KES.`,
+        variant: "destructive"
+      });
+      setIsProcessingPurchase(false);
+      return;
+    }
+
     setIsProcessingPurchase(true);
     try {
       const activeBooking = bookingDetails || bookingData;

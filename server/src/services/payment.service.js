@@ -216,6 +216,18 @@ export class PaymentService {
                 callback_url
             } = paymentData;
 
+            // ============================================================
+            // STEP 0: VALIDATE AMOUNT (Minimum 10 KES per documentation)
+            // ============================================================
+            const numericAmount = Number.parseFloat(amount);
+            if (numericAmount < 10) {
+                throw new PaydError(
+                    `Minimum transaction amount is 10 KES. Requested: ${numericAmount} KES.`,
+                    PaydErrorCodes.INVALID_AMOUNT,
+                    400
+                );
+            }
+
             // Validate credentials
             if (!this.username || !this.password) {
                 throw new PaydError('Payd credentials not configured', PaydErrorCodes.CONFIG_ERROR);
@@ -252,7 +264,7 @@ export class PaymentService {
                     "https://bybloshq.space/api/payments/webhook/payd");
 
             const payload = {
-                username: this.payloadUsername,
+                username: this.username || this.payloadUsername, // PIN-DOC-01: Must use the account username
                 channel: "MPESA",
                 amount: Number.parseFloat(amount),
                 phone_number: normalizedPhone,
@@ -370,10 +382,10 @@ export class PaymentService {
             )
         }
 
-        // Final validation: must be 0[17]\d{8}
-        if (!/^0[17]\d{8}$/.test(digits)) {
+        // Phone number must be exactly 10 digits starting with 0 (e.g. 07XXXXXXXX)
+        if (!/^0\d{9}$/.test(digits)) {
             throw new PaydError(
-                `Phone number "${digits}" is not a valid Kenyan mobile number`,
+                `Invalid phone number format: "${phone}". Must be 10 digits starting with 0 (e.g. 0712345678)`,
                 PaydErrorCodes.INVALID_PHONE,
                 400
             )
