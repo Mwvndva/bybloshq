@@ -84,6 +84,9 @@ services:
       - baileys_auth:/app/baileys_auth_info
     networks:
       - byblos-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
 
   # Frontend
   frontend:

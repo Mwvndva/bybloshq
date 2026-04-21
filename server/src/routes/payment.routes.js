@@ -88,6 +88,11 @@ protectedRouter.post('/health/payd-agent/reset',
   paymentController.resetAgent
 );
 
+protectedRouter.get('/health/network',
+  hasPermission('manage-all'),
+  paymentController.checkNetwork
+);
+
 router.use(protectedRouter);
 
 export default router;
