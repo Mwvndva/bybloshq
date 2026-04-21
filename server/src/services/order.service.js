@@ -437,15 +437,36 @@ class OrderService {
       const updatedOrder = await Order.updateStatusWithReason(client, orderId, OrderStatus.CANCELLED, reason);
 
       if (updatedOrder) {
-        // 4. Update Buyer Refunds (Track cumulative refunds)
-        const refundAmount = Number.parseFloat(order.total_amount);
-        await client.query(
-          `UPDATE buyers 
-           SET refunds = COALESCE(refunds, 0) + $1,
-               updated_at = NOW()
-           WHERE id = $2`,
-          [refundAmount, order.buyer_id]
-        );
+        // 4. Update Buyer Refunds (XP-02: Only if payment was actually collected)
+        if (order.payment_status === 'completed') {
+          const refundAmount = Number.parseFloat(order.total_amount);
+          await client.query(
+            `UPDATE buyers 
+             SET refunds = COALESCE(refunds, 0) + $1,
+                 updated_at = NOW()
+             WHERE id = $2`,
+            [refundAmount, order.buyer_id]
+          );
+        }
+
+        // 5. Release Service Slot (SP-01)
+        if (order.order_type === OrderType.SERVICE) {
+          await client.query(
+            `UPDATE service_slots 
+             SET status = 'AVAILABLE', reserved_by_order_id = NULL, expires_at = NULL, updated_at = NOW()
+             WHERE reserved_by_order_id = $1`,
+            [orderId]
+          );
+          logger.info(`[SLOT-RELEASE] Released slot for cancelled Order ${orderId}`);
+        }
+
+        // 6. Release Physical Inventory
+        if (order.order_type === OrderType.PHYSICAL) {
+          const { rows: items } = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [orderId]);
+          // Map structure for _releaseInventory
+          const formattedItems = items.map(i => ({ productId: i.product_id, quantity: i.quantity, trackInventory: true }));
+          await this._releaseInventory(client, formattedItems);
+        }
       }
 
       await client.query('COMMIT');
@@ -764,6 +785,7 @@ class OrderService {
          WHERE 
            service_slots.status = 'AVAILABLE' 
            OR (service_slots.status = 'RESERVED' AND service_slots.expires_at < NOW())
+           OR (service_slots.reserved_by_order_id = $3)
        RETURNING id, status`,
       [productId, timeSlot, orderId]
     );
@@ -1077,10 +1099,10 @@ class OrderService {
     // 2. Finalize Inventory (If any limited digital stock)
     await this._finalizeInventory(client, items);
 
-    // 3. Construct Download URLs for Digital Items
+    // 3. Construct Download URLs for Digital Items (DP-01: Fix property naming)
     const baseUrl = process.env.FRONTEND_URL || 'https://bybloshq.space';
     const downloadUrls = items
-      .filter(item => item.is_digital)
+      .filter(item => item.isDigital || item.is_digital)
       .map(item => ({
         productId: item.product_id,
         name: item.product_name,
@@ -1188,11 +1210,11 @@ class OrderService {
 
           const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
-          // 3. Notify Stakeholders
+          // 3. Notify Stakeholders (SP-04: Fix undefined newStatus)
           whatsappService.notifySellerStatusUpdate({
             seller: normalizedOrder.seller,
             order: normalizedOrder,
-            newStatus,
+            newStatus: OrderStatus.COMPLETED,
             oldStatus: OrderStatus.COLLECTION_PENDING, // Context-specific
             notes: 'Status updated via dashboard'
           }).catch(err => logger.error('Error sending status notification to seller:', err));
@@ -1200,7 +1222,7 @@ class OrderService {
           whatsappService.notifyBuyerStatusUpdate({
             buyer: normalizedOrder.buyer,
             order: normalizedOrder,
-            newStatus,
+            newStatus: OrderStatus.COMPLETED,
             seller: normalizedOrder.seller,
             notes: 'Status updated'
           }).catch(err => logger.error('Error sending status notification to buyer:', err));
@@ -1585,12 +1607,8 @@ class OrderService {
       return OrderStatus.COLLECTION_PENDING; // Pickup at shop
     }
 
-    if (fulfillmentType === FulfillmentType.COURIER) {
-      return OrderStatus.DELIVERY_PENDING; // Logistics handles it
-    }
-
-    // Fallback for legacy or unknown
-    return OrderStatus.COMPLETED;
+    // Default physical products to DELIVERY_PENDING if specifically COURIER or fulfillment indeterminate
+    return OrderStatus.DELIVERY_PENDING;
   }
 
   static _buildBuyerNotificationData(fullOrder) {

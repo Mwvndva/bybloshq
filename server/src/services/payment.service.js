@@ -222,25 +222,21 @@ export class PaymentService {
             }
 
             // ============================================================
-            // STEP 1: CHECK PLATFORM BALANCE (Optional but recommended)
+            // STEP 1: CHECK PLATFORM BALANCE (Optional, non-blocking)
+            // checkBalance() already returns null on failure — never throws.
             // ============================================================
-            try {
-                const balance = await this.checkBalance();
+            const balance = await this.checkBalance();
+            if (balance) {
                 logger.info('[PAYD-PAYIN] Platform balance check', {
                     available: balance.available_balance,
                     required: amount
                 });
-
                 if (Number.parseFloat(balance.available_balance) < Number.parseFloat(amount) * 1.1) {
-                    // Alert if balance is low (less than 110% of transaction amount)
                     logger.warn('[PAYD-PAYIN] Low platform balance', {
                         available: balance.available_balance,
                         required: amount
                     });
                 }
-            } catch (balanceError) {
-                // Don't block payment if balance check fails
-                logger.error('[PAYD-PAYIN] Balance check failed (non-critical)', balanceError);
             }
 
             // ============================================================
@@ -1026,8 +1022,10 @@ export class PaymentService {
         try {
             logger.info('[PAYD-BALANCE] Checking platform balance');
 
+            // Use a short 5-second timeout so a slow balance API never blocks payment initiation.
             const response = await this.client.get(`/accounts/${this.username}/all_balances`, {
                 baseURL: 'https://api.payd.money/api/v1',
+                timeout: 5000,
                 headers: {
                     'Authorization': this.getAuthHeader(),
                     'Accept': 'application/json'
@@ -1052,11 +1050,12 @@ export class PaymentService {
             };
 
         } catch (error) {
-            logger.error('[PAYD-BALANCE] Balance check failed', {
-                error: this._extractErrorDetails(error)
+            // Balance check is non-critical — log the error but return null instead of
+            // rethrowing so callers (initiatePayment) can safely skip the check.
+            logger.warn('[PAYD-BALANCE] Balance check failed (non-critical, skipping)', {
+                error: error.message || error.code
             });
-
-            throw this._handlePaydError(error);
+            return null;
         }
     }
 
