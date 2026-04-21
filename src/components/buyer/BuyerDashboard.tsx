@@ -380,12 +380,6 @@ function BuyerDashboard() {
 
   const handleBack = () => navigate(-1);
 
-  const tabs = [
-    { key: 'shop', label: 'Shop', Icon: Store },
-    { key: 'shops', label: 'My Shops', Icon: ShoppingBag },
-    { key: 'orders', label: 'Orders', Icon: Package },
-    { key: 'wishlist', label: 'Wishlist', Icon: Heart },
-  ];
 
   const navItems = [
     { key: 'home', label: 'Home', Icon: Home, path: '/' },
@@ -455,43 +449,7 @@ function BuyerDashboard() {
         </div>
       </div>
 
-      {/* Tab bar */}
-      <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
-        <div style={{
-          display: 'flex', background: '#141414',
-          borderRadius: 'var(--radius-md)', padding: 3, gap: 2,
-        }}>
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              style={{
-                flex: 1,
-                height: 34,
-                borderRadius: 9,
-                border: 'none',
-                background: activeSection === tab.key ? '#1C1C1C' : 'transparent',
-                color: activeSection === tab.key ? '#fff' : 'rgba(255,255,255,0.45)',
-                fontSize: 11,
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'all 0.18s ease',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                whiteSpace: 'nowrap',
-              }}
-            >
-              <tab.Icon
-                size={13}
-                color={activeSection === tab.key ? '#F5C518' : 'rgba(255,255,255,0.45)'}
-              />
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
+
 
       {/* Search bar */}
       {(activeSection === 'shop' || activeSection === 'shops') && (
