@@ -49,7 +49,6 @@ export class PaymentService {
             maxFreeSockets: 10,           // ✅ Keep 10 idle sockets ready
             timeout: 25000,               // ✅ MUST be less than axios timeout (30s)
             scheduling: 'lifo',           // ✅ Reuse most recent socket
-            family: 4,                    // ✅ FORCE IPv4 to prevent socket hang up
             rejectUnauthorized: true,      // ✅ Enforce SSL verification
             ca: process.env.PAYD_CA_CERT_PATH ? fs.readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
         });
@@ -1152,6 +1151,53 @@ export class PaymentService {
                 message: error.message
             };
         }
+    }
+
+    /**
+     * Check container networking (DNS + HTTPS) to Google and Payd
+     * @returns {Promise<Object>}
+     */
+    async getNetworkStatus() {
+        const targets = [
+            { name: 'google', host: 'google.com', url: 'https://google.com' },
+            { name: 'payd', host: 'api.payd.money', url: `${this.baseUrl}/payments` }
+        ];
+
+        const results = {};
+
+        for (const target of targets) {
+            const result = { dns: 'unknown', https: 'unknown' };
+
+            // DNS Check
+            try {
+                const lookup = await new Promise((resolve, reject) => {
+                    dns.lookup(target.host, (err, address) => {
+                        if (err) reject(err);
+                        else resolve(address);
+                    });
+                });
+                result.dns = `ok (${lookup})`;
+            } catch (err) {
+                result.dns = `failed (${err.code || err.message})`;
+            }
+
+            // HTTPS Check (GET request)
+            try {
+                const startTime = Date.now();
+                // Use default axios client for simple head check
+                await axios.get(target.url, {
+                    timeout: 5000,
+                    validateStatus: () => true // Accept any status
+                });
+                result.https = `ok (${Date.now() - startTime}ms)`;
+            } catch (err) {
+                result.https = `failed (${err.code || err.message})`;
+            }
+
+            results[target.name] = result;
+        }
+
+        return results;
     }
 
     /**

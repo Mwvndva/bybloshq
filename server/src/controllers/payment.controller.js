@@ -167,6 +167,27 @@ class PaymentController {
       });
     }
   }
+
+  /**
+   * Check container networking
+   */
+  async checkNetwork(req, res) {
+    try {
+      const results = await paymentService.getNetworkStatus();
+      res.status(200).json({
+        status: 'success',
+        data: results,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      logger.error('Network check failed:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Network check failed',
+        error: error.message
+      });
+    }
+  }
 }
 
 export default new PaymentController();
