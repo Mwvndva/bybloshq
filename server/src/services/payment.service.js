@@ -47,11 +47,26 @@ export class PaymentService {
             keepAliveMsecs: 30000,        // ✅ Keep alive for 30s
             maxSockets: 50,               // ✅ Max concurrent connections
             maxFreeSockets: 10,           // ✅ Keep 10 idle sockets ready
-            timeout: 90000,               // ✅ Increased timeout to 90s
+            timeout: 25000,               // ✅ MUST be less than axios timeout (30s)
             scheduling: 'lifo',           // ✅ Reuse most recent socket
             family: 4,                    // ✅ FORCE IPv4 to prevent socket hang up
             rejectUnauthorized: true,      // ✅ Enforce SSL verification
             ca: process.env.PAYD_CA_CERT_PATH ? fs.readFileSync(process.env.PAYD_CA_CERT_PATH) : undefined
+        });
+
+        // ✅ FIX 3a: Destroy sockets that have been idle for too long (prevent stale connection reuse)
+        this.httpsAgent.on('free', (socket) => {
+            if (socket.destroyed) return;
+            const age = Date.now() - (socket._creationTime || Date.now());
+            if (age > 60000) {
+                logger.debug('[HTTPS-AGENT] Destroying stale socket (age > 60s)');
+                socket.destroy();
+            }
+        });
+
+        // ✅ FIX 3b: Tag each socket with its creation time
+        this.httpsAgent.on('connect', (socket) => {
+            socket._creationTime = Date.now();
         });
 
         // Monitor agent health
@@ -62,7 +77,7 @@ export class PaymentService {
         logger.info('[HTTPS-AGENT] Configured with connection pooling', {
             keepAlive: true,
             maxSockets: 50,
-            keepAliveMsecs: 30000
+            timeout: 25000
         });
 
         // Create axios instance with optimized config (for legacy methods or GET calls)
@@ -72,7 +87,7 @@ export class PaymentService {
                 'Content-Type': 'application/json',
                 'User-Agent': 'Byblos/1.1 (Axios)',
             },
-            timeout: 60000,
+            timeout: 30000,               // ✅ Reduced from 60000 to improve UX
             httpsAgent: this.httpsAgent
         });
     }
@@ -291,10 +306,12 @@ export class PaymentService {
                         headers: {
                             'Authorization': this.getAuthHeader(),
                             'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        }
+                            'Accept': 'application/json',
+                            'Connection': 'keep-alive',
+                        },
+                        timeout: 30000, // Explicitly set for initiation
                     });
-                }, 3, 1000);
+                }, 1, 2000); // ✅ Reduced from 3 retries to prevent double STK push
             } catch (error) {
                 logger.error('[PAYD-PAYIN] API Request Failed', {
                     error: error.message,
@@ -341,11 +358,23 @@ export class PaymentService {
         } catch (error) {
             const duration = Date.now() - startTime;
 
-            logger.error('[PAYD-PAYIN] Payment initiation failed', {
+            // ✅ FIX 4: Detailed diagnostic logging for payment orientation
+            const errorDetail = {
                 duration: `${duration}ms`,
                 invoice_id: paymentData.invoice_id,
-                error: this._extractErrorDetails(error)
-            });
+                errorCode: error.code,
+                errorMessage: error.message,
+                isAxiosError: !!error.isAxiosError,
+                hasResponse: !!error.response,
+                responseStatus: error.response?.status,
+                responseData: error.response?.data ? JSON.stringify(error.response.data) : null,
+                isTimeout: error.code === 'ECONNABORTED' || error.message?.includes('timeout'),
+                isConnRefused: error.code === 'ECONNREFUSED',
+                isConnReset: error.code === 'ECONNRESET',
+                isDNSFail: error.code === 'ENOTFOUND',
+            };
+
+            logger.error('[PAYD-PAYIN] Payment initiation failed — detailed diagnostics:', errorDetail);
 
             throw this._handlePaydError(error);
         }
