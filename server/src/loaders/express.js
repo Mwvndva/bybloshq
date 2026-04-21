@@ -151,6 +151,11 @@ export default async (app) => {
 
     // 6. CSRF Middleware with exclusions
     app.use((req, res, next) => {
+        // CSRF DEBUG LOGGING (Root Cause 6)
+        if (req.method === 'POST') {
+            logger.debug(`[CSRF-DEBUG] POST ${req.path} | cookie: ${!!req.cookies['csrf-token-v2']} | header: ${!!req.headers['x-csrf-token']}`);
+        }
+
         // Ensure a CSRF session ID exists for non-GET requests if use SessionID as identifier
         if (!req.cookies['csrf-session-id'] && req.method !== 'GET') {
             // This will be set by the /csrf-token route, but we add a safety check
@@ -158,6 +163,7 @@ export default async (app) => {
 
         const isExcluded =
             req.path.startsWith('/api/payments/webhook') ||
+            req.path.startsWith('/api/payments/initiate-product') ||
             req.path.startsWith('/api/callbacks/') ||
             req.path.startsWith('/api/whatsapp/');
 
