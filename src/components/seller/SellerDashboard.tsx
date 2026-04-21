@@ -1574,8 +1574,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       Add Product
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none">
-                    <div className="bg-zinc-950 border border-white/10 rounded-[2.5rem] overflow-hidden shadow-2xl">
+                  <DialogContent className="w-full max-w-full sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none h-[100dvh] sm:h-auto overflow-hidden">
+                    <div className="bg-zinc-950 border-x border-y sm:border border-white/10 rounded-none sm:rounded-[2.5rem] h-full sm:h-auto overflow-hidden shadow-2xl flex flex-col">
                       <AddProductForm
                         onSuccess={() => {
                           fetchProducts();
