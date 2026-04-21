@@ -278,7 +278,7 @@ export class PaymentService {
                     "https://bybloshq.space/api/payments/webhook/payd");
 
             const payload = {
-                username: this.username || this.payloadUsername, // PIN-DOC-01: Must use the account username
+                username: this.payloadUsername, // PIN-DOC-01: Must use the account username (e.g., mwxndx)
                 channel: "MPESA",
                 amount: Number.parseFloat(amount),
                 phone_number: normalizedPhone,

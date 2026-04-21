@@ -496,7 +496,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       const response = await apiClient.post('/payments/initiate-product', payload);
       const data: any = response.data;
 
-      if (data.status === 'success') {
+      if (data.status === 'success' || data.success === true) {
         toast({
           title: 'STK Push Sent',
           description: 'Please check your phone to complete the payment.',
