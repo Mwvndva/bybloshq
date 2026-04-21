@@ -1071,32 +1071,16 @@ class OrderService {
   static async _completeDigitalOrder(client, order, items, payment) {
     logger.info(`[_completeDigitalOrder] Finalizing Order #${order.order_number}`);
 
-    // 1. Grant Digital Entitlement
+    // 1. Grant Digital Entitlement (The core change)
     await this._grantDigitalAccess(client, order.id, order.buyer_id, items);
 
-    // 2. Finalize Inventory
+    // 2. Finalize Inventory (If any limited digital stock)
     await this._finalizeInventory(client, items);
 
-    // 3. Generate Link (Direct to Buyer Dashboard / Orders)
-    const frontendUrl = process.env.FRONTEND_URL || 'https://byblos.co.ke';
-    const downloadUrl = `${frontendUrl}/buyer/orders`;
+    // 3. Digital orders are COMPLETED immediately
+    const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.COMPLETED, 'completed', payment.provider_reference);
 
-    // 4. Update order with COMPLETED status and download URL in metadata
-    const metadataOverride = {
-      download_url: downloadUrl,
-      is_digital: true
-    };
-
-    const updatedOrder = await Order.updateStatusWithSideEffects(
-      client,
-      order.id,
-      OrderStatus.COMPLETED,
-      'completed',
-      payment.provider_reference,
-      metadataOverride
-    );
-
-    // 5. Process Payout immediately
+    // 4. Process Payout immediately
     await this._processSellerPayout(client, updatedOrder);
 
     return { updatedOrder };
@@ -1846,7 +1830,7 @@ class OrderService {
         }
       },
       service: {
-        id: metadata.product_id || (items?.[0]?.product_id || items?.[0]?.id),
+        id: fullOrder.metadata?.product_id || (items?.[0]?.product_id || items?.[0]?.id),
         title: fullOrder.service_title || 'Service',
         price: Number.parseFloat(fullOrder.total_amount || 0) / Number.parseInt(fullOrder.total_quantity || 1),
         quantity: Number.parseInt(fullOrder.total_quantity || 1),

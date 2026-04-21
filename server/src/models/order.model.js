@@ -587,14 +587,13 @@ class Order {
     return rows[0];
   }
 
-  static async updateStatusWithSideEffects(client, orderId, status, paymentStatus, paymentReference = null, metadataOverride = null) {
+  static async updateStatusWithSideEffects(client, orderId, status, paymentStatus, paymentReference = null) {
     const query = `
       UPDATE product_orders 
       SET 
         status = $1::order_status,
         payment_status = $2::payment_status,
         payment_reference = COALESCE($3, payment_reference),
-        metadata = CASE WHEN $5::jsonb IS NOT NULL THEN COALESCE(metadata, '{}'::jsonb) || $5::jsonb ELSE metadata END,
         updated_at = NOW(),
         paid_at = CASE WHEN $2::payment_status = 'completed'::payment_status AND paid_at IS NULL THEN NOW() ELSE paid_at END,
         completed_at = CASE WHEN $1::text = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END,
@@ -603,7 +602,7 @@ class Order {
       RETURNING *
     `;
     const executor = client || pool;
-    const { rows } = await executor.query(query, [status, paymentStatus, paymentReference, orderId, metadataOverride ? JSON.stringify(metadataOverride) : null]);
+    const { rows } = await executor.query(query, [status, paymentStatus, paymentReference, orderId]);
     return rows[0];
   }
 
