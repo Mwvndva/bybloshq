@@ -340,6 +340,7 @@ class OrderService {
                   b.latitude AS buyer_latitude, b.longitude AS buyer_longitude,
                   COALESCE(s.full_name, u.email, 'Unknown Seller') as seller_name, 
                   COALESCE(s.whatsapp_number, NULL) as seller_phone, 
+                  s.whatsapp_number as seller_whatsapp, 
                   COALESCE(s.email, u.email) as seller_email, 
                   s.physical_address as seller_address, s.shop_name,
                   s.latitude as seller_latitude, s.longitude as seller_longitude,
@@ -476,7 +477,7 @@ class OrderService {
         const fullOrderResult = await pool.query(
           `SELECT o.*, 
                   b.full_name as buyer_name_actual, b.mobile_payment as buyer_phone_actual, b.whatsapp_number as buyer_whatsapp_actual, b.email as buyer_email_actual,
-                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.email as seller_email, s.physical_address as seller_address
+                  s.full_name as seller_name, s.whatsapp_number as seller_phone, s.whatsapp_number as seller_whatsapp, s.email as seller_email, s.physical_address as seller_address
            FROM product_orders o
            LEFT JOIN buyers b ON o.buyer_id = b.id
            LEFT JOIN sellers s ON o.seller_id = s.id
