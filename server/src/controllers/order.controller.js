@@ -376,23 +376,31 @@ export const downloadDigitalProduct = async (req, res) => {
         // Security: Robust path resolution and traversal prevention
         const fileNameOnly = path.basename(digitalFilePath);
 
-        // Use synchronous check for simpler logic during path detection or fs.promises
-        const fsPromises = require('fs').promises;
-
         // Root detection: The files are in server/uploads/digital_products
-        let baseDir = path.join(process.cwd(), 'server', 'uploads', 'digital_products');
+        // Check multiple possible paths based on common execution environments
+        const possiblePaths = [
+            path.join(process.cwd(), 'server', 'uploads', 'digital_products'),
+            path.join(process.cwd(), 'uploads', 'digital_products'),
+            path.join(process.cwd(), '..', 'uploads', 'digital_products'),
+            path.join(process.cwd(), '..', 'server', 'uploads', 'digital_products')
+        ];
 
-        try {
-            await fsPromises.access(baseDir);
-        } catch (e) {
-            // Fallback to relative uploads if not in server/
-            const altDir = path.join(process.cwd(), 'uploads', 'digital_products');
+        let baseDir = possiblePaths[0]; // Default
+        let foundDir = false;
+
+        for (const p of possiblePaths) {
             try {
-                await fsPromises.access(altDir);
-                baseDir = altDir;
+                await fs.access(p);
+                baseDir = p;
+                foundDir = true;
+                break;
             } catch (err) {
-                logger.error(`[DOWNLOAD] All upload directories missing: ${baseDir}, ${altDir}`);
+                // Continue to next path
             }
+        }
+
+        if (!foundDir) {
+            logger.warn(`[DOWNLOAD] Could not find digital_products directory in any of: ${possiblePaths.join(', ')}`);
         }
 
         const absolutePath = path.resolve(baseDir, fileNameOnly);
@@ -409,7 +417,7 @@ export const downloadDigitalProduct = async (req, res) => {
         try {
             await fs.access(absolutePath);
         } catch {
-            logger.error(`[DOWNLOAD] File not found on disk: ${absolutePath}`);
+            logger.error(`[DOWNLOAD] File not found on disk at: ${absolutePath}`);
             return res.status(404).json({ status: 'error', message: 'File not found on server' });
         }
 
