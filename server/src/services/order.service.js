@@ -355,51 +355,33 @@ class OrderService {
 
         if (fullOrderResult.rows.length > 0) {
           const fullOrder = fullOrderResult.rows[0];
-          const buyerData = {
-            name: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-            phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual,
-            whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-            email: fullOrder.buyer_email || fullOrder.buyer_email_actual,
-            latitude: fullOrder.buyer_latitude,
-            longitude: fullOrder.buyer_longitude
-          };
-          const sellerData = {
-            name: fullOrder.seller_name,
-            whatsapp_number: fullOrder.seller_phone,
-            phone: fullOrder.seller_phone,
-            email: fullOrder.seller_email,
-            physicalAddress: fullOrder.seller_address,
-            shopName: fullOrder.shop_name,
-            latitude: fullOrder.seller_latitude,
-            longitude: fullOrder.seller_longitude,
-            instagram_link: fullOrder.instagram_link,
-            tiktok_link: fullOrder.tiktok_link,
-            facebook_link: fullOrder.facebook_link
-          };
+
+          // Re-fetch items for complete details
+          const itemsResult = await pool.query(
+            `SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.name as product_name
+             FROM order_items oi
+             LEFT JOIN products p ON oi.product_id = p.id
+             WHERE oi.order_id = $1`,
+            [orderId]
+          );
+
+          const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, itemsResult.rows);
 
           const notificationPayload = {
-            buyer: buyerData,
-            seller: sellerData,
-            order: {
-              orderNumber: fullOrder.order_number,
-              totalAmount: fullOrder.total_amount,
-              status: newStatus,
-              type: fullOrder.order_type,
-              fulfillmentType: fullOrder.fulfillment_type,
-              metadata: fullOrder.metadata
-            },
-            location: {
-              address: fullOrder.location_address,
-              lat: fullOrder.location_lat,
-              lng: fullOrder.location_lng
-            },
+            buyer: normalizedOrder.buyer,
+            seller: normalizedOrder.seller,
+            order: normalizedOrder,
+            location: normalizedOrder.location,
             oldStatus: currentStatus,
             newStatus: newStatus,
             notes: 'Status updated by seller'
           };
 
           whatsappService.notifyBuyerStatusUpdate(notificationPayload)
-            .catch(err => logger.error('Error sending status update notification:', err));
+            .catch(err => logger.error('Error sending status update notification to buyer:', err));
+
+          whatsappService.notifySellerStatusUpdate(notificationPayload)
+            .catch(err => logger.error('Error sending status update notification to seller:', err));
         }
       } catch (e) {
         logger.error('Error sending status notification:', e);
@@ -1712,6 +1694,13 @@ class OrderService {
 
       // WHATSAPP NOTIFICATIONS (Once-only for Buyer/Seller)
       if (!fullOrder.notification_sent) {
+        // Enforce re-parsing for digital properties if missing in normalized payload
+        if (fullOrder.order_type === 'DIGITAL') {
+          const freshMeta = typeof fullOrder.metadata === 'string' ? JSON.parse(fullOrder.metadata) : (fullOrder.metadata || {});
+          normalizedOrder.downloadUrl = freshMeta.download_url || freshMeta.downloadUrl || null;
+          normalizedOrder.downloadUrls = freshMeta.download_urls || freshMeta.downloadUrls || [];
+        }
+
         whatsappService.notifyBuyerOrderConfirmation(normalizedOrder).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
         whatsappService.notifySellerNewOrder(normalizedOrder).catch(e => logger.error('[ORDER] Seller notification failed:', e));
 

@@ -374,13 +374,26 @@ export const downloadDigitalProduct = async (req, res) => {
         }
 
         // Security: Robust path resolution and traversal prevention
-        const baseDir = path.join(process.cwd(), 'uploads', 'digital_products');
         const fileNameOnly = path.basename(digitalFilePath);
-        const absolutePath = path.join(baseDir, fileNameOnly);
 
-        // Extra guard: Ensure the resolved path is still within baseDir
-        if (!absolutePath.startsWith(baseDir)) {
-            logger.warn(`[DOWNLOAD-SECURITY] Traversal attempt blocked: ${digitalFilePath}`);
+        // FIX: Account for the fact that the server might be run from the workspace root OR server directory
+        let baseDir = path.join(process.cwd(), 'uploads', 'digital_products');
+        if (!fs.access(baseDir).catch(() => false)) {
+            // If not found in CWD /uploads, check /server/uploads
+            const fallbackDir = path.join(process.cwd(), 'server', 'uploads', 'digital_products');
+            try {
+                await fs.access(fallbackDir);
+                baseDir = fallbackDir;
+            } catch (err) {
+                // Keep the original baseDir if both fail, the check below will handle it
+            }
+        }
+
+        const absolutePath = path.resolve(baseDir, fileNameOnly);
+
+        // Extra guard: Ensure the resolved path is still within a valid uploads directory
+        if (!absolutePath.includes('digital_products')) {
+            logger.warn(`[DOWNLOAD-SECURITY] Traversal attempt blocked or invalid path: ${digitalFilePath}`);
             return res.status(403).json({ status: 'error', message: 'Access denied: Invalid file path' });
         }
 
