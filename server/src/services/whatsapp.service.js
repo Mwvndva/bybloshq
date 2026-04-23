@@ -298,18 +298,23 @@ class WhatsAppService {
             let longitude = lng;
 
             if (typeof name === 'object' && name !== null) {
+                // If the first argument is an object (common in current usage)
                 const loc = name;
-                latitude = loc.latitude || loc.lat;
-                longitude = loc.longitude || loc.lng;
+                latitude = loc.latitude !== undefined ? loc.latitude : loc.lat;
+                longitude = loc.longitude !== undefined ? loc.longitude : loc.lng;
             }
 
-            // Strict check: Only return a link if coordinates are provided
+            // Strict check: Only return a link if both coordinates are provided and valid
             if (latitude !== null && latitude !== undefined && longitude !== null && longitude !== undefined) {
                 const finalLat = Number(latitude);
                 const finalLng = Number(longitude);
 
-                if (!isNaN(finalLat) && !isNaN(finalLng)) {
-                    return `https://www.google.com/maps/search/?api=1&query=${finalLat},${finalLng}`;
+                if (!isNaN(finalLat) && !isNaN(finalLng) && (finalLat !== 0 || finalLng !== 0)) {
+                    // Use a more descriptive search query if name is available, otherwise just coords
+                    const query = (typeof name === 'string' && name)
+                        ? encodeURIComponent(`${name}, ${address || ''}`)
+                        : `${finalLat},${finalLng}`;
+                    return `https://www.google.com/maps/search/?api=1&query=${query}`;
                 }
             }
 
@@ -369,14 +374,14 @@ class WhatsAppService {
         if (['CONFIRMED', 'PAID', 'PENDING', 'RESERVED'].includes(status)) {
             if (isBuyer) {
                 if (isDigital) return "👉 *Next Step:* Click the download link below to access your product.";
-                if (isSystemDelivery) return "⏳ *Next Step:* The seller is dropping off your item at our hub. Hub arrival takes 1-2 days. Please wait for the 'Arrived' notification.";
-                if (isShopPickup) return "⏳ *Next Step:* The seller is preparing your item. We'll notify you the moment it's ready for collection at the shop.";
-                if (isMobileService) return "⏳ *Next Step:* Booking confirmed! Please be at your location at the scheduled time to receive the service.";
-                if (isShopService) return "⏳ *Next Step:* Booking confirmed! Please visit the shop at the scheduled time for your service.";
+                if (isSystemDelivery) return "⏳ *Next Step:* The seller has been notified to drop off your item at our hub. We'll alert you when it arrives!";
+                if (isShopPickup) return "⏳ *Next Step:* The seller is preparing your items. You'll receive a notification the moment they are ready for collection at the shop.";
+                if (isMobileService) return "⏳ *Next Step:* Appointment confirmed! The professional will visit your location at the scheduled time.";
+                if (isShopService) return "⏳ *Next Step:* Appointment confirmed! Please visit the shop at the scheduled time for your service.";
             } else {
-                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 48 hours to complete fulfillment.`;
-                if (isShopPickup) return "👉 *Next Step:* Prepare the items for the buyer's pickup. Update status to 'Ready for Collection' once packed.";
-                if (isMobileService) return "👉 *Next Step:* Prepare your tools and proceed to the buyer's location at the scheduled time.";
+                if (isSystemDelivery) return `📦 *Next Step:* Please drop off the items at ${this.DROPOFF_LOCATION} within 48 hours to initiate delivery.`;
+                if (isShopPickup) return "👉 *Next Step:* Prepare the items. Once ready, update status to 'Ready for Collection' in your dashboard.";
+                if (isMobileService) return "👉 *Next Step:* Please proceed to the buyer's location at the scheduled time to provide the service.";
                 if (isShopService) return "👉 *Next Step:* Prepare for the buyer's arrival at your shop at the scheduled time.";
             }
         }
@@ -384,46 +389,46 @@ class WhatsAppService {
         // 2. PROCESSING
         if (status === 'PROCESSING') {
             if (isBuyer) {
-                return isService ? "⏳ *Next Step:* The seller is now preparing for your service appointment." : "⏳ *Next Step:* The seller is currently packing your items. Dispatch notification coming soon!";
+                return isService ? "⏳ *Next Step:* The professional is now preparing for your service appointment." : "⏳ *Next Step:* The seller is currently packing your items. Dispatch notification coming soon!";
             }
-            return "👉 *Next Step:* Proceed with preparation. Update status to 'Delivery Pending' or 'Ready for Collection' when done.";
+            return "👉 *Next Step:* Finalize preparation and update status to 'Ready for Collection' or 'Delivery Pending'.";
         }
 
         // 3. DELIVERY / DISPATCH
         if (status === 'DELIVERY_PENDING') {
             if (isBuyer) {
-                if (isSystemDelivery) return "🚚 *Next Step:* Your order is en route to our hub. Stay tuned for the 'Arrived at Hub' notification before visiting.";
+                if (isSystemDelivery) return "🚚 *Next Step:* Your order is en route to our hub. Please wait for the 'Arrived at Hub' notification before visiting.";
                 return "🚚 *Next Step:* Your order is on its way! Please be ready to receive it.";
             }
-            return isSystemDelivery ? "👉 *Next Step:* Item dispatched to hub. Logistics tracking initiated." : "🚚 *Next Step:* Proceed with the delivery to the buyer.";
+            return isSystemDelivery ? "✅ *Next Step:* Item successfully received for hub delivery. Logistics tracking is active." : "🚚 *Next Step:* Proceed with the delivery to the buyer's address.";
         }
 
         // 4. COLLECTION (READY)
         if (status === 'COLLECTION_PENDING' || status === 'READY_FOR_COLLECTION') {
             if (isBuyer) {
-                if (isShopPickup || isShopService) return "📍 *Next Step:* YOUR ORDER IS READY! Please visit the shop now to collect.";
-                if (isSystemDelivery) return `📍 *Next Step:* ARRIVED AT HUB! Your order is ready. Visit ${this.DROPOFF_LOCATION} now to collect.`;
+                if (isShopPickup || isShopService) return "📍 *Next Step:* YOUR ORDER IS READY! Please visit the shop now to collect/receive service.";
+                if (isSystemDelivery) return `📍 *Next Step:* ARRIVED AT HUB! Your order is ready for pickup at ${this.DROPOFF_LOCATION}.`;
             }
-            return "👉 *Next Step:* Buyer has been notified. Hand over the items/service and mark as 'Completed'.";
+            return "👉 *Next Step:* Buyer has been notified. Hand over the items/service and ensure they mark the order as 'Completed'.";
         }
 
         // 5. SERVICE EN ROUTE / PENDING CONFIRMATION
         if (status === 'SERVICE_PENDING') {
             if (isBuyer) {
-                return "⏳ *Next Step:* Waiting for the professional to confirm your booking. You'll receive a notification once they are ready to proceed.";
+                return "⏳ *Next Step:* Waiting for the professional to finalize the service booking details.";
             }
-            return "👉 *Next Step:* YOU HAVE A NEW BOOKING! Please confirm the appointment in your dashboard to initiate the service.";
+            return "👉 *Next Step:* NEW SERVICE BOOKING! Please confirm and finalize the appointment in your dashboard.";
         }
 
         // 6. COMPLETED / DELIVERED
         if (status === 'COMPLETED' || status === 'DELIVERY_COMPLETE') {
             if (isBuyer) {
                 if (isSystemDelivery && status === 'DELIVERY_COMPLETE') {
-                    return `📍 *Next Step:* YOUR ORDER HAS ARRIVED AT THE HUB! Visit ${this.DROPOFF_LOCATION} now to collect your package.`;
+                    return `📍 *Notice:* Your order has arrived at our hub (${this.DROPOFF_LOCATION}). Please collect it at your earliest convenience.`;
                 }
-                return "🎉 *Next Step:* Transaction successful! Thank you for choosing Byblos.";
+                return "🎉 *Notice:* Order successfully completed. Thank you for choosing Byblos!";
             }
-            return "✅ *Status:* Order finalized. Funds have been released to your wallet. Thank you!";
+            return "✅ *Status:* Transaction finalized. Funds have been credited to your wallet.";
         }
 
         return "";

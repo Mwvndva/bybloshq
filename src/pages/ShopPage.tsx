@@ -202,7 +202,7 @@ const ShopPage = () => {
           <img
             src={getImageUrl(sellerInfo.bannerImage)}
             alt={`${sellerInfo.shopName || 'Shop'} Banner`}
-            className="w-full h-full object-cover animate-slow-zoom"
+            className="w-full h-full object-cover sm:animate-slow-zoom"
             onError={(e) => {
               console.error('Error loading banner image:', e);
               e.currentTarget.src = defaultBanner;
@@ -234,7 +234,7 @@ const ShopPage = () => {
 
         {/* Hero Content */}
         <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-6 sm:p-8 sm:pb-10">
-          <div className="max-w-7xl mx-auto flex flex-col items-start text-left space-y-2 animate-fade-in-up">
+          <div className="max-w-7xl mx-auto flex flex-col items-start text-left space-y-2 sm:animate-fade-in-up">
             {/* Shop Name */}
             <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl">
               {sellerInfo?.shopName || 'Shop'}

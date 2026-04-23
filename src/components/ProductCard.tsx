@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart, ExternalLink, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Store, Image as ImageIcon, FileText, Handshake, Calendar, MapPin, Loader2, Heart, ShoppingCart, ExternalLink, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Product, Seller } from '@/types';
 import { useWishlist } from '@/contexts/WishlistContext';
@@ -589,7 +589,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     <Card
       className={cn(
         'group relative overflow-hidden transition-all duration-700 backdrop-blur-md border-0 rounded-2xl sm:rounded-[2rem]',
-        isSold ? 'opacity-60' : 'hover:-translate-y-3 hover:scale-[1.03]',
+        isSold ? 'opacity-60' : 'sm:hover:-translate-y-3 sm:hover:scale-[1.03]',
         'cursor-pointer',
         themeClasses.card
       )}
@@ -664,7 +664,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <ProductImage
           src={product.image_url}
           alt={product.name}
-          className="w-full aspect-[3/4] transition-transform duration-700 group-hover:scale-105"
+          className="w-full aspect-[3/4] transition-transform duration-700 sm:group-hover:scale-105"
         />
       </div>
 
@@ -692,22 +692,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </p>
 
         {product.description && (
-          <div className="relative group/desc h-10 overflow-hidden">
-            <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2 h-full text-sm sm:text-sm",
+          <div className="relative group/desc h-10 overflow-hidden mb-1.5 sm:mb-2">
+            <p className={cn("mobile-text leading-tight line-clamp-2 h-full text-[11px] sm:text-xs",
               (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
             )}>
               {product.description}
             </p>
-            {product.description.length > 60 && (
-              <span className={cn(
-                "absolute bottom-0 right-0 pl-10 text-[10px] sm:text-xs font-bold transition-colors group-hover/desc:text-yellow-500",
-                (theme === 'black' || theme === 'default' || forceWhiteText)
-                  ? "bg-gradient-to-l from-[#111] via-[#111] to-transparent text-yellow-500/80"
-                  : "bg-gradient-to-l from-[var(--theme-card-bg)] via-[var(--theme-card-bg)] to-transparent text-yellow-600"
-              )}>
-                ...
-              </span>
-            )}
           </div>
         )}
 
