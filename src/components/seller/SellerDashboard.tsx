@@ -245,10 +245,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<string | null>(null);
 
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
@@ -567,36 +564,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
 
   const handleDeleteProduct = async (id: string) => {
-    setProductToDelete(id);
-    setShowDeleteDialog(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!productToDelete) return;
-
-    try {
-      setDeletingId(productToDelete);
-      await sellerApi.deleteProduct(productToDelete);
-      setShowDeleteDialog(false);
-      setProductToDelete(null);
-
-      // Refresh only the products list (lighter than fetchData which also fetches analytics)
-      await fetchProducts();
-
-      toast({
-        title: 'Success',
-        description: 'Product deleted successfully',
-      });
-    } catch (error: any) {
-      console.error('Failed to delete product:', error);
-      toast({
-        title: 'Error',
-        description: error?.response?.data?.message || error?.message || 'Failed to delete product. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setDeletingId(null);
-    }
+    await sellerApi.deleteProduct(id);
   };
 
   const handleStatusUpdate = async (productId: string, newStatus: 'available' | 'sold') => {
@@ -634,7 +602,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   useEffect(() => {
     return () => {
       setUpdatingId(null);
-      setDeletingId(null);
     };
   }, []);
 
@@ -1953,45 +1920,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           </div>
         )}
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
-          <DialogHeader>
-            <DialogTitle className="text-white">Delete Product</DialogTitle>
-            <DialogDescription className="text-zinc-300">
-              Are you sure you want to delete this product? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowDeleteDialog(false);
-                setProductToDelete(null);
-              }}
-              disabled={!!deletingId}
-              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={confirmDelete}
-              disabled={!!deletingId}
-            >
-              {deletingId ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                'Delete'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* New Client OrderModal */}
       <NewClientOrderModal

@@ -198,6 +198,7 @@ export default function OrdersSection() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [downloadingOrderId, setDownloadingOrderId] = useState<string | null>(null);
+  const [downloadProgress, setDownloadProgress] = useState<Record<string, number>>({});
 
   const isDigitalOrder = (order: Order): boolean => {
     return !!(
@@ -218,12 +219,26 @@ export default function OrdersSection() {
 
     try {
       setDownloadingOrderId(order.id);
-      await buyerApi.downloadDigitalProduct(String(order.id), String(digitalItem.productId));
-      toast.success('Download Started. Your file is downloading.');
+      setDownloadProgress(prev => ({ ...prev, [order.id]: 0 }));
+
+      await buyerApi.downloadDigitalProduct(
+        String(order.id),
+        String(digitalItem.productId),
+        (percent) => {
+          setDownloadProgress(prev => ({ ...prev, [order.id]: percent }));
+        }
+      );
+
+      toast.success('Download Complete!');
     } catch (err: any) {
       toast.error(err.message || 'Could not download the file. Please try again.');
     } finally {
       setDownloadingOrderId(null);
+      setDownloadProgress(prev => {
+        const next = { ...prev };
+        delete next[order.id];
+        return next;
+      });
     }
   };
 
@@ -683,7 +698,9 @@ export default function OrdersSection() {
                         {downloadingOrderId === order.id ? (
                           <>
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            Downloading...
+                            {downloadProgress[order.id] !== undefined
+                              ? `Downloading ${downloadProgress[order.id]}%`
+                              : 'Preparing...'}
                           </>
                         ) : (
                           <>
