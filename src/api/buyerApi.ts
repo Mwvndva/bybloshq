@@ -659,10 +659,16 @@ const buyerApi = {
     }
   },
 
-  downloadDigitalProduct: async (orderId: string, productId: string): Promise<void> => {
+  downloadDigitalProduct: async (orderId: string, productId: string, onProgress?: (percent: number) => void): Promise<void> => {
     try {
       const response = await buyerApiInstance.get(`/orders/${orderId}/download/${productId}`, {
         responseType: 'blob', // Important for file downloads
+        onDownloadProgress: (progressEvent) => {
+          if (onProgress && progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress(percentCompleted);
+          }
+        },
       });
 
       // Create a blob URL and trigger download
