@@ -376,56 +376,61 @@ export const downloadDigitalProduct = async (req, res) => {
         // Security: Robust path resolution and traversal prevention
         const fileNameOnly = path.basename(digitalFilePath);
 
-        // Root detection: The files are in server/uploads/digital_products
+        logger.info(`[DOWNLOAD] Processing request for file: ${fileNameOnly} (Order: ${orderId})`);
+
         // Check multiple possible paths based on common execution environments
         const possiblePaths = [
             path.join(process.cwd(), 'server', 'uploads', 'digital_products'),
             path.join(process.cwd(), 'uploads', 'digital_products'),
             path.join(process.cwd(), '..', 'uploads', 'digital_products'),
-            path.join(process.cwd(), '..', 'server', 'uploads', 'digital_products')
+            path.join(process.cwd(), '..', 'server', 'uploads', 'digital_products'),
+            '/var/www/bybloshq/server/uploads/digital_products',
+            '/var/www/bybloshq/uploads/digital_products'
         ];
 
-        let baseDir = possiblePaths[0]; // Default
-        let foundDir = false;
+        let absolutePath = null;
+        let baseDir = null;
 
         for (const p of possiblePaths) {
+            const testPath = path.resolve(p, fileNameOnly);
             try {
-                await fs.access(p);
+                // Use synchronous check for speed in the loop, or stick to async for consistency
+                await fs.access(testPath);
+                absolutePath = testPath;
                 baseDir = p;
-                foundDir = true;
+                logger.info(`[DOWNLOAD] ✅ File found successfully at: ${absolutePath}`);
                 break;
             } catch (err) {
-                // Continue to next path
+                // Log failed path only in debug or if no match found at the end
             }
         }
 
-        if (!foundDir) {
-            logger.warn(`[DOWNLOAD] Could not find digital_products directory in any of: ${possiblePaths.join(', ')}`);
+        if (!absolutePath) {
+            logger.error(`[DOWNLOAD] ❌ File not found in any expected location for: ${fileNameOnly}`);
+            logger.error(`[DOWNLOAD] Checked locations: ${JSON.stringify(possiblePaths)}`);
+            return res.status(404).json({
+                status: 'error',
+                message: 'Digital file not found on server storage. Please ensure the file was uploaded correctly.',
+                debug: process.env.NODE_ENV !== 'production' ? { checkedLocations: possiblePaths, fileName: fileNameOnly } : undefined
+            });
         }
 
-        const absolutePath = path.resolve(baseDir, fileNameOnly);
-
-        // Extra guard: Ensure it's still inside digital_products
+        // Extra guard: Ensure it's still inside a digital_products directory
         if (!absolutePath.includes('digital_products')) {
-            logger.warn(`[DOWNLOAD-SECURITY] Traversal attempt blocked or invalid path: ${digitalFilePath}`);
+            logger.warn(`[DOWNLOAD-SECURITY] ⚠️ Traversal attempt blocked: ${absolutePath}`);
             return res.status(403).json({ status: 'error', message: 'Access denied: Invalid file path' });
         }
 
         const ext = path.extname(absolutePath).toLowerCase();
         const fileName = data.digital_file_name || `download${ext}`;
 
-        try {
-            await fs.access(absolutePath);
-        } catch {
-            logger.error(`[DOWNLOAD] File not found on disk at: ${absolutePath}`);
-            return res.status(404).json({ status: 'error', message: 'File not found on server' });
-        }
+        logger.info(`[DOWNLOAD] 🚀 Initiating file stream: ${fileName}`);
 
         return res.download(absolutePath, fileName, (err) => {
             if (err) {
-                logger.error(`[DOWNLOAD] Error sending file: ${err.message}`);
+                logger.error(`[DOWNLOAD] 💥 Stream interrupted for ${fileName}: ${err.message}`);
                 if (!res.headersSent) {
-                    res.status(500).json({ status: 'error', message: 'Failed to send file' });
+                    res.status(500).json({ status: 'error', message: 'Failed to complete download stream' });
                 }
             }
         });
