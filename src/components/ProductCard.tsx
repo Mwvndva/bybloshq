@@ -46,7 +46,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const isWishlistLoading = wishlistContext.isLoading;
 
   // Dialog state
-  const [isImageDialogOpen, setIsImageDialogOpen] = useState(false);
+
   const [isPhoneCheckModalOpen, setIsPhoneCheckModalOpen] = useState(false);
   const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
   const [currentPhone, setCurrentPhone] = useState('');
@@ -81,17 +81,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMounted = useRef(true); // FIX (Task 14): Prevent memory leaks / state updates on unmounted component
 
-  // Add cleanup on unmount
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-      if (pollingIntervalRef.current) {
-        clearInterval(pollingIntervalRef.current);
-      }
-    };
-  }, []);
-
   /**
    * FIX (Task 21): Normalize phone numbers before API calls
    * Converts +2547... to 07... and removes spaces
@@ -105,6 +94,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
     return normalized;
   };
+
+
 
   // Derived state
   const displaySeller = seller || product.seller;
@@ -198,22 +189,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     }
   };
 
-  const handleCardClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const isInteractiveElement =
-      target.closest('button') ||
-      target.closest('a') ||
-      target.closest('[role="button"]') ||
-      target.closest('input') ||
-      target.closest('textarea') ||
-      target.closest('select') ||
-      target.closest('[contenteditable="true"]') ||
-      target.closest('[tabindex]');
 
-    if (!isInteractiveElement) {
-      setIsImageDialogOpen(true);
-    }
-  };
 
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string; locationType?: string } | null>(null);
@@ -619,7 +595,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       )}
       style={themedCardStyle}
       aria-label={`Product: ${product.name}`}
-      onClick={handleCardClick}
+      onClick={(e) => e.stopPropagation()}
     >
 
       {/* Wishlist Button */}
@@ -693,12 +669,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       </div>
 
       <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-        <h3 className={cn("font-bold mb-0.5 sm:mb-1.5 line-clamp-1 h-5 sm:h-6 text-[13px] sm:text-base antialiased",
+        <h3 className={cn("font-bold mb-1 sm:mb-1.5 line-clamp-1 h-6 sm:h-6 text-base sm:text-base antialiased",
           (theme === 'black' || forceWhiteText) ? 'text-white' : 'text-black'
         )}>
           {product.name}
         </h3>
-        <p className={cn("font-black text-[13px] sm:text-base mb-0.5 sm:mb-1.5 flex items-center gap-1 sm:gap-2",
+        <p className={cn("font-black text-base sm:text-base mb-1 sm:mb-1.5 flex items-center gap-1.5 sm:gap-2",
           (product.product_type === 'service' || (product as any).productType === 'service')
             ? 'text-purple-600'
             : (forceWhiteText && theme === 'default') ? 'text-yellow-400' : themeClasses.price
@@ -717,7 +693,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
         {product.description && (
           <div className="relative group/desc h-10 overflow-hidden">
-            <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2 h-full",
+            <p className={cn("mobile-text leading-snug mb-1.5 sm:mb-2 line-clamp-2 h-full text-sm sm:text-sm",
               (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
             )}>
               {product.description}
@@ -740,8 +716,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           <div className={cn("flex items-start gap-1.5 mb-2 text-xs",
             (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
           )}>
-            <MapPin className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span className="line-clamp-2">
+            <MapPin className="h-4 w-4 mt-0.5 shrink-0" />
+            <span className="line-clamp-2 text-sm">
               {(product.service_options?.location_type === 'seller_visits_buyer' || (product as any).serviceOptions?.location_type === 'seller_visits_buyer') ? (
                 "Mobile Service"
               ) : (product.service_options?.location_type === 'hybrid' || (product as any).serviceOptions?.location_type === 'hybrid') ? (
@@ -757,9 +733,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         <div className={cn("flex items-center gap-1 sm:gap-1.5 pt-1.5 sm:pt-2 border-t mt-1.5 sm:mt-2",
           (theme === 'black' || forceWhiteText) ? 'border-gray-800' : 'border-gray-100'
         )}>
-          <Store className={cn("h-3 w-3 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
+          <Store className={cn("h-3.5 w-3.5 sm:h-3.5 sm:w-3.5", themeClasses.icon)} />
           <span
-            className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90 cursor-pointer hover:underline",
+            className={cn("mobile-text font-bold tracking-tight truncate flex-1 opacity-90 cursor-pointer hover:underline text-sm sm:text-xs",
               (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-800'
             )}
             onClick={(e) => {
@@ -844,9 +820,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           variant="default"
           size="default"
           className={cn(
-            'button-mobile w-full font-semibold transition-colors mt-2 sm:mt-2.5',
+            'button-mobile w-full h-12 sm:h-10 font-bold transition-colors mt-3 sm:mt-2.5',
             'focus-visible:ring-2 focus-visible:ring-offset-2',
-            'flex items-center justify-center gap-1.5 sm:gap-2',
+            'flex items-center justify-center gap-2 sm:gap-2 text-base sm:text-sm',
             'disabled:opacity-50 disabled:pointer-events-none',
             isSold
               ? 'bg-gray-400 hover:bg-gray-400'
@@ -896,141 +872,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </Button>
       </CardContent>
 
-      <Dialog open={isImageDialogOpen} onOpenChange={setIsImageDialogOpen}>
-        <DialogContent className="product-image-dialog w-[95vw] sm:max-w-5xl mx-auto max-h-[95dvh] flex flex-col p-0 bg-[#0a0a0a] border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-          <DialogHeader className="absolute top-0 left-0 w-full z-40 p-4 sm:p-6 pointer-events-none bg-gradient-to-b from-black/80 via-black/40 to-transparent">
-            <DialogTitle className="text-base sm:text-lg md:text-xl font-black flex items-center gap-2 text-white drop-shadow-md opacity-0 md:opacity-100 transition-opacity">
-              {isDigital && (
-                <FileText className="h-4 w-4 md:h-5 md:w-5 text-red-500" />
-              )}
-              <span className="pointer-events-auto">
-                {(isDigital && product.images && product.images.length > 0)
-                  ? `Document Preview: ${product.name}`
-                  : product.name
-                }
-              </span>
-            </DialogTitle>
-          </DialogHeader>
-          <div className="absolute right-4 top-4">
-            {/* The Dialog component automatically renders a generic close button, but we can style children or use DialogPrimitive.Close if we need more control. 
-                 Since we can't easily override the internal DialogContent close button without modifying the UI library component globally, 
-                 we can use the DialogClose exported from the library. */}
-          </div>
-          {/* We'll use CSS to target the internal close button since we don't want to change the global ui/dialog.tsx component. */}
 
-          <div
-            className="flex-1 w-full overflow-y-auto md:overflow-hidden flex flex-col md:grid md:grid-cols-2 relative custom-scrollbar"
-          >
-            {/* Left/Top: Image section */}
-            <div
-              className="relative flex flex-col justify-center bg-black/40 min-h-[40dvh] md:h-full group/modal cursor-pointer shrink-0"
-              onClick={() => setIsImageDialogOpen(false)}
-            >
-              <style>{`
-              .hide-scrollbar::-webkit-scrollbar { display: none; }
-              .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-            `}</style>
-              <div className="flex items-center justify-center w-full p-2 sm:p-4 pb-4">
-                {allImages.length > 0 && (
-                  <div className="relative w-full max-w-2xl bg-black/20 sm:bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
-                    <div
-                      ref={scrollRef}
-                      onScroll={handleScroll}
-                      className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar w-full h-full items-center"
-                      style={{ scrollBehavior: 'smooth' }}
-                    >
-                      {allImages.map((img, idx) => (
-                        <div key={img} className="relative w-full flex-none snap-center flex items-center justify-center h-full">
-                          <img
-                            src={getImageUrl(img)}
-                            alt={`${product.name} - Image ${idx + 1}`}
-                            className="max-w-full w-full h-full object-contain shadow-2xl"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.src = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MDAiIGhlaWdodD0iNjAwIiB2aWV3Qm94PSIwIDAgMjQgMjQiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2QwZDBkMCIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWltYWdlIj48cmVjdCB4PSIzIiB5PSIzIiB3aWR0aD0iMTgiIGhlaWdodD0iMTgiIHJ4PSIyIiByeT0iMiIvPjxjaXJjbGUgY3g9IjguNSIgY3k9IjguNSIgcj0iMS41Ii8+PHBvbHlsaW5lIHBvaW50cz0iMjEgMTUgMTYgMTAgNSAyMSIvPjwvc3ZnPg==';
-                            }}
-                          />
-                        </div>
-                      ))}
-                    </div>
-
-                    {allImages.length > 1 && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute left-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
-                          onClick={handlePrevImage}
-                        >
-                          <ChevronLeft className="h-6 w-6" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 bg-black/50 hover:bg-black/70 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover/modal:opacity-100 transition-opacity z-20"
-                          onClick={handleNextImage}
-                        >
-                          <ChevronRight className="h-6 w-6" />
-                        </Button>
-                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-20">
-                          {allImages.map((img, idx) => (
-                            <div
-                              key={`indicator-${img}`}
-                              className={`h-1.5 rounded-full transition-all cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-yellow-400' : 'w-1.5 bg-white/50'}`}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setCurrentImageIndex(idx);
-                                scrollToImage(idx);
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </>
-                    )}
-
-                    {((product.product_type === 'digital' || (product as any).productType === 'digital') && allImages.length > 0) && (
-                      <div className="absolute top-4 right-4 bg-black/60 text-white px-3 py-1.5 text-sm rounded-full backdrop-blur-md z-20">
-                        Page {currentImageIndex + 1} of {allImages.length}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right/Bottom: Description section */}
-            <div className="flex flex-col bg-[#0a0a0a] border-t md:border-t-0 md:border-l border-white/5 p-6 sm:p-8 md:overflow-y-auto custom-scrollbar">
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight mb-2 md:hidden">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center gap-2 mb-6 md:hidden">
-                    <Badge variant="outline" className="bg-white/5 border-white/10 text-yellow-500/80 text-[10px] uppercase tracking-[0.2em] font-black px-3 py-1">
-                      {isDigital ? 'Digital Product' : isService ? 'Service' : 'Physical Product'}
-                    </Badge>
-                  </div>
-
-                  <h4 className="text-yellow-500/60 text-[11px] uppercase tracking-[0.2em] font-black mb-4">Description</h4>
-                  <p className="text-gray-300 text-sm sm:text-base leading-relaxed whitespace-pre-line font-medium opacity-90">
-                    {product.description || "No description provided."}
-                  </p>
-                </div>
-
-                {/* Additional context or action can go here if needed */}
-                <div className="pt-6 border-t border-white/5 mt-auto">
-                  <Button
-                    className="w-full h-12 bg-white text-black hover:bg-gray-200 rounded-xl font-bold transition-all duration-300 shadow-lg shadow-white/5"
-                    onClick={() => setIsImageDialogOpen(false)}
-                  >
-                    Close Preview
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
       {/* Buyer Information Modal */}
       <PhoneCheckModal
