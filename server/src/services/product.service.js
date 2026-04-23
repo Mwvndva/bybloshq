@@ -16,8 +16,13 @@ class ProductService {
         } = data;
 
         // Validation Logic
-        if (!name || !price || !description) {
+        if (!name || price === undefined || price === null || !description) {
             throw new Error('Name, price, and description are required');
+        }
+
+        const priceValue = Number.parseFloat(price);
+        if (priceValue < 10) {
+            throw new Error('Minimum price must be KES 10');
         }
 
         if (is_digital && !digital_file_path) {
@@ -162,7 +167,13 @@ class ProductService {
 
             const updateFields = {};
             if (name !== undefined) updateFields.name = name;
-            if (price !== undefined) updateFields.price = Number.parseFloat(price);
+            if (price !== undefined) {
+                const priceValue = Number.parseFloat(price);
+                if (priceValue < 10) {
+                    throw new Error('Minimum price must be KES 10');
+                }
+                updateFields.price = priceValue;
+            }
             if (description !== undefined) updateFields.description = description;
             if (image_url !== undefined) updateFields.image_url = image_url;
             if (images !== undefined) {

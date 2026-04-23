@@ -247,10 +247,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
     }
 
     const priceValue = Number.parseFloat(editFormData.price);
-    if (Number.isNaN(priceValue) || priceValue <= 0) {
+    if (Number.isNaN(priceValue) || priceValue < 10) {
       toast({
         title: 'Error',
-        description: 'Please enter a valid price',
+        description: 'Minimum price must be KES 10',
         variant: 'destructive',
       });
       return;

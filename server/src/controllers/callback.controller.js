@@ -17,36 +17,39 @@ import WithdrawalService from '../services/withdrawal.service.js';
  *   third_party_trans_id   — Safaricom M-Pesa receipt (on success)
  */
 export const handlePaydPayoutCallback = async (req, res) => {
-    const payload = req.body;
+    // Payd might wrap payload in 'data' object
+    const data = req.body.data || req.body;
 
     logger.info('[PAYOUT-CALLBACK] Received', {
-        transaction_reference: payload.transaction_reference,
-        result_code: payload.result_code,
-        status: payload.status,
-        success: payload.success,
+        transaction_reference: data.transaction_reference,
+        correlator_id: data.correlator_id,
+        result_code: data.result_code,
+        status: data.status,
+        success: data.success,
     });
 
     // RESPOND 200 IMMEDIATELY as required by Payd docs
     res.status(200).json({ received: true });
 
-    // NOTE: We do NOT open a transaction here. updateStatusWithSideEffects
-    // manages its own atomic transaction internally with row-level locking.
-    // Opening an outer transaction here would create lock contention.
     setImmediate(async () => {
         try {
-            const transactionReference = payload.transaction_reference;
+            // Payd v2 payout callback uses 'transaction_reference' or 'correlator_id'
+            const transactionReference = data.transaction_reference || data.correlator_id;
+
             if (!transactionReference) {
-                logger.warn('[PAYOUT-CALLBACK] Missing transaction_reference');
+                logger.warn('[PAYOUT-CALLBACK] Missing transaction reference in payload', { keys: Object.keys(data) });
                 return;
             }
 
-            const resultCodeNum = Number.parseInt(payload.result_code, 10);
-            const isSuccess = resultCodeNum === 0 &&
-                (payload.status === 'success' || payload.success === true);
+            // result_code 0 usually means success. success flag might be string "true" or boolean true
+            const resultCodeNum = Number.parseInt(data.result_code, 10);
+            const isSuccess = resultCodeNum === 0 ||
+                data.status === 'success' ||
+                data.success === true ||
+                data.success === 'true';
+
             const finalStatus = isSuccess ? 'completed' : 'failed';
 
-            // Transaction and locking are handled in the service layer to ensure atomicity
-            // across status updates and wallet refunds. We only fetch the ID here.
             const { rows: [request] } = await pool.query(
                 `SELECT id FROM withdrawal_requests WHERE provider_reference = $1`,
                 [transactionReference]
@@ -58,8 +61,8 @@ export const handlePaydPayoutCallback = async (req, res) => {
             }
 
             await WithdrawalService.updateStatusWithSideEffects(request.id, finalStatus, {
-                remarks: payload.remarks,
-                mpesa_receipt: payload.third_party_trans_id || null,
+                remarks: data.remarks || data.message || (isSuccess ? 'Payout successful' : 'Payout failed'),
+                mpesa_receipt: data.third_party_trans_id || data.mpesa_receipt || null,
                 provider_reference: transactionReference
             });
 

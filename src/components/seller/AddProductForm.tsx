@@ -191,9 +191,16 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         digitalFileSize = res.size;
       }
 
+      const priceFloat = parseFloat(formData.price || '0');
+      if (priceFloat < 10) {
+        toast({ title: 'Invalid Price', description: 'Minimum price must be KES 10', variant: 'destructive' });
+        setIsLoading(false);
+        return;
+      }
+
       const productData = {
         name: formData.name,
-        price: parseFloat(formData.price || '0'),
+        price: priceFloat,
         description: formData.description,
         image_url: formData.image_url,
         images: extraPreviews,
