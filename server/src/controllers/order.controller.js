@@ -376,22 +376,28 @@ export const downloadDigitalProduct = async (req, res) => {
         // Security: Robust path resolution and traversal prevention
         const fileNameOnly = path.basename(digitalFilePath);
 
-        // FIX: Account for the fact that the server might be run from the workspace root OR server directory
-        let baseDir = path.join(process.cwd(), 'uploads', 'digital_products');
-        if (!fs.access(baseDir).catch(() => false)) {
-            // If not found in CWD /uploads, check /server/uploads
-            const fallbackDir = path.join(process.cwd(), 'server', 'uploads', 'digital_products');
+        // Use synchronous check for simpler logic during path detection or fs.promises
+        const fsPromises = require('fs').promises;
+
+        // Root detection: The files are in server/uploads/digital_products
+        let baseDir = path.join(process.cwd(), 'server', 'uploads', 'digital_products');
+
+        try {
+            await fsPromises.access(baseDir);
+        } catch (e) {
+            // Fallback to relative uploads if not in server/
+            const altDir = path.join(process.cwd(), 'uploads', 'digital_products');
             try {
-                await fs.access(fallbackDir);
-                baseDir = fallbackDir;
+                await fsPromises.access(altDir);
+                baseDir = altDir;
             } catch (err) {
-                // Keep the original baseDir if both fail, the check below will handle it
+                logger.error(`[DOWNLOAD] All upload directories missing: ${baseDir}, ${altDir}`);
             }
         }
 
         const absolutePath = path.resolve(baseDir, fileNameOnly);
 
-        // Extra guard: Ensure the resolved path is still within a valid uploads directory
+        // Extra guard: Ensure it's still inside digital_products
         if (!absolutePath.includes('digital_products')) {
             logger.warn(`[DOWNLOAD-SECURITY] Traversal attempt blocked or invalid path: ${digitalFilePath}`);
             return res.status(403).json({ status: 'error', message: 'Access denied: Invalid file path' });

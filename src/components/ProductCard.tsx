@@ -692,8 +692,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         </p>
 
         {product.description && (
-          <div className="relative group/desc h-10 overflow-hidden mb-1.5 sm:mb-2">
-            <p className={cn("mobile-text leading-tight line-clamp-2 h-full text-[11px] sm:text-xs",
+          <div className="relative group/desc h-10 overflow-y-auto no-scrollbar mb-1.5 sm:mb-2 overscroll-contain">
+            <p className={cn("mobile-text leading-tight text-[11px] sm:text-xs min-h-full",
               (theme === 'black' || forceWhiteText) ? 'text-gray-300' : 'text-gray-700'
             )}>
               {product.description}
