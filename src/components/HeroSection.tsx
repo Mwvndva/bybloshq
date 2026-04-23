@@ -27,26 +27,26 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
       />
 
       {/* Dynamic light blobs for depth */}
-      <div className="absolute top-1/4 left-1/4 w-[30rem] h-[30rem] bg-yellow-400/10 rounded-full blur-[120px] animate-pulse pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-[25rem] h-[25rem] bg-pink-500/10 rounded-full blur-[100px] animate-pulse pointer-events-none delay-1000" />
+      <div className="absolute top-1/4 left-1/4 w-[30rem] h-[30rem] bg-yellow-400/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[25rem] h-[25rem] bg-pink-500/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="container-mobile relative z-10 w-full px-6 max-w-6xl mx-auto">
         <div className="flex flex-col items-center text-center space-y-12">
 
           {/* Main Title Group */}
           <div className="space-y-6 max-w-4xl mx-auto">
-            <h1 className="text-5xl sm:text-6xl md:text-8xl font-medium text-white leading-[1.1] tracking-tight animate-in fade-in slide-in-from-bottom-5 duration-1000">
+            <h1 className="text-5xl sm:text-6xl md:text-8xl font-medium text-white leading-[1.1] tracking-tight">
               Beyond Commerce. <br />
               <span className="italic font-serif text-yellow-300/90">This is Brand Identity.</span>
             </h1>
 
-            <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto font-light leading-relaxed animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-200">
+            <p className="text-lg sm:text-xl text-white/70 max-w-2xl mx-auto font-light leading-relaxed">
               Where aesthetic vision meets professional commerce.
             </p>
           </div>
 
           {/* Minimal CTA Group */}
-          <div className="flex flex-col sm:flex-row items-center gap-4 animate-in fade-in slide-in-from-bottom-10 duration-1000 delay-500">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
             <Link to="/buyer/login">
               <Button
                 className="bg-white/10 backdrop-blur-md text-white hover:bg-white/20 border border-white/20 hover:border-white/40 rounded-full px-10 py-6 text-lg font-medium transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] group"
