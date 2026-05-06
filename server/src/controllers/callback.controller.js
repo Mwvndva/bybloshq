@@ -1,6 +1,7 @@
 import { pool } from '../config/database.js';
 import logger from '../utils/logger.js';
 import WithdrawalService from '../services/withdrawal.service.js';
+import PayoutService from '../services/payout.service.js';
 
 /**
  * handlePaydPayoutCallback
@@ -17,15 +18,25 @@ import WithdrawalService from '../services/withdrawal.service.js';
  *   third_party_trans_id   — Safaricom M-Pesa receipt (on success)
  */
 export const handlePaydPayoutCallback = async (req, res) => {
+    // 1. Signature Verification (CRITICAL FIX: DETE-HMAC-VERIFICATION)
+    const signature = req.headers['x-payd-signature'];
+    const isValid = PayoutService.verifyWebhookSignature(signature, req.rawBody);
+
+    if (!isValid) {
+        logger.error('[PAYOUT-CALLBACK] Invalid signature or forge attempt detected', {
+            signature: signature || 'missing',
+            ip: req.ip,
+            path: req.path
+        });
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
     // Payd might wrap payload in 'data' object
     const data = req.body.data || req.body;
 
-    logger.info('[PAYOUT-CALLBACK] Received', {
+    logger.info('[PAYOUT-CALLBACK] Authenticated webhook received', {
         transaction_reference: data.transaction_reference,
-        correlator_id: data.correlator_id,
-        result_code: data.result_code,
-        status: data.status,
-        success: data.success,
+        status: data.status
     });
 
     // RESPOND 200 IMMEDIATELY as required by Payd docs
@@ -51,12 +62,27 @@ export const handlePaydPayoutCallback = async (req, res) => {
             const finalStatus = isSuccess ? 'completed' : 'failed';
 
             const { rows: [request] } = await pool.query(
-                `SELECT id FROM withdrawal_requests WHERE provider_reference = $1`,
+                `SELECT id, amount, status FROM withdrawal_requests WHERE provider_reference = $1`,
                 [transactionReference]
             );
 
             if (!request) {
                 logger.warn(`[PAYOUT-CALLBACK] No request found for: ${transactionReference}`);
+                return;
+            }
+
+            // 🛠️ FRAUD GUARD: Verify amount matches DB record (CRITICAL FIX: PRICE-TRUST)
+            const providerAmount = Number.parseFloat(data.amount);
+            const dbAmount = Number.parseFloat(request.amount);
+            if (isSuccess && !isNaN(providerAmount) && providerAmount < dbAmount) {
+                logger.error('[PAYOUT-CALLBACK] FRAUD ALERT: Amount mismatch!', {
+                    orderId: request.id,
+                    expected: dbAmount,
+                    received: providerAmount
+                });
+                await WithdrawalService.updateStatusWithSideEffects(request.id, 'failed', {
+                    remarks: `FRAUD ALERT: Paid ${providerAmount} but required ${dbAmount}`
+                });
                 return;
             }
 

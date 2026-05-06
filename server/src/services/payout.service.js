@@ -1,5 +1,6 @@
 import axios from 'axios';
 import https from 'https';
+import crypto from 'crypto';
 import logger from '../utils/logger.js';
 import Fees from '../config/fees.js';
 import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
@@ -179,7 +180,7 @@ class PayoutService {
             }
 
             // ============================================================
-            // STEP 3: BUILD PAYOUT REQUEST
+            // STEP 3: BUILD PAYOUT REQUEST (CRITICAL FIX: PAYOUT-IDEMPOTENCY)
             // ============================================================
             const payload = {
                 phone_number: normalizedPhone,
@@ -187,7 +188,8 @@ class PayoutService {
                 narration: narration || 'Payout from ByblosHQ',
                 callback_url: callbackUrl,
                 channel: 'MPESA',
-                currency: 'KES'
+                currency: 'KES',
+                client_reference: params.idempotency_key // Use our key as Payd's reference
             };
 
             // ============================================================
@@ -450,6 +452,38 @@ class PayoutService {
      * @param {Object} request - withdrawal_requests row
      * @returns {Promise<number|null>} newBalance
      */
+    /**
+     * Verify Payd webhook signature (CRITICAL FIX: WEBHOOK-SECURITY)
+     * Verify Payd Webhook Signature (CRITICAL FIX: DETE-HMAC-VERIFICATION)
+     */
+    static verifyWebhookSignature(signature, rawBody) {
+        if (!signature || !rawBody) return false;
+
+        const secret = process.env.PAYD_WEBHOOK_SECRET;
+        if (!secret) {
+            logger.warn('PAYD_WEBHOOK_SECRET is not set. Webhook verification skipped (UNSAFE).');
+            return false;
+        }
+
+        try {
+            const hmac = crypto.createHmac('sha256', secret);
+            const digest = hmac.update(rawBody).digest('hex');
+
+            // Use timingSafeEqual to prevent timing attacks
+            const signatureBuffer = Buffer.from(signature, 'utf8');
+            const digestBuffer = Buffer.from(digest, 'utf8');
+
+            if (signatureBuffer.length !== digestBuffer.length) {
+                return false;
+            }
+
+            return crypto.timingSafeEqual(signatureBuffer, digestBuffer);
+        } catch (error) {
+            logger.error('[Webhook] Verification error:', error.message);
+            return false;
+        }
+    }
+
     async refundToWallet(client, request) {
         const amount = Number.parseFloat(request.amount);
         let newBalance = null;

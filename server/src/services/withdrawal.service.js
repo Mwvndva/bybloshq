@@ -56,8 +56,9 @@ class WithdrawalService {
                 await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [request.seller_id]);
             }
 
-            // Prevent re-processing terminal states
+            // Prevent re-processing terminal states (CRITICAL FIX: STATE-TRANSITIONS)
             if (['completed', 'failed'].includes(request.status)) {
+                logger.warn(`[WithdrawalService] Ignoring update for terminal request ${requestId} (Status: ${request.status})`);
                 if (isInternalTransaction) {
                     await client.query('ROLLBACK');
                 }
@@ -176,17 +177,19 @@ class WithdrawalService {
                 [deductionAmount, entityId]
             );
 
-            // Insert withdrawal request record
+            // Insert withdrawal request record with a unique idempotency key
+            const idempotencyKey = `WD-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
             const insertResult = await client.query(
                 `INSERT INTO withdrawal_requests 
-                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, created_at)
-                 VALUES ($1, $2, $3, $4, 'processing', TRUE, NOW())
-                 RETURNING id, amount, seller_id, mpesa_number, mpesa_name, status, created_at`,
+                    (seller_id, amount, mpesa_number, mpesa_name, status, api_call_pending, idempotency_key, created_at)
+                 VALUES ($1, $2, $3, $4, 'processing', TRUE, $5, NOW())
+                 RETURNING id, amount, seller_id, mpesa_number, mpesa_name, status, idempotency_key, created_at`,
                 [
                     entityId,
                     validatedAmount,
                     normalizedPhone,
-                    mpesaName.trim()
+                    mpesaName.trim(),
+                    idempotencyKey
                 ]
             );
 
@@ -242,7 +245,8 @@ class WithdrawalService {
             const paydResponse = await payoutService.initiatePayout({
                 phone_number: phone,
                 amount,
-                narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`
+                narration: `Withdrawal for ${entity.full_name || 'ByblosHQ Seller'}`,
+                idempotency_key: request.idempotency_key // PASS IDEMPOTENCY KEY
             });
 
             // Payd withdrawal response uses 'correlator_id'; the webhook uses 'transaction_reference'

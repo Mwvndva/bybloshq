@@ -142,8 +142,13 @@ export default async (app) => {
     });
 
     app.use('/api', limiter);
-    // Enable JSON body parsing with higher limits for base64 images
-    app.use(express.json({ limit: '500mb' }));
+    // Enable JSON body parsing with higher limits and raw body capture (CRITICAL FIX: HMAC-VERIFICATION)
+    app.use(express.json({
+        limit: '500mb',
+        verify: (req, res, buf) => {
+            req.rawBody = buf;
+        }
+    }));
     app.use(express.urlencoded({ extended: true, limit: '500mb' }));
     app.use(cookieParser());
     app.use(xss());

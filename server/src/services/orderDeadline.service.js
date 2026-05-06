@@ -168,7 +168,7 @@ class OrderDeadlineService {
 
     /**
      * PIN-06: RESCUE EXPIRED RESERVATIONS
-     * Releases inventory for orders that weren't paid within 10 minutes
+     * Releases inventory for orders that weren't paid within 10 minutes (or TTL)
      */
     async checkExpiredReservations() {
         try {
@@ -178,7 +178,7 @@ class OrderDeadlineService {
                  FROM product_orders po
                  JOIN order_items oi ON po.id = oi.order_id
                  JOIN products p ON oi.product_id = p.id
-                 WHERE po.status = 'RESERVED'
+                 WHERE po.status IN ('RESERVED', 'HELD')
                    AND po.reservation_expires_at < NOW()
                  GROUP BY po.id`
             );
@@ -193,7 +193,7 @@ class OrderDeadlineService {
                 try {
                     await client.query('BEGIN');
 
-                    // 1. Release Inventory
+                    // 1. Release Inventory (CRITICAL FIX: ATOMIC-RECOVERY)
                     for (const item of order.items) {
                         if (item.trackInventory) {
                             await client.query(
@@ -208,7 +208,7 @@ class OrderDeadlineService {
                     }
 
                     // 2. Release Service Slots (if any)
-                    if (order.order_type === 'SERVICE') {
+                    if (order.status === 'HELD' || order.order_type === 'SERVICE') {
                         await client.query(
                             `UPDATE service_slots 
                              SET status = 'AVAILABLE',
@@ -224,7 +224,7 @@ class OrderDeadlineService {
                     await client.query(
                         `UPDATE product_orders 
                          SET status = 'EXPIRED',
-                             metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window (10 min) exceeded"}'::jsonb,
+                             metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window exceeded"}'::jsonb,
                              updated_at = NOW()
                          WHERE id = $1`,
                         [order.id]
