@@ -1,6 +1,4 @@
 import HeroSection from '@/components/HeroSection';
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
 
 const IndexPage = () => {
   const handleExploreClick = () => {
@@ -8,15 +6,10 @@ const IndexPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col selection:bg-yellow-300 selection:text-black">
-      <Header />
-      <main className="flex-grow">
-        <HeroSection
-          onExploreClick={handleExploreClick}
-        />
-      </main>
-
-      <Footer />
+    <div className="selection:bg-yellow-300 selection:text-black">
+      <HeroSection
+        onExploreClick={handleExploreClick}
+      />
     </div>
   );
 };

@@ -27,23 +27,23 @@ export const routes = [
         path: '/shop/:shopName',
         element: <ShopPage />,
       },
-      {
-        path: '/admin/marketing/login',
-        element: (
-          <Suspense fallback={<RouteFallback />}>
-            <MarketingLogin />
-          </Suspense>
-        ),
-      },
-      {
-        path: '/admin/marketing',
-        element: (
-          <Suspense fallback={<RouteFallback />}>
-            <MarketingDashboard />
-          </Suspense>
-        ),
-      },
     ]
+  },
+  {
+    path: '/admin/marketing/login',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MarketingLogin />
+      </Suspense>
+    ),
+  },
+  {
+    path: '/admin/marketing',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <MarketingDashboard />
+      </Suspense>
+    ),
   },
   {
     path: '/verify-email',
