@@ -2,7 +2,7 @@ import cron from 'node-cron';
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import ProductModel from '../models/product.model.js';
-import Order from '../models/order.model.js';
+import OrderService from '../modules/orders/order.service.js';
 import { OrderStatus } from '../shared/constants/enums.js';
 import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 
@@ -36,9 +36,9 @@ class ReconciliationEngine {
             await client.query('BEGIN');
 
             const expiredQuery = `
-                SELECT id, status FROM product_orders
+                SELECT id, order_number FROM product_orders
                 WHERE status IN ('RESERVED', 'HELD')
-                  AND expires_at < NOW()
+                  AND reservation_expires_at < NOW()
                 FOR UPDATE SKIP LOCKED
             `;
             const { rows: expiredOrders } = await client.query(expiredQuery);
@@ -48,19 +48,12 @@ class ReconciliationEngine {
             logger.info(`⚖️ [RECON] Found ${expiredOrders.length} expired reservations.`);
 
             for (const order of expiredOrders) {
-                // 1. Fetch items
-                const { rows: items } = await client.query(
-                    'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
-                    [order.id]
-                );
-
-                // 2. Release inventory
-                for (const item of items) {
-                    await ProductModel.release(client, item.product_id, item.quantity);
+                try {
+                    // Use State Machine to handle transitions and inventory release
+                    await OrderService.transitionTo(order.id, 'EXPIRED', { reason: 'System Reconciliation Cleanup' }, client);
+                } catch (err) {
+                    logger.error(`⚖️ [RECON] Failed to transition expired order ${order.order_number}:`, err);
                 }
-
-                // 3. Transition to CANCELLED
-                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'system_timeout');
             }
 
             await client.query('COMMIT');
@@ -81,7 +74,7 @@ class ReconciliationEngine {
             await client.query('BEGIN');
 
             const stuckQuery = `
-                SELECT id FROM product_orders
+                SELECT id, order_number FROM product_orders
                 WHERE status = 'PAYMENT_PENDING'
                   AND updated_at < NOW() - INTERVAL '30 minutes'
                 FOR UPDATE SKIP LOCKED
@@ -89,18 +82,12 @@ class ReconciliationEngine {
             const { rows: stuckOrders } = await client.query(stuckQuery);
 
             for (const order of stuckOrders) {
-                logger.warn(`⚖️ [RECON] Found stuck PAYMENT_PENDING order ${order.id}. Cancelling.`);
-
-                // Release inventory before cancelling
-                const { rows: items } = await client.query(
-                    'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
-                    [order.id]
-                );
-                for (const item of items) {
-                    await ProductModel.release(client, item.product_id, item.quantity);
+                logger.warn(`⚖️ [RECON] Found stuck PAYMENT_PENDING order ${order.order_number}. Cancelling.`);
+                try {
+                    await OrderService.transitionTo(order.id, 'CANCELLED', { reason: 'Stuck Payment Cleanup' }, client);
+                } catch (err) {
+                    logger.error(`⚖️ [RECON] Failed to cancel stuck order ${order.order_number}:`, err);
                 }
-
-                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'stuck_payment');
             }
 
             await client.query('COMMIT');

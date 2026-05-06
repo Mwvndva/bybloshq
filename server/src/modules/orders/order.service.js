@@ -5,6 +5,7 @@ import cacheService from '../../shared/utils/cache.service.js';
 import BookingService from '../bookings/booking.service.js';
 import { assertValidTransition } from '../../shared/utils/OrderStatusGuard.js';
 import { AppError } from '../../shared/utils/errorHandler.js';
+import EscrowManager from '../../services/EscrowManager.js';
 
 class OrderService {
     /**
@@ -154,6 +155,9 @@ class OrderService {
             case 'FULFILLED':
                 await this.handleFulfilledAction(client, order);
                 break;
+            case 'COMPLETED':
+                await this.handleFulfilledAction(client, order);
+                break;
             case 'EXPIRED':
                 await this.handleCancelledAction(client, order);
                 break;
@@ -211,6 +215,9 @@ class OrderService {
                 );
             }
         }
+
+        // Release funds through EscrowManager (Ported from legacy completion logic)
+        await EscrowManager.releaseFunds(client, order, 'OrderService State Machine');
 
         if (order.order_type === 'DIGITAL') {
             await this.grantDigitalAccess(client, order);
