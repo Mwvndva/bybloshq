@@ -25,25 +25,30 @@ export interface BuyerInfo {
 interface BuyerInfoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (buyerInfo: BuyerInfo) => Promise<void>;
+  onSuccess: (buyer: any) => void;
   isLoading?: boolean;
   theme?: string;
-  phoneNumber: string; // Pre-filled from first step
+  phoneNumber?: string;
   initialData?: Partial<BuyerInfo>;
 }
 
 export function BuyerInfoModal({
   isOpen,
   onClose,
-  onSubmit,
-  isLoading = false,
+  onSuccess,
+  isLoading: externalIsLoading = false,
   theme = 'default',
-  phoneNumber,
+  phoneNumber = '',
   initialData
 }: BuyerInfoModalProps) {
   const { toast } = useToast();
+  const [internalIsLoading, setInternalIsLoading] = useState(false);
+  const isLoading = externalIsLoading || internalIsLoading;
+
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [requiresLogin, setRequiresLogin] = useState(false);
+
   const [buyerInfo, setBuyerInfo] = useState<BuyerInfo>({
     firstName: initialData?.fullName?.split(' ')[0] || '',
     lastName: initialData?.fullName?.split(' ').slice(1).join(' ') || '',
@@ -60,7 +65,6 @@ export function BuyerInfoModal({
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [errors, setErrors] = useState<Partial<BuyerInfo & { termsAccepted?: string }>>({});
 
-  // Update state when initialData changes
   useEffect(() => {
     if (initialData) {
       setBuyerInfo(prev => ({
@@ -73,16 +77,15 @@ export function BuyerInfoModal({
     }
   }, [initialData]);
 
-  // FIX (Task 1): Reset ALL state when modal opens to prevent auto-save or carry-over errors
   useEffect(() => {
     if (isOpen) {
       setTermsAccepted(false);
       setErrors({});
-      // Note: we don't reset buyerInfo here to allow pre-filling from initialData
+      setRequiresLogin(false);
+      setShowPassword(false);
     }
   }, [isOpen]);
 
-  // Password strength checker function
   const checkPasswordStrength = (password: string) => {
     return {
       minLength: password.length >= 8,
@@ -96,13 +99,8 @@ export function BuyerInfoModal({
   const validateForm = (): boolean => {
     const newErrors: Partial<BuyerInfo & { termsAccepted?: string }> = {};
 
-    if (!buyerInfo.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
-    }
-
-    if (!buyerInfo.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
-    }
+    if (!buyerInfo.firstName.trim()) newErrors.firstName = 'First name is required';
+    if (!buyerInfo.lastName.trim()) newErrors.lastName = 'Last name is required';
 
     if (!buyerInfo.email.trim()) {
       newErrors.email = 'Email is required';
@@ -110,31 +108,27 @@ export function BuyerInfoModal({
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Strict Password validation matching BuyerRegister
-    const strength = checkPasswordStrength(buyerInfo.password || '');
-    const unmetRequirements: string[] = [];
+    if (requiresLogin) {
+      if (!buyerInfo.password) {
+        newErrors.password = 'Password is required to login';
+      }
+    } else {
+      // Optional password for guest, but if provided must be strong
+      if (buyerInfo.password) {
+        const strength = checkPasswordStrength(buyerInfo.password);
+        const unmet: string[] = [];
+        if (!strength.minLength) unmet.push("8+ chars");
+        if (!strength.hasNumber) unmet.push("number");
+        if (unmet.length > 0) newErrors.password = `Weak password: ${unmet.join(', ')}`;
 
-    if (!strength.minLength) unmetRequirements.push("at least 8 characters");
-    if (!strength.hasNumber) unmetRequirements.push("a number");
-    if (!strength.hasSpecial) unmetRequirements.push("a special character");
-    if (!strength.hasUpper) unmetRequirements.push("an uppercase letter");
-    if (!strength.hasLower) unmetRequirements.push("a lowercase letter");
-
-    if (unmetRequirements.length > 0) {
-      newErrors.password = `Password needs ${unmetRequirements.join(', ')}`;
+        if (buyerInfo.password !== buyerInfo.confirmPassword) {
+          newErrors.confirmPassword = 'Passwords do not match';
+        }
+      }
     }
 
-    if (buyerInfo.password !== buyerInfo.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!buyerInfo.whatsappNumber?.trim()) {
-      newErrors.whatsappNumber = 'WhatsApp number is required';
-    }
-
-    if (!termsAccepted) {
-      newErrors.termsAccepted = 'You must accept the Terms and Conditions to continue.';
-    }
+    if (!buyerInfo.whatsappNumber?.trim()) newErrors.whatsappNumber = 'WhatsApp is required';
+    if (!termsAccepted) newErrors.termsAccepted = 'Required';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -142,45 +136,56 @@ export function BuyerInfoModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    if (!validateForm()) {
-      return;
-    }
-
+    setInternalIsLoading(true);
     try {
-      await onSubmit({
+      const { registerOrLogin } = (await import('@/api/buyerApi')).default;
+      const result = await registerOrLogin({
         ...buyerInfo,
         fullName: `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim(),
-        termsAccepted: true // Passed as true because validation passed
-      } as any);
-      // Reset form on successful submission
-      setBuyerInfo({
-        firstName: '',
-        lastName: '',
-        email: '',
-        mobilePayment: '',
-        whatsappNumber: '',
-        city: '',
-        location: '',
-        password: '',
-        confirmPassword: ''
       });
-      setErrors({});
-      onClose();
+
+      if (result.requiresLogin) {
+        setRequiresLogin(true);
+        setShowPassword(true);
+        toast({
+          title: 'Account Found',
+          description: 'An account already exists with this email. Please enter your password to continue.',
+        });
+        return;
+      }
+
+      if (result.buyer) {
+        // Success! Rehydrate auth state
+        // In a real app we'd wait for GlobalAuthContext to refresh
+        toast({
+          title: 'Success',
+          description: 'Account ready! Resuming your action...',
+        });
+
+        // This is a bit of a hack—we should ideally await GlobalAuthContext refresh
+        // But for now, we'll return the buyer data and let the caller decide
+        onSuccess(result.buyer);
+        onClose();
+      } else if (result.requiresLogin) {
+        // Already handled above
+      } else {
+        throw new Error(result.message || 'Authentication failed');
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: error.message || 'Failed to save buyer information',
+        description: error.message || 'Failed to process request',
         variant: 'destructive',
-        duration: 5000,
       });
+    } finally {
+      setInternalIsLoading(false);
     }
   };
 
   const handleClose = () => {
     if (!isLoading) {
-      setTermsAccepted(false); // Reset terms on close
-      setErrors({});
       onClose();
     }
   };
@@ -216,6 +221,15 @@ export function BuyerInfoModal({
               scrollbarWidth: 'thin',
               scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent'
             }}>
+
+            {requiresLogin && (
+              <div className="p-3 bg-yellow-400/10 border border-yellow-400/20 rounded-xl mb-2">
+                <p className="text-xs font-bold text-yellow-400 text-center uppercase tracking-wider">
+                  Existing Account Detected - Please Login
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="firstName" className={`text-xs font-black uppercase tracking-wider ${themeClasses.label}`}>
@@ -535,10 +549,10 @@ export function BuyerInfoModal({
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Saving Profile...
+                  Processing...
                 </>
               ) : (
-                'Save & Continue to Payment'
+                requiresLogin ? 'Login & Continue' : 'Save & Continue'
               )}
             </Button>
             <Button
