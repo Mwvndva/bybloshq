@@ -1,6 +1,6 @@
 import pg from 'pg';
 import dotenv from 'dotenv';
-import logger from '../shared/utils/logger.js';
+import logger from '../utils/logger.js';
 
 dotenv.config();
 
@@ -89,4 +89,5 @@ export const testConnection = async () => {
     throw error;
   }
 };
+
 
