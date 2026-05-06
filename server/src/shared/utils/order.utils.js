@@ -1,5 +1,5 @@
 import logger from './logger.js';
-import Buyer from '../models/buyer.model.js';
+import Buyer from '../../models/buyer.model.js';
 
 /**
  * PIN-05: NO-NULL JSONB / STRING-SAFE
