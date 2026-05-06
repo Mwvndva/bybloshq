@@ -1,8 +1,17 @@
 -- Migration: Order Lifecycle Overhaul
 -- Reason: Restructure order statuses and add inventory/digital delivery tracking.
 
--- 1. Enum synchronization moved to 20260506170000_re_sync_order_status.sql
--- (Required because ADD VALUE cannot be used in the same transaction as CREATE INDEX WHERE ...)
+-- 1. Sync order_status enum
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'CREATED';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'HELD';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'PAYMENT_PENDING';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'FULFILLMENT_PENDING';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'FULFILLED';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'DELIVERED';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'BOOKED';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'REFUND_PENDING';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'REFUNDED';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'COMPENSATION_REQUIRED';
 
 -- 2. Enhance Products Table (Atomic Inventory)
 ALTER TABLE products ADD COLUMN IF NOT EXISTS reserved_quantity INTEGER DEFAULT 0;

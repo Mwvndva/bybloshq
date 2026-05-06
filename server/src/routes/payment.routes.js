@@ -35,6 +35,13 @@ const publicRouter = express.Router();
 publicRouter.use(paymentRequestLogger);
 
 
+// Product payment initiation (public) — same flow as tickets, but for products
+publicRouter.post(
+  '/initiate-product',
+  paymentRateLimiter,
+  validate(initiateProductSchema),
+  paymentController.initiateProductPayment
+);
 
 // Webhook endpoint (public) - Paystack
 publicRouter.post(
@@ -69,14 +76,6 @@ router.use(publicRouter);
 // Mount protected routes
 const protectedRouter = express.Router();
 protectedRouter.use(protect);
-
-// Product payment initiation (protected)
-protectedRouter.post(
-  '/initiate-product',
-  paymentRateLimiter,
-  validate(initiateProductSchema),
-  paymentController.initiateProductPayment
-);
 
 // Add health check routes (admin only)
 protectedRouter.get('/health/payd-agent',

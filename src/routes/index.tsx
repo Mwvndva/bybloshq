@@ -11,23 +11,16 @@ const MarketingLogin = safeLazy(() => import('@/pages/marketing/MarketingLogin')
 const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
 const VerifyEmail = safeLazy(() => import('@/pages/auth/VerifyEmail'));
 
-import PublicLayout from '@/components/layout/PublicLayout';
-
 // Main routes configuration
 export const routes = [
   {
-    element: <PublicLayout />,
-    children: [
-      {
-        path: '/',
-        element: <IndexPage />,
-      },
-      // Public shop page — no auth required
-      {
-        path: '/shop/:shopName',
-        element: <ShopPage />,
-      },
-    ]
+    path: '/',
+    element: <IndexPage />,
+  },
+  // Public shop page — no auth required
+  {
+    path: '/shop/:shopName',
+    element: <ShopPage />,
   },
   {
     path: '/admin/marketing/login',

@@ -6,7 +6,7 @@ import dns from 'node:dns';
 import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
 import { PaymentStatus } from '../shared/constants/enums.js';
-import OrderService from '../modules/orders/order.service.js';
+import OrderService from './order.service.js';
 import { PaydError, PaydErrorCodes } from '../shared/utils/PaydError.js';
 import Buyer from '../models/buyer.model.js';
 import cacheService from './cache.service.js';
@@ -774,10 +774,10 @@ export class PaymentService {
      */
     async _handleDownstreamOrderAction(payment, metadata) {
         try {
-            logger.info(`[PURCHASE-FLOW] 7. Completing Order ${metadata.order_id} via OrderService.transitionTo('PAID')`);
-            const completionResult = await OrderService.transitionTo(metadata.order_id, 'PAID', { paymentId: payment.id });
-            logger.info(`[PURCHASE-FLOW] 8. Order Transition Result:`, completionResult);
-            return { status: 'success', message: 'Payment processed and Order state transitioned to PAID' };
+            logger.info(`[PURCHASE-FLOW] 7. Completing Order ${metadata.order_id} via OrderService.completeOrder()`);
+            const completionResult = await OrderService.completeOrder(payment);
+            logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
+            return { status: 'success', message: 'Payment processed and Order completion triggered' };
         } catch (completionErr) {
             logger.error(`[PAYD-PAYIN] CRITICAL: Order completion failed after payment was confirmed. Payment ID: ${payment.id}`, {
                 paymentId: payment.id,
