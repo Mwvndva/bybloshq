@@ -5,7 +5,8 @@ import { WishlistProvider } from '@/contexts/WishlistContext';
 import { BybxProvider } from '@/contexts/BybxContext';
 import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
-import BuyerLayout from '@/layouts/BuyerLayout';
+import BuyerLayout from '@/components/layout/BuyerLayout';
+import PublicLayout from '@/components/layout/PublicLayout';
 
 // Lazy load components
 const BuyerLogin = safeLazy(() => import('@/components/buyer/BuyerLogin').then(m => m.BuyerLogin));
@@ -18,36 +19,41 @@ const ShopPage = safeLazy(() => import('@/pages/ShopPage'));
 export const buyerRoutes = [
   // ─── Public routes ──────────────────────────────────────────────────────────
   {
-    path: '/buyer/register',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerRegister />
-      </Suspense>
-    ),
-  },
-  {
-    path: '/buyer/login',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerLogin />
-      </Suspense>
-    ),
-  },
-  {
-    path: '/buyer/forgot-password',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerForgotPassword />
-      </Suspense>
-    ),
-  },
-  {
-    path: '/buyer/reset-password',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <BuyerResetPassword />
-      </Suspense>
-    ),
+    element: <PublicLayout />,
+    children: [
+      {
+        path: '/buyer/register',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerRegister />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/buyer/login',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerLogin />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/buyer/forgot-password',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerForgotPassword />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/buyer/reset-password',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <BuyerResetPassword />
+          </Suspense>
+        ),
+      },
+    ]
   },
 
   // ─── Protected routes ────────────────────────────────────────────────────────
