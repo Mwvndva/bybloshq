@@ -1,5 +1,5 @@
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 import Fees from '../config/fees.js';
 
 class EscrowManager {
@@ -122,3 +122,5 @@ class EscrowManager {
 }
 
 export default new EscrowManager();
+
+

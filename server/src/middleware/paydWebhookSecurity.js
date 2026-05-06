@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 function ipToInt(ip) {
     return ip.split('.').reduce((acc, octet) => (acc << 8) + Number.parseInt(octet, 10), 0) >>> 0;
@@ -281,3 +281,4 @@ export const webhookRateLimiter = (() => {
 })();
 
 export default verifyPaydWebhook;
+

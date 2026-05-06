@@ -1,5 +1,5 @@
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 
 /**
  * Verify required internal financial indexes.
@@ -40,3 +40,5 @@ export const verifyRequiredIndexes = async () => {
 
     logger.info('✅ Required financial indexes verified');
 };
+
+

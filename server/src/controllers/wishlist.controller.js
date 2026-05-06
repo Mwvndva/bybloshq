@@ -1,5 +1,5 @@
 import * as wishlistRepository from '../repositories/wishlist.repository.js';
-import { sanitizePublicProduct } from '../utils/sanitize.js';
+import { sanitizePublicProduct } from '../shared/utils/sanitize.js';
 
 // Get the buyer's wishlist
 export const getWishlist = async (req, res) => {

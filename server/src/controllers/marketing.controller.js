@@ -3,9 +3,9 @@
  * Read-only analytics endpoints for the marketing admin dashboard.
  * All queries are optimised for read performance — no writes happen here.
  */
-import { pool } from '../config/database.js'
-import { AppError } from '../utils/errorHandler.js'
-import logger from '../utils/logger.js'
+import { pool } from '../shared/db/database.js'
+import { AppError } from '../shared/utils/errorHandler.js'
+import logger from '../shared/utils/logger.js'
 import AuthService from '../services/auth.service.js'
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
@@ -600,3 +600,6 @@ export const getRecentActivity = async (req, res, next) => {
     next(err)
   }
 }
+
+
+

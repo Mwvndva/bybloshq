@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import * as sellerController from '../controllers/seller.controller.js';
 import * as productController from '../controllers/product.controller.js';
 import * as analyticsController from '../controllers/analytics.controller.js';
@@ -90,3 +90,4 @@ router.post('/debts/:debtId/pay', sellerController.initiateDebtPayment);
 router.use('/referral', referralRoutes);
 
 export default router;
+

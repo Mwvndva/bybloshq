@@ -2,7 +2,7 @@
 'use strict';
 
 import cron from 'node-cron';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import ReferralService from '../services/referral.service.js';
 
 /**
@@ -56,3 +56,4 @@ const scheduleReferralRewards = (options = {}) => {
 };
 
 export { scheduleReferralRewards };
+

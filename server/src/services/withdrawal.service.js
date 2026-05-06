@@ -1,5 +1,5 @@
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 import payoutService from './payout.service.js';
 import whatsappService from './whatsapp.service.js';
 
@@ -502,3 +502,5 @@ class WithdrawalService {
 }
 
 export default new WithdrawalService();
+
+

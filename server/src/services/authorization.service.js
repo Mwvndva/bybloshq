@@ -1,5 +1,5 @@
-import { query } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { query } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 import CacheService from './cache.service.js';
 
 class AuthorizationService {
@@ -110,3 +110,5 @@ class AuthorizationService {
 }
 
 export default AuthorizationService;
+
+

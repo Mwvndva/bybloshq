@@ -1,16 +1,16 @@
-import { query, pool } from '../config/database.js';
+import { query, pool } from '../shared/db/database.js';
 import { invalidateAuthCache } from '../middleware/auth.js';
 import payoutService from '../services/payout.service.js';
 import whatsappService from '../services/whatsapp.service.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import ImageService from '../services/image.service.js';
 import AuthService from '../services/auth.service.js';
-import { setAuthCookie } from '../utils/cookie.utils.js';
+import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 
 import SellerService from '../services/seller.service.js';
 import ReferralService from '../services/referral.service.js';
 import * as SellerModel from '../models/seller.model.js';
-import { getTokenFromRequest, verifyToken } from '../utils/jwt.js';
+import { getTokenFromRequest, verifyToken } from '../shared/utils/jwt.js';
 import {
   findSellerById,
   findSellerByUserId,
@@ -26,7 +26,7 @@ import {
   sanitizeSeller,
   sanitizePublicSeller,
   sanitizeWithdrawalRequest
-} from '../utils/sanitize.js';
+} from '../shared/utils/sanitize.js';
 
 // Helper to send token via cookie
 const sendTokenResponse = (data, statusCode, res, message) => {
@@ -915,3 +915,6 @@ export const getBuyerShops = async (req, res) => {
     });
   }
 };
+
+
+

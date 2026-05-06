@@ -1,8 +1,8 @@
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 
 // Convert snake_case to camelCase function
-import { toCamelCase } from '../utils/caseUtils.js';
+import { toCamelCase } from '../shared/utils/caseUtils.js';
 
 class Buyer {
   // Create a new buyer
@@ -189,3 +189,6 @@ class Buyer {
 }
 
 export default Buyer;
+
+
+

@@ -1,8 +1,8 @@
 // @ts-check
 'use strict';
 
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
 
@@ -519,3 +519,5 @@ If already collected, please contact the seller to arrange return.
 }
 
 export default new OrderDeadlineService();
+
+

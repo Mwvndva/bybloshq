@@ -1,6 +1,6 @@
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 import paymentService from '../services/payment.service.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import Payment from '../models/payment.model.js';
 import jwt from 'jsonwebtoken';
 import Order from '../models/order.model.js';
@@ -8,7 +8,7 @@ import OrderService from '../services/order.service.js';
 import Buyer from '../models/buyer.model.js';
 import Fees from '../config/fees.js';
 import { PaymentStatus, ProductType } from '../constants/enums.js';
-import { normalizeOrderInput } from '../utils/order.utils.js';
+import { normalizeOrderInput } from '../shared/utils/order.utils.js';
 
 class PaymentController {
   /**
@@ -191,3 +191,6 @@ class PaymentController {
 }
 
 export default new PaymentController();
+
+
+

@@ -1,5 +1,5 @@
 import express from 'express';
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 
 const router = express.Router();
 
@@ -31,3 +31,4 @@ router.get('/', async (req, res) => {
 });
 
 export default router;
+

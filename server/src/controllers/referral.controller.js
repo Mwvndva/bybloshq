@@ -2,9 +2,9 @@
 'use strict';
 
 import ReferralService from '../services/referral.service.js';
-import { AppError } from '../utils/errorHandler.js';
-import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import { AppError } from '../shared/utils/errorHandler.js';
+import logger from '../shared/utils/logger.js';
+import { pool } from '../shared/db/database.js';
 
 /**
  * GET /api/v1/sellers/referral/dashboard
@@ -91,3 +91,6 @@ export const generateCode = async (req, res, next) => {
         next(err);
     }
 };
+
+
+

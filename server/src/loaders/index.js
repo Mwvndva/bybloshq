@@ -1,8 +1,8 @@
 import expressLoader from './express.js';
 import cronLoader from './cron.js';
 import servicesLoader from './services.js';
-import { testConnection } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { testConnection } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 
 /**
  * Main Loader
@@ -39,3 +39,5 @@ export default async (app) => {
 
     logger.info('✨ All loaders initialized successfully');
 };
+
+

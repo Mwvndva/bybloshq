@@ -1,7 +1,7 @@
 import express from 'express';
 import * as buyerController from '../controllers/buyer.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
-import { AppError } from '../utils/errorHandler.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 import wishlistRoutes from './wishlist.routes.js';
 import { validateRegistration, validateLogin } from '../middleware/authValidation.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
@@ -60,4 +60,5 @@ router.post('/sellers/:sellerId/leave-client', sellerController.handleLeaveClien
 
 
 export default router;
+
 

@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 /**
  * Granular Rate Limiting Configuration (P1-003)
@@ -285,3 +285,4 @@ export default {
     admin: adminRateLimiter,
     create: createRateLimiter
 };
+

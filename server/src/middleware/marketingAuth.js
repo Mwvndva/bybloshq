@@ -4,7 +4,7 @@
  * Marketing tokens have role='marketing' — they grant read-only dashboard access.
  */
 import jwt from 'jsonwebtoken'
-import { AppError } from '../utils/errorHandler.js'
+import { AppError } from '../shared/utils/errorHandler.js'
 
 export const protectMarketing = (req, res, next) => {
     try {
@@ -29,3 +29,4 @@ export const protectMarketing = (req, res, next) => {
         return next(new AppError('Invalid authentication token', 401))
     }
 }
+

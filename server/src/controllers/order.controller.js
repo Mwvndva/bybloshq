@@ -1,11 +1,11 @@
 import OrderService from '../services/order.service.js';
 import Order from '../models/order.model.js';
-import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import logger from '../shared/utils/logger.js';
+import { pool } from '../shared/db/database.js';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
-import { sanitizeOrder } from '../utils/sanitize.js';
+import { sanitizeOrder } from '../shared/utils/sanitize.js';
 
 export const getSellerOrders = async (req, res) => {
     try {
@@ -214,7 +214,7 @@ export const getByReference = async (req, res) => {
                 const userId = buyerRows[0]?.user_id;
 
                 if (userId) {
-                    const { signAutoLoginToken } = await import('../utils/jwt.js');
+                    const { signAutoLoginToken } = await import('../shared/utils/jwt.js');
                     autoLoginToken = signAutoLoginToken(userId, 'buyer', 'payment_success');
                 }
             } catch (err) {
@@ -485,3 +485,6 @@ export const locationPreview = async (req, res) => {
         });
     }
 };
+
+
+

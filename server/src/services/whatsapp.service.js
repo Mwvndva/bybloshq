@@ -3,8 +3,8 @@ import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaile
 import qrcode from 'qrcode-terminal';
 import path from 'path';
 import fs from 'fs';
-import logger from '../utils/logger.js';
-import { sellerHasPhysicalShop } from '../utils/sellerUtils.js';
+import logger from '../shared/utils/logger.js';
+import { sellerHasPhysicalShop } from '../shared/utils/sellerUtils.js';
 
 class WhatsAppService {
     constructor() {
@@ -834,3 +834,5 @@ _Order refunded. Do not ship._
 }
 
 export default new WhatsAppService();
+
+

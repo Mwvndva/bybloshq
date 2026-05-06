@@ -1,11 +1,11 @@
-import { query } from '../config/database.js';
-import { AppError } from '../utils/errorHandler.js';
-import { verifyToken, getTokenFromRequest, changedPasswordAfter } from '../utils/jwt.js';
+import { query } from '../shared/db/database.js';
+import { AppError } from '../shared/utils/errorHandler.js';
+import { verifyToken, getTokenFromRequest, changedPasswordAfter } from '../shared/utils/jwt.js';
 import AuthorizationService from '../services/authorization.service.js';
 import ProductPolicy from '../policies/ProductPolicy.js';
 import OrderPolicy from '../policies/OrderPolicy.js';
 import CacheService from '../services/cache.service.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import TokenBlacklistService from '../services/tokenBlacklist.service.js';
 
 
@@ -277,3 +277,6 @@ export const invalidateAuthCache = (token) => {
     _authCache.delete(token);
   }
 };
+
+
+

@@ -1,6 +1,6 @@
 import whatsappService from '../services/whatsapp.service.js';
 import WithdrawalService from '../services/withdrawal.service.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 export default async (app) => {
     // 1. WhatsApp Service
@@ -14,3 +14,4 @@ export default async (app) => {
         logger.error('⚠️  Withdrawal retry failed:', err.message);
     });
 };
+

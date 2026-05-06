@@ -1,14 +1,14 @@
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import User from '../models/user.model.js';
 import BuyerService from './buyer.service.js';
 import SellerService from './seller.service.js';
 import * as SellerModel from '../models/seller.model.js';
 import Buyer from '../models/buyer.model.js';
-import { signToken } from '../utils/jwt.js';
-import { sendPasswordResetEmail } from '../utils/email.js';
-import { pool } from '../config/database.js';
+import { signToken } from '../shared/utils/jwt.js';
+import { sendPasswordResetEmail } from '../shared/utils/email.js';
+import { pool } from '../shared/db/database.js';
 import PendingRegistration from '../models/pendingRegistration.model.js';
 
 // FIXED BUG-AUTH-02: cost factor must match bcrypt.hash(password, 12) used in user.model.js
@@ -53,7 +53,7 @@ class AuthService {
 
             await PendingRegistration.updateToken(normalizedEmail, hashedToken, expiresAt);
 
-            const { sendVerificationEmail } = await import('../utils/email.js');
+            const { sendVerificationEmail } = await import('../shared/utils/email.js');
             sendVerificationEmail(normalizedEmail, rawToken, target.role).catch(err =>
                 logger.error('[AUTH] Failed to resend pending verification email:', err.message)
             );
@@ -285,7 +285,7 @@ class AuthService {
         });
 
         // 3. Send verification email
-        const { sendVerificationEmail } = await import('../utils/email.js');
+        const { sendVerificationEmail } = await import('../shared/utils/email.js');
         await sendVerificationEmail(normalizedEmail, rawToken, type);
 
         return { status: 'pending_verification', email: normalizedEmail };
@@ -351,7 +351,7 @@ class AuthService {
         await User.setEmailVerificationToken(email, hashedToken, expires)
 
         // Send raw token in the email link — backend hashes it on verification
-        const { sendVerificationEmail } = await import('../utils/email.js')
+        const { sendVerificationEmail } = await import('../shared/utils/email.js')
         await sendVerificationEmail(email, rawToken, userType)
 
         return true
@@ -518,7 +518,7 @@ class AuthService {
 
             // Use the original role from registration for the link to ensure consistency
             const linkRole = pending.role || userType;
-            const { sendVerificationEmail } = await import('../utils/email.js');
+            const { sendVerificationEmail } = await import('../shared/utils/email.js');
             await sendVerificationEmail(normalizedEmail, rawToken, linkRole);
         }
 
@@ -527,3 +527,5 @@ class AuthService {
 }
 
 export default AuthService;
+
+

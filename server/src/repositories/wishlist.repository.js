@@ -1,4 +1,4 @@
-import { query } from '../config/database.js';
+import { query } from '../shared/db/database.js';
 
 /**
  * Fetches the wishlist for a given buyer, joining with product details.

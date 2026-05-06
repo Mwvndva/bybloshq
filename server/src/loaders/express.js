@@ -11,9 +11,9 @@ import path from 'path';
 import { existsSync } from 'fs';
 import { mkdir } from 'fs/promises';
 
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import routes from '../routes/index.js';
-import { globalErrorHandler, notFoundHandler } from '../utils/errorHandler.js';
+import { globalErrorHandler, notFoundHandler } from '../shared/utils/errorHandler.js';
 import requestId from '../middleware/requestId.js';
 import fixApiPrefix from '../middleware/fixApiPrefix.js';
 
@@ -203,3 +203,5 @@ export default async (app) => {
 
     return app;
 };
+
+

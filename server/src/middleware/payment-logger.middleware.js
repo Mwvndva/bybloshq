@@ -1,4 +1,4 @@
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 /**
  * Payment Request Logger Middleware
@@ -30,3 +30,4 @@ const paymentRequestLogger = (req, res, next) => {
 };
 
 export default paymentRequestLogger;
+

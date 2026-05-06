@@ -1,4 +1,4 @@
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 
 class PendingRegistration {
     static async create({ email, passwordHash, role, registrationData, physicalAddress, latitude, longitude, verificationToken, expiresAt, termsAccepted = false }) {
@@ -99,3 +99,4 @@ class PendingRegistration {
 }
 
 export default PendingRegistration;
+

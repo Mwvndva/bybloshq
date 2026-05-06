@@ -1,4 +1,4 @@
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 import bcrypt from 'bcrypt';
 
 class User {
@@ -230,3 +230,4 @@ class User {
 }
 
 export default User;
+

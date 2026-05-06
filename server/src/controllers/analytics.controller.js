@@ -1,5 +1,5 @@
-import { pool } from '../config/database.js';
-import { AppError } from '../utils/errorHandler.js';
+import { pool } from '../shared/db/database.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 
 /**
  * @desc    Get analytics data for the authenticated seller
@@ -171,3 +171,4 @@ export const getSellerAnalytics = async (req, res, next) => {
     return next(new AppError(`Error fetching analytics data: ${error.message}`, 500));
   }
 };
+

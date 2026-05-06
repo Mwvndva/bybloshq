@@ -1,7 +1,7 @@
 import path from 'path';
 import ProductModel from '../models/product.model.js';
-import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import logger from '../shared/utils/logger.js';
+import { pool } from '../shared/db/database.js';
 import cacheService from './cache.service.js';
 
 class ProductService {
@@ -310,3 +310,5 @@ class ProductService {
 }
 
 export default ProductService;
+
+

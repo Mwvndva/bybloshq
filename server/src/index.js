@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 import dotenv from 'dotenv';
-import logger from './utils/logger.js';
+import logger from './shared/utils/logger.js';
 import { validateEnvironment } from './config/validateEnv.js';
 import loaders from './loaders/index.js';
 
@@ -55,7 +55,7 @@ async function startServer() {
     logger.error(err.name, err.message);
     server.close(async () => {
       try {
-        const { pool } = await import('./config/database.js');
+        const { pool } = await import('./shared/db/database.js');
         await pool.end();
         logger.info('📦 Database pool closed');
       } catch (poolErr) {
@@ -71,7 +71,7 @@ async function startServer() {
     logger.info('👋 SIGTERM RECEIVED. Shutting down gracefully');
     server.close(async () => {
       try {
-        const { pool } = await import('./config/database.js');
+        const { pool } = await import('./shared/db/database.js');
         await pool.end();
         logger.info('📦 Database pool closed');
       } catch (poolErr) {
@@ -87,3 +87,5 @@ startServer().catch(err => {
   logger.error('❌ Failed to start server:', err);
   process.exit(1);
 });
+
+

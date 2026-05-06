@@ -2,7 +2,7 @@
 'use strict';
 
 import cron from 'node-cron';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import OrderDeadlineService from '../services/orderDeadline.service.js';
 
 /**
@@ -21,7 +21,7 @@ const scheduleOrderDeadlineChecks = (options = {}) => {
 
     // C-5: Add health check for stale pending orders
     const checkExpiredPendingOrders = async () => {
-        const { pool } = await import('../config/database.js');
+        const { pool } = await import('../shared/db/database.js');
         await pool.query(`
             UPDATE product_orders 
             SET status = 'FAILED', 
@@ -74,3 +74,5 @@ const scheduleOrderDeadlineChecks = (options = {}) => {
 };
 
 export { scheduleOrderDeadlineChecks };
+
+
