@@ -12,6 +12,8 @@ import ReferralService from './referral.service.js';
 import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../shared/utils/email.js';
 import cacheService from './cache.service.js';
 import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../shared/utils/fulfillment.js';
+import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
+import ProductModel from '../models/product.model.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -167,10 +169,9 @@ class OrderService {
         }
 
         // 5. Determine initial status and handle inventory reservation
-        const initialStatus = this._determineInitialStatus(orderType);
-        if (orderType === OrderType.PHYSICAL) {
-          await this._reserveInventory(client, items);
-        }
+        const initialStatus = OrderStatus.CREATED;
+
+        // ... insertion of order happens later with initialStatus ...
 
         // 5c. Set Reservation Expiry
         const reservationExpiresAt = (orderType === OrderType.PHYSICAL || orderType === OrderType.SERVICE)
@@ -223,6 +224,20 @@ class OrderService {
         if (orderType === OrderType.SERVICE && metadata.booking_date && metadata.booking_time) {
           await this._reserveServiceSlot(client, order.id, metadata);
         }
+
+        // 8. STRICT TRANSITION FROM CREATED
+        let targetStatus = OrderStatus.PAYMENT_PENDING;
+        if (orderType === OrderType.PHYSICAL) targetStatus = OrderStatus.RESERVED;
+        else if (orderType === OrderType.SERVICE) targetStatus = OrderStatus.HELD;
+
+        assertValidTransition(order.status, targetStatus, order.id);
+
+        // Perform the actual transition (idempotent resource lock)
+        if (orderType === OrderType.PHYSICAL) {
+          await this._reserveInventory(client, items);
+        }
+
+        await Order.updateStatusWithSideEffects(client, order.id, targetStatus, 'pending');
 
         if (isManaged) await client.query('COMMIT');
         logger.info(`OrderService: Order ${order.id} created successfully`);
@@ -940,6 +955,10 @@ class OrderService {
   /**
    * Complete an order after successful payment
    */
+  /**
+   * Complete an order after successful payment.
+   * LEGACY WRAPPER: Now delegates to the state machine via executeFulfillment.
+   */
   static async completeOrder(payment, externalClient = null) {
     const client = externalClient || await pool.connect();
     const shouldManageTransaction = !externalClient;
@@ -947,175 +966,158 @@ class OrderService {
     try {
       const { metadata = {} } = payment;
       const orderId = metadata.order_id;
-
       if (!orderId) throw new Error('No order_id found in payment metadata');
 
       if (shouldManageTransaction) await client.query('BEGIN');
 
-      // 1. Fetch Order
-      const orderResult = await client.query(
-        'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE',
-        [orderId]
-      );
-      if (orderResult.rows.length === 0) throw new Error('Order not found');
-      const order = orderResult.rows[0];
+      const { rows } = await client.query('SELECT * FROM product_orders WHERE id = $1 FOR UPDATE', [orderId]);
+      if (rows.length === 0) throw new Error('Order not found');
+      const order = rows[0];
 
-      // 2. Atomic idempotency check
-      if (['COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status) ||
-        order.payment_status === 'completed') {
-        if (shouldManageTransaction) await client.query('ROLLBACK');
-        logger.info(`[ORDER] Order ${orderId} already in terminal state (${order.status}). Skipping.`);
-        return { success: true, message: 'Order already processed' };
-      }
-
-      // 3. Fetch Items
-      const itemsQuery = `
-        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options, p.track_inventory, p.name as product_name
-        FROM order_items oi
-        LEFT JOIN products p ON oi.product_id = p.id
-        WHERE oi.order_id = $1
-      `;
-      const itemsResult = await client.query(itemsQuery, [orderId]);
-      const items = itemsResult.rows;
-
-      // 4. DISPATCH BY ORDER TYPE (PHASE 5: ISOLATION)
-      let result;
-      const orderType = order.order_type || metadata.product_type?.toUpperCase() || OrderType.PHYSICAL;
-
-      if (orderType === OrderType.PHYSICAL) {
-        result = await this._completePhysicalOrder(client, order, items, payment);
-      } else if (orderType === OrderType.SERVICE) {
-        result = await this._completeServiceOrder(client, order, items, payment);
-      } else if (orderType === OrderType.DIGITAL) {
-        result = await this._completeDigitalOrder(client, order, items, payment);
-      } else {
-        throw new Error(`Unknown order type: ${orderType}`);
-      }
-
-      // 5. Shared Side Effects (Metadata update)
-      await client.query(
-        `UPDATE payments 
-         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{order_completed_at}', to_jsonb(NOW()))
-         WHERE id = $1`,
-        [payment.id]
-      );
+      // Execute fulfillment logic
+      await this.executeFulfillment(client, order);
 
       if (shouldManageTransaction) await client.query('COMMIT');
-
-      // Async Side Effects
-      this._handleOrderCompletionSideEffects(result.updatedOrder, items, payment).catch(err =>
-        logger.error('[ORDER-SIDE-EFFECTS] Error:', err)
-      );
-
-      return { success: true, orderId, newStatus: result.updatedOrder.status };
-
-    } catch (error) {
+      return { success: true };
+    } catch (err) {
       if (shouldManageTransaction) await client.query('ROLLBACK');
-      throw error;
+      logger.error('[FULFILLMENT] completeOrder failed:', err);
+      throw err;
     } finally {
       if (shouldManageTransaction) client.release();
     }
   }
 
-  static async _completePhysicalOrder(client, order, items, payment) {
-    logger.info(`[_completePhysicalOrder] Finalizing Order #${order.order_number}`);
+  /**
+   * Execute fulfillment process for a PAID order.
+   * Called by FulfillmentQueueWorker or legacy completeOrder.
+   */
+  static async executeFulfillment(client, order) {
+    const orderId = order.id;
 
-    // 1. Finalize Inventory (Convert Reserved to Sold)
-    await this._finalizeInventory(client, items);
-
-    // 2. Determine and Update Status (Standardized Source of Truth)
-    const newStatus = this._determineCompletionStatus(items, order.fulfillment_type, order, payment.metadata);
-
-    const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, newStatus, 'completed', payment.provider_reference);
-
-    // 3. Process Payout if immediately completed (e.g. self-collection with no further steps)
-    if (newStatus === OrderStatus.COMPLETED) {
-      await this._processSellerPayout(client, updatedOrder);
+    // 1. Verify Status is PAID
+    if (order.status !== OrderStatus.PAID) {
+      logger.warn(`[FULFILLMENT] Order ${orderId} is not in PAID status (Current: ${order.status}). skipping.`);
+      return;
     }
 
-    return { updatedOrder };
+    // 2. Fetch Items
+    const itemsQuery = `
+        SELECT oi.*, p.product_type::text as product_type, p.is_digital, p.service_options, p.track_inventory, p.name as product_name
+        FROM order_items oi
+        LEFT JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = $1
+      `;
+    const { rows: items } = await client.query(itemsQuery, [orderId]);
+
+    const orderType = order.order_type;
+    logger.info(`[FULFILLMENT] Starting execution for Order ${orderId} (${orderType})`);
+
+    if (orderType === OrderType.PHYSICAL) {
+      await this._completePhysicalOrder(client, order, items);
+    } else if (orderType === OrderType.SERVICE) {
+      await this._completeServiceOrder(client, order, items);
+    } else if (orderType === OrderType.DIGITAL) {
+      await this._completeDigitalOrder(client, order, items);
+    } else {
+      throw new Error(`Unknown order type: ${orderType}`);
+    }
   }
 
-  static async _completeServiceOrder(client, order, items, payment) {
-    logger.info(`[_completeServiceOrder] Finalizing Order #${order.order_number}`);
+  /**
+   * Complete Physical Order: PAID -> FULFILLMENT_PENDING -> FULFILLED
+   */
+  static async _completePhysicalOrder(client, order, items) {
+    // 1. Transition to FULFILLMENT_PENDING
+    assertValidTransition(order.status, OrderStatus.FULFILLMENT_PENDING, order.id);
+    await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLMENT_PENDING, 'completed');
 
-    // 1. Finalize Service Slot (Convert Reserved to Booked)
-    await this._finalizeServiceSlot(client, order.id);
-
-    // Mobile service: seller visits buyer. Persist buyer's location.
-    // In-store service (BUYER_TO_SELLER): buyer visits seller, no buyer location to save.
-    if (order.fulfillment_type === FulfillmentType.SELLER_TO_BUYER && order.buyer_id) {
-      const lat = Number.parseFloat(order.location_lat);
-      const lng = Number.parseFloat(order.location_lng);
-      const addr = order.location_address;
-
-      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
-        logger.info(`[ORDER] Persisting buyer location at completion: buyer=${order.buyer_id}`);
-        await Buyer.updateLocation(order.buyer_id, {
-          latitude: lat,
-          longitude: lng,
-          fullAddress: addr || null,
-        }).catch(err =>
-          logger.error(`[ORDER] Buyer location persistence failed:`, err.message)
-        );
-      } else {
-        logger.warn(
-          `[ORDER] Mobile service ${order.id} missing buyer coordinates ` +
-          `(lat=${order.location_lat}, lng=${order.location_lng})`
-        );
+    // 2. Commit Inventory (Decrement reserved_quantity)
+    for (const item of items) {
+      if (item.track_inventory) {
+        await ProductModel.commit(client, item.product_id, item.quantity);
       }
     }
 
-    // 3. Determine and Update Status (Standardized mapping)
-    const newStatus = this._determineCompletionStatus(items, order.fulfillment_type, order, payment.metadata);
-    const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, newStatus, 'completed', payment.provider_reference);
+    // 3. Initiate logistics/notifications
+    try {
+      // Re-fetch order status since it changed
+      const { rows } = await client.query('SELECT * FROM product_orders WHERE id = $1 FOR UPDATE', [order.id]);
+      const currentOrder = rows[0];
 
-    return { updatedOrder };
-  }
+      await this._initiatePhysicalFulfillment(currentOrder, items);
 
-  static async _completeDigitalOrder(client, order, items, payment) {
-    logger.info(`[_completeDigitalOrder] Finalizing Order #${order.order_number}`);
-
-    // 1. Grant Digital Entitlement
-    await this._grantDigitalAccess(client, order.id, order.buyer_id, items);
-
-    // 2. Finalize Inventory (If any limited digital stock)
-    await this._finalizeInventory(client, items);
-
-    // 3. Construct Download URLs for Digital Items (DP-01: Fix property naming)
-    const baseUrl = process.env.FRONTEND_URL || 'https://bybloshq.space';
-    const downloadUrls = items
-      .filter(item => item.isDigital || item.is_digital)
-      .map(item => ({
-        productId: item.product_id,
-        name: item.product_name,
-        url: `${baseUrl}/api/orders/${order.id}/download/${item.product_id}`
-      }));
-
-    // Update order metadata with download URLs
-    if (downloadUrls.length > 0) {
-      const existingMetadata = order.metadata || {};
-      const updatedMetadata = {
-        ...existingMetadata,
-        download_urls: downloadUrls,
-        download_url: downloadUrls[0].url
-      };
-
-      await client.query(
-        'UPDATE product_orders SET metadata = $1 WHERE id = $2',
-        [JSON.stringify(updatedMetadata), order.id]
-      );
-      order.metadata = updatedMetadata;
+      // 4. Transition to FULFILLED
+      assertValidTransition(currentOrder.status, OrderStatus.FULFILLED, order.id);
+      await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.FULFILLED, 'completed');
+    } catch (err) {
+      logger.error(`[FULFILLMENT-PHYSICAL] Failed initiation for Order ${order.id}:`, err);
+      throw err;
     }
-
-    // 4. Digital orders are COMPLETED immediately
-    const updatedOrder = await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.COMPLETED, 'completed', payment.provider_reference);
-
-    // 5. Process Payout immediately
-    await this._processSellerPayout(client, updatedOrder);
-
-    return { updatedOrder };
   }
+
+  /**
+   * Complete Service Order: PAID -> BOOKED
+   */
+  static async _completeServiceOrder(client, order, items) {
+    // 1. Transition to BOOKED
+    assertValidTransition(order.status, OrderStatus.BOOKED, order.id);
+    await this._finalizeServiceSlot(client, order.id);
+    await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.BOOKED, 'completed');
+
+    // 2. Notifications
+    try {
+      await whatsappService.notifySellerNewOrder({ order, items });
+      await whatsappService.notifyBuyerPaymentSuccess({ order, items });
+    } catch (err) {
+      logger.warn(`[FULFILLMENT-SERVICE] Notification failure:`, err.message);
+    }
+  }
+
+  /**
+   * Complete Digital Order: PAID -> DELIVERY_PENDING -> DELIVERED
+   */
+  static async _completeDigitalOrder(client, order, items) {
+    // 1. Transition to DELIVERY_PENDING
+    assertValidTransition(order.status, OrderStatus.DELIVERY_PENDING, order.id);
+    await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.DELIVERY_PENDING, 'completed');
+
+    // 2. Grant Access
+    try {
+      await this._grantDigitalAccessFlow(client, order, items);
+
+      // 3. Transition to DELIVERED
+      assertValidTransition(OrderStatus.DELIVERY_PENDING, OrderStatus.DELIVERED, order.id);
+      await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.DELIVERED, 'completed');
+    } catch (err) {
+      logger.error(`[FULFILLMENT-DIGITAL] Failed delivery for Order ${order.id}:`, err);
+      throw err;
+    }
+  }
+
+  static async _initiatePhysicalFulfillment(order, items) {
+    await whatsappService.notifySellerNewOrder({ order, items });
+    await whatsappService.notifyBuyerPaymentSuccess({ order, items });
+
+    if (order.fulfillment_type === 'COURIER') {
+      await whatsappService.notifyCourierNewOrder({ order, items });
+    }
+  }
+
+  static async _grantDigitalAccessFlow(client, order, items) {
+    for (const item of items) {
+      if (item.is_digital) {
+        const accessToken = crypto.randomBytes(32).toString('hex');
+        await client.query(
+          `INSERT INTO digital_access (order_id, user_id, access_token)
+                   VALUES ($1, $2, $3)`,
+          [order.id, order.buyer_id, accessToken]
+        );
+      }
+    }
+    await whatsappService.notifyBuyerDigitalDelivery({ order, items });
+  }
+
   static async _processSellerPayout(client, order) {
     return await escrowManager.releaseFunds(client, order, 'OrderService');
   }

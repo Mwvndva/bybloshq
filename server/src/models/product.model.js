@@ -113,6 +113,60 @@ class ProductModel {
         );
         return rowCount > 0;
     }
+
+    /**
+     * PIN-01: ATOMIC INVENTORY RESERVE
+     * Decrements available quantity and increments reserved quantity.
+     * Throws if insufficient stock.
+     */
+    static async reserve(client, id, qty) {
+        const query = `
+            UPDATE products 
+            SET quantity = quantity - $1, 
+                reserved_quantity = reserved_quantity + $1,
+                updated_at = NOW()
+            WHERE id = $2 AND (quantity >= $1 OR track_inventory = false)
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [qty, id]);
+        if (rows.length === 0) {
+            throw new Error(`Insufficient stock for product ${id} or product not found`);
+        }
+        return rows[0];
+    }
+
+    /**
+     * PIN-01: ATOMIC INVENTORY RELEASE (EXPIRE/CANCEL)
+     * Restores available quantity and decrements reserved quantity.
+     */
+    static async release(client, id, qty) {
+        const query = `
+            UPDATE products 
+            SET quantity = quantity + $1, 
+                reserved_quantity = reserved_quantity - $1,
+                updated_at = NOW()
+            WHERE id = $2 AND reserved_quantity >= $1
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [qty, id]);
+        return rows[0];
+    }
+
+    /**
+     * PIN-01: ATOMIC INVENTORY COMMIT (PAID)
+     * Clears reserved quantity after payment success.
+     */
+    static async commit(client, id, qty) {
+        const query = `
+            UPDATE products 
+            SET reserved_quantity = reserved_quantity - $1,
+                updated_at = NOW()
+            WHERE id = $2 AND reserved_quantity >= $1
+            RETURNING *
+        `;
+        const { rows } = await client.query(query, [qty, id]);
+        return rows[0];
+    }
 }
 
 export default ProductModel;

@@ -10,6 +10,9 @@ import OrderService from './order.service.js';
 import { PaydError, PaydErrorCodes } from '../shared/utils/PaydError.js';
 import Buyer from '../models/buyer.model.js';
 import cacheService from './cache.service.js';
+import FulfillmentQueueService from './fulfillmentQueue.service.js';
+import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
+import Order from '../models/order.model.js';
 
 export class PaymentService {
     constructor() {
@@ -229,6 +232,17 @@ export class PaymentService {
                 last_name,
                 callback_url
             } = paymentData;
+            const orderId = paymentData.metadata?.order_id || paymentData.order_id;
+
+            // 0a. Transition Order to PAYMENT_PENDING
+            if (orderId) {
+                const { rows: orders } = await pool.query('SELECT status FROM product_orders WHERE id = $1', [orderId]);
+                if (orders.length > 0) {
+                    assertValidTransition(orders[0].status, 'PAYMENT_PENDING', orderId);
+                    await pool.query('UPDATE product_orders SET status = $1, updated_at = NOW() WHERE id = $2', ['PAYMENT_PENDING', orderId]);
+                    logger.info(`[PAYMENT-INIT] Order ${orderId} transitioned to PAYMENT_PENDING`);
+                }
+            }
 
             // ============================================================
             // STEP 0: VALIDATE AMOUNT (Minimum 10 KES per documentation)
@@ -498,26 +512,26 @@ export class PaymentService {
             const updateResult = await this._updatePaymentOnCallback(payment, isSuccess, mpesaReceipt);
             if (!updateResult.success) return updateResult;
 
-            // STEP 5: POST-COMMIT SIDE EFFECTS (Order Completion)
+            // STEP 5: TRANSITION ORDER TO PAID AND ENQUEUE FULFILLMENT
             if (isSuccess && (paymentMeta.order_id || paymentMeta.product_id)) {
+                const orderId = paymentMeta.order_id || paymentMeta.product_id;
                 try {
-                    await OrderService.completeOrder({
-                        ...payment,
-                        status: PaymentStatus.COMPLETED,
-                        metadata: { ...paymentMeta, payd_confirmation: callbackData }
-                    });
-                    logger.info('[PAYD-WEBHOOK] Order completion successful', { payment_id: payment.id });
-                } catch (completionErr) {
-                    logger.error(`[CRITICAL] handlePaydCallback completeOrder failed for payment ${payment.id}:`, completionErr);
-                    try {
-                        await pool.query(
-                            "UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{needs_completion}', 'true'::jsonb) WHERE id = $1",
-                            [payment.id]
-                        );
-                        logger.info(`[RECOVERY] Marked payment ${payment.id} as needs_completion=true`);
-                    } catch (flagErr) {
-                        logger.error(`[CRITICAL] FAILED TO SET needs_completion FLAG for payment ${payment.id}:`, flagErr);
+                    const { rows: orders } = await pool.query('SELECT status FROM product_orders WHERE id = $1 FOR UPDATE', [orderId]);
+                    if (orders.length > 0) {
+                        assertValidTransition(orders[0].status, 'PAID', orderId);
+                        await pool.query('UPDATE product_orders SET status = $2, payment_status = $3, updated_at = NOW() WHERE id = $1', [orderId, 'PAID', 'completed']);
+
+                        // Enqueue for async fulfillment
+                        await FulfillmentQueueService.enqueue(null, orderId);
+                        logger.info(`[PAYD-WEBHOOK] Order ${orderId} transitioned to PAID and enqueued for fulfillment`);
                     }
+                } catch (completionErr) {
+                    logger.error(`[CRITICAL] handlePaydCallback order transition failed for payment ${payment.id}:`, completionErr);
+                    // Log as system issue for reconciliation to pick up
+                    await FulfillmentQueueService.logSystemIssue(orderId, 'PAYMENT_TRANSITION_FAILURE', 'HIGH', {
+                        error: completionErr.message,
+                        payment_id: payment.id
+                    });
                 }
             }
 
