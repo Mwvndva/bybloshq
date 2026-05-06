@@ -11,32 +11,39 @@ const MarketingLogin = safeLazy(() => import('@/pages/marketing/MarketingLogin')
 const MarketingDashboard = safeLazy(() => import('@/pages/marketing/MarketingDashboard'));
 const VerifyEmail = safeLazy(() => import('@/pages/auth/VerifyEmail'));
 
+import PublicLayout from '@/components/layout/PublicLayout';
+
 // Main routes configuration
 export const routes = [
   {
-    path: '/',
-    element: <IndexPage />,
-  },
-  // Public shop page — no auth required
-  {
-    path: '/shop/:shopName',
-    element: <ShopPage />,
-  },
-  {
-    path: '/admin/marketing/login',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <MarketingLogin />
-      </Suspense>
-    ),
-  },
-  {
-    path: '/admin/marketing',
-    element: (
-      <Suspense fallback={<RouteFallback />}>
-        <MarketingDashboard />
-      </Suspense>
-    ),
+    element: <PublicLayout />,
+    children: [
+      {
+        path: '/',
+        element: <IndexPage />,
+      },
+      // Public shop page — no auth required
+      {
+        path: '/shop/:shopName',
+        element: <ShopPage />,
+      },
+      {
+        path: '/admin/marketing/login',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <MarketingLogin />
+          </Suspense>
+        ),
+      },
+      {
+        path: '/admin/marketing',
+        element: (
+          <Suspense fallback={<RouteFallback />}>
+            <MarketingDashboard />
+          </Suspense>
+        ),
+      },
+    ]
   },
   {
     path: '/verify-email',

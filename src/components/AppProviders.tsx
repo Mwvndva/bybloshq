@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { GlobalAuthProvider } from "../contexts/GlobalAuthContext";
 import { WishlistProvider } from "../contexts/WishlistContext";
+import { ModalProvider } from "../contexts/ModalContext";
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -22,9 +23,11 @@ export const AppProviders = ({ children }: { children: React.ReactNode }) => (
             <SonnerToaster />
             {/* Unified auth provider - provides all role-specific hooks */}
             <GlobalAuthProvider>
-                <WishlistProvider>
-                    {children}
-                </WishlistProvider>
+                <ModalProvider>
+                    <WishlistProvider>
+                        {children}
+                    </WishlistProvider>
+                </ModalProvider>
             </GlobalAuthProvider>
         </TooltipProvider>
     </QueryClientProvider>
