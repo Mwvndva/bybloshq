@@ -5,7 +5,7 @@ class BookingService {
     /**
      * Reserve a time slot for a service order
      */
-    static async reserveSlot(client: any, slotId: number, orderId: number) {
+    static async reserveSlot(client, slotId, orderId) {
         const executor = client || pool;
 
         logger.info(`[BookingService] Reserved slot ${slotId} for order ${orderId}`);
@@ -32,7 +32,7 @@ class BookingService {
     /**
      * Finalize a reserved slot (mark as BOOKED)
      */
-    static async finalizeSlot(client: any, orderId: number) {
+    static async finalizeSlot(client, orderId) {
         const executor = client || pool;
 
         logger.info(`[BookingService] Finalizing slot for order ${orderId}`);
@@ -58,7 +58,7 @@ class BookingService {
     /**
      * Release a reserved slot (cancel reservation)
      */
-    static async releaseSlot(client: any, orderId: number) {
+    static async releaseSlot(client, orderId) {
         const executor = client || pool;
 
         logger.info(`[BookingService] Releasing slot for order ${orderId}`);
