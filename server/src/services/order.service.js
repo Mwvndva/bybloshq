@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import Fees from '../config/fees.js';
-import { OrderStatus, ProductType, OrderType } from '../constants/enums.js';
+import { OrderStatus, ProductType, OrderType } from '../shared/constants/enums.js';
 import Order from '../models/order.model.js';
 import Buyer from '../models/buyer.model.js';
 import whatsappService from './whatsapp.service.js';
@@ -1915,6 +1915,7 @@ class OrderService {
 }
 
 export default OrderService;
+
 
 
 

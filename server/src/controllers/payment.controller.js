@@ -7,7 +7,7 @@ import Order from '../models/order.model.js';
 import OrderService from '../services/order.service.js';
 import Buyer from '../models/buyer.model.js';
 import Fees from '../config/fees.js';
-import { PaymentStatus, ProductType } from '../constants/enums.js';
+import { PaymentStatus, ProductType } from '../shared/constants/enums.js';
 import { normalizeOrderInput } from '../shared/utils/order.utils.js';
 
 class PaymentController {
@@ -191,6 +191,7 @@ class PaymentController {
 }
 
 export default new PaymentController();
+
 
 
 
