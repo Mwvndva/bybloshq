@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-let redisClient: any = null;
+let redisClient = null;
 
 const createRedisClient = () => {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
@@ -24,12 +24,10 @@ const createRedisClient = () => {
         enableOfflineQueue: true,
     });
 
-    client.on('error', (err: any) => {
+    client.on('error', (err) => {
         if (err.code === 'ECONNREFUSED') {
-            // @ts-ignore
             if (!client._connectionRefusedLogged) {
                 console.warn('Redis connection refused. Ensure Redis is running if you want persistence.');
-                // @ts-ignore
                 client._connectionRefusedLogged = true;
             }
         } else {
@@ -39,7 +37,6 @@ const createRedisClient = () => {
 
     client.on('connect', () => {
         console.log('Redis client connected successfully');
-        // @ts-ignore
         client._connectionRefusedLogged = false;
     });
 
@@ -47,7 +44,7 @@ const createRedisClient = () => {
         console.log('Redis client is ready to accept commands');
     });
 
-    client.connect().catch((err: any) => {
+    client.connect().catch((err) => {
         console.warn('Redis initial connection failed:', err.message);
     });
 
