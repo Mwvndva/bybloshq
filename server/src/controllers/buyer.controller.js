@@ -10,7 +10,7 @@ import { setAuthCookie } from '../shared/utils/cookie.utils.js';
 import { signToken, verifyToken, getTokenFromRequest } from '../shared/utils/jwt.js';
 import OrderService from "../services/order.service.js";
 import OrderModel from "../models/order.model.js";
-import { OrderStatus } from "../constants/enums.js";
+import { OrderStatus } from "../shared/constants/enums.js";
 
 // Helper to send token via cookie
 const createSendToken = (data, statusCode, req, res, next) => {
@@ -766,6 +766,7 @@ export const markOrderAsCollected = async (req, res, next) => {
     next(error);
   }
 };
+
 
 
 
