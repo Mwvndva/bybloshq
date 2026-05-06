@@ -2,15 +2,12 @@ import { getRedisClient } from '../db/redis.js';
 import logger from './logger.js';
 
 class CacheService {
-    public redis: any;
-    private defaultTTL: number;
-
     constructor() {
         this.redis = getRedisClient();
         this.defaultTTL = 300; // 5 minutes default
     }
 
-    async get(key: string) {
+    async get(key) {
         try {
             if (!this.redis) return null;
             const data = await this.redis.get(key);
@@ -22,7 +19,7 @@ class CacheService {
         }
     }
 
-    async set(key: string, value: any, ttlSeconds: number = this.defaultTTL) {
+    async set(key, value, ttlSeconds = this.defaultTTL) {
         try {
             if (!this.redis) return false;
             const stringValue = JSON.stringify(value);
@@ -34,7 +31,7 @@ class CacheService {
         }
     }
 
-    async del(key: string) {
+    async del(key) {
         try {
             if (!this.redis) return false;
             await this.redis.del(key);
@@ -45,7 +42,7 @@ class CacheService {
         }
     }
 
-    async clearPattern(pattern: string) {
+    async clearPattern(pattern) {
         try {
             if (!this.redis) return false;
             let cursor = '0';

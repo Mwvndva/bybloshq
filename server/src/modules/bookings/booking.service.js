@@ -6,7 +6,7 @@ class BookingService {
     /**
      * Hold a slot during order creation (CRITICAL FIX: SLOT-LOCKING)
      */
-    static async reserveSlot(client: any, slotId: number, orderId: number) {
+    static async reserveSlot(client, slotId, orderId) {
         const holdDurationMinutes = 15;
         const result = await client.query(
             `UPDATE service_slots 
@@ -30,14 +30,13 @@ class BookingService {
     /**
      * Finalize a service booking after payment
      */
-    static async confirmBooking(order: any) {
+    static async confirmBooking(order) {
         logger.info(`[Booking] Confirming booking for Order ${order.id}`);
 
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
 
-            // 1. Mark slot as BOOKED (only if still HELD/valid)
             const result = await client.query(
                 `UPDATE service_slots 
                  SET status = 'BOOKED', expires_at = NULL, updated_at = NOW()
@@ -47,13 +46,10 @@ class BookingService {
             );
 
             if (result.rows.length === 0) {
-                // If the slot is gone or EXPIRED, we might need to trigger an auto-refund logic here
                 logger.error(`[Booking] FAILED to confirm: Slot lost or expired for Order ${order.id}`);
-                // In production, we'd trigger a refund/alert system here
                 throw new Error('Service slot reservation expired before payment confirmation.');
             }
 
-            // 2. Update Order status
             await OrderModel.updateStatus(client, order.id, 'SERVICE_PENDING');
 
             await client.query('COMMIT');
@@ -70,7 +66,7 @@ class BookingService {
     /**
      * Release a reservation (e.g. on cancellation or timeout)
      */
-    static async releaseReservation(orderId: number) {
+    static async releaseReservation(orderId) {
         const query = `
       UPDATE service_slots 
       SET status = 'AVAILABLE', reserved_by_order_id = NULL, expires_at = NULL, updated_at = NOW()

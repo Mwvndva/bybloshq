@@ -4,88 +4,44 @@ import OrderModel from './order.model.js';
 import cacheService from '../../shared/utils/cache.service.js';
 import BookingService from '../bookings/booking.service.js';
 import { assertValidTransition } from '../../shared/utils/OrderStatusGuard.js';
-import { OrderStatus } from './order.types.js';
 import { AppError } from '../../shared/utils/errorHandler.js';
 
 class OrderService {
     /**
      * Create a new order (Ported from legacy OrderService)
      */
-    static async createOrder(orderData: any, externalClient: any = null) {
-        const {
-            buyer,
-            service,
-            location,
-            metadata = {},
-            idempotencyKey = null
-        } = orderData;
-
-        const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyer.id}:seller:${orderData.sellerId}`;
-
+    static async createOrder(orderData, externalClient = null) {
         const isManaged = !externalClient;
         const client = externalClient || await pool.connect();
 
-        try {
-            // 1. Acquire Lock (Simple Redis Lock)
-            if (cacheService?.redis) {
-                const acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 10, 'NX');
-                if (!acquired) {
-                    throw new Error('Order creation already in progress. Please wait.');
-                }
-            }
+        const lockKey = `lock:buyer:${orderData.buyer?.id || orderData.buyer?.email}`;
+        if (cacheService?.redis) {
+            const acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 30, 'NX');
+            if (!acquired) throw new AppError('An order is already being processed for this user. Please wait.', 429);
+        }
 
+        try {
             if (isManaged) await client.query('BEGIN');
 
-            // 2. Resolve and verify prices from DB (CRITICAL FIX: PRICE-VERIFICATION)
-            const items = metadata.items || [];
-            if (items.length === 0 && service) {
-                // Handle legacy single-item format
-                items.push({
-                    productId: Number.parseInt(service.id, 10),
-                    quantity: Number.parseInt(service.quantity, 10) || 1
-                });
-            }
+            const items = orderData.items || [];
+            const enrichedItems = items.map(item => ({
+                ...item,
+                subtotal: item.price * item.quantity,
+                productType: item.productType || 'physical'
+            }));
 
-            let calculatedTotal = 0;
-            const enrichedItems = [];
-
-            for (const item of items) {
-                const productRes = await client.query(
-                    'SELECT id, name, price, product_type, is_digital FROM products WHERE id = $1',
-                    [item.productId]
-                );
-                const product = productRes.rows[0];
-
-                if (!product) {
-                    throw new Error(`Product with ID ${item.productId} not found`);
-                }
-
-                const itemPrice = Number.parseFloat(product.price);
-                const itemQty = Math.max(1, Number.parseInt(item.quantity, 10) || 1);
-                const itemSubtotal = Math.round(itemPrice * itemQty * 100) / 100;
-
-                calculatedTotal += itemSubtotal;
-                enrichedItems.push({
-                    ...item,
-                    name: product.name,
-                    price: itemPrice,
-                    subtotal: itemSubtotal,
-                    productType: product.product_type,
-                    isDigital: product.is_digital
-                });
-            }
-
-            // Calculate fees using platform rates (1% commission)
-            const commissionRate = 0.01;
+            const calculatedTotal = enrichedItems.reduce((acc, item) => acc + item.subtotal, 0);
+            const commissionRate = 0.05; // 5% platform fee
             const platformFee = Math.round(calculatedTotal * commissionRate * 100) / 100;
             const sellerPayout = Math.round((calculatedTotal - platformFee) * 100) / 100;
 
-            // 4. Insert Order
             const orderNumber = await this.generateOrderNumber(client);
             const reservationTTL = 15; // 15 minutes
             const reservationExpiresAt = new Date(Date.now() + reservationTTL * 60 * 1000);
 
             const initialStatus = enrichedItems[0]?.productType === 'service' ? 'HELD' : 'RESERVED';
+
+            const buyer = orderData.buyer || {};
 
             const orderRecord = {
                 order_number: orderNumber,
@@ -99,54 +55,38 @@ class OrderService {
                 buyer_email: buyer.email,
                 buyer_mobile_payment: buyer.phone,
                 buyer_whatsapp_number: buyer.phone,
-                location_address: location?.address || null,
-                location_lat: location?.lat || null,
-                location_lng: location?.lng || null,
-                service_title: enrichedItems[0]?.name || 'Product',
-                metadata: { ...metadata, items: enrichedItems },
                 status: initialStatus,
                 payment_status: 'pending',
-                order_type: orderData.orderType || (enrichedItems[0]?.productType === 'service' ? 'SERVICE' : (enrichedItems[0]?.isDigital ? 'DIGITAL' : 'PHYSICAL')),
-                fulfillment_type: orderData.fulfillmentType || null,
-                total_quantity: enrichedItems.reduce((acc: number, cur: any) => acc + (cur.quantity || 1), 0),
-                reservation_expires_at: reservationExpiresAt
+                order_type: enrichedItems[0]?.isDigital ? 'DIGITAL' : (enrichedItems[0]?.productType === 'service' ? 'SERVICE' : 'PHYSICAL'),
+                total_quantity: enrichedItems.reduce((acc, item) => acc + item.quantity, 0),
+                reservation_expires_at: reservationExpiresAt,
+                metadata: {
+                    items: enrichedItems,
+                    source: 'web_checkout',
+                    product_type: enrichedItems[0]?.productType || 'physical'
+                }
             };
 
-            const order = await OrderModel.insert(client, orderRecord);
+            const savedOrder = await OrderModel.insert(client, orderRecord);
+            await OrderModel.insertItems(client, savedOrder.id, enrichedItems);
 
-            // 5. Insert Items
-            if (enrichedItems.length > 0) {
-                await OrderModel.insertItems(client, order.id, enrichedItems);
-
-                // 6. Reserve Inventory/Slots (CRITICAL FIX: ATOMIC-RESERVATION)
-                for (const item of enrichedItems) {
-                    if (item.productType === 'service' && item.slotId) {
-                        await BookingService.reserveSlot(client, item.slotId, order.id);
-                    } else if (item.productType !== 'service') {
-                        // Atomic inventory decrement AND reservation increment for all products (Physical/Digital)
-                        const invResult = await client.query(
-                            `UPDATE products 
-                             SET quantity = quantity - $1, 
-                                 reserved_quantity = reserved_quantity + $1,
-                                 updated_at = NOW() 
-                             WHERE id = $2 AND track_inventory = TRUE AND quantity >= $1`,
-                            [item.quantity, item.productId]
-                        );
-                        if (invResult.rowCount === 0) {
-                            // Check if it's because tracking is off or stock is low
-                            const check = await client.query('SELECT track_inventory, quantity FROM products WHERE id = $1', [item.productId]);
-                            if (check.rows[0]?.track_inventory && check.rows[0]?.quantity < item.quantity) {
-                                throw new Error(`Insufficient stock for product: ${item.name}`);
-                            }
-                        }
-                    }
+            for (const item of enrichedItems) {
+                if (item.productType === 'service' && item.slotId) {
+                    await BookingService.reserveSlot(client, item.slotId, savedOrder.id);
+                } else {
+                    await client.query(
+                        `UPDATE products 
+                         SET quantity = quantity - $1, 
+                             reserved_quantity = reserved_quantity + $1,
+                             updated_at = NOW() 
+                         WHERE id = $2 AND track_inventory = TRUE`,
+                        [item.quantity, item.productId]
+                    );
                 }
             }
 
             if (isManaged) await client.query('COMMIT');
-
-            logger.info(`[OrderService] Order ${order.id} created with verified amount KES ${calculatedTotal}`);
-            return order;
+            return savedOrder;
         } catch (error) {
             if (isManaged) await client.query('ROLLBACK');
             logger.error('[OrderService] Error creating order:', error);
@@ -162,14 +102,13 @@ class OrderService {
     /**
      * Transition an order to a new state with strict validation and side effects
      */
-    static async transitionTo(orderId: number, targetStatus: OrderStatus, metadata: any = {}, externalClient: any = null) {
+    static async transitionTo(orderId, targetStatus, metadata = {}, externalClient = null) {
         const isManaged = !externalClient;
         const client = externalClient || await pool.connect();
 
         try {
             if (isManaged) await client.query('BEGIN');
 
-            // 1. Lock Order for Update
             const { rows: orderRows } = await client.query(
                 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE',
                 [orderId]
@@ -181,8 +120,6 @@ class OrderService {
             }
 
             const currentStatus = order.status;
-
-            // 2. Validate Transition
             assertValidTransition(currentStatus, targetStatus, order.order_number);
 
             if (currentStatus === targetStatus) {
@@ -192,10 +129,7 @@ class OrderService {
 
             logger.info(`[STATE-MACHINE] Transitioning Order ${order.order_number} from ${currentStatus} -> ${targetStatus}`);
 
-            // 3. Status-Specific Side Effects
             await this.handleStateSideEffects(client, order, targetStatus, metadata);
-
-            // 4. Update Status
             const updatedOrder = await OrderModel.updateStatus(client, orderId, targetStatus);
 
             if (isManaged) await client.query('COMMIT');
@@ -209,10 +143,7 @@ class OrderService {
         }
     }
 
-    /**
-     * Handle logic triggered by specific state transitions
-     */
-    private static async handleStateSideEffects(client: any, order: any, targetStatus: OrderStatus, metadata: any) {
+    static async handleStateSideEffects(client, order, targetStatus, metadata) {
         switch (targetStatus) {
             case 'PAID':
                 await this.handlePaidAction(client, order);
@@ -224,15 +155,13 @@ class OrderService {
                 await this.handleFulfilledAction(client, order);
                 break;
             case 'EXPIRED':
-                await this.handleCancelledAction(client, order); // Same as cancelled for inventory/bookings
+                await this.handleCancelledAction(client, order);
                 break;
         }
     }
 
-    private static async handlePaidAction(client: any, order: any) {
-        // Logic for paid orders: trigger fulfillment queue or digital access
+    static async handlePaidAction(client, order) {
         if (order.order_type === 'DIGITAL') {
-            // Auto-fulfill digital items
             await this.transitionTo(order.id, 'FULFILLED', {}, client);
         } else if (order.order_type === 'SERVICE') {
             await this.transitionTo(order.id, 'BOOKED', {}, client);
@@ -241,15 +170,13 @@ class OrderService {
         }
     }
 
-    private static async handleCancelledAction(client: any, order: any) {
-        // 1. Release inventory / slots
+    static async handleCancelledAction(client, order) {
         const { rows: items } = await client.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
 
         for (const item of items) {
             if (order.order_type === 'SERVICE' && item.metadata?.slotId) {
                 await BookingService.releaseReservation(order.id);
             } else {
-                // Revert inventory
                 await client.query(
                     `UPDATE products 
                      SET quantity = quantity + $1, 
@@ -261,7 +188,6 @@ class OrderService {
             }
         }
 
-        // 2. Refund buyer (if payment was at least attempted or order was paid)
         if (order.buyer_id && order.total_amount > 0) {
             logger.info(`[REFUND] Crediting KES ${order.total_amount} back to buyer ${order.buyer_id} for order ${order.order_number}`);
             await client.query(
@@ -271,8 +197,7 @@ class OrderService {
         }
     }
 
-    private static async handleFulfilledAction(client: any, order: any) {
-        // Finalize inventory (remove from reserved)
+    static async handleFulfilledAction(client, order) {
         const { rows: items } = await client.query('SELECT * FROM order_items WHERE order_id = $1', [order.id]);
 
         for (const item of items) {
@@ -292,13 +217,11 @@ class OrderService {
         }
     }
 
-    private static async grantDigitalAccess(client: any, order: any) {
-        // Implementation for digital delivery
+    static async grantDigitalAccess(client, order) {
         logger.info(`[DIGITAL-DELIVERY] Granting access for Order ${order.order_number}`);
-        // TODO: Insert into digital_access table
     }
 
-    private static async generateOrderNumber(client: any) {
+    static async generateOrderNumber(client) {
         const prefix = 'BY';
         const timestamp = Date.now().toString().slice(-6);
         const random = Math.floor(1000 + Math.random() * 9000);

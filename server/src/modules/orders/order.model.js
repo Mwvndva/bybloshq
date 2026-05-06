@@ -1,12 +1,11 @@
 import { pool } from '../../shared/db/database.js';
 import logger from '../../shared/utils/logger.js';
-import { OrderStatus, OrderType, FulfillmentType } from './order.types.js';
 
 class OrderModel {
     /**
      * Pure DAO method to insert an order record
      */
-    static async insert(client: any, data: any) {
+    static async insert(client, data) {
         if (!data.order_number) throw new Error('Order number is required');
         if (!data.seller_id) throw new Error('Seller ID is required');
         if (!data.buyer_email) throw new Error('buyer_email is required for DB insert');
@@ -26,7 +25,7 @@ class OrderModel {
       RETURNING *
     `;
 
-        const toStrictJson = (val: any) => {
+        const toStrictJson = (val) => {
             if (val === null || val === undefined) return null;
             if (typeof val === 'string') {
                 try {
@@ -76,8 +75,7 @@ class OrderModel {
         return result.rows[0];
     }
 
-    static async insertItems(client: any, orderId: number, items: any[]) {
-        // Ported from legacy model with minor cleanups
+    static async insertItems(client, orderId, items) {
         const itemValues = items.map(item => {
             const subtotal = item.subtotal || (item.price * item.quantity);
             return [
@@ -109,19 +107,19 @@ class OrderModel {
         return result.rows;
     }
 
-    static async findById(orderId: number) {
+    static async findById(orderId) {
         const query = 'SELECT * FROM product_orders WHERE id = $1';
         const result = await pool.query(query, [orderId]);
         return result.rows[0];
     }
 
-    static async findByOrderNumber(orderNumber: string) {
+    static async findByOrderNumber(orderNumber) {
         const query = 'SELECT * FROM product_orders WHERE order_number = $1';
         const result = await pool.query(query, [orderNumber]);
         return result.rows[0];
     }
 
-    static async updateStatus(client: any, orderId: number, status: OrderStatus) {
+    static async updateStatus(client, orderId, status) {
         const query = 'UPDATE product_orders SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *';
         const executor = client || pool;
         const result = await executor.query(query, [status, orderId]);
