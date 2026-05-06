@@ -5,6 +5,7 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
+import OrderService from '../modules/orders/order.service.js';
 
 class OrderDeadlineService {
     /**
@@ -189,54 +190,12 @@ class OrderDeadlineService {
             logger.info(`Found ${expiredOrders.length} expired reservations to release`);
 
             for (const order of expiredOrders) {
-                const client = await pool.connect();
                 try {
-                    await client.query('BEGIN');
-
-                    // 1. Release Inventory (CRITICAL FIX: ATOMIC-RECOVERY)
-                    for (const item of order.items) {
-                        if (item.trackInventory) {
-                            await client.query(
-                                `UPDATE products 
-                                 SET quantity = quantity + $1,
-                                     reserved_quantity = GREATEST(0, reserved_quantity - $1),
-                                     updated_at = NOW()
-                                 WHERE id = $2`,
-                                [item.quantity, item.productId]
-                            );
-                        }
-                    }
-
-                    // 2. Release Service Slots (if any)
-                    if (order.status === 'HELD' || order.order_type === 'SERVICE') {
-                        await client.query(
-                            `UPDATE service_slots 
-                             SET status = 'AVAILABLE',
-                                 reserved_by_order_id = NULL,
-                                 expires_at = NULL,
-                                 updated_at = NOW()
-                             WHERE reserved_by_order_id = $1`,
-                            [order.id]
-                        );
-                    }
-
-                    // 3. Update Order Status
-                    await client.query(
-                        `UPDATE product_orders 
-                         SET status = 'EXPIRED',
-                             metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window exceeded"}'::jsonb,
-                             updated_at = NOW()
-                         WHERE id = $1`,
-                        [order.id]
-                    );
-
-                    await client.query('COMMIT');
-                    logger.info(`Released reservation for expired order ${order.order_number}`);
+                    // Transition to EXPIRED via State Machine (handles inventory recovery)
+                    await OrderService.transitionTo(order.id, 'EXPIRED', { reason: 'Reservation TTL exceeded' });
+                    logger.info(`Released reservation for expired order ${order.order_number} via State Machine`);
                 } catch (err) {
-                    await client.query('ROLLBACK');
                     logger.error(`Failed to release reservation for order ${order.order_number}:`, err);
-                } finally {
-                    client.release();
                 }
             }
 

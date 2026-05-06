@@ -1,14 +1,24 @@
 export type OrderStatus =
     | 'PENDING'
     | 'RESERVED'
+    | 'HELD'
+    | 'PAYMENT_PENDING'
     | 'PAID'
     | 'PROCESSING'
+    | 'SERVICE_PENDING'
+    | 'DELIVERY_PENDING'
+    | 'COLLECTION_PENDING'
+    | 'FULFILLMENT_PENDING'
+    | 'FULFILLED'
+    | 'DELIVERED'
+    | 'BOOKED'
     | 'COMPLETED'
     | 'CANCELLED'
+    | 'FAILED'
     | 'EXPIRED'
-    | 'COLLECTION_PENDING'
-    | 'DELIVERY_PENDING'
-    | 'SERVICE_PENDING';
+    | 'REFUND_PENDING'
+    | 'REFUNDED'
+    | 'COMPENSATION_REQUIRED';
 
 export type OrderType = 'PHYSICAL' | 'SERVICE' | 'DIGITAL';
 
