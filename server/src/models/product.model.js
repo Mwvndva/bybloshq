@@ -1,4 +1,4 @@
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 
 const PRODUCT_UPDATABLE_FIELDS = new Set([
     'name', 'price', 'description', 'image_url', 'images', 'aesthetic',
@@ -116,3 +116,4 @@ class ProductModel {
 }
 
 export default ProductModel;
+

@@ -1,4 +1,4 @@
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import { getRedisClient } from '../config/redis.js';
 
 /**
@@ -146,3 +146,4 @@ class TokenBlacklistService {
 
 // Export singleton instance
 export default new TokenBlacklistService();
+

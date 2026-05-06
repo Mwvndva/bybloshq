@@ -1,13 +1,13 @@
 import { promisify } from 'util';
 import dotenv from 'dotenv';
-import { AppError } from '../utils/errorHandler.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 import AdminService from '../services/admin.service.js';
 import AuthService from '../services/auth.service.js';
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 import whatsappService from '../services/whatsapp.service.js';
 import payoutService from '../services/payout.service.js';
 import { PaymentService } from '../services/payment.service.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 const paymentService = new PaymentService();
 
@@ -794,4 +794,7 @@ export {
   deleteUser,
   getMe
 };
+
+
+
 

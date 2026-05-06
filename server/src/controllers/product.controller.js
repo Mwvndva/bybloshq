@@ -1,7 +1,7 @@
 import ProductService from '../services/product.service.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import ImageService from '../services/image.service.js';
-import { sanitizeProduct } from '../utils/sanitize.js';
+import { sanitizeProduct } from '../shared/utils/sanitize.js';
 
 // Upload digital file handler
 export const uploadDigitalFile = async (req, res) => {
@@ -208,3 +208,5 @@ export const deleteProduct = async (req, res) => {
     res.status(status).json({ status: 'error', message: error.message });
   }
 };
+
+

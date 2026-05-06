@@ -1,4 +1,4 @@
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 /**
  * Required Environment Variables
@@ -193,3 +193,4 @@ export function validateEnvironment() {
 }
 
 export default validateEnvironment;
+

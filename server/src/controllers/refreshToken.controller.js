@@ -1,5 +1,5 @@
-import { refreshAccessToken } from '../utils/refreshToken.js';
-import { AppError } from '../utils/errorHandler.js';
+import { refreshAccessToken } from '../shared/utils/refreshToken.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 
 /**
  * Refresh access token using refresh token
@@ -27,3 +27,4 @@ export const refreshToken = async (req, res, next) => {
     next(new AppError(error.message || 'Failed to refresh token', 401));
   }
 };
+

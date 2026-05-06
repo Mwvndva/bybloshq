@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import Buyer from '../models/buyer.model.js';
-import { signToken } from '../utils/jwt.js';
+import { signToken } from '../shared/utils/jwt.js';
 import User from '../models/user.model.js';
 
 class BuyerService {
@@ -11,7 +11,7 @@ class BuyerService {
         const mobile_payment = mp || mobilePayment || phone;
         const whatsapp_number = whatsappNumber || wn || phone;
 
-        const client = await (await import('../config/database.js')).pool.connect();
+        const client = await (await import('../shared/db/database.js')).pool.connect();
         try {
             await client.query('BEGIN');
 
@@ -56,7 +56,7 @@ class BuyerService {
                     }
                 } catch (cacheErr) {
                     // Non-critical — cache will expire naturally
-                    const logger = (await import('../utils/logger.js')).default;
+                    const logger = (await import('../shared/utils/logger.js')).default;
                     logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
                 }
 
@@ -81,7 +81,7 @@ class BuyerService {
                 }
             } catch (cacheErr) {
                 // Non-critical — cache will expire naturally
-                const logger = (await import('../utils/logger.js')).default;
+                const logger = (await import('../shared/utils/logger.js')).default;
                 logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
             }
 
@@ -99,7 +99,7 @@ class BuyerService {
         const mobile_payment = mobilePayment || mp || phone;
         const whatsapp_number = whatsappNumber || wn || phone;
 
-        const client = await (await import('../config/database.js')).pool.connect();
+        const client = await (await import('../shared/db/database.js')).pool.connect();
         try {
             await client.query('BEGIN');
 
@@ -147,7 +147,7 @@ class BuyerService {
                     }
                 } catch (cacheErr) {
                     // Non-critical — cache will expire naturally
-                    const logger = (await import('../utils/logger.js')).default;
+                    const logger = (await import('../shared/utils/logger.js')).default;
                     logger.warn('[REGISTER] Failed to invalidate cross-role cache:', cacheErr.message);
                 }
 
@@ -208,3 +208,6 @@ class BuyerService {
 }
 
 export default BuyerService;
+
+
+

@@ -1,6 +1,6 @@
 import { schedulePaymentProcessing } from '../cron/paymentCron.js';
 import { schedulePayoutReconciliation } from '../cron/payoutCleanup.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 export default async () => {
     // 1. Payment Processing (every 5 min)
@@ -66,3 +66,4 @@ export default async () => {
         }
     }
 };
+

@@ -4,10 +4,10 @@
 import crypto from 'node:crypto';
 
 // @ts-ignore
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 import Fees from '../config/fees.js';
-import logger from '../utils/logger.js';
-import { AppError } from '../utils/errorHandler.js';
+import logger from '../shared/utils/logger.js';
+import { AppError } from '../shared/utils/errorHandler.js';
 
 /**
  * ReferralService — all referral business logic.
@@ -354,3 +354,6 @@ class ReferralService {
 }
 
 export default ReferralService;
+
+
+

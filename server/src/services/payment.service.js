@@ -3,11 +3,11 @@ import https from 'https';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import dns from 'node:dns';
-import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import logger from '../shared/utils/logger.js';
+import { pool } from '../shared/db/database.js';
 import { PaymentStatus } from '../constants/enums.js';
 import OrderService from './order.service.js';
-import { PaydError, PaydErrorCodes } from '../utils/PaydError.js';
+import { PaydError, PaydErrorCodes } from '../shared/utils/PaydError.js';
 import Buyer from '../models/buyer.model.js';
 import cacheService from './cache.service.js';
 
@@ -894,7 +894,7 @@ export class PaymentService {
                 const userId = buyerRows[0]?.user_id;
 
                 if (userId) {
-                    const { signAutoLoginToken } = await import('../utils/jwt.js');
+                    const { signAutoLoginToken } = await import('../shared/utils/jwt.js');
                     autoLoginToken = signAutoLoginToken(userId, 'buyer', 'payment_success');
                     logger.info(`[PaymentService] Generated auto-login token for buyer ${buyerProfileId} (user ${userId})`);
                 } else {
@@ -1567,3 +1567,6 @@ export class PaymentService {
 }
 
 export default new PaymentService();
+
+
+

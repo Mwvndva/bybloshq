@@ -4,9 +4,9 @@
 
 import WithdrawalService from '../services/withdrawal.service.js';
 import payoutService from '../services/payout.service.js';
-import { sanitizeWithdrawalRequest } from '../utils/sanitize.js';
-import { AppError } from '../utils/errorHandler.js';
-import logger from '../utils/logger.js';
+import { sanitizeWithdrawalRequest } from '../shared/utils/sanitize.js';
+import { AppError } from '../shared/utils/errorHandler.js';
+import logger from '../shared/utils/logger.js';
 
 function validateWithdrawalBody(body) {
     const { amount, mpesaNumber, mpesaName } = body;
@@ -112,3 +112,5 @@ export const getWithdrawalById = async (req, res, next) => {
         return next(new AppError('Failed to fetch withdrawal request', 500));
     }
 };
+
+

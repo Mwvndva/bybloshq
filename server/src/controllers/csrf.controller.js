@@ -1,4 +1,4 @@
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import crypto from 'crypto';
 
 /**
@@ -38,3 +38,4 @@ export const getCsrfToken = (req, res) => {
         });
     }
 };
+

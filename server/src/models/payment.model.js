@@ -1,4 +1,4 @@
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 
 const PAYMENT_UPDATABLE_FIELDS = new Set([
   'status', 'metadata', 'provider_reference', 'api_ref',
@@ -113,3 +113,4 @@ class Payment {
 }
 
 export default Payment;
+

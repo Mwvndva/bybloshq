@@ -1,13 +1,13 @@
 import BuyerService from '../services/buyer.service.js';
 import Buyer from '../models/buyer.model.js';
 import User from '../models/user.model.js';
-import { AppError } from '../utils/errorHandler.js';
-import { sanitizeBuyer, sanitizeOrder } from '../utils/sanitize.js';
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { AppError } from '../shared/utils/errorHandler.js';
+import { sanitizeBuyer, sanitizeOrder } from '../shared/utils/sanitize.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 import AuthService from '../services/auth.service.js';
-import { setAuthCookie } from '../utils/cookie.utils.js';
-import { signToken, verifyToken, getTokenFromRequest } from '../utils/jwt.js';
+import { setAuthCookie } from '../shared/utils/cookie.utils.js';
+import { signToken, verifyToken, getTokenFromRequest } from '../shared/utils/jwt.js';
 import OrderService from "../services/order.service.js";
 import OrderModel from "../models/order.model.js";
 import { OrderStatus } from "../constants/enums.js";
@@ -766,3 +766,6 @@ export const markOrderAsCollected = async (req, res, next) => {
     next(error);
   }
 };
+
+
+

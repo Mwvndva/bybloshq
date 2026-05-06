@@ -2,9 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'url';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
-import { uploadToCloudinary, deleteFromCloudinary } from '../utils/cloudinary.js';
+import { uploadToCloudinary, deleteFromCloudinary } from '../shared/utils/cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -138,3 +138,5 @@ class ImageService {
 }
 
 export default new ImageService();
+
+

@@ -1,6 +1,6 @@
 import fs from 'fs';
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 import os from 'os';
 import whatsappService from './whatsapp.service.js';
 import tokenBlacklist from './tokenBlacklist.service.js';
@@ -237,3 +237,5 @@ class HealthCheckService {
 
 // Export singleton instance
 export default new HealthCheckService();
+
+

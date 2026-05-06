@@ -1,5 +1,5 @@
 import { getRedisClient } from '../config/redis.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 class CacheService {
     constructor() {
@@ -100,3 +100,4 @@ class CacheService {
 }
 
 export default new CacheService();
+

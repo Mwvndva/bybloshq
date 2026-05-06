@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import cron from 'node-cron';
-import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import logger from '../shared/utils/logger.js';
+import { pool } from '../shared/db/database.js';
 import OrderService from '../services/order.service.js';
 
 /**
@@ -59,3 +59,5 @@ export const scheduleCompletionRetry = (options = {}) => {
         }, { timezone: 'Africa/Nairobi' });
     }, jitterMs);
 };
+
+

@@ -1,8 +1,8 @@
-import { pool } from '../config/database.js';
+import { pool } from '../shared/db/database.js';
 
 import cacheService from '../services/cache.service.js';
-import { sanitizePublicProduct, sanitizePublicSeller } from '../utils/sanitize.js';
-import { signAutoLoginToken } from '../utils/jwt.js';
+import { sanitizePublicProduct, sanitizePublicSeller } from '../shared/utils/sanitize.js';
+import { signAutoLoginToken } from '../shared/utils/jwt.js';
 
 // Get all products (public)
 export const getProducts = async (req, res) => {
@@ -380,3 +380,5 @@ export const getOrderStatus = async (req, res) => {
     });
   }
 };
+
+

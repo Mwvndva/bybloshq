@@ -1,5 +1,5 @@
-import logger from '../utils/logger.js';
-import { pool } from '../config/database.js';
+import logger from '../shared/utils/logger.js';
+import { pool } from '../shared/db/database.js';
 
 /**
  * Monitoring Service for Security Alerts and Webhook Pattern Analysis
@@ -231,3 +231,5 @@ class MonitoringService {
 
 // Export singleton instance
 export default new MonitoringService();
+
+

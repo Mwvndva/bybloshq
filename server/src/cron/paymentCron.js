@@ -2,7 +2,7 @@
 'use strict';
 
 import cron from 'node-cron';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import PaymentService from '../services/payment.service.js';
 
 /**
@@ -58,3 +58,4 @@ const schedulePaymentProcessing = (options = {}) => {
 };
 
 export { schedulePaymentProcessing };
+

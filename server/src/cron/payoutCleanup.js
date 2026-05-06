@@ -1,5 +1,5 @@
 import cron from 'node-cron';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import withdrawalService from '../services/withdrawal.service.js';
 
 const schedulePayoutReconciliation = (options = {}) => {
@@ -22,3 +22,4 @@ const schedulePayoutReconciliation = (options = {}) => {
 };
 
 export { schedulePayoutReconciliation };
+

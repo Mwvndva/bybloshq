@@ -1,17 +1,17 @@
 import crypto from 'node:crypto';
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 import Fees from '../config/fees.js';
 import { OrderStatus, ProductType, OrderType } from '../constants/enums.js';
 import Order from '../models/order.model.js';
 import Buyer from '../models/buyer.model.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
-import { sellerHasPhysicalShop } from '../utils/sellerUtils.js';
+import { sellerHasPhysicalShop } from '../shared/utils/sellerUtils.js';
 import ReferralService from './referral.service.js';
-import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../utils/email.js';
+import { sendProductOrderConfirmationEmail, sendNewOrderNotificationEmail, sendPaymentReceiptEmail } from '../shared/utils/email.js';
 import cacheService from './cache.service.js';
-import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../utils/fulfillment.js';
+import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../shared/utils/fulfillment.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -1915,3 +1915,6 @@ class OrderService {
 }
 
 export default OrderService;
+
+
+

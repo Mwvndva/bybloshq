@@ -1,5 +1,5 @@
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 
 class AdminService {
   async getDashboardStats() {
@@ -339,3 +339,5 @@ class AdminService {
 }
 
 export default new AdminService();
+
+

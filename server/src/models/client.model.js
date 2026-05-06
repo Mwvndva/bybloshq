@@ -1,5 +1,5 @@
-import { pool } from '../config/database.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import logger from '../shared/utils/logger.js';
 
 /**
  * Client Model - Manages client information for seller-initiated orders
@@ -114,3 +114,5 @@ class ClientModel {
 }
 
 export default ClientModel;
+
+

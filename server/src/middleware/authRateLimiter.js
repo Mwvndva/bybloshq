@@ -1,7 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { RedisStore } from 'rate-limit-redis';
 import { getRedisClient } from '../config/redis.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 const createAuthLimiter = () => {
     const redisClient = getRedisClient();
@@ -50,3 +50,4 @@ const createAuthLimiter = () => {
 };
 
 export const authLimiter = createAuthLimiter();
+

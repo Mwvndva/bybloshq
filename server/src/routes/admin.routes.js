@@ -2,8 +2,8 @@ import express from 'express';
 import * as adminController from '../controllers/admin.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
 import { authLimiter } from '../middleware/authRateLimiter.js';
-import { getTokenFromRequest, verifyToken } from '../utils/jwt.js';
-import logger from '../utils/logger.js';
+import { getTokenFromRequest, verifyToken } from '../shared/utils/jwt.js';
+import logger from '../shared/utils/logger.js';
 
 const router = express.Router();
 
@@ -79,3 +79,4 @@ router.get('/withdrawal-requests', adminController.getAllWithdrawalRequests);
 router.patch('/withdrawal-requests/:id/status', adminController.updateWithdrawalRequestStatus);
 
 export default router;
+

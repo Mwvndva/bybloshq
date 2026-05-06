@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
-import { signToken } from '../utils/jwt.js';
-import { query, pool } from '../config/database.js'; // Assuming query is exported
+import { signToken } from '../shared/utils/jwt.js';
+import { query, pool } from '../shared/db/database.js'; // Assuming query is exported
 import * as SellerModel from '../models/seller.model.js';
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 import withdrawalService from './withdrawal.service.js';
 
 const SALT_ROUNDS = 10;
@@ -130,3 +130,6 @@ class SellerService {
 }
 
 export default SellerService;
+
+
+

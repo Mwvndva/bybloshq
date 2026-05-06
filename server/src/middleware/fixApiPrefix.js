@@ -1,4 +1,4 @@
-import logger from '../utils/logger.js';
+import logger from '../shared/utils/logger.js';
 
 /**
  * Middleware to handle double /api prefixes in URLs
@@ -24,3 +24,4 @@ const fixApiPrefix = (req, res, next) => {
 };
 
 export default fixApiPrefix;
+

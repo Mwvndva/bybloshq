@@ -1,7 +1,7 @@
 // CRUD only
-import { pool } from '../config/database.js';
-import { toCamelCase } from '../utils/caseUtils.js';
-import logger from '../utils/logger.js';
+import { pool } from '../shared/db/database.js';
+import { toCamelCase } from '../shared/utils/caseUtils.js';
+import logger from '../shared/utils/logger.js';
 
 const SALT_ROUNDS = 10;
 
@@ -428,3 +428,6 @@ export const findSellersByUserId = async (userId) => {
   );
   return result.rows;
 };
+
+
+
