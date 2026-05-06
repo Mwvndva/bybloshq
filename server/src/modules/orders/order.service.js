@@ -11,7 +11,7 @@ class OrderService {
     /**
      * Create a new order (Ported from legacy OrderService)
      */
-    static async createOrder(orderData: any, externalClient: any = null) {
+    static async createOrder(orderData, externalClient = null) {
         const {
             buyer,
             service,
@@ -111,7 +111,7 @@ class OrderService {
                 payment_status: 'pending',
                 order_type: orderData.orderType || (enrichedItems[0]?.productType === 'service' ? 'SERVICE' : (enrichedItems[0]?.isDigital ? 'DIGITAL' : 'PHYSICAL')),
                 fulfillment_type: orderData.fulfillmentType || null,
-                total_quantity: enrichedItems.reduce((acc: number, cur: any) => acc + (cur.quantity || 1), 0),
+                total_quantity: enrichedItems.reduce((acc, cur) => acc + (cur.quantity || 1), 0),
                 reservation_expires_at: reservationExpiresAt
             };
 
@@ -153,7 +153,7 @@ class OrderService {
         }
     }
 
-    private static async generateOrderNumber(client: any) {
+    static async generateOrderNumber(client) {
         const prefix = 'BY';
         const timestamp = Date.now().toString().slice(-6);
         const random = Math.floor(1000 + Math.random() * 9000);
