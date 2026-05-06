@@ -5,7 +5,6 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
-import OrderService from '../modules/orders/order.service.js';
 
 class OrderDeadlineService {
     /**
@@ -190,12 +189,54 @@ class OrderDeadlineService {
             logger.info(`Found ${expiredOrders.length} expired reservations to release`);
 
             for (const order of expiredOrders) {
+                const client = await pool.connect();
                 try {
-                    // Transition to EXPIRED via State Machine (handles inventory recovery)
-                    await OrderService.transitionTo(order.id, 'EXPIRED', { reason: 'Reservation TTL exceeded' });
-                    logger.info(`Released reservation for expired order ${order.order_number} via State Machine`);
+                    await client.query('BEGIN');
+
+                    // 1. Release Inventory (CRITICAL FIX: ATOMIC-RECOVERY)
+                    for (const item of order.items) {
+                        if (item.trackInventory) {
+                            await client.query(
+                                `UPDATE products 
+                                 SET quantity = quantity + $1,
+                                     reserved_quantity = GREATEST(0, reserved_quantity - $1),
+                                     updated_at = NOW()
+                                 WHERE id = $2`,
+                                [item.quantity, item.productId]
+                            );
+                        }
+                    }
+
+                    // 2. Release Service Slots (if any)
+                    if (order.status === 'HELD' || order.order_type === 'SERVICE') {
+                        await client.query(
+                            `UPDATE service_slots 
+                             SET status = 'AVAILABLE',
+                                 reserved_by_order_id = NULL,
+                                 expires_at = NULL,
+                                 updated_at = NOW()
+                             WHERE reserved_by_order_id = $1`,
+                            [order.id]
+                        );
+                    }
+
+                    // 3. Update Order Status
+                    await client.query(
+                        `UPDATE product_orders 
+                         SET status = 'EXPIRED',
+                             metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window exceeded"}'::jsonb,
+                             updated_at = NOW()
+                         WHERE id = $1`,
+                        [order.id]
+                    );
+
+                    await client.query('COMMIT');
+                    logger.info(`Released reservation for expired order ${order.order_number}`);
                 } catch (err) {
+                    await client.query('ROLLBACK');
                     logger.error(`Failed to release reservation for order ${order.order_number}:`, err);
+                } finally {
+                    client.release();
                 }
             }
 
@@ -215,17 +256,46 @@ class OrderDeadlineService {
      * @param {string} reason
      */
     async cancelOrderAndRefund(order, reason) {
+        const client = await pool.connect();
+
         try {
-            // Transition to CANCELLED via State Machine (handles inventory, slots, and refunds)
-            await OrderService.transitionTo(order.id, 'CANCELLED', { reason });
-            logger.info(`Auto-cancelled order ${order.order_number}: ${reason} via State Machine`);
+            await client.query('BEGIN');
+
+            // Update order status
+            await client.query(
+                `UPDATE product_orders 
+                 SET status = 'CANCELLED',
+                     payment_status = 'failed',
+                     auto_cancelled_reason = $1,
+                     cancelled_at = NOW()
+                 WHERE id = $2`,
+                [reason, order.id]
+            );
+
+            // Refund buyer
+            if (order.buyer_id) {
+                await client.query(
+                    `UPDATE buyers 
+                     SET refunds = refunds + $1 
+                     WHERE id = $2`,
+                    [order.total_amount, order.buyer_id]
+                );
+            }
+
+            await client.query('COMMIT');
+
+            logger.info(`Auto-cancelled order ${order.order_number}: ${reason}`);
 
             // Send notifications
             await this.sendCancellationNotifications(order, reason);
+
             return true;
         } catch (error) {
-            logger.error(`Error auto-cancelling order ${order.order_number}:`, error);
+            await client.query('ROLLBACK');
+            logger.error(`Error cancelling order ${order.order_number}:`, error);
             throw error;
+        } finally {
+            client.release();
         }
     }
 
@@ -234,12 +304,35 @@ class OrderDeadlineService {
      * @param {any} order
      */
     async releaseServicePayment(order) {
+        const client = await pool.connect();
+
         try {
-            // Transition to COMPLETED via State Machine
-            // Note: In Phase 3, we should ensure the state machine handles escrow release or 
-            // keep it here if it's too specific. For now, transition first.
-            await OrderService.transitionTo(order.id, 'COMPLETED', { reason: 'Deadline service completion' });
-            logger.info(`Released service payment for order ${order.order_number} via State Machine`);
+            await client.query('BEGIN');
+
+            // Update order to completed
+            await client.query(
+                `UPDATE product_orders 
+                 SET status = 'COMPLETED',
+                     payment_status = 'completed',
+                     payment_completed_at = NOW(),
+                     completed_at = NOW()
+                 WHERE id = $1`,
+                [order.id]
+            );
+
+            // Release funds through EscrowManager — the single source of truth
+            // for all seller balance/revenue/sales updates and payouts table entries.
+            const releaseResult = await escrowManager.releaseFunds(client, order, 'OrderDeadlineService');
+            if (!releaseResult.success && !releaseResult.alreadyReleased) {
+                throw new Error(
+                    `EscrowManager.releaseFunds failed for order ${order.id}: ` +
+                    `${releaseResult.reason || 'unknown reason'}`
+                );
+            }
+
+            await client.query('COMMIT');
+
+            logger.info(`Released service payment for order ${order.order_number}: KSh ${order.seller_payout_amount}`);
 
             // Send notification to buyer
             if (order.buyer_whatsapp) {
@@ -262,8 +355,11 @@ Thank you for using Byblos!`;
 
             return true;
         } catch (error) {
+            await client.query('ROLLBACK');
             logger.error(`Error releasing service payment for order ${order.order_number}:`, error);
             throw error;
+        } finally {
+            client.release();
         }
     }
 

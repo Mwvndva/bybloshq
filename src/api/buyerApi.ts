@@ -627,41 +627,6 @@ const buyerApi = {
     }
   },
 
-  registerOrLogin: async (buyerInfo: {
-    fullName: string;
-    email: string;
-    mobilePayment: string;
-    whatsappNumber: string;
-    city?: string;
-    location?: string;
-    password?: string;
-  }): Promise<{ buyer?: Buyer; message?: string; requiresLogin?: boolean; exists?: boolean }> => {
-    try {
-      const response = await apiClient.post<{ status: string; data: { buyer?: Buyer; message?: string; requiresLogin?: boolean; exists?: boolean } }>(
-        `/buyers/register-or-login`,
-        {
-          ...buyerInfo,
-        }
-      );
-
-      if (!response.data || response.data.status !== 'success') {
-        throw new Error(response.data?.data?.message || 'Failed to process authentication');
-      }
-
-      const { buyer, ...rest } = response.data.data;
-      return {
-        buyer: buyer ? transformBuyer(buyer) : undefined,
-        ...rest
-      };
-    } catch (error: any) {
-      console.error('Error in registerOrLogin:', error);
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      }
-      throw new Error('Authentication failed. Please try again.');
-    }
-  },
-
   // Request refund withdrawal (uses buyer's existing details)
   requestRefund: async (data: {
     amount: number;

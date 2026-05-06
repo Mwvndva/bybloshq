@@ -13,7 +13,6 @@ console.log('Buyer routes loaded');
 // Public routes
 router.post('/register', authLimiter, validateRegistration, buyerController.register);
 router.post('/login', authLimiter, validateLogin, buyerController.login);
-router.post('/register-or-login', authLimiter, buyerController.registerOrLogin);
 router.post('/forgot-password', buyerController.forgotPassword);
 router.post('/reset-password', buyerController.resetPassword);
 router.get('/verify-email', buyerController.verifyEmail);

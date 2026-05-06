@@ -113,9 +113,7 @@ export type RegistrationData =
 interface GlobalAuthContextType {
     user: GlobalUser | null;
     isAuthenticated: boolean;
-    isGuest: boolean;
     isLoading: boolean;
-    initializing: boolean;
     role: UserRole | null;
 
     // Auth operations
@@ -133,10 +131,6 @@ interface GlobalAuthContextType {
     // Profile management
     getProfile: (role: UserRole) => Promise<void>;
     updateProfile: (updates: Partial<UserProfile>, role: UserRole) => Promise<void>;
-
-    // Flow Management
-    pendingActionRef: React.MutableRefObject<(() => void | Promise<void>) | null>;
-    executePendingAction: () => Promise<void>;
 }
 
 // ============================================================================
@@ -157,17 +151,6 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const [initializing, setInitializing] = useState<boolean>(true);
     const navigate = useNavigate();
     const location = useLocation();
-
-    // Flow Management Ref
-    const pendingActionRef = useRef<(() => void | Promise<void>) | null>(null);
-
-    const executePendingAction = useCallback(async () => {
-        if (pendingActionRef.current) {
-            const action = pendingActionRef.current;
-            pendingActionRef.current = null;
-            await action();
-        }
-    }, []);
 
     // ============================================================================
     // HELPER FUNCTIONS
@@ -708,9 +691,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const value: GlobalAuthContextType = useMemo(() => ({
         user,
         isAuthenticated: user?.isAuthenticated || false,
-        isGuest: !user || !user.isAuthenticated,
         isLoading,
-        initializing,
         role: user?.role || null,
         login,
         loginWithToken,
@@ -722,9 +703,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         resetPassword,
         getProfile,
         updateProfile,
-        pendingActionRef,
-        executePendingAction,
-    }), [user, isLoading, initializing, login, loginWithToken, loginAdmin, register, logout, refreshRole, forgotPassword, resetPassword, getProfile, updateProfile, executePendingAction]);
+    }), [user, isLoading, login, loginWithToken, loginAdmin, register, logout, refreshRole, forgotPassword, resetPassword, getProfile, updateProfile]);
 
     // ============================================================================
     // RENDER GATING (Prevents Flickering)
@@ -760,7 +739,7 @@ export const useGlobalAuth = (): GlobalAuthContextType => {
 // ============================================================================
 
 export const useBuyerAuth = () => {
-    const { user, isAuthenticated, isLoading, initializing, login, loginWithToken, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
+    const { user, isAuthenticated, isLoading, login, loginWithToken, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
 
     return {
         user: user?.role === 'buyer' ? user.profile as BuyerProfile : null,
@@ -777,7 +756,7 @@ export const useBuyerAuth = () => {
 };
 
 export const useSellerAuth = () => {
-    const { user, isAuthenticated, isLoading, initializing, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
+    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
 
     return {
         seller: user?.role === 'seller' ? user.profile as SellerProfile : null,

@@ -14,6 +14,7 @@ import cacheService from './cache.service.js';
 import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } from '../shared/utils/fulfillment.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import ProductModel from '../models/product.model.js';
+import BookingService from '../modules/bookings/booking.service.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -1116,6 +1117,10 @@ class OrderService {
       }
     }
     await whatsappService.notifyBuyerDigitalDelivery({ order, items });
+  }
+
+  static async _finalizeServiceSlot(client, orderId) {
+    await BookingService.finalizeSlot(client, orderId);
   }
 
   static async _processSellerPayout(client, order) {
