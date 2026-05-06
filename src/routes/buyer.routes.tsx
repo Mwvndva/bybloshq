@@ -7,6 +7,7 @@ import { safeLazy } from '@/utils/safeLazy';
 import { RouteFallback } from '@/components/common/RouteFallback';
 import BuyerLayout from '@/components/layout/BuyerLayout';
 import PublicLayout from '@/components/layout/PublicLayout';
+import SimpleBuyerLayout from '@/components/layout/SimpleBuyerLayout';
 
 // Lazy load components
 const BuyerLogin = safeLazy(() => import('@/components/buyer/BuyerLogin').then(m => m.BuyerLogin));
@@ -62,7 +63,7 @@ export const buyerRoutes = [
     element: (
       <BuyerProtectedRoute>
         <BybxProvider>
-          <BuyerLayout />
+          <SimpleBuyerLayout />
         </BybxProvider>
       </BuyerProtectedRoute>
     ),
