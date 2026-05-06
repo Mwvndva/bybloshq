@@ -8,8 +8,7 @@
 -- ==========================================
 DO $$ 
 BEGIN 
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_status') THEN 
-        CREATE TYPE order_status AS ENUM ('PENDING', 'RESERVED', 'PAID', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'EXPIRED', 'COLLECTION_PENDING', 'DELIVERY_PENDING', 'SERVICE_PENDING'); 
+            CREATE TYPE order_status AS ENUM ('PENDING', 'RESERVED', 'HELD', 'PAID', 'PROCESSING', 'COMPLETED', 'CANCELLED', 'FAILED', 'EXPIRED', 'COLLECTION_PENDING', 'DELIVERY_PENDING', 'SERVICE_PENDING'); 
     END IF; 
 
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'order_type') THEN 
@@ -23,7 +22,9 @@ END $$;
 
 -- Update existing enums for reserved/expired if not present
 ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'RESERVED';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'HELD';
 ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'EXPIRED';
+ALTER TYPE order_status ADD VALUE IF NOT EXISTS 'FAILED';
 
 -- ==========================================
 -- 2. CORE SCHEMA SETUP

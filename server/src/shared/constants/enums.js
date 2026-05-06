@@ -6,6 +6,7 @@
 export const OrderStatus = {
     PENDING: 'PENDING',
     RESERVED: 'RESERVED', // Slot or inventory locked
+    HELD: 'HELD',         // Service slot locked
     PAID: 'PAID',
     PROCESSING: 'PROCESSING',
     SERVICE_PENDING: 'SERVICE_PENDING',
