@@ -113,6 +113,7 @@ export type RegistrationData =
 interface GlobalAuthContextType {
     user: GlobalUser | null;
     isAuthenticated: boolean;
+    isGuest: boolean;
     isLoading: boolean;
     role: UserRole | null;
 
@@ -688,9 +689,10 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     // CONTEXT VALUE
     // ============================================================================
 
-    const value: GlobalAuthContextType = useMemo(() => ({
+    const value: GlobalAuthContextType & { isGuest: boolean } = useMemo(() => ({
         user,
         isAuthenticated: user?.isAuthenticated || false,
+        isGuest: !user || !user.isAuthenticated,
         isLoading,
         role: user?.role || null,
         login,

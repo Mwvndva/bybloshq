@@ -414,7 +414,7 @@ const ShopPage = () => {
                     <ProductCard
                       product={productWithSeller}
                       seller={sellerForCard}
-                      hideWishlist={!isAuthenticated}
+                      hideWishlist={false} // Show for everyone, gating handled internally
                       theme={sellerInfo?.theme as Theme}
                     />
                   </div>

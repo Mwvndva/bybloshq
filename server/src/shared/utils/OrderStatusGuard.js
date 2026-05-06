@@ -13,22 +13,28 @@ const TRANSITIONS = {
 
     [OrderStatus.PAYMENT_PENDING]: [OrderStatus.PAID, OrderStatus.CANCELLED, OrderStatus.FAILED, OrderStatus.EXPIRED],
 
-    [OrderStatus.PAID]: [OrderStatus.FULFILLMENT_PENDING, OrderStatus.BOOKED, OrderStatus.DELIVERY_PENDING, OrderStatus.REFUND_PENDING, OrderStatus.COMPENSATION_REQUIRED],
+    [OrderStatus.PAID]: [OrderStatus.PROCESSING, OrderStatus.FULFILLMENT_PENDING, OrderStatus.BOOKED, OrderStatus.DELIVERY_PENDING, OrderStatus.REFUND_PENDING, OrderStatus.COMPENSATION_REQUIRED],
 
-    [OrderStatus.FULFILLMENT_PENDING]: [OrderStatus.FULFILLED, OrderStatus.FAILED, OrderStatus.REFUND_PENDING],
+    [OrderStatus.PROCESSING]: [OrderStatus.FULFILLMENT_PENDING, OrderStatus.SERVICE_PENDING, OrderStatus.DELIVERY_PENDING, OrderStatus.COLLECTION_PENDING, OrderStatus.FULFILLED, OrderStatus.DELIVERED, OrderStatus.BOOKED, OrderStatus.CANCELLED, OrderStatus.FAILED],
+
+    [OrderStatus.FULFILLMENT_PENDING]: [OrderStatus.FULFILLED, OrderStatus.FAILED, OrderStatus.REFUND_PENDING, OrderStatus.CANCELLED],
     [OrderStatus.FULFILLED]: [OrderStatus.COMPLETED, OrderStatus.REFUND_PENDING],
 
     [OrderStatus.BOOKED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED, OrderStatus.COMPENSATION_REQUIRED],
 
+    [OrderStatus.SERVICE_PENDING]: [OrderStatus.BOOKED, OrderStatus.CANCELLED, OrderStatus.FAILED],
+
     [OrderStatus.DELIVERY_PENDING]: [OrderStatus.DELIVERED, OrderStatus.FAILED, OrderStatus.REFUND_PENDING],
     [OrderStatus.DELIVERED]: [OrderStatus.COMPLETED, OrderStatus.REFUND_PENDING],
 
+    [OrderStatus.COLLECTION_PENDING]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
+
     [OrderStatus.COMPLETED]: [], // Terminal state
     [OrderStatus.CANCELLED]: [], // Terminal state
-    [OrderStatus.EXPIRED]: [OrderStatus.PAID, OrderStatus.COMPENSATION_REQUIRED], // Late payment handling
-    [OrderStatus.FAILED]: [OrderStatus.REFUND_PENDING, OrderStatus.COMPENSATION_REQUIRED],
+    [OrderStatus.EXPIRED]: [OrderStatus.PAID, OrderStatus.COMPENSATION_REQUIRED, OrderStatus.CANCELLED], // Late payment handling
+    [OrderStatus.FAILED]: [OrderStatus.REFUND_PENDING, OrderStatus.COMPENSATION_REQUIRED, OrderStatus.PENDING],
 
-    [OrderStatus.REFUND_PENDING]: [OrderStatus.REFUNDED],
+    [OrderStatus.REFUND_PENDING]: [OrderStatus.REFUNDED, OrderStatus.FAILED],
     [OrderStatus.REFUNDED]: [],   // Terminal state
     [OrderStatus.COMPENSATION_REQUIRED]: [OrderStatus.REFUND_PENDING, OrderStatus.COMPLETED]
 };

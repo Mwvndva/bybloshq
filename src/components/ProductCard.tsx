@@ -11,7 +11,6 @@ import { cn, formatCurrency, getImageUrl, isSellerShopless, formatFileSize } fro
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
 import { BuyerInfoModal, BuyerInfo } from '@/components/BuyerInfoModal';
-import PhoneCheckModal from '@/components/PhoneCheckModal';
 import { ServiceBookingModal } from '@/components/ServiceBookingModal';
 import { PaymentStatusModal } from '@/components/PaymentStatusModal';
 import buyerApi from '@/api/buyerApi';
@@ -39,7 +38,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const navigate = useNavigate();
 
   const wishlistContext = useWishlist();
-  const { isAuthenticated, user: userData } = useBuyerAuth();
 
   const addToWishlist = wishlistContext.addToWishlist;
   const isInWishlist = wishlistContext.isInWishlist;
@@ -47,13 +45,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   // Dialog state
 
-  const [isPhoneCheckModalOpen, setIsPhoneCheckModalOpen] = useState(false);
   const [isBuyerModalOpen, setIsBuyerModalOpen] = useState(false);
   const [currentPhone, setCurrentPhone] = useState('');
-  const [buyerId, setBuyerId] = useState<number | string | null>(null);
   const [initialBuyerData, setInitialBuyerData] = useState<{ fullName?: string; email?: string; city?: string; location?: string } | undefined>(undefined);
   const [shouldSkipSave, setShouldSkipSave] = useState(false);
-  const [isBookingFlowActive, setIsBookingFlowActive] = useState(false);
   const [initialBuyerLocation, setInitialBuyerLocation] = useState<{ lat: number; lng: number; address: string } | null>(null);
 
   // Helper variables for product types
@@ -73,7 +68,6 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [wishlistActionLoading, setWishlistActionLoading] = useState(false);
   const [isProcessingPurchase, setIsProcessingPurchase] = useState(false);
-  const [isCheckingPhone, setIsCheckingPhone] = useState(false);
 
   // FIX (Task 14): Prevent duplicate payment triggers and race conditions
   const { runWithLock, isLocked } = useAsyncLock();
@@ -171,19 +165,26 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isWishlistLoading || wishlistActionLoading || isSold) return;
+
+    if (isGuest) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to add items to your wishlist.",
+      });
+      pendingActionRef.current = () => toggleWishlist(e);
+      setIsBuyerModalOpen(true);
+      return;
+    }
+
     setWishlistActionLoading(true);
     try {
       if (isWishlisted) {
         await wishlistContext.removeFromWishlist(product.id);
-        // Toast is handled inside removeFromWishlist context method
       } else {
         await addToWishlist(product);
-        // Toast is handled inside addToWishlist context method
       }
     } catch (error: any) {
       console.error('Wishlist toggle error:', error);
-      // Errors are also handled with toasts in the context, 
-      // but we log here just in case.
     } finally {
       setWishlistActionLoading(false);
     }
@@ -194,30 +195,34 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
   const [bookingData, setBookingData] = useState<{ date: Date; time: string; location: string; locationType?: string } | null>(null);
 
-  const handleBuyClick = async (e: React.MouseEvent) => {
+  const { isAuthenticated, isGuest, user: userData } = useBuyerAuth() as any;
+
+  // Action resumption (Task 10)
+  const pendingActionRef = useRef<(() => void) | null>(null);
+
+  const handleBuyClick = async (e?: React.MouseEvent) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
 
-    const isService = product.product_type === 'service' || (product as any).productType === 'service';
+    if (isSold) return;
 
-    // 1. Service Product + Not Authenticated? -> Verification First Flow
-    if (isService && !isAuthenticated) {
-      setIsBookingFlowActive(true);
-      setIsPhoneCheckModalOpen(true);
+    // Guest? -> Security Gate
+    if (isGuest) {
+      toast({
+        title: "Secure Purchase",
+        description: "Please provide your details once to proceed with your order.",
+      });
+
+      pendingActionRef.current = () => handleBuyClick();
+      setIsBuyerModalOpen(true);
       return;
     }
 
-    // 2. Service Product + Authenticated? -> Booking Flow
+    // Authenticated path
     if (isService) {
-      // For services, we always trigger the booking modal
       setIsBookingModalOpen(true);
-      return;
-    }
-
-    // 3. Authenticated? -> Direct Payment
-    if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
+    } else {
       await runWithLock(async () => {
-        // Prevents duplicate payment requests via synchronous lock (Task 14)
         await executePayment({
           fullName: userData.fullName,
           email: userData.email,
@@ -226,27 +231,15 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           location: userData.location
         });
       });
-    } else {
-      // 4. Not Authenticated? -> Phone Check
-      setIsBookingFlowActive(false);
-      setIsPhoneCheckModalOpen(true);
     }
   };
 
-  const handleBookingConfirm = async (data: {
-    date: Date;
-    time: string;
-    location: string;
-    locationType?: string;
-    serviceRequirements?: string;
-    buyerLocation?: { lat: number; lng: number; address: string } | null
-  }) => {
+  const handleBookingConfirm = async (data: any) => {
     setBookingData(data);
     setIsBookingModalOpen(false);
 
-    if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
+    if (isAuthenticated) {
       await runWithLock(async () => {
-        // Prevents duplicate payment requests via synchronous lock (Task 14)
         await executePayment({
           fullName: userData.fullName,
           email: userData.email,
@@ -255,153 +248,17 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           location: userData.location
         }, data);
       });
-    } else if (currentPhone && buyerId) {
-      // CASE: Guest who just finished phone check (Task BUG-BOOK-04)
-      await runWithLock(async () => {
-        await executePayment({
-          fullName: 'Guest',
-          email: '',
-          mobilePayment: currentPhone,
-          city: data.location || '',
-          location: data.location || ''
-        }, data, buyerId);
-      });
-    } else {
-      setIsPhoneCheckModalOpen(true);
     }
   };
 
-  const handlePhoneSubmit = async (phone: string) => {
-    setIsCheckingPhone(true);
-    try {
-      // FIX (Task 21): Normalize phone number before checking status
-      const normalizedPhone = normalizePhone(phone);
-      const result = await buyerApi.checkBuyerByPhone(normalizedPhone);
+  const handleBuyerInfoSuccess = async (buyer: any) => {
+    setIsBuyerModalOpen(false);
 
-      setCurrentPhone(normalizedPhone);
-      setIsPhoneCheckModalOpen(false);
-
-      if (result.exists && result.buyer) {
-        // CASE A: Buyer Exists
-        setCurrentPhone(normalizedPhone);
-        setBuyerId(result.buyer.id);
-        setIsPhoneCheckModalOpen(false);
-
-        // If it's a booking flow, open ServiceBookingModal ONLY if we don't have booking data yet (Task BUG-BOOK-01)
-        if (isBookingFlowActive && !bookingData) {
-          if (result.buyer.latitude && result.buyer.longitude) {
-            setInitialBuyerLocation({
-              lat: Number(result.buyer.latitude),
-              lng: Number(result.buyer.longitude),
-              address: result.buyer.fullAddress || result.buyer.location || ''
-            });
-          } else {
-            setInitialBuyerLocation(null);
-          }
-          setIsBookingModalOpen(true);
-          return;
-        }
-
-        // Check hasEmail flag instead of explicit email string to avoid PII leak
-        if (result.buyer.hasEmail || (result.buyer.email && result.buyer.email.trim() !== '')) {
-          // Has Email -> PROCEED TO PAYMENT
-          // We pass empty email if we only have the flag; backend will resolve it from DB
-          await runWithLock(async () => {
-            // Prevents duplicate payment requests via synchronous lock (Task 14)
-            await executePayment({
-              fullName: result.buyer!.fullName || '',
-              email: result.buyer!.email || '', // Can be empty if we have hasEmail=true
-              mobilePayment: result.buyer!.mobilePayment || normalizedPhone,
-              city: result.buyer!.city,
-              location: result.buyer!.location
-            }, null, result.buyer!.id);
-          });
-        } else {
-          // Missing Email -> Prompt to Complete Profile
-          toast({
-            title: "Email Required",
-            description: "Please provide your email address to receive the receipt.",
-            variant: "default"
-          });
-          setInitialBuyerData({
-            fullName: result.buyer.fullName,
-            city: result.buyer.city,
-            location: result.buyer.location,
-            email: ''
-          });
-          setShouldSkipSave(false); // Enable save/login to identify the user session
-          setIsBuyerModalOpen(true);
-        }
-      } else {
-        // CASE B: New Buyer -> Registration Form
-        setCurrentPhone(normalizedPhone);
-        setIsPhoneCheckModalOpen(false);
-
-        if (isBookingFlowActive && !bookingData) {
-          setInitialBuyerLocation(null);
-          setIsBookingModalOpen(true);
-        } else {
-          setBuyerId(null); // Reset ID for new guest record if needed? 
-          // Actually, checkBuyerByPhone for non-existent returns a fresh ID sometimes?
-          // If not exists, we'll get it during registration/payment
-          setInitialBuyerData(undefined);
-          setShouldSkipSave(false);
-          setIsBuyerModalOpen(true);
-        }
-      }
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to check phone number.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsCheckingPhone(false);
-    }
-  };
-
-  const handleBuyerInfoSubmit = async (
-    buyerInfo: any,
-    explicitBookingData?: any,
-    isExistingUserUpdate: boolean = false
-  ) => {
-    try {
-      // FIX (Task 5): Merge booking coordinates into buyer profile if available
-      const activeBooking = explicitBookingData || bookingData;
-      const enrichedBuyerInfo = {
-        ...buyerInfo,
-        latitude: activeBooking?.buyerLocation?.lat, // Profile still uses latitude/longitude for legacy reasons
-        longitude: activeBooking?.buyerLocation?.lng
-      };
-
-      // If it's a new user (not just updating email for existing), save them first
-      if (!isExistingUserUpdate && !shouldSkipSave) {
-        const saveResult = await buyerApi.saveBuyerInfo(enrichedBuyerInfo);
-
-        if (saveResult.requiresLogin) {
-          // Save current location for redirect after login
-          sessionStorage.setItem('redirectAfterLogin', window.location.pathname);
-          navigate('/buyer/login', { replace: true });
-          return;
-        }
-
-
-        // Proceed with new ID (or let backend infer from cookie)
-        await runWithLock(async () => {
-          // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(enrichedBuyerInfo, explicitBookingData, saveResult.buyer?.id);
-        });
-      } else {
-        // Existing user (skipped save) -> Proceed using backend lookup
-        await runWithLock(async () => {
-          // Prevents duplicate payment requests via synchronous lock (Task 14)
-          await executePayment(enrichedBuyerInfo, explicitBookingData);
-        });
-      }
-
-    } catch (error: any) {
-      console.error('Save error:', error);
-      toast({ title: "Error", description: "Failed to save information." });
+    // Resume pending action if it exists
+    if (pendingActionRef.current) {
+      const action = pendingActionRef.current;
+      pendingActionRef.current = null;
+      action();
     }
   };
 
@@ -864,23 +721,10 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
 
 
-      {/* Buyer Information Modal */}
-      <PhoneCheckModal
-        isOpen={isPhoneCheckModalOpen}
-        onClose={() => setIsPhoneCheckModalOpen(false)}
-        onPhoneSubmit={handlePhoneSubmit}
-        isLoading={isCheckingPhone}
-      />
-
       <BuyerInfoModal
         isOpen={isBuyerModalOpen}
         onClose={() => setIsBuyerModalOpen(false)}
-        onSubmit={async (buyerInfo) => {
-          await handleBuyerInfoSubmit({
-            ...buyerInfo,
-            fullName: buyerInfo.fullName || `${buyerInfo.firstName} ${buyerInfo.lastName}`.trim(),
-          }, null, shouldSkipSave);
-        }}
+        onSuccess={handleBuyerInfoSuccess}
         isLoading={isProcessingPurchase}
         theme={theme}
         phoneNumber={currentPhone}
