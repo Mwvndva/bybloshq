@@ -502,6 +502,22 @@ export class PaymentService {
             const payment = payments[0];
             const paymentMeta = payment.metadata || {};
 
+            if (isSuccess) {
+                if (Number.isNaN(amount) || amount <= 0) {
+                    throw new Error('Successful Payd callback missing valid amount');
+                }
+                const expectedAmount = Number.parseFloat(payment.amount || 0);
+                if (Math.abs(amount - expectedAmount) > 1) {
+                    await pool.query(
+                        `UPDATE payments
+                         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{fraud_flag}', $1::jsonb)
+                         WHERE id = $2`,
+                        [JSON.stringify({ reason: 'amount_mismatch', expected: expectedAmount, received: amount }), payment.id]
+                    );
+                    throw new Error(`Payd callback amount mismatch: expected ${expectedAmount}, received ${amount}`);
+                }
+            }
+
             // STEP 3: IDEMPOTENCY CHECK (Fast path)
             if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
                 logger.warn('[PAYD-WEBHOOK] Duplicate webhook ignored', { payment_id: payment.id, reference });
@@ -727,7 +743,13 @@ export class PaymentService {
             if (amount) {
                 const paidAmount = Number.parseFloat(amount);
                 if (Math.abs(paidAmount - Number.parseFloat(payment.amount)) > 1) {
-                    logger.warn(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
+                    await dbClient.query(
+                        `UPDATE payments
+                         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{fraud_flag}', $1::jsonb)
+                         WHERE id = $2`,
+                        [JSON.stringify({ reason: 'amount_mismatch', expected: Number.parseFloat(payment.amount), received: paidAmount }), payment.id]
+                    );
+                    throw new Error(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
                 }
             }
 
@@ -895,8 +917,7 @@ export class PaymentService {
 
         // If payment is successful and has buyer info, generate auto-login token
         let autoLoginToken = null;
-        const paymentMeta = payment.metadata || {};
-        const buyerProfileId = paymentMeta.buyer_id; // buyers.id stored in metadata
+        const buyerProfileId = null; // public status checks must not mint login tokens
 
         if ((payment.status === 'completed' || payment.status === 'success') && buyerProfileId) {
             try {

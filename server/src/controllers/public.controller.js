@@ -2,7 +2,6 @@ import { pool } from '../shared/db/database.js';
 
 import cacheService from '../services/cache.service.js';
 import { sanitizePublicProduct, sanitizePublicSeller } from '../shared/utils/sanitize.js';
-import { signAutoLoginToken } from '../shared/utils/jwt.js';
 
 // Get all products (public)
 export const getProducts = async (req, res) => {
@@ -350,26 +349,13 @@ export const getOrderStatus = async (req, res) => {
     }
 
     const order = result.rows[0];
-    let autoLoginToken = null;
-
-    // Generate auto-login token if this is a guest order and payment is completed
-    if (!order.buyer_id && (order.payment_status === 'completed' || order.status !== 'PENDING')) {
-      // Find the user_id via email since guest checkouts use users with guest flags or similar
-      // Or if we know the guest email, we can generate a token for that user
-      const userRes = await pool.query('SELECT id FROM users WHERE email = $1', [order.buyer_email]);
-      if (userRes.rows.length > 0) {
-        autoLoginToken = signAutoLoginToken(userRes.rows[0].id, 'buyer');
-      }
-    }
-
     res.status(200).json({
       status: 'success',
       data: {
         id: order.id,
         orderNumber: order.order_number,
         status: order.status,
-        paymentStatus: order.payment_status,
-        autoLoginToken
+        paymentStatus: order.payment_status
       }
     });
   } catch (error) {

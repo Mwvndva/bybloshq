@@ -38,6 +38,7 @@ export const AppEvents = {
         EXPIRED: 'booking.expired'
     },
     WITHDRAWAL: {
+        INITIATED: 'withdrawal.initiated',
         COMPLETED: 'withdrawal.completed',
         FAILED: 'withdrawal.failed'
     }

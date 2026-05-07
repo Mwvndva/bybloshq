@@ -3,7 +3,7 @@ import { validate } from '../middleware/validate.js';
 import { z } from 'zod';
 import paymentController from '../controllers/payment.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
-import { verifyPaydWebhook } from '../middleware/paydWebhookSecurity.js';
+import { verifyPaydWebhook, webhookRateLimiter } from '../middleware/paydWebhookSecurity.js';
 import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
 import { paymentRateLimiter } from '../middleware/rateLimiting.js';
 
@@ -47,6 +47,7 @@ publicRouter.post(
 publicRouter.post(
   '/webhook/payd',
   verifyPaydWebhook,
+  webhookRateLimiter,
   paymentController.handlePaydWebhook // Updated method name
 );
 

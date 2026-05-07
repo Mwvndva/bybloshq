@@ -75,7 +75,18 @@ export const handlePaydPayoutCallback = async (req, res) => {
             // 🛠️ FRAUD GUARD: Verify amount matches DB record (CRITICAL FIX: PRICE-TRUST)
             const providerAmount = Number.parseFloat(data.amount);
             const dbAmount = Number.parseFloat(request.amount);
-            if (isSuccess && !isNaN(providerAmount) && providerAmount < dbAmount) {
+            if (isSuccess && (isNaN(providerAmount) || providerAmount <= 0)) {
+                logger.error('[PAYOUT-CALLBACK] FRAUD ALERT: Successful payout callback missing valid amount', {
+                    requestId: request.id,
+                    received: data.amount
+                });
+                await WithdrawalService.updateStatusWithSideEffects(request.id, 'failed', {
+                    remarks: 'FRAUD ALERT: Successful payout callback missing valid amount'
+                });
+                return;
+            }
+
+            if (isSuccess && providerAmount < dbAmount) {
                 logger.error('[PAYOUT-CALLBACK] FRAUD ALERT: Amount mismatch!', {
                     orderId: request.id,
                     expected: dbAmount,
