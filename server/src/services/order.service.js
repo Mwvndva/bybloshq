@@ -1040,7 +1040,10 @@ class OrderService {
     // 2. Commit Inventory (Decrement reserved_quantity)
     for (const item of items) {
       if (item.track_inventory) {
-        await ProductModel.commit(client, item.product_id, item.quantity);
+        const committed = await ProductModel.commit(client, item.product_id, item.quantity);
+        if (!committed) {
+          throw new Error(`Reserved inventory missing for product ${item.product_id} on order ${order.id}`);
+        }
       }
     }
 

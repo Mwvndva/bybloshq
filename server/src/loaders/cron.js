@@ -34,6 +34,16 @@ export default async () => {
         logger.error('❌ Failed to start Fulfillment Worker:', err.message);
     }
 
+    // 5b. Payout reconciliation
+    if (process.env.ENABLE_PAYOUT_RECONCILIATION !== 'false') {
+        try {
+            schedulePayoutReconciliation();
+            logger.info('Payout reconciliation cron started');
+        } catch (err) {
+            logger.error('Failed to start payout reconciliation cron:', err.message);
+        }
+    }
+
     // 6. Cleanup Job (daily)
     if (process.env.ENABLE_CLEANUP_CRON !== 'false') {
         try {

@@ -1,29 +1,18 @@
 /**
  * payment.controller.js
  *
- * REFACTORED: Now delegates to CorePaymentService instead of directly to legacy services.
- *
- * Architecture after refactor:
- *   PaymentController → CorePaymentService → Legacy/Modular (via feature flags)
- *
- * The key improvement: the Payd webhook now triggers an ATOMIC update of both
- * the payment record AND the order status in ONE transaction via CorePaymentService.
+ * Delegates payment confirmation to CorePaymentService so payment and order
+ * state are updated in one transaction.
  */
 import CorePaymentService from '../core/CorePaymentService.js';
 import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
 import { normalizeOrderInput } from '../shared/utils/order.utils.js';
-
-// Keep legacy payment service accessible for methods not yet in CorePaymentService
 import paymentService from '../services/payment.service.js';
 
 class PaymentController {
-
   /**
-   * Handle Payd STK Push webhook (payment confirmation)
-   *
-   * KEY CHANGE: Now calls CorePaymentService.handlePaydWebhook which contains
-   * the ATOMIC transaction fix for payment + order status in one DB transaction.
+   * Handle Payd STK Push webhook (payment confirmation).
    */
   async handlePaydWebhook(req, res) {
     const webhookData = req.body;
@@ -34,28 +23,23 @@ class PaymentController {
       success: webhookData.success,
     });
 
-    // RESPOND 200 IMMEDIATELY as required by Payd docs
-    res.status(200).json({ received: true });
-
-    // Process asynchronously — webhook is already acknowledged above
-    setImmediate(async () => {
-      try {
-        await CorePaymentService.handlePaydWebhook(webhookData);
-        logger.info('[PaymentController] Payd webhook processed successfully', {
-          transaction_reference: webhookData.transaction_reference
-        });
-      } catch (error) {
-        logger.error('[PaymentController] Payd webhook processing failed (async):', {
-          transaction_reference: webhookData.transaction_reference,
-          error: error.message
-        });
-      }
-    });
+    try {
+      await CorePaymentService.handlePaydWebhook(webhookData);
+      logger.info('[PaymentController] Payd webhook processed successfully', {
+        transaction_reference: webhookData.transaction_reference
+      });
+      return res.status(200).json({ received: true });
+    } catch (error) {
+      logger.error('[PaymentController] Payd webhook processing failed:', {
+        transaction_reference: webhookData.transaction_reference,
+        error: error.message
+      });
+      return res.status(500).json({ error: 'Webhook processing failed' });
+    }
   }
 
   /**
-   * Initiate product payment (STK Push)
-   * Delegates to legacy service for now — no change in behaviour.
+   * Initiate product payment (STK Push).
    */
   async initiateProductPayment(req, res) {
     try {
@@ -68,7 +52,6 @@ class PaymentController {
         total: normalizedOrder.service.total
       });
 
-      // Delegate to legacy payment service (no change to STK Push initiation)
       const result = await paymentService.initiateProductPayment(normalizedOrder);
 
       res.status(200).json({
@@ -79,7 +62,6 @@ class PaymentController {
     } catch (error) {
       logger.error('[PaymentController] Product payment initiation failed:', error);
 
-      // Clean up if order/payment records were partially created
       if (error.orderId) {
         await pool.query(
           `UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1`,
@@ -103,7 +85,7 @@ class PaymentController {
   }
 
   /**
-   * Check payment status
+   * Check payment status.
    */
   async checkStatus(req, res) {
     try {
@@ -124,9 +106,6 @@ class PaymentController {
     }
   }
 
-  /**
-   * Check Payd agent status — delegated to legacy
-   */
   async getAgentStatus(req, res) {
     try {
       const status = paymentService.getAgentStatus();
@@ -137,9 +116,6 @@ class PaymentController {
     }
   }
 
-  /**
-   * Reset Payd agent — delegated to legacy
-   */
   async resetAgent(req, res) {
     try {
       paymentService.resetAgent();
@@ -150,9 +126,6 @@ class PaymentController {
     }
   }
 
-  /**
-   * Check container networking — delegated to legacy
-   */
   async checkNetwork(req, res) {
     try {
       const results = await paymentService.getNetworkStatus();

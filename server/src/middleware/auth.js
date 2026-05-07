@@ -134,6 +134,7 @@ export const protect = async (req, res, next) => {
             FROM users u 
             LEFT JOIN sellers s ON u.id = s.user_id 
             WHERE u.id = $1
+              AND COALESCE(s.status, 'active') = 'active'
           `;
         break;
       default:

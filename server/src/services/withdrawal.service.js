@@ -29,7 +29,7 @@ class WithdrawalService {
      * @param {Object} externalClient - Optional external DB client for transaction management
      */
     async updateStatusWithSideEffects(requestId, newStatus, opts = {}, externalClient = null) {
-        const { remarks = null, provider_reference = null, mpesa_receipt = null } = opts;
+        const { remarks = null, provider_reference = null, mpesa_receipt = null, skipRefund = false } = opts;
 
         // If an externalClient is provided, we use it and let the caller manage COMMIT/ROLLBACK.
         // Otherwise, we obtain a new client from the pool and manage our own transaction.
@@ -82,10 +82,12 @@ class WithdrawalService {
             );
 
             let newBalance = null;
-            if (newStatus === 'failed') {
+            if (newStatus === 'failed' && !skipRefund) {
                 // ENSURE: refundToWallet uses the SAME client for atomicity
                 newBalance = await payoutService.refundToWallet(client, request);
                 logger.info(`[WithdrawalService] Request ${requestId} failed. Refunded KES ${request.amount} to seller ${request.seller_id}`);
+            } else if (newStatus === 'failed') {
+                logger.warn(`[WithdrawalService] Request ${requestId} marked failed without refund: ${remarks || 'skipRefund=true'}`);
             }
 
             if (isInternalTransaction) {
@@ -289,7 +291,48 @@ class WithdrawalService {
             try {
                 await client.query('BEGIN');
 
-                const newBalance = await payoutService.refundToWallet(client, request);
+                const { rows: [currentRequest] } = await client.query(
+                    `SELECT *
+                     FROM withdrawal_requests
+                     WHERE id = $1
+                     FOR UPDATE`,
+                    [request.id]
+                );
+
+                if (!currentRequest) {
+                    await client.query('ROLLBACK');
+                    logger.error(`[WithdrawalService] Request ${request.id} disappeared before API failure handling.`);
+                    return;
+                }
+
+                if (['completed', 'failed'].includes(currentRequest.status)) {
+                    await client.query('ROLLBACK');
+                    logger.warn(`[WithdrawalService] Request ${request.id} is already ${currentRequest.status}; skipping API-failure refund.`);
+                    return;
+                }
+
+                if (currentRequest.provider_reference) {
+                    await client.query(
+                        `UPDATE withdrawal_requests
+                         SET metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb,
+                             api_call_pending = FALSE,
+                             updated_at = NOW()
+                         WHERE id = $2`,
+                        [
+                            JSON.stringify({
+                                api_error: apiError.message,
+                                reconciliation_flag: 'provider_reference_present_after_api_error'
+                            }),
+                            request.id
+                        ]
+                    );
+                    await client.query('COMMIT');
+                    logger.warn(`[WithdrawalService] Request ${request.id} has provider_reference after API error; left processing for callback/manual review.`);
+                    return;
+                }
+
+                await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [currentRequest.seller_id]);
+                const newBalance = await payoutService.refundToWallet(client, currentRequest);
 
                 await client.query(
                     `UPDATE withdrawal_requests 

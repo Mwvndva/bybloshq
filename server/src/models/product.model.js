@@ -122,8 +122,8 @@ class ProductModel {
     static async reserve(client, id, qty) {
         const query = `
             UPDATE products 
-            SET quantity = quantity - $1, 
-                reserved_quantity = reserved_quantity + $1,
+            SET quantity = CASE WHEN track_inventory = false THEN quantity ELSE quantity - $1 END,
+                reserved_quantity = CASE WHEN track_inventory = false THEN reserved_quantity ELSE reserved_quantity + $1 END,
                 updated_at = NOW()
             WHERE id = $2 AND (quantity >= $1 OR track_inventory = false)
             RETURNING *

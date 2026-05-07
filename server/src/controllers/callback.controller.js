@@ -40,17 +40,13 @@ export const handlePaydPayoutCallback = async (req, res) => {
         status: data.status
     });
 
-    // RESPOND 200 IMMEDIATELY as required by Payd docs
-    res.status(200).json({ received: true });
-
-    setImmediate(async () => {
-        try {
+    try {
             // Payd v2 payout callback uses 'transaction_reference' or 'correlator_id'
             const transactionReference = data.transaction_reference || data.correlator_id;
 
             if (!transactionReference) {
                 logger.warn('[PAYOUT-CALLBACK] Missing transaction reference in payload', { keys: Object.keys(data) });
-                return;
+                return res.status(400).json({ error: 'Missing transaction reference' });
             }
 
             // result_code 0 usually means success. success flag might be string "true" or boolean true
@@ -69,7 +65,7 @@ export const handlePaydPayoutCallback = async (req, res) => {
 
             if (!request) {
                 logger.warn(`[PAYOUT-CALLBACK] No request found for: ${transactionReference}`);
-                return;
+                return res.status(202).json({ received: true, status: 'unmatched' });
             }
 
             // 🛠️ FRAUD GUARD: Verify amount matches DB record (CRITICAL FIX: PRICE-TRUST)
@@ -81,21 +77,23 @@ export const handlePaydPayoutCallback = async (req, res) => {
                     received: data.amount
                 });
                 await WithdrawalService.updateStatusWithSideEffects(request.id, 'failed', {
-                    remarks: 'FRAUD ALERT: Successful payout callback missing valid amount'
+                    remarks: 'FRAUD ALERT: Successful payout callback missing valid amount',
+                    skipRefund: true
                 });
-                return;
+                return res.status(200).json({ received: true, status: 'rejected' });
             }
 
-            if (isSuccess && providerAmount < dbAmount) {
+            if (isSuccess && Math.abs(providerAmount - dbAmount) > 0.01) {
                 logger.error('[PAYOUT-CALLBACK] FRAUD ALERT: Amount mismatch!', {
                     orderId: request.id,
                     expected: dbAmount,
                     received: providerAmount
                 });
                 await WithdrawalService.updateStatusWithSideEffects(request.id, 'failed', {
-                    remarks: `FRAUD ALERT: Paid ${providerAmount} but required ${dbAmount}`
+                    remarks: `FRAUD ALERT: Paid ${providerAmount} but expected ${dbAmount}`,
+                    skipRefund: true
                 });
-                return;
+                return res.status(200).json({ received: true, status: 'rejected' });
             }
 
             await WithdrawalService.updateStatusWithSideEffects(request.id, finalStatus, {
@@ -115,10 +113,11 @@ export const handlePaydPayoutCallback = async (req, res) => {
             }
 
             logger.info(`[PAYOUT-CALLBACK] Processed request ${request.id}. Status: ${finalStatus}`);
-        } catch (error) {
-            logger.error('[PAYOUT-CALLBACK] Processing error:', error);
-        }
-    });
+        return res.status(200).json({ received: true });
+    } catch (error) {
+        logger.error('[PAYOUT-CALLBACK] Processing error:', error);
+        return res.status(500).json({ error: 'Callback processing failed' });
+    }
 };
 
 
