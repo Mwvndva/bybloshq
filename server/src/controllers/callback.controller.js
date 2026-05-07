@@ -2,6 +2,7 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import WithdrawalService from '../services/withdrawal.service.js';
 import PayoutService from '../services/payout.service.js';
+import eventBus, { AppEvents } from '../events/eventBus.js';
 
 /**
  * handlePaydPayoutCallback
@@ -91,6 +92,16 @@ export const handlePaydPayoutCallback = async (req, res) => {
                 mpesa_receipt: data.third_party_trans_id || data.mpesa_receipt || null,
                 provider_reference: transactionReference
             });
+
+            // P1-3 FIX: Emit WITHDRAWAL.COMPLETED only here — after Payd has confirmed the payout.
+            // NEVER emit this from initiateWithdrawal (that emits WITHDRAWAL.INITIATED).
+            if (isSuccess) {
+                setImmediate(() => {
+                    eventBus.emit(AppEvents.WITHDRAWAL.COMPLETED, {
+                        withdrawal: { id: request.id, amount: request.amount, status: 'completed' }
+                    });
+                });
+            }
 
             logger.info(`[PAYOUT-CALLBACK] Processed request ${request.id}. Status: ${finalStatus}`);
         } catch (error) {

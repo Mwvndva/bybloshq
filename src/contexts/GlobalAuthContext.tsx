@@ -545,7 +545,11 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             let profileData;
 
             if (newRole === 'admin') {
-                profileData = { id: 1, email: 'admin@byblos.com', createdAt: new Date().toISOString() };
+                // P1-8 FIX: Fetch real admin profile instead of hardcoded stub.
+                const isAuth = adminApi.isAuthenticated();
+                if (!isAuth) throw new Error('Not authenticated as admin');
+                profileData = await adminApi.getMe();
+                if (!profileData) throw new Error('Failed to fetch admin profile');
             } else {
                 profileData = await api.getProfile();
             }

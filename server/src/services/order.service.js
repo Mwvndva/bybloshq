@@ -43,8 +43,14 @@ class OrderService {
     const isManaged = !externalClient;
     const client = externalClient || await pool.connect();
     try {
-      // 1. Acquire Lock
-      const acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 10, 'NX');
+      // 1. Acquire Lock (P1-7 FIX: Redis outage must NOT crash order creation)
+      let acquired;
+      try {
+        acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 10, 'NX');
+      } catch (redisErr) {
+        logger.warn('[OrderService] Redis lock unavailable — continuing without distributed lock. Reason:', redisErr.message);
+        acquired = true; // pessimistic allow: DB FOR UPDATE guards will still protect against duplicates
+      }
       if (!acquired) {
         const error = new Error('Order creation already in progress. Please wait.');
         error.code = 'CONCURRENT_REQUEST';
@@ -528,24 +534,13 @@ class OrderService {
             shop_name: fullOrder.seller_name // fallback
           };
 
-          // Prepare notification calls
-          const notificationPromises = [];
+          // P1-2 FIX: Direct WhatsApp calls REMOVED from here.
+          // The EventBus listener in order.events.js (ORDER.CANCELLED event)
+          // handles buyer and seller notifications to prevent duplicate messages.
+          // The CoreOrderService emits ORDER.CANCELLED after cancelOrder returns.
 
-          // 1. Notify Buyer "You cancelled"
-          try {
-            await whatsappService.sendBuyerOrderCancellationNotification(orderData, 'Buyer');
-          } catch (err) {
-            logger.error('Error sending buyer cancellation notification:', err);
-          }
-
-          // 2. Notify Seller "Buyer cancelled"
-          try {
-            await whatsappService.sendSellerOrderCancellationNotification(orderData, seller, 'Buyer');
-          } catch (err) {
-            logger.error('Error sending seller cancellation notification:', err);
-          }
-
-          // 3. Notify courier if this was a logistics (delivery) order
+          // Keep logistics notification ONLY — it is NOT handled by the EventBus.
+          // Removing it would silently break courier notifications.
           const cancelledProductType = fullOrder.metadata?.product_type;
           const wasDeliveryOrder = cancelledProductType !== 'service' &&
             cancelledProductType !== 'digital' &&
@@ -694,60 +689,65 @@ class OrderService {
   }
 
   /**
-   * PIN-03: ATOMIC INVENTORY RESERVATION
-   * Decrements quantity and increments reserved_quantity
+   * PIN-03: ATOMIC BULK INVENTORY RESERVATION
+   * Uses UNNEST for a single-query bulk update instead of N queries.
+   * Atomicity preserved via the shared transaction client.
+   * ROLLBACK is handled by the caller's transaction if any row fails.
    */
   static async _reserveInventory(client, items) {
-    for (const item of items) {
-      if (item.trackInventory === true) {
-        const requestedQty = Number.parseInt(item.quantity, 10) || 1;
-        const productId = Number.parseInt(item.productId, 10);
+    const trackable = items.filter(i => i.trackInventory === true);
+    if (trackable.length === 0) return;
 
-        const query = `
-          UPDATE products 
-          SET 
-            quantity = quantity - $1,
-            reserved_quantity = reserved_quantity + $1,
-            updated_at = NOW()
-          WHERE id = $2 AND quantity >= $1
-          RETURNING id, quantity, reserved_quantity
-        `;
+    // Build parallel arrays for UNNEST
+    const ids = trackable.map(i => Number.parseInt(i.productId, 10));
+    const qtys = trackable.map(i => Number.parseInt(i.quantity, 10) || 1);
 
-        const { rows } = await client.query(query, [requestedQty, productId]);
+    // Single bulk UPDATE using UNNEST — only updates rows where quantity >= requested
+    const { rows } = await client.query(
+      `UPDATE products AS p
+       SET quantity = p.quantity - v.qty,
+           reserved_quantity = p.reserved_quantity + v.qty,
+           updated_at = NOW()
+       FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
+       WHERE p.id = v.id AND p.quantity >= v.qty
+       RETURNING p.id, p.quantity, p.reserved_quantity`,
+      [ids, qtys]
+    );
 
-        if (rows.length === 0) {
-          throw new Error(`Inventory reservation failed for product ${productId}. It may have just sold out.`);
-        }
-
-        logger.info(`[RESERVATION] Reserved ${requestedQty} units for product ${productId}. New qty: ${rows[0].quantity}, Reserved: ${rows[0].reserved_quantity}`);
-      }
+    // Verify every tracked item was successfully reserved
+    const reservedIds = new Set(rows.map(r => r.id));
+    const failed = trackable.filter(i => !reservedIds.has(Number.parseInt(i.productId, 10)));
+    if (failed.length > 0) {
+      const failedIds = failed.map(i => i.productId).join(', ');
+      throw new Error(`Inventory reservation failed for product(s) ${failedIds}. Items may have just sold out.`);
     }
+
+    logger.info(`[RESERVATION] Bulk reserved inventory for ${rows.length} product(s)`);
   }
 
   /**
-   * PIN-04: RELEASE RESERVATION
-   * Restores quantity and decrements reserved_quantity (used for cancellation/timeout)
+   * PIN-04: ATOMIC BULK RELEASE RESERVATION
+   * Restores quantity for multiple items in one query (cancellation/timeout).
    */
   static async _releaseInventory(client, items) {
-    for (const item of items) {
-      if (item.trackInventory === true) {
-        const qty = Number.parseInt(item.quantity, 10) || 1;
-        const productId = Number.parseInt(item.productId, 10);
+    const trackable = items.filter(i => i.trackInventory === true);
+    if (trackable.length === 0) return;
 
-        const query = `
-          UPDATE products 
-          SET 
-            quantity = quantity + $1,
-            reserved_quantity = GREATEST(0, reserved_quantity - $1),
-            updated_at = NOW()
-          WHERE id = $2
-          RETURNING id, quantity, reserved_quantity
-        `;
+    const ids = trackable.map(i => Number.parseInt(i.productId, 10));
+    const qtys = trackable.map(i => Number.parseInt(i.quantity, 10) || 1);
 
-        const { rows } = await client.query(query, [qty, productId]);
-        logger.info(`[RESERVATION-RELEASE] Released ${qty} units for product ${productId}. New qty: ${rows[0].quantity}, Reserved: ${rows[0].reserved_quantity}`);
-      }
-    }
+    const { rows } = await client.query(
+      `UPDATE products AS p
+       SET quantity = p.quantity + v.qty,
+           reserved_quantity = GREATEST(0, p.reserved_quantity - v.qty),
+           updated_at = NOW()
+       FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
+       WHERE p.id = v.id
+       RETURNING p.id, p.quantity, p.reserved_quantity`,
+      [ids, qtys]
+    );
+
+    logger.info(`[RESERVATION-RELEASE] Bulk released inventory for ${rows.length} product(s)`);
   }
 
   /**

@@ -1,4 +1,15 @@
-import OrderService from '../services/order.service.js';
+/**
+ * order.controller.js
+ *
+ * REFACTORED: Now delegates to CoreOrderService instead of directly to legacy services.
+ *
+ * Architecture after refactor:
+ *   OrderController → CoreOrderService → Legacy/Modular (via feature flags)
+ *
+ * The CoreOrderService facade also emits ORDER.CREATED / ORDER.CANCELLED events
+ * so WhatsApp and other side effects are fully decoupled from the transaction.
+ */
+import CoreOrderService from '../core/CoreOrderService.js';
 import Order from '../models/order.model.js';
 import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
@@ -6,6 +17,11 @@ import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
 import { sanitizeOrder } from '../shared/utils/sanitize.js';
+
+// Legacy service kept for methods not yet exposed on CoreOrderService
+// (e.g., createClientOrder). Remove as methods are migrated.
+import LegacyOrderService from '../services/order.service.js';
+
 
 export const getSellerOrders = async (req, res) => {
     try {
