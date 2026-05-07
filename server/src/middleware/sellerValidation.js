@@ -32,6 +32,8 @@ export const sellerRegistrationSchema = z.object({
     physicalAddress: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
+    referralCode: z.string().regex(/^BY[A-Z0-9]{6}$/i, 'Invalid referral code').optional(),
+    referral_code: z.string().regex(/^BY[A-Z0-9]{6}$/i, 'Invalid referral code').optional(),
     termsAccepted: z.literal(true, { errorMap: () => ({ message: 'You must accept the terms and conditions' }) }).optional()
 }).refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",

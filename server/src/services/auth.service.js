@@ -10,6 +10,7 @@ import { signToken } from '../shared/utils/jwt.js';
 import { sendPasswordResetEmail } from '../shared/utils/email.js';
 import { pool } from '../shared/db/database.js';
 import PendingRegistration from '../models/pendingRegistration.model.js';
+import ReferralService from './referral.service.js';
 
 // FIXED BUG-AUTH-02: cost factor must match bcrypt.hash(password, 12) used in user.model.js
 // Regenerate with: node -e "const b=require('bcrypt');b.hash('__timing_dummy__',12).then(console.log)"
@@ -435,12 +436,15 @@ class AuthService {
                 longitude: pending.longitude !== null && pending.longitude !== undefined ? Number(pending.longitude) : (regData.longitude ? Number(regData.longitude) : null),
                 userId: newUser.id,
                 termsAccepted: pending.terms_accepted !== undefined ? pending.terms_accepted : true,
-                referralCode: regData.referralCode || null
+                referralCode: regData.referralCode || regData.referral_code || null
             };
             let profile = null;
 
             if (pending.role === 'seller') {
                 profile = await SellerModel.createSeller(profileData, client);
+                if (profileData.referralCode && profile?.id) {
+                    await ReferralService.applyReferral(profile.id, profileData.referralCode, client);
+                }
             } else if (pending.role === 'buyer') {
                 profile = await Buyer.create(profileData, client);
 

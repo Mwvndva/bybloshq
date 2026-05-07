@@ -319,7 +319,7 @@ export const sellerApi = {
         physicalAddress: data.physicalAddress,
         latitude: data.latitude,
         longitude: data.longitude,
-        referral_code: (data as any).referralCode || undefined,
+        referralCode: data.referralCode || undefined,
         termsAccepted: data.termsAccepted
       });
 
