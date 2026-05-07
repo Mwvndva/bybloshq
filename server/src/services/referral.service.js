@@ -90,8 +90,8 @@ class ReferralService {
      * @returns {string}
      */
     static getReferralLink(referralCode) {
-        const base = process.env.FRONTEND_URL || 'https://byblos.co.ke';
-        return `${base}/join?ref=${referralCode}`;
+        const base = (process.env.FRONTEND_URL || 'https://byblos.co.ke').replace(/\/+$/, '');
+        return `${base}/join?ref=${encodeURIComponent(String(referralCode || '').trim().toUpperCase())}`;
     }
 
     // ─── Registration Hook ──────────────────────────────────────────────────────
@@ -102,12 +102,18 @@ class ReferralService {
      * @param {number} newSellerId
      * @param {string} referralCode
      */
-    static async applyReferral(newSellerId, referralCode) {
+    static async applyReferral(newSellerId, referralCode, dbClient = pool) {
+        const normalizedCode = String(referralCode || '').trim().toUpperCase();
+        if (!newSellerId || !/^BY[A-Z0-9]{6}$/.test(normalizedCode)) {
+            logger.warn(`[ReferralService] Invalid referral code format used: ${referralCode}`);
+            return null;
+        }
+
         let referrerResult;
         try {
-            referrerResult = await pool.query(
+            referrerResult = await dbClient.query(
                 'SELECT id FROM sellers WHERE referral_code = $1',
-                [referralCode]
+                [normalizedCode]
             );
         } catch (err) {
             const errorMsg = err instanceof Error ? err.message : String(err);
@@ -128,12 +134,18 @@ class ReferralService {
             return;
         }
 
-        await pool.query(
-            'UPDATE sellers SET referred_by_seller_id = $1 WHERE id = $2 AND referred_by_seller_id IS NULL',
+        const updateResult = await dbClient.query(
+            'UPDATE sellers SET referred_by_seller_id = $1 WHERE id = $2 AND referred_by_seller_id IS NULL RETURNING id',
             [referrerId, newSellerId]
         );
 
-        logger.info(`[REFERRAL] Seller ${newSellerId} referred by seller ${referrerId} (code: ${referralCode})`);
+        if (updateResult.rowCount === 0) {
+            logger.info(`[REFERRAL] Seller ${newSellerId} already has a referrer; skipped code ${normalizedCode}`);
+            return null;
+        }
+
+        logger.info(`[REFERRAL] Seller ${newSellerId} referred by seller ${referrerId} (code: ${normalizedCode})`);
+        return { referredSellerId: newSellerId, referrerSellerId: referrerId };
     }
 
     // ─── First-Sale Activation Hook ─────────────────────────────────────────────
@@ -228,6 +240,8 @@ class ReferralService {
         logger.info(`[REFERRAL-CRON] Processing referral rewards for ${year}-${String(month).padStart(2, '0')}`);
 
         // Fetch all active referral relationships
+        const periodStart = new Date(Date.UTC(year, month - 1, 1));
+        const periodEnd = new Date(Date.UTC(year, month, 1));
         const activeReferrals = await pool.query(
             `SELECT
          s.id           AS referred_seller_id,
@@ -235,7 +249,9 @@ class ReferralService {
          s.referred_by_seller_id AS referrer_seller_id
        FROM sellers s
        WHERE s.referred_by_seller_id IS NOT NULL
-         AND s.referral_active_until > NOW()`,
+         AND s.referral_active_until IS NOT NULL
+         AND s.referral_active_until >= $1`,
+            [periodStart]
         );
 
         if (activeReferrals.rowCount === 0) {
@@ -261,9 +277,14 @@ class ReferralService {
            FROM product_orders
            WHERE seller_id = $1
              AND payment_status = 'completed'
-             AND EXTRACT(MONTH FROM paid_at AT TIME ZONE 'Africa/Nairobi') = $2
-             AND EXTRACT(YEAR FROM paid_at AT TIME ZONE 'Africa/Nairobi') = $3`,
-                    [referred_seller_id, month, year]
+             AND paid_at >= $2
+             AND paid_at < $3
+             AND paid_at <= (
+               SELECT referral_active_until
+               FROM sellers
+               WHERE id = $1
+             )`,
+                    [referred_seller_id, periodStart, periodEnd]
                 );
 
                 const gmv = Number.parseFloat(gmvResult.rows[0].gmv);

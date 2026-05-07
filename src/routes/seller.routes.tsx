@@ -33,6 +33,14 @@ export const sellerRoutes: RouteObject[] = [
     ),
   },
   {
+    path: '/join',
+    element: (
+      <Suspense fallback={<RouteFallback />}>
+        <SellerRegistration />
+      </Suspense>
+    ),
+  },
+  {
     path: '/seller/reset-password',
     element: (
       <Suspense fallback={<RouteFallback />}>

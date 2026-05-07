@@ -157,7 +157,7 @@ export const register = async (req, res) => {
     sendTokenResponse(loginData, 201, res, 'Registration successful');
 
     // ── Referral hook (post-response, non-blocking) ──
-    const refCode = req.body.referralCode || req.query.ref;
+    const refCode = req.body.referralCode || req.body.referral_code || req.query.ref;
     if (refCode) {
       const newSellerId = loginData?.profile?.id;
       if (newSellerId) {

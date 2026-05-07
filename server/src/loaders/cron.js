@@ -1,5 +1,6 @@
 import { schedulePaymentProcessing } from '../cron/paymentCron.js';
 import { schedulePayoutReconciliation } from '../cron/payoutCleanup.js';
+import { scheduleReferralRewards } from '../cron/referralCron.js';
 import logger from '../shared/utils/logger.js';
 
 export default async () => {
@@ -41,6 +42,15 @@ export default async () => {
             logger.info('✅ Cleanup cron started');
         } catch (err) {
             logger.error('❌ Failed to start cleanup cron:', err.message);
+        }
+    }
+    // 7. Monthly referral reward payout
+    if (process.env.ENABLE_REFERRAL_CRON !== 'false') {
+        try {
+            scheduleReferralRewards();
+            logger.info('Referral rewards cron started');
+        } catch (err) {
+            logger.error('Failed to start referral rewards cron:', err.message);
         }
     }
 };
