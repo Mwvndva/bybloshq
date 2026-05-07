@@ -1,5 +1,5 @@
 ﻿import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { memo, useMemo, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
@@ -34,13 +34,39 @@ const SHOP_COLORS = [
   '#F59E0B', '#EF4444', '#06B6D4', '#F97316',
 ];
 
+const FOLLOWED_SHOPS_CACHE_TTL_MS = 2 * 60 * 1000;
+let followedShopsCache: { data: any[]; timestamp: number } | null = null;
+let followedShopsRequest: Promise<any[]> | null = null;
+
+const hasFreshFollowedShopsCache = () =>
+  Boolean(followedShopsCache && Date.now() - followedShopsCache.timestamp < FOLLOWED_SHOPS_CACHE_TTL_MS);
+
+async function getFollowedShopsCached(force = false) {
+  if (!force && hasFreshFollowedShopsCache()) {
+    return followedShopsCache!.data;
+  }
+
+  if (!followedShopsRequest) {
+    followedShopsRequest = buyerApi.getShops()
+      .then((data) => {
+        followedShopsCache = { data, timestamp: Date.now() };
+        return data;
+      })
+      .finally(() => {
+        followedShopsRequest = null;
+      });
+  }
+
+  return followedShopsRequest;
+}
+
 function shopColor(name) {
   let h = 0;
   for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFFFFFFFF;
   return SHOP_COLORS[Math.abs(h) % SHOP_COLORS.length];
 }
 
-function ShopCard({ shop, onOpen }) {
+const ShopCard = memo(function ShopCard({ shop, onOpen }) {
   const color = shopColor(shop.shopName || shop.name || '');
   const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
 
@@ -117,9 +143,9 @@ function ShopCard({ shop, onOpen }) {
       </div>
     </div>
   );
-}
+});
 
-function FeaturedShopCard({ shop, onOpen }) {
+const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen }) {
   const color = shopColor(shop.shopName || shop.name || '');
   const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
 
@@ -163,6 +189,22 @@ function FeaturedShopCard({ shop, onOpen }) {
 
       <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center' }}>
         <ChevronRight size={14} color="rgba(255,255,255,0.45)" />
+      </div>
+    </div>
+  );
+});
+
+function ShopCardSkeleton() {
+  return (
+    <div style={{ background: '#141414', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{
+        height: 68,
+        background: 'linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
+      }} />
+      <div style={{ padding: 10 }}>
+        <div style={{ height: 12, width: '70%', borderRadius: 6, background: 'rgba(255,255,255,0.08)', marginBottom: 10 }} />
+        <div style={{ height: 10, width: '48%', borderRadius: 6, background: 'rgba(255,255,255,0.06)', marginBottom: 10 }} />
+        <div style={{ height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.06)' }} />
       </div>
     </div>
   );
@@ -231,22 +273,28 @@ function BuyerDashboard() {
   const [shops, setShops] = useState<any[]>([]);
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
   const [isLoadingShops, setIsLoadingShops] = useState(false);
+  const shopsLoadedRef = useRef(false);
 
-  const fetchShops = useCallback(async () => {
-    setIsLoadingShops(true);
+  const fetchShops = useCallback(async (options: { force?: boolean; silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setIsLoadingShops(true);
+    }
     try {
-      const fetchedShops = await buyerApi.getShops();
+      const fetchedShops = await getFollowedShopsCached(options.force);
+      shopsLoadedRef.current = true;
       setShops(fetchedShops);
     } catch (error) {
       console.error('Error fetching shops:', error);
     } finally {
-      setIsLoadingShops(false);
+      if (!options.silent) {
+        setIsLoadingShops(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     if (activeSection === 'shops') {
-      fetchShops();
+      fetchShops({ silent: shopsLoadedRef.current });
     }
   }, [activeSection, fetchShops]);
 
@@ -408,9 +456,20 @@ function BuyerDashboard() {
     }
   };
 
-  const handleOpenShop = (shop) => {
+  const filteredShops = useMemo(() => {
+    const query = shopsSearchQuery.trim().toLowerCase();
+    if (!query) return shops;
+
+    return shops.filter((shop) => {
+      const name = String(shop.shopName || shop.name || '').toLowerCase();
+      const location = String(shop.location || shop.city || '').toLowerCase();
+      return name.includes(query) || location.includes(query);
+    });
+  }, [shops, shopsSearchQuery]);
+
+  const handleOpenShop = useCallback((shop) => {
     navigate(`/buyer/shop/${encodeURIComponent(shop.shopName || shop.name)}`);
-  };
+  }, [navigate]);
 
   return (
     <div className="page-enter" style={{
@@ -504,11 +563,11 @@ function BuyerDashboard() {
               flexShrink: 0,
             }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>My Shops</span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{shops.length} shops</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{filteredShops.length} shops</span>
             </div>
 
             {/* Featured strip ΓÇö first shop only */}
-            {shops.length > 0 && (
+            {filteredShops.length > 0 && (
               <div style={{ marginBottom: 12 }}>
                 <div style={{
                   fontSize: 10, fontWeight: 600, letterSpacing: 1,
@@ -516,7 +575,7 @@ function BuyerDashboard() {
                 }}>
                   Featured
                 </div>
-                <FeaturedShopCard shop={shops[0]} onOpen={handleOpenShop} />
+                <FeaturedShopCard shop={filteredShops[0]} onOpen={handleOpenShop} />
               </div>
             )}
 
@@ -526,14 +585,17 @@ function BuyerDashboard() {
               gridTemplateColumns: '1fr 1fr',
               gap: 8,
             }}>
-              {shops.slice(1).map(shop => (
+              {isLoadingShops && shops.length === 0 && Array.from({ length: 6 }).map((_, index) => (
+                <ShopCardSkeleton key={index} />
+              ))}
+              {filteredShops.slice(1).map(shop => (
                 <ShopCard key={shop.id} shop={shop} onOpen={handleOpenShop} />
               ))}
             </div>
 
-            {shops.length === 0 && !isLoadingShops && (
+            {filteredShops.length === 0 && !isLoadingShops && (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.28)' }}>
-                No shops followed yet.
+                {shopsSearchQuery ? 'No followed shops match your search.' : 'No shops followed yet.'}
               </div>
             )}
           </>

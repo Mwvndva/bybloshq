@@ -1,4 +1,4 @@
-
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -175,4 +175,4 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
     );
 };
 
-export default SellerBrandCard;
+export default memo(SellerBrandCard);
