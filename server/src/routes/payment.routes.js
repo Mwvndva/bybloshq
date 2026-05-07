@@ -12,7 +12,7 @@ const router = express.Router();
 const initiateProductSchema = z.object({
   phone: z.string().min(1, 'Phone number is required'),
   email: z.string().email().optional().nullable().or(z.literal('')),
-  amount: z.coerce.number().positive('Valid amount is required'),
+  amount: z.coerce.number().positive('Valid amount is required').optional(),
   productId: z.coerce.string().min(1, 'Product ID is required'),
   sellerId: z.coerce.string().optional().nullable(),
   productName: z.string().optional().nullable(),

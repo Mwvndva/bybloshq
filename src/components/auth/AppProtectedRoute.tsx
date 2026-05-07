@@ -66,14 +66,6 @@ export function AppProtectedRoute({
 
     // Wrong role → redirect to own dashboard
     if (role && !allowedRoles.includes(role)) {
-        // Explicit cross-role check: a seller with a buyerProfile may access buyer routes
-        const sellerAccessingBuyerRoute =
-            role === 'seller' && allowedRoles.includes('buyer');
-
-        if (sellerAccessingBuyerRoute) {
-            return <>{children}</>;
-        }
-
         return <Navigate to={`/${role}/dashboard`} replace />;
     }
 

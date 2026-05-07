@@ -230,6 +230,7 @@ export class PaymentService {
                 narrative,
                 first_name,
                 last_name,
+                api_ref,
                 callback_url
             } = paymentData;
             const orderId = paymentData.metadata?.order_id || paymentData.order_id;
@@ -298,6 +299,7 @@ export class PaymentService {
                 phone_number: normalizedPhone,
                 narration: narration || narrative || `Payment for ${invoice_id}`,
                 currency: "KES",
+                api_ref,
                 callback_url: callbackUrl,
             };
 
@@ -1531,9 +1533,11 @@ export class PaymentService {
             await client.query('BEGIN');
 
             const order = await OrderService.createOrder(orderData, client);
+            const apiRef = `BYB-${order.id}-${Date.now()}`;
 
             const paymentData = {
                 invoice_id: String(order.id),
+                api_ref: apiRef,
                 amount: finalTotal,
                 currency: 'KES',
                 status: PaymentStatus.PENDING,
@@ -1542,6 +1546,7 @@ export class PaymentService {
                 email: buyerEmail,
                 metadata: {
                     order_id: order.id,
+                    api_ref: apiRef,
                     order_number: order.order_number,
                     product_id: service.id,
                     seller_id: product.seller_id,
@@ -1552,9 +1557,9 @@ export class PaymentService {
             };
 
             const insertRes = await client.query(
-                `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
-                  VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6) RETURNING *`,
-                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, finalTotal, JSON.stringify(paymentData.metadata)]
+                `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, api_ref, metadata)
+                  VALUES ($1, $2, $3, $4, $5, 'pending', 'payd', $6, $7) RETURNING *`,
+                [paymentData.invoice_id, buyerEmail, buyerMobilePayment, buyerWhatsApp, finalTotal, apiRef, JSON.stringify(paymentData.metadata)]
             );
             const payment = insertRes.rows[0];
 

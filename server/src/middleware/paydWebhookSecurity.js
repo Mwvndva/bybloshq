@@ -76,6 +76,12 @@ export const verifyPaydWebhook = (req, res, next) => {
         }
     } else if (allowedIPsString.toLowerCase() === 'skip' || allowedIPsString === '*') {
         logger.warn(`[WEBHOOK-SECURITY] ⚠️  SECURITY ALERT: IP Whitelisting is explicitly DISABLED (Value: ${allowedIPsString})`);
+        if (process.env.NODE_ENV === 'production') {
+            return res.status(503).json({
+                status: 'error',
+                message: 'Webhook IP whitelist cannot be disabled in production'
+            });
+        }
         logger.info(`[WEBHOOK-SECURITY] Authorized incoming IP ${clientIP} via skip rule`);
     } else {
         // Parse allowed IPs

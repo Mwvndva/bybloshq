@@ -1,7 +1,5 @@
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
-import { OrderStatus, OrderType } from '../shared/constants/enums.js';
-import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 
 class FulfillmentQueueService {
     /**
@@ -25,14 +23,17 @@ class FulfillmentQueueService {
      * Designed to be called by a cron or loop.
      */
     static async processJobs(limit = 5) {
-        // Find jobs that are PENDING or FAILED (with retry delay)
+        // Find candidate jobs. The actual claim happens inside processJob's transaction.
         const findQuery = `
             SELECT * FROM fulfillment_jobs
-            WHERE (status = 'PENDING' OR status = 'FAILED')
+            WHERE (
+                status = 'PENDING'
+                OR status = 'FAILED'
+                OR (status = 'PROCESSING' AND updated_at < NOW() - INTERVAL '10 minutes')
+              )
               AND attempts < max_attempts
               AND (last_attempt_at IS NULL OR last_attempt_at < NOW() - INTERVAL '1 minute' * POWER(2, attempts))
             LIMIT $1
-            FOR UPDATE SKIP LOCKED
         `;
 
         const { rows: jobs } = await pool.query(findQuery, [limit]);
@@ -50,13 +51,34 @@ class FulfillmentQueueService {
         try {
             await client.query('BEGIN');
 
-            // 1. Mark as processing
+            // 1. Claim the job under lock before processing.
+            const { rows: claimedJobs } = await client.query(
+                `SELECT *
+                 FROM fulfillment_jobs
+                 WHERE id = $1
+                   AND (
+                     status IN ('PENDING', 'FAILED')
+                     OR (status = 'PROCESSING' AND updated_at < NOW() - INTERVAL '10 minutes')
+                   )
+                   AND attempts < max_attempts
+                 FOR UPDATE SKIP LOCKED`,
+                [job.id]
+            );
+
+            if (claimedJobs.length === 0) {
+                await client.query('ROLLBACK');
+                logger.info(`[QUEUE] Job ${job.id} was already claimed or is no longer eligible.`);
+                return;
+            }
+            job = claimedJobs[0];
+
+            // 2. Mark as processing
             await client.query(
                 `UPDATE fulfillment_jobs SET status = 'PROCESSING', last_attempt_at = NOW(), attempts = attempts + 1 WHERE id = $1`,
                 [job.id]
             );
 
-            // 2. Fetch Order details
+            // 3. Fetch Order details
             const { rows: orders } = await client.query(
                 `SELECT * FROM product_orders WHERE id = $1 FOR UPDATE`,
                 [job.order_id]
@@ -68,7 +90,7 @@ class FulfillmentQueueService {
 
             const order = orders[0];
 
-            // 3. Delegate to order completion logic based on type
+            // 4. Delegate to order completion logic based on type
             // (Circular dependency alert: use dynamic import or move logic to a shared helper)
             const { default: OrderService } = await import('./order.service.js');
 
@@ -77,7 +99,7 @@ class FulfillmentQueueService {
             // This call should be updated to strictly follow the new transitions
             await OrderService.executeFulfillment(client, order);
 
-            // 4. Mark job as completed
+            // 5. Mark job as completed
             await client.query(
                 `UPDATE fulfillment_jobs SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1`,
                 [job.id]

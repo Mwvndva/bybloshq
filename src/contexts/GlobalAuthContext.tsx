@@ -745,7 +745,7 @@ export const useGlobalAuth = (): GlobalAuthContextType => {
 export const useBuyerAuth = () => {
     const { user, isAuthenticated, isLoading, login, loginWithToken, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
 
-    return {
+    return useMemo(() => ({
         user: user?.role === 'buyer' ? user.profile as BuyerProfile : null,
         isAuthenticated: isAuthenticated && user?.role === 'buyer',
         isLoading,
@@ -756,13 +756,13 @@ export const useBuyerAuth = () => {
         resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'buyer'),
         loginWithToken: (token: string) => loginWithToken(token, 'buyer'),
         updateBuyerProfile: (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer'),
-    };
+    }), [user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, loginWithToken, updateProfile]);
 };
 
 export const useSellerAuth = () => {
     const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
 
-    return {
+    return useMemo(() => ({
         seller: user?.role === 'seller' ? user.profile as SellerProfile : null,
         isAuthenticated: isAuthenticated && user?.role === 'seller',
         isLoading,
@@ -772,17 +772,17 @@ export const useSellerAuth = () => {
         forgotPassword: (email: string) => forgotPassword(email, 'seller'),
         resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'seller'),
         updateSellerProfile: (updates: Partial<SellerProfile>) => updateProfile(updates, 'seller'),
-    };
+    }), [user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile]);
 };
 
 export const useAdminAuth = () => {
     const { user, isAuthenticated, isLoading, loginAdmin, logout } = useGlobalAuth();
 
-    return {
+    return useMemo(() => ({
         isAuthenticated: isAuthenticated && user?.role === 'admin',
         loading: isLoading,
         error: null,
         login: loginAdmin,
         logout,
-    };
+    }), [user, isAuthenticated, isLoading, loginAdmin, logout]);
 };

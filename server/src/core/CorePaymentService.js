@@ -86,7 +86,8 @@ const CorePaymentService = {
         // Step 2: Extract key identifiers from webhook payload.
         const reference = webhookData.data?.api_ref
             || webhookData.api_ref
-            || webhookData.data?.transaction_reference;
+            || webhookData.data?.transaction_reference
+            || webhookData.transaction_reference;
 
         const rawStatus = webhookData.data?.status || webhookData.status;
         const resultCode = webhookData.data?.result_code ?? webhookData.result_code;

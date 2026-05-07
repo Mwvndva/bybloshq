@@ -29,7 +29,10 @@ class FulfillmentWorker {
             SELECT fj.*, po.status as order_current_status, po.order_type
             FROM fulfillment_jobs fj
             JOIN product_orders po ON fj.order_id = po.id
-            WHERE fj.status IN ('PENDING', 'FAILED')
+            WHERE (
+                fj.status IN ('PENDING', 'FAILED')
+                OR (fj.status = 'PROCESSING' AND fj.updated_at < NOW() - INTERVAL '10 minutes')
+              )
               AND fj.attempts < fj.max_attempts
             ORDER BY fj.created_at ASC
             LIMIT 10
@@ -56,7 +59,10 @@ class FulfillmentWorker {
             const { rows: claimedJobs } = await client.query(
                 `SELECT * FROM fulfillment_jobs
                  WHERE id = $1
-                   AND status IN ('PENDING', 'FAILED')
+                   AND (
+                     status IN ('PENDING', 'FAILED')
+                     OR (status = 'PROCESSING' AND updated_at < NOW() - INTERVAL '10 minutes')
+                   )
                    AND attempts < max_attempts
                  FOR UPDATE SKIP LOCKED`,
                 [job.id]
