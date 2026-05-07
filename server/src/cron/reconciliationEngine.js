@@ -29,59 +29,103 @@ class ReconciliationEngine {
 
     /**
      * Release inventory for RESERVED or HELD orders that exceeded deadlines.
+     *
+     * P1-4 FIX: Each order is processed in an INDEPENDENT transaction.
+     * A failure for one order does NOT roll back all other releases.
+     * P1-5 FIX: Service slots are released for expired SERVICE orders.
      */
     static async handleExpiredReservations() {
-        const client = await pool.connect();
-        try {
-            await client.query('BEGIN');
+        // First: find all expired orders without locking (we'll lock per-order below)
+        const { rows: expiredOrders } = await pool.query(
+            `SELECT po.id, po.order_type
+             FROM product_orders po
+             WHERE po.status IN ('RESERVED', 'HELD')
+               AND po.reservation_expires_at < NOW()
+             LIMIT 50`
+        );
 
-            const expiredQuery = `
-                SELECT id, status FROM product_orders
-                WHERE status IN ('RESERVED', 'HELD')
-                  AND expires_at < NOW()
-                FOR UPDATE SKIP LOCKED
-            `;
-            const { rows: expiredOrders } = await client.query(expiredQuery);
+        if (expiredOrders.length === 0) return;
 
-            if (expiredOrders.length === 0) return;
+        logger.info(`⚖️ [RECON] Found ${expiredOrders.length} expired reservations. Processing individually.`);
 
-            logger.info(`⚖️ [RECON] Found ${expiredOrders.length} expired reservations.`);
+        for (const order of expiredOrders) {
+            const client = await pool.connect();
+            try {
+                await client.query('BEGIN');
 
-            for (const order of expiredOrders) {
-                // 1. Fetch items
-                const { rows: items } = await client.query(
-                    'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+                // Lock the specific order row; SKIP if already updated by another worker
+                const { rows: locked } = await client.query(
+                    `SELECT id, order_type, status FROM product_orders
+                     WHERE id = $1 AND status IN ('RESERVED', 'HELD')
+                     FOR UPDATE SKIP LOCKED`,
                     [order.id]
                 );
 
-                // 2. Release inventory
-                for (const item of items) {
-                    await ProductModel.release(client, item.product_id, item.quantity);
+                if (locked.length === 0) {
+                    // Another worker already handled this order
+                    await client.query('ROLLBACK');
+                    continue;
                 }
 
-                // 3. Transition to CANCELLED
-                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'system_timeout');
-            }
+                const lockedOrder = locked[0];
 
-            await client.query('COMMIT');
-        } catch (err) {
-            await client.query('ROLLBACK');
-            throw err;
-        } finally {
-            client.release();
+                // P1-5 FIX: Release service slot if this is a SERVICE order
+                if (lockedOrder.order_type === 'SERVICE') {
+                    await client.query(
+                        `UPDATE service_slots
+                         SET status = 'AVAILABLE',
+                             reserved_by_order_id = NULL,
+                             expires_at = NULL,
+                             updated_at = NOW()
+                         WHERE reserved_by_order_id = $1`,
+                        [order.id]
+                    );
+                    logger.info(`⚖️ [RECON] Released service slot for expired ORDER ${order.id}`);
+                }
+
+                // P1-4 FIX: Only release physical inventory for PHYSICAL orders
+                if (lockedOrder.order_type === 'PHYSICAL' || !lockedOrder.order_type) {
+                    const { rows: items } = await client.query(
+                        'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+                        [order.id]
+                    );
+
+                    for (const item of items) {
+                        const released = await ProductModel.release(client, item.product_id, item.quantity);
+                        if (!released) {
+                            logger.warn(`⚖️ [RECON] Inventory release skipped for product ${item.product_id} (reserved_quantity may already be 0)`);
+                        }
+                    }
+                }
+
+                // Transition to CANCELLED
+                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'system_timeout');
+
+                await client.query('COMMIT');
+                logger.info(`⚖️ [RECON] Expired order ${order.id} (${lockedOrder.order_type}) cancelled successfully.`);
+            } catch (err) {
+                await client.query('ROLLBACK').catch(() => { });
+                logger.error(`⚖️ [RECON] Failed to cancel expired order ${order.id}:`, err.message);
+            } finally {
+                client.release();
+            }
         }
     }
 
     /**
      * Cleanup PAYMENT_PENDING orders that have been stuck for too long (e.g. > 15 mins).
+     *
+     * Inventory safety: Only PHYSICAL orders have reserved inventory.
+     * DIGITAL and SERVICE orders must NOT have inventory released.
      */
     static async handleStuckPayments() {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
 
+            // Fetch order_type to determine which orders need inventory release
             const stuckQuery = `
-                SELECT id FROM product_orders
+                SELECT id, order_type FROM product_orders
                 WHERE status = 'PAYMENT_PENDING'
                   AND updated_at < NOW() - INTERVAL '30 minutes'
                 FOR UPDATE SKIP LOCKED
@@ -89,15 +133,30 @@ class ReconciliationEngine {
             const { rows: stuckOrders } = await client.query(stuckQuery);
 
             for (const order of stuckOrders) {
-                logger.warn(`⚖️ [RECON] Found stuck PAYMENT_PENDING order ${order.id}. Cancelling.`);
+                logger.warn(`⚖️ [RECON] Found stuck PAYMENT_PENDING order ${order.id} (${order.order_type}). Cancelling.`);
 
-                // Release inventory before cancelling
-                const { rows: items } = await client.query(
-                    'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
-                    [order.id]
-                );
-                for (const item of items) {
-                    await ProductModel.release(client, item.product_id, item.quantity);
+                // Only release inventory for PHYSICAL orders that actually reserved stock
+                if (order.order_type === 'PHYSICAL' || !order.order_type) {
+                    const { rows: items } = await client.query(
+                        'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
+                        [order.id]
+                    );
+                    for (const item of items) {
+                        const released = await ProductModel.release(client, item.product_id, item.quantity);
+                        if (!released) {
+                            logger.warn(`⚖️ [RECON] Inventory release skipped for product ${item.product_id} (order ${order.id}) — reserved_quantity may already be 0`);
+                        }
+                    }
+                }
+
+                // SERVICE orders: also release any service slot held in PAYMENT_PENDING state
+                if (order.order_type === 'SERVICE') {
+                    await client.query(
+                        `UPDATE service_slots
+                         SET status = 'AVAILABLE', reserved_by_order_id = NULL, expires_at = NULL, updated_at = NOW()
+                         WHERE reserved_by_order_id = $1`,
+                        [order.id]
+                    );
                 }
 
                 await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'stuck_payment');

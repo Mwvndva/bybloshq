@@ -19,18 +19,60 @@ const scheduleOrderDeadlineChecks = (options = {}) => {
 
     logger.info(`Scheduling order deadline checks with schedule: ${schedule}`);
 
-    // C-5: Add health check for stale pending orders
+    // P1-6 FIX: Use per-row FOR UPDATE SKIP LOCKED to prevent race with webhook handler.
+    // A bare bulk UPDATE without a lock can overwrite a PAID status with FAILED
+    // if the Payd callback arrives and commits concurrently.
     const checkExpiredPendingOrders = async () => {
-        const { pool } = await import('../shared/db/database.js');
-        await pool.query(`
-            UPDATE product_orders 
-            SET status = 'FAILED', 
-                payment_status = 'failed',
-                metadata = COALESCE(metadata, '{}'::jsonb) || '{"reason": "Payd STK push expired or never completed"}'::jsonb
-            WHERE status = 'PENDING' 
-              AND created_at < NOW() - INTERVAL '30 minutes'
-        `);
+        const { pool: dbPool } = await import('../shared/db/database.js');
+
+        // Find candidates (no lock yet — just a quick scan)
+        const { rows: candidates } = await dbPool.query(
+            `SELECT id FROM product_orders
+             WHERE status = 'PENDING'
+               AND created_at < NOW() - INTERVAL '30 minutes'
+             LIMIT 50`
+        );
+
+        if (candidates.length === 0) return;
+
+        for (const candidate of candidates) {
+            const client = await dbPool.connect();
+            try {
+                await client.query('BEGIN');
+
+                // Lock the row; SKIP if another transaction holds it (e.g. webhook)
+                const { rows: locked } = await client.query(
+                    `SELECT id, status FROM product_orders
+                     WHERE id = $1 AND status = 'PENDING'
+                     FOR UPDATE SKIP LOCKED`,
+                    [candidate.id]
+                );
+
+                if (locked.length === 0) {
+                    // Row is locked by another transaction (likely the webhook) — safe to skip
+                    await client.query('ROLLBACK');
+                    continue;
+                }
+
+                await client.query(
+                    `UPDATE product_orders
+                     SET status = 'FAILED',
+                         payment_status = 'failed',
+                         metadata = COALESCE(metadata, '{}'::jsonb) || '{"reason": "Payd STK push expired or never completed"}'::jsonb,
+                         updated_at = NOW()
+                     WHERE id = $1`,
+                    [candidate.id]
+                );
+
+                await client.query('COMMIT');
+            } catch (err) {
+                await client.query('ROLLBACK').catch(() => { });
+            } finally {
+                client.release();
+            }
+        }
     };
+
 
     return cron.schedule(schedule, async () => {
         const startTime = Date.now();

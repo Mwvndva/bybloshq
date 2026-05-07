@@ -32,6 +32,18 @@ async function startServer() {
   // 2. Initialize Loaders (DB, Express, Cron, Services)
   await loaders(app);
 
+  // 2b. Boot Event Listeners (must be after loaders so services are ready)
+  // These files register async listeners on the AppEventBus singleton.
+  // Listeners are isolated — their failures NEVER affect core transactions.
+  await import('./events/order.events.js');
+  await import('./events/payment.events.js');
+  logger.info('[EventBus] All event listeners registered');
+
+  // 2c. Boot the unified fulfillment-retry cron (P1-1: replaces completionRetryCron for new path)
+  const { scheduleFulfillmentRetry } = await import('./cron/paymentCron.js');
+  scheduleFulfillmentRetry();
+  logger.info('[Cron] Unified fulfillment-retry cron registered (checks needs_fulfillment + needs_completion)');
+
   // 3. Start Listening
   const PORT = process.env.PORT || 3002;
   const server = http.createServer(app);

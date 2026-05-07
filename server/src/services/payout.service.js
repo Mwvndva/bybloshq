@@ -143,7 +143,7 @@ class PayoutService {
      * @param {string} [params.callback_url] - Webhook URL
      * @returns {Promise<Object>}
      */
-    async initiatePayout({ phone_number, amount, narration, callback_url }) {
+    async initiatePayout({ phone_number, amount, narration, callback_url, idempotency_key }) {
         const startTime = Date.now();
 
         try {
