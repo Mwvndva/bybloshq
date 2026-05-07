@@ -465,12 +465,16 @@ class OrderService {
           logger.info(`[SLOT-RELEASE] Released slot for cancelled Order ${orderId}`);
         }
 
-        // 6. Release Physical Inventory
-        if (order.order_type === OrderType.PHYSICAL) {
+        // 6. Release Physical Inventory only before reserved stock has been committed.
+        const statusForRelease = String(order.status || '').toUpperCase();
+        const canReleaseInventory = ['CREATED', 'RESERVED', 'HELD', 'PAYMENT_PENDING', 'FAILED', 'EXPIRED'].includes(statusForRelease);
+        if (order.order_type === OrderType.PHYSICAL && canReleaseInventory) {
           const { rows: items } = await client.query('SELECT product_id, quantity FROM order_items WHERE order_id = $1', [orderId]);
           // Map structure for _releaseInventory
           const formattedItems = items.map(i => ({ productId: i.product_id, quantity: i.quantity, trackInventory: true }));
           await this._releaseInventory(client, formattedItems);
+        } else if (order.order_type === OrderType.PHYSICAL) {
+          logger.warn(`[RESERVATION-RELEASE] Skipped inventory release for Order ${orderId} in status ${order.status}`);
         }
       }
 

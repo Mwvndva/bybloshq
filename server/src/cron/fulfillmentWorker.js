@@ -52,7 +52,25 @@ class FulfillmentWorker {
         try {
             await client.query('BEGIN');
 
-            // 1. Mark as processing
+            // 1. Claim the job under lock so multiple worker instances cannot process it.
+            const { rows: claimedJobs } = await client.query(
+                `SELECT * FROM fulfillment_jobs
+                 WHERE id = $1
+                   AND status IN ('PENDING', 'FAILED')
+                   AND attempts < max_attempts
+                 FOR UPDATE SKIP LOCKED`,
+                [job.id]
+            );
+
+            if (claimedJobs.length === 0) {
+                await client.query('ROLLBACK');
+                logger.info(`[WORKER] Job ${job.id} was already claimed or is no longer eligible.`);
+                return;
+            }
+
+            job = claimedJobs[0];
+
+            // 2. Mark as processing
             await client.query(
                 `UPDATE fulfillment_jobs 
                  SET status = 'PROCESSING', attempts = attempts + 1, last_attempt_at = NOW(), updated_at = NOW()
@@ -60,7 +78,7 @@ class FulfillmentWorker {
                 [job.id]
             );
 
-            // 2. Load the order (fresh lock)
+            // 3. Load the order (fresh lock)
             const { rows: orders } = await client.query(
                 'SELECT * FROM product_orders WHERE id = $1 FOR UPDATE',
                 [job.order_id]
@@ -71,10 +89,10 @@ class FulfillmentWorker {
             }
             const order = orders[0];
 
-            // 3. Execute OrderService Fulfillment
+            // 4. Execute OrderService Fulfillment
             await OrderService.executeFulfillment(client, order);
 
-            // 4. Mark job as completed
+            // 5. Mark job as completed
             await client.query(
                 `UPDATE fulfillment_jobs SET status = 'COMPLETED', updated_at = NOW() WHERE id = $1`,
                 [job.id]

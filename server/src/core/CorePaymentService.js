@@ -9,7 +9,7 @@
  *   This service fixes that with ONE atomic transaction:
  *     BEGIN
  *       UPDATE payments SET status = 'COMPLETED' ...
- *       UPDATE orders    SET status = 'PAID'      ...
+     *       UPDATE product_orders SET status = 'PAID' ...
  *     COMMIT
  *
  * NO-TOUCH ZONES preserved:
@@ -22,6 +22,7 @@
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import eventBus, { AppEvents } from '../events/eventBus.js';
+import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 
 // ── Lazy imports to prevent circular dependencies ──
 let _legacyPaymentService = null;
@@ -88,10 +89,17 @@ const CorePaymentService = {
             || webhookData.data?.transaction_reference;
 
         const rawStatus = webhookData.data?.status || webhookData.status;
-        const isSuccess = rawStatus === 'SUCCESS' || rawStatus === 'success';
+        const resultCode = webhookData.data?.result_code ?? webhookData.result_code;
+        const resultCodeNum = Number.parseInt(resultCode, 10);
+        const isSuccess =
+            rawStatus === 'SUCCESS' ||
+            rawStatus === 'success' ||
+            resultCodeNum === 0 ||
+            resultCodeNum === 200;
         const mpesaReceipt = webhookData.data?.third_party_trans_id || null;
         // P0-3: Capture webhook-reported amount for DB verification below
-        const webhookAmount = Number.parseFloat(webhookData.data?.amount ?? webhookData.amount ?? 0);
+        const webhookAmountRaw = webhookData.data?.amount ?? webhookData.amount;
+        const webhookAmount = Number.parseFloat(webhookAmountRaw);
 
         if (!reference) {
             logger.warn('[CorePaymentService] Webhook received with no reference. Ignoring.', webhookData);
@@ -139,7 +147,19 @@ const CorePaymentService = {
             // P0-3: AMOUNT FRAUD GUARD — webhook amount must match DB amount.
             // Allow a tolerance of KES 1 to accommodate Payd rounding differences.
             // Only enforce on successful payments (failed webhooks have amount=0).
-            if (isSuccess && webhookAmount > 0) {
+            if (isSuccess) {
+                if (webhookAmountRaw === undefined || webhookAmountRaw === null || Number.isNaN(webhookAmount) || webhookAmount <= 0) {
+                    await dbClient.query('ROLLBACK');
+                    logger.error(`[CorePaymentService] FRAUD_DETECTED: Successful webhook for ref ${reference} did not include a valid positive amount.`);
+                    await pool.query(
+                        `UPDATE payments
+                         SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{fraud_flag}', $1::jsonb)
+                         WHERE id = $2`,
+                        [JSON.stringify({ reason: 'missing_or_invalid_success_amount', received: webhookAmountRaw ?? null }), paymentRow.id]
+                    ).catch(e => logger.error('[CorePaymentService] Failed to set fraud_flag:', e));
+                    throw new Error('Successful webhook missing valid amount');
+                }
+
                 const dbAmount = Number.parseFloat(paymentRow.amount ?? 0);
                 if (Math.abs(webhookAmount - dbAmount) > 1) {
                     await dbClient.query('ROLLBACK');
@@ -186,26 +206,51 @@ const CorePaymentService = {
             if (isSuccess && paymentMeta.order_id) {
                 const orderId = Number.parseInt(paymentMeta.order_id, 10);
 
-                // Lock the order row
+                // Lock the order row. The live schema uses product_orders.
                 const { rows: orderRows } = await dbClient.query(
-                    `SELECT * FROM orders WHERE id = $1 FOR UPDATE`,
+                    `SELECT * FROM product_orders WHERE id = $1 FOR UPDATE`,
                     [orderId]
                 );
 
                 if (orderRows.length) {
                     orderRow = orderRows[0];
 
-                    // Only update if not already in a terminal/paid state
-                    if (!['paid', 'completed', 'fulfilled', 'delivered'].includes(orderRow.status?.toLowerCase())) {
+                    // Only update fulfillable orders. Late payments after timeout/cancel need manual reconciliation.
+                    const currentStatus = String(orderRow.status || '').toUpperCase();
+                    const paidTerminal = ['PAID', 'COMPLETED', 'FULFILLED', 'DELIVERED', 'BOOKED'];
+                    const cannotFulfill = ['CANCELLED', 'EXPIRED', 'REFUNDED', 'COMPENSATION_REQUIRED'];
+
+                    if (cannotFulfill.includes(currentStatus)) {
                         await dbClient.query(
-                            `UPDATE orders
-                             SET status = 'paid',
-                                 payment_status = 'paid',
+                            `UPDATE product_orders
+                             SET status = 'COMPENSATION_REQUIRED',
+                                 payment_status = 'completed',
+                                 metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{late_payment}', $2::jsonb),
                                  updated_at = NOW()
-                             WHERE id = $1`,
+                              WHERE id = $1`,
+                            [orderId, JSON.stringify({ payment_id: paymentRow.id, previous_status: currentStatus, received_at: new Date().toISOString() })]
+                        );
+                        logger.error(`[CorePaymentService] Late payment for order ${orderId} in ${currentStatus}; marked COMPENSATION_REQUIRED`);
+                    } else if (!paidTerminal.includes(currentStatus)) {
+                        await dbClient.query(
+                            `UPDATE product_orders
+                             SET status = 'PAID',
+                                 payment_status = 'completed',
+                                 updated_at = NOW()
+                              WHERE id = $1`,
                             [orderId]
                         );
                         logger.info(`[CorePaymentService] Order ${orderId} ATOMICALLY set to PAID with payment ${paymentRow.id}`);
+                    }
+
+                    const { rows: refreshedOrders } = await dbClient.query(
+                        `SELECT * FROM product_orders WHERE id = $1 FOR UPDATE`,
+                        [orderId]
+                    );
+                    orderRow = refreshedOrders[0] || { ...orderRow, status: 'PAID', payment_status: 'completed' };
+
+                    if (!cannotFulfill.includes(currentStatus)) {
+                        await FulfillmentQueueService.enqueue(dbClient, orderId);
                     }
                 }
             }
@@ -243,12 +288,12 @@ const CorePaymentService = {
 
                 // P0-1 FIX: executeFulfillment REQUIRES a live DB client.
                 // Always acquire a fresh client with its own transaction.
-                if (orderRow) {
+                if (process.env.ENABLE_INLINE_FULFILLMENT === 'true' && orderRow) {
                     const fulfillClient = await pool.connect();
                     try {
                         const legacyOrder = await getLegacyOrderService();
                         await fulfillClient.query('BEGIN');
-                        await legacyOrder.executeFulfillment(fulfillClient, { ...orderRow, status: 'paid' });
+                        await legacyOrder.executeFulfillment(fulfillClient, { ...orderRow, status: 'PAID' });
                         await fulfillClient.query('COMMIT');
                     } catch (fulfillErr) {
                         await fulfillClient.query('ROLLBACK').catch(() => { });

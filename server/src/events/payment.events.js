@@ -1,5 +1,4 @@
 import eventBus, { AppEvents } from './eventBus.js';
-import whatsappService from '../services/whatsapp.service.js';
 import logger from '../shared/utils/logger.js';
 
 /**
@@ -23,6 +22,17 @@ eventBus.on(AppEvents.PAYMENT.FAILED, async ({ payment, reason }) => {
         logger.warn(`[Event:PaymentFailed] Payment ${payment.id} failed: ${reason}`);
     } catch (err) {
         logger.error(`[Event:PaymentFailed] Listener failed: ${err.message}`);
+    }
+});
+
+/**
+ * Handle WITHDRAWAL.INITIATED event
+ */
+eventBus.on(AppEvents.WITHDRAWAL.INITIATED, async ({ withdrawal }) => {
+    try {
+        logger.info(`[Event:WithdrawalInitiated] Withdrawal ${withdrawal.id} initiated`);
+    } catch (err) {
+        logger.error(`[Event:WithdrawalInitiated] Listener failed: ${err.message}`);
     }
 });
 

@@ -12,7 +12,12 @@ export const verifyRequiredIndexes = async () => {
         {
             name: 'payouts_order_id_unique',
             table: 'payouts',
-            definition: 'CREATE UNIQUE INDEX payouts_order_id_unique ON payouts(order_id)'
+            definition: 'CREATE UNIQUE INDEX IF NOT EXISTS payouts_order_id_unique ON payouts(order_id) WHERE order_id IS NOT NULL'
+        },
+        {
+            name: 'fulfillment_jobs_order_id_unique',
+            table: 'fulfillment_jobs',
+            definition: 'CREATE UNIQUE INDEX IF NOT EXISTS fulfillment_jobs_order_id_unique ON fulfillment_jobs(order_id)'
         }
     ];
 

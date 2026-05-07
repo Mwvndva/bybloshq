@@ -541,7 +541,7 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
       return next(new AppError('Admin override status must be "completed" or "failed"', 400));
     }
 
-    const { rows: [request] } = await pool.query(
+    let { rows: [request] } = await pool.query(
       `SELECT wr.*, 
                     s.whatsapp_number AS entity_phone,
                     s.balance AS entity_balance
@@ -560,6 +560,28 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
+
+      const { rows: [lockedRequest] } = await client.query(
+        `SELECT wr.*,
+                    s.whatsapp_number AS entity_phone,
+                    s.balance AS entity_balance
+             FROM withdrawal_requests wr
+             LEFT JOIN sellers s ON wr.seller_id = s.id
+             WHERE wr.id = $1
+             FOR UPDATE OF wr`,
+        [id]
+      );
+
+      if (!lockedRequest) throw new Error('Withdrawal request not found');
+      if (['completed', 'failed'].includes(lockedRequest.status)) {
+        throw new AppError(`Already finalized as "${lockedRequest.status}" — cannot override`, 400);
+      }
+
+      if (status === 'failed' && lockedRequest.seller_id) {
+        await client.query('SELECT id FROM sellers WHERE id = $1 FOR UPDATE', [lockedRequest.seller_id]);
+      }
+
+      request = lockedRequest;
 
       await client.query(
         `UPDATE withdrawal_requests

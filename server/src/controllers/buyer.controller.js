@@ -717,8 +717,9 @@ export const autoLogin = async (req, res, next) => {
       return next(new AppError('Buyer profile not found', 404));
     }
 
-    // Set the JWT as an HTTP-only cookie (same as regular login)
-    setAuthCookie(res, autoLoginToken);
+    // Exchange the short-lived auto-login token for a normal buyer session cookie.
+    const sessionToken = signToken(decoded.id, 'buyer');
+    setAuthCookie(res, sessionToken);
 
     logger.info(`[AUTO-LOGIN] Buyer ${buyer.id} auto-logged in after payment success`);
 

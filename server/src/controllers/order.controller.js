@@ -18,10 +18,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { sanitizeOrder } from '../shared/utils/sanitize.js';
 
-// Legacy service kept for methods not yet exposed on CoreOrderService
-// (e.g., createClientOrder). Remove as methods are migrated.
-import LegacyOrderService from '../services/order.service.js';
-
+const OrderService = CoreOrderService;
 
 export const getSellerOrders = async (req, res) => {
     try {
@@ -219,25 +216,6 @@ export const getByReference = async (req, res) => {
             });
         }
 
-        // Generate auto-login token if order is successful
-        let autoLoginToken = null;
-        if (['success', 'completed'].includes((order.paymentStatus || '').toLowerCase())) {
-            try {
-                const { rows: buyerRows } = await pool.query(
-                    'SELECT user_id FROM buyers WHERE id = $1',
-                    [order.buyerId]
-                );
-                const userId = buyerRows[0]?.user_id;
-
-                if (userId) {
-                    const { signAutoLoginToken } = await import('../shared/utils/jwt.js');
-                    autoLoginToken = signAutoLoginToken(userId, 'buyer', 'payment_success');
-                }
-            } catch (err) {
-                logger.warn('[OrderController] Failed to generate autoLoginToken for reference-based check', err.message);
-            }
-        }
-
         // Return a structure compatible with CheckoutPage.tsx
         res.status(200).json({
             success: true,
@@ -247,8 +225,7 @@ export const getByReference = async (req, res) => {
                 orderNumber: order.orderNumber,
                 status: order.status.toLowerCase(),
                 message: `Order status is ${order.status}`,
-                paymentStatus: order.paymentStatus,
-                autoLoginToken // Added for CheckoutPage redirection
+                paymentStatus: order.paymentStatus
             }
         });
     } catch (error) {

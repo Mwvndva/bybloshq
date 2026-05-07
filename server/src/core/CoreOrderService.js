@@ -135,6 +135,14 @@ const CoreOrderService = {
     },
 
     /**
+     * Seller-created client order. This path is still legacy-only.
+     */
+    async createClientOrder(sellerId, orderData) {
+        const svc = await getLegacyService();
+        return svc.createClientOrder(sellerId, orderData);
+    },
+
+    /**
      * Get all orders with optional filters.
      * Delegates directly to legacy service (no event needed for reads).
      */
