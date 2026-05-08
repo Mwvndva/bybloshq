@@ -28,7 +28,7 @@ const Header = () => {
               <Link to="/seller/dashboard">
                 <Button
                   className="bg-yellow-400 hover:bg-white text-black rounded-full px-6 transition-all duration-300 border border-white/10 hover:border-white/20 shadow-lg backdrop-blur-md"
-                  aria-label="Seller Dashboard"
+                  aria-label="Seller area"
                 >
                   <LayoutDashboard className="h-4 w-4 mr-2" />
                   <span className="hidden sm:inline text-sm font-semibold tracking-wide uppercase">Dashboard</span>
