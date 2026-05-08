@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   ChevronLeft, LogOut,
-  Search, Home, Heart, ShoppingCart, User,
+  Search, Heart, User,
   Users, Store, Package, Info, X
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -321,10 +321,6 @@ function BuyerDashboard() {
     }
   }, [user, lastViewedOrdersTime]);
 
-  const handleBackToHome = () => {
-    navigate('/');
-  };
-
   const handleAestheticChange = (aesthetic: Aesthetic) => {
     setSelectedAesthetic(aesthetic);
   };
@@ -356,7 +352,6 @@ function BuyerDashboard() {
 
 
   const navItems = [
-    { key: 'home', label: 'Home', Icon: Home, path: '/' },
     { key: 'shop', label: 'Shops', Icon: Store, path: '/buyer/dashboard' },
     { key: 'shops', label: 'My Shops', Icon: Users, path: '/buyer/shops' },
     { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },

@@ -8,7 +8,7 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
   return (
-    <section className="relative min-h-[75dvh] flex items-center justify-center overflow-hidden bg-white">
+    <section className="relative min-h-[82dvh] flex items-center justify-center overflow-hidden bg-white">
       {/* Background with deep blur and subtle movement */}
       <div
         className="absolute inset-0 z-0 opacity-100"
@@ -30,18 +30,17 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
       <div className="absolute top-1/4 left-1/4 w-[30rem] h-[30rem] bg-yellow-300/25 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-[25rem] h-[25rem] bg-slate-200/60 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="container-mobile relative z-10 w-full px-6 max-w-6xl mx-auto">
+      <div className="relative z-10 w-full px-6 sm:px-10 lg:px-16">
         <div className="flex flex-col items-center text-center space-y-12">
 
           {/* Main Title Group */}
-          <div className="space-y-6 max-w-4xl mx-auto">
-            <h1 className="text-5xl sm:text-6xl md:text-8xl font-medium text-slate-950 leading-[1.1] tracking-tight">
-              Beyond Commerce. <br />
-              <span className="italic font-serif text-yellow-600">This is Brand Identity.</span>
+          <div className="space-y-5">
+            <h1 className="text-6xl sm:text-7xl md:text-9xl font-black text-slate-950 leading-none tracking-tight">
+              BYBLOS
             </h1>
 
-            <p className="text-lg sm:text-xl text-slate-600 max-w-2xl mx-auto font-light leading-relaxed">
-              Where aesthetic vision meets professional commerce.
+            <p className="text-xl sm:text-2xl md:text-3xl text-slate-950 font-semibold leading-tight">
+              Give Your Business A Social Identity
             </p>
           </div>
 
@@ -63,15 +62,6 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
                 <ChevronRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-          </div>
-
-          {/* Glass Verification Badges - Minimal Version */}
-          <div className="pt-12 flex flex-wrap justify-center gap-8 opacity-40 hover:opacity-100 transition-opacity duration-700">
-            {["100% Authentic", "Verified Nairobi Shops", "Secure Escrow"].map((item, i) => (
-              <span key={i} className="text-slate-500 text-xs uppercase tracking-[0.2em] font-medium">
-                {item}
-              </span>
-            ))}
           </div>
 
         </div>

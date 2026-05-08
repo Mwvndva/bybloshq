@@ -62,7 +62,7 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="sm:max-w-[420px] bg-[#111111] border-white/10 text-white rounded-3xl overflow-hidden shadow-2xl">
+            <DialogContent className="sm:max-w-[420px] bg-white border-slate-200 text-slate-950 rounded-3xl overflow-hidden shadow-2xl">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-400 to-yellow-600" />
 
                 <DialogHeader className="pt-6">
@@ -73,18 +73,18 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
                             <Mail className="h-8 w-8 text-yellow-500" />
                         )}
                     </div>
-                    <DialogTitle className="text-2xl font-bold text-center text-white">
+                    <DialogTitle className="text-2xl font-bold text-center text-slate-950">
                         Verify Your Email
                     </DialogTitle>
-                    <DialogDescription className="text-center text-gray-400 pt-2 text-base">
+                    <DialogDescription className="text-center text-slate-500 pt-2 text-base">
                         Your {role} account is almost ready. We've sent a verification link to:
                         <br />
-                        <span className="text-white font-semibold mt-1 block">{email}</span>
+                        <span className="text-slate-950 font-semibold mt-1 block">{email}</span>
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4 py-6">
-                    <p className="text-sm text-gray-400 text-center leading-relaxed">
+                    <p className="text-sm text-slate-500 text-center leading-relaxed">
                         Please click the link in the email to activate your account. If you don't see it, check your spam folder.
                     </p>
 
@@ -109,7 +109,7 @@ export function VerifyEmailModal({ isOpen, onClose, email, role }: VerifyEmailMo
                     <Button
                         variant="ghost"
                         onClick={onClose}
-                        className="w-full text-zinc-400 hover:text-white hover:bg-white/5 h-11 rounded-xl"
+                        className="w-full text-slate-500 hover:text-slate-950 hover:bg-slate-100 h-11 rounded-xl"
                     >
                         Close and go back
                     </Button>

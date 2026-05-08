@@ -62,13 +62,13 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
 
-  // Ensure body and html have black background and no margins/padding
+  // Keep the standalone auth route aligned with the white app shell.
   useEffect(() => {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
 
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
 
     return () => {
       document.body.style.cssText = originalBodyStyle;
@@ -310,14 +310,14 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
 
   return (
-    <div className="min-h-screen w-full bg-black flex flex-col relative"
+    <div className="auth-page min-h-screen w-full bg-white flex flex-col relative"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        backgroundColor: '#000000',
+        backgroundColor: '#ffffff',
       }}
     >
       {/* Header */}
-      <header className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30">
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between h-20">
             {/* Left: Back Button */}
@@ -326,7 +326,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/')}
-                className="text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
+                className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Back</span>
@@ -337,9 +337,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
             {/* Center: Title */}
             <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%] flex items-center justify-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
-                <Store className="h-4 w-4 text-white" />
+                <Store className="h-4 w-4 text-slate-950" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
                 Seller Portal
               </h1>
             </div>
@@ -358,7 +358,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         <div className="w-full max-w-[420px]">
           {/* Register Card */}
           <div
-            className="rounded-2xl border border-white/10 shadow-2xl p-5 sm:p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md"
+            className="rounded-2xl border border-slate-200 shadow-xl p-5 sm:p-6 bg-white/95 backdrop-blur-md"
           >
             <div className="text-center mb-6">
               <div className="mx-auto mb-4 flex items-center justify-center">
@@ -548,8 +548,8 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                         <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 text-[10px] sm:text-base">
                           <SelectValue placeholder="Nairobi" className="text-gray-300" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
-                          <SelectItem value="Nairobi" className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">
+                        <SelectContent className="bg-white border-slate-200 text-slate-950">
+                          <SelectItem value="Nairobi" className="text-slate-950 hover:bg-slate-100 focus:bg-slate-100 text-xs">
                             Nairobi
                           </SelectItem>
                         </SelectContent>
@@ -566,9 +566,9 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
                         <SelectTrigger className="!pl-4 h-8 sm:h-12 rounded-lg sm:rounded-xl bg-gray-800 border-gray-700 text-white focus:border-yellow-400 focus:ring-yellow-400 disabled:opacity-50 text-[10px] sm:text-base">
                           <SelectValue placeholder={formData.city ? 'Select your area' : 'Select city first'} className="text-gray-300" />
                         </SelectTrigger>
-                        <SelectContent className="bg-gray-800 border-gray-700 text-white">
+                        <SelectContent className="bg-white border-slate-200 text-slate-950">
                           {formData.city && locationData[formData.city]?.sort((a, b) => a.localeCompare(b)).map((area) => (
-                            <SelectItem key={area} value={area} className="text-white hover:bg-gray-700 focus:bg-gray-700 text-xs">{area}</SelectItem>
+                            <SelectItem key={area} value={area} className="text-slate-950 hover:bg-slate-100 focus:bg-slate-100 text-xs">{area}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
