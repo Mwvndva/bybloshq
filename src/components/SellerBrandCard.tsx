@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, MousePointerClick, Users } from 'lucide-react';
+import { ArrowUpRight, Heart, MousePointerClick, Users } from 'lucide-react';
 import { cn, getImageUrl } from '@/lib/utils';
 import { publicApiService, Seller } from '@/api/publicApi';
 
@@ -184,7 +184,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 <div className="rounded-xl bg-white/[0.04] px-2 py-2 text-center">
                     <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/45">
                         <MousePointerClick className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide">Knocks</span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wide">Clicks</span>
                     </div>
                     <p className="text-sm font-black tabular-nums" style={{ color: palette.accent }}>{knockCount}</p>
                 </div>
@@ -193,15 +193,33 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
             <button
                 type="button"
                 onClick={handleKnock}
-                className="mt-3 h-9 w-full rounded-xl border text-xs font-black transition duration-200 hover:brightness-110 active:brightness-95"
+                className="group/open relative mt-3 flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-white shadow-sm backdrop-blur transition duration-200 hover:brightness-110 active:brightness-95"
                 style={{
-                    backgroundColor: palette.accent,
+                    background: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, ${palette.accentSoft} 46%, rgba(255,255,255,0.06) 100%)`,
                     borderColor: palette.border,
-                    color: palette.buttonText
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 30px ${palette.accentSoft}, 0 0 0 1px ${palette.border}`,
+                    color: '#FFFFFF'
                 }}
-                aria-label={`Knock on ${shopName}`}
+                aria-label={`Open ${shopName}`}
             >
-                Knock
+                <span
+                    className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-20deg] bg-white/20 opacity-0 blur-sm transition duration-500 group-hover/open:left-full group-hover/open:opacity-100"
+                />
+                <span
+                    className="pointer-events-none absolute inset-x-3 top-0 h-px"
+                    style={{ background: `linear-gradient(90deg, transparent, ${palette.accent}, transparent)` }}
+                />
+                <span
+                    className="flex h-5 w-5 items-center justify-center rounded-full"
+                    style={{
+                        backgroundColor: palette.accent,
+                        color: palette.buttonText,
+                        boxShadow: `0 0 18px ${palette.accentSoft}`
+                    }}
+                >
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                </span>
+                <span className="relative">Open</span>
             </button>
         </article>
     );
