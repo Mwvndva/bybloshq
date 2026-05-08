@@ -29,6 +29,8 @@ import { format } from 'date-fns';
 
 import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
+import { publicApiService } from '@/api/publicApi';
+import { getImageUrl } from '@/lib/utils';
 
 const SHOP_COLORS = [
   '#8B5CF6', '#EC4899', '#10B981', '#3B82F6',
@@ -49,9 +51,33 @@ const updateSellerClientCount = (seller, clientCount) => ({
   client_count: clientCount
 });
 
+const updateSellerKnockCount = (seller, knockCount) => ({
+  ...seller,
+  knockCount,
+  knock_count: knockCount
+});
+
+const getShopInitials = (shop) => {
+  const source = String(shop.shopName || shop.name || 'Shop').trim();
+  const parts = source.split(/[\s._-]+/).filter(Boolean);
+  return (parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'S');
+};
+
+const getShopMetric = (shop, ...keys) => {
+  for (const key of keys) {
+    const value = Number(shop?.[key]);
+    if (Number.isFinite(value)) return value;
+  }
+  return 0;
+};
+
 const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowing }) {
   const color = shopColor(shop.shopName || shop.name || '');
-  const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
+  const initials = getShopInitials(shop);
+  const avatarUrl = shop.avatarUrl || shop.avatar_url;
+  const clientCount = getShopMetric(shop, 'clientCount', 'client_count');
+  const wishlistCount = getShopMetric(shop, 'wishlistCount', 'totalWishlistCount', 'wishlist_count', 'total_wishlist_count');
+  const knockCount = getShopMetric(shop, 'knockCount', 'knock_count');
 
   return (
     <div
@@ -68,20 +94,21 @@ const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowin
       onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
       onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
     >
-      {/* Card image area */}
       <div style={{
-        height: 68,
+        minHeight: 94,
         background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12,
       }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 10,
+          width: 48, height: 48, borderRadius: 16, overflow: 'hidden',
           background: `${color}20`,
           border: `1.5px solid ${color}40`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 700, color,
+          fontSize: 14, fontWeight: 800, color,
         }}>
-          {initial}
+          {avatarUrl ? (
+            <img src={getImageUrl(avatarUrl)} alt={`${shop.shopName || shop.name} business photo`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : initials}
         </div>
       </div>
 
@@ -94,16 +121,27 @@ const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowin
         }}>
           {shop.shopName || shop.name}
         </div>
+        {shop.bio && (
+          <div style={{
+            color: 'rgba(255,255,255,0.45)', fontSize: 10.5, lineHeight: '15px',
+            height: 30, overflow: 'hidden', marginBottom: 8,
+          }}>
+            {shop.bio}
+          </div>
+        )}
 
         <div style={{
           display: 'flex', alignItems: 'center',
           justifyContent: 'space-between', marginBottom: 8,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-            <Users size={10} /> {shop.clientCount ?? 0}
+            <Users size={10} /> {clientCount}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-            <Heart size={10} /> {shop.wishlistCount ?? 0}
+            <Heart size={10} /> {wishlistCount}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
+            <ShoppingBag size={10} /> {knockCount}
           </div>
         </div>
 
@@ -122,7 +160,7 @@ const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowin
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
             onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
           >
-            Open
+            Knock
           </button>
           <button
             disabled={isUnfollowing}
@@ -152,7 +190,11 @@ const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowin
 
 const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen, onUnfollow, isUnfollowing }) {
   const color = shopColor(shop.shopName || shop.name || '');
-  const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
+  const initials = getShopInitials(shop);
+  const avatarUrl = shop.avatarUrl || shop.avatar_url;
+  const clientCount = getShopMetric(shop, 'clientCount', 'client_count');
+  const wishlistCount = getShopMetric(shop, 'wishlistCount', 'totalWishlistCount', 'wishlist_count', 'total_wishlist_count');
+  const knockCount = getShopMetric(shop, 'knockCount', 'knock_count');
 
   return (
     <div
@@ -176,10 +218,13 @@ const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen, onUnfoll
           width: 28, height: 28, borderRadius: '50%',
           background: 'rgba(245,197,24,0.12)',
           border: '1.5px solid rgba(245,197,24,0.4)',
+          overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 12, fontWeight: 700, color: '#F5C518',
         }}>
-          {initial}
+          {avatarUrl ? (
+            <img src={getImageUrl(avatarUrl)} alt={`${shop.shopName || shop.name} business photo`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : initials}
         </div>
       </div>
 
@@ -188,11 +233,25 @@ const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen, onUnfoll
           {shop.shopName || shop.name}
         </div>
         <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-          {shop.clientCount ?? 0} clients ┬╖ {shop.wishlistCount ?? 0} saved
+          {clientCount} clients · {wishlistCount} saved · {knockCount} knocks
         </div>
       </div>
 
       <div style={{ padding: '0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpen(shop);
+          }}
+          style={{
+            height: 28, borderRadius: 999, border: '1px solid rgba(245,197,24,0.28)',
+            background: 'rgba(245,197,24,0.92)', color: '#000',
+            fontSize: 10, fontWeight: 800, padding: '0 10px',
+            cursor: 'pointer',
+          }}
+        >
+          Knock
+        </button>
         <button
           disabled={isUnfollowing}
           onClick={(e) => {
@@ -542,8 +601,44 @@ function BuyerDashboard() {
   }, [shops, shopsSearchQuery]);
 
   const handleOpenShop = useCallback((shop) => {
+    const shopId = getShopId(shop);
+    const nextKnockCount = getShopMetric(shop, 'knockCount', 'knock_count') + 1;
+
+    if (shopId) {
+      queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
+        current.map(item => getShopId(item) === shopId ? updateSellerKnockCount(item, nextKnockCount) : item)
+      );
+      queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
+        if (!current?.sellers) return current;
+        return {
+          ...current,
+          sellers: current.sellers.map((seller) => (
+            getShopId(seller) === shopId ? updateSellerKnockCount(seller, nextKnockCount) : seller
+          ))
+        };
+      });
+
+      void publicApiService.knockSeller(shopId).then((result) => {
+        if (typeof result.knockCount !== 'number') return;
+        queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
+          current.map(item => getShopId(item) === shopId ? updateSellerKnockCount(item, result.knockCount) : item)
+        );
+        queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
+          if (!current?.sellers) return current;
+          return {
+            ...current,
+            sellers: current.sellers.map((seller) => (
+              getShopId(seller) === shopId ? updateSellerKnockCount(seller, result.knockCount) : seller
+            ))
+          };
+        });
+      }).catch((error) => {
+        console.error('Failed to record seller knock:', error);
+      });
+    }
+
     navigate(`/buyer/shop/${encodeURIComponent(shop.shopName || shop.name)}`);
-  }, [navigate]);
+  }, [navigate, queryClient]);
   const handleUnfollowShop = useCallback((shop) => {
     unfollowShopMutation.mutate(shop);
   }, [unfollowShopMutation]);

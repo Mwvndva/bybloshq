@@ -149,7 +149,10 @@ export const sanitizePublicSeller = (seller) => {
         latitude: sellerObj.latitude ? Number.parseFloat(sellerObj.latitude) : null,
         longitude: sellerObj.longitude ? Number.parseFloat(sellerObj.longitude) : null,
         hasPhysicalShop: !!(sellerObj.physicalAddress || sellerObj.physical_address),
-        clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0)
+        clientCount: Number.parseInt(sellerObj.clientCount || sellerObj.client_count || 0),
+        totalWishlistCount: Number.parseInt(sellerObj.totalWishlistCount || sellerObj.total_wishlist_count || 0),
+        wishlistCount: Number.parseInt(sellerObj.wishlistCount || sellerObj.wishlist_count || sellerObj.totalWishlistCount || sellerObj.total_wishlist_count || 0),
+        knockCount: Number.parseInt(sellerObj.knockCount || sellerObj.knock_count || 0)
         // STRICTLY REMOVED: email, phone, whatsappNumber, fullName, balance, revenue, internal IDs, coordinates
     };
 };

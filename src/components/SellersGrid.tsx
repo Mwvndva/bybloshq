@@ -14,13 +14,26 @@ const INITIAL_VISIBLE_SELLERS = 24;
 const VISIBLE_SELLERS_STEP = 24;
 
 const SellerGridSkeleton = () => (
-    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" aria-label="Loading shops">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3" aria-label="Loading shops">
         {Array.from({ length: 12 }).map((_, index) => (
             <div
                 key={index}
-                className="aspect-square overflow-hidden rounded-2xl bg-gray-900"
+                className="h-[184px] overflow-hidden rounded-2xl border border-white/10 bg-[#111111] p-3"
             >
-                <div className="h-full w-full animate-pulse bg-gradient-to-br from-zinc-800 via-zinc-900 to-black" />
+                <div className="mb-3 flex items-start gap-3">
+                    <div className="h-14 w-14 animate-pulse rounded-2xl bg-white/10" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-4 w-2/3 animate-pulse rounded bg-white/10" />
+                        <div className="h-3 w-full animate-pulse rounded bg-white/5" />
+                        <div className="h-3 w-4/5 animate-pulse rounded bg-white/5" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                    <div className="h-12 animate-pulse rounded-xl bg-white/5" />
+                    <div className="h-12 animate-pulse rounded-xl bg-white/5" />
+                    <div className="h-12 animate-pulse rounded-xl bg-white/5" />
+                </div>
+                <div className="mt-3 h-9 animate-pulse rounded-xl bg-white/10" />
             </div>
         ))}
     </div>
@@ -73,7 +86,7 @@ const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGr
 
     return (
         <>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {visibleSellers.map((seller) => (
                     <SellerBrandCard key={seller.id} seller={seller} isBuyer={isBuyer} />
                 ))}
