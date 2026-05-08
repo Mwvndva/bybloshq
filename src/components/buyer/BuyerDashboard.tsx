@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { memo, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,9 @@ function shopColor(name) {
   return SHOP_COLORS[Math.abs(h) % SHOP_COLORS.length];
 }
 
-const ShopCard = memo(function ShopCard({ shop, onOpen }) {
+const getShopId = (shop) => String(shop.id || shop.sellerId || shop.seller_id || '');
+
+const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowing }) {
   const color = shopColor(shop.shopName || shop.name || '');
   const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
 
@@ -99,28 +101,50 @@ const ShopCard = memo(function ShopCard({ shop, onOpen }) {
           </div>
         </div>
 
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen(shop);
-          }}
-          style={{
-            width: '100%', height: 28, borderRadius: 7, border: 'none',
-            background: '#1C1C1C', color: '#fff',
-            fontSize: 11, fontWeight: 500, cursor: 'pointer',
-            transition: 'background 0.15s ease',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
-        >
-          Open Shop
-        </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpen(shop);
+            }}
+            style={{
+              height: 28, borderRadius: 7, border: 'none',
+              background: '#1C1C1C', color: '#fff',
+              fontSize: 11, fontWeight: 500, cursor: 'pointer',
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
+          >
+            Open
+          </button>
+          <button
+            disabled={isUnfollowing}
+            onClick={(e) => {
+              e.stopPropagation();
+              onUnfollow(shop);
+            }}
+            style={{
+              height: 28, borderRadius: 7, border: '1px solid rgba(248,113,113,0.28)',
+              background: 'rgba(248,113,113,0.08)', color: '#FCA5A5',
+              fontSize: 11, fontWeight: 600, cursor: isUnfollowing ? 'wait' : 'pointer',
+              opacity: isUnfollowing ? 0.65 : 1,
+              transition: 'background 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              if (!isUnfollowing) e.currentTarget.style.background = 'rgba(248,113,113,0.14)';
+            }}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}
+          >
+            {isUnfollowing ? '...' : 'Unfollow'}
+          </button>
+        </div>
       </div>
     </div>
   );
 });
 
-const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen }) {
+const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen, onUnfollow, isUnfollowing }) {
   const color = shopColor(shop.shopName || shop.name || '');
   const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
 
@@ -162,7 +186,22 @@ const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen }) {
         </div>
       </div>
 
-      <div style={{ padding: '0 14px', display: 'flex', alignItems: 'center' }}>
+      <div style={{ padding: '0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button
+          disabled={isUnfollowing}
+          onClick={(e) => {
+            e.stopPropagation();
+            onUnfollow(shop);
+          }}
+          style={{
+            height: 28, borderRadius: 999, border: '1px solid rgba(248,113,113,0.28)',
+            background: 'rgba(248,113,113,0.08)', color: '#FCA5A5',
+            fontSize: 10, fontWeight: 700, padding: '0 10px',
+            cursor: isUnfollowing ? 'wait' : 'pointer', opacity: isUnfollowing ? 0.65 : 1,
+          }}
+        >
+          {isUnfollowing ? '...' : 'Unfollow'}
+        </button>
         <ChevronRight size={14} color="rgba(255,255,255,0.45)" />
       </div>
     </div>
@@ -191,6 +230,7 @@ function ShopCardSkeleton() {
 function BuyerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { user, logout, updateBuyerProfile } = useBuyerAuth();
   const { wishlist } = useWishlist();
   const { toast } = useToast();
@@ -255,6 +295,61 @@ function BuyerDashboard() {
   });
   const shops = shopsQuery.data || [];
   const isLoadingShops = shopsQuery.isLoading;
+  const [unfollowingShopId, setUnfollowingShopId] = useState<string | null>(null);
+  const unfollowShopMutation = useMutation({
+    mutationFn: (shop) => buyerApi.leaveClient(getShopId(shop)),
+    onMutate: async (shop) => {
+      const shopId = getShopId(shop);
+      setUnfollowingShopId(shopId);
+      await queryClient.cancelQueries({ queryKey: ['buyer-followed-shops'] });
+      await queryClient.cancelQueries({ queryKey: ['public-sellers'] });
+
+      const previousFollowedShops = queryClient.getQueryData<any[]>(['buyer-followed-shops']);
+      const previousPublicSellerQueries = queryClient.getQueriesData({ queryKey: ['public-sellers'] });
+
+      queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
+        current.filter(item => getShopId(item) !== shopId)
+      );
+
+      queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
+        if (!current?.sellers) return current;
+        return {
+          ...current,
+          sellers: current.sellers.map((seller) => (
+            getShopId(seller) === shopId
+              ? { ...seller, clientCount: Math.max(0, Number(seller.clientCount || 0) - 1) }
+              : seller
+          ))
+        };
+      });
+
+      return { previousFollowedShops, previousPublicSellerQueries };
+    },
+    onError: (error, _shop, context) => {
+      if (context?.previousFollowedShops) {
+        queryClient.setQueryData(['buyer-followed-shops'], context.previousFollowedShops);
+      }
+      context?.previousPublicSellerQueries?.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      toast({
+        title: 'Could not unfollow shop',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive'
+      });
+    },
+    onSuccess: (result) => {
+      toast({
+        title: 'Shop unfollowed',
+        description: result.message || 'The shop was removed from My Shops.'
+      });
+    },
+    onSettled: () => {
+      setUnfollowingShopId(null);
+      queryClient.invalidateQueries({ queryKey: ['buyer-followed-shops'] });
+      queryClient.invalidateQueries({ queryKey: ['public-sellers'] });
+    }
+  });
 
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
@@ -389,7 +484,8 @@ function BuyerDashboard() {
 
   const navItems = [
     { key: 'home', label: 'Home', Icon: Home, path: '/' },
-    { key: 'shop', label: 'Shop', Icon: Store, path: '/buyer/dashboard' },
+    { key: 'shop', label: 'Shops', Icon: Store, path: '/buyer/dashboard' },
+    { key: 'shops', label: 'My Shops', Icon: Users, path: '/buyer/shops' },
     { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },
     { key: 'orders', label: 'Orders', Icon: Package, path: '/buyer/orders', badge: hasUnreadOrders },
     { key: 'profile', label: 'Profile', Icon: User, path: '/buyer/profile' },
@@ -428,6 +524,9 @@ function BuyerDashboard() {
   const handleOpenShop = useCallback((shop) => {
     navigate(`/buyer/shop/${encodeURIComponent(shop.shopName || shop.name)}`);
   }, [navigate]);
+  const handleUnfollowShop = useCallback((shop) => {
+    unfollowShopMutation.mutate(shop);
+  }, [unfollowShopMutation]);
 
   return (
     <div className="page-enter" style={{
@@ -452,7 +551,7 @@ function BuyerDashboard() {
           <ChevronLeft size={14} /> Back
         </button>
         <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '-0.2px' }}>
-          you are protected
+          Trusted Businesses
         </span>
         <div
           onClick={handleLogout}
@@ -502,13 +601,6 @@ function BuyerDashboard() {
       }}>
         {activeSection === 'shop' && (
           <>
-            <div style={{
-              padding: '0 0 8px',
-              display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
-              flexShrink: 0,
-            }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Featured</span>
-            </div>
             <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
           </>
         )}
@@ -527,13 +619,12 @@ function BuyerDashboard() {
             {/* Featured strip ΓÇö first shop only */}
             {filteredShops.length > 0 && (
               <div style={{ marginBottom: 12 }}>
-                <div style={{
-                  fontSize: 10, fontWeight: 600, letterSpacing: 1,
-                  color: '#F5C518', textTransform: 'uppercase', marginBottom: 6,
-                }}>
-                  Featured
-                </div>
-                <FeaturedShopCard shop={filteredShops[0]} onOpen={handleOpenShop} />
+                <FeaturedShopCard
+                  shop={filteredShops[0]}
+                  onOpen={handleOpenShop}
+                  onUnfollow={handleUnfollowShop}
+                  isUnfollowing={unfollowingShopId === getShopId(filteredShops[0])}
+                />
               </div>
             )}
 
@@ -547,7 +638,13 @@ function BuyerDashboard() {
                 <ShopCardSkeleton key={index} />
               ))}
               {filteredShops.slice(1).map(shop => (
-                <ShopCard key={shop.id} shop={shop} onOpen={handleOpenShop} />
+                <ShopCard
+                  key={shop.id}
+                  shop={shop}
+                  onOpen={handleOpenShop}
+                  onUnfollow={handleUnfollowShop}
+                  isUnfollowing={unfollowingShopId === getShopId(shop)}
+                />
               ))}
             </div>
 

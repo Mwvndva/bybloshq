@@ -713,13 +713,14 @@ const buyerApi = {
     }
   },
 
-  leaveClient: async (sellerId: string): Promise<{ success: boolean; message: string; wasClient?: boolean }> => {
+  leaveClient: async (sellerId: string): Promise<{ success: boolean; message: string; wasClient?: boolean; clientCount?: number }> => {
     try {
-      const response = await buyerApiInstance.post<{ message: string; data: { wasClient: boolean } }>(`/buyers/sellers/${sellerId}/leave-client`);
+      const response = await buyerApiInstance.post<{ message: string; data: { wasClient: boolean; clientCount?: number } }>(`/buyers/sellers/${sellerId}/leave-client`);
       return {
         success: true,
         message: response.data.message || 'Successfully unfollowed',
-        wasClient: response.data.data?.wasClient
+        wasClient: response.data.data?.wasClient,
+        clientCount: response.data.data?.clientCount
       };
     } catch (error: any) {
       console.error('Error leaving clientele:', error);
