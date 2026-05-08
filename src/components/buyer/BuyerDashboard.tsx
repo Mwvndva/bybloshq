@@ -132,11 +132,14 @@ function BuyerDashboard() {
     };
 
     const targetSection = pathMapping[pathname];
-    if (pathname === '/buyer/profile') {
+    const shouldOpenProfileSidebar = pathname === '/buyer/profile'
+      || queryParams.get('section') === 'profile'
+      || queryParams.get('tab') === 'profile';
+
+    if (shouldOpenProfileSidebar) {
       setIsProfileSidebarOpen(true);
-    }
-    if (queryParams.get('section') === 'profile' || queryParams.get('tab') === 'profile') {
-      setIsProfileSidebarOpen(true);
+    } else {
+      setIsProfileSidebarOpen(false);
     }
     if (targetSection && targetSection !== activeSection) {
       setActiveSection(targetSection);
@@ -360,6 +363,27 @@ function BuyerDashboard() {
 
   const handleBack = () => navigate('/');
 
+  const handleProfileSidebarOpenChange = useCallback((open: boolean) => {
+    setIsProfileSidebarOpen(open);
+
+    if (open) {
+      if (location.pathname !== '/buyer/profile') {
+        navigate('/buyer/profile', { replace: true });
+      }
+      return;
+    }
+
+    setIsEditingProfile(false);
+    const queryParams = new URLSearchParams(location.search);
+    if (
+      location.pathname === '/buyer/profile' ||
+      queryParams.get('section') === 'profile' ||
+      queryParams.get('tab') === 'profile'
+    ) {
+      navigate('/buyer/dashboard', { replace: true });
+    }
+  }, [location.pathname, location.search, navigate]);
+
 
   const navItems = [
     { key: 'shop', label: 'Shops', Icon: Store, path: '/buyer/dashboard' },
@@ -381,9 +405,11 @@ function BuyerDashboard() {
     };
     if (key === 'profile') {
       setIsProfileSidebarOpen(true);
+      navigate('/buyer/profile');
       return;
     }
     setIsProfileSidebarOpen(false);
+    setIsEditingProfile(false);
     navigate(`/buyer/${pathMap[key]}`);
     if (key === 'orders') {
       const now = new Date().toISOString();
@@ -656,55 +682,55 @@ function BuyerDashboard() {
         )}
       </div>
 
-      <Sheet open={isProfileSidebarOpen} onOpenChange={setIsProfileSidebarOpen}>
-        <SheetContent side="right" className="w-full max-w-sm overflow-y-auto bg-white text-slate-950 border-l border-slate-200">
+      <Sheet open={isProfileSidebarOpen} onOpenChange={handleProfileSidebarOpenChange}>
+        <SheetContent side="right" className="w-full max-w-sm overflow-y-auto bg-black text-white border-l border-white/15 shadow-2xl shadow-black/70">
           <SheetHeader className="text-left">
-            <SheetTitle className="text-slate-950">Buyer Profile</SheetTitle>
+            <SheetTitle className="text-white">Buyer Profile</SheetTitle>
           </SheetHeader>
 
           <div className="mt-6 flex flex-col gap-4">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Full Name</div>
-              <div className="mt-1 text-base font-semibold text-slate-950">{user?.fullName || 'Not set'}</div>
-              <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Email Address</div>
-              <div className="mt-1 text-sm font-semibold text-slate-950 break-words">{user?.email || 'Not set'}</div>
+            <div className="rounded-2xl border border-white/15 bg-white/5 p-4 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Full Name</div>
+              <div className="mt-1 text-base font-semibold text-white">{user?.fullName || 'Not set'}</div>
+              <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-white/60">Email Address</div>
+              <div className="mt-1 text-sm font-semibold text-white break-words">{user?.email || 'Not set'}</div>
               <div className="mt-4 grid grid-cols-2 gap-3">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">City</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.city || 'Not set'}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">City</div>
+                  <div className="mt-1 text-sm font-semibold text-white">{user?.city || 'Not set'}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Area</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.location || 'Not set'}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Area</div>
+                  <div className="mt-1 text-sm font-semibold text-white">{user?.location || 'Not set'}</div>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-1 gap-3">
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mobile Payment</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.mobilePayment || 'Not set'}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">Mobile Payment</div>
+                  <div className="mt-1 text-sm font-semibold text-white">{user?.mobilePayment || 'Not set'}</div>
                 </div>
                 <div>
-                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">WhatsApp</div>
-                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.whatsappNumber || 'Not set'}</div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-white/60">WhatsApp</div>
+                  <div className="mt-1 text-sm font-semibold text-white">{user?.whatsappNumber || 'Not set'}</div>
                 </div>
               </div>
             </div>
 
             <button
               onClick={() => setIsEditingProfile(!isEditingProfile)}
-              className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-950"
+              className="h-10 rounded-xl border border-white/15 bg-white/10 text-sm font-semibold text-white hover:bg-white/15"
             >
               {isEditingProfile ? 'Cancel Editing' : 'Edit Profile'}
             </button>
 
             {isEditingProfile && (
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
-                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-white border border-slate-200 text-slate-950 h-10" />
+              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 shadow-sm space-y-3">
+                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-black border border-white/15 text-white h-10" />
                 <Select value={city} onValueChange={(value) => {
                   setCity(value);
                   setLocationArea('');
                 }}>
-                  <SelectTrigger className="bg-white border border-slate-200 text-slate-950 h-10">
+                  <SelectTrigger className="bg-black border border-white/15 text-white h-10">
                     <SelectValue placeholder="Select City" />
                   </SelectTrigger>
                   <SelectContent>
@@ -712,15 +738,15 @@ function BuyerDashboard() {
                   </SelectContent>
                 </Select>
                 <Select value={locationArea} onValueChange={setLocationArea} disabled={!city}>
-                  <SelectTrigger className="bg-white border border-slate-200 text-slate-950 h-10">
+                  <SelectTrigger className="bg-black border border-white/15 text-white h-10">
                     <SelectValue placeholder="Select Area" />
                   </SelectTrigger>
                   <SelectContent>
                     {(locationData[city] || []).map(area => <SelectItem key={area} value={area}>{area}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Input value={mobilePayment} onChange={e => setMobilePayment(e.target.value)} placeholder="Mobile Payment Number" className="bg-white border border-slate-200 text-slate-950 h-10" />
-                <Input value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="WhatsApp Number" className="bg-white border border-slate-200 text-slate-950 h-10" />
+                <Input value={mobilePayment} onChange={e => setMobilePayment(e.target.value)} placeholder="Mobile Payment Number" className="bg-black border border-white/15 text-white h-10" />
+                <Input value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="WhatsApp Number" className="bg-black border border-white/15 text-white h-10" />
                 <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="w-full bg-[#F5C518] text-black h-10 font-bold">
                   {isSavingProfile ? 'Saving...' : 'Save Profile'}
                 </Button>
@@ -732,7 +758,7 @@ function BuyerDashboard() {
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="h-10 w-full justify-center gap-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+              className="h-10 w-full justify-center gap-2 border-red-400/25 bg-red-500/10 text-red-100 hover:bg-red-500/15"
             >
               <LogOut className="h-4 w-4" />
               Logout
