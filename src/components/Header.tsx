@@ -11,13 +11,13 @@ const Header = () => {
   return (
     <header className={cn(
       'sticky top-0 z-50 transition-all duration-300',
-      'bg-white/5 backdrop-blur-xl border-b border-white/10'
+      'bg-white/85 backdrop-blur-xl border-b border-slate-200'
     )}>
       <div className="w-full px-6 md:px-10 lg:px-12">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <h1 className="font-serif text-xl sm:text-2xl font-bold text-white tracking-tight group-hover:text-yellow-400 transition-colors">
+            <h1 className="font-serif text-xl sm:text-2xl font-bold text-slate-950 tracking-tight group-hover:text-yellow-600 transition-colors">
               Byblos
             </h1>
           </Link>

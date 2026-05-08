@@ -545,12 +545,12 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   // Get theme styles dynamically from CSS variables (set by ShopPage)
   const themedCardStyle: React.CSSProperties = {
-    background: 'var(--theme-card-bg, rgba(17, 17, 17, 0.7))',
+    background: 'var(--theme-card-bg, rgba(255, 255, 255, 0.96))',
     backdropFilter: 'blur(16px)',
     WebkitBackdropFilter: 'blur(16px)',
-    border: '1px solid var(--theme-border, rgba(255, 255, 255, 0.1))',
-    color: 'var(--theme-text, white)',
-    boxShadow: '0 4px 24px -1px rgba(0, 0, 0, 0.2), 0 0 0 1px var(--theme-border, rgba(255, 255, 255, 0.1))'
+    border: '1px solid var(--theme-border, rgba(15, 23, 42, 0.08))',
+    color: 'var(--theme-text, #111827)',
+    boxShadow: '0 10px 34px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px var(--theme-border, rgba(15, 23, 42, 0.08))'
   };
 
   const getThemeClasses = () => {
@@ -585,11 +585,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
       default: // default/glass theme
         return {
           card: 'border-0',
-          price: 'text-yellow-400',
+          price: 'text-yellow-600',
           button: 'bg-yellow-400 hover:bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/10',
-          seller: 'text-gray-100',
-          description: 'text-gray-300',
-          icon: 'text-gray-300',
+          seller: 'text-slate-600',
+          description: 'text-slate-500',
+          icon: 'text-slate-500',
         };
     }
   };

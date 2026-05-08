@@ -98,31 +98,31 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/90 backdrop-blur-md transition-all duration-300">
-            <div className="bg-[#111] border-x border-t sm:border border-gray-800/50 
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-950/30 backdrop-blur-md transition-all duration-300">
+            <div className="bg-white border-x border-t sm:border border-slate-200 
                           rounded-t-[2rem] sm:rounded-2xl p-6 sm:p-8 
                           w-full sm:max-w-sm mx-0 sm:mx-4 
                           h-[85dvh] sm:h-auto
                           flex flex-col justify-center
-                          text-center shadow-2xl shadow-black">
+                          text-center shadow-2xl shadow-slate-300/60">
 
                 <div className="flex-1 flex flex-col items-center justify-center">
                     {state === 'POLLING' && (
                         <>
                             <div className="relative mb-6">
-                                <div className="w-20 h-20 border-4 border-gray-800 rounded-full" />
+                                <div className="w-20 h-20 border-4 border-slate-200 rounded-full" />
                                 <div className="absolute top-0 left-0 w-20 h-20 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin" />
                             </div>
-                            <h2 className="text-white text-2xl font-bold mb-3">Confirming Payment</h2>
-                            <p className="text-gray-400 text-base mb-1">Check your phone for an M-Pesa prompt</p>
+                            <h2 className="text-slate-950 text-2xl font-bold mb-3">Confirming Payment</h2>
+                            <p className="text-slate-500 text-base mb-1">Check your phone for an M-Pesa prompt</p>
                             {orderNumber && (
-                                <div className="bg-gray-900/50 px-4 py-2 rounded-full mt-4 flex items-center gap-2">
-                                    <span className="text-gray-500 text-xs">Order:</span>
-                                    <span className="text-yellow-400 font-mono text-sm font-bold">{orderNumber}</span>
+                                <div className="bg-slate-100 px-4 py-2 rounded-full mt-4 flex items-center gap-2">
+                                    <span className="text-slate-500 text-xs">Order:</span>
+                                    <span className="text-yellow-600 font-mono text-sm font-bold">{orderNumber}</span>
                                 </div>
                             )}
-                            <div className="mt-8 p-4 bg-yellow-400/5 rounded-xl border border-yellow-400/10">
-                                <p className="text-yellow-400/80 text-sm leading-relaxed">
+                            <div className="mt-8 p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                                <p className="text-yellow-700 text-sm leading-relaxed">
                                     Please enter your M-Pesa PIN on the prompt sent to confirm your payment.
                                 </p>
                             </div>
@@ -134,10 +134,10 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                             <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/20">
                                 <span className="text-green-400 text-4xl">✓</span>
                             </div>
-                            <h2 className="text-white text-2xl font-bold mb-3">Payment Confirmed!</h2>
+                            <h2 className="text-slate-950 text-2xl font-bold mb-3">Payment Confirmed!</h2>
                             {orderNumber && (
-                                <p className="text-gray-400 text-base mb-6">
-                                    Order <span className="text-yellow-400 font-mono font-bold">#{orderNumber}</span> has been successfully placed.
+                                <p className="text-slate-500 text-base mb-6">
+                                    Order <span className="text-yellow-600 font-mono font-bold">#{orderNumber}</span> has been successfully placed.
                                 </p>
                             )}
 
@@ -151,7 +151,7 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="w-full h-14 text-gray-400 font-medium hover:text-white transition-colors"
+                                    className="w-full h-14 text-slate-500 font-medium hover:text-slate-950 transition-colors"
                                 >
                                     Return to Shop
                                 </button>
@@ -164,8 +164,8 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                             <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
                                 <span className="text-red-400 text-4xl">✗</span>
                             </div>
-                            <h2 className="text-white text-2xl font-bold mb-3">Payment Failed</h2>
-                            <p className="text-gray-400 text-base mb-8">
+                            <h2 className="text-slate-950 text-2xl font-bold mb-3">Payment Failed</h2>
+                            <p className="text-slate-500 text-base mb-8">
                                 No charges were made. This could be due to a timeout or cancellation.
                             </p>
                             <button
@@ -183,23 +183,23 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                             <div className="w-20 h-20 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-amber-500/20">
                                 <span className="text-amber-400 text-4xl">⏱</span>
                             </div>
-                            <h2 className="text-white text-2xl font-bold mb-3">Still Waiting...</h2>
-                            <p className="text-gray-400 text-base mb-2">Did the prompt reach your phone?</p>
-                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+                            <h2 className="text-slate-950 text-2xl font-bold mb-3">Still Waiting...</h2>
+                            <p className="text-slate-500 text-base mb-2">Did the prompt reach your phone?</p>
+                            <p className="text-slate-500 text-sm mb-8 leading-relaxed">
                                 If you've already entered your PIN, don't worry—your order will update automatically once confirmed.
                             </p>
 
                             <div className="w-full space-y-3">
                                 <a
                                     href="/buyer/orders"
-                                    className="flex items-center justify-center w-full h-14 bg-gray-800 text-white rounded-xl font-bold hover:bg-gray-700 active:scale-[0.98] transition-all"
+                                    className="flex items-center justify-center w-full h-14 bg-slate-950 text-white rounded-xl font-bold hover:bg-slate-800 active:scale-[0.98] transition-all"
                                 >
                                     Check Order Status
                                 </a>
                                 <button
                                     type="button"
                                     onClick={onClose}
-                                    className="w-full h-12 text-gray-500 font-medium hover:text-gray-300"
+                                    className="w-full h-12 text-slate-500 font-medium hover:text-slate-800"
                                 >
                                     Close
                                 </button>
@@ -209,7 +209,7 @@ export const PaymentStatusModal = ({ isOpen, orderNumber, invoiceId, onClose, on
                 </div>
 
                 {/* Mobile Handle */}
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-gray-800 rounded-full sm:hidden" />
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-slate-200 rounded-full sm:hidden" />
             </div>
         </div>
     );

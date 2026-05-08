@@ -776,14 +776,14 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // Loading state - show skeleton while auth is loading OR data is being fetched
   if (isAuthLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
           <div className="flex justify-center mb-8">
             <Skeleton className="h-32 w-96" />
           </div>
 
-          <div className="flex space-x-2 mb-12 bg-black/40 backdrop-blur-[12px] p-2 rounded-2xl shadow-lg border border-white/10 w-fit mx-auto">
+          <div className="flex space-x-2 mb-12 bg-white/90 backdrop-blur-[12px] p-2 rounded-2xl shadow-lg border border-slate-200 w-fit mx-auto">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-12 w-24 rounded-xl" />
             ))}
@@ -802,7 +802,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   // Error state
   if (!analytics || error) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center space-y-6 p-8">
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
             <RefreshCw className="h-12 w-12 text-red-600" />
@@ -967,7 +967,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
-        <div className="mb-6 sm:mb-8 bg-black/40 backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-white/10 w-full overflow-x-auto">
+        <div className="mb-6 sm:mb-8 bg-white/90 backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-slate-200 w-full overflow-x-auto">
           <div className="flex items-center justify-start sm:justify-center gap-2 min-w-max">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -1785,7 +1785,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               </div>
 
               {/* Theme Settings */}
-              <div className="bg-black/40 backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-white/10">
+              <div className="bg-white/90 backdrop-blur-[12px] rounded-xl sm:rounded-2xl lg:rounded-3xl p-3 sm:p-4 lg:p-6 xl:p-8 shadow-lg border border-slate-200">
                 <ThemeSelector
                   currentTheme={(sellerProfile?.theme as Theme) || 'default'}
                   onThemeChange={(theme) => {
