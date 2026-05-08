@@ -4,19 +4,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Phone, Loader2 } from 'lucide-react';
+import { formatCurrency } from '@/lib/utils';
 
 interface PhoneCheckModalProps {
   isOpen: boolean;
   onClose: () => void;
   onPhoneSubmit: (phone: string) => void;
   isLoading?: boolean;
+  purchaseDetails?: {
+    shopName: string;
+    productName: string;
+    productPrice: number;
+  };
 }
 
 const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
   isOpen,
   onClose,
   onPhoneSubmit,
-  isLoading = false
+  isLoading = false,
+  purchaseDetails
 }) => {
   const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
@@ -71,6 +78,23 @@ const PhoneCheckModal: React.FC<PhoneCheckModalProps> = ({
               </p>
 
               {/* 🛡️ ESCROW NOTICE: Buyer Protection (CRITICAL UX FIX) */}
+              {purchaseDetails && (
+                <div className="bg-yellow-400/10 border border-yellow-400/20 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Shop</span>
+                    <span className="text-xs sm:text-sm font-bold text-white text-right truncate">{purchaseDetails.shopName}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Product</span>
+                    <span className="text-xs sm:text-sm font-bold text-white text-right truncate">{purchaseDetails.productName}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-yellow-400/10 pt-3">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-yellow-300">Price</span>
+                    <span className="text-sm sm:text-base font-black text-yellow-300">{formatCurrency(purchaseDetails.productPrice)}</span>
+                  </div>
+                </div>
+              )}
+
               <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
