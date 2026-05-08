@@ -319,7 +319,7 @@ export const updateProfile = async (req, res) => {
         /^https?:\/\//i.test(avatarUrl);
 
       if (!isAllowedAvatar) {
-        return res.status(400).json({ status: 'error', message: 'Avatar must be a valid image URL' });
+        return res.status(400).json({ status: 'error', message: 'Business photo must be a valid image URL' });
       }
 
       req.body.avatarUrl = avatarUrl || null;
@@ -671,6 +671,67 @@ export const uploadBanner = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to upload banner',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// @desc    Upload a business photo for the seller
+// @route   POST /api/sellers/upload-business-photo
+// @access  Private
+export const uploadBusinessPhoto = async (req, res) => {
+  try {
+    const sellerId = req.user?.sellerId;
+
+    if (!sellerId) {
+      return res.status(401).json({
+        status: 'error',
+        message: 'Seller profile required'
+      });
+    }
+
+    let { businessPhoto } = req.body;
+
+    if (req.file) {
+      const base64String = `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`;
+      businessPhoto = await ImageService.base64ToFile(base64String, 'seller_business_photo');
+    } else if (businessPhoto && ImageService.isBase64Image(businessPhoto)) {
+      businessPhoto = await ImageService.base64ToFile(businessPhoto, 'seller_business_photo');
+    }
+
+    const businessPhotoValue = businessPhoto === '' ? null : businessPhoto;
+
+    const result = await query(
+      `UPDATE sellers
+       SET avatar_url = $1
+       WHERE id = $2
+       RETURNING id, avatar_url AS "avatarUrl"`,
+      [businessPhotoValue, sellerId]
+    );
+
+    if (!result.rows[0]) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Seller not found'
+      });
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        businessPhotoUrl: result.rows[0].avatarUrl || '',
+        avatarUrl: result.rows[0].avatarUrl || ''
+      }
+    });
+  } catch (error) {
+    logger.error('Error uploading business photo:', {
+      error: error.message,
+      stack: error.stack,
+      sellerId: req.user?.sellerId
+    });
+    res.status(500).json({
+      status: 'error',
+      message: 'Failed to upload business photo',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
