@@ -24,6 +24,13 @@ function isAesthetic(value: string): value is Aesthetic {
   ].includes(value);
 }
 
+const getSellerInitials = (shopName?: string, fullName?: string) => {
+  const source = (shopName || fullName || 'Shop').trim();
+  const parts = source.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return 'S';
+  return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('');
+};
+
 // Base product type that matches the Product interface but makes some fields optional
 interface BaseProduct extends Omit<ProductType, 'seller' | 'aesthetic' | 'isSold' | 'status'> {
   seller?: Seller;
@@ -46,6 +53,9 @@ interface ShopSeller extends Omit<Seller, 'bannerUrl'> {
   tiktokLink?: string;
   facebookLink?: string;
   clientCount?: number;
+  bio?: string;
+  avatarUrl?: string;
+  avatar_url?: string;
 }
 
 const ShopPage = () => {
@@ -55,6 +65,7 @@ const ShopPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sellerInfo, setSellerInfo] = useState<ShopSeller | null>(null);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const defaultBanner = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
 
@@ -93,6 +104,8 @@ const ShopPage = () => {
           tiktokLink: seller.tiktokLink || '',
           facebookLink: seller.facebookLink || '',
           clientCount: seller.clientCount || seller.client_count || 0,
+          bio: seller.bio || '',
+          avatarUrl: seller.avatarUrl || seller.avatar_url || '',
           hasPhysicalShop: !!seller.physicalAddress,
           physicalAddress: seller.physicalAddress,
           latitude: seller.latitude,
@@ -101,6 +114,7 @@ const ShopPage = () => {
         };
 
         setSellerInfo(sellerData);
+        setAvatarLoadFailed(false);
 
         const sellerProducts = await sellerApi.getSellerProducts(seller.id);
 
@@ -134,16 +148,6 @@ const ShopPage = () => {
     }
   }, [shopName]);
 
-  // Log when banner image is rendered
-  useEffect(() => {
-    if (sellerInfo) {
-      console.log('Current seller info in state:', {
-        ...sellerInfo,
-        bannerImage: sellerInfo.bannerImage || 'No banner image'
-      });
-    }
-  }, [sellerInfo]);
-
   // Filter products based on search query
   const filteredProducts = products.filter(product => {
     if (!searchQuery.trim()) return true;
@@ -155,6 +159,9 @@ const ShopPage = () => {
       productText.includes(term)
     );
   });
+
+  const sellerInitials = getSellerInitials(sellerInfo?.shopName, sellerInfo?.fullName);
+  const showSellerAvatar = Boolean(sellerInfo?.avatarUrl && !avatarLoadFailed);
 
   if (isLoading) {
     return (
@@ -197,7 +204,7 @@ const ShopPage = () => {
   return (
     <div className="min-h-screen bg-[var(--theme-bg-color)] text-[var(--theme-text)] transition-colors duration-200">
       {/* Modern Hero Section */}
-      <div className="relative h-[30dvh] min-h-[260px] sm:h-[40dvh] lg:h-[50dvh] w-full overflow-hidden">
+      <div className="relative h-[38dvh] min-h-[340px] sm:h-[44dvh] lg:h-[50dvh] w-full overflow-hidden">
         {sellerInfo?.bannerImage ? (
           <img
             src={getImageUrl(sellerInfo.bannerImage)}
@@ -233,32 +240,46 @@ const ShopPage = () => {
         </div>
 
         {/* Hero Content */}
-        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-6 sm:p-8 sm:pb-10">
-          <div className="max-w-7xl mx-auto flex flex-col items-start text-left space-y-2 sm:animate-fade-in-up">
-            {/* Shop Name */}
-            <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl">
-              {sellerInfo?.shopName || 'Shop'}
-            </h1>
+        <div className="absolute bottom-0 left-0 right-0 z-20 p-4 pb-5 sm:p-8 sm:pb-8">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-end gap-3 sm:gap-5 text-left sm:animate-fade-in-up">
+            <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/30 shadow-2xl overflow-hidden flex items-center justify-center text-xl sm:text-2xl font-black text-black shrink-0">
+              {showSellerAvatar ? (
+                <img
+                  src={getImageUrl(sellerInfo?.avatarUrl || '')}
+                  alt={`${sellerInfo?.shopName || 'Shop'} avatar`}
+                  className="h-full w-full object-cover"
+                  onError={() => setAvatarLoadFailed(true)}
+                />
+              ) : (
+                <span>{sellerInitials}</span>
+              )}
+            </div>
 
-            {/* Row 1: Core info — always fits on one line */}
-            <div className="flex items-center gap-2 text-white/90 font-medium text-[11px] sm:text-sm backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg whitespace-nowrap overflow-hidden max-w-full">
-              <span className="shrink-0">{filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}</span>
-              <span className="opacity-40 shrink-0">·</span>
-              <span className="flex items-center gap-1 shrink-0">
+            <div className="min-w-0 flex-1 space-y-2">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-white tracking-tight leading-none drop-shadow-2xl break-words">
+                {sellerInfo?.shopName || 'Shop'}
+              </h1>
+
+              {sellerInfo?.bio && (
+                <p className="max-w-3xl text-xs sm:text-sm md:text-base text-white/85 leading-relaxed break-words max-h-[4.5rem] sm:max-h-none overflow-hidden drop-shadow">
+                  {sellerInfo.bio}
+                </p>
+              )}
+              <div className="flex flex-wrap items-center gap-2 text-white/90 font-medium text-[11px] sm:text-sm max-w-full">
+                <span className="backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">{filteredProducts.length} {filteredProducts.length === 1 ? 'Item' : 'Items'}</span>
+                <span className="flex items-center gap-1 backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
                 <Users className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="font-bold">{sellerInfo?.clientCount || 0}</span>
-                <span className="hidden xs:inline">Followers</span>
+                <span>Followers</span>
               </span>
-              <span className="opacity-40 shrink-0">·</span>
-              <span className="flex items-center gap-1 shrink-0">
+                <span className="flex items-center gap-1 backdrop-blur-sm bg-black/25 px-3 py-1.5 rounded-full border border-white/10 shadow-lg">
                 <Store className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="font-bold">{(sellerInfo && (sellerInfo.physicalAddress || (sellerInfo.latitude && sellerInfo.longitude && sellerInfo.latitude !== 0))) ? 'Physical Shop' : 'Online Shop'}</span>
               </span>
             </div>
 
-            {/* Row 2: Social links — only if any exist, icon-only on mobile */}
             {(sellerInfo?.instagramLink || sellerInfo?.tiktokLink || sellerInfo?.facebookLink) && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex flex-wrap items-center gap-1.5">
                 {sellerInfo?.instagramLink && (
                   <a
                     href={sellerInfo.instagramLink}
@@ -305,6 +326,7 @@ const ShopPage = () => {
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
 

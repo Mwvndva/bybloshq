@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 import {
@@ -67,6 +68,13 @@ const formatNumber = (value: number | null | undefined) => {
   return num.toLocaleString();
 };
 
+const getSellerInitials = (name?: string, fallback?: string) => {
+  const source = (name || fallback || 'Shop').trim();
+  const parts = source.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return 'S';
+  return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('');
+};
+
 interface SellerProfile {
   fullName?: string;
   shopName?: string;
@@ -79,6 +87,8 @@ interface SellerProfile {
   latitude?: number;
   longitude?: number;
   bannerImage?: string;
+  avatarUrl?: string;
+  bio?: string;
   theme?: Theme;
   instagramLink?: string;
   tiktokLink?: string;
@@ -253,6 +263,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     tiktokLink: string;
     facebookLink: string;
     whatsappNumber: string;
+    avatarUrl: string;
+    bio: string;
   }>({
     fullName: sellerProfile?.fullName || '',
     shopName: sellerProfile?.shopName || '',
@@ -264,7 +276,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     instagramLink: sellerProfile?.instagramLink || '',
     tiktokLink: sellerProfile?.tiktokLink || '',
     facebookLink: sellerProfile?.facebookLink || '',
-    whatsappNumber: sellerProfile?.whatsappNumber || ''
+    whatsappNumber: sellerProfile?.whatsappNumber || '',
+    avatarUrl: sellerProfile?.avatarUrl || '',
+    bio: sellerProfile?.bio || ''
   });
 
   const [shopNameAvailable, setShopNameAvailable] = useState<boolean | null>(null);
@@ -553,7 +567,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           instagramLink: sellerProfile?.instagramLink || '',
           tiktokLink: sellerProfile?.tiktokLink || '',
           facebookLink: sellerProfile?.facebookLink || '',
-          whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || ''
+          whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || '',
+          avatarUrl: sellerProfile?.avatarUrl || '',
+          bio: sellerProfile?.bio || ''
         });
         setShopNameAvailable(null);
       }
@@ -581,6 +597,29 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       return;
     }
 
+    if (formData.bio.trim().length > 500) {
+      toast({
+        title: 'Error',
+        description: 'Bio must be at most 500 characters',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const trimmedAvatarUrl = formData.avatarUrl.trim();
+    if (
+      trimmedAvatarUrl &&
+      !trimmedAvatarUrl.startsWith('/') &&
+      !/^https?:\/\//i.test(trimmedAvatarUrl)
+    ) {
+      toast({
+        title: 'Error',
+        description: 'Avatar must be a valid image URL',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -593,7 +632,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         instagramLink: formData.instagramLink,
         tiktokLink: formData.tiktokLink,
         facebookLink: formData.facebookLink,
-        whatsappNumber: formData.whatsappNumber
+        whatsappNumber: formData.whatsappNumber,
+        avatarUrl: trimmedAvatarUrl || null,
+        bio: formData.bio.trim()
       };
 
       payload.latitude = formData.latitude;
@@ -1657,6 +1698,61 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     ) : (
                       <p className="text-sm sm:text-base lg:text-lg font-semibold text-white truncate" title={sellerProfile?.fullName || 'Not set'}>
                         {sellerProfile?.fullName || 'Not set'}
+                      </p>
+                    )}
+                  </div>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2">
+                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">Shop Avatar</p>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/20 overflow-hidden flex items-center justify-center text-lg font-black text-black shrink-0">
+                        {(isEditing ? formData.avatarUrl : sellerProfile?.avatarUrl) ? (
+                          <img
+                            src={getImageUrl(isEditing ? formData.avatarUrl : sellerProfile?.avatarUrl || '')}
+                            alt={`${sellerProfile?.shopName || 'Shop'} avatar`}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span>{getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}</span>
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        {isEditing ? (
+                          <Input
+                            name="avatarUrl"
+                            value={formData.avatarUrl}
+                            onChange={(e) => setFormData(prev => ({ ...prev, avatarUrl: e.target.value }))}
+                            placeholder="https://example.com/avatar.jpg"
+                            className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                          />
+                        ) : (
+                          <p className="text-sm sm:text-base font-semibold text-white truncate">
+                            {sellerProfile?.avatarUrl ? 'Avatar added' : 'Using shop initials'}
+                          </p>
+                        )}
+                        <p className="mt-1 text-[10px] sm:text-xs text-gray-400">
+                          This appears on your public shop page and buyer shop cards.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2">
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <p className="text-xs sm:text-sm font-medium text-gray-300">Shop Bio</p>
+                      {isEditing && (
+                        <span className="text-[10px] text-gray-400">{formData.bio.length}/500</span>
+                      )}
+                    </div>
+                    {isEditing ? (
+                      <Textarea
+                        name="bio"
+                        value={formData.bio}
+                        onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value.slice(0, 500) }))}
+                        placeholder="Tell buyers what your shop offers."
+                        className="min-h-[92px] text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400 resize-none"
+                      />
+                    ) : (
+                      <p className="text-sm sm:text-base font-semibold text-white whitespace-pre-line break-words">
+                        {sellerProfile?.bio || 'Not set'}
                       </p>
                     )}
                   </div>
