@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Heart, MousePointerClick, Users } from 'lucide-react';
+import { ArrowUpRight, Heart, MapPin, MousePointerClick, UserMinus, Users, Wifi } from 'lucide-react';
 import { cn, getImageUrl } from '@/lib/utils';
 import { publicApiService, Seller } from '@/api/publicApi';
 
@@ -8,6 +8,10 @@ interface SellerBrandCardProps {
     seller: Seller;
     className?: string;
     isBuyer?: boolean;
+    showUnfollow?: boolean;
+    isUnfollowing?: boolean;
+    onUnfollow?: (seller: Seller) => void;
+    onClickCountChange?: (seller: Seller, clickCount: number) => void;
 }
 
 const getInitials = (shopName?: string, fullName?: string) => {
@@ -23,6 +27,12 @@ const getNumber = (...values: unknown[]) => {
         if (Number.isFinite(parsed)) return parsed;
     }
     return 0;
+};
+
+const hasValidCoordinate = (latitude?: number, longitude?: number) => {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+    return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
 };
 
 const getThemePalette = (theme?: string) => {
@@ -88,7 +98,7 @@ const getThemePalette = (theme?: string) => {
     return palettes[theme || 'black'] || palettes.black;
 };
 
-const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) => {
+const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isUnfollowing = false, onUnfollow, onClickCountChange }: SellerBrandCardProps) => {
     const navigate = useNavigate();
     const shopName = seller.shopName || seller.shop_name || 'Shop';
     const shopLink = isBuyer
@@ -99,6 +109,12 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
     const [avatarFailed, setAvatarFailed] = useState(false);
     const [knockCount, setKnockCount] = useState(getNumber(seller.knockCount, seller.knock_count));
     const palette = useMemo(() => getThemePalette(seller.theme), [seller.theme]);
+    const isPhysicalShop = Boolean(
+        seller.hasPhysicalShop ||
+        seller.physicalAddress ||
+        (seller as any).physical_address ||
+        hasValidCoordinate(seller.latitude, seller.longitude)
+    );
 
     const clientCount = getNumber(seller.clientCount, seller.client_count);
     const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as any).wishlist_count, (seller as any).total_wishlist_count);
@@ -111,13 +127,23 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
     const handleKnock = useCallback(() => {
         const optimisticCount = knockCount + 1;
         setKnockCount(optimisticCount);
+        onClickCountChange?.(seller, optimisticCount);
 
-        void publicApiService.knockSeller(seller.id).catch((error) => {
+        void publicApiService.knockSeller(seller.id).then((result) => {
+            if (typeof result.knockCount !== 'number') return;
+            setKnockCount(result.knockCount);
+            onClickCountChange?.(seller, result.knockCount);
+        }).catch((error) => {
             console.error('Failed to record seller knock:', error);
         });
 
         navigate(shopLink);
-    }, [knockCount, navigate, seller.id, shopLink]);
+    }, [knockCount, navigate, onClickCountChange, seller, shopLink]);
+
+    const handleUnfollow = useCallback(() => {
+        if (!onUnfollow || isUnfollowing) return;
+        onUnfollow(seller);
+    }, [isUnfollowing, onUnfollow, seller]);
 
     return (
         <article className={cn(
@@ -153,9 +179,23 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 </div>
 
                 <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-black tracking-tight text-white" title={shopName}>
-                        {shopName}
-                    </h3>
+                    <div className="flex min-w-0 items-center gap-2">
+                        <h3 className="truncate text-sm font-black tracking-tight text-white" title={shopName}>
+                            {shopName}
+                        </h3>
+                        <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white/85"
+                            style={{
+                                borderColor: palette.border,
+                                backgroundColor: palette.accentSoft,
+                                boxShadow: `0 0 16px ${palette.accentSoft}`
+                            }}
+                            title={isPhysicalShop ? 'Physical shop' : 'Online shop'}
+                        >
+                            {isPhysicalShop ? <MapPin className="h-2.5 w-2.5" /> : <Wifi className="h-2.5 w-2.5" />}
+                            {isPhysicalShop ? 'Physical' : 'Online'}
+                        </span>
+                    </div>
                     {seller.bio ? (
                         <p className="mt-1 max-h-10 overflow-hidden text-[11px] leading-5 text-white/55">
                             {seller.bio}
@@ -190,37 +230,52 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 </div>
             </div>
 
-            <button
-                type="button"
-                onClick={handleKnock}
-                className="group/open relative mt-3 flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-white shadow-sm backdrop-blur transition duration-200 hover:brightness-110 active:brightness-95"
-                style={{
-                    background: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, ${palette.accentSoft} 46%, rgba(255,255,255,0.06) 100%)`,
-                    borderColor: palette.border,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 30px ${palette.accentSoft}, 0 0 0 1px ${palette.border}`,
-                    color: '#FFFFFF'
-                }}
-                aria-label={`Open ${shopName}`}
-            >
-                <span
-                    className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-20deg] bg-white/20 opacity-0 blur-sm transition duration-500 group-hover/open:left-full group-hover/open:opacity-100"
-                />
-                <span
-                    className="pointer-events-none absolute inset-x-3 top-0 h-px"
-                    style={{ background: `linear-gradient(90deg, transparent, ${palette.accent}, transparent)` }}
-                />
-                <span
-                    className="flex h-5 w-5 items-center justify-center rounded-full"
+            <div className={cn("mt-3 grid gap-2", showUnfollow ? "grid-cols-[1fr_auto]" : "grid-cols-1")}>
+                <button
+                    type="button"
+                    onClick={handleKnock}
+                    className="group/open relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-white shadow-sm backdrop-blur transition duration-200 hover:brightness-110 active:brightness-95"
                     style={{
-                        backgroundColor: palette.accent,
-                        color: palette.buttonText,
-                        boxShadow: `0 0 18px ${palette.accentSoft}`
+                        background: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, ${palette.accentSoft} 46%, rgba(255,255,255,0.06) 100%)`,
+                        borderColor: palette.border,
+                        boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 30px ${palette.accentSoft}, 0 0 0 1px ${palette.border}`,
+                        color: '#FFFFFF'
                     }}
+                    aria-label={`Open ${shopName}`}
                 >
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                </span>
-                <span className="relative">Open</span>
-            </button>
+                    <span
+                        className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 skew-x-[-20deg] bg-white/20 opacity-0 blur-sm transition duration-500 group-hover/open:left-full group-hover/open:opacity-100"
+                    />
+                    <span
+                        className="pointer-events-none absolute inset-x-3 top-0 h-px"
+                        style={{ background: `linear-gradient(90deg, transparent, ${palette.accent}, transparent)` }}
+                    />
+                    <span
+                        className="flex h-5 w-5 items-center justify-center rounded-full"
+                        style={{
+                            backgroundColor: palette.accent,
+                            color: palette.buttonText,
+                            boxShadow: `0 0 18px ${palette.accentSoft}`
+                        }}
+                    >
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="relative">Open</span>
+                </button>
+
+                {showUnfollow && onUnfollow && (
+                    <button
+                        type="button"
+                        disabled={isUnfollowing}
+                        onClick={handleUnfollow}
+                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-300/25 bg-red-400/10 px-3 text-[11px] font-black text-red-200 transition duration-200 hover:bg-red-400/16 active:bg-red-400/20 disabled:cursor-wait disabled:opacity-60"
+                        aria-label={`Unfollow ${shopName}`}
+                    >
+                        <UserMinus className="h-3.5 w-3.5" />
+                        <span>{isUnfollowing ? '...' : 'Unfollow'}</span>
+                    </button>
+                )}
+            </div>
         </article>
     );
 };
