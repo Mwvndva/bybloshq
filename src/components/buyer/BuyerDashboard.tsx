@@ -43,6 +43,12 @@ function shopColor(name) {
 
 const getShopId = (shop) => String(shop.id || shop.sellerId || shop.seller_id || '');
 
+const updateSellerClientCount = (seller, clientCount) => ({
+  ...seller,
+  clientCount,
+  client_count: clientCount
+});
+
 const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowing }) {
   const color = shopColor(shop.shopName || shop.name || '');
   const initial = (shop.shopName || shop.name || '?')[0].toUpperCase();
@@ -317,7 +323,7 @@ function BuyerDashboard() {
           ...current,
           sellers: current.sellers.map((seller) => (
             getShopId(seller) === shopId
-              ? { ...seller, clientCount: Math.max(0, Number(seller.clientCount || 0) - 1) }
+              ? updateSellerClientCount(seller, Math.max(0, Number(seller.clientCount ?? seller.client_count ?? 0) - 1))
               : seller
           ))
         };
@@ -338,7 +344,21 @@ function BuyerDashboard() {
         variant: 'destructive'
       });
     },
-    onSuccess: (result) => {
+    onSuccess: (result, shop) => {
+      const shopId = getShopId(shop);
+      if (typeof result.clientCount === 'number') {
+        queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
+          if (!current?.sellers) return current;
+          return {
+            ...current,
+            sellers: current.sellers.map((seller) => (
+              getShopId(seller) === shopId
+                ? updateSellerClientCount(seller, result.clientCount)
+                : seller
+            ))
+          };
+        });
+      }
       toast({
         title: 'Shop unfollowed',
         description: result.message || 'The shop was removed from My Shops.'

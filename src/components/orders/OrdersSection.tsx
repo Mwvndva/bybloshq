@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useBuyerAuth } from '@/contexts/GlobalAuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardFooter } from '@/components/ui/card';
@@ -60,6 +61,20 @@ import { toast } from 'sonner';
 import { getImageUrl, cn } from '@/lib/utils';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 import { getOrderInstruction } from '@/utils/orderInstructions';
+
+const updateSellerClientCountInCache = (queryClient, sellerId: string, clientCount: number) => {
+  queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
+    if (!current?.sellers) return current;
+    return {
+      ...current,
+      sellers: current.sellers.map((seller) => (
+        String(seller.id || seller.sellerId || seller.seller_id || '') === String(sellerId)
+          ? { ...seller, clientCount, client_count: clientCount }
+          : seller
+      ))
+    };
+  });
+};
 
 const glassCardStyle: React.CSSProperties = {
   background: 'rgba(20, 20, 20, 0.7)',
@@ -193,6 +208,7 @@ const getPaymentStatusBadge = (status?: string) => {
 
 export default function OrdersSection() {
   const { user } = useBuyerAuth();
+  const queryClient = useQueryClient();
   const [orders, setOrders] = useState<Order[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -438,6 +454,11 @@ export default function OrdersSection() {
         const result = await buyerApi.leaveClient(sellerId);
         if (result.success) {
           setClientStatus(prev => ({ ...prev, [sellerId]: false }));
+          if (typeof result.clientCount === 'number') {
+            updateSellerClientCountInCache(queryClient, sellerId, result.clientCount);
+          }
+          queryClient.invalidateQueries({ queryKey: ['buyer-followed-shops'] });
+          queryClient.invalidateQueries({ queryKey: ['public-sellers'] });
           toast.success(`You have unfollowed ${sellerName}`);
         } else {
           toast.error(result.message || 'Failed to unfollow');
@@ -447,6 +468,11 @@ export default function OrdersSection() {
         // @ts-ignore
         const result = await publicApiService.becomeClient(sellerId);
         setClientStatus(prev => ({ ...prev, [sellerId]: true }));
+        if (typeof result.data?.clientCount === 'number') {
+          updateSellerClientCountInCache(queryClient, sellerId, result.data.clientCount);
+        }
+        queryClient.invalidateQueries({ queryKey: ['buyer-followed-shops'] });
+        queryClient.invalidateQueries({ queryKey: ['public-sellers'] });
 
         if (result.data?.alreadyClient) {
           toast.info(`You are already following ${sellerName}`);
