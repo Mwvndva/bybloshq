@@ -72,8 +72,9 @@ interface SellerAnalytics {
   totalRevenue: number;
   totalPayout: number;
   balance: number;
-  pendingDebt: number;
-  pendingDebtCount: number;
+  clientCount: number;
+  wishlistCount: number;
+  clickCount: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: Array<{
     id: number;
@@ -87,14 +88,6 @@ interface SellerAnalytics {
       quantity: number;
       price: number;
     }>;
-  }>;
-  recentDebts?: Array<{
-    id: number;
-    amount: number;
-    clientName: string;
-    clientPhone: string;
-    productName: string;
-    createdAt: string;
   }>;
 }
 
@@ -728,56 +721,6 @@ export const sellerApi = {
     };
   },
 
-  // Client Orders
-  async createClientOrder(data: {
-    clientName: string;
-    clientPhone: string;
-    paymentType?: 'stk' | 'debt';
-    items: Array<{
-      productId: string;
-      name: string;
-      quantity: number;
-      price: number;
-    }>;
-  }): Promise<{
-    success: boolean;
-    order: {
-      id: number;
-      orderNumber: string;
-      totalAmount: number;
-      status: string;
-    };
-    payment: {
-      id: number;
-      reference: string;
-    };
-    message: string;
-  }> {
-    const response = await sellerApiInstance.post<{
-      status: string;
-      data: {
-        success: boolean;
-        order: {
-          id: number;
-          orderNumber: string;
-          totalAmount: number;
-          status: string;
-        };
-        payment: {
-          id: number;
-          reference: string;
-        };
-        message: string;
-      };
-    }>('/orders/client-order', {
-      clientName: data.clientName,
-      clientPhone: data.clientPhone,
-      paymentType: data.paymentType,
-      items: data.items
-    });
-    return response.data.data;
-  },
-
   // Referrals
   async getReferralDashboard(): Promise<ReferralDashboard> {
     const response = await sellerApiInstance.get<ReferralDashboardResponse>('/sellers/referral/dashboard');
@@ -830,13 +773,6 @@ export const withdrawalService = {
 
   getRequests: async () => {
     const response = await sellerApiInstance.get('/sellers/withdrawal-requests');
-    return response.data;
-  }
-};
-
-export const debtService = {
-  initiatePayment: async (debtId: number) => {
-    const response = await sellerApiInstance.post(`/sellers/debts/${debtId}/pay`);
     return response.data;
   }
 };

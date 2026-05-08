@@ -44,11 +44,6 @@ class OrderService {
         return ActiveOrderService.confirmOrderReceipt(orderId, buyerId);
     }
 
-    static async createClientOrder(sellerId, orderData) {
-        logger.warn('[SHADOW-ORDER-SERVICE] Deprecated modules/orders service delegated to active OrderService.createClientOrder');
-        return ActiveOrderService.createClientOrder(sellerId, orderData);
-    }
-
     static async getOrders(filters) {
         return ActiveOrderService.getOrders(filters);
     }

@@ -25,7 +25,7 @@ const createOrderSchema = z.object({
     additionalInfo: z.string().optional().default('')
   }),
 
-  paymentMethod: z.enum(['paystack', 'debt']),
+  paymentMethod: z.enum(['paystack', 'payd']),
 
   sellerId: z.number().int()
 });

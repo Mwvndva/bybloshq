@@ -39,7 +39,6 @@ export const getOrderInstruction = ({
             COMPLETED: { text: 'Order complete. Thank you for shopping with Byblos!', color: 'green' },
             CANCELLED: { text: 'Order cancelled. Any refund has been added to your balance.', color: 'red' },
             FAILED: { text: 'Payment was not completed. No charges made.', color: 'red' },
-            CLIENT_PAYMENT_PENDING: { text: 'Check your phone for an M-Pesa payment prompt.', color: 'blue' },
         },
         seller: {
             PENDING: { text: isCourier ? `Drop off item at ${COURIER_LOCATION} within 48 hours.` : isShopPickup ? 'Prepare item for buyer collection.' : isService ? 'New booking! Confirm the appointment.' : 'New order received.', color: 'blue' },
@@ -52,7 +51,6 @@ export const getOrderInstruction = ({
             COMPLETED: { text: '✅ Order complete. Funds released to your wallet.', color: 'green' },
             CANCELLED: { text: 'Order cancelled. Inventory has been restored.', color: 'red' },
             FAILED: { text: 'Payment failed. No funds were collected.', color: 'red' },
-            CLIENT_PAYMENT_PENDING: { text: 'M-Pesa prompt sent to client. Awaiting payment.', color: 'blue' },
         },
     };
 

@@ -288,61 +288,6 @@ export const sellerCancelOrder = async (req, res) => {
     }
 };
 
-export const createSellerClientOrder = async (req, res) => {
-    try {
-        const sellerId = req.user.sellerId;
-        const { clientName, clientPhone, items } = req.body;
-
-        // Basic validation
-        if (!clientName || !clientPhone || !items || !Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Client name, phone, and at least one product are required'
-            });
-        }
-
-        // Validate phone format (basic)
-        const phoneRegex = /^(?:254|0)[17]\d{8}$/;
-        if (!phoneRegex.test(clientPhone.replace(/\s+/g, ''))) {
-            return res.status(400).json({
-                status: 'error',
-                message: 'Invalid phone number format. Use format: 0712345678 or 254712345678'
-            });
-        }
-
-        // Create client order
-        const orderData = {
-            clientName: clientName.trim(),
-            clientPhone: clientPhone.replace(/\s+/g, ''),
-            paymentType: req.body.paymentType,
-            items,
-            paymentDetails: req.body.paymentDetails
-        };
-
-        // Ensure paymentDetails is an object for JSONB storage
-        if (orderData.paymentDetails && typeof orderData.paymentDetails === 'string') {
-            try {
-                orderData.paymentDetails = JSON.parse(orderData.paymentDetails);
-            } catch (e) {
-                // Keep as string if not valid JSON
-            }
-        }
-
-        const result = await OrderService.createClientOrder(sellerId, orderData);
-
-        res.status(201).json({
-            status: 'success',
-            data: { order: sanitizeOrder(result, 'seller') }
-        });
-    } catch (error) {
-        logger.error('Error creating client order:', error);
-        res.status(500).json({
-            status: 'error',
-            message: error.message || 'Failed to create client order'
-        });
-    }
-};
-
 export const downloadDigitalProduct = async (req, res) => {
     try {
         const { orderId, productId } = req.params;

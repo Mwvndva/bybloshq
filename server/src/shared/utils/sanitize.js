@@ -213,7 +213,6 @@ export const sanitizeOrder = (order, userType = 'buyer') => {
             buyerName: orderObj.buyerName || orderObj.buyer_name || '',
             buyerWhatsAppNumber: orderObj.buyerWhatsAppNumber || orderObj.buyer_whatsapp_number || '',
             buyerMobilePayment: orderObj.buyerMobilePayment || orderObj.buyer_mobile_payment || '',
-            isSellerInitiated: orderObj.isSellerInitiated || orderObj.is_seller_initiated || false,
         };
     }
 

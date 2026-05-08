@@ -1,50 +1,36 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { PLATFORM_FEE_RATE } from '@/lib/constants';
-import { formatCurrency, decodeJwt, isTokenExpired } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { formatCurrency } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 import {
   ArrowLeft,
   BarChart3,
-  Bike,
-  Check,
-  CheckCircle,
-  Copy,
-  DollarSign,
   Edit,
   Link as LinkIcon,
-  LogOut,
   Package,
   Plus,
   RefreshCw,
   Settings,
   ShoppingBag,
-  TrendingUp,
-  User,
   Clock,
-  Truck,
   Wallet,
   Download,
   Calendar,
   X,
-  XCircle,
   Loader2,
   Info,
-  Trash2,
-  Handshake,
   Gift
 } from 'lucide-react';
-import { sellerApi, checkShopNameAvailability, debtService, type Theme } from '@/api/sellerApi';
+import { sellerApi, checkShopNameAvailability, type Theme } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
@@ -52,22 +38,14 @@ import { BusinessPhotoUpload } from './BusinessPhotoUpload';
 import { ThemeSelector } from './ThemeSelector';
 import { exportWithdrawalsToCSV } from '@/utils/exportUtils';
 import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
-import PaymentLoadingModal from './PaymentLoadingModal';
 import SellerOrdersSection from './SellerOrdersSection';
 import ShopLocationPicker from './ShopLocationPicker';
 import { ProductsList } from './ProductsList';
 import { AddProductForm } from './AddProductForm';
-import NewClientOrderModal from './NewClientOrderModal';
 import ReferralPanel from './ReferralPanel';
 import { useAsyncLock } from '@/hooks/useAsyncLock';
 
 
-
-// Local helpers for consistent formatting within this component
-const formatNumber = (value: number | null | undefined) => {
-  const num = typeof value === 'number' && Number.isFinite(value) ? value : 0;
-  return num.toLocaleString();
-};
 
 const getSellerInitials = (name?: string, fallback?: string) => {
   const source = (name || fallback || 'Shop').trim();
@@ -76,26 +54,27 @@ const getSellerInitials = (name?: string, fallback?: string) => {
   return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('');
 };
 
-interface SellerProfile {
-  fullName?: string;
-  shopName?: string;
-  email?: string;
-  whatsappNumber?: string;
-  phone?: string; // fallback
-  city?: string;
-  location?: string;
-  physicalAddress?: string;
-  latitude?: number;
-  longitude?: number;
-  bannerImage?: string;
-  avatarUrl?: string;
-  bio?: string;
-  theme?: Theme;
-  instagramLink?: string;
-  tiktokLink?: string;
-  facebookLink?: string;
-  totalSales?: number;
-}
+const pendingOverviewStatuses = new Set(['SERVICE_PENDING', 'COLLECTION_PENDING', 'DELIVERY_PENDING']);
+
+const formatOrderStatusLabel = (status: string) => {
+  return status
+    .split('_')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
+const getPendingStatusStyles = (status: string) => {
+  switch (status) {
+    case 'SERVICE_PENDING':
+      return 'border-purple-400/30 bg-purple-500/10 text-purple-200';
+    case 'COLLECTION_PENDING':
+      return 'border-amber-400/30 bg-amber-500/10 text-amber-200';
+    case 'DELIVERY_PENDING':
+      return 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200';
+    default:
+      return 'border-white/10 bg-white/5 text-gray-200';
+  }
+};
 
 interface WithdrawalRequest {
   id: string;
@@ -147,18 +126,11 @@ interface AnalyticsData {
   totalRevenue: number;
   totalPayout: number;
   balance: number;  // Made required since it's now always provided by the backend
-  pendingDebt: number;
-  pendingDebtCount: number;
+  clientCount: number;
+  wishlistCount: number;
+  clickCount: number;
   monthlySales: Array<{ month: string; sales: number }>;
   recentOrders?: RecentOrder[];
-  recentDebts?: Array<{
-    id: number;
-    amount: number;
-    clientName: string;
-    clientPhone: string;
-    productName: string;
-    createdAt: string;
-  }>;
 }
 
 interface SellerDashboardProps {
@@ -175,8 +147,9 @@ const normalizeSellerAnalytics = (productsData: Product[], analyticsData: any): 
       totalRevenue: 0,
       totalPayout: 0,
       balance: 0,
-      pendingDebt: 0,
-      pendingDebtCount: 0,
+      clientCount: 0,
+      wishlistCount: 0,
+      clickCount: 0,
       monthlySales: [],
       recentOrders: []
     };
@@ -194,11 +167,11 @@ const normalizeSellerAnalytics = (productsData: Product[], analyticsData: any): 
     totalRevenue,
     totalPayout: totalRevenue,
     balance: analyticsData.balance || 0,
-    pendingDebt: analyticsData.pendingDebt || 0,
-    pendingDebtCount: analyticsData.pendingDebtCount || 0,
+    clientCount: analyticsData.clientCount || analyticsData.client_count || 0,
+    wishlistCount: analyticsData.wishlistCount || analyticsData.wishlist_count || 0,
+    clickCount: analyticsData.clickCount || analyticsData.click_count || analyticsData.knockCount || analyticsData.knock_count || 0,
     monthlySales: analyticsData.monthlySales || [],
-    recentOrders: analyticsData.recentOrders || [],
-    recentDebts: analyticsData.recentDebts || []
+    recentOrders: analyticsData.recentOrders || []
   };
 };
 
@@ -224,7 +197,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const { toast } = useToast();
 
   // Use seller auth context - same pattern as BuyerDashboard
-  const { seller: sellerProfile, logout: handleLogout, isLoading: isAuthLoading, updateSellerProfile } = useSellerAuth();
+  const { seller: sellerProfile, isLoading: isAuthLoading, updateSellerProfile } = useSellerAuth();
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
@@ -234,8 +207,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
-  const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
-
   const dashboardQuery = useQuery({
     queryKey: ['seller-dashboard', 'summary'],
     queryFn: loadSellerDashboardData,
@@ -315,7 +286,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     return () => clearTimeout(timer);
   }, [formData.shopName, sellerProfile?.shopName]);
 
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -380,41 +350,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     });
   }, [withdrawalRequests, startDate, endDate]);
 
-  // Client Order Modal State
-  const [showClientOrderModal, setShowClientOrderModal] = useState(false);
-  const [isCreatingClientOrder, setIsCreatingClientOrder] = useState(false);
-
-  // Payment Loading Modal State
-  const [showPaymentLoadingModal, setShowPaymentLoadingModal] = useState(false);
-  const [paymentReference, setPaymentReference] = useState<string | undefined>();
-  const [paymentClientPhone, setPaymentClientPhone] = useState<string | undefined>();
-
-  // Debt Prompt State
-  const [processingDebtId, setProcessingDebtId] = useState<number | null>(null);
-
-  const handleSendDebtPrompt = async (debtId: number) => {
-    if (processingDebtId) return;
-
-    setProcessingDebtId(debtId);
-    try {
-      const result = await debtService.initiatePayment(debtId) as any;
-
-      // Show payment loading modal
-      setPaymentReference(result.data?.payment?.reference || result.data?.payment?.api_ref);
-      // Find the debt to get client phone
-      const debt = (analytics as any)?.pendingPayments?.find((d: any) => d.id === debtId);
-      setPaymentClientPhone(debt?.client_phone);
-      setShowPaymentLoadingModal(true);
-
-      toast({
-        title: '📱 Prompt Sent',
-        description: `STK Push sent to ${debt?.client_phone || 'client'}. Waiting for payment...`,
-        className: 'bg-yellow-500/10 border-yellow-400/30 text-yellow-200',
-      });
-    } finally {
-      setProcessingDebtId(null);
-    }
-  };
+  const pendingOverviewOrders = useMemo(() => {
+    return (analytics?.recentOrders || [])
+      .filter(order => pendingOverviewStatuses.has(order.status))
+      .slice(0, 8);
+  }, [analytics?.recentOrders]);
 
   // Define cities and their locations
   const cities = {
@@ -534,11 +474,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         totalRevenue: 0,
         totalPayout: 0,
         balance: 0,
-        pendingDebt: 0,
-        pendingDebtCount: 0,
+        clientCount: 0,
+        wishlistCount: 0,
+        clickCount: 0,
         monthlySales: [],
-        recentOrders: [],
-        recentDebts: []
+        recentOrders: []
       };
     } finally {
       setIsLoading(false);
@@ -770,71 +710,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     });
   }, [withdrawalForm, analytics?.balance, toast, fetchWithdrawalRequests]);
 
-  const handleClientOrderSubmit = useCallback(async (data: {
-    clientName: string;
-    clientPhone: string;
-    paymentType?: 'stk' | 'debt';
-    items: Array<{ productId: string; name: string; quantity: number; price: number }>;
-  }) => {
-    setIsCreatingClientOrder(true);
-    try {
-      const result = await sellerApi.createClientOrder(data);
-
-      if (data.paymentType === 'debt') {
-        toast({
-          title: '✅ Order Recorded',
-          description: `Order recorded as debt for ${data.clientName}. Inventory updated.`,
-          className: 'bg-blue-500/10 border-blue-400/30 text-blue-200',
-        });
-      } else {
-        // STK Push - show loading modal
-        setPaymentReference((result as any).payment?.reference || (result as any).payment?.api_ref);
-        setPaymentClientPhone(data.clientPhone);
-        setShowPaymentLoadingModal(true);
-
-        toast({
-          title: '📱 STK Push Sent!',
-          description: `Payment request sent to ${data.clientPhone}. Waiting for client to complete payment...`,
-          className: 'bg-green-500/10 border-green-400/30 text-green-200',
-        });
-      }
-
-      setShowClientOrderModal(false);
-
-      // Note: Dashboard will auto-refresh on next load or manual refresh
-      // Forcing refresh here causes dashboard to crash
-    } catch (error: any) {
-      console.error('Error creating client order:', error);
-      toast({
-        title: '❌ Error',
-        description: error.response?.data?.message || error.message || 'Failed to create client order',
-        className: 'bg-red-500/10 border-red-400/30 text-red-200',
-      });
-    } finally {
-      setIsCreatingClientOrder(false);
-    }
-  }, [toast, fetchData]);
-
-  const handlePaymentSuccess = useCallback(() => {
-    toast({
-      title: '✅ Payment Successful!',
-      description: 'The client has completed the payment. Your balance has been updated.',
-      className: 'bg-green-500/10 border-green-400/30 text-green-200',
-      duration: 5000,
-    });
-    queryClient.invalidateQueries({ queryKey: ['seller-dashboard', 'summary'] });
-    fetchWithdrawalRequests();
-  }, [toast, queryClient, fetchWithdrawalRequests]);
-
-  const handlePaymentFailure = useCallback(() => {
-    toast({
-      title: '⏱️ Payment Timeout',
-      description: 'The payment request has expired. You can send a new prompt if needed.',
-      className: 'bg-orange-500/10 border-orange-400/30 text-orange-200',
-    });
-  }, [toast]);
-
-
   // Token expiration check removed - auth is now handled by SellerAuthContext with HttpOnly cookies
 
   useEffect(() => {
@@ -884,13 +759,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   // Removed: Profile data is already available from SellerAuthContext
   // No need to fetch separately when settings tab is active
-
-  // Create context value to pass to child routes
-  const outletContext = {
-    products,
-    onDeleteProduct: async () => { },
-    fetchData,
-  };
 
   // If children are provided, render them with the fetchData function
   if (children) {
@@ -1091,13 +959,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         </div>
       </div>
 
-      <div className="w-full max-w-screen-2xl mx-auto px-6 lg:px-10 2xl:px-12 py-4 sm:py-5 md:py-6">
+      <div className="w-full px-[18px] py-4 sm:py-5 md:py-6">
         {/* Stats Overview */}
         {/* Stats Overview */}
         <div className="mb-6 sm:mb-7 md:mb-8">
           <UnifiedAnalyticsHub
             analytics={analytics}
-            onWithdraw={() => setActiveTab('withdrawals')}
           />
         </div>
 
@@ -1417,7 +1284,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Store Overview</h2>
               <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Manage your products and track your store performance</p>
               {sellerProfile?.shopName && (
-                <div className="mt-4 flex justify-center gap-3">
+                <div className="mt-4 flex justify-center">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1442,80 +1309,59 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     <LinkIcon className="h-3 w-3" />
                     Copy Shop Link
                   </Button>
-
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 border-emerald-400/30 rounded-lg shadow-lg hover:shadow-emerald-500/20 transition-all font-bold h-8 px-3 text-xs"
-                    onClick={() => setShowClientOrderModal(true)}
-                  >
-                    <Handshake className="h-3.5 w-3.5" />
-                    New Client Order
-                  </Button>
                 </div>
               )}
             </div>
 
             <div className="space-y-4">
 
-              {/* Store Performance */}
+              {/* Active fulfillment states */}
               <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl w-full rounded-2xl">
                 <CardHeader className="p-4">
                   <CardTitle className="text-base sm:text-lg font-black text-white flex items-center">
                     <div className="w-9 h-9 bg-yellow-500/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-xl flex items-center justify-center mr-3">
                       <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    Pending Payments
+                    Pending Orders
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 px-4 pb-4">
-                  {/* Recent Debts List */}
-                  {analytics.recentDebts && analytics.recentDebts.length > 0 ? (
+                  {pendingOverviewOrders.length > 0 ? (
                     <div className="space-y-2 mt-2">
-                      {analytics.recentDebts.map((debt) => (
-                        <div key={debt.id} className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
-                          <div className="flex justify-between items-center mb-1">
-                            <div className="flex flex-col">
-                              <span className="font-bold text-sm sm:text-base text-white truncate max-w-[120px] sm:max-w-[150px]" title={debt.clientName}>{debt.clientName}</span>
-                              <span className="text-[10px] sm:text-xs text-gray-400 font-mono">{debt.clientPhone}</span>
+                      {pendingOverviewOrders.map((order) => (
+                        <div key={order.id} className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm sm:text-base text-white truncate" title={order.orderNumber}>
+                                  {order.orderNumber}
+                                </span>
+                                <Badge className={`border text-[10px] font-bold ${getPendingStatusStyles(order.status)}`}>
+                                  {formatOrderStatusLabel(order.status)}
+                                </Badge>
+                              </div>
+                              <p className="mt-1 text-xs text-gray-400 truncate">
+                                {(order.items || []).map(item => `${item.quantity}x ${item.product_name}`).join(', ') || 'Order items pending'}
+                              </p>
                             </div>
-                            <span className="text-xs sm:text-sm font-mono text-yellow-300 font-bold bg-yellow-500/10 px-2 py-0.5 rounded-lg border border-yellow-500/20">{formatCurrency(debt.amount)}</span>
-                          </div>
-                          <div className="flex justify-between items-center text-xs sm:text-sm text-gray-400 mb-3">
-                            <span className="truncate max-w-[120px] sm:max-w-[150px]" title={debt.productName}>{debt.productName}</span>
-                            <span>{new Date(debt.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
-                          </div>
-
-                          <div className="flex justify-end mt-2">
-                            <Button
-                              size="sm"
-                              className="w-auto h-6 px-2.5 text-[10px] font-bold bg-gradient-to-r from-yellow-400/80 to-yellow-500/80 text-black border-none hover:from-yellow-400 hover:to-yellow-500 hover:shadow-[0_0_12px_rgba(250,204,21,0.2)]"
-                              onClick={() => handleSendDebtPrompt(debt.id)}
-                              disabled={processingDebtId === debt.id}
-                            >
-                              {processingDebtId === debt.id ? (
-                                <>
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                  Sending...
-                                </>
-                              ) : (
-                                <>
-                                  <Wallet className="h-3 w-3 mr-1" />
-                                  Send Prompt
-                                </>
-                              )}
-                            </Button>
+                            <div className="sm:text-right shrink-0">
+                              <p className="text-sm font-black text-yellow-300">{formatCurrency(order.totalAmount)}</p>
+                              <p className="text-[11px] text-gray-500">
+                                {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <div className="p-4 text-center">
-                      <p className="text-gray-400 text-sm">No pending debts</p>
+                      <p className="text-gray-400 text-sm">No service, collection, or delivery pending orders</p>
                     </div>
                   )}
                 </CardContent>
-              </Card>            </div>
+              </Card>
+            </div>
           </div>
         )}
 
@@ -1954,23 +1800,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         )}
       </div>
 
-      {/* New Client OrderModal */}
-      <NewClientOrderModal
-        isOpen={showClientOrderModal}
-        onClose={() => setShowClientOrderModal(false)}
-        products={products as any}
-        onSubmit={handleClientOrderSubmit}
-      />
-
-      {/* Payment Loading Modal */}
-      <PaymentLoadingModal
-        isOpen={showPaymentLoadingModal}
-        onClose={() => setShowPaymentLoadingModal(false)}
-        paymentReference={paymentReference}
-        clientPhone={paymentClientPhone}
-        onSuccess={handlePaymentSuccess}
-        onFailure={handlePaymentFailure}
-      />
     </>
   );
 };
