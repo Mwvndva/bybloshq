@@ -104,6 +104,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
     const shopLink = isBuyer
         ? `/buyer/shop/${encodeURIComponent(shopName)}`
         : `/shop/${encodeURIComponent(shopName)}`;
+    const clientCount = Number(seller.clientCount ?? seller.client_count ?? 0);
 
     return (
         <div className={cn("group relative aspect-square overflow-hidden rounded-2xl bg-gray-900", className)}>
@@ -124,7 +125,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm", styles.badge)}>
                     <Users className={cn("h-2.5 w-2.5", styles.icon)} />
                     <span className={cn("text-[9px] font-bold", styles.icon)}>
-                        {seller.clientCount || 0}
+                        {clientCount}
                     </span>
                 </div>
             </div>

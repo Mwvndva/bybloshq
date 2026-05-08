@@ -189,6 +189,7 @@ export interface Seller {
   longitude?: number;
   totalWishlistCount?: number;
   clientCount?: number;
+  client_count?: number;
 }
 
 // Helper function to transform product data from API
