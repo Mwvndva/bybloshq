@@ -3,7 +3,7 @@ import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
 import ProductModel from '../models/product.model.js';
 import Order from '../models/order.model.js';
-import { OrderStatus } from '../shared/constants/enums.js';
+import { OrderStatus, PaymentStatus } from '../shared/constants/enums.js';
 import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 
 const RECONCILIATION_LOCK_KEY = 'byblos:reconciliation-engine';
@@ -13,6 +13,23 @@ const RECONCILIATION_LOCK_KEY = 'byblos:reconciliation-engine';
  * Enforces consistency and handles expired/stuck states.
  */
 class ReconciliationEngine {
+    static async markCancellationReason(client, orderId, reason) {
+        await client.query(
+            `UPDATE product_orders
+             SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                 updated_at = NOW()
+             WHERE id = $1`,
+            [
+                orderId,
+                JSON.stringify({
+                    cancellation_reason: reason,
+                    reconciliation_reason: reason,
+                    reconciled_at: new Date().toISOString()
+                })
+            ]
+        );
+    }
+
     static async start() {
         cron.schedule('*/5 * * * *', async () => {
             await this.runOnce();
@@ -117,7 +134,8 @@ class ReconciliationEngine {
                     }
                 }
 
-                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'system_timeout');
+                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, PaymentStatus.CANCELLED);
+                await this.markCancellationReason(client, order.id, 'system_timeout');
 
                 await client.query('COMMIT');
                 logger.info(`[RECON] Expired order ${order.id} (${lockedOrder.order_type}) cancelled successfully.`);
@@ -176,7 +194,8 @@ class ReconciliationEngine {
                     );
                 }
 
-                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'stuck_payment');
+                await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, PaymentStatus.CANCELLED);
+                await this.markCancellationReason(client, order.id, 'stuck_payment');
             }
 
             await client.query('COMMIT');
