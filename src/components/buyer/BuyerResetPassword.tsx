@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Loader2, Lock, ArrowLeft, ShoppingBag, Check, X } from 'lucide-react';
+import { RouteFallback } from '@/components/common/RouteFallback';
 
 export function BuyerResetPassword() {
     const [searchParams] = useSearchParams();
@@ -145,36 +146,29 @@ export function BuyerResetPassword() {
 
     // Show loading state while validating token
     if (isValidToken === null) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-black">
-                <div className="text-center">
-                    <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-yellow-500" />
-                    <p className="text-gray-400 font-medium">Validating reset token...</p>
-                </div>
-            </div>
-        );
+        return <RouteFallback message="Validating reset token" />;
     }
 
     // Show error state if token is invalid
     if (isValidToken === false) {
         return (
-            <div className="min-h-screen flex items-center justify-center p-4 bg-black">
+            <div className="auth-page min-h-screen flex items-center justify-center p-4 bg-white">
                 <div
-                    className="w-full max-w-md rounded-2xl border p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md shadow-2xl"
+                    className="w-full max-w-md rounded-2xl border p-6 bg-white/95 backdrop-blur-md shadow-xl"
                     style={{
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        border: '1px solid rgba(226, 232, 240, 0.95)',
                     }}
                 >
                     <div className="text-center mb-6">
                         <div className="w-12 h-12 mx-auto mb-3 bg-red-500/20 rounded-xl flex items-center justify-center border border-red-500/30">
                             <Lock className="h-6 w-6 text-red-500" />
                         </div>
-                        <h1 className="text-xl font-semibold text-white mb-1">Invalid Link</h1>
+                        <h1 className="text-xl font-semibold text-slate-950 mb-1">Invalid Link</h1>
                         <p className="text-sm text-gray-400 font-normal">This reset link is invalid or has expired.</p>
                     </div>
                     <Button
                         onClick={() => navigate('/buyer/login')}
-                        className="w-full h-11 bg-gray-800 text-white hover:bg-gray-700 rounded-xl font-medium transition-all"
+                        className="w-full h-11 bg-slate-100 text-slate-950 hover:bg-slate-200 rounded-xl font-medium transition-all"
                     >
                         Back to Login
                     </Button>
@@ -186,19 +180,19 @@ export function BuyerResetPassword() {
     const strength = checkPasswordStrength(formData.password);
 
     return (
-        <div className="min-h-screen w-full bg-black flex flex-col relative"
+        <div className="auth-page min-h-screen w-full bg-white flex flex-col relative"
             style={{
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
             }}
         >
             {/* Header */}
-            <header className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30">
+            <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
                 <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => navigate('/buyer/login')}
-                        className="text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
+                        className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
                     >
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         <span>Back</span>
@@ -206,9 +200,9 @@ export function BuyerResetPassword() {
 
                     <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
                         <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
-                            <ShoppingBag className="h-4 w-4 text-white" />
+                            <ShoppingBag className="h-4 w-4 text-slate-950" />
                         </div>
-                        <h1 className="text-xl font-black text-white tracking-tight">
+                        <h1 className="text-xl font-black text-slate-950 tracking-tight">
                             Buyer Portal
                         </h1>
                     </div>
@@ -221,9 +215,9 @@ export function BuyerResetPassword() {
             <div className="flex-1 flex items-center justify-center py-8 px-4 sm:px-6 lg:px-8">
                 <div className="w-full max-w-[400px]">
                     <div
-                        className="rounded-2xl border shadow-2xl p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md"
+                        className="rounded-2xl border shadow-xl p-6 bg-white/95 backdrop-blur-md"
                         style={{
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(226, 232, 240, 0.95)',
                         }}
                     >
                         <div className="text-center mb-6">

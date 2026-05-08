@@ -44,8 +44,8 @@ export function BuyerLogin() {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
 
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
 
     return () => {
       document.body.style.cssText = originalBodyStyle;
@@ -100,14 +100,14 @@ export function BuyerLogin() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-black flex flex-col relative"
+    <div className="auth-page min-h-screen w-full bg-white flex flex-col relative"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        backgroundColor: '#000000',
+        backgroundColor: '#ffffff',
       }}
     >
       {/* Header */}
-      <header className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30">
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between h-20">
             {/* Left: Back Button */}
@@ -115,7 +115,7 @@ export function BuyerLogin() {
               variant="ghost"
               size="sm"
               onClick={() => navigate('/')}
-              className="text-zinc-400 hover:text-white hover:bg-white/5 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
+              className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
               <span>Back</span>
@@ -124,9 +124,9 @@ export function BuyerLogin() {
             {/* Center: Title */}
             <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%] flex items-center justify-center gap-2">
               <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center shrink-0">
-                <ShoppingBag className="h-4 w-4 text-white" />
+                <ShoppingBag className="h-4 w-4 text-slate-950" />
               </div>
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight truncate">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
                 Buyer Portal
               </h1>
             </div>
@@ -145,11 +145,11 @@ export function BuyerLogin() {
           <div
             className="rounded-2xl border shadow-2xl p-5 sm:p-6"
             style={{
-              background: 'rgba(17, 17, 17, 0.7)',
+              background: 'rgba(255, 255, 255, 0.96)',
               backdropFilter: 'blur(12px)',
               WebkitBackdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
-              boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)'
+              border: '1px solid rgba(226, 232, 240, 0.95)',
+              boxShadow: '0 18px 45px rgba(15, 23, 42, 0.08)'
             }}
           >
             <div className="text-center mb-6">

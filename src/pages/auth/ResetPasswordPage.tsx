@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { Loader2, ArrowLeft, Eye, EyeOff, Lock, Check, X, ShieldCheck } from 'lucide-react';
+import { RouteFallback } from '@/components/common/RouteFallback';
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
@@ -100,7 +101,7 @@ export function ResetPasswordPage() {
   // Handle body background
   useEffect(() => {
     const originalBodyStyle = document.body.style.cssText;
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
     return () => {
       document.body.style.cssText = originalBodyStyle;
     };
@@ -144,32 +145,25 @@ export function ResetPasswordPage() {
   };
 
   if (isValidToken === null) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="flex flex-col items-center space-y-4">
-          <Loader2 className="h-8 w-8 animate-spin text-yellow-500" />
-          <p className="text-gray-400">Verifying your reset link...</p>
-        </div>
-      </div>
-    );
+    return <RouteFallback message="Verifying reset link" />;
   }
 
   if (!isValidToken) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-black">
-        <div className="w-full max-w-md rounded-2xl border border-white/10 p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md shadow-2xl">
+      <div className="auth-page min-h-screen flex items-center justify-center p-4 bg-white">
+        <div className="w-full max-w-md rounded-2xl border border-slate-200 p-6 bg-white/95 backdrop-blur-md shadow-xl">
           <div className="text-center mb-6">
             <div className="w-12 h-12 mx-auto mb-3 bg-red-500/20 rounded-xl flex items-center justify-center border border-red-500/30">
               <Lock className="h-6 w-6 text-red-500" />
             </div>
-            <h1 className="text-xl font-semibold text-white mb-1">Invalid or Expired Link</h1>
+            <h1 className="text-xl font-semibold text-slate-950 mb-1">Invalid or Expired Link</h1>
             <p className="text-sm text-gray-400">The password reset link is invalid or has expired.</p>
           </div>
           <div className="space-y-3">
             <Button className="w-full bg-yellow-500 text-black hover:bg-yellow-600 rounded-xl" onClick={() => navigate('/seller/forgot-password')}>
               Request New Reset Link
             </Button>
-            <Button variant="ghost" className="w-full text-gray-400 hover:text-white" onClick={() => navigate('/seller/login')}>
+            <Button variant="ghost" className="w-full text-slate-500 hover:text-slate-950 hover:bg-slate-100" onClick={() => navigate('/seller/login')}>
               <ArrowLeft className="mr-2 h-4 w-4" /> Back to Login
             </Button>
           </div>
@@ -181,18 +175,18 @@ export function ResetPasswordPage() {
   const strength = checkPasswordStrength(password);
 
   return (
-    <div className="min-h-screen w-full bg-black flex flex-col relative" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="auth-page min-h-screen w-full bg-white flex flex-col relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
-      <header className="bg-black/80 backdrop-blur-md border-b border-white/10 sticky top-0 z-30">
+      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-screen-2xl mx-auto px-4 h-20 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/seller/login')} className="text-zinc-400 hover:text-white hover:bg-white/5 rounded-xl">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/seller/login')} className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 rounded-xl">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-lg flex items-center justify-center">
-              <ShieldCheck className="h-4 w-4 text-white" />
+              <ShieldCheck className="h-4 w-4 text-slate-950" />
             </div>
-            <h1 className="text-xl font-black text-white tracking-tight">Security Center</h1>
+            <h1 className="text-xl font-black text-slate-950 tracking-tight">Security Center</h1>
           </div>
           <div className="w-20" /> {/* Spacer */}
         </div>
@@ -200,7 +194,7 @@ export function ResetPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center py-8 px-4">
         <div className="w-full max-w-[400px]">
-          <div className="rounded-2xl border border-white/10 shadow-2xl p-6 bg-[rgba(17,17,17,0.7)] backdrop-blur-md">
+          <div className="rounded-2xl border border-slate-200 shadow-xl p-6 bg-white/95 backdrop-blur-md">
             <div className="text-center mb-6">
               <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
                 <Lock className="h-6 w-6 text-white" />

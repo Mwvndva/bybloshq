@@ -52,6 +52,13 @@ export function BaseDashboardLayout({
     const { logout, isAuthenticated } = useGlobalAuth();
     const [sidebarOpen, setSidebarOpen] = React.useState(false);
 
+    React.useEffect(() => {
+        document.body.classList.add('dashboard-active');
+        return () => {
+            document.body.classList.remove('dashboard-active');
+        };
+    }, []);
+
     // Check if current path matches navigation item
     const isActivePath = (path: string) => {
         return location.pathname === path || location.pathname.startsWith(path + '/');
