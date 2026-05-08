@@ -55,6 +55,7 @@ const getSellerInitials = (name?: string, fallback?: string) => {
 };
 
 const pendingOverviewStatuses = new Set(['SERVICE_PENDING', 'COLLECTION_PENDING', 'DELIVERY_PENDING']);
+const MIN_WITHDRAWAL_AMOUNT = 50;
 
 const formatOrderStatusLabel = (status: string) => {
   return status
@@ -655,10 +656,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     }
 
     const amount = parseFloat(withdrawalForm.amount);
-    if (amount <= 0) {
+    if (amount < MIN_WITHDRAWAL_AMOUNT) {
       toast({
         title: 'Error',
-        description: 'Please enter a valid amount',
+        description: `Minimum withdrawal amount is KSh ${MIN_WITHDRAWAL_AMOUNT}`,
         variant: 'destructive',
       });
       return;
@@ -1075,13 +1076,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
 
             {/* Minimum Withdrawal Notification */}
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
-              <div className="bg-blue-100 border border-blue-200 rounded-full p-0.5 sm:p-1 mt-0.5 flex-shrink-0">
-                <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-700" />
+            <div className="withdrawal-minimum-note bg-yellow-400 border border-yellow-300 rounded-xl p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
+              <div className="bg-black/10 border border-black/15 rounded-full p-0.5 sm:p-1 mt-0.5 flex-shrink-0">
+                <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-black" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-slate-950 text-[10px] sm:text-xs">Minimum: KSh 50</h4>
-                <p className="text-slate-700 text-[9px] sm:text-[10px] mt-0.5 leading-tight">
+                <h4 className="font-semibold text-black text-[10px] sm:text-xs">Minimum: KSh {MIN_WITHDRAWAL_AMOUNT}</h4>
+                <p className="text-black text-[9px] sm:text-[10px] mt-0.5 leading-tight">
                   Ensure sufficient balance before requesting withdrawal.
                 </p>
               </div>
@@ -1092,7 +1093,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <Button
                   onClick={() => setShowWithdrawalForm(true)}
                   className="gap-1.5 sm:gap-2 bg-yellow-400 text-black hover:bg-yellow-500 shadow-lg px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-xl font-bold text-xs sm:text-sm w-full sm:w-auto h-7 sm:h-auto"
-                  disabled={(analytics?.balance || 0) <= 0}
+                  disabled={(analytics?.balance || 0) < MIN_WITHDRAWAL_AMOUNT}
                 >
                   <Wallet className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   Request Withdrawal
@@ -1113,7 +1114,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           value={withdrawalForm.amount}
                           onChange={(e) => setWithdrawalForm(prev => ({ ...prev, amount: e.target.value }))}
                           placeholder="Enter amount"
-                          min="1"
+                          min={MIN_WITHDRAWAL_AMOUNT}
                           max={analytics?.balance || 0}
                           className="h-7 sm:h-8 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
                           required

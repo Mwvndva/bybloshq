@@ -665,8 +665,8 @@ export const sellerApi = {
     idempotencyKey: string;
   }): Promise<WithdrawalRequest> {
     // FIX (Task 6): Validate amount to prevent invalid payout requests
-    if (data.amount <= 0 || data.amount > 1_000_000) {
-      throw new Error('Invalid withdrawal amount. Must be between 1 and 1,000,000.');
+    if (data.amount < 50 || data.amount > 250_000) {
+      throw new Error('Invalid withdrawal amount. Must be between KSh 50 and KSh 250,000.');
     }
 
     if (!data.idempotencyKey) {
