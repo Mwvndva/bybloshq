@@ -186,25 +186,25 @@ export function BuyerInfoModal({
   };
 
   const themeClasses = {
-    bg: 'bg-[#0a0a0a] border border-white/10',
-    text: 'text-white',
-    input: 'bg-white/5 border-white/10 text-white placeholder:text-[#555555] focus-visible:ring-yellow-400',
-    label: 'text-[#a1a1a1]',
+    bg: 'bg-white border border-slate-200',
+    text: 'text-slate-950',
+    input: 'bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus-visible:ring-yellow-400',
+    label: 'text-slate-500',
     button: 'bg-yellow-400 hover:bg-yellow-500 text-black',
     error: 'text-red-500'
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className={`w-[95vw] max-w-[480px] max-h-[85dvh] sm:max-h-[90dvh] p-0 overflow-hidden ${themeClasses.bg} ${themeClasses.text} border-white/10 shadow-2xl rounded-3xl`}>
+      <DialogContent className={`w-[95vw] max-w-[480px] max-h-[85dvh] sm:max-h-[90dvh] p-0 overflow-hidden ${themeClasses.bg} ${themeClasses.text} shadow-2xl rounded-3xl`}>
         <form onSubmit={handleSubmit} className="flex flex-col h-full max-h-[85dvh] sm:max-h-[90dvh] w-full">
           <DialogHeader className="p-4 sm:p-6 lg:p-8 pb-3 shrink-0 space-y-4">
-            <div className="mx-auto w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
+            <div className="mx-auto w-14 h-14 bg-yellow-50 border border-yellow-100 rounded-2xl flex items-center justify-center shadow-inner">
               <User className="h-7 w-7 text-yellow-400" />
             </div>
             <div className="space-y-2">
-              <DialogTitle className="text-2xl font-black text-center text-white">PAYMENT DETAILS</DialogTitle>
-              <p className="text-[11px] text-center font-bold text-[#a1a1a1] uppercase tracking-wider opacity-80 leading-relaxed px-4">
+              <DialogTitle className="text-2xl font-black text-center text-slate-950">PAYMENT DETAILS</DialogTitle>
+              <p className="text-[11px] text-center font-bold text-slate-500 uppercase tracking-wider opacity-80 leading-relaxed px-4">
                 Your payment details are safe and are only collected once
               </p>
             </div>
@@ -223,7 +223,7 @@ export function BuyerInfoModal({
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <User className="h-4 w-4 text-[#555555]" />
+                    <User className="h-4 w-4 text-slate-400" />
                   </div>
                   <Input
                     id="firstName"
@@ -245,7 +245,7 @@ export function BuyerInfoModal({
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <User className="h-4 w-4 text-[#555555]" />
+                    <User className="h-4 w-4 text-slate-400" />
                   </div>
                   <Input
                     id="lastName"
@@ -270,7 +270,7 @@ export function BuyerInfoModal({
               </Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                  <Mail className="h-4 w-4 text-[#555555]" />
+                  <Mail className="h-4 w-4 text-slate-400" />
                 </div>
                 <Input
                   id="email"
@@ -295,7 +295,7 @@ export function BuyerInfoModal({
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <Phone className="h-4 w-4 text-[#555555]" />
+                    <Phone className="h-4 w-4 text-slate-400" />
                   </div>
                   <Input
                     id="mobilePayment"
@@ -315,7 +315,7 @@ export function BuyerInfoModal({
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <Phone className="h-4 w-4 text-[#555555]" />
+                    <Phone className="h-4 w-4 text-slate-400" />
                   </div>
                   <Input
                     id="whatsappNumber"
@@ -339,7 +339,7 @@ export function BuyerInfoModal({
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <MapPin className="h-4 w-4 text-[#555555]" />
+                    <MapPin className="h-4 w-4 text-slate-400" />
                   </div>
                   <Select
                     value={buyerInfo.city}
@@ -355,14 +355,14 @@ export function BuyerInfoModal({
                     <SelectTrigger className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}>
                       <SelectValue placeholder="Select city" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
-                      <SelectItem value="Nairobi" className="text-white hover:bg-white/5 focus:bg-white/10">
+                    <SelectContent className="bg-white border-slate-200 text-slate-950">
+                      <SelectItem value="Nairobi" className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
                         Nairobi
                       </SelectItem>
-                      <SelectItem value="Mombasa" className="text-white hover:bg-white/5 focus:bg-white/10">
+                      <SelectItem value="Mombasa" className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
                         Mombasa
                       </SelectItem>
-                      <SelectItem value="Kisumu" className="text-white hover:bg-white/5 focus:bg-white/10">
+                      <SelectItem value="Kisumu" className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
                         Kisumu
                       </SelectItem>
                     </SelectContent>
@@ -375,7 +375,7 @@ export function BuyerInfoModal({
                 </Label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                    <MapPin className="h-4 w-4 text-[#555555]" />
+                    <MapPin className="h-4 w-4 text-slate-400" />
                   </div>
                   <Select
                     value={buyerInfo.location}
@@ -390,11 +390,11 @@ export function BuyerInfoModal({
                     <SelectTrigger className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}>
                       <SelectValue placeholder={buyerInfo.city ? "Select area" : "City first"} />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#1a1a1a] border-white/10 text-white">
+                    <SelectContent className="bg-white border-slate-200 text-slate-950">
                       {buyerInfo.city && [...(locationData[buyerInfo.city] || [])]
                         .sort((a, b) => a.localeCompare(b))
                         .map((area) => (
-                          <SelectItem key={area} value={area} className="text-white hover:bg-white/5 focus:bg-white/10">
+                          <SelectItem key={area} value={area} className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
                             {area}
                           </SelectItem>
                         ))}
@@ -411,7 +411,7 @@ export function BuyerInfoModal({
               </Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                  <Lock className="h-4 w-4 text-[#555555]" />
+                  <Lock className="h-4 w-4 text-slate-400" />
                 </div>
                 <Input
                   id="password"
@@ -425,7 +425,7 @@ export function BuyerInfoModal({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-950 transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -437,7 +437,7 @@ export function BuyerInfoModal({
 
               {/* Password Strength Checklist */}
               {buyerInfo.password && (
-                <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: "8+ chars", met: checkPasswordStrength(buyerInfo.password).minLength },
@@ -446,10 +446,10 @@ export function BuyerInfoModal({
                       { label: "Case Mix", met: checkPasswordStrength(buyerInfo.password).hasUpper && checkPasswordStrength(buyerInfo.password).hasLower },
                     ].map((req, index) => (
                       <div key={index} className="flex items-center space-x-2">
-                        <div className={`p-0.5 rounded-full ${req.met ? 'bg-green-500/20 text-green-400' : 'bg-white/5 text-[#555555]'}`}>
+                        <div className={`p-0.5 rounded-full ${req.met ? 'bg-green-500/20 text-green-400' : 'bg-slate-50 text-slate-400'}`}>
                           <CheckCircle2 className="h-3 w-3" />
                         </div>
-                        <span className={`text-[10px] uppercase font-black ${req.met ? 'text-green-400' : 'text-[#555555]'}`}>
+                        <span className={`text-[10px] uppercase font-black ${req.met ? 'text-green-400' : 'text-slate-400'}`}>
                           {req.label}
                         </span>
                       </div>
@@ -470,7 +470,7 @@ export function BuyerInfoModal({
               </Label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none z-10">
-                  <Lock className="h-4 w-4 text-[#555555]" />
+                  <Lock className="h-4 w-4 text-slate-400" />
                 </div>
                 <Input
                   id="confirmPassword"
@@ -484,7 +484,7 @@ export function BuyerInfoModal({
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555555] hover:text-white transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-950 transition-colors"
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -505,14 +505,14 @@ export function BuyerInfoModal({
                 id="termsAccepted"
                 checked={termsAccepted}
                 onChange={(e) => setTermsAccepted(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-white/10 bg-white/5 text-yellow-400 focus:ring-yellow-400 accent-yellow-400"
+                className="mt-1 h-4 w-4 rounded border-slate-200 bg-slate-50 text-yellow-400 focus:ring-yellow-400 accent-yellow-400"
               />
-              <label htmlFor="termsAccepted" className="text-sm text-[#a1a1a1] cursor-pointer leading-relaxed">
+              <label htmlFor="termsAccepted" className="text-sm text-slate-500 cursor-pointer leading-relaxed">
                 I agree to the{' '}
                 <button
                   type="button"
                   onClick={() => setIsTermsModalOpen(true)}
-                  className="text-white underline font-medium hover:text-yellow-400 transition-colors"
+                  className="text-slate-950 underline font-medium hover:text-yellow-400 transition-colors"
                 >
                   Terms and Conditions
                 </button>
@@ -524,7 +524,7 @@ export function BuyerInfoModal({
             )}
           </div>
 
-          <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-white/5 shrink-0 bg-white/2 backdrop-blur-sm">
+          <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-slate-100 shrink-0 bg-slate-50/70 backdrop-blur-sm">
             <Button
               type="submit"
               disabled={isLoading || !termsAccepted}
@@ -546,7 +546,7 @@ export function BuyerInfoModal({
               variant="ghost"
               onClick={handleClose}
               disabled={isLoading}
-              className="w-full h-10 text-sm font-bold text-[#a1a1a1] hover:text-white hover:bg-white/5"
+              className="w-full h-10 text-sm font-bold text-slate-500 hover:text-slate-950 hover:bg-slate-50"
             >
               Cancel
             </Button>

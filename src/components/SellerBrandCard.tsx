@@ -162,12 +162,12 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
 
     return (
         <article className={cn(
-            "group relative overflow-hidden rounded-2xl border bg-[#111111] p-3 shadow-sm transition-colors duration-200 hover:bg-[#151515]",
+            "group relative overflow-hidden rounded-2xl border bg-white p-3 shadow-sm transition-colors duration-200 hover:bg-slate-50",
             className
         )}
             style={{
                 borderColor: palette.border,
-                boxShadow: `0 16px 40px ${palette.accentSoft}`
+                boxShadow: `0 16px 40px rgba(15,23,42,0.06), 0 0 24px ${palette.accentSoft}`
             }}
         >
             <div className="flex items-start gap-3">
@@ -195,7 +195,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
 
                 <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
-                        <h3 className="truncate text-sm font-black tracking-tight text-white" title={shopName}>
+                        <h3 className="truncate text-sm font-black tracking-tight text-slate-950" title={shopName}>
                             {shopName}
                         </h3>
                         <span
@@ -213,32 +213,32 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                         </span>
                     </div>
                     {seller.bio ? (
-                        <p className="mt-1 max-h-10 overflow-hidden text-[11px] leading-5 text-white/55">
+                        <p className="mt-1 max-h-10 overflow-hidden text-[11px] leading-5 text-slate-600">
                             {seller.bio}
                         </p>
                     ) : (
-                        <p className="mt-1 text-[11px] leading-5 text-white/35">Business profile</p>
+                        <p className="mt-1 text-[11px] leading-5 text-slate-400">Business profile</p>
                     )}
                 </div>
             </div>
 
             <div className="mt-3 grid grid-cols-3 gap-1.5">
-                <div className="rounded-xl bg-white/[0.04] px-2 py-2 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/45">
+                <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
                         <Users className="h-3 w-3" />
                         <span className="text-[9px] font-semibold uppercase tracking-wide">Clients</span>
                     </div>
                     <p className="text-sm font-black tabular-nums" style={{ color: palette.accent }}>{clientCount}</p>
                 </div>
-                <div className="rounded-xl bg-white/[0.04] px-2 py-2 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/45">
+                <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
                         <Heart className="h-3 w-3" />
                         <span className="text-[9px] font-semibold uppercase tracking-wide">Saved</span>
                     </div>
                     <p className="text-sm font-black tabular-nums" style={{ color: palette.accent }}>{wishlistCount}</p>
                 </div>
-                <div className="rounded-xl bg-white/[0.04] px-2 py-2 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/45">
+                <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
                         <MousePointerClick className="h-3 w-3" />
                         <span className="text-[9px] font-semibold uppercase tracking-wide">Clicks</span>
                     </div>

@@ -618,15 +618,15 @@ export default function SellerOrdersSection() {
 
             {/* Ready for Pickup Confirmation Dialog */}
             < Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog} >
-                <DialogContent className="sm:max-w-md bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10 shadow-xl">
+                <DialogContent className="sm:max-w-md bg-white backdrop-blur-[12px] border border-slate-200 shadow-xl text-slate-950">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-slate-950">
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center">
-                                <Truck className="h-4 w-4 text-white" />
+                                <Truck className="h-4 w-4 text-blue-600" />
                             </div>
                             Confirm Package Drop-off
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-gray-300 leading-relaxed">
+                        <DialogDescription className="text-sm text-slate-600 leading-relaxed">
                             Have you dropped off the package at the specified location?
                         </DialogDescription>
                     </DialogHeader>
@@ -634,11 +634,11 @@ export default function SellerOrdersSection() {
                     <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-4 my-4">
                         <div className="flex items-start gap-3">
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                <Package className="h-4 w-4 text-white" />
+                                <Package className="h-4 w-4 text-blue-600" />
                             </div>
                             <div className="text-sm">
-                                <p className="font-semibold text-blue-100 mb-1">Drop-off Location:</p>
-                                <p className="text-blue-200/80">
+                                <p className="font-semibold text-blue-900 mb-1">Drop-off Location:</p>
+                                <p className="text-blue-700">
                                     <strong>Dynamic Mall</strong><br />
                                     Along Tomboya Street<br />
                                     Shop Number: <strong>SL 32</strong>
@@ -648,7 +648,7 @@ export default function SellerOrdersSection() {
                     </div>
 
                     <div className="bg-yellow-500/10 border border-yellow-400/20 rounded-xl p-3 mb-4">
-                        <p className="text-sm text-yellow-200 font-semibold">
+                        <p className="text-sm text-yellow-800 font-semibold">
                             ⚠️ Please confirm only after the package has been physically dropped off at the specified location.
                         </p>
                     </div>
@@ -658,7 +658,7 @@ export default function SellerOrdersSection() {
                             variant="outline"
                             onClick={() => setShowPickupDialog(false)}
                             disabled={isUpdating}
-                            className="w-full sm:w-auto bg-transparent border-white/10 text-gray-200 hover:bg-white/5 h-8 text-xs"
+                            className="w-full sm:w-auto bg-transparent border-slate-200 text-slate-600 hover:bg-slate-100 h-8 text-xs"
                         >
                             Cancel
                         </Button>
@@ -685,15 +685,15 @@ export default function SellerOrdersSection() {
 
             {/* Cancel Order Confirmation Dialog */}
             < Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog} >
-                <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10 shadow-xl">
+                <DialogContent className="sm:max-w-[425px] bg-white backdrop-blur-[12px] border border-slate-200 shadow-xl text-slate-950">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-slate-950">
                             <div className="w-8 h-8 bg-red-500/10 border border-red-400/20 rounded-full flex items-center justify-center">
-                                <XCircle className="h-4 w-4 text-white" />
+                                <XCircle className="h-4 w-4 text-red-600" />
                             </div>
                             Cancel Order
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-gray-300 leading-relaxed">
+                        <DialogDescription className="text-sm text-slate-600 leading-relaxed">
                             Are you sure you want to cancel this order?
                             <br /><br />
                             The buyer will receive a full refund to their account balance.
@@ -701,7 +701,7 @@ export default function SellerOrdersSection() {
                     </DialogHeader>
 
                     <div className="bg-red-500/10 border border-red-400/20 rounded-xl p-3 mb-4">
-                        <p className="text-sm text-red-200 font-semibold">
+                        <p className="text-sm text-red-800 font-semibold">
                             ⚠️ This action cannot be undone. The buyer will be notified of the cancellation.
                         </p>
                     </div>
@@ -711,7 +711,7 @@ export default function SellerOrdersSection() {
                             variant="outline"
                             onClick={() => setShowCancelDialog(false)}
                             disabled={isUpdating}
-                            className="bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
+                            className="bg-transparent border-slate-200 text-slate-600 hover:bg-slate-100"
                         >
                             No, Keep Order
                         </Button>

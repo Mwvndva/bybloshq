@@ -178,7 +178,7 @@ export default function LocationPicker({
                         type="text"
                         value={searchQuery}
                         onChange={handleSearchChange}
-                        className="pl-12 md:pl-12 h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                    className="pl-12 md:pl-12 h-11 bg-white border-slate-200 text-slate-950 placeholder:text-slate-400"
                         placeholder={placeholder}
                         autoComplete="off"
                     />
@@ -189,12 +189,12 @@ export default function LocationPicker({
                     )}
 
                     {showResults && searchResults.length > 0 && (
-                        <div className="absolute z-[1000] w-full mt-1 bg-[#1a1a1a] border border-white/10 rounded-md shadow-lg max-h-60 overflow-auto">
+                        <div className="absolute z-[1000] w-full mt-1 bg-white border border-slate-200 rounded-md shadow-lg max-h-60 overflow-auto">
                             {searchResults.map((result, index) => (
                                 <button
                                     key={index}
                                     type="button"
-                                    className="w-full text-left px-4 py-2 hover:bg-white/5 focus:bg-white/5 focus:outline-none border-b border-white/5 last:border-0 text-sm text-gray-200"
+                                    className="w-full text-left px-4 py-2 hover:bg-slate-50 focus:bg-slate-50 focus:outline-none border-b border-slate-100 last:border-0 text-sm text-slate-700"
                                     onClick={() => selectLocation(result)}
                                 >
                                     {result.display_name}
@@ -214,7 +214,7 @@ export default function LocationPicker({
                     type="text"
                     value={address}
                     onChange={handleManualAddressChange}
-                    className="h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
+                    className="h-11 bg-white border-slate-200 text-slate-950 placeholder:text-slate-400"
                     placeholder="e.g. Building Name, Floor, Office/House No"
                 />
             </div>
