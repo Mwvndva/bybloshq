@@ -139,7 +139,7 @@ export function SellerLogin() {
     >
       {/* Header */}
       <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between h-20">
             {/* Left: Back Button */}
             <div className="flex-1 flex items-center gap-2">
@@ -147,7 +147,7 @@ export function SellerLogin() {
                 variant="ghost"
                 size="sm"
                 onClick={() => navigate('/')}
-                className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
+                className="text-white hover:text-black hover:bg-yellow-400 transition-all duration-200 rounded-xl px-3 py-2 text-sm"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 <span className="hidden sm:inline">Back</span>
