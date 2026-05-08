@@ -106,8 +106,17 @@ export default async (app) => {
         },
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-        exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token'],
+        allowedHeaders: [
+            'Content-Type',
+            'Authorization',
+            'X-Requested-With',
+            'X-CSRF-Token',
+            'Idempotency-Key',
+            'X-Checkout-Token',
+            'X-Idempotency-Key',
+            'X-Request-Id'
+        ],
+        exposedHeaders: ['Authorization', 'X-Access-Token', 'X-Refresh-Token', 'X-Request-Id'],
         maxAge: 86400,
     };
 
@@ -142,14 +151,15 @@ export default async (app) => {
     });
 
     app.use('/api', limiter);
-    // Enable JSON body parsing with higher limits and raw body capture (CRITICAL FIX: HMAC-VERIFICATION)
+    // Enable JSON body parsing with raw body capture for HMAC verification.
+    // Large binary uploads must use upload endpoints, not base64 JSON bodies.
     app.use(express.json({
-        limit: '500mb',
+        limit: process.env.JSON_BODY_LIMIT || '10mb',
         verify: (req, res, buf) => {
             req.rawBody = buf;
         }
     }));
-    app.use(express.urlencoded({ extended: true, limit: '500mb' }));
+    app.use(express.urlencoded({ extended: true, limit: process.env.FORM_BODY_LIMIT || '2mb' }));
     app.use(cookieParser());
     app.use(xss());
     app.use(hpp());

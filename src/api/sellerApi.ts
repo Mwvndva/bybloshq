@@ -655,19 +655,22 @@ export const sellerApi = {
     amount: number;
     mpesaNumber: string;
     mpesaName: string;
+    idempotencyKey: string;
   }): Promise<WithdrawalRequest> {
     // FIX (Task 6): Validate amount to prevent invalid payout requests
     if (data.amount <= 0 || data.amount > 1_000_000) {
       throw new Error('Invalid withdrawal amount. Must be between 1 and 1,000,000.');
     }
 
-    // FIX (Task 6): Add idempotency key to prevent duplicate payout requests
-    // Format: withdrawal-{timestamp}-{random}
-    const idempotencyKey = `withdrawal-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+    if (!data.idempotencyKey) {
+      throw new Error('Withdrawal idempotency key is required.');
+    }
+
+    const { idempotencyKey, ...payload } = data;
 
     const response = await sellerApiInstance.post<{ data: WithdrawalRequest }>(
       '/sellers/withdrawal-request',
-      data,
+      payload,
       {
         headers: {
           'Idempotency-Key': idempotencyKey
@@ -791,21 +794,22 @@ export const sellerApi = {
 };
 
 export const withdrawalService = {
-  createRequest: async (data: { amount: string; mpesaNumber: string; mpesaName: string }) => {
+  createRequest: async (data: { amount: string; mpesaNumber: string; mpesaName: string; idempotencyKey: string }) => {
     const amount = parseFloat(data.amount);
-
-    // FIX (Task 6): Prevents duplicate payout requests via idempotency key
-    const idempotencyKey = `withdrawal-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
 
     if (isNaN(amount) || amount <= 0 || amount > 1_000_000) {
       throw new Error('Invalid withdrawal amount');
     }
 
+    if (!data.idempotencyKey) {
+      throw new Error('Withdrawal idempotency key is required.');
+    }
+
     const response = await sellerApiInstance.post('/sellers/withdrawal-request',
-      { ...data, amount },
+      { mpesaNumber: data.mpesaNumber, mpesaName: data.mpesaName, amount },
       {
         headers: {
-          'Idempotency-Key': idempotencyKey
+          'Idempotency-Key': data.idempotencyKey
         }
       }
     );

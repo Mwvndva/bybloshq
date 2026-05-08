@@ -133,11 +133,47 @@ interface GlobalAuthContextType {
     updateProfile: (updates: Partial<UserProfile>, role: UserRole) => Promise<void>;
 }
 
+interface BuyerAuthContextType {
+    user: BuyerProfile | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    login: (email: string, password: string) => Promise<void>;
+    register: (data: BuyerRegistrationData) => Promise<{ status: string; message?: string } | void>;
+    logout: () => void;
+    forgotPassword: (email: string) => Promise<boolean>;
+    resetPassword: (token: string, newPassword: string, email: string) => Promise<void>;
+    loginWithToken: (token: string) => Promise<void>;
+    updateBuyerProfile: (updates: Partial<BuyerProfile>) => Promise<void>;
+}
+
+interface SellerAuthContextType {
+    seller: SellerProfile | null;
+    isAuthenticated: boolean;
+    isLoading: boolean;
+    login: (credentials: { email: string; password: string }) => Promise<void>;
+    register: (data: SellerRegistrationData) => Promise<{ status: string; message?: string } | void>;
+    logout: () => void;
+    forgotPassword: (email: string) => Promise<boolean>;
+    resetPassword: (token: string, newPassword: string, email: string) => Promise<void>;
+    updateSellerProfile: (updates: Partial<SellerProfile>) => Promise<void>;
+}
+
+interface AdminAuthContextType {
+    isAuthenticated: boolean;
+    loading: boolean;
+    error: null;
+    login: (email: string, password: string) => Promise<void>;
+    logout: () => void;
+}
+
 // ============================================================================
 // CONTEXT CREATION
 // ============================================================================
 
 const GlobalAuthContext = createContext<GlobalAuthContextType | undefined>(undefined);
+const BuyerAuthContext = createContext<BuyerAuthContextType | undefined>(undefined);
+const SellerAuthContext = createContext<SellerAuthContextType | undefined>(undefined);
+const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 // ============================================================================
 // PROVIDER COMPONENT
@@ -219,13 +255,14 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
     const initialized = useRef(false);
     // FIX (Task 8): 5-minute TTL for auth re-validation to prevent stale sessions and reduce API load
     const lastCheckRef = useRef<number>(0);
+    const lastRouteRoleRef = useRef<UserRole | null>(null);
     const AUTH_TTL = 5 * 60 * 1000; // 5 minutes
 
     const checkAuth = useCallback(async (force = false) => {
         // If already checking, don't start another one unless forced
         if (authCheckInProgress.current && !force) return;
 
-        const currentPath = globalThis.location.pathname;
+        const currentPath = location.pathname;
         const currentRole = getRoleFromRoute(currentPath);
 
         // Optimization (Task 8): 5-minute TTL for auth re-validation
@@ -259,14 +296,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             let profileData;
 
             if (currentRole === 'admin') {
-                // Admin uses different auth check
-                const isAuth = adminApi.isAuthenticated();
-                if (!isAuth) {
-                    setUser(null);
-                    localStorage.removeItem(sessionKey);
-                    return;
-                }
-                // Fetch actual admin profile
+                // Backend /admin/me is the source of truth. localStorage markers are only UX hints.
                 profileData = await adminApi.getMe();
                 if (!profileData) {
                     setUser(null);
@@ -302,14 +332,44 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             setInitializing(false); // Mark first-load complete — never goes true again
             authCheckInProgress.current = false;
         }
-    }, [user]); // Add user to deps to allow the optimization check
+    }, [location.pathname, user]); // Add user to deps to allow the optimization check
 
     useEffect(() => {
-        if (!initialized.current) {
-            checkAuth();
+        const currentRole = getRoleFromRoute(location.pathname);
+        const routeRoleChanged = lastRouteRoleRef.current !== currentRole;
+        const isStale = Date.now() - lastCheckRef.current > AUTH_TTL;
+        lastRouteRoleRef.current = currentRole;
+
+        if (!initialized.current || routeRoleChanged || isStale) {
             initialized.current = true;
+            checkAuth(routeRoleChanged || isStale);
         }
-    }, [checkAuth]);
+    }, [location.pathname, checkAuth]);
+
+    useEffect(() => {
+        const revalidateOnResume = () => {
+            const currentRole = getRoleFromRoute(location.pathname);
+            if (!currentRole || isPublicRoute(location.pathname)) return;
+            const isStale = Date.now() - lastCheckRef.current > AUTH_TTL;
+            if (isStale) {
+                checkAuth(true);
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                revalidateOnResume();
+            }
+        };
+
+        window.addEventListener('focus', revalidateOnResume);
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            window.removeEventListener('focus', revalidateOnResume);
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [location.pathname, checkAuth]);
 
     // ============================================================================
     // LOGIN
@@ -403,15 +463,13 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             const success = response?.status === 'success' || !!response?.data?.token;
 
             if (success) {
-                const adminId = response?.data?.user?.id || response?.data?.id || response?.data?.admin?.id || 1;
+                const adminProfile = await adminApi.getMe();
+                if (!adminProfile?.id) {
+                    throw new Error('Admin profile could not be verified after login');
+                }
                 setUser({
                     role: 'admin',
-                    profile: {
-                        id: adminId,
-                        email: email,
-                        is_verified: true,
-                        createdAt: new Date().toISOString()
-                    },
+                    profile: adminProfile,
                     isAuthenticated: true
                 });
 
@@ -516,7 +574,11 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         const role = user.role;
 
         try {
-            const logoutUrl = role === 'seller' ? '/sellers/logout' : '/buyers/logout';
+            const logoutUrl = role === 'seller'
+                ? '/sellers/logout'
+                : role === 'admin'
+                    ? '/admin/logout'
+                    : '/buyers/logout';
             await apiClient.post(logoutUrl);
         } catch (error) {
             // Fail silently
@@ -545,9 +607,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             let profileData;
 
             if (newRole === 'admin') {
-                // P1-8 FIX: Fetch real admin profile instead of hardcoded stub.
-                const isAuth = adminApi.isAuthenticated();
-                if (!isAuth) throw new Error('Not authenticated as admin');
+                // Fetch real admin profile from the backend instead of trusting localStorage.
                 profileData = await adminApi.getMe();
                 if (!profileData) throw new Error('Failed to fetch admin profile');
             } else {
@@ -641,8 +701,7 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
             let profileData;
 
             if (role === 'admin') {
-                const isAuth = adminApi.isAuthenticated();
-                if (!isAuth) throw new Error('Not authenticated');
+                // Backend /admin/me is authoritative for admin auth.
                 profileData = await adminApi.getMe();
                 if (!profileData) throw new Error('Failed to fetch admin profile');
             } else {
@@ -709,6 +768,39 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
         updateProfile,
     }), [user, isLoading, login, loginWithToken, loginAdmin, register, logout, refreshRole, forgotPassword, resetPassword, getProfile, updateProfile]);
 
+    const buyerAuthValue: BuyerAuthContextType = useMemo(() => ({
+        user: user?.role === 'buyer' ? user.profile as BuyerProfile : null,
+        isAuthenticated: Boolean(user?.isAuthenticated && user.role === 'buyer'),
+        isLoading,
+        login: (email: string, password: string) => login(email, password, 'buyer'),
+        register: (data: BuyerRegistrationData) => register(data, 'buyer'),
+        logout,
+        forgotPassword: (email: string) => forgotPassword(email, 'buyer'),
+        resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'buyer'),
+        loginWithToken: (token: string) => loginWithToken(token, 'buyer'),
+        updateBuyerProfile: (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer'),
+    }), [user, isLoading, login, register, logout, forgotPassword, resetPassword, loginWithToken, updateProfile]);
+
+    const sellerAuthValue: SellerAuthContextType = useMemo(() => ({
+        seller: user?.role === 'seller' ? user.profile as SellerProfile : null,
+        isAuthenticated: Boolean(user?.isAuthenticated && user.role === 'seller'),
+        isLoading,
+        login: (credentials: { email: string; password: string }) => login(credentials.email, credentials.password, 'seller'),
+        register: (data: SellerRegistrationData) => register(data, 'seller'),
+        logout,
+        forgotPassword: (email: string) => forgotPassword(email, 'seller'),
+        resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'seller'),
+        updateSellerProfile: (updates: Partial<SellerProfile>) => updateProfile(updates, 'seller'),
+    }), [user, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile]);
+
+    const adminAuthValue: AdminAuthContextType = useMemo(() => ({
+        isAuthenticated: Boolean(user?.isAuthenticated && user.role === 'admin'),
+        loading: isLoading,
+        error: null,
+        login: loginAdmin,
+        logout,
+    }), [user, isLoading, loginAdmin, logout]);
+
     // ============================================================================
     // RENDER GATING (Prevents Flickering)
     // ============================================================================
@@ -721,7 +813,13 @@ export function GlobalAuthProvider({ children }: { children: ReactNode }) {
 
     return (
         <GlobalAuthContext.Provider value={value}>
-            {children}
+            <BuyerAuthContext.Provider value={buyerAuthValue}>
+                <SellerAuthContext.Provider value={sellerAuthValue}>
+                    <AdminAuthContext.Provider value={adminAuthValue}>
+                        {children}
+                    </AdminAuthContext.Provider>
+                </SellerAuthContext.Provider>
+            </BuyerAuthContext.Provider>
         </GlobalAuthContext.Provider>
     );
 }
@@ -743,46 +841,25 @@ export const useGlobalAuth = (): GlobalAuthContextType => {
 // ============================================================================
 
 export const useBuyerAuth = () => {
-    const { user, isAuthenticated, isLoading, login, loginWithToken, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
-
-    return useMemo(() => ({
-        user: user?.role === 'buyer' ? user.profile as BuyerProfile : null,
-        isAuthenticated: isAuthenticated && user?.role === 'buyer',
-        isLoading,
-        login: (email: string, password: string) => login(email, password, 'buyer'),
-        register: (data: BuyerRegistrationData) => register(data, 'buyer'),
-        logout,
-        forgotPassword: (email: string) => forgotPassword(email, 'buyer'),
-        resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'buyer'),
-        loginWithToken: (token: string) => loginWithToken(token, 'buyer'),
-        updateBuyerProfile: (updates: Partial<BuyerProfile>) => updateProfile(updates, 'buyer'),
-    }), [user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, loginWithToken, updateProfile]);
+    const context = useContext(BuyerAuthContext);
+    if (context === undefined) {
+        throw new Error('useBuyerAuth must be used within a GlobalAuthProvider');
+    }
+    return context;
 };
 
 export const useSellerAuth = () => {
-    const { user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile } = useGlobalAuth();
-
-    return useMemo(() => ({
-        seller: user?.role === 'seller' ? user.profile as SellerProfile : null,
-        isAuthenticated: isAuthenticated && user?.role === 'seller',
-        isLoading,
-        login: (credentials: { email: string; password: string }) => login(credentials.email, credentials.password, 'seller'),
-        register: (data: SellerRegistrationData) => register(data, 'seller'),
-        logout,
-        forgotPassword: (email: string) => forgotPassword(email, 'seller'),
-        resetPassword: (token: string, newPassword: string, email: string) => resetPassword(token, newPassword, email, 'seller'),
-        updateSellerProfile: (updates: Partial<SellerProfile>) => updateProfile(updates, 'seller'),
-    }), [user, isAuthenticated, isLoading, login, register, logout, forgotPassword, resetPassword, updateProfile]);
+    const context = useContext(SellerAuthContext);
+    if (context === undefined) {
+        throw new Error('useSellerAuth must be used within a GlobalAuthProvider');
+    }
+    return context;
 };
 
 export const useAdminAuth = () => {
-    const { user, isAuthenticated, isLoading, loginAdmin, logout } = useGlobalAuth();
-
-    return useMemo(() => ({
-        isAuthenticated: isAuthenticated && user?.role === 'admin',
-        loading: isLoading,
-        error: null,
-        login: loginAdmin,
-        logout,
-    }), [user, isAuthenticated, isLoading, loginAdmin, logout]);
+    const context = useContext(AdminAuthContext);
+    if (context === undefined) {
+        throw new Error('useAdminAuth must be used within a GlobalAuthProvider');
+    }
+    return context;
 };

@@ -153,6 +153,9 @@ class PayoutService {
             const validatedAmount = this.validateAmount(amount);
             const normalizedPhone = this.normalizePhoneForPayout(phone_number);
             const callbackUrl = callback_url || this.getCallbackUrl();
+            const payoutIdempotencyKey = typeof idempotency_key === 'string' && idempotency_key.trim()
+                ? idempotency_key.trim().slice(0, 120)
+                : `PO-${crypto.randomUUID()}`;
 
             logger.info('[PAYD-PAYOUT] Initiating payout', {
                 phone: normalizedPhone,
@@ -189,7 +192,7 @@ class PayoutService {
                 callback_url: callbackUrl,
                 channel: 'MPESA',
                 currency: 'KES',
-                client_reference: params.idempotency_key // Use our key as Payd's reference
+                client_reference: payoutIdempotencyKey
             };
 
             // ============================================================
@@ -453,15 +456,15 @@ class PayoutService {
      * @returns {Promise<number|null>} newBalance
      */
     /**
-     * Verify Payd webhook signature (CRITICAL FIX: WEBHOOK-SECURITY)
-     * Verify Payd Webhook Signature (CRITICAL FIX: DETE-HMAC-VERIFICATION)
+     * Verify Payd webhook signature.
+     * Kept for compatibility; active callback routes use paydWebhookSecurity middleware.
      */
     static verifyWebhookSignature(signature, rawBody) {
         if (!signature || !rawBody) return false;
 
-        const secret = process.env.PAYD_WEBHOOK_SECRET;
+        const secret = process.env.PAYD_WEBHOOK_SECRET || process.env.PAYD_CALLBACK_SECRET;
         if (!secret) {
-            logger.warn('PAYD_WEBHOOK_SECRET is not set. Webhook verification skipped (UNSAFE).');
+            logger.error('PAYD_WEBHOOK_SECRET/PAYD_CALLBACK_SECRET is not set. Webhook verification fails closed.');
             return false;
         }
 
@@ -470,8 +473,9 @@ class PayoutService {
             const digest = hmac.update(rawBody).digest('hex');
 
             // Use timingSafeEqual to prevent timing attacks
-            const signatureBuffer = Buffer.from(signature, 'utf8');
-            const digestBuffer = Buffer.from(digest, 'utf8');
+            const normalizedSignature = String(signature).replace(/^sha256=/i, '').trim();
+            const signatureBuffer = Buffer.from(normalizedSignature, 'hex');
+            const digestBuffer = Buffer.from(digest, 'hex');
 
             if (signatureBuffer.length !== digestBuffer.length) {
                 return false;

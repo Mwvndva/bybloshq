@@ -1,23 +1,19 @@
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { ProductCard } from './ProductCard';
 import { Aesthetic, Seller, Product } from '@/types';
 import { publicApiService } from '@/api/publicApi';
 import { AestheticWithNone, ProductGridProps } from '@/types/components';
 
+type PaginationState = {
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+};
+
 const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locationArea, priceMin, priceMax }: ProductGridProps) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [sellers, setSellers] = useState<Record<string, Seller>>({});
-  const [cacheKey, setCacheKey] = useState('');
-  const requestCache = useMemo(() => new Map<string, { data: Product[]; timestamp: number }>(), []);
-  const CACHE_DURATION = 60000; // 60 seconds cache
-
-  const getCacheKey = useCallback((params: any) => {
-    return JSON.stringify(params);
-  }, []);
-
   // Transform product data to ensure it matches our Product interface
   const transformProduct = (product: any): Product | null => {
     // Relaxed validation: Allow missing images (will use placeholder)
@@ -72,100 +68,47 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
     return transformedProduct;
   };
 
-  // Optimized product fetching logic with caching
-  const fetchProducts = useCallback(async (signal?: AbortSignal) => {
-    const params = {
-      locationCity,
-      locationArea,
-      selectedAesthetic
-    };
-    const key = getCacheKey(params);
-    setCacheKey(key);
-
-    // Check cache first
-    const cached = requestCache.get(key);
-    if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
-      setProducts(cached.data);
-      setLoading(false);
-      return;
+  const queryParams = useMemo(() => {
+    const params: any = { page: 1, limit: 50 };
+    if (locationCity) {
+      params.city = locationCity;
+      if (locationArea) params.location = locationArea;
     }
+    if (selectedAesthetic && selectedAesthetic !== 'all') {
+      params.aesthetic = selectedAesthetic;
+    }
+    return params;
+  }, [locationCity, locationArea, selectedAesthetic]);
 
-    try {
-      setLoading(true);
-      setError('');
-
-      // Build query parameters
-      const queryParams: any = {};
-
-      if (locationCity) {
-        queryParams.city = locationCity;
-
-        if (locationArea) {
-          queryParams.location = locationArea;
-        }
-      }
-
-      // Fetch products from the API
-      let fetchedProducts = await publicApiService.getProducts(queryParams);
-
-      // Check if the component was unmounted or a new request was started
-      if (signal?.aborted) return;
-
-      // Filter by aesthetic if one is selected
-      if (selectedAesthetic && selectedAesthetic !== 'all') {
-        fetchedProducts = fetchedProducts.filter(
-          (product: any) => product.aesthetic === selectedAesthetic
-        );
-      }
-
-      // Transform and set products
-      const transformedProducts = fetchedProducts
+  const productsQuery = useQuery({
+    queryKey: ['public-products', queryParams],
+    queryFn: async () => {
+      const result = await publicApiService.getProductsPage(queryParams);
+      const transformedProducts = result.products
         .map(transformProduct)
         .filter((p): p is Product => p !== null);
-
-      // Extract sellers from the products that have them
       const sellersFromProducts = transformedProducts.reduce<Record<string, Seller>>((acc, product) => {
-        if (product.seller) {
-          acc[product.seller.id] = product.seller;
-        }
+        if (product.seller) acc[product.seller.id] = product.seller;
         return acc;
       }, {});
 
-      // Set the products
-      setProducts(transformedProducts);
+      return {
+        products: transformedProducts,
+        sellers: sellersFromProducts,
+        pagination: result.pagination
+      };
+    },
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    retry: 1,
+    placeholderData: (previousData) => previousData
+  });
 
-      // Use sellers from products if available
-      setSellers(sellersFromProducts);
-
-      // Cache the result
-      requestCache.set(key, { data: transformedProducts, timestamp: Date.now() });
-
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
-      console.error('Failed to fetch products:', err);
-      setError('Failed to load products. Please try again later.');
-      setProducts([]);
-      setSellers({});
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedAesthetic, locationCity, locationArea, requestCache, getCacheKey]);
-
-  // Fetch products when any filter changes - no debouncing for faster response
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetchProducts(controller.signal).catch(err => {
-      if (err.name === 'AbortError') return;
-      console.error('Error in fetchProducts:', err);
-      setError('Failed to load products. Please try again later.');
-      setProducts([]);
-      setSellers({});
-      setLoading(false);
-    });
-
-    return () => controller.abort();
-  }, [fetchProducts]);
+  const products = productsQuery.data?.products || [];
+  const sellers = productsQuery.data?.sellers || {};
+  const pagination: PaginationState = productsQuery.data?.pagination || { total: 0, page: 1, pageSize: 50, hasMore: false };
+  const loading = productsQuery.isLoading;
+  const error = productsQuery.isError ? 'Failed to load products. Please try again later.' : '';
 
   // Memoized filtered products for better performance
   const filteredProducts = useMemo(() => {
@@ -316,7 +259,7 @@ const ProductGrid = ({ selectedAesthetic, searchQuery = '', locationCity, locati
             }
           </h2>
           <p className="text-gray-600 text-lg font-medium">
-            {filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'} found
+            Showing {filteredProducts.length} of {pagination.total || filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'}
             {searchQuery && ` for "${searchQuery}"`}
           </p>
         </div>

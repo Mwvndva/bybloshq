@@ -1,8 +1,7 @@
 import { pool } from '../shared/db/database.js';
 import { AppError } from '../shared/utils/errorHandler.js';
-import whatsappService from '../services/whatsapp.service.js';
-import Buyer from '../models/buyer.model.js';
 import logger from '../shared/utils/logger.js';
+import eventBus, { AppEvents } from '../events/eventBus.js';
 
 /**
  * Get all refund requests (Admin only)
@@ -141,7 +140,7 @@ export const confirmRefundRequest = async (req, res, next) => {
     // Lock the buyer row SEPARATELY to serialize concurrent refund processing
     // for the same buyer across different refund requests
     const buyerResult = await client.query(
-      `SELECT id, refunds FROM buyers WHERE id = $1 FOR UPDATE`,
+      `SELECT id, refunds, full_name, whatsapp_number FROM buyers WHERE id = $1 FOR UPDATE`,
       [request.buyer_id]
     );
 
@@ -187,16 +186,16 @@ export const confirmRefundRequest = async (req, res, next) => {
 
     logger.info(`Refund request ${id} confirmed. Deducted KSh ${requestAmount} from buyer ${request.buyer_id}`);
 
-    // Send WhatsApp notification to buyer
-    try {
-      const buyer = await Buyer.findById(request.buyer_id);
-      if (buyer) {
-        await whatsappService.sendRefundApprovedNotification(buyer, requestAmount);
-      }
-    } catch (error) {
-      logger.error('[REFUND] WhatsApp notification failed (refund already processed):', error.message);
-      // Don't fail the request if notification fails
-    }
+    eventBus.emit(AppEvents.REFUND.APPROVED, {
+      eventId: `refund.approved:${id}`,
+      refund: {
+        ...request,
+        id,
+        amount: requestAmount,
+        status: 'completed'
+      },
+      buyer
+    });
 
     res.status(200).json({
       status: 'success',
@@ -228,7 +227,10 @@ export const rejectRefundRequest = async (req, res, next) => {
 
     // Fetch all needed data in ONE query before updating
     const checkResult = await pool.query(
-      `SELECT status, buyer_id, amount FROM refund_requests WHERE id = $1`,
+      `SELECT rr.status, rr.buyer_id, rr.amount, b.full_name, b.whatsapp_number
+       FROM refund_requests rr
+       JOIN buyers b ON b.id = rr.buyer_id
+       WHERE rr.id = $1`,
       [id]
     );
 
@@ -236,7 +238,7 @@ export const rejectRefundRequest = async (req, res, next) => {
       return next(new AppError('Refund request not found', 404));
     }
 
-    const { status: currentStatus, buyer_id, amount } = checkResult.rows[0];
+    const { status: currentStatus, buyer_id, amount, full_name, whatsapp_number } = checkResult.rows[0];
 
     if (currentStatus !== 'pending') {
       return next(new AppError(`Refund request is already ${currentStatus}`, 400));
@@ -259,16 +261,21 @@ export const rejectRefundRequest = async (req, res, next) => {
 
     logger.info(`Refund request ${id} rejected`);
 
-    // Get buyer details and send WhatsApp notification
-    try {
-      const buyer = await Buyer.findById(buyer_id);
-      if (buyer) {
-        await whatsappService.sendRefundRejectedNotification(buyer, amount, adminNotes);
+    eventBus.emit(AppEvents.REFUND.REJECTED, {
+      eventId: `refund.rejected:${id}`,
+      refund: {
+        id,
+        buyer_id,
+        amount,
+        status: 'rejected',
+        adminNotes
+      },
+      buyer: {
+        id: buyer_id,
+        full_name,
+        whatsapp_number
       }
-    } catch (error) {
-      logger.error('[REFUND] WhatsApp rejection notification failed:', error.message);
-      // Don't fail the request if notification fails
-    }
+    });
 
     res.status(200).json({
       status: 'success',

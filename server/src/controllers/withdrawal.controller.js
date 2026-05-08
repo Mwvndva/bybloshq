@@ -51,6 +51,10 @@ export const createWithdrawal = async (req, res, next) => {
     const { amount, mpesaNumber, mpesaName } = req.body;
     try {
         const normalizedPhone = mpesaNumber; // Pass through to service for authoritative normalization
+        const idempotencyKey = req.headers['idempotency-key'];
+        if (typeof idempotencyKey !== 'string' || !idempotencyKey.trim()) {
+            return next(new AppError('Idempotency-Key header is required', 400));
+        }
 
         const request = await WithdrawalService.createWithdrawalRequest({
             entityId: sellerId,
@@ -58,6 +62,7 @@ export const createWithdrawal = async (req, res, next) => {
             amount: parseFloat(amount),
             mpesaNumber: normalizedPhone,
             mpesaName,
+            idempotencyKey,
         });
         logger.info(`[WithdrawalCtrl] Request ${request.id} created for seller ${sellerId}`);
         return res.status(201).json({

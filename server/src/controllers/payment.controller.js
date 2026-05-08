@@ -6,7 +6,6 @@
  */
 import CorePaymentService from '../core/CorePaymentService.js';
 import logger from '../shared/utils/logger.js';
-import { pool } from '../shared/db/database.js';
 import { normalizeOrderInput } from '../shared/utils/order.utils.js';
 import paymentService from '../services/payment.service.js';
 
@@ -24,7 +23,10 @@ class PaymentController {
     });
 
     try {
-      await CorePaymentService.handlePaydWebhook(webhookData);
+      await CorePaymentService.handlePaydWebhook(webhookData, {
+        signature: req.headers['x-payd-signature'],
+        rawBody: req.rawBody
+      });
       logger.info('[PaymentController] Payd webhook processed successfully', {
         transaction_reference: webhookData.transaction_reference
       });
@@ -34,7 +36,20 @@ class PaymentController {
         transaction_reference: webhookData.transaction_reference,
         error: error.message
       });
-      return res.status(500).json({ error: 'Webhook processing failed' });
+      if (
+        error.message?.includes('missing valid amount')
+        || error.message?.includes('Amount mismatch')
+        || error.message?.includes('amount mismatch')
+      ) {
+        return res.status(200).json({
+          received: true,
+          processed: false,
+          reason: 'verified_provider_payload_rejected'
+        });
+      }
+
+      const statusCode = error.message?.includes('signature') ? 401 : 500;
+      return res.status(statusCode).json({ error: 'Webhook processing failed' });
     }
   }
 
@@ -44,6 +59,21 @@ class PaymentController {
   async initiateProductPayment(req, res) {
     try {
       logger.info('[PaymentController] Incoming Payment Request: ' + JSON.stringify(req.body));
+      const checkoutToken = req.headers['idempotency-key']
+        || req.headers['x-checkout-token']
+        || req.body.checkout_token
+        || req.body.clientCheckoutToken
+        || req.body.checkoutAttemptId
+        || req.body.idempotencyKey
+        || req.body.metadata?.client_checkout_token;
+
+      if (typeof checkoutToken !== 'string' || !checkoutToken.trim()) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Checkout idempotency token is required'
+        });
+      }
+
       const normalizedOrder = await normalizeOrderInput(req);
 
       logger.info('[PaymentController] Product payment initiation', {
@@ -61,20 +91,6 @@ class PaymentController {
       });
     } catch (error) {
       logger.error('[PaymentController] Product payment initiation failed:', error);
-
-      if (error.orderId) {
-        await pool.query(
-          `UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1`,
-          [error.orderId]
-        ).catch(e => logger.error('[PaymentController] Failed to mark order as failed:', e));
-      }
-
-      if (error.paymentId) {
-        await pool.query(
-          `UPDATE payments SET status = 'failed' WHERE id = $1`,
-          [error.paymentId]
-        ).catch(e => logger.error('[PaymentController] Failed to mark payment as failed:', e));
-      }
 
       res.status(500).json({
         status: 'error',

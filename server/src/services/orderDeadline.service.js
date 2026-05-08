@@ -3,8 +3,9 @@
 
 import { pool } from '../shared/db/database.js';
 import logger from '../shared/utils/logger.js';
-import whatsappService from './whatsapp.service.js';
+import eventBus, { AppEvents } from '../events/eventBus.js';
 import escrowManager from './EscrowManager.js';
+import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
 
 class OrderDeadlineService {
     /**
@@ -173,14 +174,12 @@ class OrderDeadlineService {
     async checkExpiredReservations() {
         try {
             const result = await pool.query(
-                `SELECT po.id, po.order_number, po.status, po.order_type,
-                        json_agg(json_build_object('productId', oi.product_id, 'quantity', oi.quantity, 'trackInventory', (p.track_inventory = true))) as items
+                `SELECT po.id, po.order_number
                  FROM product_orders po
-                 JOIN order_items oi ON po.id = oi.order_id
-                 JOIN products p ON oi.product_id = p.id
                  WHERE po.status IN ('RESERVED', 'HELD')
                    AND po.reservation_expires_at < NOW()
-                 GROUP BY po.id`
+                 ORDER BY po.reservation_expires_at ASC
+                 LIMIT 100`
             );
 
             const expiredOrders = result.rows;
@@ -193,40 +192,30 @@ class OrderDeadlineService {
                 try {
                     await client.query('BEGIN');
 
-                    // 1. Release Inventory (CRITICAL FIX: ATOMIC-RECOVERY)
-                    for (const item of order.items) {
-                        if (item.trackInventory) {
-                            await client.query(
-                                `UPDATE products 
-                                 SET quantity = quantity + $1,
-                                     reserved_quantity = GREATEST(0, reserved_quantity - $1),
-                                     updated_at = NOW()
-                                 WHERE id = $2`,
-                                [item.quantity, item.productId]
-                            );
-                        }
+                    const { rows: lockedOrders } = await client.query(
+                        `SELECT id, order_number
+                         FROM product_orders
+                         WHERE id = $1
+                           AND status IN ('RESERVED', 'HELD')
+                           AND reservation_expires_at < NOW()
+                         FOR UPDATE SKIP LOCKED`,
+                        [order.id]
+                    );
+
+                    if (lockedOrders.length === 0) {
+                        await client.query('ROLLBACK');
+                        continue;
                     }
 
-                    // 2. Release Service Slots (if any)
-                    if (order.status === 'HELD' || order.order_type === 'SERVICE') {
-                        await client.query(
-                            `UPDATE service_slots 
-                             SET status = 'AVAILABLE',
-                                 reserved_by_order_id = NULL,
-                                 expires_at = NULL,
-                                 updated_at = NOW()
-                             WHERE reserved_by_order_id = $1`,
-                            [order.id]
-                        );
-                    }
+                    await releaseOrderReservations(client, order.id);
 
-                    // 3. Update Order Status
                     await client.query(
                         `UPDATE product_orders 
                          SET status = 'EXPIRED',
                              metadata = COALESCE(metadata, '{}'::jsonb) || '{"expiry_reason": "Payment window exceeded"}'::jsonb,
                              updated_at = NOW()
-                         WHERE id = $1`,
+                         WHERE id = $1
+                           AND status IN ('RESERVED', 'HELD')`,
                         [order.id]
                     );
 
@@ -261,24 +250,42 @@ class OrderDeadlineService {
         try {
             await client.query('BEGIN');
 
-            // Update order status
+            const { rows: lockedOrders } = await client.query(
+                `SELECT id, order_number, buyer_id, total_amount, status, auto_cancelled_reason
+                 FROM product_orders
+                 WHERE id = $1
+                   AND auto_cancelled_reason IS NULL
+                   AND status IN ('DELIVERY_PENDING', 'DELIVERY_COMPLETE')
+                 FOR UPDATE SKIP LOCKED`,
+                [order.id]
+            );
+
+            if (lockedOrders.length === 0) {
+                await client.query('ROLLBACK');
+                logger.info(`Order ${order.order_number} was already handled by another deadline worker.`);
+                return false;
+            }
+
+            const lockedOrder = lockedOrders[0];
+
             await client.query(
                 `UPDATE product_orders 
                  SET status = 'CANCELLED',
                      payment_status = 'failed',
                      auto_cancelled_reason = $1,
                      cancelled_at = NOW()
-                 WHERE id = $2`,
-                [reason, order.id]
+                 WHERE id = $2
+                   AND auto_cancelled_reason IS NULL`,
+                [reason, lockedOrder.id]
             );
 
-            // Refund buyer
-            if (order.buyer_id) {
+            if (lockedOrder.buyer_id) {
+                await client.query('SELECT id FROM buyers WHERE id = $1 FOR UPDATE', [lockedOrder.buyer_id]);
                 await client.query(
                     `UPDATE buyers 
                      SET refunds = refunds + $1 
                      WHERE id = $2`,
-                    [order.total_amount, order.buyer_id]
+                    [lockedOrder.total_amount, lockedOrder.buyer_id]
                 );
             }
 
@@ -330,28 +337,22 @@ class OrderDeadlineService {
                 );
             }
 
+            const durableEvent = await eventBus.enqueueInTransaction(client, AppEvents.ORDER.FULFILLED, {
+                eventId: `order.fulfilled:${order.id}:deadline-release`,
+                order
+            });
+
             await client.query('COMMIT');
 
             logger.info(`Released service payment for order ${order.order_number}: KSh ${order.seller_payout_amount}`);
 
-            // Send notification to buyer
-            if (order.buyer_whatsapp) {
-                const serviceType = whatsappService.getServiceProviderType(order);
-                const amount = Number.parseFloat(order.total_amount || 0);
-
-                const msg = `✅ *SERVICE PAYMENT RELEASED*
-
-Your service order is complete.
-
-📦 Order #${order.order_number}
-💰 Amount: KSh ${amount.toLocaleString()}
-
-✅ Payment has been released to your ${serviceType}.
-
-Thank you for using Byblos!`;
-
-                await whatsappService.sendMessage(order.buyer_whatsapp, msg);
-            }
+            setImmediate(() => {
+                eventBus.dispatchOutboxEvent(durableEvent.eventId)
+                    .catch(error => logger.error('[OrderDeadline] Durable fulfillment event dispatch failed', {
+                        eventId: durableEvent.eventId,
+                        error: error.message
+                    }));
+            });
 
             return true;
         } catch (error) {
@@ -370,107 +371,20 @@ Thank you for using Byblos!`;
      */
     async sendCancellationNotifications(order, reason) {
         try {
-            const amount = Number.parseFloat(order.total_amount || 0);
-            const isBuyerFault = reason.includes('Buyer failed');
-            const isSellerFault = reason.includes('Seller failed');
-
-            // Notify buyer
-            if (order.buyer_whatsapp) {
-                const buyerMsg = `❌ *ORDER AUTO-CANCELLED*
-
-Order #${order.order_number} has been automatically cancelled.
-
-💰 Amount: KSh ${amount.toLocaleString()}
-📝 Reason: ${reason}
-
-✅ *REFUND PROCESSED*
-Your refund has been added to your account balance. You can withdraw it from your dashboard.
-
----
-*Byblos Marketplace*`;
-
-                await whatsappService.sendMessage(order.buyer_whatsapp, buyerMsg);
-            }
-
-            // Notify seller
-            if (order.seller_whatsapp) {
-                let sellerMsg = '';
-
-                if (isSellerFault) {
-                    sellerMsg = `❌ *ORDER AUTO-CANCELLED*
-
-Order #${order.order_number} has been automatically cancelled.
-
-💰 Amount: KSh ${amount.toLocaleString()}
-📝 Reason: ${reason}
-
-⚠️ *IMPORTANT*
-You failed to drop off the items within the 48-hour deadline. The buyer has been refunded.
-
-Please ensure timely delivery for future orders to avoid cancellations.
-
----
-*Byblos Marketplace*`;
-                } else if (isBuyerFault) {
-                    sellerMsg = `❌ *ORDER AUTO-CANCELLED*
-
-Order #${order.order_number} has been automatically cancelled.
-
-💰 Amount: KSh ${amount.toLocaleString()}
-📝 Reason: ${reason}
-
-ℹ️ The buyer did not pick up the order within 24 hours. They have been refunded.
-
----
-*Byblos Marketplace*`;
-                }
-
-                if (sellerMsg) {
-                    await whatsappService.sendMessage(order.seller_whatsapp, sellerMsg);
-                }
-            }
-
-            // Notify courier if this was a logistics delivery order
-            // (physical product, seller had no shop address)
-            const isDeliveryOrder = !order.physical_address &&
-                order.metadata?.product_type !== 'service' &&
-                order.metadata?.product_type !== 'digital'
-
-            if (isDeliveryOrder) {
-                const COURIER_NUMBER = process.env.COURIER_WHATSAPP_NUMBER || '0748137819'
-                const cancelMsg = `
-❌ *ORDER CANCELLED — DELIVERY CANCELLED*
-
-📦 *Order #${order.order_number}*
-💰 *Amount:* KSh ${Number.parseFloat(order.total_amount || 0).toLocaleString()}
-
-📝 *Reason:* ${reason}
-
-⚠️ *ACTION REQUIRED:*
-Please do NOT collect this order from the seller.
-If already collected, please contact the seller to arrange return.
-
-👤 *Buyer:* ${order.buyer_name || 'N/A'}
-📞 *Buyer Phone:* ${order.buyer_whatsapp || 'N/A'}
-🏪 *Seller:* ${order.seller_name || 'N/A'}
-📞 *Seller Phone:* ${order.seller_whatsapp || 'N/A'}
-      `.trim()
-
-                await whatsappService.sendMessage(COURIER_NUMBER, cancelMsg)
-                    .catch(err => logger.error(`[DEADLINE] Courier cancellation notification failed for order ${order.order_number}:`, err.message))
-
-                logger.info(`[DEADLINE] Courier cancellation notification sent for order ${order.order_number}`)
-            }
-
-            logger.info(`Sent cancellation notifications for order ${order.order_number}`);
+            eventBus.emit(AppEvents.ORDER.CANCELLED, {
+                eventId: `order.cancelled:${order.id}:deadline`,
+                order,
+                cancelledBy: 'deadline',
+                reason
+            });
+            logger.info(`Emitted cancellation notification event for order ${order.order_number}`);
         } catch (error) {
-            logger.error(`Error sending cancellation notifications for order ${order.order_number}:`, error);
-            // Don't throw - notifications are not critical
+            logger.error(`Error emitting cancellation notification event for order ${order.order_number}:`, error);
         }
     }
 
     /**
-     * Run all deadline checks
+     * Run all deadline checks.
      * @returns {Promise<{
      *   reservations: {processedCount: number, orders: any[]},
      *   sellerDeadlines: {processedCount: number, orders: any[]},

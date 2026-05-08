@@ -5,7 +5,6 @@ import Fees from '../config/fees.js';
 import { OrderStatus, ProductType, OrderType } from '../shared/constants/enums.js';
 import Order from '../models/order.model.js';
 import Buyer from '../models/buyer.model.js';
-import whatsappService from './whatsapp.service.js';
 import escrowManager from './EscrowManager.js';
 import { sellerHasPhysicalShop } from '../shared/utils/sellerUtils.js';
 import ReferralService from './referral.service.js';
@@ -15,6 +14,7 @@ import { resolveFulfillmentType, validateFulfillmentPayload, FulfillmentType } f
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import ProductModel from '../models/product.model.js';
 import BookingService from '../modules/bookings/booking.service.js';
+import eventBus, { AppEvents } from '../events/eventBus.js';
 
 /**
  * OrderService — Order lifecycle orchestrator.
@@ -37,8 +37,14 @@ class OrderService {
       idempotencyKey = null
     } = orderData;
 
+    const checkoutToken = idempotencyKey || rawMetadata.client_checkout_token;
+    if (typeof checkoutToken !== 'string' || !checkoutToken.trim()) {
+      throw new Error('Checkout idempotency token is required');
+    }
+    const normalizedCheckoutToken = checkoutToken.trim().slice(0, 160);
+
     // --- PIN-01: DISTRIBUTED LOCK FOR ATOMIC ORDER CREATION ---
-    const lockKey = idempotencyKey ? `lock:order_create:${idempotencyKey}` : `lock:order_create:buyer:${buyer.id}:seller:${orderData.sellerId}`;
+    const lockKey = `lock:order_create:${normalizedCheckoutToken}`;
 
     const isManaged = !externalClient;
     const client = externalClient || await pool.connect();
@@ -46,7 +52,7 @@ class OrderService {
       // 1. Acquire Lock (P1-7 FIX: Redis outage must NOT crash order creation)
       let acquired;
       try {
-        acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 10, 'NX');
+        acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 60, 'NX');
       } catch (redisErr) {
         logger.warn('[OrderService] Redis lock unavailable — continuing without distributed lock. Reason:', redisErr.message);
         acquired = true; // pessimistic allow: DB FOR UPDATE guards will still protect against duplicates
@@ -68,6 +74,19 @@ class OrderService {
 
         logger.info('OrderService: Starting order creation', { buyerId: buyer.id, sellerId });
         if (isManaged) await client.query('BEGIN');
+
+        const { rows: existingOrders } = await client.query(
+          `SELECT * FROM product_orders WHERE client_checkout_token = $1 FOR UPDATE`,
+          [normalizedCheckoutToken]
+        );
+        if (existingOrders.length > 0) {
+          if (isManaged) await client.query('COMMIT');
+          logger.info('[OrderService] Returning existing order for checkout token', {
+            token: normalizedCheckoutToken,
+            orderId: existingOrders[0].id
+          });
+          return existingOrders[0];
+        }
 
         // 1. Verify seller exists and is active
         const sellerInfo = await this._getSellerDetails(client, sellerId);
@@ -206,6 +225,7 @@ class OrderService {
           location_lat: finalLat ?? null,
           location_lng: finalLng ?? null,
           service_title: service.title || items[0]?.name || 'Service',
+          client_checkout_token: normalizedCheckoutToken,
 
           notes: orderData.notes || null,
           metadata: metadata,
@@ -399,11 +419,10 @@ class OrderService {
             notes: 'Status updated by seller'
           };
 
-          whatsappService.notifyBuyerStatusUpdate(notificationPayload)
-            .catch(err => logger.error('Error sending status update notification to buyer:', err));
-
-          whatsappService.notifySellerStatusUpdate(notificationPayload)
-            .catch(err => logger.error('Error sending status update notification to seller:', err));
+          eventBus.emit(AppEvents.ORDER.UPDATED, {
+            eventId: `order.updated:${orderId}:${newStatus}`,
+            payload: notificationPayload
+          });
         }
       } catch (e) {
         logger.error('Error sending status notification:', e);
@@ -551,29 +570,7 @@ class OrderService {
             !fullOrder.seller_address;
 
           if (wasDeliveryOrder) {
-            try {
-              const buyerForCancel = {
-                fullName: fullOrder.buyer_name || fullOrder.buyer_name_actual,
-                whatsapp_number: fullOrder.buyer_whatsapp_number || fullOrder.buyer_whatsapp_actual,
-                phone: fullOrder.buyer_mobile_payment || fullOrder.buyer_phone_actual
-              };
-              const sellerForCancel = {
-                shop_name: fullOrder.seller_name,
-                whatsapp_number: fullOrder.seller_phone,
-                physicalAddress: fullOrder.seller_address || null
-              };
-              const orderForCancel = {
-                id: fullOrder.id,
-                orderNumber: fullOrder.order_number || fullOrder.id,
-                total_amount: fullOrder.total_amount,
-                items: items
-              };
-              await whatsappService.sendLogisticsCancellationNotification(
-                orderForCancel, buyerForCancel, sellerForCancel, 'Buyer'
-              );
-            } catch (err) {
-              logger.error('Error sending logistics cancellation notification:', err);
-            }
+            logger.info(`[OrderService] Deferred logistics cancellation notification for order ${orderId}`);
           }
         }
       } catch (e) {
@@ -699,7 +696,10 @@ class OrderService {
    * ROLLBACK is handled by the caller's transaction if any row fails.
    */
   static async _reserveInventory(client, items) {
-    const trackable = items.filter(i => i.trackInventory === true);
+    const trackable = items.filter(i => {
+      const productType = String(i.productType || i.product_type || '').toUpperCase();
+      return i.trackInventory === true && productType !== 'DIGITAL';
+    });
     if (trackable.length === 0) return;
 
     // Build parallel arrays for UNNEST
@@ -743,13 +743,23 @@ class OrderService {
     const { rows } = await client.query(
       `UPDATE products AS p
        SET quantity = p.quantity + v.qty,
-           reserved_quantity = GREATEST(0, p.reserved_quantity - v.qty),
+           reserved_quantity = p.reserved_quantity - v.qty,
            updated_at = NOW()
        FROM (SELECT UNNEST($1::int[]) AS id, UNNEST($2::int[]) AS qty) AS v
        WHERE p.id = v.id
+         AND p.reserved_quantity >= v.qty
        RETURNING p.id, p.quantity, p.reserved_quantity`,
       [ids, qtys]
     );
+
+    if (rows.length !== trackable.length) {
+      logger.error('[RESERVATION-RELEASE] Reserved inventory invariant failed during release', {
+        expected: trackable.length,
+        released: rows.length,
+        ids
+      });
+      throw new Error('Reserved inventory invariant failed during release');
+    }
 
     logger.info(`[RESERVATION-RELEASE] Bulk released inventory for ${rows.length} product(s)`);
   }
@@ -824,13 +834,18 @@ class OrderService {
         const query = `
           UPDATE products 
           SET 
-            reserved_quantity = GREATEST(0, reserved_quantity - $1),
+            reserved_quantity = reserved_quantity - $1,
             updated_at = NOW()
           WHERE id = $2
+            AND reserved_quantity >= $1
           RETURNING id, reserved_quantity
         `;
 
-        await client.query(query, [qty, productId]);
+        const finalizeResult = await client.query(query, [qty, productId]);
+        if (finalizeResult.rowCount !== 1) {
+          logger.error(`[RESERVATION-FINALIZE-ERROR] Reserved inventory invariant failed for product ${productId}.`);
+          throw new Error(`Reserved inventory invariant failed for product ${productId}`);
+        }
         logger.info(`[RESERVATION-FINALIZED] Finalized ${qty} units for product ${productId}.`);
       }
     }
@@ -1073,13 +1088,7 @@ class OrderService {
     await this._finalizeServiceSlot(client, order.id);
     await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.BOOKED, 'completed');
 
-    // 2. Notifications
-    try {
-      await whatsappService.notifySellerNewOrder({ order, items });
-      await whatsappService.notifyBuyerPaymentSuccess({ order, items });
-    } catch (err) {
-      logger.warn(`[FULFILLMENT-SERVICE] Notification failure:`, err.message);
-    }
+    // Notifications are emitted by FulfillmentQueueService after the DB commit.
   }
 
   /**
@@ -1104,12 +1113,7 @@ class OrderService {
   }
 
   static async _initiatePhysicalFulfillment(order, items) {
-    await whatsappService.notifySellerNewOrder({ order, items });
-    await whatsappService.notifyBuyerPaymentSuccess({ order, items });
-
-    if (order.fulfillment_type === 'COURIER') {
-      await whatsappService.notifyCourierNewOrder({ order, items });
-    }
+    logger.info(`[FULFILLMENT-PHYSICAL] DB fulfillment prepared for Order ${order.id}; notifications deferred until commit.`);
   }
 
   static async _grantDigitalAccessFlow(client, order, items) {
@@ -1123,7 +1127,7 @@ class OrderService {
         );
       }
     }
-    await whatsappService.notifyBuyerDigitalDelivery({ order, items });
+    logger.info(`[FULFILLMENT-DIGITAL] Digital access granted for order ${order.id}; delivery notification is emitted after commit.`);
   }
 
   static async _finalizeServiceSlot(client, orderId) {
@@ -1207,22 +1211,17 @@ class OrderService {
 
           const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
-          // 3. Notify Stakeholders (SP-04: Fix undefined newStatus)
-          whatsappService.notifySellerStatusUpdate({
-            seller: normalizedOrder.seller,
-            order: normalizedOrder,
-            newStatus: OrderStatus.COMPLETED,
-            oldStatus: OrderStatus.COLLECTION_PENDING, // Context-specific
-            notes: 'Status updated via dashboard'
-          }).catch(err => logger.error('Error sending status notification to seller:', err));
-
-          whatsappService.notifyBuyerStatusUpdate({
-            buyer: normalizedOrder.buyer,
-            order: normalizedOrder,
-            newStatus: OrderStatus.COMPLETED,
-            seller: normalizedOrder.seller,
-            notes: 'Status updated'
-          }).catch(err => logger.error('Error sending status notification to buyer:', err));
+          eventBus.emit(AppEvents.ORDER.UPDATED, {
+            eventId: `order.updated:${orderId}:${OrderStatus.COMPLETED}`,
+            payload: {
+              buyer: normalizedOrder.buyer,
+              seller: normalizedOrder.seller,
+              order: normalizedOrder,
+              newStatus: OrderStatus.COMPLETED,
+              oldStatus: OrderStatus.COLLECTION_PENDING,
+              notes: 'Status updated via dashboard'
+            }
+          });
         }
       } catch (e) {
         logger.error('Error sending collection notifications:', e);
@@ -1325,13 +1324,10 @@ class OrderService {
             notes: 'Service confirmed as done by buyer'
           };
 
-          // Notify Seller: "Buyer confirmed the service is done, funds released."
-          whatsappService.notifySellerStatusUpdate(notificationPayload)
-            .catch(err => logger.error('Error sending confirmation notification to seller:', err));
-
-          // Notify Buyer: "Thank you for confirming. Order completed."
-          whatsappService.notifyBuyerStatusUpdate(notificationPayload)
-            .catch(err => logger.error('Error sending confirmation notification to buyer:', err));
+          eventBus.emit(AppEvents.ORDER.UPDATED, {
+            eventId: `order.updated:${orderId}:${OrderStatus.COMPLETED}:receipt`,
+            payload: notificationPayload
+          });
         }
       } catch (e) {
         logger.error('Error sending confirmation notifications:', e);
@@ -1369,7 +1365,13 @@ class OrderService {
 
       const message = `⚠️ *LOW STOCK ALERT*\n\nProduct: *${productName}*\nCurrent Stock: *${currentQuantity} units*\nThreshold: ${threshold} units\n\nPlease restock soon to avoid running out.`;
 
-      await whatsappService.sendMessage(sellerPhone, message);
+      eventBus.emit(AppEvents.INVENTORY.LOW_STOCK, {
+        eventId: `inventory.low_stock:${sellerId}:${productName}:${currentQuantity}`,
+        sellerPhone,
+        productName,
+        currentQuantity,
+        threshold
+      });
       logger.info(`[INVENTORY] Low stock alert sent to seller ${sellerId} for product ${productName}`);
     } catch (error) {
       logger.error('[INVENTORY] Error sending low stock alert:', error);
@@ -1400,7 +1402,11 @@ class OrderService {
 
       const message = `🚨 *OUT OF STOCK ALERT*\n\nProduct: *${productName}*\nStatus: *SOLD OUT*\n\nThis product is now unavailable for purchase. Please restock as soon as possible.`;
 
-      await whatsappService.sendMessage(sellerPhone, message);
+      eventBus.emit(AppEvents.INVENTORY.OUT_OF_STOCK, {
+        eventId: `inventory.out_of_stock:${sellerId}:${productName}`,
+        sellerPhone,
+        productName
+      });
       logger.info(`[INVENTORY] Out of stock alert sent to seller ${sellerId} for product ${productName}`);
     } catch (error) {
       logger.error('[INVENTORY] Error sending out of stock alert:', error);
@@ -1715,8 +1721,11 @@ class OrderService {
           normalizedOrder.downloadUrls = freshMeta.download_urls || freshMeta.downloadUrls || [];
         }
 
-        whatsappService.notifyBuyerOrderConfirmation(normalizedOrder).catch(e => logger.error('[ORDER] Buyer notification failed:', e));
-        whatsappService.notifySellerNewOrder(normalizedOrder).catch(e => logger.error('[ORDER] Seller notification failed:', e));
+        eventBus.emit(AppEvents.ORDER.FULFILLED, {
+          eventId: `order.fulfilled:${orderId}`,
+          order: normalizedOrder,
+          items
+        });
 
         // Mark as sent
         await pool.query('UPDATE product_orders SET notification_sent = true WHERE id = $1', [orderId]);
@@ -1729,9 +1738,7 @@ class OrderService {
       logger.info(`[COURIER-CHECK] Order #${fullOrder.order_number}: hasPhysical=${hasPhysical}, isCourier=${isCourier}, type=${fullOrder.fulfillment_type}`);
 
       if (hasPhysical && isCourier) {
-        logger.info(`[COURIER-NOTIFY] Sending logistics notification for order #${fullOrder.order_number}`);
-        whatsappService.sendLogisticsNotification(normalizedOrder)
-          .catch(e => logger.error('[ORDER] Courier notification failed:', e.message));
+        logger.info(`[COURIER-NOTIFY] Logistics notification is handled by ORDER.FULFILLED for order #${fullOrder.order_number}`);
       }
 
       // Notify Buyer via Email if not seller-initiated
@@ -1787,15 +1794,20 @@ class OrderService {
 
       await client.query('UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2', [stkResult.reference, payment.id]);
 
-      // Notification
-      try {
-        const { rows } = await client.query('SELECT shop_name, full_name as businessName FROM sellers WHERE id = $1', [sellerId]);
-        await whatsappService.notifyClientOrderCreated(clientPhone, { seller: rows[0], order: { orderNumber: order.order_number, totalAmount }, items });
-      } catch (waError) {
-        logger.warn('[ORDER] Client notification failed:', waError.message);
-      }
-
       await client.query('COMMIT');
+      setImmediate(() => {
+        eventBus.emit(AppEvents.ORDER.CREATED, {
+          eventId: `order.created:${order.id}:seller-client`,
+          order: {
+            ...order,
+            order_number: order.order_number,
+            total_amount: totalAmount,
+            client_phone: clientPhone,
+            seller_id: sellerId
+          },
+          items
+        });
+      });
       return {
         success: true,
         order: { id: order.id, orderNumber: order.order_number, totalAmount, status: OrderStatus.CLIENT_PAYMENT_PENDING },

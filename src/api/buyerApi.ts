@@ -730,9 +730,9 @@ const buyerApi = {
     }
   },
 
-  getShops: async (): Promise<any[]> => {
+  getShops: async (params: { page?: number; limit?: number } = {}): Promise<any[]> => {
     try {
-      const response = await buyerApiInstance.get<ApiResponse<any[]>>('/buyers/shops');
+      const response = await buyerApiInstance.get<ApiResponse<any[]>>('/buyers/shops', { params });
       const isSuccess = response.data?.success || (response.data as any)?.status === 'success';
       if (!isSuccess) {
         throw new Error('Failed to fetch shops');

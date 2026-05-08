@@ -80,6 +80,19 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
 
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isMounted = useRef(true); // FIX (Task 14): Prevent memory leaks / state updates on unmounted component
+  const checkoutAttemptTokenRef = useRef<string | null>(null);
+
+  const getCheckoutAttemptToken = () => {
+    if (!checkoutAttemptTokenRef.current) {
+      const fallbackBytes = new Uint32Array(4);
+      globalThis.crypto?.getRandomValues?.(fallbackBytes);
+      const randomPart = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Array.from(fallbackBytes).map(value => value.toString(36)).join('')}`;
+      checkoutAttemptTokenRef.current = `checkout:${product.id}:${randomPart}`;
+    }
+    return checkoutAttemptTokenRef.current;
+  };
 
   /**
    * FIX (Task 21): Normalize phone numbers before API calls
@@ -438,6 +451,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         buyerLocation: activeBooking?.buyerLocation
       });
       const isService = product.product_type === 'service' || (product as any).productType === 'service';
+      const checkoutToken = getCheckoutAttemptToken();
       const payload = {
         phone: buyerDetails.mobilePayment, // For STK Push
         mobilePayment: buyerDetails.mobilePayment,
@@ -449,6 +463,8 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         customerName: buyerDetails.fullName,
         narrative: `Purchase of ${product.name}`,
         paymentMethod: 'payd',
+        checkout_token: checkoutToken,
+        clientCheckoutToken: checkoutToken,
         // Provide structured buyerLocation if it came from booking/map
         // root city/location fields are deprecated and ignored by backend
         buyerLocation: activeBooking?.buyerLocation || (buyerDetails.city && buyerDetails.location ? {
@@ -462,14 +478,20 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
           service_location: activeBooking.location,
           service_requirements: activeBooking.serviceRequirements,
           buyer_location: activeBooking.buyerLocation,
-          product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical')
+          product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
+          client_checkout_token: checkoutToken
         } : {
-          product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical')
+          product_type: isService ? 'service' : (isDigital ? 'digital' : 'physical'),
+          client_checkout_token: checkoutToken
         }
       };
 
       // USE NEW API CLIENT
-      const response = await apiClient.post('/payments/initiate-product', payload);
+      const response = await apiClient.post('/payments/initiate-product', payload, {
+        headers: {
+          'Idempotency-Key': checkoutToken
+        }
+      });
       const data: any = response.data;
 
       if (data.status === 'success' || data.success === true) {
@@ -487,6 +509,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         console.log('[PAYMENT-DEBUG] Initiation Result:', { orderId, orderNumber, paymentReference });
 
         if (orderNumber) {
+          checkoutAttemptTokenRef.current = null;
           setPaymentModalData({
             isOpen: true,
             orderNumber: orderNumber,
@@ -520,6 +543,9 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         variant: 'destructive',
         duration: 8000
       });
+      if (error.response) {
+        checkoutAttemptTokenRef.current = null;
+      }
       setIsProcessingPurchase(false);
     }
   };

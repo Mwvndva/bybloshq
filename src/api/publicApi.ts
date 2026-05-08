@@ -144,6 +144,23 @@ export interface Product {
   seller?: Seller;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+}
+
+export interface ProductListResponse {
+  products: Product[];
+  pagination: PaginationMeta;
+}
+
+export interface SellerListResponse {
+  sellers: Seller[];
+  pagination: PaginationMeta;
+}
+
 export interface Seller {
   id: string;
   fullName: string;
@@ -294,9 +311,9 @@ export const publicApiService = {
   },
 
   // Get all active sellers with wishlist count
-  getSellers: async (): Promise<Seller[]> => {
+  getSellersPage: async (params: { page?: number; limit?: number } = {}): Promise<SellerListResponse> => {
     try {
-      const response = await publicApi.get('public/sellers/active');
+      const response = await publicApi.get('public/sellers/active', { params });
       let sellersData: any[] = [];
       const responseData = response.data;
 
@@ -308,7 +325,8 @@ export const publicApiService = {
         sellersData = responseData.sellers;
       }
 
-      return sellersData.map(item => {
+      const paginationSource = responseData?.pagination || responseData?.data?.pagination || {};
+      const sellers = sellersData.map(item => {
         const seller = transformSeller(item);
         if (seller) {
           // Add extra property for this specific view if needed, but Seller interface usually is enough.
@@ -324,167 +342,68 @@ export const publicApiService = {
         }
         return null;
       }).filter((seller): seller is Seller => seller !== null);
+
+      return {
+        sellers,
+        pagination: {
+          page: Number(paginationSource.page || params.page || 1),
+          pageSize: Number(paginationSource.pageSize || params.limit || sellers.length || 24),
+          total: Number(paginationSource.total || sellers.length),
+          hasMore: Boolean(paginationSource.hasMore)
+        }
+      };
     } catch (error) {
       console.error('Error fetching sellers:', error);
-      return [];
+      return {
+        sellers: [],
+        pagination: {
+          page: params.page || 1,
+          pageSize: params.limit || 24,
+          total: 0,
+          hasMore: false
+        }
+      };
     }
   },
 
-  // Get all products with city and location filters
-  getProducts: async (filters: { city?: string; location?: string } = {}): Promise<Product[]> => {
+  getSellers: async (): Promise<Seller[]> => {
+    const page = await publicApiService.getSellersPage({ page: 1, limit: 24 });
+    return page.sellers;
+  },
+
+  getProductsPage: async (filters: { city?: string; location?: string; aesthetic?: string; page?: number; limit?: number } = {}): Promise<ProductListResponse> => {
     try {
       console.log('Starting getProducts with filters:', filters);
+      const response = await publicApi.get('public/products', { params: filters });
+      const responseData = response.data;
+      let productsData: any[] = [];
+      const pagination = responseData?.pagination || responseData?.data?.pagination || {
+        total: 0,
+        page: filters.page || 1,
+        pageSize: filters.limit || productsData.length,
+        hasMore: false
+      };
 
-      // If no city filter is provided, fetch all products directly from the backend
-      if (!filters.city) {
-        console.log('No city filter - fetching all products directly from backend');
-        const response = await publicApi.get('public/products', {
-          params: filters
-        });
+      if (Array.isArray(responseData)) {
+        productsData = responseData;
+      } else if (Array.isArray(responseData?.data)) {
+        productsData = responseData.data;
+      } else if (Array.isArray(responseData?.data?.products)) {
+        productsData = responseData.data.products;
+      } else if (Array.isArray(responseData?.products)) {
+        productsData = responseData.products;
+      }
 
-        let productsData: any[] = [];
-        const responseData = response.data;
-
-        if (Array.isArray(responseData)) {
-          productsData = responseData;
-        } else if (responseData && 'data' in responseData) {
-          if (Array.isArray(responseData.data)) {
-            productsData = responseData.data;
-          } else if (responseData.data && 'products' in responseData.data && Array.isArray(responseData.data.products)) {
-            productsData = responseData.data.products;
-          }
-        } else if (responseData && 'products' in responseData && Array.isArray(responseData.products)) {
-          productsData = responseData.products;
+      console.log(`Fetched ${productsData.length} products from aggregated backend endpoint`);
+      return {
+        products: productsData.map(transformProduct),
+        pagination: {
+          total: Number(pagination.total || productsData.length),
+          page: Number(pagination.page || filters.page || 1),
+          pageSize: Number(pagination.pageSize || filters.limit || productsData.length),
+          hasMore: Boolean(pagination.hasMore)
         }
-
-        console.log(`Fetched ${productsData.length} products from backend (no city filter)`);
-
-        // Transform products and ensure seller info is included
-        const transformedProducts = productsData.map(product => {
-          const transformed = transformProduct(product);
-
-          // If the API response includes seller data in snake_case, transform it
-          if (product.seller_name || product.seller_full_name) {
-            transformed.seller = {
-              id: product.seller_id || String(product.sellerId || ''),
-              fullName: product.seller_name || product.seller_full_name || 'Unknown Seller',
-              email: product.seller_email || '',
-              phone: product.seller_phone || '',
-              location: product.seller_location || null,
-              city: product.seller_city || null,
-              createdAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            };
-          }
-
-          return transformed;
-        });
-
-        return transformedProducts;
-      }
-
-      // If city filter is provided, search for sellers first
-      console.log('Searching for sellers with filters:', filters);
-      const sellers = await publicApiService.searchSellers(filters as { city: string; location?: string });
-
-      console.log(`Found ${sellers.length} sellers for city: ${filters.city}${filters.location ? `, location: ${filters.location}` : ''}`);
-
-      if (sellers.length === 0) {
-        console.log('No sellers found for the specified location');
-        return [];
-      }
-
-      // Log seller information
-      console.log('Sellers found:', sellers.map(seller => ({
-        id: seller.id,
-        name: seller.fullName,
-        location: seller.location,
-        city: seller.city
-      })));
-
-      // Create a map of sellerId to seller for quick lookup
-      const sellerMap = sellers.reduce<Record<string, Seller>>((acc, seller) => {
-        acc[seller.id] = seller;
-        return acc;
-      }, {});
-
-      // Get unique seller IDs
-      const sellerIds = Object.keys(sellerMap);
-
-      console.log('Fetching products for sellers:', sellerIds);
-
-      // Fetch products for these sellers
-      const productsPromises = sellerIds.map(sellerId =>
-        publicApi.get(`sellers/${sellerId}/products`).then(response => {
-          console.log(`Received products for seller ${sellerId}:`, response.data);
-
-          const responseData = response.data;
-          let products: any[] = [];
-
-          if (Array.isArray(responseData)) {
-            products = responseData;
-          } else if (responseData && 'data' in responseData && Array.isArray(responseData.data)) {
-            products = responseData.data;
-          } else if (responseData && 'products' in responseData && Array.isArray(responseData.products)) {
-            products = responseData.products;
-          }
-
-          console.log(`Found ${products.length} products for seller ${sellerId}`);
-
-          // Add seller info to each product
-          const productsWithSeller = products.map(product => {
-            const productWithSeller = {
-              ...product,
-              seller: sellerMap[sellerId]
-            };
-
-            console.log(`Product ${product.id} (${product.name}) has seller:`, {
-              sellerId: sellerId,
-              sellerName: sellerMap[sellerId]?.fullName,
-              sellerLocation: sellerMap[sellerId]?.location
-            });
-
-            return productWithSeller;
-          });
-
-          return productsWithSeller;
-        }).catch(error => {
-          console.error(`Error fetching products for seller ${sellerId}:`, error);
-          return []; // Return empty array if there's an error
-        })
-      );
-
-      const productsArrays = await Promise.all(productsPromises);
-      const productsData = productsArrays.flat();
-
-      console.log(`Found ${productsData.length} products across ${sellers.length} sellers in ${filters.city}${filters.location ? `, ${filters.location}` : ''}`);
-
-      // Log the first few products for debugging
-      if (productsData.length > 0) {
-        console.log('Sample products:', productsData.slice(0, 3).map(p => ({
-          id: p.id,
-          name: p.name,
-          sellerId: p.sellerId,
-          seller: p.seller ? {
-            id: p.seller.id,
-            name: p.seller.fullName,
-            location: p.seller.location
-          } : 'No seller info'
-        })));
-      }
-
-      const transformedProducts = productsData.map(transformProduct);
-
-      // Log transformed products
-      console.log('Transformed products:', transformedProducts.map(p => ({
-        id: p.id,
-        name: p.name,
-        sellerId: p.sellerId,
-        hasSeller: !!p.seller,
-        sellerLocation: p.seller?.location
-      })));
-
-      return transformedProducts;
+      };
     } catch (error: any) {
       console.error('Error fetching products:', {
         message: error.message,
@@ -495,8 +414,22 @@ export const publicApiService = {
         } : 'No response',
         stack: error.stack
       });
-      return [];
+      return {
+        products: [],
+        pagination: {
+          total: 0,
+          page: filters.page || 1,
+          pageSize: filters.limit || 0,
+          hasMore: false
+        }
+      };
     }
+  },
+
+  // Get all products with city and location filters
+  getProducts: async (filters: { city?: string; location?: string; aesthetic?: string; page?: number; limit?: number } = {}): Promise<Product[]> => {
+    const result = await publicApiService.getProductsPage(filters);
+    return result.products;
   },
 
   // Get a single product by ID

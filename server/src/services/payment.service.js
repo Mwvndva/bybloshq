@@ -13,6 +13,9 @@ import cacheService from './cache.service.js';
 import FulfillmentQueueService from './fulfillmentQueue.service.js';
 import { assertValidTransition } from '../shared/utils/OrderStatusGuard.js';
 import Order from '../models/order.model.js';
+import { normalizeProviderReference } from '../shared/utils/providerReference.js';
+import { releaseOrderReservations } from '../shared/utils/reservationRelease.js';
+import eventBus, { AppEvents } from '../events/eventBus.js';
 
 export class PaymentService {
     constructor() {
@@ -92,6 +95,283 @@ export class PaymentService {
             timeout: 30000,               // ✅ Reduced from 60000 to improve UX
             httpsAgent: this.httpsAgent
         });
+    }
+
+    async createPaymentProviderAttempt(client, {
+        paymentId,
+        orderId,
+        apiRef,
+        idempotencyKey,
+        requestPayload
+    }) {
+        await client.query(
+            `INSERT INTO payment_provider_attempts
+                (payment_id, order_id, api_ref, idempotency_key, status, request_payload, created_at, updated_at)
+             VALUES ($1, $2, $3, $4, 'provider_call_pending', $5, NOW(), NOW())
+             ON CONFLICT (payment_id) DO UPDATE
+             SET api_ref = EXCLUDED.api_ref,
+                 idempotency_key = COALESCE(EXCLUDED.idempotency_key, payment_provider_attempts.idempotency_key),
+                 request_payload = EXCLUDED.request_payload,
+                 updated_at = NOW()`,
+            [
+                paymentId,
+                orderId,
+                apiRef,
+                idempotencyKey || null,
+                JSON.stringify(requestPayload || {})
+            ]
+        );
+    }
+
+    async markPaymentProviderAttemptStarted(paymentId) {
+        await pool.query(
+            `UPDATE payment_provider_attempts
+             SET status = 'provider_call_started',
+                 attempts = attempts + 1,
+                 last_attempt_at = NOW(),
+                 updated_at = NOW()
+             WHERE payment_id = $1`,
+            [paymentId]
+        );
+    }
+
+    async markPaymentProviderAttemptAccepted({ paymentId, providerReference, responsePayload }) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+            await client.query('SELECT id FROM payments WHERE id = $1 FOR UPDATE', [paymentId]);
+            await client.query(
+                `UPDATE payments
+                 SET provider_reference = COALESCE($1, provider_reference),
+                     updated_at = NOW()
+                 WHERE id = $2`,
+                [providerReference || null, paymentId]
+            );
+            await client.query(
+                `UPDATE payment_provider_attempts
+                 SET provider_reference = COALESCE($2, provider_reference),
+                     status = 'provider_accepted',
+                     response_payload = $3,
+                     updated_at = NOW()
+                 WHERE payment_id = $1`,
+                [paymentId, providerReference || null, JSON.stringify(responsePayload || {})]
+            );
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK').catch(() => {});
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    async markPaymentProviderAttemptFailed({ paymentId, errorPayload }) {
+        await pool.query(
+            `UPDATE payment_provider_attempts
+             SET status = 'provider_call_failed',
+                 error_payload = $2,
+                 updated_at = NOW()
+             WHERE payment_id = $1`,
+            [paymentId, JSON.stringify(errorPayload || {})]
+        );
+    }
+
+    isAmbiguousPaymentProviderError(error) {
+        const status = error?.statusCode || error?.response?.status;
+        const ambiguousCodes = new Set([
+            PaydErrorCodes.CONNECTION_FAILED,
+            PaydErrorCodes.TIMEOUT,
+            PaydErrorCodes.UNKNOWN_ERROR
+        ]);
+
+        if (ambiguousCodes.has(error?.code)) return true;
+        if (Number.isFinite(status) && status >= 500) return true;
+        if (!status && (error?.request || error?.code)) return true;
+
+        return false;
+    }
+
+    async markPaymentProviderAttemptAmbiguous({ paymentId, errorPayload }) {
+        await pool.query(
+            `UPDATE payment_provider_attempts
+             SET status = 'provider_result_ambiguous',
+                 error_payload = $2,
+                 updated_at = NOW()
+             WHERE payment_id = $1`,
+            [paymentId, JSON.stringify(errorPayload || {})]
+        );
+    }
+
+    async markPaymentInitiationAmbiguous({ orderId, paymentId, reason, providerPayload = {} }) {
+        const client = await pool.connect();
+        try {
+            await client.query('BEGIN');
+
+            const { rows: paymentRows } = await client.query(
+                `SELECT * FROM payments WHERE id = $1 FOR UPDATE`,
+                [paymentId]
+            );
+            const { rows: orderRows } = await client.query(
+                `SELECT * FROM product_orders WHERE id = $1 FOR UPDATE`,
+                [orderId]
+            );
+
+            const payment = paymentRows[0];
+            const order = orderRows[0];
+
+            if (!payment || !order) {
+                throw new Error(`Cannot mark payment initiation ambiguous: missing payment/order (${paymentId}/${orderId})`);
+            }
+
+            const paymentStatus = String(payment.status || '').toLowerCase();
+            const orderStatus = String(order.status || '').toUpperCase();
+            const terminalPayment = ['completed', 'success', 'failed'].includes(paymentStatus);
+            const terminalOrder = ['PAID', 'PROCESSING', 'FULFILLMENT_PENDING', 'FULFILLED', 'DELIVERED', 'BOOKED', 'COMPLETED', 'FAILED', 'CANCELLED', 'EXPIRED', 'REFUNDED'].includes(orderStatus);
+
+            if (!terminalPayment) {
+                await client.query(
+                    `UPDATE payments
+                     SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                         updated_at = NOW()
+                     WHERE id = $1`,
+                    [
+                        paymentId,
+                        JSON.stringify({
+                            needs_manual_review: true,
+                            provider_result_ambiguous_manual_review_required: true,
+                            ambiguous_provider_result: {
+                                reason,
+                                providerPayload,
+                                recorded_at: new Date().toISOString()
+                            }
+                        })
+                    ]
+                );
+            }
+
+            if (!terminalOrder) {
+                await client.query(
+                    `UPDATE product_orders
+                     SET metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                         updated_at = NOW()
+                     WHERE id = $1`,
+                    [
+                        orderId,
+                        JSON.stringify({
+                            needs_manual_review: true,
+                            provider_result_ambiguous_manual_review_required: true,
+                            ambiguous_provider_result: {
+                                reason,
+                                providerPayload,
+                                recorded_at: new Date().toISOString()
+                            }
+                        })
+                    ]
+                );
+            }
+
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK').catch(() => {});
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    async markPaymentInitiationFailed({ orderId, paymentId, reason, providerPayload = {} }) {
+        const client = await pool.connect();
+        let failedPayment = null;
+        let failedOrder = null;
+        try {
+            await client.query('BEGIN');
+
+            const { rows: paymentRows } = await client.query(
+                `SELECT * FROM payments WHERE id = $1 FOR UPDATE`,
+                [paymentId]
+            );
+            failedPayment = paymentRows[0];
+
+            const { rows: orderRows } = await client.query(
+                `SELECT * FROM product_orders WHERE id = $1 FOR UPDATE`,
+                [orderId]
+            );
+            failedOrder = orderRows[0];
+
+            if (!failedPayment || !failedOrder) {
+                throw new Error(`Cannot mark payment initiation failed: missing payment/order (${paymentId}/${orderId})`);
+            }
+
+            const paymentStatus = String(failedPayment.status || '').toLowerCase();
+            const orderStatus = String(failedOrder.status || '').toUpperCase();
+            const terminalPayment = ['completed', 'success', 'failed'].includes(paymentStatus);
+            const terminalOrder = ['PAID', 'PROCESSING', 'FULFILLMENT_PENDING', 'FULFILLED', 'DELIVERED', 'BOOKED', 'COMPLETED', 'FAILED', 'CANCELLED', 'EXPIRED', 'REFUNDED'].includes(orderStatus);
+
+            if (terminalPayment || terminalOrder) {
+                await client.query('COMMIT');
+                return { payment: failedPayment, order: failedOrder, skipped: true };
+            }
+
+            const releaseResult = await releaseOrderReservations(client, orderId);
+            const failureMetadata = {
+                payment_initiation_failure: {
+                    reason,
+                    providerPayload,
+                    released_inventory: releaseResult.releasedInventory,
+                    released_slots: releaseResult.releasedSlots,
+                    failed_at: new Date().toISOString()
+                }
+            };
+
+            const { rows: updatedPayments } = await client.query(
+                `UPDATE payments
+                 SET status = 'failed',
+                     metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                     updated_at = NOW()
+                 WHERE id = $1
+                 RETURNING *`,
+                [paymentId, JSON.stringify(failureMetadata)]
+            );
+
+            const { rows: updatedOrders } = await client.query(
+                `UPDATE product_orders
+                 SET status = 'FAILED',
+                     payment_status = 'failed',
+                     metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
+                     updated_at = NOW()
+                 WHERE id = $1
+                 RETURNING *`,
+                [orderId, JSON.stringify(failureMetadata)]
+            );
+
+            failedPayment = updatedPayments[0];
+            failedOrder = updatedOrders[0];
+            const durableEvent = await eventBus.enqueueInTransaction(client, AppEvents.PAYMENT.FAILED, {
+                eventId: `payment.failed:${paymentId}:initiation`,
+                payment: failedPayment,
+                order: failedOrder,
+                reason
+            });
+
+            await client.query('COMMIT');
+
+            setImmediate(() => {
+                eventBus.dispatchOutboxEvent(durableEvent.eventId)
+                    .catch(error => logger.error('[PAYMENT-INITIATE] Durable failure event dispatch failed', {
+                        eventId: durableEvent.eventId,
+                        error: error.message
+                    }));
+            });
+
+            return { payment: failedPayment, order: failedOrder, skipped: false };
+        } catch (error) {
+            await client.query('ROLLBACK').catch(rollbackError =>
+                logger.error('[PAYMENT-INITIATE] Failed rollback while marking initiation failure:', rollbackError)
+            );
+            throw error;
+        } finally {
+            client.release();
+        }
     }
 
 
@@ -483,92 +763,7 @@ export class PaymentService {
      * Handle Payd Webhook/Callback
      */
     async handlePaydCallback(callbackData) {
-        logger.info('[PAYD-WEBHOOK] Received payment callback', { raw_data: callbackData });
-
-        try {
-            // STEP 1: PARSE AND VALIDATE
-            const { reference, isSuccess, amount, phone, mpesaReceipt, status } = this._parseCallbackData(callbackData);
-
-            // STEP 2: FIND PAYMENT RECORD (initial non-locking check)
-            const { rows: payments } = await pool.query(
-                'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1',
-                [reference]
-            );
-
-            if (!payments?.length) {
-                if (isSuccess) logger.warn('[PAYD-WEBHOOK] Payment not found - will be resolved by cron', { reference, amount });
-                else logger.warn('[PAYD-WEBHOOK] Failed webhook for unknown reference', { reference });
-                return { success: false, message: 'Payment record not found' };
-            }
-
-            const payment = payments[0];
-            const paymentMeta = payment.metadata || {};
-
-            if (isSuccess) {
-                if (Number.isNaN(amount) || amount <= 0) {
-                    throw new Error('Successful Payd callback missing valid amount');
-                }
-                const expectedAmount = Number.parseFloat(payment.amount || 0);
-                if (Math.abs(amount - expectedAmount) > 1) {
-                    await pool.query(
-                        `UPDATE payments
-                         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{fraud_flag}', $1::jsonb)
-                         WHERE id = $2`,
-                        [JSON.stringify({ reason: 'amount_mismatch', expected: expectedAmount, received: amount }), payment.id]
-                    );
-                    throw new Error(`Payd callback amount mismatch: expected ${expectedAmount}, received ${amount}`);
-                }
-            }
-
-            // STEP 3: IDEMPOTENCY CHECK (Fast path)
-            if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
-                logger.warn('[PAYD-WEBHOOK] Duplicate webhook ignored', { payment_id: payment.id, reference });
-                return { success: true, message: 'Webhook already processed', duplicate: true };
-            }
-
-            // STEP 4: UPDATE PAYMENT (Atomic Transaction)
-            const updateResult = await this._updatePaymentOnCallback(payment, isSuccess, mpesaReceipt);
-            if (!updateResult.success) return updateResult;
-
-            // STEP 5: TRANSITION ORDER TO PAID AND ENQUEUE FULFILLMENT
-            if (isSuccess && (paymentMeta.order_id || paymentMeta.product_id)) {
-                const orderId = paymentMeta.order_id || paymentMeta.product_id;
-                try {
-                    const { rows: orders } = await pool.query('SELECT status FROM product_orders WHERE id = $1 FOR UPDATE', [orderId]);
-                    if (orders.length > 0) {
-                        assertValidTransition(orders[0].status, 'PAID', orderId);
-                        await pool.query('UPDATE product_orders SET status = $2, payment_status = $3, updated_at = NOW() WHERE id = $1', [orderId, 'PAID', 'completed']);
-
-                        // Enqueue for async fulfillment
-                        await FulfillmentQueueService.enqueue(null, orderId);
-                        logger.info(`[PAYD-WEBHOOK] Order ${orderId} transitioned to PAID and enqueued for fulfillment`);
-                    }
-                } catch (completionErr) {
-                    logger.error(`[CRITICAL] handlePaydCallback order transition failed for payment ${payment.id}:`, completionErr);
-                    // Log as system issue for reconciliation to pick up
-                    await FulfillmentQueueService.logSystemIssue(orderId, 'PAYMENT_TRANSITION_FAILURE', 'HIGH', {
-                        error: completionErr.message,
-                        payment_id: payment.id
-                    });
-                }
-            }
-
-            logger.info('[PAYD-WEBHOOK] Webhook processed successfully', {
-                payment_id: payment.id,
-                status: isSuccess ? 'success' : 'failed'
-            });
-
-            return {
-                success: true,
-                message: 'Webhook processed',
-                payment_id: payment.id,
-                status: isSuccess ? 'success' : 'failed'
-            };
-
-        } catch (error) {
-            logger.error('[PAYD-WEBHOOK] Webhook processing failed', { error: error.message });
-            throw error;
-        }
+        throw new Error('Legacy Payd callback entrypoint is disabled. Use the verified payment webhook controller.');
     }
 
     /**
@@ -597,183 +792,16 @@ export class PaymentService {
         return { reference, isSuccess, amount, phone, mpesaReceipt, status };
     }
 
-    /**
-     * Update payment record within a transaction
-     * @private
-     */
-    async _updatePaymentOnCallback(payment, isSuccess, mpesaReceipt) {
-        const dbClient = await pool.connect();
-        try {
-            await dbClient.query('BEGIN');
-
-            const { rows: lockedRows } = await dbClient.query(
-                'SELECT id, status FROM payments WHERE id = $1 FOR UPDATE',
-                [payment.id]
-            );
-
-            if (!lockedRows[0]) {
-                await dbClient.query('ROLLBACK');
-                return { success: false, message: 'Payment not found during lock' };
-            }
-
-            if (lockedRows[0].status === PaymentStatus.COMPLETED || lockedRows[0].status === PaymentStatus.SUCCESS) {
-                await dbClient.query('ROLLBACK');
-                return { success: true, message: 'Webhook already processed (concurrent)', duplicate: true };
-            }
-
-            await dbClient.query(
-                `UPDATE payments 
-                 SET status = $1, mpesa_receipt = $2,
-                     metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{webhook_received_at}', $3::jsonb),
-                     updated_at = NOW()
-                 WHERE id = $4`,
-                [
-                    isSuccess ? PaymentStatus.COMPLETED : 'failed',
-                    mpesaReceipt,
-                    JSON.stringify(new Date().toISOString()),
-                    payment.id
-                ]
-            );
-
-            const paymentMeta = payment.metadata || {};
-            if (isSuccess && paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-                await dbClient.query(
-                    'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                    [Number.parseInt(paymentMeta.debt_id, 10)]
-                );
-            }
-
-            await dbClient.query('COMMIT');
-            return { success: true };
-        } catch (error) {
-            await dbClient.query('ROLLBACK').catch(e => logger.error('[PAYD-WEBHOOK] Rollback failed:', e));
-            throw error;
-        } finally {
-            dbClient.release();
-        }
+    async _updatePaymentOnCallback() {
+        throw new Error('Legacy payment callback mutation is disabled. Use CorePaymentService.completeVerifiedPayment().');
     }
 
-
-    /**
-     * Process successful payment logic and trigger downstream actions
-     */
-    async handleSuccessfulPayment(data) {
-        const { reference, amount, metadata } = data;
-        logger.info(`[PAYMENT-SUCCESS] Processing Ref: ${reference}, Amount: ${amount}`);
-
-        // 1. Find payment by provider_reference or api_ref
-        const { rows } = await pool.query(
-            'SELECT * FROM payments WHERE provider_reference = $1 OR api_ref = $1 LIMIT 1',
-            [reference]
-        );
-        let payment = rows[0];
-
-        // 2. Fallback: Check if it's a Withdrawal Request (Payout)
-        if (!payment) {
-            const { rows: withdrawalRows } = await pool.query(
-                'SELECT * FROM withdrawal_requests WHERE provider_reference = $1',
-                [reference]
-            );
-
-            if (withdrawalRows.length > 0) {
-                const withdrawal = withdrawalRows[0];
-                if (withdrawal.status === PaymentStatus.COMPLETED || withdrawal.status === PaymentStatus.FAILED) {
-                    return { status: 'success', message: 'Withdrawal already processed' };
-                }
-
-                await pool.query(
-                    "UPDATE withdrawal_requests SET status = 'completed', raw_response = COALESCE(raw_response, '{}'::jsonb) || $1::jsonb, processed_at = NOW() WHERE id = $2",
-                    [JSON.stringify(metadata || {}), withdrawal.id]
-                );
-                logger.info(`[PAYMENT-SUCCESS] Withdrawal ${withdrawal.id} marked COMPLETED`);
-                return { status: 'success', message: 'Withdrawal processed successfully' };
-            }
-
-            logger.warn(`[PAYMENT-SUCCESS] No record found for reference: ${reference}`);
-            return { status: 'error', message: 'Record not found' };
-        }
-
-        // 3. Process Payment Idempotency
-        if (payment.status === PaymentStatus.COMPLETED || payment.status === PaymentStatus.SUCCESS) {
-            logger.info(`[PAYMENT-SUCCESS] Payment ${payment.id} already COMPLETED. Skipping.`, { reference });
-            return { status: 'already_processed', message: 'Payment already completed' };
-        }
-
-        // 4. STEP 1: ATOMIC UPDATE
-        const updateResult = await this._updatePaymentOnSuccess(payment, reference, amount, metadata);
-        if (updateResult.status === 'already_processed') return updateResult;
-
-        payment = updateResult.payment;
-        const paymentMeta = payment.metadata || {};
-
-        // 5. STEP 2: DOWNSTREAM ACTIONS
-        if (paymentMeta.order_id || paymentMeta.product_id) {
-            return await this._handleDownstreamOrderAction(payment, paymentMeta);
-        } else if (paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-            return await this._handleDownstreamDebtAction(payment, paymentMeta);
-        }
-
-        logger.warn(`[PAYMENT-SUCCESS] Payment ${payment.id} completed but no downstream action defined`);
-        return { status: 'success', message: 'Payment received but no downstream action defined' };
+    async handleSuccessfulPayment() {
+        throw new Error('Legacy payment success mutation is disabled. Use CorePaymentService.completeVerifiedPayment().');
     }
 
-    /**
-     * Atomically update payment to COMPLETED status
-     * @private
-     */
-    async _updatePaymentOnSuccess(payment, reference, amount, metadata) {
-        const dbClient = await pool.connect();
-        try {
-            await dbClient.query('BEGIN');
-
-            const { rows: lockedRows } = await dbClient.query(
-                'SELECT * FROM payments WHERE id = $1 FOR UPDATE',
-                [payment.id]
-            );
-
-            if (!lockedRows.length) {
-                await dbClient.query('ROLLBACK');
-                throw new Error('Payment not found during lock');
-            }
-
-            const lockedPayment = lockedRows[0];
-            if (lockedPayment.status === PaymentStatus.COMPLETED || lockedPayment.status === PaymentStatus.SUCCESS) {
-                await dbClient.query('ROLLBACK');
-                return { status: 'already_processed', message: 'Payment processed by concurrent webhook' };
-            }
-
-            if (amount) {
-                const paidAmount = Number.parseFloat(amount);
-                if (Math.abs(paidAmount - Number.parseFloat(payment.amount)) > 1) {
-                    await dbClient.query(
-                        `UPDATE payments
-                         SET metadata = jsonb_set(COALESCE(metadata, '{}'::jsonb), '{fraud_flag}', $1::jsonb)
-                         WHERE id = $2`,
-                        [JSON.stringify({ reason: 'amount_mismatch', expected: Number.parseFloat(payment.amount), received: paidAmount }), payment.id]
-                    );
-                    throw new Error(`Amount mismatch for ${payment.id}: expected ${payment.amount}, got ${paidAmount}`);
-                }
-            }
-
-            const mpesaReceipt = metadata?.data?.third_party_trans_id || metadata?.third_party_trans_id || null;
-
-            const { rows: updatedRows } = await dbClient.query(
-                `UPDATE payments 
-                 SET status = $1, provider_reference = $4, mpesa_receipt = $5,
-                     metadata = COALESCE(metadata, '{}'::jsonb) || $2::jsonb,
-                     updated_at = NOW()
-                 WHERE id = $3 RETURNING *`,
-                [PaymentStatus.COMPLETED, JSON.stringify({ payd_confirmation: metadata }), payment.id, reference, mpesaReceipt]
-            );
-
-            await dbClient.query('COMMIT');
-            return { status: 'success', payment: updatedRows[0] };
-        } catch (error) {
-            await dbClient.query('ROLLBACK').catch(e => logger.error('[LOCKING] Rollback failed:', e));
-            throw error;
-        } finally {
-            dbClient.release();
-        }
+    async _updatePaymentOnSuccess() {
+        throw new Error('Legacy payment success mutation is disabled. Use CorePaymentService.completeVerifiedPayment().');
     }
 
 
@@ -792,78 +820,24 @@ export class PaymentService {
         return 'pending';
     }
 
-    /**
-     * Handle downstream order completion logic
-     * @private
-     */
-    async _handleDownstreamOrderAction(payment, metadata) {
-        try {
-            logger.info(`[PURCHASE-FLOW] 7. Completing Order ${metadata.order_id} via OrderService.completeOrder()`);
-            const completionResult = await OrderService.completeOrder(payment);
-            logger.info(`[PURCHASE-FLOW] 8. Order Completion Result:`, completionResult);
-            return { status: 'success', message: 'Payment processed and Order completion triggered' };
-        } catch (completionErr) {
-            logger.error(`[PAYD-PAYIN] CRITICAL: Order completion failed after payment was confirmed. Payment ID: ${payment.id}`, {
-                paymentId: payment.id,
-                orderId: metadata.order_id,
-                error: completionErr.message
-            });
-            try {
-                await pool.query(
-                    `UPDATE payments SET metadata = jsonb_set(COALESCE(metadata, '{}'), '{needs_completion}', 'true'::jsonb) WHERE id = $1`,
-                    [payment.id]
-                );
-                logger.info(`[RECOVERY] Marked payment ${payment.id} as needs_completion=true`);
-            } catch (flagErr) {
-                logger.error(`[CRITICAL] FAILED TO SET needs_completion FLAG for payment ${payment.id}:`, flagErr);
-            }
-            return {
-                status: 'payment_confirmed_completion_pending',
-                message: 'Payment received. Order completion will be retried.',
-                paymentId: payment.id,
-                completionError: completionErr.message
-            };
-        }
+    async _handleDownstreamOrderAction() {
+        throw new Error('Legacy downstream fulfillment is disabled. Use fulfillment queue from CorePaymentService.');
     }
 
-    /**
-     * Handle downstream debt settlement logic
-     * @private
-     */
-    async _handleDownstreamDebtAction(payment, metadata) {
-        const debtClient = await pool.connect();
-        try {
-            await debtClient.query('BEGIN');
-            logger.info(`[PURCHASE-FLOW] 7. Marking debt ${metadata.debt_id} as paid`);
-
-            await debtClient.query(
-                'UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1',
-                [Number.parseInt(metadata.debt_id, 10)]
-            );
-
-            await debtClient.query("UPDATE payments SET status = $1 WHERE id = $2", [PaymentStatus.COMPLETED, payment.id]);
-
-            await debtClient.query('COMMIT');
-            logger.info(`[PURCHASE-FLOW] 8. Debt ${metadata.debt_id} settled successfully`);
-            return { status: 'success', message: 'Payment processed and Debt settled' };
-        } catch (debtErr) {
-            await debtClient.query('ROLLBACK').catch(e => logger.error('Debt rollback failed:', e));
-            logger.error('[PURCHASE-FLOW] ERROR - Error settling debt after payment:', debtErr);
-            throw debtErr;
-        } finally {
-            debtClient.release();
-        }
+    async _handleDownstreamDebtAction() {
+        throw new Error('Legacy debt settlement is disabled. Use CorePaymentService.completeVerifiedPayment().');
     }
 
     async checkPaymentStatus(identifier) {
-        // Query by all possible identifiers in one go to avoid numeric collision bugs
-        // (Previously, purely numeric references were misidentified as internal payment IDs)
+        // Public/status polling identifiers are provider/order-facing references.
+        // They must never resolve through payments.id because numeric provider refs
+        // can collide with unrelated internal payment ids.
         const query = `
             SELECT * FROM payments 
-            WHERE id::text = $1 
-               OR provider_reference = $1 
+            WHERE provider_reference = $1
                OR invoice_id = $1 
                OR api_ref = $1 
+            ORDER BY id ASC
             LIMIT 1
         `;
         const { rows } = await pool.query(query, [String(identifier)]);
@@ -878,36 +852,21 @@ export class PaymentService {
                 const normalizedStatus = paydStatus.status; // already lowercased in checkTransactionStatus
 
                 if (['success', 'completed', 'processed', 'paid'].includes(normalizedStatus)) {
-                    payment.status = PaymentStatus.COMPLETED;
-                    // Persist status change immediately
-                    await pool.query('UPDATE payments SET status = $1, updated_at = NOW() WHERE id = $2', [PaymentStatus.COMPLETED, payment.id]);
-                    logger.info(`[PaymentService] In-poll sync: Payment ${payment.id} verified as ${normalizedStatus} -> COMPLETED (Persisted)`);
-
-                    // If this is a pending order, trigger completion now instead of waiting for webhook
-                    const paymentMeta = payment.metadata || {};
-                    const orderId = paymentMeta.order_id || paymentMeta.product_id;
-
-                    if (orderId) {
-                        const lockKey = `lock:order_completion:${orderId}`;
-                        try {
-                            // DISTRIBUTED LOCK: Prevent race conditions between webhooks and polling
-                            // ioredis set command with 'NX' ensures only one caller acquires the lock
-                            const acquired = await cacheService.redis.set(lockKey, 'locked', 'EX', 30, 'NX');
-
-                            if (!acquired) {
-                                logger.info(`[ORDER-LOCK] Order ${orderId} completion already in progress. Skipping polling path.`);
-                                return;
-                            }
-
-                            await OrderService.completeOrder({
-                                ...payment,
-                                metadata: paymentMeta
-                            });
-                            logger.info('[PAYMENT-POLL] Order completion triggered successfully via polling', { orderId });
-                        } catch (completionErr) {
-                            logger.error('[PAYMENT-POLL] Failed to complete order via polling path:', completionErr);
-                        }
-                    }
+                    const { default: CorePaymentService } = await import('../core/CorePaymentService.js');
+                    const completion = await CorePaymentService.completeVerifiedPayment({
+                        paymentId: payment.id,
+                        reference: payment.provider_reference,
+                        providerPayload: {
+                            ...paydStatus,
+                            status: normalizedStatus
+                        },
+                        source: 'status_polling'
+                    });
+                    logger.info('[PaymentService] Polling delegated payment completion to Core path', {
+                        paymentId: payment.id,
+                        completionStatus: completion.status
+                    });
+                    payment.status = completion.payment?.status || PaymentStatus.COMPLETED;
                 }
                 // REMOVED: Auto-fail update. We should not mark as failed in the poller to avoid race conditions with webhooks.
                 // Webhooks and Cron are the authoritative sources for failure.
@@ -1342,16 +1301,46 @@ export class PaymentService {
         };
 
         try {
-            // 1. Fetch pending payments within time window
-            const { rows: pendingPayments } = await pool.query(
-                `SELECT * FROM payments
- WHERE status = 'pending'
-   AND created_at > NOW() - ($1 * INTERVAL '1 hour')
-   AND created_at < NOW() - INTERVAL '1 minute'
- ORDER BY created_at ASC
- LIMIT $2`,
-                [hoursAgo, limit]
-            );
+            // 1. Claim pending payments with row locks so concurrent cron instances
+            // cannot verify and complete the same payment at the same time.
+            const claimClient = await pool.connect();
+            let pendingPayments = [];
+            try {
+                await claimClient.query('BEGIN');
+                const { rows } = await claimClient.query(
+                    `WITH claimed AS (
+                       SELECT id
+                       FROM payments
+                       WHERE status = 'pending'
+                         AND created_at > NOW() - ($1 * INTERVAL '1 hour')
+                         AND created_at < NOW() - INTERVAL '1 minute'
+                         AND (
+                           metadata->>'cron_claimed_until' IS NULL
+                           OR (metadata->>'cron_claimed_until')::timestamptz < NOW()
+                         )
+                       ORDER BY created_at ASC
+                       LIMIT $2
+                       FOR UPDATE SKIP LOCKED
+                     )
+                     UPDATE payments p
+                     SET metadata = COALESCE(p.metadata, '{}'::jsonb) || jsonb_build_object(
+                           'cron_claimed_at', NOW(),
+                           'cron_claimed_until', NOW() + INTERVAL '5 minutes'
+                         ),
+                         updated_at = NOW()
+                     FROM claimed
+                     WHERE p.id = claimed.id
+                     RETURNING p.*`,
+                    [hoursAgo, limit]
+                );
+                pendingPayments = rows;
+                await claimClient.query('COMMIT');
+            } catch (claimErr) {
+                await claimClient.query('ROLLBACK').catch(() => {});
+                throw claimErr;
+            } finally {
+                claimClient.release();
+            }
 
             results.processedCount = pendingPayments.length;
 
@@ -1365,8 +1354,10 @@ export class PaymentService {
                     // Calculate payment age in minutes
                     const ageMinutes = Math.floor((new Date() - new Date(payment.created_at)) / 60000);
 
-                    // Skip payments without provider reference
-                    if (!payment.provider_reference) {
+                    const statusReference = payment.provider_reference || payment.api_ref;
+
+                    // Skip payments without any durable provider lookup reference
+                    if (!statusReference) {
                         // If payment is older than 30 minutes and has no provider reference,
                         continue;
                     }
@@ -1377,7 +1368,7 @@ export class PaymentService {
                     let is404Error = false;
 
                     try {
-                        const response = await this.client.get(`/payments/${payment.provider_reference}`, {
+                        const response = await this.client.get(`/payments/${statusReference}`, {
                             headers: { Authorization: this.getAuthHeader() }
                         });
                         providerData = response.data;
@@ -1404,10 +1395,16 @@ export class PaymentService {
                     // Process based on determined status
                     if (providerStatus === 'success') {
                         logger.info(`Payment ${payment.id} verified as SUCCESS via Cron`);
-                        await this.handleSuccessfulPayment({
-                            reference: payment.provider_reference,
-                            amount: payment.amount,
-                            metadata: providerData || {}
+                        const { default: CorePaymentService } = await import('../core/CorePaymentService.js');
+                        await CorePaymentService.completeVerifiedPayment({
+                            paymentId: payment.id,
+                            reference: statusReference,
+                            providerPayload: {
+                                ...(providerData || {}),
+                                api_ref: payment.api_ref,
+                                status: 'success'
+                            },
+                            source: 'payment_cron'
                         });
                         results.successCount++;
                     } else if (providerStatus === 'failed') {
@@ -1416,28 +1413,18 @@ export class PaymentService {
                             : (providerData?.remarks || providerData?.status_description || 'Payment failed');
 
                         logger.info(`Payment ${payment.id} verified as FAILED via Cron - Reason: ${failureReason}`);
-                        await pool.query(
-                            "UPDATE payments SET status = 'failed', metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb WHERE id = $2",
-                            [JSON.stringify({
-                                failure_reason: failureReason,
-                                failed_by: 'cron_job',
-                                failed_at: new Date().toISOString(),
-                                provider_data: providerData || { error_code: 404 }
-                            }), payment.id]
-                        );
-
-                        // If linked to an order, mark the order as failed too
-                        if (payment.metadata?.order_id) {
-                            try {
-                                await pool.query(
-                                    "UPDATE product_orders SET status = 'FAILED', payment_status = 'failed' WHERE id = $1",
-                                    [payment.metadata.order_id]
-                                );
-                                logger.info(`[Cron] Marked Order ${payment.metadata.order_id} as FAILED due to payment failure`);
-                            } catch (orderErr) {
-                                logger.error(`[Cron] Failed to mark order ${payment.metadata.order_id} as failed:`, orderErr);
-                            }
-                        }
+                        const { default: CorePaymentService } = await import('../core/CorePaymentService.js');
+                        await CorePaymentService.completeVerifiedPayment({
+                            paymentId: payment.id,
+                            reference: statusReference,
+                            providerPayload: {
+                                ...(providerData || {}),
+                                api_ref: payment.api_ref,
+                                status: 'failed',
+                                failure_reason: failureReason
+                            },
+                            source: 'payment_cron'
+                        });
 
                         results.failedCount++;
                     }
@@ -1469,7 +1456,7 @@ export class PaymentService {
 
 
     async initiateProductPayment(normalizedOrder) {
-        const { buyer, service, location, metadata } = normalizedOrder;
+        const { buyer, service, location, metadata, idempotencyKey } = normalizedOrder;
 
         const buyerId = buyer.id;
         const buyerEmail = buyer.email;
@@ -1498,6 +1485,40 @@ export class PaymentService {
 
         if (finalTotal <= 0) throw new Error('Invalid order amount after secure calculation');
 
+        if (idempotencyKey) {
+            const { rows: existing } = await pool.query(
+                `SELECT po.id AS order_id,
+                        po.order_number,
+                        p.id AS payment_id,
+                        p.provider_reference,
+                        p.status AS payment_status
+                 FROM product_orders po
+                 LEFT JOIN payments p ON p.metadata->>'order_id' = po.id::text
+                 WHERE po.client_checkout_token = $1
+                 ORDER BY p.created_at DESC NULLS LAST
+                 LIMIT 1`,
+                [idempotencyKey]
+            );
+            if (existing.length) {
+                logger.info('[PAYMENT-INITIATE] Returning existing checkout attempt', {
+                    idempotencyKey,
+                    orderId: existing[0].order_id,
+                    paymentId: existing[0].payment_id
+                });
+                return {
+                    success: true,
+                    idempotent: true,
+                    orderId: existing[0].order_id,
+                    orderNumber: existing[0].order_number,
+                    paymentId: existing[0].payment_id,
+                    paymentResult: {
+                        reference: existing[0].provider_reference,
+                        status: existing[0].payment_status
+                    }
+                };
+            }
+        }
+
         // 4. Create Order (PIN-02: UNIFIED ORDER CONTEXT)
         const orderData = {
             ...normalizedOrder,
@@ -1511,6 +1532,7 @@ export class PaymentService {
             },
             metadata: {
                 ...metadata,
+                client_checkout_token: idempotencyKey || metadata.client_checkout_token || null,
                 product_type: product.product_type,
                 is_digital: product.is_digital,
                 product_id: service.id,
@@ -1529,6 +1551,7 @@ export class PaymentService {
         };
 
         const client = await pool.connect();
+        let gwPayload = null;
         try {
             await client.query('BEGIN');
 
@@ -1563,21 +1586,68 @@ export class PaymentService {
             );
             const payment = insertRes.rows[0];
 
+            gwPayload = {
+                ...paymentData,
+                phone: buyerMobilePayment,
+                firstName: buyer.name?.split(' ')[0],
+                narration: metadata.narration || `Payment for ${product.name}`
+            };
+
+            await this.createPaymentProviderAttempt(client, {
+                paymentId: payment.id,
+                orderId: order.id,
+                apiRef,
+                idempotencyKey,
+                requestPayload: gwPayload
+            });
+
             await client.query('COMMIT');
 
             // 5. Initiate Gateway
             try {
-                const gwPayload = {
-                    ...paymentData,
-                    phone: buyerMobilePayment,
-                    firstName: buyer.name?.split(' ')[0],
-                    narration: metadata.narration || `Payment for ${product.name}`
-                };
-
+                await this.markPaymentProviderAttemptStarted(payment.id);
                 const result = await this.initiatePayment(gwPayload);
 
-                if (result.reference) {
-                    await pool.query("UPDATE payments SET provider_reference = $1 WHERE id = $2", [result.reference, payment.id]);
+                try {
+                    await this.markPaymentProviderAttemptAccepted({
+                        paymentId: payment.id,
+                        providerReference: result.reference,
+                        responsePayload: result
+                    });
+                } catch (persistError) {
+                    logger.error('[PAYMENT-GATEWAY] Provider accepted payment but local reference persistence failed; keeping payment pending for api_ref webhook/cron recovery', {
+                        paymentId: payment.id,
+                        orderId: order.id,
+                        apiRef,
+                        providerReference: result.reference,
+                        error: persistError.message
+                    });
+
+                    await this.markPaymentInitiationAmbiguous({
+                        orderId: order.id,
+                        paymentId: payment.id,
+                        reason: 'provider_reference_persistence_failed',
+                        providerPayload: {
+                            provider_reference: result.reference,
+                            api_ref: apiRef,
+                            persistence_error: persistError.message,
+                            response: result
+                        }
+                    }).catch(error => logger.error('[PAYMENT-GATEWAY] Failed to persist provider-reference persistence failure:', error.message));
+
+                    return {
+                        success: true,
+                        pending: true,
+                        ambiguous: true,
+                        orderId: order.id,
+                        orderNumber: order.order_number,
+                        paymentId: payment.id,
+                        paymentResult: {
+                            reference: result.reference || apiRef,
+                            status: 'pending',
+                            message: 'Payment request was accepted and is pending confirmation.'
+                        }
+                    };
                 }
 
                 return {
@@ -1589,15 +1659,100 @@ export class PaymentService {
                 };
             } catch (gwError) {
                 logger.error('[PAYMENT-GATEWAY] Gateway initiation failed:', gwError);
-                return {
-                    success: false,
-                    orderId: order.id,
-                    orderNumber: order.order_number,
-                    error: 'Payment initiation failed. Your order has been placed but payment was not triggered. Please try again from Order History.'
+                const errorPayload = {
+                    message: gwError.message,
+                    code: gwError.code,
+                    status: gwError.statusCode || gwError.response?.status,
+                    data: gwError.details || gwError.response?.data
                 };
+
+                if (this.isAmbiguousPaymentProviderError(gwError)) {
+                    await this.markPaymentProviderAttemptAmbiguous({
+                        paymentId: payment.id,
+                        errorPayload
+                    }).catch(error => logger.error('[PAYMENT-GATEWAY] Failed to persist ambiguous provider attempt:', error.message));
+
+                    await this.markPaymentInitiationAmbiguous({
+                        orderId: order.id,
+                        paymentId: payment.id,
+                        reason: gwError.message || 'gateway_result_ambiguous',
+                        providerPayload: errorPayload
+                    });
+
+                    logger.warn('[PAYMENT-GATEWAY] Gateway initiation result ambiguous; keeping payment pending for webhook/cron settlement', {
+                        orderId: order.id,
+                        paymentId: payment.id,
+                        apiRef,
+                        code: gwError.code,
+                        status: errorPayload.status
+                    });
+
+                    return {
+                        success: true,
+                        pending: true,
+                        ambiguous: true,
+                        orderId: order.id,
+                        orderNumber: order.order_number,
+                        paymentId: payment.id,
+                        paymentResult: {
+                            reference: apiRef,
+                            status: 'pending',
+                            message: 'Payment request is pending provider confirmation. Check your phone or retry status shortly.'
+                        }
+                    };
+                }
+
+                await this.markPaymentProviderAttemptFailed({
+                    paymentId: payment.id,
+                    errorPayload
+                }).catch(error => logger.error('[PAYMENT-GATEWAY] Failed to persist provider attempt failure:', error.message));
+
+                await this.markPaymentInitiationFailed({
+                    orderId: order.id,
+                    paymentId: payment.id,
+                    reason: gwError.message || 'gateway_initiation_failed',
+                    providerPayload: errorPayload
+                });
+                const failure = new Error('Payment initiation failed before STK push. No payment was triggered; please try again.');
+                failure.orderId = order.id;
+                failure.paymentId = payment.id;
+                throw failure;
             }
         } catch (error) {
             await client.query('ROLLBACK');
+            if (idempotencyKey && error.code === '23505') {
+                const { rows: existing } = await pool.query(
+                    `SELECT po.id AS order_id,
+                            po.order_number,
+                            p.id AS payment_id,
+                            p.provider_reference,
+                            p.status AS payment_status
+                     FROM product_orders po
+                     LEFT JOIN payments p ON p.metadata->>'order_id' = po.id::text
+                     WHERE po.client_checkout_token = $1
+                     ORDER BY p.created_at DESC NULLS LAST
+                     LIMIT 1`,
+                    [idempotencyKey]
+                );
+                if (existing.length) {
+                    logger.info('[PAYMENT-INITIATE] Recovered existing checkout after unique race', {
+                        idempotencyKey,
+                        orderId: existing[0].order_id,
+                        paymentId: existing[0].payment_id
+                    });
+                    return {
+                        success: true,
+                        idempotent: true,
+                        orderId: existing[0].order_id,
+                        orderNumber: existing[0].order_number,
+                        paymentId: existing[0].payment_id,
+                        paymentResult: {
+                            reference: existing[0].provider_reference,
+                            status: existing[0].payment_status
+                        }
+                    };
+                }
+            }
             logger.error('[PAYMENT-INITIATE] Transaction failed:', error);
             throw error;
         } finally {

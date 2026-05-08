@@ -1,4 +1,5 @@
 import { memo, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { publicApiService, Seller } from '@/api/publicApi';
 import SellerBrandCard from '@/components/SellerBrandCard';
 
@@ -9,34 +10,8 @@ interface SellersGridProps {
     isBuyer?: boolean;
 }
 
-const SELLERS_CACHE_TTL_MS = 5 * 60 * 1000;
 const INITIAL_VISIBLE_SELLERS = 24;
 const VISIBLE_SELLERS_STEP = 24;
-
-let sellersCache: { data: Seller[]; timestamp: number } | null = null;
-let sellersRequest: Promise<Seller[]> | null = null;
-
-const hasFreshSellersCache = () =>
-    Boolean(sellersCache && Date.now() - sellersCache.timestamp < SELLERS_CACHE_TTL_MS);
-
-const getCachedSellers = async () => {
-    if (hasFreshSellersCache()) {
-        return sellersCache!.data;
-    }
-
-    if (!sellersRequest) {
-        sellersRequest = publicApiService.getSellers()
-            .then((data) => {
-                sellersCache = { data, timestamp: Date.now() };
-                return data;
-            })
-            .finally(() => {
-                sellersRequest = null;
-            });
-    }
-
-    return sellersRequest;
-};
 
 const SellerGridSkeleton = () => (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3" aria-label="Loading shops">
@@ -52,36 +27,16 @@ const SellerGridSkeleton = () => (
 );
 
 const SellersGrid = ({ filterCity, filterArea, searchQuery, isBuyer }: SellersGridProps) => {
-    const [sellers, setSellers] = useState<Seller[]>(() => hasFreshSellersCache() ? sellersCache!.data : []);
-    const [loading, setLoading] = useState(() => !hasFreshSellersCache());
     const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_SELLERS);
     const deferredSearchQuery = useDeferredValue(searchQuery);
-
-    useEffect(() => {
-        let cancelled = false;
-
-        const fetchSellers = async () => {
-            if (!hasFreshSellersCache()) {
-                setLoading(true);
-            }
-            try {
-                const data = await getCachedSellers();
-                if (cancelled) return;
-                setSellers(data);
-            } catch (error: any) {
-                if (cancelled) return;
-                console.error('Failed to fetch sellers', error);
-            } finally {
-                if (!cancelled) setLoading(false);
-            }
-        };
-
-        fetchSellers();
-
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const sellersQuery = useQuery({
+        queryKey: ['public-sellers', 1, 48],
+        queryFn: () => publicApiService.getSellersPage({ page: 1, limit: 48 }),
+        staleTime: 5 * 60 * 1000,
+        gcTime: 10 * 60 * 1000
+    });
+    const sellers = sellersQuery.data?.sellers || [];
+    const loading = sellersQuery.isLoading;
 
     useEffect(() => {
         setVisibleCount(INITIAL_VISIBLE_SELLERS);

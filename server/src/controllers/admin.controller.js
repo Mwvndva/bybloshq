@@ -4,10 +4,10 @@ import { AppError } from '../shared/utils/errorHandler.js';
 import AdminService from '../services/admin.service.js';
 import AuthService from '../services/auth.service.js';
 import { pool } from '../shared/db/database.js';
-import whatsappService from '../services/whatsapp.service.js';
 import payoutService from '../services/payout.service.js';
 import { PaymentService } from '../services/payment.service.js';
 import logger from '../shared/utils/logger.js';
+import eventBus, { AppEvents } from '../events/eventBus.js';
 
 const paymentService = new PaymentService();
 
@@ -606,16 +606,19 @@ const updateWithdrawalRequestStatus = async (req, res, next) => {
 
       await client.query('COMMIT');
 
-      // Notify entity
-      if (request.entity_phone) {
-        whatsappService.notifySellerWithdrawalUpdate(request.entity_phone, {
-          amount: request.amount,
-          status,
-          reference: request.provider_reference || `REQ-${id}`,
-          reason: reason || (status === 'failed' ? 'Rejected by admin' : null),
-          newBalance
-        }).catch(err => logger.error('Admin override WA notify failed:', err));
-      }
+      eventBus.emit(AppEvents.WITHDRAWAL.UPDATED, {
+        eventId: `withdrawal.updated:${request.id}:admin:${status}`,
+        withdrawal: {
+          ...request,
+          id: request.id,
+          status
+        },
+        seller: {
+          whatsapp_number: request.entity_phone
+        },
+        reason: reason || (status === 'failed' ? 'Rejected by admin' : null),
+        newBalance
+      });
 
       res.status(200).json({
         status: 'success',
