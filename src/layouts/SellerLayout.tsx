@@ -21,6 +21,7 @@ export function SellerLayout() {
             title={`Welcome, ${sellerFirstName}`}
             navigationItems={navigationItems}
             showBackButton={true}
+            showHeader={false}
             backButtonPath="/"
             backButtonLabel="Back to Home"
         >
