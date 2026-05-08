@@ -8,6 +8,7 @@ import { pool } from '../shared/db/database.js';
 import Fees from '../config/fees.js';
 import logger from '../shared/utils/logger.js';
 import { AppError } from '../shared/utils/errorHandler.js';
+import eventBus, { AppEvents } from '../events/eventBus.js';
 
 /**
  * ReferralService — all referral business logic.
@@ -246,8 +247,10 @@ class ReferralService {
             `SELECT
          s.id           AS referred_seller_id,
          s.shop_name    AS referred_shop_name,
-         s.referred_by_seller_id AS referrer_seller_id
+         s.referred_by_seller_id AS referrer_seller_id,
+         ref.whatsapp_number AS referrer_whatsapp
        FROM sellers s
+       JOIN sellers ref ON ref.id = s.referred_by_seller_id
        WHERE s.referred_by_seller_id IS NOT NULL
          AND s.referral_active_until IS NOT NULL
          AND s.referral_active_until >= $1`,
@@ -263,13 +266,14 @@ class ReferralService {
 
         let processed = 0;
         let totalCredited = 0;
+        const rewardEvents = [];
 
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
 
             for (/** @type {any} */ const row of activeReferrals.rows) {
-                const { referred_seller_id, referred_shop_name, referrer_seller_id } = row;
+                const { referred_seller_id, referred_shop_name, referrer_seller_id, referrer_whatsapp } = row;
 
                 // 1. Calculate Seller Payout GMV for the referred seller in the target month/year (Timezone aware)
                 const gmvResult = await client.query(
@@ -328,10 +332,20 @@ class ReferralService {
 
                 logger.info(`[REFERRAL-CRON] SUCCESS: Credited KES ${reward} to referrer ${referrer_seller_id} from referred ${referred_seller_id} (GMV: ${gmv})`);
 
-                // 6. WhatsApp notification (async, non-blocking)
-                ReferralService._notifyReferrer(referrer_seller_id, referred_shop_name, reward).catch(err =>
-                    logger.error(`[REFERRAL-CRON] WhatsApp notify failed for seller ${referrer_seller_id}:`, err.message)
-                );
+                rewardEvents.push({
+                    eventId: `referral.reward_created:${referrer_seller_id}:${referred_seller_id}:${year}:${month}`,
+                    seller: {
+                        id: referrer_seller_id,
+                        whatsapp_number: referrer_whatsapp
+                    },
+                    reward: {
+                        amount: reward,
+                        referredShopName: referred_shop_name,
+                        referredSellerId: referred_seller_id,
+                        periodMonth: month,
+                        periodYear: year
+                    }
+                });
             }
 
             await client.query('COMMIT');
@@ -344,34 +358,12 @@ class ReferralService {
         }
 
         logger.info(`[REFERRAL-CRON] ✅ Done — processed: ${processed}, total credited: KES ${totalCredited}`);
+        for (const payload of rewardEvents) {
+            eventBus.emit(AppEvents.REFERRAL.REWARD_CREATED, payload);
+        }
         return { processed, totalCredited };
     }
 
-    // ─── Private Helpers ────────────────────────────────────────────────────────
-
-    /**
-     * Send a WhatsApp reward notification to the referrer.
-     * @private
-     * @param {number} referrerSellerId
-     * @param {string} referredShopName
-     * @param {number} amount
-     */
-    static async _notifyReferrer(referrerSellerId, referredShopName, amount) {
-        const sellerResult = await pool.query(
-            'SELECT whatsapp_number FROM sellers WHERE id = $1',
-            [referrerSellerId]
-        );
-
-        const phone = sellerResult.rows[0]?.whatsapp_number;
-        if (!phone) return;
-
-        // @ts-ignore
-        const { default: whatsappService } = await import('./whatsapp.service.js');
-        const message = `💛 Byblos: You earned KES ${amount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} from ${referredShopName}'s sales this month. Keep building your squad!`;
-        // @ts-ignore
-        await whatsappService.sendMessage(phone, message);
-        logger.info(`[REFERRAL] WhatsApp reward notification sent to seller ${referrerSellerId}`);
-    }
 }
 
 export default ReferralService;

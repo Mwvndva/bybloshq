@@ -38,10 +38,16 @@ export async function normalizeOrderInput(req) {
         metadata: rawMetadata = {},
         overrideContact = false
     } = body;
-
     logger.info('[RAW-LOCATION-DEBUG] Extracted Data: ' + JSON.stringify({ rawBuyerLocation, metadata: rawMetadata }));
 
     const metadata = safeJson(rawMetadata);
+    const checkoutToken = req.headers['idempotency-key']
+        || req.headers['x-checkout-token']
+        || body.checkout_token
+        || body.clientCheckoutToken
+        || body.checkoutAttemptId
+        || body.idempotencyKey
+        || metadata.client_checkout_token;
 
     // 1. Resolve Identity via Phone (PIN-10: IDENTITY RESOLUTION)
     const phone = req.user?.phone || rawPhone;
@@ -260,10 +266,12 @@ export async function normalizeOrderInput(req) {
         },
         metadata: {
             ...metadata,
+            client_checkout_token: checkoutToken ? String(checkoutToken).trim().slice(0, 160) : null,
             product_id: service.id,
             product_name: service.title,
             customer_name: buyer.name,
             items: metadata.items || [] // Ensure items array exists for downstream logic
-        }
+        },
+        idempotencyKey: checkoutToken ? String(checkoutToken).trim().slice(0, 160) : null
     };
 }

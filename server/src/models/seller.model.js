@@ -407,7 +407,10 @@ export const removeClient = async (sellerId, userId) => {
   }
 };
 
-export const findSellersByUserId = async (userId) => {
+export const findSellersByUserId = async (userId, options = {}) => {
+  const page = Math.max(1, parseInt(options.page || '1', 10) || 1);
+  const pageSize = Math.min(50, Math.max(1, parseInt(options.limit || options.pageSize || '24', 10) || 24));
+  const offset = (page - 1) * pageSize;
   const result = await query(
     `SELECT 
       s.id, 
@@ -419,14 +422,24 @@ export const findSellersByUserId = async (userId) => {
       s.theme,
       s.instagram_link AS "instagramLink",
       s.client_count AS "clientCount",
-      s.created_at AS "createdAt"
+      s.created_at AS "createdAt",
+      COUNT(*) OVER() AS "totalCount"
      FROM sellers s
      JOIN seller_clients sc ON s.id = sc.seller_id
      WHERE sc.user_id = $1
-     ORDER BY sc.created_at DESC`,
-    [userId]
+     ORDER BY sc.created_at DESC, s.id ASC
+     LIMIT $2 OFFSET $3`,
+    [userId, pageSize, offset]
   );
-  return result.rows;
+  return {
+    sellers: result.rows,
+    pagination: {
+      page,
+      pageSize,
+      total: parseInt(result.rows[0]?.totalCount || '0', 10),
+      hasMore: offset + result.rows.length < parseInt(result.rows[0]?.totalCount || '0', 10)
+    }
+  };
 };
 
 

@@ -1,18 +1,12 @@
 /**
  * paymentCron.js
  *
- * This cron originally called PaymentService.processPendingPayments which could race
- * with CorePaymentService.handlePaydWebhook for the same payment row.
+ * Active payment recovery behavior is intentionally narrow:
+ * - PaymentService.processPendingPayments claims rows with FOR UPDATE SKIP LOCKED.
  *
- * P0-4 FIX: The cron now ONLY calls legacy PaymentService.processPendingPayments which
- * already uses the legacy handlePaydCallback. The critical safety guard is that
- * handlePaydCallback has an idempotency check (status === 'completed' → skip).
- * We add FOR UPDATE SKIP LOCKED at the DB level (inside processPendingPayments) to
- * prevent simultaneous processing from the webhook path.
- *
- * P1-1 FIX: The completionRetryCron is kept here as a second cron that uses the
- * unified key 'needs_fulfillment' (not the old 'needs_completion') to retry
- * any orders where fulfillment failed post-payment.
+ * - Provider success/failure delegates to CorePaymentService.completeVerifiedPayment.
+ * - CorePaymentService updates payment/order state and enqueues fulfillment in one transaction.
+ * - The fulfillment repair cron below only re-enqueues through FulfillmentQueueService.
  */
 
 // @ts-check
@@ -22,7 +16,7 @@ import cron from 'node-cron';
 import logger from '../shared/utils/logger.js';
 import PaymentService from '../services/payment.service.js';
 import { pool } from '../shared/db/database.js';
-import OrderService from '../services/order.service.js';
+import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 
 /**
  * @typedef {Object} CronOptions
@@ -92,12 +86,14 @@ const scheduleFulfillmentRetry = (options = {}) => {
     try {
       // P1-1: Check BOTH keys for backward compat during the transition period
       const { rows } = await pool.query(
-        `SELECT * FROM payments
+        `SELECT p.*, (p.metadata->>'order_id')::int AS order_id
+         FROM payments p
          WHERE status = 'completed'
            AND (
              metadata->>'needs_fulfillment' = 'true'
              OR metadata->>'needs_completion' = 'true'
            )
+           AND metadata->>'order_id' IS NOT NULL
            AND updated_at > NOW() - INTERVAL '24 hours'
          ORDER BY updated_at ASC
          LIMIT 20`
@@ -108,7 +104,7 @@ const scheduleFulfillmentRetry = (options = {}) => {
 
       for (const payment of rows) {
         try {
-          await OrderService.completeOrder(payment);
+          await FulfillmentQueueService.enqueue(null, payment.order_id);
 
           // P1-1: Clear BOTH keys on success
           await pool.query(

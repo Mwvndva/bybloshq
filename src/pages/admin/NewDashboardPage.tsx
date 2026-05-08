@@ -325,6 +325,12 @@ const NewAdminDashboard = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [dashboardReloadToken, setDashboardReloadToken] = useState(0);
+  const inspectionSessionId = useMemo(() => {
+    const bytes = new Uint32Array(2);
+    globalThis.crypto?.getRandomValues?.(bytes);
+    return Array.from(bytes).map(value => value.toString(36)).join('').toUpperCase() || String(Date.now());
+  }, []);
 
   // Initialize state for dashboard data with proper typing
   // State for ticket buyers modal
@@ -478,7 +484,7 @@ const NewAdminDashboard = () => {
     };
 
     fetchDashboardData();
-  }, [authLoading, isAuthenticated]);
+  }, [authLoading, isAuthenticated, dashboardReloadToken]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -651,7 +657,11 @@ const NewAdminDashboard = () => {
             <p className="text-gray-400 font-medium">{error}</p>
           </div>
           <Button
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              setError(null);
+              setIsInitialized(false);
+              setDashboardReloadToken(token => token + 1);
+            }}
             className="w-full h-14 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-gray-200 transition-all"
           >
             Re-Initialize
@@ -1142,7 +1152,7 @@ const NewAdminDashboard = () => {
                       )}
                     </div>
                     <div className="p-8 border-t border-white/10 bg-white/[0.02] flex justify-between items-center">
-                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Session ID: {Math.random().toString(36).substring(7).toUpperCase()}</p>
+                      <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Session ID: {inspectionSessionId}</p>
                       <Button onClick={closeSellerModal} className="bg-white text-black font-black uppercase tracking-widest px-12 py-5 rounded-[1.5rem] hover:bg-gray-200 transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)] active:scale-95 group">
                         Close Inspection
                         <X className="ml-3 h-5 w-5 group-hover:rotate-90 transition-transform" />

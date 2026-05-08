@@ -1,5 +1,8 @@
 import crypto from 'crypto';
 import logger from '../shared/utils/logger.js';
+import { normalizeProviderReference } from '../shared/utils/providerReference.js';
+import cacheService from '../services/cache.service.js';
+import { pool } from '../shared/db/database.js';
 
 function ipToInt(ip) {
     return ip.split('.').reduce((acc, octet) => (acc << 8) + Number.parseInt(octet, 10), 0) >>> 0;
@@ -28,10 +31,9 @@ function ipMatches(clientIP, allowedEntry) {
 /**
  * Payd Webhook Security Middleware
  * 
- * CRITICAL CONTEXT: Payd does NOT provide webhook signature verification.
  * This middleware implements defense-in-depth security through multiple layers:
  * 
- * 1. IP Whitelisting (PRIMARY SECURITY LAYER - REQUIRED)
+ * 1. IP Whitelisting (network allow-list)
  * 2. Request validation (Content-Type, body structure)
  * 3. Timestamp validation (reject stale webhooks)
  * 
@@ -155,11 +157,7 @@ export const verifyPaydWebhook = (req, res, next) => {
     const payload = req.body.data || req.body;
 
     // Check for transaction reference (various field names Payd might use)
-    const hasReference = payload.transaction_reference ||
-        payload.correlator_id ||
-        payload.transaction_id ||
-        payload.reference ||
-        payload.tracking_id;
+    const hasReference = normalizeProviderReference(req.body);
 
     if (!hasReference) {
         logger.warn('[WEBHOOK-SECURITY] ⚠️  Missing transaction reference in payload:', {
@@ -232,16 +230,210 @@ export const verifyPaydWebhook = (req, res, next) => {
     next();
 };
 
+export function verifyPaydHmacSignature(signature, rawBody, secret = process.env.PAYD_WEBHOOK_SECRET || process.env.PAYD_CALLBACK_SECRET) {
+    if (!signature || !rawBody || !secret) {
+        return false;
+    }
+
+    try {
+        const bodyBuffer = Buffer.isBuffer(rawBody) ? rawBody : Buffer.from(String(rawBody));
+        const expected = crypto.createHmac('sha256', secret).update(bodyBuffer).digest('hex');
+        const received = String(signature).replace(/^sha256=/i, '').trim();
+        const expectedBuffer = Buffer.from(expected, 'hex');
+        const receivedBuffer = Buffer.from(received, 'hex');
+
+        if (expectedBuffer.length !== receivedBuffer.length) {
+            return false;
+        }
+        return crypto.timingSafeEqual(expectedBuffer, receivedBuffer);
+    } catch (error) {
+        logger.error('[WEBHOOK-SECURITY] HMAC verification error', { error: error.message });
+        return false;
+    }
+}
+
+function parseWebhookTimestamp(req, payload) {
+    const rawTimestamp = req.headers['x-payd-timestamp']
+        || req.headers['x-webhook-timestamp']
+        || req.headers['x-request-timestamp']
+        || payload.timestamp
+        || payload.created_at
+        || payload.time;
+
+    if (!rawTimestamp) return { valid: false, rawTimestamp: null, reason: 'missing_timestamp' };
+
+    const numeric = Number(rawTimestamp);
+    const timestamp = Number.isFinite(numeric)
+        ? new Date(numeric > 10_000_000_000 ? numeric : numeric * 1000)
+        : new Date(rawTimestamp);
+
+    if (Number.isNaN(timestamp.getTime())) {
+        return { valid: false, rawTimestamp, reason: 'invalid_timestamp' };
+    }
+
+    const ageMs = Math.abs(Date.now() - timestamp.getTime());
+    const maxAgeMs = Number.parseInt(process.env.PAYD_WEBHOOK_MAX_AGE_MS || `${10 * 60 * 1000}`, 10);
+    if (ageMs > maxAgeMs) {
+        return { valid: false, rawTimestamp, reason: 'stale_timestamp', ageMs };
+    }
+
+    return { valid: true, rawTimestamp, timestamp, ageMs };
+}
+
+function deriveReplayEventId(req, payload) {
+    const raw = Buffer.isBuffer(req.rawBody) ? req.rawBody : Buffer.from(String(req.rawBody || ''));
+    const bodyHash = crypto.createHash('sha256').update(raw).digest('hex');
+    return String(
+        req.headers['x-payd-event-id']
+        || req.headers['x-webhook-id']
+        || req.headers['x-request-id']
+        || payload.event_id
+        || payload.callback_id
+        || payload.transaction_id
+        || payload.transaction_reference
+        || payload.correlator_id
+        || bodyHash
+    ).trim();
+}
+
+export const requirePaydWebhookHmac = async (req, res, next) => {
+    const payload = req.body?.data || req.body || {};
+    const signature = req.headers['x-payd-signature'];
+    const reference = normalizeProviderReference(req.body);
+
+    if (!verifyPaydHmacSignature(signature, req.rawBody)) {
+        logger.error('[WEBHOOK-SECURITY] Rejected webhook with invalid or missing HMAC signature', {
+            ip: req.ip,
+            path: req.originalUrl,
+            reference
+        });
+        return res.status(401).json({ status: 'error', message: 'Invalid webhook signature' });
+    }
+
+    const timestampCheck = parseWebhookTimestamp(req, payload);
+    if (!timestampCheck.valid) {
+        logger.error('[WEBHOOK-SECURITY] Rejected webhook with invalid replay timestamp', {
+            ip: req.ip,
+            path: req.originalUrl,
+            reference,
+            reason: timestampCheck.reason,
+            ageMs: timestampCheck.ageMs
+        });
+        return res.status(403).json({ status: 'error', message: 'Webhook timestamp rejected' });
+    }
+
+    const eventId = deriveReplayEventId(req, payload);
+    if (!eventId) {
+        logger.error('[WEBHOOK-SECURITY] Rejected webhook without replay event id', {
+            ip: req.ip,
+            path: req.originalUrl,
+            reference
+        });
+        return res.status(400).json({ status: 'error', message: 'Webhook replay id missing' });
+    }
+
+    try {
+        const { rows: [claim] } = await pool.query(
+            `WITH upsert AS (
+                INSERT INTO webhook_replay_dedupe (
+                    event_id,
+                    event_type,
+                    provider_reference,
+                    expires_at,
+                    status,
+                    attempts,
+                    updated_at
+                )
+                VALUES ($1, $2, $3, NOW() + INTERVAL '24 hours', 'processing', 1, NOW())
+                ON CONFLICT (event_id)
+                DO UPDATE SET
+                    status = 'processing',
+                    attempts = webhook_replay_dedupe.attempts + 1,
+                    updated_at = NOW(),
+                    last_error = NULL
+                WHERE webhook_replay_dedupe.status <> 'completed'
+                  AND (
+                      webhook_replay_dedupe.status <> 'processing'
+                      OR webhook_replay_dedupe.updated_at IS NULL
+                      OR webhook_replay_dedupe.updated_at < NOW() - INTERVAL '2 minutes'
+                  )
+                RETURNING status, attempts, TRUE AS claimed
+             )
+             SELECT status, attempts, claimed FROM upsert
+             UNION ALL
+             SELECT status, attempts, FALSE AS claimed
+             FROM webhook_replay_dedupe
+             WHERE event_id = $1
+               AND NOT EXISTS (SELECT 1 FROM upsert)
+             LIMIT 1`,
+            [eventId, req.originalUrl || req.path, reference || null]
+        );
+
+        if (!claim?.claimed) {
+            if (claim?.status === 'completed') {
+                logger.info('[WEBHOOK-SECURITY] Idempotent replay suppressed after completed processing', {
+                    eventId,
+                    reference,
+                    path: req.originalUrl
+                });
+                return res.status(200).json({ status: 'success', message: 'Webhook already processed' });
+            }
+
+            logger.warn('[WEBHOOK-SECURITY] Rejected concurrent replay while original webhook is processing', {
+                eventId,
+                reference,
+                path: req.originalUrl,
+                status: claim?.status
+            });
+            return res.status(409).json({ status: 'error', message: 'Webhook already processing' });
+        }
+
+        res.on('finish', () => {
+            const completed = res.statusCode < 500;
+            pool.query(
+                `UPDATE webhook_replay_dedupe
+                 SET status = $2,
+                     completed_at = CASE WHEN $2 = 'completed' THEN NOW() ELSE completed_at END,
+                     last_error = CASE WHEN $2 = 'failed' THEN $3 ELSE NULL END,
+                     updated_at = NOW()
+                 WHERE event_id = $1`,
+                [eventId, completed ? 'completed' : 'failed', `HTTP ${res.statusCode}`]
+            ).catch(error => logger.warn('[WEBHOOK-SECURITY] Failed to finalize webhook replay state', {
+                eventId,
+                error: error.message
+            }));
+        });
+
+        pool.query('DELETE FROM webhook_replay_dedupe WHERE expires_at < NOW()')
+            .catch(error => logger.warn('[WEBHOOK-SECURITY] Replay dedupe cleanup failed', { error: error.message }));
+    } catch (error) {
+        logger.error('[WEBHOOK-SECURITY] Replay protection unavailable; rejecting webhook', {
+            eventId,
+            reference,
+            error: error.message
+        });
+        return res.status(503).json({ status: 'error', message: 'Webhook replay protection unavailable' });
+    }
+
+    req.webhookSecurity = {
+        ...(req.webhookSecurity || {}),
+        hmacVerified: true,
+        replayEventId: eventId,
+        replayCheckedAt: new Date(),
+        timestamp: timestampCheck.timestamp
+    };
+    return next();
+};
+
 /**
  * Rate limiting specifically for webhooks
  * Prevents abuse even from whitelisted IPs
  */
 export const webhookRateLimiter = (() => {
-    const requests = new Map(); // IP -> { count, resetTime }
-    const WINDOW_MS = 60 * 1000; // 1 minute
-    const MAX_REQUESTS = 100; // Max 100 webhooks per minute per IP
+    const requests = new Map();
+    const WINDOW_MS = 60 * 1000;
+    const MAX_REQUESTS = 100;
 
-    // Cleanup old entries every 5 minutes
     setInterval(() => {
         const now = Date.now();
         for (const [ip, data] of requests.entries()) {
@@ -251,40 +443,69 @@ export const webhookRateLimiter = (() => {
         }
     }, 5 * 60 * 1000);
 
-    return (req, res, next) => {
+    const fallbackMemoryLimit = (clientIP, now) => {
+        let ipData = requests.get(clientIP);
+        if (!ipData || now > ipData.resetTime) {
+            ipData = { count: 1, resetTime: now + WINDOW_MS };
+            requests.set(clientIP, ipData);
+        } else {
+            ipData.count++;
+        }
+        return ipData;
+    };
+
+    return async (req, res, next) => {
         const clientIP = req.webhookSecurity?.clientIP || req.ip;
         const now = Date.now();
 
-        let ipData = requests.get(clientIP);
+        try {
+            const redis = cacheService?.redis;
+            if (redis?.incr && redis?.expire) {
+                const bucket = Math.floor(now / WINDOW_MS);
+                const key = `rate:webhook:payd:${clientIP}:${bucket}`;
+                const count = await redis.incr(key);
+                if (count === 1) {
+                    await redis.expire(key, Math.ceil(WINDOW_MS / 1000));
+                }
 
-        if (!ipData || now > ipData.resetTime) {
-            // New window
-            ipData = {
-                count: 1,
-                resetTime: now + WINDOW_MS
-            };
-            requests.set(clientIP, ipData);
-        } else {
-            // Within window
-            ipData.count++;
+                if (count > MAX_REQUESTS) {
+                    logger.warn(`[WEBHOOK-SECURITY] Rate limit exceeded for IP via Redis: ${clientIP}`, {
+                        count,
+                        limit: MAX_REQUESTS
+                    });
 
-            if (ipData.count > MAX_REQUESTS) {
-                logger.warn(`[WEBHOOK-SECURITY] ⚠️  Rate limit exceeded for IP: ${clientIP}`, {
-                    count: ipData.count,
-                    limit: MAX_REQUESTS
-                });
+                    return res.status(429).json({
+                        status: 'error',
+                        message: 'Too many webhook requests',
+                        retryAfter: Math.ceil(WINDOW_MS / 1000)
+                    });
+                }
 
-                return res.status(429).json({
-                    status: 'error',
-                    message: 'Too many webhook requests',
-                    retryAfter: Math.ceil((ipData.resetTime - now) / 1000)
-                });
+                return next();
             }
+        } catch (error) {
+            logger.error('[WEBHOOK-SECURITY] Redis rate limiter unavailable; using local fallback', {
+                ip: clientIP,
+                error: error.message
+            });
+        }
+
+        const ipData = fallbackMemoryLimit(clientIP, now);
+        if (ipData.count > MAX_REQUESTS) {
+            logger.warn(`[WEBHOOK-SECURITY] Rate limit exceeded for IP: ${clientIP}`, {
+                count: ipData.count,
+                limit: MAX_REQUESTS
+            });
+
+            return res.status(429).json({
+                status: 'error',
+                message: 'Too many webhook requests',
+                retryAfter: Math.ceil((ipData.resetTime - now) / 1000)
+            });
         }
 
         next();
     };
 })();
-
 export default verifyPaydWebhook;
 

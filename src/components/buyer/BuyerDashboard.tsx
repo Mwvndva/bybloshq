@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { memo, useMemo, useRef } from 'react';
+import { memo, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
@@ -33,32 +34,6 @@ const SHOP_COLORS = [
   '#8B5CF6', '#EC4899', '#10B981', '#3B82F6',
   '#F59E0B', '#EF4444', '#06B6D4', '#F97316',
 ];
-
-const FOLLOWED_SHOPS_CACHE_TTL_MS = 2 * 60 * 1000;
-let followedShopsCache: { data: any[]; timestamp: number } | null = null;
-let followedShopsRequest: Promise<any[]> | null = null;
-
-const hasFreshFollowedShopsCache = () =>
-  Boolean(followedShopsCache && Date.now() - followedShopsCache.timestamp < FOLLOWED_SHOPS_CACHE_TTL_MS);
-
-async function getFollowedShopsCached(force = false) {
-  if (!force && hasFreshFollowedShopsCache()) {
-    return followedShopsCache!.data;
-  }
-
-  if (!followedShopsRequest) {
-    followedShopsRequest = buyerApi.getShops()
-      .then((data) => {
-        followedShopsCache = { data, timestamp: Date.now() };
-        return data;
-      })
-      .finally(() => {
-        followedShopsRequest = null;
-      });
-  }
-
-  return followedShopsRequest;
-}
 
 function shopColor(name) {
   let h = 0;
@@ -270,33 +245,16 @@ function BuyerDashboard() {
   const [mobilePayment, setMobilePayment] = useState<string>(user?.mobilePayment || '');
   const [whatsappNumber, setWhatsappNumber] = useState<string>(user?.whatsappNumber || '');
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [shops, setShops] = useState<any[]>([]);
   const [shopsSearchQuery, setShopsSearchQuery] = useState('');
-  const [isLoadingShops, setIsLoadingShops] = useState(false);
-  const shopsLoadedRef = useRef(false);
-
-  const fetchShops = useCallback(async (options: { force?: boolean; silent?: boolean } = {}) => {
-    if (!options.silent) {
-      setIsLoadingShops(true);
-    }
-    try {
-      const fetchedShops = await getFollowedShopsCached(options.force);
-      shopsLoadedRef.current = true;
-      setShops(fetchedShops);
-    } catch (error) {
-      console.error('Error fetching shops:', error);
-    } finally {
-      if (!options.silent) {
-        setIsLoadingShops(false);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (activeSection === 'shops') {
-      fetchShops({ silent: shopsLoadedRef.current });
-    }
-  }, [activeSection, fetchShops]);
+  const shopsQuery = useQuery({
+    queryKey: ['buyer-followed-shops'],
+    queryFn: () => buyerApi.getShops({ page: 1, limit: 48 }),
+    staleTime: 2 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    enabled: activeSection === 'shops'
+  });
+  const shops = shopsQuery.data || [];
+  const isLoadingShops = shopsQuery.isLoading;
 
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);

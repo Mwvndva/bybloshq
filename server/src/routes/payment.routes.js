@@ -3,7 +3,7 @@ import { validate } from '../middleware/validate.js';
 import { z } from 'zod';
 import paymentController from '../controllers/payment.controller.js';
 import { protect, hasPermission } from '../middleware/auth.js';
-import { verifyPaydWebhook, webhookRateLimiter } from '../middleware/paydWebhookSecurity.js';
+import { requirePaydWebhookHmac, verifyPaydWebhook, webhookRateLimiter } from '../middleware/paydWebhookSecurity.js';
 import paymentRequestLogger from '../middleware/payment-logger.middleware.js';
 import { paymentRateLimiter } from '../middleware/rateLimiting.js';
 
@@ -19,6 +19,10 @@ const initiateProductSchema = z.object({
   customerName: z.string().optional().nullable(),
   narrative: z.string().optional().nullable(),
   paymentMethod: z.enum(['paystack', 'payd']).optional(),
+  checkout_token: z.string().optional().nullable(),
+  clientCheckoutToken: z.string().optional().nullable(),
+  checkoutAttemptId: z.string().optional().nullable(),
+  idempotencyKey: z.string().optional().nullable(),
   // PIN-12: PERSISTENCE SHIELD (Do not strip these fields)
   buyerLocation: z.any().optional(),
   metadata: z.any().optional(),
@@ -48,6 +52,7 @@ publicRouter.post(
   '/webhook/payd',
   verifyPaydWebhook,
   webhookRateLimiter,
+  requirePaydWebhookHmac,
   paymentController.handlePaydWebhook // Updated method name
 );
 

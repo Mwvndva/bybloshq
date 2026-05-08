@@ -2,14 +2,14 @@ import crypto from 'crypto';
 import cron from 'node-cron';
 import logger from '../shared/utils/logger.js';
 import { pool } from '../shared/db/database.js';
-import OrderService from '../services/order.service.js';
+import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 
 /**
- * Retry cron for payments that completed (status='completed')
- * but whose order completion failed (metadata.needs_completion = 'true').
+ * Deprecated shadow cron.
  *
- * The cron runs every 2 minutes, picks up to 20 flagged payments,
- * calls completeOrder for each, and clears the flag on success.
+ * This module is not booted by the active loader. Runtime fulfillment repair is
+ * handled by paymentCron.scheduleFulfillmentRetry() and FulfillmentWorker, both
+ * of which enqueue through FulfillmentQueueService.
  */
 export const scheduleCompletionRetry = (options = {}) => {
     const schedule = options.schedule || '*/2 * * * *';
@@ -39,7 +39,16 @@ export const scheduleCompletionRetry = (options = {}) => {
 
                 for (const payment of rows) {
                     try {
-                        await OrderService.completeOrder(payment);
+                        const orderId = payment.order_id
+                            || payment.product_order_id
+                            || payment.metadata?.order_id
+                            || payment.metadata?.product_order_id;
+
+                        if (!orderId) {
+                            throw new Error(`Payment ${payment.id} is missing order id for fulfillment retry`);
+                        }
+
+                        await FulfillmentQueueService.enqueue(null, orderId);
 
                         // Clear the flag on success
                         await pool.query(

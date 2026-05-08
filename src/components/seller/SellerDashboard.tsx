@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PLATFORM_FEE_RATE } from '@/lib/constants';
 import { formatCurrency, decodeJwt, isTokenExpired, getImageUrl } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -155,11 +156,60 @@ interface SellerDashboardProps {
   }) => React.ReactNode;
 }
 
+const normalizeSellerAnalytics = (productsData: Product[], analyticsData: any): AnalyticsData => {
+  if (!analyticsData) {
+    return {
+      totalProducts: productsData.length || 0,
+      totalSales: 0,
+      totalRevenue: 0,
+      totalPayout: 0,
+      balance: 0,
+      pendingDebt: 0,
+      pendingDebtCount: 0,
+      monthlySales: [],
+      recentOrders: []
+    };
+  }
+
+  const salesTotal = (analyticsData.monthlySales || []).reduce(
+    (sum: number, monthData: { sales?: number }) => sum + (monthData.sales || 0),
+    0
+  );
+  const totalRevenue = analyticsData.totalRevenue || salesTotal || 0;
+
+  return {
+    totalProducts: analyticsData.totalProducts,
+    totalSales: analyticsData.totalSales || 0,
+    totalRevenue,
+    totalPayout: totalRevenue,
+    balance: analyticsData.balance || 0,
+    pendingDebt: analyticsData.pendingDebt || 0,
+    pendingDebtCount: analyticsData.pendingDebtCount || 0,
+    monthlySales: analyticsData.monthlySales || [],
+    recentOrders: analyticsData.recentOrders || [],
+    recentDebts: analyticsData.recentDebts || []
+  };
+};
+
+const loadSellerDashboardData = async () => {
+  const [productsData, analyticsData] = await Promise.all([
+    sellerApi.getProducts(),
+    sellerApi.getAnalytics()
+  ]);
+
+  const products = Array.isArray(productsData) ? productsData : [];
+  return {
+    products,
+    analytics: normalizeSellerAnalytics(products, analyticsData)
+  };
+};
+
 
 
 export default function SellerDashboard({ children }: SellerDashboardProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   // Use seller auth context - same pattern as BuyerDashboard
@@ -174,6 +224,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [showWithdrawDialog, setShowWithdrawDialog] = useState(false);
+
+  const dashboardQuery = useQuery({
+    queryKey: ['seller-dashboard', 'summary'],
+    queryFn: loadSellerDashboardData,
+    staleTime: 60_000,
+    gcTime: 5 * 60_000,
+    retry: 1,
+    refetchOnWindowFocus: false
+  });
 
   const initialPhysicalAddress = sellerProfile?.physicalAddress === 'Nairobi, Kenya' ? '' : (sellerProfile?.physicalAddress || '');
   const initialLat = sellerProfile?.latitude;
@@ -247,6 +306,26 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [withdrawalRequests, setWithdrawalRequests] = useState<WithdrawalRequest[]>([]);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (dashboardQuery.data) {
+      setProducts(dashboardQuery.data.products);
+      setAnalytics(dashboardQuery.data.analytics);
+      setError(null);
+      setIsLoading(false);
+      return;
+    }
+
+    if (dashboardQuery.isLoading) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (dashboardQuery.error) {
+      setError('Failed to load data. Please try again later.');
+      setIsLoading(false);
+    }
+  }, [dashboardQuery.data, dashboardQuery.error, dashboardQuery.isLoading]);
+
   // Order notification state
   const [hasUnreadOrders, setHasUnreadOrders] = useState(false);
   const [lastViewedOrdersTime, setLastViewedOrdersTime] = useState<string | null>(
@@ -262,6 +341,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [showWithdrawalForm, setShowWithdrawalForm] = useState(false);
   // FIX (Task 15): Prevent duplicate withdrawal requests via synchronous lock
   const { runWithLock, isLocked: isRequestingWithdrawal } = useAsyncLock();
+  const withdrawalIdempotencyKeyRef = useRef<string | null>(null);
 
   // Date filter state for withdrawals
   const [startDate, setStartDate] = useState('');
@@ -403,31 +483,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     setError(null);
 
     try {
-      // Fetch products and analytics data in parallel
-      // Auth is handled by HttpOnly cookies, no need to check localStorage
-      const [productsData, analyticsData] = await Promise.all([
-        sellerApi.getProducts(),
-        sellerApi.getAnalytics()
-      ]);
+      const data = await queryClient.fetchQuery({
+        queryKey: ['seller-dashboard', 'summary'],
+        queryFn: loadSellerDashboardData,
+        staleTime: 60_000
+      });
 
-      setProducts(productsData);
-
-      // Create analytics data structure
-      const processedAnalytics = {
-        totalProducts: analyticsData.totalProducts,
-        totalSales: analyticsData.totalSales,
-        totalRevenue: analyticsData.totalRevenue,
-        totalPayout: analyticsData.totalPayout,
-        balance: analyticsData.balance || 0,
-        pendingDebt: analyticsData.pendingDebt || 0,
-        pendingDebtCount: (analyticsData as any).pendingDebtCount || 0,
-        monthlySales: analyticsData.monthlySales || [],
-        recentOrders: analyticsData.recentOrders || [],
-        recentDebts: (analyticsData as any).recentDebts || []
-      };
-
-      setAnalytics(processedAnalytics);
-      return processedAnalytics as AnalyticsData;
+      setProducts(data.products);
+      setAnalytics(data.analytics);
+      return data.analytics;
 
     } catch (err: any) {
       console.error('Error fetching dashboard data:', err);
@@ -466,7 +530,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [navigate, toast, fetchWithdrawalRequests]);
+  }, [navigate, toast, queryClient, location.pathname]);
 
   const toggleEdit = useCallback(() => {
     setIsEditing(prev => {
@@ -639,10 +703,17 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     // FIX (Task 15): Prevents duplicate payout requests and invalid amounts
     await runWithLock(async () => {
       try {
+        if (!withdrawalIdempotencyKeyRef.current) {
+          withdrawalIdempotencyKeyRef.current = globalThis.crypto?.randomUUID
+            ? `withdrawal-${globalThis.crypto.randomUUID()}`
+            : `withdrawal-${Date.now()}`;
+        }
+
         await sellerApi.requestWithdrawal({
           amount,
           mpesaNumber: withdrawalForm.mpesaNumber,
-          mpesaName: withdrawalForm.mpesaName
+          mpesaName: withdrawalForm.mpesaName,
+          idempotencyKey: withdrawalIdempotencyKeyRef.current
         });
 
         toast({
@@ -658,6 +729,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           mpesaName: ''
         });
         setShowWithdrawalForm(false);
+        withdrawalIdempotencyKeyRef.current = null;
 
         // Refresh withdrawal requests
         await fetchWithdrawalRequests();
@@ -726,10 +798,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       className: 'bg-green-500/10 border-green-400/30 text-green-200',
       duration: 5000,
     });
-    // Refresh dashboard data
-    // Note: Using window.location.reload() to avoid infinite loop from fetchData dependency
-    setTimeout(() => window.location.reload(), 2000);
-  }, [toast]);
+    queryClient.invalidateQueries({ queryKey: ['seller-dashboard', 'summary'] });
+    fetchWithdrawalRequests();
+  }, [toast, queryClient, fetchWithdrawalRequests]);
 
   const handlePaymentFailure = useCallback(() => {
     toast({
@@ -760,98 +831,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
     fetchTabData();
   }, [activeTab, fetchWithdrawalRequests]);
-
-  // Prefetch data on initial mount to make tabs render instantly like Settings
-  useEffect(() => {
-    let isMounted = true;
-
-    const prefetch = async () => {
-      setIsLoading(true);
-
-      try {
-        const [productsData, analyticsData] = await Promise.all([
-          sellerApi.getProducts(),
-          sellerApi.getAnalytics()
-        ]);
-        if (!isMounted) return;
-        setProducts(productsData);
-
-        // Calculate total sales and revenue from analytics data
-        if (analyticsData) {
-          // Calculate revenue from monthly sales data
-          const salesTotal = analyticsData.monthlySales.reduce(
-            (sum, monthData) => sum + monthData.sales, 0
-          );
-
-          let totalRevenue = 0;
-          let calculatedPayout = 0;
-
-          // Try to calculate revenue from orders first (most accurate)
-          // We don't have orders here directly unless we fetch them, but analyticsData includes totalRevenue
-          // The component logic previously had complex fallbacks. Simplified here:
-
-          if (analyticsData.totalRevenue) {
-            totalRevenue = analyticsData.totalRevenue;
-          } else if (salesTotal > 0) {
-            totalRevenue = salesTotal;
-          }
-
-          calculatedPayout = totalRevenue;
-
-          const updatedAnalytics: AnalyticsData = {
-            ...analyticsData,
-            totalSales: (analyticsData as any).totalSales || 0,
-            totalRevenue: totalRevenue,
-            totalPayout: calculatedPayout,
-            balance: analyticsData.balance || 0,
-            pendingDebt: analyticsData.pendingDebt || 0,
-            pendingDebtCount: (analyticsData as any).pendingDebtCount || 0,
-            monthlySales: analyticsData.monthlySales || [],
-            recentOrders: (analyticsData as any).recentOrders || [],
-            recentDebts: (analyticsData as any).recentDebts || []
-          };
-
-          const result: AnalyticsData = {
-            totalProducts: updatedAnalytics.totalProducts,
-            totalSales: updatedAnalytics.totalSales,
-            totalRevenue: updatedAnalytics.totalRevenue,
-            totalPayout: updatedAnalytics.totalPayout,
-            balance: updatedAnalytics.balance,
-            pendingDebt: updatedAnalytics.pendingDebt,
-            pendingDebtCount: updatedAnalytics.pendingDebtCount,
-            monthlySales: updatedAnalytics.monthlySales,
-            recentOrders: updatedAnalytics.recentOrders,
-            recentDebts: updatedAnalytics.recentDebts
-          };
-
-          setAnalytics(updatedAnalytics);
-        } else {
-          // Fallback if analyticsData is null
-          const defaultData: AnalyticsData = {
-            totalProducts: productsData.length || 0,
-            totalSales: 0,
-            totalRevenue: 0,
-            totalPayout: 0,
-            balance: 0,
-            pendingDebt: 0,
-            pendingDebtCount: 0,
-            monthlySales: [],
-            recentOrders: []
-          };
-          setAnalytics(defaultData);
-        }
-      } catch (err) {
-        setError('Failed to load data. Please try again later.');
-        console.error('Error prefetching data:', err);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    };
-
-    prefetch();
-    // fetchProfile() removed - profile is already fetched by SellerAuthContext
-    return () => { isMounted = false; };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for new orders
   useEffect(() => {

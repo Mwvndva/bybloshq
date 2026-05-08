@@ -22,11 +22,11 @@ class Order {
         payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number,
         notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
         fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
-        location_address, location_lat, location_lng, service_title, notification_sent
+        location_address, location_lat, location_lng, service_title, notification_sent, client_checkout_token
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 
         $12, $13::jsonb, $14, $15, $16::jsonb, $17, $18, $19, 
-        $20, $21::jsonb, $22, $23, $24, $25, $26, $27, $28, $29
+        $20, $21::jsonb, $22, $23, $24, $25, $26, $27, $28, $29, $30
       )
       RETURNING *
     `;
@@ -82,7 +82,8 @@ class Order {
       data.location_lat || null,                             // $26
       data.location_lng || null,                             // $27
       data.service_title || null,                            // $28
-      data.notification_sent || false                       // $29
+      data.notification_sent || false,                      // $29
+      data.client_checkout_token || data.metadata?.client_checkout_token || `server:${data.order_number}` // $30
     ];
 
     // 5. DEFENSIVE AUDITING (FINAL)

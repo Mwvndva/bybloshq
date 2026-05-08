@@ -3,6 +3,7 @@ import { makeWASocket, DisconnectReason, useMultiFileAuthState, fetchLatestBaile
 import qrcode from 'qrcode-terminal';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'node:crypto';
 import logger from '../shared/utils/logger.js';
 import { sellerHasPhysicalShop } from '../shared/utils/sellerUtils.js';
 
@@ -14,6 +15,8 @@ class WhatsAppService {
         this.authFolder = path.join(process.cwd(), 'baileys_auth_info');
         this.messageQueues = new Map();
         this.MAX_QUEUE_SIZE = 500;
+        this.recentMessageKeys = new Map();
+        this.MESSAGE_DEDUPE_TTL_MS = 5 * 60 * 1000;
 
         // Configuration (override via env)
         this.DROPOFF_LOCATION = (process.env.DROPOFF_LOCATION || 'Dynamic Mall, Tom Mboya St, Nairobi | Shop SL 32').replace(/^["']|["']$/g, '');
@@ -142,6 +145,14 @@ class WhatsAppService {
         const jid = this.formatToJid(phone);
         if (!jid) throw new Error(`Invalid phone number format: ${phone}`);
 
+        this.pruneRecentMessageKeys();
+        const messageKey = this.buildMessageKey(jid, message);
+        if (this.recentMessageKeys.has(messageKey)) {
+            logger.warn('[WHATSAPP] Duplicate notification suppressed', { jid });
+            return false;
+        }
+        this.recentMessageKeys.set(messageKey, Date.now() + this.MESSAGE_DEDUPE_TTL_MS);
+
         // Simple Mutex/Queue for same JID to prevent race conditions
         if (!this.messageQueues) this.messageQueues = new Map();
 
@@ -181,6 +192,7 @@ class WhatsAppService {
                 return true;
             } catch (error) {
                 logger.error(`❌ Failed to send WhatsApp message to ${phone} (JID: ${jid}):`, error.message);
+                this.recentMessageKeys.delete(messageKey);
                 throw error;
             } finally {
                 // M-12 FIX: Remove map entry when this task completes to prevent unbounded growth.
@@ -193,6 +205,21 @@ class WhatsAppService {
 
         this.messageQueues.set(jid, currentTask);
         return currentTask;
+    }
+
+    buildMessageKey(jid, message) {
+        return crypto
+            .createHash('sha256')
+            .update(`${jid}:${String(message || '').trim()}`)
+            .digest('hex');
+    }
+
+    pruneRecentMessageKeys() {
+        if (!this.recentMessageKeys) this.recentMessageKeys = new Map();
+        const now = Date.now();
+        for (const [key, expiresAt] of this.recentMessageKeys.entries()) {
+            if (expiresAt <= now) this.recentMessageKeys.delete(key);
+        }
     }
 
     /**

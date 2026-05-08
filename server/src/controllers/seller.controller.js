@@ -898,12 +898,17 @@ export const getBuyerShops = async (req, res) => {
       });
     }
 
-    const sellers = await SellerModel.findSellersByUserId(userId);
+    const result = await SellerModel.findSellersByUserId(userId, {
+      page: req.query.page,
+      limit: req.query.limit || req.query.pageSize
+    });
+    const sellers = result.sellers || [];
 
     res.status(200).json({
       status: 'success',
       success: true,
-      data: sellers.map(s => sanitizePublicSeller(s))
+      data: sellers.map(s => sanitizePublicSeller(s)),
+      pagination: result.pagination
     });
 
   } catch (error) {

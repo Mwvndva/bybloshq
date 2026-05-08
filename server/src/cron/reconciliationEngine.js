@@ -6,36 +6,59 @@ import Order from '../models/order.model.js';
 import { OrderStatus } from '../shared/constants/enums.js';
 import FulfillmentQueueService from '../services/fulfillmentQueue.service.js';
 
+const RECONCILIATION_LOCK_KEY = 'byblos:reconciliation-engine';
+
 /**
  * ReconciliationEngine: Self-healing background service.
  * Enforces consistency and handles expired/stuck states.
  */
 class ReconciliationEngine {
     static async start() {
-        // Run reconciliation every 5 minutes
         cron.schedule('*/5 * * * *', async () => {
-            logger.info('⚖️ [RECON] Starting system reconciliation run...');
-            try {
-                await this.handleExpiredReservations();
-                await this.handleStuckPayments();
-                await this.handleMissingFulfillmentJobs();
-            } catch (err) {
-                logger.error('❌ [RECON] Reconciliation run failed:', err);
-            }
+            await this.runOnce();
         });
 
-        logger.info('🚀 [RECON] Reconciliation Engine initialized (5-minute schedule).');
+        logger.info('[RECON] Reconciliation Engine initialized (5-minute schedule).');
+    }
+
+    static async runOnce() {
+        const client = await pool.connect();
+        let lockAcquired = false;
+
+        try {
+            const { rows: [lock] } = await client.query(
+                'SELECT pg_try_advisory_lock(hashtext($1)) AS locked',
+                [RECONCILIATION_LOCK_KEY]
+            );
+            lockAcquired = lock?.locked === true;
+
+            if (!lockAcquired) {
+                logger.info('[RECON] Skipping reconciliation; another instance owns the run lock.');
+                return { skipped: true };
+            }
+
+            logger.info('[RECON] Starting system reconciliation run...');
+            await this.handleExpiredReservations();
+            await this.handleStuckPayments();
+            await this.handleMissingFulfillmentJobs();
+            return { skipped: false };
+        } catch (err) {
+            logger.error('[RECON] Reconciliation run failed:', err);
+            throw err;
+        } finally {
+            if (lockAcquired) {
+                await client.query('SELECT pg_advisory_unlock(hashtext($1))', [RECONCILIATION_LOCK_KEY])
+                    .catch(err => logger.error('[RECON] Failed to release reconciliation lock:', err));
+            }
+            client.release();
+        }
     }
 
     /**
      * Release inventory for RESERVED or HELD orders that exceeded deadlines.
-     *
-     * P1-4 FIX: Each order is processed in an INDEPENDENT transaction.
-     * A failure for one order does NOT roll back all other releases.
-     * P1-5 FIX: Service slots are released for expired SERVICE orders.
+     * Each order is processed in an independent transaction.
      */
     static async handleExpiredReservations() {
-        // First: find all expired orders without locking (we'll lock per-order below)
         const { rows: expiredOrders } = await pool.query(
             `SELECT po.id, po.order_type
              FROM product_orders po
@@ -46,14 +69,13 @@ class ReconciliationEngine {
 
         if (expiredOrders.length === 0) return;
 
-        logger.info(`⚖️ [RECON] Found ${expiredOrders.length} expired reservations. Processing individually.`);
+        logger.info(`[RECON] Found ${expiredOrders.length} expired reservations. Processing individually.`);
 
         for (const order of expiredOrders) {
             const client = await pool.connect();
             try {
                 await client.query('BEGIN');
 
-                // Lock the specific order row; SKIP if already updated by another worker
                 const { rows: locked } = await client.query(
                     `SELECT id, order_type, status FROM product_orders
                      WHERE id = $1 AND status IN ('RESERVED', 'HELD')
@@ -62,14 +84,12 @@ class ReconciliationEngine {
                 );
 
                 if (locked.length === 0) {
-                    // Another worker already handled this order
                     await client.query('ROLLBACK');
                     continue;
                 }
 
                 const lockedOrder = locked[0];
 
-                // P1-5 FIX: Release service slot if this is a SERVICE order
                 if (lockedOrder.order_type === 'SERVICE') {
                     await client.query(
                         `UPDATE service_slots
@@ -80,10 +100,9 @@ class ReconciliationEngine {
                          WHERE reserved_by_order_id = $1`,
                         [order.id]
                     );
-                    logger.info(`⚖️ [RECON] Released service slot for expired ORDER ${order.id}`);
+                    logger.info(`[RECON] Released service slot for expired order ${order.id}`);
                 }
 
-                // P1-4 FIX: Only release physical inventory for PHYSICAL orders
                 if (lockedOrder.order_type === 'PHYSICAL' || !lockedOrder.order_type) {
                     const { rows: items } = await client.query(
                         'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
@@ -93,19 +112,18 @@ class ReconciliationEngine {
                     for (const item of items) {
                         const released = await ProductModel.release(client, item.product_id, item.quantity);
                         if (!released) {
-                            logger.warn(`⚖️ [RECON] Inventory release skipped for product ${item.product_id} (reserved_quantity may already be 0)`);
+                            logger.warn(`[RECON] Inventory release skipped for product ${item.product_id}; reserved quantity may already be zero.`);
                         }
                     }
                 }
 
-                // Transition to CANCELLED
                 await Order.updateStatusWithSideEffects(client, order.id, OrderStatus.CANCELLED, 'system_timeout');
 
                 await client.query('COMMIT');
-                logger.info(`⚖️ [RECON] Expired order ${order.id} (${lockedOrder.order_type}) cancelled successfully.`);
+                logger.info(`[RECON] Expired order ${order.id} (${lockedOrder.order_type}) cancelled successfully.`);
             } catch (err) {
                 await client.query('ROLLBACK').catch(() => { });
-                logger.error(`⚖️ [RECON] Failed to cancel expired order ${order.id}:`, err.message);
+                logger.error(`[RECON] Failed to cancel expired order ${order.id}:`, err.message);
             } finally {
                 client.release();
             }
@@ -113,29 +131,29 @@ class ReconciliationEngine {
     }
 
     /**
-     * Cleanup PAYMENT_PENDING orders that have been stuck for too long (e.g. > 15 mins).
-     *
-     * Inventory safety: Only PHYSICAL orders have reserved inventory.
-     * DIGITAL and SERVICE orders must NOT have inventory released.
+     * Cleanup PAYMENT_PENDING orders that have been stuck for too long.
      */
     static async handleStuckPayments() {
         const client = await pool.connect();
         try {
             await client.query('BEGIN');
 
-            // Fetch order_type to determine which orders need inventory release
             const stuckQuery = `
                 SELECT id, order_type FROM product_orders
                 WHERE status = 'PAYMENT_PENDING'
                   AND updated_at < NOW() - INTERVAL '30 minutes'
+                  AND COALESCE(metadata->>'provider_result_ambiguous_manual_review_required', 'false') <> 'true'
+                  AND COALESCE(metadata->>'requires_manual_review', 'false') <> 'true'
+                  AND COALESCE(metadata->>'needs_manual_review', 'false') <> 'true'
+                ORDER BY updated_at ASC, id ASC
+                LIMIT 50
                 FOR UPDATE SKIP LOCKED
             `;
             const { rows: stuckOrders } = await client.query(stuckQuery);
 
             for (const order of stuckOrders) {
-                logger.warn(`⚖️ [RECON] Found stuck PAYMENT_PENDING order ${order.id} (${order.order_type}). Cancelling.`);
+                logger.warn(`[RECON] Found stuck PAYMENT_PENDING order ${order.id} (${order.order_type}). Cancelling.`);
 
-                // Only release inventory for PHYSICAL orders that actually reserved stock
                 if (order.order_type === 'PHYSICAL' || !order.order_type) {
                     const { rows: items } = await client.query(
                         'SELECT product_id, quantity FROM order_items WHERE order_id = $1',
@@ -144,12 +162,11 @@ class ReconciliationEngine {
                     for (const item of items) {
                         const released = await ProductModel.release(client, item.product_id, item.quantity);
                         if (!released) {
-                            logger.warn(`⚖️ [RECON] Inventory release skipped for product ${item.product_id} (order ${order.id}) — reserved_quantity may already be 0`);
+                            logger.warn(`[RECON] Inventory release skipped for product ${item.product_id} (order ${order.id}); reserved quantity may already be zero.`);
                         }
                     }
                 }
 
-                // SERVICE orders: also release any service slot held in PAYMENT_PENDING state
                 if (order.order_type === 'SERVICE') {
                     await client.query(
                         `UPDATE service_slots
@@ -185,8 +202,8 @@ class ReconciliationEngine {
         const { rows: missingOrders } = await pool.query(query);
 
         for (const order of missingOrders) {
-            logger.info(`⚖️ [RECON] Re-enqueuing missing fulfillment job for Order ${order.id}.`);
-            await FulfillmentQueueService.enqueue(order.id);
+            logger.info(`[RECON] Re-enqueuing missing fulfillment job for order ${order.id}.`);
+            await FulfillmentQueueService.enqueue(null, order.id);
         }
     }
 }

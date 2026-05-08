@@ -50,11 +50,31 @@ export const getSellerOrders = async (req, res) => {
 
 export const createOrder = async (req, res) => {
     try {
+        const checkoutToken = req.headers['idempotency-key']
+            || req.headers['x-checkout-token']
+            || req.body.checkout_token
+            || req.body.clientCheckoutToken
+            || req.body.checkoutAttemptId
+            || req.body.idempotencyKey
+            || req.body.metadata?.client_checkout_token;
+
+        if (typeof checkoutToken !== 'string' || !checkoutToken.trim()) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'Checkout idempotency token is required'
+            });
+        }
+
         // Assume request body contains necessary order details
         // For a seller creating an order, we enforce their ID as sellerId
         const orderData = {
             ...req.body,
-            sellerId: req.user.sellerId
+            sellerId: req.user.sellerId,
+            idempotencyKey: checkoutToken.trim().slice(0, 160),
+            metadata: {
+                ...(req.body.metadata || {}),
+                client_checkout_token: checkoutToken.trim().slice(0, 160)
+            }
         };
 
         const order = await OrderService.createOrder(orderData);

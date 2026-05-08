@@ -27,6 +27,7 @@ export const getProducts = async (req, res) => {
 
     let query = `
       SELECT p.*,
+             COUNT(*) OVER() AS total_count,
              p.is_digital as "isDigital",
              p.digital_file_name as "digitalFileName",
              s.id as seller_id,
@@ -68,10 +69,11 @@ export const getProducts = async (req, res) => {
       }
     }
 
-    query += ` LIMIT $${paramCount++} OFFSET $${paramCount++}`;
+    query += ` ORDER BY p.created_at DESC, p.id DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
     queryParams.push(limitNum, offset);
 
     const result = await pool.query(query, queryParams);
+    const total = Number.parseInt(result.rows[0]?.total_count || 0, 10);
 
     // Transform results to use sanitization DTOs
     const sanitizedProducts = result.rows.map(row => {
@@ -96,8 +98,20 @@ export const getProducts = async (req, res) => {
     const responseData = {
       status: 'success',
       results: sanitizedProducts.length,
+      pagination: {
+        total,
+        page: pageNum,
+        pageSize: limitNum,
+        hasMore: offset + sanitizedProducts.length < total
+      },
       data: {
-        products: sanitizedProducts
+        products: sanitizedProducts,
+        pagination: {
+          total,
+          page: pageNum,
+          pageSize: limitNum,
+          hasMore: offset + sanitizedProducts.length < total
+        }
       }
     };
 
@@ -234,7 +248,10 @@ export const getSellerPublicInfo = async (req, res) => {
 // Get all active sellers with wishlist count
 export const getSellers = async (req, res) => {
   try {
-    const cacheKey = 'public:sellers:list';
+    const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
+    const pageSize = Math.min(50, Math.max(1, parseInt(req.query.limit || req.query.pageSize || '24', 10) || 24));
+    const offset = (page - 1) * pageSize;
+    const cacheKey = `public:sellers:list:${page}:${pageSize}`;
     const cachedData = await cacheService.get(cacheKey);
     if (cachedData) return res.status(200).json(cachedData);
 
@@ -247,15 +264,18 @@ export const getSellers = async (req, res) => {
         s.theme,
         s.client_count,
         s.created_at,
+        COUNT(*) OVER() AS total_count,
         COUNT(w.id) as total_wishlist_count
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
       LEFT JOIN wishlists w ON p.id = w.product_id
       GROUP BY s.id
-      ORDER BY total_wishlist_count DESC
+      ORDER BY total_wishlist_count DESC, s.id ASC
+      LIMIT $1 OFFSET $2
     `;
 
-    const result = await pool.query(query);
+    const result = await pool.query(query, [pageSize, offset]);
+    const total = parseInt(result.rows[0]?.total_count || '0', 10);
 
     const sellers = result.rows.map(row => ({
       id: row.id,
@@ -272,8 +292,20 @@ export const getSellers = async (req, res) => {
     const responseData = {
       status: 'success',
       results: sellers.length,
+      pagination: {
+        page,
+        pageSize,
+        total,
+        hasMore: offset + sellers.length < total
+      },
       data: {
-        sellers
+        sellers,
+        pagination: {
+          page,
+          pageSize,
+          total,
+          hasMore: offset + sellers.length < total
+        }
       }
     };
 
@@ -312,7 +344,8 @@ export const getServiceAvailability = async (req, res) => {
        FROM service_slots
        WHERE service_id = $1
          AND DATE(time_slot AT TIME ZONE 'Africa/Nairobi') = $2::date
-         AND (status = 'BOOKED' OR (status = 'RESERVED' AND expires_at > NOW()))`,
+         AND (status = 'BOOKED' OR (status = 'RESERVED' AND expires_at > NOW()))
+       ORDER BY time_slot ASC, id ASC`,
       [productId, date]
     );
 
@@ -332,12 +365,12 @@ export const getServiceAvailability = async (req, res) => {
 
 export const getOrderStatus = async (req, res) => {
   try {
-    const { id } = req.params; // id could be numeric primary key or string order_number
+    const { id } = req.params;
 
     const result = await pool.query(
       `SELECT id, order_number, status, payment_status, buyer_id, buyer_email
        FROM product_orders 
-       WHERE id::text = $1 OR order_number = $1`,
+       WHERE order_number = $1`,
       [id]
     );
 
