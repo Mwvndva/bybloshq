@@ -45,6 +45,20 @@ const updateSellerClickCount = (seller, clickCount) => ({
   knock_count: clickCount
 });
 
+const hasValidShopCoordinate = (shop) => {
+  const lat = Number(shop?.latitude);
+  const lng = Number(shop?.longitude);
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0;
+};
+
+const isPhysicalShop = (shop) => Boolean(
+  shop?.hasPhysicalShop ||
+  shop?.has_physical_shop ||
+  shop?.physicalAddress ||
+  shop?.physical_address ||
+  hasValidShopCoordinate(shop)
+);
+
 function SellerBrandCardSkeleton() {
   return (
     <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: 12, overflow: 'hidden' }}>
@@ -380,6 +394,21 @@ function BuyerDashboard() {
     });
   }, [shops, shopsSearchQuery]);
 
+  const { onlineShops, physicalShops } = useMemo(() => {
+    const online = [];
+    const physical = [];
+
+    filteredShops.forEach((shop) => {
+      if (isPhysicalShop(shop)) {
+        physical.push(shop);
+      } else {
+        online.push(shop);
+      }
+    });
+
+    return { onlineShops: online, physicalShops: physical };
+  }, [filteredShops]);
+
   const handleShopClickCountChange = useCallback((shop, clickCount) => {
     const shopId = getShopId(shop);
     if (!shopId) return;
@@ -490,24 +519,55 @@ function BuyerDashboard() {
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{filteredShops.length} shops</span>
             </div>
 
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              gap: 10,
-            }}>
-              {isLoadingShops && shops.length === 0 && Array.from({ length: 6 }).map((_, index) => (
-                <SellerBrandCardSkeleton key={index} />
-              ))}
-              {filteredShops.map(shop => (
-                <SellerBrandCard
-                  key={getShopId(shop)}
-                  seller={shop}
-                  isBuyer
-                  showUnfollow
-                  onUnfollow={handleUnfollowShop}
-                  onClickCountChange={handleShopClickCountChange}
-                  isUnfollowing={unfollowingShopId === getShopId(shop)}
-                />
+            <div className="grid gap-4 md:grid-cols-2">
+              {[
+                {
+                  key: 'online',
+                  title: 'Online Shops',
+                  count: onlineShops.length,
+                  shops: onlineShops,
+                  empty: shopsSearchQuery ? 'No online shops match your search.' : 'No online shops followed yet.'
+                },
+                {
+                  key: 'physical',
+                  title: 'Physical Shops',
+                  count: physicalShops.length,
+                  shops: physicalShops,
+                  empty: shopsSearchQuery ? 'No physical shops match your search.' : 'No physical shops followed yet.'
+                }
+              ].map((group) => (
+                <section key={group.key} className="min-w-0 rounded-2xl border border-white/10 bg-white/[0.025] p-2.5">
+                  <div className="mb-2 flex items-center justify-between gap-2 px-1">
+                    <span className="text-xs font-black text-white">{group.title}</span>
+                    <span className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[10px] font-bold text-white/45">
+                      {group.count}
+                    </span>
+                  </div>
+
+                  <div className="grid gap-2.5">
+                    {isLoadingShops && shops.length === 0 && Array.from({ length: 3 }).map((_, index) => (
+                      <SellerBrandCardSkeleton key={`${group.key}-skeleton-${index}`} />
+                    ))}
+
+                    {!isLoadingShops && group.shops.map(shop => (
+                      <SellerBrandCard
+                        key={getShopId(shop)}
+                        seller={shop}
+                        isBuyer
+                        showUnfollow
+                        onUnfollow={handleUnfollowShop}
+                        onClickCountChange={handleShopClickCountChange}
+                        isUnfollowing={unfollowingShopId === getShopId(shop)}
+                      />
+                    ))}
+
+                    {!isLoadingShops && filteredShops.length > 0 && group.shops.length === 0 && (
+                      <div className="rounded-xl border border-white/10 bg-white/[0.03] px-3 py-8 text-center text-xs text-white/35">
+                        {group.empty}
+                      </div>
+                    )}
+                  </div>
+                </section>
               ))}
             </div>
 

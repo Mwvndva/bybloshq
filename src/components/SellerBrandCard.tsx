@@ -115,6 +115,21 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
         (seller as any).physical_address ||
         hasValidCoordinate(seller.latitude, seller.longitude)
     );
+    const shopModeStyle = isPhysicalShop
+        ? {
+            label: 'Physical',
+            border: 'rgba(248,113,113,0.44)',
+            background: 'rgba(248,113,113,0.14)',
+            color: '#FCA5A5',
+            shadow: 'rgba(248,113,113,0.18)'
+        }
+        : {
+            label: 'Online',
+            border: 'rgba(52,211,153,0.44)',
+            background: 'rgba(52,211,153,0.14)',
+            color: '#86EFAC',
+            shadow: 'rgba(52,211,153,0.18)'
+        };
 
     const clientCount = getNumber(seller.clientCount, seller.client_count);
     const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as any).wishlist_count, (seller as any).total_wishlist_count);
@@ -184,16 +199,17 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                             {shopName}
                         </h3>
                         <span
-                            className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide text-white/85"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-wide"
                             style={{
-                                borderColor: palette.border,
-                                backgroundColor: palette.accentSoft,
-                                boxShadow: `0 0 16px ${palette.accentSoft}`
+                                borderColor: shopModeStyle.border,
+                                backgroundColor: shopModeStyle.background,
+                                boxShadow: `0 0 16px ${shopModeStyle.shadow}`,
+                                color: shopModeStyle.color
                             }}
                             title={isPhysicalShop ? 'Physical shop' : 'Online shop'}
                         >
                             {isPhysicalShop ? <MapPin className="h-2.5 w-2.5" /> : <Wifi className="h-2.5 w-2.5" />}
-                            {isPhysicalShop ? 'Physical' : 'Online'}
+                            {shopModeStyle.label}
                         </span>
                     </div>
                     {seller.bio ? (
