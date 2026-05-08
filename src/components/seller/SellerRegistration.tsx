@@ -274,7 +274,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
       // Welcome toast for already-logged-in (cross-role)
       toast({
         title: "Registration Successful!",
-        description: "Welcome to your seller dashboard!",
+        description: "Welcome to Byblos!",
       });
 
       // Redirect to dashboard

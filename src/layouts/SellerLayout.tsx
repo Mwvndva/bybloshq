@@ -1,10 +1,12 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import { SellerDashboardLayout } from '@/layouts/BaseDashboardLayout';
-import { Home, Package, ShoppingBag, Settings, Store } from 'lucide-react';
+import { Home, Package, ShoppingBag, Settings } from 'lucide-react';
+import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 
 export function SellerLayout() {
-    const location = useLocation();
+    const { seller } = useSellerAuth();
+    const sellerFirstName = seller?.fullName?.trim().split(/\s+/)[0] || seller?.shopName?.trim().split(/\s+/)[0] || 'Seller';
     const navigationItems = [
         { label: 'Dashboard', path: '/seller/dashboard', icon: Home },
         { label: 'Products', path: '/seller/products', icon: Package },
@@ -16,8 +18,7 @@ export function SellerLayout() {
 
     return (
         <SellerDashboardLayout
-            title="Seller Dashboard"
-            subtitle="Manage your products and orders"
+            title={`Welcome, ${sellerFirstName}`}
             navigationItems={navigationItems}
             showBackButton={true}
             backButtonPath="/"

@@ -198,6 +198,10 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   // Use seller auth context - same pattern as BuyerDashboard
   const { seller: sellerProfile, isLoading: isAuthLoading, updateSellerProfile } = useSellerAuth();
+  const sellerFirstName = useMemo(
+    () => sellerProfile?.fullName?.trim().split(/\s+/)[0] || sellerProfile?.shopName?.trim().split(/\s+/)[0] || 'Seller',
+    [sellerProfile?.fullName, sellerProfile?.shopName]
+  );
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isLoading, setIsLoading] = useState(true);
@@ -883,11 +887,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
               <div className="min-w-0 text-center pb-1">
                 <h1 className="text-sm font-black text-white tracking-tight truncate">
-                  {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
+                  Welcome, {sellerFirstName}
                 </h1>
-                <p className="text-xs text-gray-300 font-medium truncate">
-                  Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
-                </p>
               </div>
             </div>
 
@@ -908,11 +909,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
               <div className="min-w-0 text-center px-1 sm:px-2">
                 <h1 className="text-sm sm:text-lg md:text-xl font-black text-white tracking-tight truncate">
-                  {sellerProfile?.shopName ? `${sellerProfile.shopName}'s Dashboard` : 'Seller Dashboard'}
+                  Welcome, {sellerFirstName}
                 </h1>
-                <p className="hidden sm:block text-xs text-gray-300 font-medium">
-                  Welcome, {sellerProfile?.fullName?.split(' ')[0] || 'Seller'}!
-                </p>
               </div>
 
               <div className="flex items-center justify-end gap-2 sm:gap-3">
@@ -1282,7 +1280,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
               <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Store Overview</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Manage your products and track your store performance</p>
+              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Welcome, {sellerFirstName}</p>
               {sellerProfile?.shopName && (
                 <div className="mt-4 flex justify-center">
                   <Button
