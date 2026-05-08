@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { PLATFORM_FEE_RATE } from '@/lib/constants';
-import { formatCurrency, decodeJwt, isTokenExpired, getImageUrl } from '@/lib/utils';
+import { formatCurrency, decodeJwt, isTokenExpired } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,7 @@ import { sellerApi, checkShopNameAvailability, debtService, type Theme } from '@
 import { useToast } from '@/components/ui/use-toast';
 import { useSellerAuth } from '@/contexts/GlobalAuthContext';
 import { BannerUpload } from './BannerUpload';
+import { BusinessPhotoUpload } from './BusinessPhotoUpload';
 import { ThemeSelector } from './ThemeSelector';
 import { exportWithdrawalsToCSV } from '@/utils/exportUtils';
 import { UnifiedAnalyticsHub } from './UnifiedAnalyticsHub';
@@ -263,7 +264,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     tiktokLink: string;
     facebookLink: string;
     whatsappNumber: string;
-    avatarUrl: string;
     bio: string;
   }>({
     fullName: sellerProfile?.fullName || '',
@@ -277,7 +277,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
     tiktokLink: sellerProfile?.tiktokLink || '',
     facebookLink: sellerProfile?.facebookLink || '',
     whatsappNumber: sellerProfile?.whatsappNumber || '',
-    avatarUrl: sellerProfile?.avatarUrl || '',
     bio: sellerProfile?.bio || ''
   });
 
@@ -568,7 +567,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           tiktokLink: sellerProfile?.tiktokLink || '',
           facebookLink: sellerProfile?.facebookLink || '',
           whatsappNumber: sellerProfile?.whatsappNumber || sellerProfile?.phone || '',
-          avatarUrl: sellerProfile?.avatarUrl || '',
           bio: sellerProfile?.bio || ''
         });
         setShopNameAvailable(null);
@@ -606,20 +604,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
       return;
     }
 
-    const trimmedAvatarUrl = formData.avatarUrl.trim();
-    if (
-      trimmedAvatarUrl &&
-      !trimmedAvatarUrl.startsWith('/') &&
-      !/^https?:\/\//i.test(trimmedAvatarUrl)
-    ) {
-      toast({
-        title: 'Error',
-        description: 'Avatar must be a valid image URL',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     setIsSaving(true);
 
     try {
@@ -633,7 +617,6 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         tiktokLink: formData.tiktokLink,
         facebookLink: formData.facebookLink,
         whatsappNumber: formData.whatsappNumber,
-        avatarUrl: trimmedAvatarUrl || null,
         bio: formData.bio.trim()
       };
 
@@ -1702,38 +1685,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     )}
                   </div>
                   <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2">
-                    <p className="text-xs sm:text-sm font-medium text-gray-300 mb-2">Shop Avatar</p>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-yellow-300 to-yellow-500 border border-white/20 overflow-hidden flex items-center justify-center text-lg font-black text-black shrink-0">
-                        {(isEditing ? formData.avatarUrl : sellerProfile?.avatarUrl) ? (
-                          <img
-                            src={getImageUrl(isEditing ? formData.avatarUrl : sellerProfile?.avatarUrl || '')}
-                            alt={`${sellerProfile?.shopName || 'Shop'} avatar`}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span>{getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}</span>
-                        )}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        {isEditing ? (
-                          <Input
-                            name="avatarUrl"
-                            value={formData.avatarUrl}
-                            onChange={(e) => setFormData(prev => ({ ...prev, avatarUrl: e.target.value }))}
-                            placeholder="https://example.com/avatar.jpg"
-                            className="h-8 sm:h-9 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
-                          />
-                        ) : (
-                          <p className="text-sm sm:text-base font-semibold text-white truncate">
-                            {sellerProfile?.avatarUrl ? 'Avatar added' : 'Using shop initials'}
-                          </p>
-                        )}
-                        <p className="mt-1 text-[10px] sm:text-xs text-gray-400">
-                          This appears on your public shop page and buyer shop cards.
-                        </p>
-                      </div>
-                    </div>
+                    <BusinessPhotoUpload
+                      currentPhotoUrl={sellerProfile?.avatarUrl}
+                      fallbackInitials={getSellerInitials(sellerProfile?.shopName, sellerProfile?.fullName)}
+                      onPhotoUploaded={() => {
+                        queryClient.invalidateQueries({ queryKey: ['sellerDashboard'] });
+                      }}
+                    />
                   </div>
                   <div className="p-3 sm:p-4 lg:p-5 bg-white/5 border border-white/10 rounded-lg sm:rounded-xl lg:rounded-2xl sm:col-span-2">
                     <div className="flex items-center justify-between gap-3 mb-1">
