@@ -275,7 +275,7 @@ export default function SellerOrdersSection() {
         return (
             <div className="space-y-4 sm:space-y-6">
                 {[1, 2].map((i) => (
-                    <Card key={i} className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
+                    <Card key={i} className="bg-black border border-white/15 shadow-sm hover:shadow-md transition-all duration-300">
                         <CardContent className="p-4 sm:p-6">
                             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
                                 <div className="space-y-3 sm:space-y-4 flex-1">
@@ -315,11 +315,11 @@ export default function SellerOrdersSection() {
     if (orders.length === 0) {
         return (
             <div className="text-center py-12 px-4">
-                <div className="mx-auto w-16 h-16 bg-yellow-50 border border-yellow-200 rounded-full flex items-center justify-center mb-4">
-                    <Package className="h-8 w-8 text-yellow-700" />
+                <div className="mx-auto w-16 h-16 bg-yellow-400/15 border border-yellow-400/30 rounded-full flex items-center justify-center mb-4">
+                    <Package className="h-8 w-8 text-yellow-300" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-950 mb-2">No orders yet</h3>
-                <p className="text-slate-700 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
+                <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
+                <p className="text-white/75 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
             </div>
         );
     }
@@ -335,7 +335,7 @@ export default function SellerOrdersSection() {
                             placeholder="Search by buyer name, product, or order ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                            className="bg-black border-white/20 text-white placeholder:text-white/65 focus:border-yellow-400/70 focus:ring-yellow-400/20"
                         />
                     </div>
 
@@ -343,7 +343,7 @@ export default function SellerOrdersSection() {
                     <Button
                         onClick={() => exportOrdersToCSV(orders)}
                         variant="outline"
-                        className="border-slate-200 text-slate-950 hover:bg-slate-50 gap-2"
+                        className="border-white/20 text-white hover:bg-yellow-400 hover:text-black gap-2"
                         disabled={orders.length === 0}
                     >
                         <Download className="h-4 w-4" />
@@ -354,44 +354,44 @@ export default function SellerOrdersSection() {
 
                 <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
                     {filteredOrders.length === 0 ? (
-                        <div className="text-center py-12 px-4 bg-white rounded-2xl border border-slate-200">
-                            <p className="text-slate-700">No orders found matching "{searchQuery}"</p>
+                        <div className="text-center py-12 px-4 bg-black rounded-2xl border border-white/15">
+                            <p className="text-white/75">No orders found matching "{searchQuery}"</p>
                         </div>
                     ) : (
                         filteredOrders.map((order) => {
                             const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                             const isDigital = order.items?.some(i => i.productType === 'digital');
 
-                            let cardClasses = "transition-all duration-300 ";
-                            let itemClasses = "text-xs sm:text-sm text-slate-950 rounded-lg px-3 py-2 border ";
+                            let cardClasses = "transition-all duration-300 bg-black border shadow-[0_12px_32px_rgba(0,0,0,0.35)] hover:border-yellow-400/40 ";
+                            let itemClasses = "text-xs sm:text-sm text-white rounded-lg px-3 py-2 border ";
 
                             if (isService) {
-                                cardClasses += "bg-white border border-purple-200 shadow-sm hover:shadow-md";
-                                itemClasses += "bg-purple-50 border-purple-200";
+                                cardClasses += "border-purple-400/45";
+                                itemClasses += "bg-purple-500/10 border-purple-400/25";
                             } else if (isDigital) {
-                                cardClasses += "bg-white border border-red-200 shadow-sm hover:shadow-md";
-                                itemClasses += "bg-red-50 border-red-200";
+                                cardClasses += "border-red-400/45";
+                                itemClasses += "bg-red-500/10 border-red-400/25";
                             } else {
-                                cardClasses += "bg-white border border-slate-200 shadow-sm hover:shadow-md";
-                                itemClasses += "bg-slate-50 border-slate-200";
+                                cardClasses += "border-white/15";
+                                itemClasses += "bg-white/8 border-white/12";
                             }
 
                             return (
                                 <Card key={order.id} className={cardClasses}>
                                     <CardContent className="p-4 sm:p-6">
                                         {/* Mobile-first responsive layout */}
-                                        <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
+                                        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_220px] gap-4 sm:gap-6">
                                             {/* Order Information Section */}
                                             <div className="space-y-3 sm:space-y-4 flex-1">
                                                 {/* Order Header */}
-                                                <div className="flex flex-row justify-between items-start gap-2">
+                                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="font-bold text-sm sm:text-lg text-slate-950 truncate pr-2">Order #{order.orderNumber}</h3>
-                                                        <p className="text-[10px] sm:text-sm text-slate-600">{formatDate(order.createdAt)}</p>
+                                                        <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">Order #{order.orderNumber}</h3>
+                                                        <p className="text-[10px] sm:text-sm text-white/70">{formatDate(order.createdAt)}</p>
                                                         {(order.buyerName || order.customer?.name) && (
-                                                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md w-fit">
+                                                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-white bg-blue-500/15 border border-blue-400/30 px-2 py-0.5 rounded-md w-fit max-w-full">
                                                                 <User className="h-3 w-3" />
-                                                                <span className="font-medium truncate max-w-[120px] sm:max-w-xs">{order.buyerName || order.customer?.name}</span>
+                                                                <span className="font-medium truncate max-w-[180px] sm:max-w-xs">{order.buyerName || order.customer?.name}</span>
                                                             </div>
                                                         )}
                                                     </div>
@@ -444,10 +444,10 @@ export default function SellerOrdersSection() {
                                                     });
                                                     if (!instruction) return null;
                                                     return (
-                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-50 text-blue-900 border border-blue-200' :
-                                                            instruction.color === 'amber' ? 'bg-yellow-50 text-yellow-900 border border-yellow-200' :
-                                                                instruction.color === 'green' ? 'bg-green-50 text-green-900 border border-green-200' :
-                                                                    'bg-red-50 text-red-900 border border-red-200'
+                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-500/15 text-white border border-blue-400/30' :
+                                                            instruction.color === 'amber' ? 'bg-yellow-400/15 text-yellow-100 border border-yellow-400/30' :
+                                                                instruction.color === 'green' ? 'bg-green-500/15 text-green-100 border border-green-400/30' :
+                                                                    'bg-red-500/15 text-red-100 border border-red-400/30'
                                                             }`}>
                                                             {instruction.text}
                                                         </div>
@@ -456,41 +456,41 @@ export default function SellerOrdersSection() {
 
                                                 {/* Products Section */}
                                                 <div>
-                                                    <h4 className="text-sm sm:text-base font-semibold text-slate-950 mb-3">Products</h4>
+                                                    <h4 className="text-sm sm:text-base font-semibold text-white mb-3">Products</h4>
                                                     <ul className="space-y-2">
                                                         {order.items && order.items.length > 0 ? (
                                                             order.items.map((item) => (
                                                                 <li key={item.id} className={itemClasses}>
                                                                     <div className="flex items-center justify-between gap-3">
                                                                         <span className="font-semibold">{item.name}</span>
-                                                                        <span className="text-slate-600">Qty {item.quantity}</span>
+                                                                        <span className="text-white/70">Qty {item.quantity}</span>
                                                                     </div>
                                                                 </li>
                                                             ))
                                                         ) : (
-                                                            <li className="text-xs sm:text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">No items in this order</li>
+                                                            <li className="text-xs sm:text-sm text-white/70 bg-white/8 rounded-lg px-3 py-2 border border-white/12">No items in this order</li>
                                                         )}
                                                     </ul>
                                                 </div>
 
                                                 {/* Service Booking Details */}
                                                 {(order.metadata?.booking_date || order.metadata?.service_location || order.metadata?.service_requirements) && (
-                                                    <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200 shadow-sm">
-                                                        <h4 className="flex items-center text-sm font-semibold text-purple-950 mb-2">
-                                                            <Calendar className="h-4 w-4 mr-2 text-purple-700" />
+                                                    <div className="mt-4 p-3 bg-purple-500/10 rounded-lg border border-purple-400/25 shadow-sm">
+                                                        <h4 className="flex items-center text-sm font-semibold text-white mb-2">
+                                                            <Calendar className="h-4 w-4 mr-2 text-purple-200" />
                                                             Service Booking Details
                                                         </h4>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                                            <div className="bg-white p-2 rounded border border-purple-100">
-                                                                <p className="text-purple-700 text-xs font-medium mb-1">Date & Time</p>
-                                                                <p className="font-semibold text-slate-950">
+                                                            <div className="bg-black/60 p-2 rounded border border-purple-400/20">
+                                                                <p className="text-purple-200 text-xs font-medium mb-1">Date & Time</p>
+                                                                <p className="font-semibold text-white">
                                                                     {order.metadata.booking_date ? formatDate(order.metadata.booking_date) : 'N/A'}
-                                                                    {order.metadata.booking_time && <span className="text-slate-600 font-normal"> at {order.metadata.booking_time}</span>}
+                                                                    {order.metadata.booking_time && <span className="text-white/70 font-normal"> at {order.metadata.booking_time}</span>}
                                                                 </p>
                                                             </div>
-                                                            <div className="bg-white p-2 rounded border border-purple-100">
-                                                                <p className="text-purple-700 text-xs font-medium mb-1">Location</p>
-                                                                <div className="font-semibold text-slate-950 break-words">
+                                                            <div className="bg-black/60 p-2 rounded border border-purple-400/20">
+                                                                <p className="text-purple-200 text-xs font-medium mb-1">Location</p>
+                                                                <div className="font-semibold text-white break-words">
                                                                     {order.metadata.buyer_location ? (
                                                                         <div className="space-y-1">
                                                                             <p>{order.metadata.buyer_location.fullAddress || 'Buyer Coordinates Provided'}</p>
@@ -499,7 +499,7 @@ export default function SellerOrdersSection() {
                                                                                     href={`https://www.google.com/maps?q=${order.metadata.buyer_location.latitude},${order.metadata.buyer_location.longitude}`}
                                                                                     target="_blank"
                                                                                     rel="noopener noreferrer"
-                                                                                    className="text-xs text-purple-400 hover:text-purple-300 underline block"
+                                                                                    className="text-xs text-purple-200 hover:text-yellow-200 underline block"
                                                                                 >
                                                                                     View on Maps
                                                                                 </a>
@@ -512,9 +512,9 @@ export default function SellerOrdersSection() {
                                                             </div>
                                                         </div>
                                                         {order.metadata?.service_requirements && (
-                                                            <div className="mt-3 bg-white p-2 rounded border border-purple-100">
-                                                                <p className="text-purple-700 text-xs font-medium mb-1">Special Requirements</p>
-                                                                <p className="text-sm text-slate-950 break-words">
+                                                            <div className="mt-3 bg-black/60 p-2 rounded border border-purple-400/20">
+                                                                <p className="text-purple-200 text-xs font-medium mb-1">Special Requirements</p>
+                                                                <p className="text-sm text-white break-words">
                                                                     {order.metadata.service_requirements}
                                                                 </p>
                                                             </div>
@@ -524,18 +524,18 @@ export default function SellerOrdersSection() {
                                             </div>
 
                                             {/* Price and Actions Section */}
-                                            <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
+                                            <div className="flex flex-col items-stretch gap-3 xl:min-w-[220px]">
                                                 {/* Total Amount */}
-                                                <div className="flex-1 sm:flex-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 w-full">
-                                                    <p className="font-bold text-lg sm:text-xl text-slate-950">
+                                                <div className="rounded-xl border border-white/15 bg-white/8 px-4 py-3 w-full">
+                                                    <p className="font-bold text-lg sm:text-xl text-white">
                                                         {formatCurrency(order.totalAmount, order.currency)}
                                                     </p>
-                                                    <p className="text-xs text-slate-600">Total Amount</p>
-                                                    <p className="mt-1 text-xs text-slate-600">Payment: {order.paymentStatus || 'Pending'}</p>
+                                                    <p className="text-xs text-white/70">Total Amount</p>
+                                                    <p className="mt-1 text-xs text-white/70">Payment: {order.paymentStatus || 'Pending'}</p>
                                                 </div>
 
                                                 {/* Action Buttons */}
-                                                <div className="w-full sm:w-auto lg:w-full">
+                                                <div className="w-full">
                                                     {order.status === 'PENDING' && (
                                                         <div className="space-y-1.5">
                                                             <Button
@@ -620,15 +620,15 @@ export default function SellerOrdersSection() {
 
             {/* Ready for Pickup Confirmation Dialog */}
             < Dialog open={showPickupDialog} onOpenChange={setShowPickupDialog} >
-                <DialogContent className="sm:max-w-md bg-white backdrop-blur-[12px] border border-slate-200 shadow-xl text-slate-950">
+                <DialogContent className="sm:max-w-md bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-slate-950">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center">
-                                <Truck className="h-4 w-4 text-blue-600" />
+                                <Truck className="h-4 w-4 text-blue-300" />
                             </div>
                             Confirm Package Drop-off
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-slate-600 leading-relaxed">
+                        <DialogDescription className="text-sm text-white/75 leading-relaxed">
                             Have you dropped off the package at the specified location?
                         </DialogDescription>
                     </DialogHeader>
@@ -636,11 +636,11 @@ export default function SellerOrdersSection() {
                     <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-4 my-4">
                         <div className="flex items-start gap-3">
                             <div className="w-8 h-8 bg-blue-500/10 border border-blue-400/20 rounded-full flex items-center justify-center flex-shrink-0">
-                                <Package className="h-4 w-4 text-blue-600" />
+                                <Package className="h-4 w-4 text-blue-300" />
                             </div>
                             <div className="text-sm">
-                                <p className="font-semibold text-blue-900 mb-1">Drop-off Location:</p>
-                                <p className="text-blue-700">
+                                <p className="font-semibold text-blue-100 mb-1">Drop-off Location:</p>
+                                <p className="text-blue-50">
                                     <strong>Dynamic Mall</strong><br />
                                     Along Tomboya Street<br />
                                     Shop Number: <strong>SL 32</strong>
@@ -650,8 +650,8 @@ export default function SellerOrdersSection() {
                     </div>
 
                     <div className="bg-yellow-500/10 border border-yellow-400/20 rounded-xl p-3 mb-4">
-                        <p className="text-sm text-yellow-800 font-semibold">
-                            ⚠️ Please confirm only after the package has been physically dropped off at the specified location.
+                        <p className="text-sm text-yellow-100 font-semibold">
+                            Please confirm only after the package has been physically dropped off at the specified location.
                         </p>
                     </div>
 
@@ -660,7 +660,7 @@ export default function SellerOrdersSection() {
                             variant="outline"
                             onClick={() => setShowPickupDialog(false)}
                             disabled={isUpdating}
-                            className="w-full sm:w-auto bg-transparent border-slate-200 text-slate-600 hover:bg-slate-100 h-8 text-xs"
+                            className="w-full sm:w-auto bg-transparent border-white/20 text-white hover:bg-white/10 h-8 text-xs"
                         >
                             Cancel
                         </Button>
@@ -687,15 +687,15 @@ export default function SellerOrdersSection() {
 
             {/* Cancel Order Confirmation Dialog */}
             < Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog} >
-                <DialogContent className="sm:max-w-[425px] bg-white backdrop-blur-[12px] border border-slate-200 shadow-xl text-slate-950">
+                <DialogContent className="sm:max-w-[425px] bg-black backdrop-blur-[12px] border border-white/15 shadow-xl text-white">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-slate-950">
+                        <DialogTitle className="flex items-center gap-2 text-lg font-semibold text-white">
                             <div className="w-8 h-8 bg-red-500/10 border border-red-400/20 rounded-full flex items-center justify-center">
-                                <XCircle className="h-4 w-4 text-red-600" />
+                                <XCircle className="h-4 w-4 text-red-300" />
                             </div>
                             Cancel Order
                         </DialogTitle>
-                        <DialogDescription className="text-sm text-slate-600 leading-relaxed">
+                        <DialogDescription className="text-sm text-white/75 leading-relaxed">
                             Are you sure you want to cancel this order?
                             <br /><br />
                             The buyer will receive a full refund to their account balance.
@@ -703,8 +703,8 @@ export default function SellerOrdersSection() {
                     </DialogHeader>
 
                     <div className="bg-red-500/10 border border-red-400/20 rounded-xl p-3 mb-4">
-                        <p className="text-sm text-red-800 font-semibold">
-                            ⚠️ This action cannot be undone. The buyer will be notified of the cancellation.
+                        <p className="text-sm text-red-100 font-semibold">
+                            This action cannot be undone. The buyer will be notified of the cancellation.
                         </p>
                     </div>
 
@@ -713,7 +713,7 @@ export default function SellerOrdersSection() {
                             variant="outline"
                             onClick={() => setShowCancelDialog(false)}
                             disabled={isUpdating}
-                            className="bg-transparent border-slate-200 text-slate-600 hover:bg-slate-100"
+                            className="bg-transparent border-white/20 text-white hover:bg-white/10"
                         >
                             No, Keep Order
                         </Button>

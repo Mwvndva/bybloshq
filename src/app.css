@@ -437,6 +437,11 @@ body.dashboard-active textarea::placeholder {
     opacity: 0.78;
 }
 
+body.dashboard-active .seller-tab-selected,
+body.dashboard-active .seller-tab-selected * {
+    color: #000000 !important;
+}
+
 .product-modal-light,
 .product-modal-light * {
     color: #FFFFFF !important;

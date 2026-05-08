@@ -16,6 +16,7 @@ import {
   BarChart3,
   Edit,
   Link as LinkIcon,
+  LogOut,
   Package,
   Plus,
   RefreshCw,
@@ -198,7 +199,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const { toast } = useToast();
 
   // Use seller auth context - same pattern as BuyerDashboard
-  const { seller: sellerProfile, isLoading: isAuthLoading, updateSellerProfile } = useSellerAuth();
+  const { seller: sellerProfile, isLoading: isAuthLoading, updateSellerProfile, logout } = useSellerAuth();
   const sellerFirstName = useMemo(
     () => sellerProfile?.fullName?.trim().split(/\s+/)[0] || sellerProfile?.shopName?.trim().split(/\s+/)[0] || 'Seller',
     [sellerProfile?.fullName, sellerProfile?.shopName]
@@ -212,6 +213,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const handleLogout = useCallback(() => {
+    logout();
+  }, [logout]);
   const dashboardQuery = useQuery({
     queryKey: ['seller-dashboard', 'summary'],
     queryFn: loadSellerDashboardData,
@@ -828,6 +832,37 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
 
   return (
     <>
+      <header className="sticky top-0 z-50 bg-black border-b border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-[auto,1fr,auto] items-center gap-3 min-h-14 sm:min-h-16">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="justify-self-start text-white hover:text-black hover:bg-yellow-400 border border-white/10 rounded-xl px-3 py-2 text-xs sm:text-sm"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
+            </Button>
+
+            <h1 className="min-w-0 text-center text-sm sm:text-lg font-medium text-white tracking-tight truncate">
+              Welcome, {sellerFirstName}
+            </h1>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="justify-self-end text-white hover:text-black hover:bg-yellow-400 border border-white/10 rounded-xl px-3 py-2 text-xs sm:text-sm"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Back to Home</span>
+              <span className="sm:hidden">Home</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
       {/* Header */}
       <div className="hidden">
         <div className="w-full px-4 sm:px-6 lg:px-8">
@@ -968,7 +1003,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
-        <div className="mb-6 sm:mb-8 bg-white/90 backdrop-blur-[12px] rounded-2xl p-1.5 shadow-lg border border-slate-200 w-full max-w-4xl mx-auto overflow-x-auto">
+        <div className="mb-6 sm:mb-8 bg-white/10 backdrop-blur-[12px] rounded-2xl p-1.5 shadow-lg border border-white/15 w-full max-w-4xl mx-auto overflow-x-auto">
           <div className="flex items-center justify-start sm:justify-center gap-3 sm:gap-5 min-w-max">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
@@ -990,9 +1025,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   }
                 }}
                 className={`relative flex items-center justify-center flex-shrink-0 space-x-1.5 sm:space-x-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 border ${activeTab === id
-                  ? 'text-slate-950 border-yellow-400/40 bg-yellow-100 shadow-[0_0_18px_rgba(250,204,21,0.18)]'
-                  : 'text-slate-700 border-transparent hover:text-slate-950 hover:bg-slate-50'
-                  }`}
+                  ? 'text-black border-yellow-300 bg-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.35)]'
+                  : 'text-white border-transparent hover:text-black hover:bg-yellow-300'
+                  } ${activeTab === id ? 'seller-tab-selected' : ''}`}
               >
                 <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
                 <span>{label}</span>
@@ -1405,13 +1440,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="w-full max-w-full sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none h-[100dvh] sm:h-auto overflow-hidden">
-                    <div className="product-modal-light bg-white border-x border-y sm:border border-slate-200 rounded-none sm:rounded-[2.5rem] h-full sm:h-auto overflow-hidden shadow-2xl flex flex-col">
+                    <div className="product-modal-light bg-black border-x border-y sm:border border-white/15 rounded-none sm:rounded-[2.5rem] h-full sm:h-auto overflow-hidden shadow-2xl flex flex-col">
                       <AddProductForm
                         onSuccess={() => {
                           fetchProducts();
                           setIsAddProductModalOpen(false);
                         }}
-                        onClose={() => setIsAddProductModalOpen(false)}
                       />
                     </div>
                   </DialogContent>

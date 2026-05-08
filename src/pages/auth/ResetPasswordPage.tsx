@@ -178,8 +178,8 @@ export function ResetPasswordPage() {
     <div className="auth-page min-h-screen w-full bg-black flex flex-col relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
       <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30">
-        <div className="max-w-screen-2xl mx-auto px-4 h-20 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/seller/login')} className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 rounded-xl">
+        <div className="w-full px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/seller/login')} className="text-white hover:text-black hover:bg-yellow-400 rounded-xl">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
           </Button>
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
