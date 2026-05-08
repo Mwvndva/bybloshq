@@ -101,7 +101,7 @@ export function ResetPasswordPage() {
   // Handle body background
   useEffect(() => {
     const originalBodyStyle = document.body.style.cssText;
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
     return () => {
       document.body.style.cssText = originalBodyStyle;
     };
@@ -150,8 +150,8 @@ export function ResetPasswordPage() {
 
   if (!isValidToken) {
     return (
-      <div className="auth-page min-h-screen flex items-center justify-center p-4 bg-white">
-        <div className="w-full max-w-md rounded-2xl border border-slate-200 p-6 bg-white/95 backdrop-blur-md shadow-xl">
+      <div className="auth-page min-h-screen flex items-center justify-center p-4 bg-black">
+        <div className="w-full max-w-md rounded-2xl border border-white/15 p-6 bg-white/5 backdrop-blur-md shadow-xl">
           <div className="text-center mb-6">
             <div className="w-12 h-12 mx-auto mb-3 bg-red-500/20 rounded-xl flex items-center justify-center border border-red-500/30">
               <Lock className="h-6 w-6 text-red-500" />
@@ -175,9 +175,9 @@ export function ResetPasswordPage() {
   const strength = checkPasswordStrength(password);
 
   return (
-    <div className="auth-page min-h-screen w-full bg-white flex flex-col relative" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="auth-page min-h-screen w-full bg-black flex flex-col relative" style={{ fontFamily: "'Inter', sans-serif" }}>
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
+      <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30">
         <div className="max-w-screen-2xl mx-auto px-4 h-20 flex items-center justify-between">
           <Button variant="ghost" size="sm" onClick={() => navigate('/seller/login')} className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 rounded-xl">
             <ArrowLeft className="h-4 w-4 mr-2" /> Back
@@ -194,7 +194,7 @@ export function ResetPasswordPage() {
 
       <div className="flex-1 flex items-center justify-center py-8 px-4">
         <div className="w-full max-w-[400px]">
-          <div className="rounded-2xl border border-slate-200 shadow-xl p-6 bg-white/95 backdrop-blur-md">
+          <div className="rounded-2xl border border-white/15 shadow-xl p-6 bg-white/5 backdrop-blur-md">
             <div className="text-center mb-6">
               <div className="w-12 h-12 mx-auto mb-3 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
                 <Lock className="h-6 w-6 text-white" />

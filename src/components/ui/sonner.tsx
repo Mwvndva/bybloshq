@@ -4,11 +4,11 @@ import { Toaster as Sonner, toast } from "sonner"
 type ToasterProps = React.ComponentProps<typeof Sonner>
 
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme = "system" } = useTheme()
+  const { theme = "dark" } = useTheme()
 
   return (
     <Sonner
-      theme={theme as ToasterProps["theme"]}
+      theme={(theme === "light" ? "dark" : theme) as ToasterProps["theme"]}
       className="toaster group"
       position="top-right"
       expand={false}
@@ -16,8 +16,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       toastOptions={{
         classNames: {
           toast:
-            "group toast group-[.toaster]:bg-white group-[.toaster]:text-slate-950 group-[.toaster]:border-slate-200 group-[.toaster]:shadow-2xl sm:min-w-[356px] min-w-[90vw] sm:max-w-[420px] max-w-[95vw] border-2",
-          description: "group-[.toast]:text-gray-400 text-sm",
+            "group toast group-[.toaster]:bg-black group-[.toaster]:text-white group-[.toaster]:border-white/20 group-[.toaster]:shadow-2xl sm:min-w-[356px] min-w-[90vw] sm:max-w-[420px] max-w-[95vw] border-2",
+          description: "group-[.toast]:text-white/80 text-sm",
           actionButton:
             "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
           cancelButton:

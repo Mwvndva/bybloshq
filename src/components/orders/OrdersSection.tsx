@@ -77,13 +77,13 @@ const updateSellerClientCountInCache = (queryClient, sellerId: string, clientCou
 };
 
 const glassCardStyle: React.CSSProperties = {
-  background: '#FFFFFF',
-  border: '1px solid rgba(15, 23, 42, 0.08)',
-  boxShadow: '0 14px 34px rgba(15, 23, 42, 0.08)'
+  background: '#050505',
+  border: '1px solid rgba(255, 255, 255, 0.16)',
+  boxShadow: '0 14px 34px rgba(0, 0, 0, 0.45)'
 };
 
 const badgeGlow = 'shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_10px_20px_rgba(0,0,0,0.35)]';
-const detailPillClass = 'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2';
+const detailPillClass = 'rounded-xl border border-white/15 bg-white/5 px-3 py-2';
 
 const getStatusBadge = (status: string) => {
   // Convert to uppercase for comparison, default to 'PENDING' if status is falsy

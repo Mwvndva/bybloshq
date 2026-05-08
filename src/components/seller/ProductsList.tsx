@@ -877,7 +877,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             </Button>
             <div>
               <DialogTitle className="text-base sm:text-lg font-bold text-white">Edit Product</DialogTitle>
-              <DialogDescription className="text-zinc-400 text-[10px] sm:text-xs">
+              <DialogDescription className="text-white text-[10px] sm:text-xs">
                 Update product information
               </DialogDescription>
             </div>
@@ -896,7 +896,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     id="edit-name"
                     value={editFormData.name}
                     onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
-                    className="bg-zinc-900 border-white/10 text-white h-9 text-sm"
+                    className="bg-black border-white/20 text-white h-9 text-sm"
                     placeholder="Enter product name"
                   />
                 </div>
@@ -908,7 +908,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     type="number"
                     value={editFormData.price}
                     onChange={(e) => setEditFormData({ ...editFormData, price: e.target.value })}
-                    className="bg-zinc-900 border-white/10 text-white h-9 text-sm"
+                    className="bg-black border-white/20 text-white h-9 text-sm"
                     placeholder="0"
                   />
                 </div>
@@ -919,7 +919,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     id="edit-description"
                     value={editFormData.description}
                     onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
-                    className="bg-zinc-900 border-white/10 text-white min-h-[60px] text-sm"
+                    className="bg-black border-white/20 text-white min-h-[60px] text-sm"
                     placeholder="Enter product description"
                   />
                 </div>
@@ -930,10 +930,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                     value={editFormData.aesthetic}
                     onValueChange={(value) => setEditFormData({ ...editFormData, aesthetic: value })}
                   >
-                    <SelectTrigger className="bg-zinc-900 border-white/10 text-white h-9">
+                    <SelectTrigger className="bg-black border-white/20 text-white h-9">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-zinc-900 border-white/10">
+                    <SelectContent className="bg-black border-white/20">
                       {aestheticCategories.map((category) => (
                         <SelectItem key={category.id} value={category.id} className="text-white hover:bg-white/5">
                           {category.title}
@@ -946,7 +946,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-white text-xs">Product Photos</Label>
-                    <span className="text-[10px] text-zinc-400">
+                    <span className="text-[10px] text-white">
                       {[editFormData.imagePreview, ...editFormData.extraPreviews].filter(Boolean).length} / 3 photos
                     </span>
                   </div>
@@ -985,8 +985,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                                 : 'border-white/20 bg-white/5 hover:border-emerald-400/40 hover:bg-emerald-400/5 cursor-pointer'
                                 }`}
                             >
-                              <ImagePlus className={`h-4 w-4 mb-1 ${isDisabled ? 'text-zinc-600' : 'text-zinc-400'}`} />
-                              <span className={`text-[8px] font-medium ${isDisabled ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                              <ImagePlus className={`h-4 w-4 mb-1 ${isDisabled ? 'text-white/40' : 'text-white'}`} />
+                              <span className={`text-[8px] font-medium ${isDisabled ? 'text-white/40' : 'text-white'}`}>
                                 {isFirst ? 'Main photo' : `Photo ${slot + 1}`}
                               </span>
                               {!isDisabled && (
@@ -1003,7 +1003,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-zinc-500 mt-2">PNG, JPG up to 5MB.</p>
+                  <p className="text-[10px] text-white mt-2">PNG, JPG up to 5MB.</p>
                 </div>
               </div>
             </div>
@@ -1013,7 +1013,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             <Button
               variant="ghost"
               onClick={() => setShowEditModal(false)}
-              className="border border-white/10 text-zinc-300 hover:bg-white/5"
+              className="border border-white/20 text-white hover:bg-white/10"
               disabled={isSavingEdit}
             >
               Cancel
@@ -1021,7 +1021,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             <Button
               onClick={handleSaveEdit}
               disabled={isSavingEdit || isLoadingEdit}
-              className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-semibold"
+              className="bg-white/10 hover:bg-white/15 text-white border border-white/15 font-semibold"
             >
               {isSavingEdit ? (
                 <>

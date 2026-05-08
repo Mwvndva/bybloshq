@@ -62,22 +62,22 @@ const isPhysicalShop = (shop) => Boolean(
 
 function SellerBrandCardSkeleton() {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 16, padding: 12, overflow: 'hidden', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
+    <div style={{ background: '#050505', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 16, padding: 12, overflow: 'hidden', boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}>
       <div style={{ display: 'flex', gap: 12 }}>
-        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(15,23,42,0.08)' }} />
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.10)' }} />
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ height: 12, width: '62%', borderRadius: 999, background: 'rgba(15,23,42,0.1)', marginBottom: 8 }} />
-          <div style={{ height: 10, width: '86%', borderRadius: 999, background: 'rgba(15,23,42,0.06)', marginBottom: 6 }} />
-          <div style={{ height: 10, width: '54%', borderRadius: 999, background: 'rgba(15,23,42,0.05)' }} />
+          <div style={{ height: 12, width: '62%', borderRadius: 999, background: 'rgba(255,255,255,0.14)', marginBottom: 8 }} />
+          <div style={{ height: 10, width: '86%', borderRadius: 999, background: 'rgba(255,255,255,0.10)', marginBottom: 6 }} />
+          <div style={{ height: 10, width: '54%', borderRadius: 999, background: 'rgba(255,255,255,0.08)' }} />
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 12 }}>
         {[0, 1, 2].map(item => (
-          <div key={item} style={{ height: 46, borderRadius: 12, background: 'rgba(15,23,42,0.045)' }} />
+          <div key={item} style={{ height: 46, borderRadius: 12, background: 'rgba(255,255,255,0.08)' }} />
         ))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 12 }}>
-        <div style={{ height: 40, borderRadius: 12, background: 'rgba(15,23,42,0.06)' }} />
+        <div style={{ height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.10)' }} />
         <div style={{ width: 94, height: 40, borderRadius: 12, background: 'rgba(248,113,113,0.08)' }} />
       </div>
     </div>
@@ -446,7 +446,7 @@ function BuyerDashboard() {
       display: 'flex', flexDirection: 'column',
       height: '100dvh',
       overflow: 'hidden',
-      background: '#F8FAFC',
+      background: '#000000',
     }}>
       {/* Header */}
       <div style={{
@@ -458,12 +458,12 @@ function BuyerDashboard() {
       }}>
         <button onClick={handleBack} style={{
           display: 'flex', alignItems: 'center', gap: 4,
-          background: 'none', border: 'none', color: 'rgba(15,23,42,0.58)',
+          background: 'none', border: 'none', color: 'rgba(255,255,255,0.86)',
           fontSize: 12, cursor: 'pointer', padding: '4px 0',
         }}>
           <ChevronLeft size={14} /> Back
         </button>
-        <span style={{ fontSize: 15, fontWeight: 700, color: '#111827', letterSpacing: '-0.2px' }}>
+        <span style={{ fontSize: 15, fontWeight: 700, color: '#FFFFFF', letterSpacing: '-0.2px' }}>
           Trusted Businesses
         </span>
         <div style={{ width: 30, height: 30 }} />
@@ -476,17 +476,17 @@ function BuyerDashboard() {
         <div style={{ padding: '0 18px 10px', flexShrink: 0 }}>
           <div style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 10,
+            background: '#080808', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 10,
             padding: '0 12px', height: 36,
           }}>
-            <Search size={14} color="rgba(15,23,42,0.45)" style={{ flexShrink: 0 }} />
+            <Search size={14} color="rgba(255,255,255,0.78)" style={{ flexShrink: 0 }} />
             <input
               value={activeSection === 'shop' ? searchQuery : shopsSearchQuery}
               onChange={e => activeSection === 'shop' ? setSearchQuery(e.target.value) : setShopsSearchQuery(e.target.value)}
               placeholder={activeSection === 'shop' ? "Search products..." : "Search my shops..."}
               style={{
                 flex: 1, background: 'transparent', border: 'none', outline: 'none',
-                color: '#111827', fontSize: 13,
+                color: '#FFFFFF', fontSize: 13,
               }}
             />
           </div>
@@ -516,8 +516,8 @@ function BuyerDashboard() {
               display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
               flexShrink: 0,
             }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>My Shops</span>
-              <span style={{ fontSize: 11, color: 'rgba(15,23,42,0.42)' }}>{filteredShops.length} shops</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>My Shops</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>{filteredShops.length} shops</span>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
@@ -537,10 +537,10 @@ function BuyerDashboard() {
                   empty: shopsSearchQuery ? 'No physical shops match your search.' : 'No physical shops followed yet.'
                 }
               ].map((group) => (
-                <section key={group.key} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm">
+                <section key={group.key} className="min-w-0 rounded-2xl border border-white/15 bg-white/5 p-2.5 shadow-sm">
                   <div className="mb-2 flex items-center justify-between gap-2 px-1">
-                    <span className="text-xs font-black text-slate-950">{group.title}</span>
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500">
+                    <span className="text-xs font-black text-white">{group.title}</span>
+                    <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-bold text-white">
                       {group.count}
                     </span>
                   </div>
@@ -563,7 +563,7 @@ function BuyerDashboard() {
                     ))}
 
                     {!isLoadingShops && filteredShops.length > 0 && group.shops.length === 0 && (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-8 text-center text-xs text-slate-400">
+                      <div className="rounded-xl border border-white/15 bg-white/5 px-3 py-8 text-center text-xs text-white">
                         {group.empty}
                       </div>
                     )}
@@ -573,7 +573,7 @@ function BuyerDashboard() {
             </div>
 
             {filteredShops.length === 0 && !isLoadingShops && (
-              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(15,23,42,0.42)' }}>
+              <div style={{ textAlign: 'center', padding: '40px 0', color: 'rgba(255,255,255,0.72)' }}>
                 {shopsSearchQuery ? 'No followed shops match your search.' : 'No shops followed yet.'}
               </div>
             )}
@@ -583,8 +583,8 @@ function BuyerDashboard() {
         {activeSection === 'wishlist' && (
           <div className="space-y-4">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Wishlist</span>
-              <span style={{ fontSize: 11, color: 'rgba(15,23,42,0.42)' }}>{wishlist.length} items</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>Wishlist</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.72)' }}>{wishlist.length} items</span>
             </div>
             <WishlistSection />
           </div>
@@ -592,7 +592,7 @@ function BuyerDashboard() {
 
         {activeSection === 'orders' && (
           <div className="space-y-4">
-            <Suspense fallback={<div style={{ color: '#111827' }}>Loading orders...</div>}>
+            <Suspense fallback={<div style={{ color: '#FFFFFF' }}>Loading orders...</div>}>
               <OrdersSection />
             </Suspense>
           </div>
@@ -601,7 +601,7 @@ function BuyerDashboard() {
         {activeSection === 'profile' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Profile</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#FFFFFF' }}>Profile</span>
               <button
                 onClick={() => setIsEditingProfile(!isEditingProfile)}
                 style={{ background: 'none', border: 'none', color: '#F5C518', fontSize: 12, fontWeight: 600 }}
@@ -611,23 +611,23 @@ function BuyerDashboard() {
             </div>
 
             {/* Minimalist Profile Info */}
-            <div style={{ background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.08)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
+            <div style={{ background: '#050505', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 14, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 10px 30px rgba(0,0,0,0.45)' }}>
               <div>
-                <div style={{ fontSize: 10, color: 'rgba(15,23,42,0.5)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Full Name</div>
-                <div style={{ fontSize: 14, color: '#111827', fontWeight: 600 }}>{user?.fullName}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Full Name</div>
+                <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.fullName}</div>
               </div>
               <div>
-                <div style={{ fontSize: 10, color: 'rgba(15,23,42,0.5)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email Address</div>
-                <div style={{ fontSize: 14, color: '#111827', fontWeight: 600 }}>{user?.email}</div>
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Email Address</div>
+                <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.email}</div>
               </div>
               <div style={{ display: 'flex', gap: 20 }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(15,23,42,0.5)', textTransform: 'uppercase', letterSpacing: 0.5 }}>City</div>
-                  <div style={{ fontSize: 14, color: '#111827', fontWeight: 600 }}>{user?.city || 'ΓÇö'}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>City</div>
+                  <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.city || 'ΓÇö'}</div>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, color: 'rgba(15,23,42,0.5)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Area</div>
-                  <div style={{ fontSize: 14, color: '#111827', fontWeight: 600 }}>{user?.location || 'ΓÇö'}</div>
+                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.72)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Area</div>
+                  <div style={{ fontSize: 14, color: '#FFFFFF', fontWeight: 600 }}>{user?.location || 'ΓÇö'}</div>
                 </div>
               </div>
             </div>
@@ -636,9 +636,9 @@ function BuyerDashboard() {
                  but keeping it functional by just showing the state for now or wrapping existing inputs */}
             {isEditingProfile && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-white border border-slate-200 text-slate-950 h-10" />
+                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-white/5 border border-white/15 text-white h-10" />
                 <Select value={city} onValueChange={setCity}>
-                  <SelectTrigger className="bg-white border border-slate-200 text-slate-950 h-10">
+                  <SelectTrigger className="bg-white/5 border border-white/15 text-white h-10">
                     <SelectValue placeholder="Select City" />
                   </SelectTrigger>
                   <SelectContent>
@@ -744,8 +744,8 @@ function BuyerDashboard() {
       {/* Bottom navigation bar */}
       <div style={{
         height: 56,
-        background: '#FFFFFF',
-        borderTop: '0.5px solid rgba(15,23,42,0.08)',
+        background: '#050505',
+        borderTop: '0.5px solid rgba(255,255,255,0.16)',
         display: 'flex',
         alignItems: 'stretch',
         flexShrink: 0,
@@ -766,11 +766,11 @@ function BuyerDashboard() {
           >
             <item.Icon
               size={18}
-              color={activeNav === item.key ? '#B45309' : 'rgba(15,23,42,0.45)'}
+              color={activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.68)'}
             />
             <span style={{
               fontSize: 9, fontWeight: 500,
-              color: activeNav === item.key ? '#B45309' : 'rgba(15,23,42,0.45)',
+              color: activeNav === item.key ? '#F5C518' : 'rgba(255,255,255,0.68)',
             }}>
               {item.label}
             </span>

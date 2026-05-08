@@ -39,14 +39,14 @@ export function BuyerForgotPassword() {
     };
 
     return (
-        <div className="auth-page min-h-screen w-full bg-white flex flex-col relative"
+        <div className="auth-page min-h-screen w-full bg-black flex flex-col relative"
             style={{
                 fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-                backgroundColor: '#ffffff',
+                backgroundColor: '#000000',
             }}
         >
             {/* Header */}
-            <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
+            <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30">
                 <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="relative flex items-center justify-between h-20">
                         {/* Left: Back Button */}
@@ -87,11 +87,11 @@ export function BuyerForgotPassword() {
                     <div
                         className="rounded-2xl border shadow-2xl p-5 sm:p-6"
                         style={{
-                            background: 'rgba(255, 255, 255, 0.96)',
+                            background: 'rgba(8, 8, 8, 0.96)',
                             backdropFilter: 'blur(10px)',
                             WebkitBackdropFilter: 'blur(10px)',
-                            border: '1px solid rgba(226, 232, 240, 0.95)',
-                            boxShadow: '0 18px 45px rgba(15, 23, 42, 0.08)'
+                            border: '1px solid rgba(255, 255, 255, 0.16)',
+                            boxShadow: '0 18px 45px rgba(0, 0, 0, 0.45)'
                         }}
                     >
                         <div className="text-center mb-6">
