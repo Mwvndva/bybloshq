@@ -452,7 +452,7 @@ function BuyerDashboard() {
           <ChevronLeft size={14} /> Back
         </button>
         <span style={{ fontSize: 15, fontWeight: 600, color: '#fff', letterSpacing: '-0.2px' }}>
-          Discover
+          you are protected
         </span>
         <div
           onClick={handleLogout}
@@ -507,7 +507,7 @@ function BuyerDashboard() {
               display: 'flex', alignItems: 'baseline', justifyContent: 'space-between',
               flexShrink: 0,
             }}>
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Featured Marketplace</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>Featured</span>
             </div>
             <SellersGrid filterCity={filterCity} filterArea={filterArea} searchQuery={searchQuery} isBuyer={true} />
           </>
