@@ -423,6 +423,37 @@ body.dashboard-active textarea::placeholder {
     opacity: 0.88;
 }
 
+.product-modal-light,
+.product-modal-light * {
+    color: #0F172A !important;
+}
+
+.product-modal-light [class*="bg-white/5"],
+.product-modal-light [class*="bg-zinc-"],
+.product-modal-light [class*="bg-gray-"],
+.product-modal-light [class*="bg-black"] {
+    background-color: #FFFFFF !important;
+}
+
+.product-modal-light [class*="border-white"],
+.product-modal-light [class*="border-gray"],
+.product-modal-light [class*="border-zinc"] {
+    border-color: #E2E8F0 !important;
+}
+
+.product-modal-light input,
+.product-modal-light textarea,
+.product-modal-light button[role="combobox"] {
+    background-color: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
+    color: #0F172A !important;
+}
+
+.product-modal-light input::placeholder,
+.product-modal-light textarea::placeholder {
+    color: #475569 !important;
+}
+
 .auth-page {
     background: #FFFFFF !important;
     color: #0F172A;

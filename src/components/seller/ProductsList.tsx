@@ -348,8 +348,8 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         <div className="mx-auto w-16 h-16 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center mb-4">
           <Plus className="h-8 w-8 text-emerald-400" />
         </div>
-        <h3 className="text-lg font-medium text-white mb-1">No products yet</h3>
-        <p className="text-zinc-400">Get started by adding your first product from the button above</p>
+        <h3 className="text-lg font-medium text-slate-950 mb-1">No products yet</h3>
+        <p className="text-slate-700">Get started by adding your first product from the button above</p>
       </div>
     );
   }
@@ -393,10 +393,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
     <div className="space-y-4">
       {/* Delete Confirmation Dialog */}
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent className="sm:max-w-[425px] bg-[rgba(17,17,17,0.75)] backdrop-blur-[12px] border border-white/10">
+        <DialogContent className="sm:max-w-[425px] bg-white border border-slate-200 text-slate-950">
           <DialogHeader>
-            <DialogTitle className="text-white">Delete Product</DialogTitle>
-            <DialogDescription className="text-zinc-300">
+            <DialogTitle className="text-slate-950">Delete Product</DialogTitle>
+            <DialogDescription className="text-slate-700">
               Are you sure you want to delete this product? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
@@ -408,7 +408,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                 setProductToDelete(null);
               }}
               disabled={!!deletingId}
-              className="bg-transparent border-white/10 text-zinc-200 hover:bg-white/5 h-8 text-xs"
+              className="bg-transparent border-slate-200 text-slate-700 hover:bg-slate-50 h-8 text-xs"
             >
               Cancel
             </Button>
@@ -431,20 +431,20 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
         </DialogContent>
       </Dialog>
       {/* Grid View - Hidden on larger screens */}
-      <div className="md:hidden grid gap-6 grid-cols-1 sm:grid-cols-2">
+      <div className="md:hidden grid gap-3 grid-cols-1 sm:grid-cols-2">
         {products.map((product) => (
-          <Card key={product.id} className="relative group bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl hover:border-emerald-500/50 transition-all shadow-2xl">
+          <Card key={product.id} className="relative group bg-white border border-slate-200 rounded-2xl hover:border-emerald-500/50 transition-all shadow-sm">
             <div className="absolute right-2 top-2 z-10">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:bg-white/5 hover:text-white">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-600 hover:bg-slate-100 hover:text-slate-950">
                     <MoreVertical className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zinc-900/90 backdrop-blur-xl border border-white/10">
+                <DropdownMenuContent align="end" className="bg-white border border-slate-200 text-slate-950">
                   <DropdownMenuItem
                     onClick={() => handleEditClick(product.id)}
-                    className="flex items-center gap-2 cursor-pointer text-white hover:bg-white/5"
+                    className="flex items-center gap-2 cursor-pointer text-slate-950 hover:bg-slate-50"
                   >
                     <Edit className="h-4 w-4 text-emerald-400" />
                     <span>Edit</span>
@@ -462,10 +462,10 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
             <CardHeader className="p-3 pb-2 sm:p-4 sm:pb-2">
               <div className="flex items-start justify-between pr-8">
                 <div className="flex-1">
-                  <CardTitle className="text-xs sm:text-sm font-medium text-white mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
-                  <p className="text-[9px] text-zinc-400 capitalize mb-1">{product.aesthetic}</p>
+                  <CardTitle className="text-xs sm:text-sm font-medium text-slate-950 mb-0.5 line-clamp-1 h-4">{product.name}</CardTitle>
+                  <p className="text-[9px] text-slate-600 capitalize mb-1">{product.aesthetic}</p>
                   {product.description && (
-                    <p className="text-[10px] text-zinc-500 line-clamp-2 h-6 leading-tight mb-2">
+                    <p className="text-[10px] text-slate-600 line-clamp-2 h-6 leading-tight mb-2">
                       {product.description}
                     </p>
                   )}
@@ -494,7 +494,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               </div>
             </CardHeader>
             <CardContent className="p-3 pt-0 sm:p-4 sm:pt-0 space-y-2">
-              <div className="aspect-[4/5] w-full bg-zinc-800/50 border border-white/5 rounded-xl overflow-hidden mb-3">
+              <div className="h-24 w-full bg-slate-100 border border-slate-200 rounded-xl overflow-hidden mb-3">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
@@ -510,7 +510,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
 
               {/* Stock Info */}
               <div className="flex items-center justify-between py-1">
-                <span className="text-[10px] text-zinc-400">Stock:</span>
+                <span className="text-[10px] text-slate-600">Stock:</span>
                 <div className="flex items-center gap-2">
                   {(product as any).track_inventory ? (
                     <Badge
@@ -527,7 +527,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       {(product as any).quantity ?? 0}
                     </Badge>
                   ) : (
-                    <span className="text-[10px] text-zinc-500 italic">Not tracked</span>
+                    <span className="text-[10px] text-slate-500 italic">Not tracked</span>
                   )}
                   <Button
                     variant="ghost"
@@ -539,7 +539,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
                       setTrackInventory((product as any).track_inventory ?? false);
                       setShowStockModal(true);
                     }}
-                    className="h-5 px-1.5 text-[10px] text-zinc-400 hover:text-emerald-400 hover:bg-white/5"
+                    className="h-5 px-1.5 text-[10px] text-slate-600 hover:text-emerald-700 hover:bg-emerald-50"
                   >
                     Edit
                   </Button>
@@ -547,7 +547,7 @@ export function ProductsList({ products, onDelete, onEdit, onStatusUpdate, onRef
               </div>
 
               <div className="flex justify-between items-center pt-1">
-                <span className="font-medium text-white text-sm sm:text-base">{formatCurrency(product.price)}</span>
+                <span className="font-medium text-slate-950 text-sm sm:text-base">{formatCurrency(product.price)}</span>
               </div>
 
               {/* Action Button - Only Status Toggle */}

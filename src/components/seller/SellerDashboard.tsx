@@ -24,7 +24,6 @@ import {
   Clock,
   Wallet,
   Download,
-  Calendar,
   X,
   Loader2,
   Info,
@@ -66,13 +65,13 @@ const formatOrderStatusLabel = (status: string) => {
 const getPendingStatusStyles = (status: string) => {
   switch (status) {
     case 'SERVICE_PENDING':
-      return 'border-purple-400/30 bg-purple-500/10 text-purple-200';
+      return 'border-purple-200 bg-purple-50 text-purple-900';
     case 'COLLECTION_PENDING':
-      return 'border-amber-400/30 bg-amber-500/10 text-amber-200';
+      return 'border-amber-200 bg-amber-50 text-amber-900';
     case 'DELIVERY_PENDING':
-      return 'border-cyan-400/30 bg-cyan-500/10 text-cyan-200';
+      return 'border-cyan-200 bg-cyan-50 text-cyan-900';
     default:
-      return 'border-white/10 bg-white/5 text-gray-200';
+      return 'border-slate-200 bg-slate-50 text-slate-900';
   }
 };
 
@@ -81,11 +80,13 @@ interface WithdrawalRequest {
   amount: number;
   mpesaNumber: string;
   mpesaName: string;
-  status: 'processing' | 'completed' | 'failed';
+  status: 'processing' | 'completed' | 'failed' | 'compensation_required';
   createdAt: string;
+  updatedAt?: string;
   processedAt?: string;
   processedBy?: string;
   providerReference?: string;
+  mpesaReceipt?: string;
   failureReason?: string;
 }
 
@@ -807,13 +808,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
           <div className="w-24 h-24 mx-auto bg-gradient-to-br from-red-100 to-red-200 rounded-3xl flex items-center justify-center shadow-lg">
             <RefreshCw className="h-12 w-12 text-red-600" />
           </div>
-          <h3 className="text-2xl font-black text-white mb-3">Unable to load dashboard</h3>
-          <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">
+          <h3 className="text-2xl font-black text-slate-950 mb-3">Unable to load dashboard</h3>
+          <p className="text-slate-700 text-lg font-medium max-w-md mx-auto mb-6">
             {error || 'Something went wrong while loading your dashboard data. Please try again.'}
           </p>
           <Button
             onClick={fetchData}
-            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
+            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-8 py-3 rounded-xl font-semibold"
           >
             <RefreshCw className="h-5 w-5 mr-2" />
             Try Again
@@ -967,8 +968,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         </div>
 
         {/* Navigation Tabs - Mobile Responsive */}
-        <div className="mb-6 sm:mb-8 bg-white/90 backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-lg border border-slate-200 w-full overflow-x-auto">
-          <div className="flex items-center justify-start sm:justify-center gap-2 min-w-max">
+        <div className="mb-6 sm:mb-8 bg-white/90 backdrop-blur-[12px] rounded-2xl p-1.5 shadow-lg border border-slate-200 w-full max-w-4xl mx-auto overflow-x-auto">
+          <div className="flex items-center justify-start sm:justify-center gap-3 sm:gap-5 min-w-max">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'products', label: 'Products', icon: Package },
@@ -988,9 +989,9 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     setHasUnreadOrders(false);
                   }
                 }}
-                className={`relative flex items-center justify-center flex-shrink-0 space-x-1.5 sm:space-x-3 px-3 sm:px-6 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-bold text-xs sm:text-base transition-all duration-300 border ${activeTab === id
-                  ? 'text-yellow-300 border-yellow-400/30 bg-yellow-400/10 shadow-[0_0_22px_rgba(250,204,21,0.25)] transform scale-[1.03]'
-                  : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'
+                className={`relative flex items-center justify-center flex-shrink-0 space-x-1.5 sm:space-x-2 px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl font-bold text-xs sm:text-sm transition-all duration-300 border ${activeTab === id
+                  ? 'text-slate-950 border-yellow-400/40 bg-yellow-100 shadow-[0_0_18px_rgba(250,204,21,0.18)]'
+                  : 'text-slate-700 border-transparent hover:text-slate-950 hover:bg-slate-50'
                   }`}
               >
                 <Icon className="h-3.5 w-3.5 sm:h-5 sm:w-5" />
@@ -1009,8 +1010,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'orders' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Order Management</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">View and manage customer orders</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-slate-950 mb-1.5">Order Management</h2>
+              <p className="text-slate-700 text-xs sm:text-sm lg:text-base font-medium">View and manage customer orders</p>
             </div>
             <SellerOrdersSection />
           </div>
@@ -1019,19 +1020,19 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'withdrawals' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Withdrawal Management</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-slate-950 mb-1.5">Withdrawal Management</h2>
+              <p className="text-slate-700 text-xs sm:text-sm lg:text-base font-medium">Request and track your withdrawal requests</p>
             </div>
 
             {/* Available Balance Card */}
-            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-lg border border-white/10">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-3 sm:p-5 md:p-6 shadow-sm border border-slate-200">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 sm:gap-4">
                 <div className="flex-1">
-                  <h3 className="text-base sm:text-lg md:text-xl font-black text-white">Available Balance</h3>
-                  <p className="text-gray-300 text-[10px] sm:text-xs font-medium mt-0.5">Current balance for withdrawal</p>
+                  <h3 className="text-base sm:text-lg md:text-xl font-black text-slate-950">Available Balance</h3>
+                  <p className="text-slate-700 text-[10px] sm:text-xs font-medium mt-0.5">Current balance for withdrawal</p>
                 </div>
-                <div className="bg-green-500/10 border border-green-400/20 rounded-lg sm:rounded-xl p-2 sm:p-2.5 md:p-4 shadow-[0_0_24px_rgba(34,197,94,0.12)]">
-                  <p className="text-lg sm:text-xl md:text-2xl font-black text-green-200">
+                <div className="bg-green-50 border border-green-200 rounded-lg sm:rounded-xl p-2 sm:p-2.5 md:p-4">
+                  <p className="text-lg sm:text-xl md:text-2xl font-black text-green-800">
                     {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                   </p>
                 </div>
@@ -1039,13 +1040,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
 
             {/* Minimum Withdrawal Notification */}
-            <div className="bg-blue-500/10 border border-blue-400/20 rounded-xl p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
-              <div className="bg-blue-500/10 border border-blue-400/20 rounded-full p-0.5 sm:p-1 mt-0.5 flex-shrink-0">
-                <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-300" />
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-2.5 sm:p-3 flex items-start gap-2 sm:gap-3">
+              <div className="bg-blue-100 border border-blue-200 rounded-full p-0.5 sm:p-1 mt-0.5 flex-shrink-0">
+                <Info className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-blue-700" />
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-blue-100 text-[10px] sm:text-xs">Minimum: KSh 50</h4>
-                <p className="text-blue-200/80 text-[9px] sm:text-[10px] mt-0.5 leading-tight">
+                <h4 className="font-semibold text-slate-950 text-[10px] sm:text-xs">Minimum: KSh 50</h4>
+                <p className="text-slate-700 text-[9px] sm:text-[10px] mt-0.5 leading-tight">
                   Ensure sufficient balance before requesting withdrawal.
                 </p>
               </div>
@@ -1062,12 +1063,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   Request Withdrawal
                 </Button>
               ) : (
-                <div className="bg-white/5 border border-white/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8">
-                  <h4 className="text-lg sm:text-xl font-bold text-white mb-4">Request Withdrawal</h4>
+                <div className="bg-white border border-slate-200 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 shadow-sm">
+                  <h4 className="text-lg sm:text-xl font-bold text-slate-950 mb-4">Request Withdrawal</h4>
                   <form onSubmit={handleWithdrawalRequest} className="space-y-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="amount" className="text-xs font-semibold text-gray-300 mb-2 block">
+                        <Label htmlFor="amount" className="text-xs font-semibold text-slate-700 mb-2 block">
                           Amount (KSh)
                         </Label>
 
@@ -1079,15 +1080,15 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           placeholder="Enter amount"
                           min="1"
                           max={analytics?.balance || 0}
-                          className="h-7 sm:h-8 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-7 sm:h-8 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
-                        <p className="text-xs text-gray-300 mt-1">
+                        <p className="text-xs text-slate-700 mt-1">
                           Max: {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(analytics?.balance ?? 0)}
                         </p>
                       </div>
                       <div>
-                        <Label htmlFor="mpesaNumber" className="text-xs font-semibold text-gray-300 mb-2 block">
+                        <Label htmlFor="mpesaNumber" className="text-xs font-semibold text-slate-700 mb-2 block">
                           M-Pesa Number
                         </Label>
 
@@ -1097,13 +1098,13 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                           value={withdrawalForm.mpesaNumber}
                           onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaNumber: e.target.value }))}
                           placeholder="0712345678"
-                          className="h-7 sm:h-8 text-xs sm:text-sm bg-gray-800 border-gray-700 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                          className="h-7 sm:h-8 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
                           required
                         />
                       </div>
                     </div>
                     <div>
-                      <Label htmlFor="mpesaName" className="text-xs font-semibold text-gray-300 mb-2 block">
+                      <Label htmlFor="mpesaName" className="text-xs font-semibold text-slate-700 mb-2 block">
                         Name on M-Pesa Number
                       </Label>
 
@@ -1113,7 +1114,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                         value={withdrawalForm.mpesaName}
                         onChange={(e) => setWithdrawalForm(prev => ({ ...prev, mpesaName: e.target.value }))}
                         placeholder="Enter name as registered on M-Pesa"
-                        className="h-7 sm:h-8 text-xs sm:text-sm bg-gray-900 border-white/10 text-white placeholder:text-gray-300 focus:border-yellow-400 focus:ring-yellow-400"
+                        className="h-7 sm:h-8 text-xs sm:text-sm bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-400 focus:ring-yellow-400"
                         required
                       />
                     </div>
@@ -1121,7 +1122,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       <Button
                         type="submit"
                         disabled={isRequestingWithdrawal}
-                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-1.5 h-6 text-xs rounded-lg font-semibold"
+                        className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-4 py-1.5 h-6 text-xs rounded-lg font-semibold"
                         size="sm"
                       >
                         {isRequestingWithdrawal ? (
@@ -1147,7 +1148,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                             mpesaName: ''
                           });
                         }}
-                        className="px-4 py-1.5 h-6 text-xs rounded-lg bg-transparent border-white/10 text-gray-200 hover:bg-white/5"
+                        className="px-4 py-1.5 h-6 text-xs rounded-lg bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
                       >
                         Cancel
                       </Button>
@@ -1158,11 +1159,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             </div>
 
             {/* Withdrawal Requests History */}
-            <div className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg border border-white/10">
+            <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 shadow-sm border border-slate-200">
               <div className="flex justify-between items-center mb-4 sm:mb-6">
                 <div>
-                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-white">Withdrawal Requests</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Track your withdrawal request history</p>
+                  <h3 className="text-lg sm:text-xl md:text-2xl font-black text-slate-950">Withdrawal Requests</h3>
+                  <p className="text-slate-700 text-xs sm:text-sm font-medium mt-1">Track your withdrawal request history</p>
                 </div>
               </div>
 
@@ -1171,23 +1172,21 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 {/* Date Range Filter */}
                 <div className="flex flex-col sm:flex-row gap-2 flex-1">
                   <div className="relative flex-1">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       type="date"
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
-                      className="pl-10 bg-zinc-900/50 border-white/10 text-white focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      className="bg-white border-slate-200 text-slate-950 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                       placeholder="Start date"
                     />
                   </div>
-                  <span className="hidden sm:flex items-center text-gray-400 text-sm">to</span>
+                  <span className="hidden sm:flex items-center text-slate-700 text-sm">to</span>
                   <div className="relative flex-1">
-                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                       type="date"
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
-                      className="pl-10 bg-zinc-900/50 border-white/10 text-white focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                      className="bg-white border-slate-200 text-slate-950 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                       placeholder="End date"
                     />
                   </div>
@@ -1199,7 +1198,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                       }}
                       variant="outline"
                       size="icon"
-                      className="border-white/10 text-white hover:bg-white/10"
+                      className="border-slate-200 text-slate-700 hover:bg-slate-50"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -1210,7 +1209,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 <Button
                   onClick={() => exportWithdrawalsToCSV(withdrawalRequests)}
                   variant="outline"
-                  className="border-white/10 text-white hover:bg-white/10 hover:border-white/20 gap-2"
+                  className="border-slate-200 text-slate-700 hover:bg-slate-50 gap-2"
                   disabled={withdrawalRequests.length === 0}
                 >
                   <Download className="h-4 w-4" />
@@ -1221,37 +1220,56 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
               {filteredWithdrawals.length > 0 ? (
                 <div className="space-y-4">
                   {filteredWithdrawals.map((request) => (
-                    <Card key={request.id} className="group hover:shadow-2xl transition-all duration-500 bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10">
+                    <Card key={request.id} className="group hover:shadow-xl transition-all duration-300 bg-white border border-slate-200">
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                           <div className="space-y-2">
                             <div className="flex items-center gap-3">
-                              <p className="text-base sm:text-xl font-black text-white">
+                              <p className="text-base sm:text-xl font-black text-slate-950">
                                 {new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(request.amount)}
                               </p>
                               <Badge
                                 variant="outline"
                                 className={`${request.status === 'processing'
-                                  ? 'bg-yellow-500/10 text-yellow-200 border-yellow-400/20'
+                                  ? 'bg-yellow-50 text-yellow-900 border-yellow-200'
                                   : request.status === 'completed'
-                                    ? 'bg-green-500/10 text-green-200 border-green-400/20'
+                                    ? 'bg-green-50 text-green-900 border-green-200'
                                     : request.status === 'failed'
-                                      ? 'bg-red-500/10 text-red-200 border-red-400/20'
-                                      : 'bg-blue-500/10 text-blue-200 border-blue-400/20'
+                                      ? 'bg-red-50 text-red-900 border-red-200'
+                                      : 'bg-blue-50 text-blue-900 border-blue-200'
                                   } rounded-full px-3 py-1 font-semibold`}
                               >
                                 {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                               </Badge>
                             </div>
-                            <p className="text-xs text-gray-300">
+                            <p className="text-xs text-slate-700">
                               M-Pesa: {request.mpesaNumber} ({request.mpesaName})
                             </p>
-                            <p className="text-xs text-gray-300">
-                              Requested on {new Date(request.createdAt).toLocaleDateString()}
-                            </p>
+                            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Requested</p>
+                                <p className="text-xs font-semibold text-slate-950">{new Date(request.createdAt).toLocaleString()}</p>
+                              </div>
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Processed</p>
+                                <p className="text-xs font-semibold text-slate-950">{request.processedAt ? new Date(request.processedAt).toLocaleString() : 'Pending'}</p>
+                              </div>
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Provider Ref</p>
+                                <p className="truncate text-xs font-semibold text-slate-950">{request.providerReference || 'Pending'}</p>
+                              </div>
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">M-Pesa Receipt</p>
+                                <p className="truncate text-xs font-semibold text-slate-950">{request.mpesaReceipt || 'Pending'}</p>
+                              </div>
+                              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Processed By</p>
+                                <p className="text-xs font-semibold text-slate-950">{request.processedBy || 'System'}</p>
+                              </div>
+                            </div>
                             {request.status === 'failed' && request.failureReason && (
                               <div className="mt-2 p-2 bg-red-500/10 border border-red-400/20 rounded-lg">
-                                <p className="text-xs text-red-200 font-medium flex items-center gap-1">
+                                <p className="text-xs text-red-800 font-medium flex items-center gap-1">
                                   <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
                                   Reason: {request.failureReason}
                                 </p>
@@ -1265,11 +1283,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                 </div>
               ) : (
                 <div className="text-center py-20">
-                  <div className="w-24 h-24 mx-auto mb-8 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center shadow-lg">
-                    <Wallet className="h-12 w-12 text-gray-300" />
+                  <div className="w-24 h-24 mx-auto mb-8 bg-slate-50 border border-slate-200 rounded-3xl flex items-center justify-center shadow-sm">
+                    <Wallet className="h-12 w-12 text-slate-500" />
                   </div>
-                  <h3 className="text-xl font-black text-white mb-3">No withdrawal requests</h3>
-                  <p className="text-gray-300 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
+                  <h3 className="text-xl font-black text-slate-950 mb-3">No withdrawal requests</h3>
+                  <p className="text-slate-700 text-lg font-medium max-w-md mx-auto mb-6">You haven't made any withdrawal requests yet</p>
                 </div>
               )}
             </div>
@@ -1279,14 +1297,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'overview' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Store Overview</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto">Welcome, {sellerFirstName}</p>
               {sellerProfile?.shopName && (
                 <div className="mt-4 flex justify-center">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="gap-1.5 bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:text-white rounded-lg h-8 px-3 text-xs font-medium"
+                    className="gap-1.5 bg-white border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg h-8 px-3 text-xs font-medium"
                     onClick={async () => {
                       const shopUrl = `${window.location.origin}/shop/${encodeURIComponent(sellerProfile.shopName!)}`;
                       try {
@@ -1314,11 +1330,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <div className="space-y-4">
 
               {/* Active fulfillment states */}
-              <Card className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow-xl w-full rounded-2xl">
+              <Card className="bg-white border border-slate-200 shadow-sm w-full rounded-2xl">
                 <CardHeader className="p-4">
-                  <CardTitle className="text-base sm:text-lg font-black text-white flex items-center">
-                    <div className="w-9 h-9 bg-yellow-500/10 border border-yellow-400/20 shadow-[0_0_18px_rgba(250,204,21,0.18)] rounded-xl flex items-center justify-center mr-3">
-                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                  <CardTitle className="text-base sm:text-lg font-black text-slate-950 flex items-center">
+                    <div className="w-9 h-9 bg-yellow-50 border border-yellow-200 rounded-xl flex items-center justify-center mr-3">
+                      <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-700" />
                     </div>
                     Pending Orders
                   </CardTitle>
@@ -1327,24 +1343,24 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                   {pendingOverviewOrders.length > 0 ? (
                     <div className="space-y-2 mt-2">
                       {pendingOverviewOrders.map((order) => (
-                        <div key={order.id} className="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                        <div key={order.id} className="p-3 bg-slate-50 border border-slate-200 rounded-xl hover:bg-white transition-colors">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                             <div className="min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className="font-bold text-sm sm:text-base text-white truncate" title={order.orderNumber}>
+                                <span className="font-bold text-sm sm:text-base text-slate-950 truncate" title={order.orderNumber}>
                                   {order.orderNumber}
                                 </span>
                                 <Badge className={`border text-[10px] font-bold ${getPendingStatusStyles(order.status)}`}>
                                   {formatOrderStatusLabel(order.status)}
                                 </Badge>
                               </div>
-                              <p className="mt-1 text-xs text-gray-400 truncate">
+                              <p className="mt-1 text-xs text-slate-700 truncate">
                                 {(order.items || []).map(item => `${item.quantity}x ${item.product_name}`).join(', ') || 'Order items pending'}
                               </p>
                             </div>
                             <div className="sm:text-right shrink-0">
-                              <p className="text-sm font-black text-yellow-300">{formatCurrency(order.totalAmount)}</p>
-                              <p className="text-[11px] text-gray-500">
+                              <p className="text-sm font-black text-slate-950">{formatCurrency(order.totalAmount)}</p>
+                              <p className="text-[11px] text-slate-500">
                                 {new Date(order.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                               </p>
                             </div>
@@ -1354,7 +1370,7 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
                     </div>
                   ) : (
                     <div className="p-4 text-center">
-                      <p className="text-gray-400 text-sm">No service, collection, or delivery pending orders</p>
+                      <p className="text-slate-600 text-sm">No service, collection, or delivery pending orders</p>
                     </div>
                   )}
                 </CardContent>
@@ -1366,30 +1382,30 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'products' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-1.5">Product Management</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium">Manage all your products in one place</p>
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-slate-950 mb-1.5">Product Management</h2>
+              <p className="text-slate-700 text-xs sm:text-sm lg:text-base font-medium">Manage all your products in one place</p>
             </div>
 
             {/* Products List with Inventory Management */}
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <div>
-                  <h3 className="text-base sm:text-lg font-black text-white">All Products</h3>
-                  <p className="text-gray-300 text-xs sm:text-sm font-medium mt-1">Manage inventory and track stock levels</p>
+                  <h3 className="text-base sm:text-lg font-black text-slate-950">All Products</h3>
+                  <p className="text-slate-700 text-xs sm:text-sm font-medium mt-1">Manage inventory and track stock levels</p>
                 </div>
 
                 <Dialog open={isAddProductModalOpen} onOpenChange={setIsAddProductModalOpen}>
                   <DialogTrigger asChild>
                     <Button
                       size="sm"
-                      className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-white hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-lg font-semibold text-xs w-full sm:w-auto h-8"
+                      className="gap-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 shadow-lg px-3 py-1.5 rounded-lg font-semibold text-xs w-full sm:w-auto h-8"
                     >
                       <Plus className="h-3.5 w-3.5" />
                       Add Product
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="w-full max-w-full sm:max-w-[640px] p-0 bg-transparent border-none shadow-none focus-visible:outline-none h-[100dvh] sm:h-auto overflow-hidden">
-                    <div className="bg-zinc-950 border-x border-y sm:border border-white/10 rounded-none sm:rounded-[2.5rem] h-full sm:h-auto overflow-hidden shadow-2xl flex flex-col">
+                    <div className="product-modal-light bg-white border-x border-y sm:border border-slate-200 rounded-none sm:rounded-[2.5rem] h-full sm:h-auto overflow-hidden shadow-2xl flex flex-col">
                       <AddProductForm
                         onSuccess={() => {
                           fetchProducts();
@@ -1416,8 +1432,8 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
         {activeTab === 'settings' && (
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             <div className="text-center px-2 sm:px-0">
-              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-white mb-2 sm:mb-3">Store Settings</h2>
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto px-4 sm:px-0">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-black text-slate-950 mb-2 sm:mb-3">Store Settings</h2>
+              <p className="text-slate-700 text-xs sm:text-sm lg:text-base font-medium max-w-3xl mx-auto px-4 sm:px-0">
                 Manage your store configuration and preferences. Update your store details, location, and appearance.
               </p>
             </div>

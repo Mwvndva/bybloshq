@@ -19,7 +19,7 @@ const formatCurrency = (value: number | undefined, currency: string = 'KSH') => 
     if (value === undefined || isNaN(value)) return `${currency} 0.00`;
     return `${currency} ${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
-import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Search, Download } from 'lucide-react';
+import { Clock, Package, Truck, CheckCircle, RefreshCw, XCircle, Calendar, User, Download } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { sellerApi } from '@/api/sellerApi';
 import { exportOrdersToCSV } from '@/utils/exportUtils';
@@ -275,7 +275,7 @@ export default function SellerOrdersSection() {
         return (
             <div className="space-y-4 sm:space-y-6">
                 {[1, 2].map((i) => (
-                    <Card key={i} className="bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow hover:shadow-md transition-all duration-300">
+                    <Card key={i} className="bg-white border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300">
                         <CardContent className="p-4 sm:p-6">
                             <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start space-y-4 lg:space-y-0">
                                 <div className="space-y-3 sm:space-y-4 flex-1">
@@ -315,11 +315,11 @@ export default function SellerOrdersSection() {
     if (orders.length === 0) {
         return (
             <div className="text-center py-12 px-4">
-                <div className="mx-auto w-16 h-16 bg-yellow-500/10 border border-yellow-400/20 rounded-full flex items-center justify-center mb-4">
-                    <Package className="h-8 w-8 text-yellow-300" />
+                <div className="mx-auto w-16 h-16 bg-yellow-50 border border-yellow-200 rounded-full flex items-center justify-center mb-4">
+                    <Package className="h-8 w-8 text-yellow-700" />
                 </div>
-                <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
-                <p className="text-gray-300 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
+                <h3 className="text-lg font-semibold text-slate-950 mb-2">No orders yet</h3>
+                <p className="text-slate-700 max-w-md mx-auto">Your orders will appear here when customers purchase your products.</p>
             </div>
         );
     }
@@ -331,12 +331,11 @@ export default function SellerOrdersSection() {
                 <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                     {/* Search Bar */}
                     <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none z-10" />
                         <Input
                             placeholder="Search by buyer name, product, or order ID..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="pl-10 bg-zinc-900/50 border-white/10 text-white placeholder:text-gray-400 focus:border-yellow-500/50 focus:ring-yellow-500/20"
+                            className="bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 focus:border-yellow-500/50 focus:ring-yellow-500/20"
                         />
                     </div>
 
@@ -344,7 +343,7 @@ export default function SellerOrdersSection() {
                     <Button
                         onClick={() => exportOrdersToCSV(orders)}
                         variant="outline"
-                        className="border-white/10 text-white hover:bg-white/10 hover:border-white/20 gap-2"
+                        className="border-slate-200 text-slate-950 hover:bg-slate-50 gap-2"
                         disabled={orders.length === 0}
                     >
                         <Download className="h-4 w-4" />
@@ -355,26 +354,26 @@ export default function SellerOrdersSection() {
 
                 <div className="max-h-[600px] overflow-y-auto pr-2 custom-scrollbar space-y-4">
                     {filteredOrders.length === 0 ? (
-                        <div className="text-center py-12 px-4 bg-zinc-900/50 rounded-2xl border border-white/10">
-                            <p className="text-gray-400">No orders found matching "{searchQuery}"</p>
+                        <div className="text-center py-12 px-4 bg-white rounded-2xl border border-slate-200">
+                            <p className="text-slate-700">No orders found matching "{searchQuery}"</p>
                         </div>
                     ) : (
                         filteredOrders.map((order) => {
                             const isService = order.metadata?.product_type === 'service' || order.items?.some(i => i.productType === 'service');
                             const isDigital = order.items?.some(i => i.productType === 'digital');
 
-                            let cardClasses = "transition-all duration-300 transform hover:-translate-y-1 ";
-                            let itemClasses = "text-xs sm:text-sm text-gray-200 rounded-lg px-3 py-2 border ";
+                            let cardClasses = "transition-all duration-300 ";
+                            let itemClasses = "text-xs sm:text-sm text-slate-950 rounded-lg px-3 py-2 border ";
 
                             if (isService) {
-                                cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-purple-400/20 shadow-sm hover:shadow-md";
-                                itemClasses += "bg-purple-500/10 border-purple-400/20";
+                                cardClasses += "bg-white border border-purple-200 shadow-sm hover:shadow-md";
+                                itemClasses += "bg-purple-50 border-purple-200";
                             } else if (isDigital) {
-                                cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-red-400/20 shadow-sm hover:shadow-md";
-                                itemClasses += "bg-red-500/10 border-red-400/20";
+                                cardClasses += "bg-white border border-red-200 shadow-sm hover:shadow-md";
+                                itemClasses += "bg-red-50 border-red-200";
                             } else {
-                                cardClasses += "bg-[rgba(20,20,20,0.7)] backdrop-blur-[12px] border border-white/10 shadow hover:shadow-md";
-                                itemClasses += "bg-white/5 border-white/10";
+                                cardClasses += "bg-white border border-slate-200 shadow-sm hover:shadow-md";
+                                itemClasses += "bg-slate-50 border-slate-200";
                             }
 
                             return (
@@ -387,10 +386,10 @@ export default function SellerOrdersSection() {
                                                 {/* Order Header */}
                                                 <div className="flex flex-row justify-between items-start gap-2">
                                                     <div className="flex-1 min-w-0">
-                                                        <h3 className="font-bold text-sm sm:text-lg text-white truncate pr-2">Order #{order.orderNumber}</h3>
-                                                        <p className="text-[10px] sm:text-sm text-gray-400">{formatDate(order.createdAt)}</p>
+                                                        <h3 className="font-bold text-sm sm:text-lg text-slate-950 truncate pr-2">Order #{order.orderNumber}</h3>
+                                                        <p className="text-[10px] sm:text-sm text-slate-600">{formatDate(order.createdAt)}</p>
                                                         {(order.buyerName || order.customer?.name) && (
-                                                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-blue-200 bg-blue-500/10 border border-blue-400/20 px-2 py-0.5 rounded-md w-fit">
+                                                            <div className="flex items-center gap-1.5 mt-1.5 text-[10px] sm:text-xs text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-md w-fit">
                                                                 <User className="h-3 w-3" />
                                                                 <span className="font-medium truncate max-w-[120px] sm:max-w-xs">{order.buyerName || order.customer?.name}</span>
                                                             </div>
@@ -445,10 +444,10 @@ export default function SellerOrdersSection() {
                                                     });
                                                     if (!instruction) return null;
                                                     return (
-                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-900/40 text-blue-300 border border-blue-800' :
-                                                            instruction.color === 'amber' ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-800' :
-                                                                instruction.color === 'green' ? 'bg-green-900/40 text-green-300 border border-green-800' :
-                                                                    'bg-red-900/40 text-red-300 border border-red-800'
+                                                        <div className={`mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-50 text-blue-900 border border-blue-200' :
+                                                            instruction.color === 'amber' ? 'bg-yellow-50 text-yellow-900 border border-yellow-200' :
+                                                                instruction.color === 'green' ? 'bg-green-50 text-green-900 border border-green-200' :
+                                                                    'bg-red-50 text-red-900 border border-red-200'
                                                             }`}>
                                                             {instruction.text}
                                                         </div>
@@ -457,39 +456,41 @@ export default function SellerOrdersSection() {
 
                                                 {/* Products Section */}
                                                 <div>
-                                                    <h4 className="text-sm sm:text-base font-semibold text-white mb-3">Products:</h4>
+                                                    <h4 className="text-sm sm:text-base font-semibold text-slate-950 mb-3">Products</h4>
                                                     <ul className="space-y-2">
                                                         {order.items && order.items.length > 0 ? (
                                                             order.items.map((item) => (
                                                                 <li key={item.id} className={itemClasses}>
-                                                                    <span className="font-semibold">{item.name}</span>
-                                                                    <span className="text-gray-300 ml-2">× {item.quantity}</span>
+                                                                    <div className="flex items-center justify-between gap-3">
+                                                                        <span className="font-semibold">{item.name}</span>
+                                                                        <span className="text-slate-600">Qty {item.quantity}</span>
+                                                                    </div>
                                                                 </li>
                                                             ))
                                                         ) : (
-                                                            <li className="text-xs sm:text-sm text-gray-300 bg-white/5 rounded-lg px-3 py-2 border border-white/10">No items in this order</li>
+                                                            <li className="text-xs sm:text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">No items in this order</li>
                                                         )}
                                                     </ul>
                                                 </div>
 
                                                 {/* Service Booking Details */}
                                                 {(order.metadata?.booking_date || order.metadata?.service_location || order.metadata?.service_requirements) && (
-                                                    <div className="mt-4 p-3 bg-purple-500/10 rounded-lg border border-purple-400/20 shadow-sm">
-                                                        <h4 className="flex items-center text-sm font-semibold text-purple-100 mb-2">
-                                                            <Calendar className="h-4 w-4 mr-2 text-purple-300" />
+                                                    <div className="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200 shadow-sm">
+                                                        <h4 className="flex items-center text-sm font-semibold text-purple-950 mb-2">
+                                                            <Calendar className="h-4 w-4 mr-2 text-purple-700" />
                                                             Service Booking Details
                                                         </h4>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                                                            <div className="bg-white/5 p-2 rounded border border-white/10">
-                                                                <p className="text-purple-200 text-xs font-medium mb-1">Date & Time</p>
-                                                                <p className="font-semibold text-white">
+                                                            <div className="bg-white p-2 rounded border border-purple-100">
+                                                                <p className="text-purple-700 text-xs font-medium mb-1">Date & Time</p>
+                                                                <p className="font-semibold text-slate-950">
                                                                     {order.metadata.booking_date ? formatDate(order.metadata.booking_date) : 'N/A'}
-                                                                    {order.metadata.booking_time && <span className="text-gray-300 font-normal"> at {order.metadata.booking_time}</span>}
+                                                                    {order.metadata.booking_time && <span className="text-slate-600 font-normal"> at {order.metadata.booking_time}</span>}
                                                                 </p>
                                                             </div>
-                                                            <div className="bg-white/5 p-2 rounded border border-white/10">
-                                                                <p className="text-purple-200 text-xs font-medium mb-1">Location</p>
-                                                                <div className="font-semibold text-white break-words">
+                                                            <div className="bg-white p-2 rounded border border-purple-100">
+                                                                <p className="text-purple-700 text-xs font-medium mb-1">Location</p>
+                                                                <div className="font-semibold text-slate-950 break-words">
                                                                     {order.metadata.buyer_location ? (
                                                                         <div className="space-y-1">
                                                                             <p>{order.metadata.buyer_location.fullAddress || 'Buyer Coordinates Provided'}</p>
@@ -511,9 +512,9 @@ export default function SellerOrdersSection() {
                                                             </div>
                                                         </div>
                                                         {order.metadata?.service_requirements && (
-                                                            <div className="mt-3 bg-white/5 p-2 rounded border border-white/10">
-                                                                <p className="text-purple-200 text-xs font-medium mb-1">Special Requirements</p>
-                                                                <p className="text-sm text-white break-words">
+                                                            <div className="mt-3 bg-white p-2 rounded border border-purple-100">
+                                                                <p className="text-purple-700 text-xs font-medium mb-1">Special Requirements</p>
+                                                                <p className="text-sm text-slate-950 break-words">
                                                                     {order.metadata.service_requirements}
                                                                 </p>
                                                             </div>
@@ -525,11 +526,12 @@ export default function SellerOrdersSection() {
                                             {/* Price and Actions Section */}
                                             <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end space-y-3 sm:space-y-0 sm:space-x-4 lg:space-x-0 lg:space-y-3 lg:min-w-[200px]">
                                                 {/* Total Amount */}
-                                                <div className="flex-1 sm:flex-none">
-                                                    <p className="font-bold text-lg sm:text-xl text-white">
+                                                <div className="flex-1 sm:flex-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 w-full">
+                                                    <p className="font-bold text-lg sm:text-xl text-slate-950">
                                                         {formatCurrency(order.totalAmount, order.currency)}
                                                     </p>
-                                                    <p className="text-xs text-gray-300">Total Amount</p>
+                                                    <p className="text-xs text-slate-600">Total Amount</p>
+                                                    <p className="mt-1 text-xs text-slate-600">Payment: {order.paymentStatus || 'Pending'}</p>
                                                 </div>
 
                                                 {/* Action Buttons */}

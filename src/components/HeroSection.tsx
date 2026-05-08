@@ -35,11 +35,11 @@ const HeroSection = ({ onExploreClick }: HeroSectionProps) => {
 
           {/* Main Title Group */}
           <div className="space-y-5">
-            <h1 className="text-6xl sm:text-7xl md:text-9xl font-black text-slate-950 leading-none tracking-tight">
+            <h1 className="text-6xl sm:text-7xl md:text-9xl font-light text-slate-950 leading-none tracking-normal">
               BYBLOS
             </h1>
 
-            <p className="text-xl sm:text-2xl md:text-3xl text-slate-950 font-semibold leading-tight">
+            <p className="text-xl sm:text-2xl md:text-3xl text-slate-950 font-light leading-tight tracking-normal">
               Give Your Business A Social Identity
             </p>
           </div>

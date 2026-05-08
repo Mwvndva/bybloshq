@@ -77,14 +77,13 @@ const updateSellerClientCountInCache = (queryClient, sellerId: string, clientCou
 };
 
 const glassCardStyle: React.CSSProperties = {
-  background: 'rgba(20, 20, 20, 0.7)',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.6)'
+  background: '#FFFFFF',
+  border: '1px solid rgba(15, 23, 42, 0.08)',
+  boxShadow: '0 14px 34px rgba(15, 23, 42, 0.08)'
 };
 
 const badgeGlow = 'shadow-[0_0_0_1px_rgba(255,255,255,0.12),0_10px_20px_rgba(0,0,0,0.35)]';
+const detailPillClass = 'rounded-xl border border-slate-200 bg-slate-50 px-3 py-2';
 
 const getStatusBadge = (status: string) => {
   // Convert to uppercase for comparison, default to 'PENDING' if status is falsy
@@ -559,19 +558,19 @@ export default function OrdersSection() {
   return (
     <div className="space-y-6">
       <div className="relative w-full max-w-md mx-auto mb-6">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 pointer-events-none z-10" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none z-10" />
         <Input
           type="text"
           placeholder="Search orders, shops, or products..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="bg-white/5 border-white/10 text-white placeholder-gray-500 rounded-xl pl-10 h-10"
+          className="bg-white border-slate-200 text-slate-950 placeholder:text-slate-500 rounded-xl pl-10 h-10"
         />
       </div>
 
       {displayOrders.length === 0 && searchQuery ? (
-        <div className="text-center py-12 px-4 bg-white/5 rounded-2xl border border-white/10">
-          <p className="text-gray-400">No orders found matching "{searchQuery}"</p>
+        <div className="text-center py-12 px-4 bg-white rounded-2xl border border-slate-200">
+          <p className="text-slate-700">No orders found matching "{searchQuery}"</p>
           <Button
             variant="link"
             onClick={() => setSearchQuery('')}
@@ -585,8 +584,8 @@ export default function OrdersSection() {
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-yellow-400/20 to-yellow-500/20 rounded-full flex items-center justify-center mb-4">
             <Package className="h-8 w-8 text-yellow-500" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
-          <p className="text-gray-300 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
+          <h3 className="text-lg font-semibold text-slate-950 mb-2">No orders yet</h3>
+          <p className="text-slate-700 max-w-md mx-auto mb-6">Your orders will appear here once you make a purchase.</p>
           <Button
             onClick={() => (window.location.href = '/shop')}
             className="bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-white font-semibold shadow-sm hover:shadow-md transition-all duration-200"
@@ -604,11 +603,11 @@ export default function OrdersSection() {
             <Card key={order.id} className="border-0 overflow-hidden" style={glassCardStyle}>
               <CardContent className="p-0">
                 {/* Header Section */}
-                <div className="p-4 sm:p-6 border-b border-white/5">
+                <div className="p-4 sm:p-6 border-b border-slate-100">
                   <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 sm:gap-3 mb-2">
-                        <h3 className="text-lg sm:text-xl font-bold text-white">
+                        <h3 className="text-lg sm:text-xl font-bold text-slate-950">
                           #{order.orderNumber || order.id.slice(0, 8).toUpperCase()}
                         </h3>
                         <div className="flex gap-1.5 sm:gap-2">
@@ -616,13 +615,31 @@ export default function OrdersSection() {
                           {getPaymentStatusBadge(order.paymentStatus)}
                         </div>
                       </div>
-                      <p className="text-xs sm:text-sm text-gray-400">{formatDate(order)}</p>
+                      <p className="text-xs sm:text-sm text-slate-600">{formatDate(order)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Total</p>
-                      <p className="text-xl sm:text-2xl font-bold text-white">
+                      <p className="text-xs text-slate-600 uppercase tracking-wider mb-1">Total</p>
+                      <p className="text-xl sm:text-2xl font-bold text-slate-950">
                         {formatCurrency((order as any).total_amount || order.totalAmount, order.currency)}
                       </p>
+                    </div>
+                  </div>
+                  <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className={detailPillClass}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Shop</p>
+                      <p className="mt-0.5 truncate text-sm font-semibold text-slate-950">{order.seller?.shopName || order.seller?.name || 'Store'}</p>
+                    </div>
+                    <div className={detailPillClass}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Payment</p>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-950">{order.paymentStatus || 'Pending'}</p>
+                    </div>
+                    <div className={detailPillClass}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Items</p>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-950">{order.items?.length || 0} item{order.items?.length === 1 ? '' : 's'}</p>
+                    </div>
+                    <div className={detailPillClass}>
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Order ID</p>
+                      <p className="mt-0.5 truncate text-sm font-semibold text-slate-950">{String(order.id).slice(0, 12)}</p>
                     </div>
                   </div>
                 </div>
@@ -638,10 +655,10 @@ export default function OrdersSection() {
                   });
                   if (!instruction) return null;
                   return (
-                    <div className={`mx-4 sm:mx-6 mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-900/40 text-blue-300 border border-blue-800' :
-                      instruction.color === 'amber' ? 'bg-yellow-900/40 text-yellow-300 border border-yellow-800' :
-                        instruction.color === 'green' ? 'bg-green-900/40 text-green-300 border border-green-800' :
-                          'bg-red-900/40 text-red-300 border border-red-800'
+                    <div className={`mx-4 sm:mx-6 mt-3 px-4 py-2 rounded-md text-sm font-medium ${instruction.color === 'blue' ? 'bg-blue-50 text-blue-900 border border-blue-200' :
+                      instruction.color === 'amber' ? 'bg-yellow-50 text-yellow-900 border border-yellow-200' :
+                        instruction.color === 'green' ? 'bg-green-50 text-green-900 border border-green-200' :
+                          'bg-red-50 text-red-900 border border-red-200'
                       }`}>
                       {instruction.text}
                     </div>
@@ -651,15 +668,17 @@ export default function OrdersSection() {
                 {/* Items Section */}
                 <div className="p-4 sm:p-6 space-y-2 sm:space-y-3">
                   {order.items.slice(0, 2).map((item, idx) => (
-                    <div key={idx} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                    <div key={idx} className="flex items-center justify-between gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-slate-50 border border-slate-100 transition-colors">
                       {/* Image removed as per request */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm sm:text-base font-semibold text-white truncate">{item.name}</p>
+                        <p className="text-sm sm:text-base font-semibold text-slate-950 truncate">{item.name}</p>
+                        <p className="text-xs text-slate-600">Qty {item.quantity || 1}</p>
                       </div>
+                      <p className="shrink-0 text-sm font-semibold text-slate-950">{formatCurrency(item.price || 0, order.currency)}</p>
                     </div>
                   ))}
                   {order.items.length > 2 && (
-                    <p className="text-xs sm:text-sm text-center text-gray-400 py-1 sm:py-2">
+                    <p className="text-xs sm:text-sm text-center text-slate-600 py-1 sm:py-2">
                       + {order.items.length - 2} more item{order.items.length - 2 > 1 ? 's' : ''}
                     </p>
                   )}
@@ -675,8 +694,8 @@ export default function OrdersSection() {
                       </div>
                     )}
                     <div>
-                      <p className="text-xs text-gray-400">Seller</p>
-                      <p className="text-sm sm:text-base font-semibold text-white">
+                      <p className="text-xs text-slate-600">Seller</p>
+                      <p className="text-sm sm:text-base font-semibold text-slate-950">
                         {order.seller?.shopName || order.seller?.name || "Store"}
                       </p>
                     </div>
@@ -687,7 +706,7 @@ export default function OrdersSection() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 sm:flex-none border-white/20 hover:bg-white/10 text-white text-xs sm:text-sm"
+                      className="flex-1 sm:flex-none border-slate-200 hover:bg-slate-50 text-slate-950 text-xs sm:text-sm"
                       onClick={() => setSelectedOrderForDetails(order)}
                     >
                       View Details
@@ -830,14 +849,14 @@ export default function OrdersSection() {
 
       {/* Order Details Dialog */}
       <Dialog open={!!selectedOrderForDetails} onOpenChange={(open) => !open && setSelectedOrderForDetails(null)}>
-        <DialogContent className="sm:max-w-2xl bg-black/95 border border-white/10 text-white">
+        <DialogContent className="sm:max-w-2xl bg-white border border-slate-200 text-slate-950">
           {selectedOrderForDetails && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold text-white">
+                <DialogTitle className="text-2xl font-bold text-slate-950">
                   Order Details
                 </DialogTitle>
-                <DialogDescription className="text-gray-400">
+                <DialogDescription className="text-slate-600">
                   {formatDate(selectedOrderForDetails)}
                 </DialogDescription>
               </DialogHeader>
@@ -847,7 +866,7 @@ export default function OrdersSection() {
                 {selectedOrderForDetails.items.map((item, idx) => (
                   <div key={idx} className="flex gap-4 items-start">
                     {/* Product Image */}
-                    <div className="h-20 w-20 rounded-lg bg-black/40 overflow-hidden border border-white/10 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                    <div className="h-20 w-20 rounded-lg bg-slate-50 overflow-hidden border border-slate-200 flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                       onClick={() => item.imageUrl && setViewingImage(getImageUrl(item.imageUrl))}>
                       {item.imageUrl ? (
                         <img
@@ -857,35 +876,35 @@ export default function OrdersSection() {
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <Package className="h-8 w-8 text-gray-600" />
+                          <Package className="h-8 w-8 text-slate-500" />
                         </div>
                       )}
                     </div>
 
                     {/* Product Details */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-base font-bold text-white leading-tight mb-1">{item.name}</h4>
-                      <div className="flex items-center text-sm text-gray-400 gap-3">
+                      <h4 className="text-base font-bold text-slate-950 leading-tight mb-1">{item.name}</h4>
+                      <div className="flex items-center text-sm text-slate-600 gap-3">
                         <span>Qty: {item.quantity}</span>
-                        <span className="w-1 h-1 bg-gray-600 rounded-full"></span>
-                        <span className="text-white font-medium">{formatCurrency(item.price * item.quantity, selectedOrderForDetails.currency)}</span>
+                        <span className="w-1 h-1 bg-slate-300 rounded-full"></span>
+                        <span className="text-slate-950 font-medium">{formatCurrency(item.price * item.quantity, selectedOrderForDetails.currency)}</span>
                       </div>
                     </div>
                   </div>
                 ))}
 
-                <div className="border-t border-white/10 my-4" />
+                <div className="border-t border-slate-200 my-4" />
 
                 {/* Shop Information */}
-                <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-3">
+                <div className="p-4 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4 text-emerald-400" />
-                    <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Shop Details</p>
+                    <p className="text-xs text-slate-600 uppercase tracking-wider font-semibold">Shop Details</p>
                   </div>
 
                   <div className="space-y-1">
                     {selectedOrderForDetails.seller?.shopName && (
-                      <p className="font-bold text-white text-lg">
+                      <p className="font-bold text-slate-950 text-lg">
                         {selectedOrderForDetails.seller.shopName}
                       </p>
                     )}
@@ -896,7 +915,7 @@ export default function OrdersSection() {
                         href={selectedOrderForDetails.seller.location.startsWith('http') ? selectedOrderForDetails.seller.location : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedOrderForDetails.seller.location)}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-start gap-2 text-sm text-gray-300 hover:text-emerald-400 transition-colors group"
+                        className="flex items-start gap-2 text-sm text-slate-700 hover:text-emerald-700 transition-colors group"
                       >
                         <div className="mt-0.5"><i className="fas fa-map-marker-alt" /></div>
                         <span>
@@ -908,9 +927,9 @@ export default function OrdersSection() {
                   </div>
 
                   {selectedOrderForDetails.shippingAddress && (
-                    <div className="pt-2 border-t border-white/5 mt-2">
-                      <p className="text-xs text-gray-500 mb-1">Shipping To:</p>
-                      <p className="text-sm text-gray-300">
+                    <div className="pt-2 border-t border-slate-200 mt-2">
+                      <p className="text-xs text-slate-500 mb-1">Shipping To:</p>
+                      <p className="text-sm text-slate-700">
                         {selectedOrderForDetails.shippingAddress.address}
                         {selectedOrderForDetails.shippingAddress.city && `, ${selectedOrderForDetails.shippingAddress.city}`}
                       </p>
@@ -919,9 +938,9 @@ export default function OrdersSection() {
                 </div>
 
                 {/* Total */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                  <span className="text-lg font-semibold text-white">Total</span>
-                  <span className="text-2xl font-bold text-emerald-400">
+                <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-50 border border-emerald-200">
+                  <span className="text-lg font-semibold text-slate-950">Total</span>
+                  <span className="text-2xl font-bold text-emerald-800">
                     {formatCurrency((selectedOrderForDetails as any).total_amount || selectedOrderForDetails.totalAmount, selectedOrderForDetails.currency)}
                   </span>
                 </div>
@@ -958,7 +977,7 @@ export default function OrdersSection() {
                 )}
                 <Button
                   variant="outline"
-                  className="border-white/20 hover:bg-white/10 text-white"
+                  className="border-slate-200 hover:bg-slate-50 text-slate-700"
                   onClick={() => setSelectedOrderForDetails(null)}
                 >
                   Close
