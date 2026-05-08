@@ -20,13 +20,13 @@ class Order {
       INSERT INTO product_orders (
         order_number, buyer_id, seller_id, total_amount, platform_fee_amount, seller_payout_amount,
         payment_method, buyer_name, buyer_email, buyer_mobile_payment, buyer_whatsapp_number,
-        notes, metadata, status, payment_status, service_requirements, is_debt, client_id, is_seller_initiated,
-        fulfillment_type, delivery_location, order_type, total_quantity, reservation_expires_at,
-        location_address, location_lat, location_lng, service_title, notification_sent, client_checkout_token
+        notes, metadata, status, payment_status, service_requirements, fulfillment_type, delivery_location,
+        order_type, total_quantity, reservation_expires_at, location_address, location_lat, location_lng,
+        service_title, notification_sent, client_checkout_token
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 
-        $12, $13::jsonb, $14, $15, $16::jsonb, $17, $18, $19, 
-        $20, $21::jsonb, $22, $23, $24, $25, $26, $27, $28, $29, $30
+        $12, $13::jsonb, $14, $15, $16::jsonb, $17, $18::jsonb,
+        $19, $20, $21, $22, $23, $24, $25, $26, $27
       )
       RETURNING *
     `;
@@ -68,27 +68,24 @@ class Order {
       data.status || 'PENDING',                              // $14
       data.payment_status || 'pending',                      // $15
       toStrictJson(data.service_requirements),               // $16 (Hardened Fallback)
-      data.is_debt || false,                                 // $17
-      data.client_id || null,                                // $18
-      data.is_seller_initiated || false,                    // $19
-      data.fulfillment_type || null,                         // $20
-      toStrictJson(data.delivery_location),                  // $21 (Forced String -> SQL Cast)
-      data.order_type || 'PHYSICAL',                         // $22
-      data.total_quantity || 1,                              // $23
-      data.reservation_expires_at instanceof Date            // $24
+      data.fulfillment_type || null,                         // $17
+      toStrictJson(data.delivery_location),                  // $18 (Forced String -> SQL Cast)
+      data.order_type || 'PHYSICAL',                         // $19
+      data.total_quantity || 1,                              // $20
+      data.reservation_expires_at instanceof Date            // $21
         ? data.reservation_expires_at
         : (data.reservation_expires_at ? new Date(data.reservation_expires_at) : null),
-      data.location_address || null,                         // $25
-      data.location_lat || null,                             // $26
-      data.location_lng || null,                             // $27
-      data.service_title || null,                            // $28
-      data.notification_sent || false,                      // $29
-      data.client_checkout_token || data.metadata?.client_checkout_token || `server:${data.order_number}` // $30
+      data.location_address || null,                         // $22
+      data.location_lat || null,                             // $23
+      data.location_lng || null,                             // $24
+      data.service_title || null,                            // $25
+      data.notification_sent || false,                      // $26
+      data.client_checkout_token || data.metadata?.client_checkout_token || `server:${data.order_number}` // $27
     ];
 
     // 5. DEFENSIVE AUDITING (FINAL)
-    // Only strings or null should reach JSON columns now ($13, $16, $21)
-    const jsonIndices = [12, 15, 20]; // index: $13, $16, $21
+    // Only strings or null should reach JSON columns now ($13, $16, $18)
+    const jsonIndices = [12, 15, 17]; // index: $13, $16, $18
     values.forEach((val, i) => {
       const colNum = i + 1;
       if (typeof val === 'object' && val !== null && !(val instanceof Date)) {

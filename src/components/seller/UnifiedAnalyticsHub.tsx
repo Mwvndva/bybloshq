@@ -3,31 +3,29 @@ import { motion } from 'framer-motion';
 import {
     TrendingUp,
     Wallet,
-    CreditCard,
-    AlertCircle
+    AlertCircle,
+    Users,
+    MousePointerClick,
+    Heart
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
-import { PLATFORM_FEE_RATE } from '@/lib/constants';
 
 interface AnalyticsData {
     totalSales: number;
     totalRevenue: number;
     totalPayout?: number;
     balance: number;
-    pendingDebt: number;
-    pendingDebtCount: number;
-    // include other fields if necessary for future expansion
+    clientCount: number;
+    clickCount: number;
+    wishlistCount: number;
 }
 
 interface UnifiedAnalyticsHubProps {
     analytics: AnalyticsData;
-    onWithdraw: () => void;
 }
 
 export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
-    analytics,
-    onWithdraw
+    analytics
 }) => {
     return (
         <motion.div
@@ -40,8 +38,7 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
             {/* Ambient Gradient Background */}
             <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-purple-500/5 to-emerald-500/5 opacity-50 pointer-events-none" />
 
-            {/* Grid Layout: Changed to grid-cols-2 for mobile to show 2x2 */}
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 relative z-10">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 relative z-10">
 
                 {/* Metric 1: Sales */}
                 <div className="group relative p-3 sm:p-6 md:p-8 flex flex-col justify-between border-b md:border-b-0 lg:border-r border-r border-white/5 transition-all duration-300 hover:bg-white/5">
@@ -103,31 +100,66 @@ export const UnifiedAnalyticsHub: React.FC<UnifiedAnalyticsHubProps> = ({
                     </div>
                 </div>
 
-                {/* Metric 4: Pending Payments */}
-                <div className="group relative p-3 sm:p-6 md:p-8 flex flex-col justify-between transition-all duration-300 hover:bg-white/5">
+                {/* Metric 4: Clients */}
+                <div className="group relative p-3 sm:p-6 md:p-8 flex flex-col justify-between border-r border-b md:border-b-0 border-white/5 transition-all duration-300 hover:bg-white/5">
                     <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <CreditCard className="h-8 w-8 sm:h-12 sm:w-12 text-purple-500/10" />
+                        <Users className="h-8 w-8 sm:h-12 sm:w-12 text-sky-500/10" />
                     </div>
 
                     <div className="space-y-0.5 sm:space-y-1">
-                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Pending</h3>
-                        <div className="flex items-baseline gap-1 sm:gap-2">
-                            <p className="text-lg sm:text-3xl lg:text-3xl font-black text-white tracking-tight truncate">
-                                {formatCurrency(analytics.pendingDebt || 0)}
-                            </p>
-                        </div>
+                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Clients</h3>
+                        <p className="text-lg sm:text-3xl lg:text-3xl font-black text-white tracking-tight truncate">
+                            {(analytics.clientCount || 0).toLocaleString()}
+                        </p>
                     </div>
 
                     <div className="mt-2 sm:mt-4">
-                        <p className="text-[9px] sm:text-sm font-medium text-gray-500 truncate">
-                            {analytics.pendingDebtCount || 0} Orders
+                        <span className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-sky-500/10 border border-sky-500/20 text-sky-300 text-[9px] sm:text-xs font-bold">
+                            <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                            Following
+                        </span>
+                    </div>
+                </div>
+
+                {/* Metric 5: Clicks */}
+                <div className="group relative p-3 sm:p-6 md:p-8 flex flex-col justify-between border-r border-white/5 transition-all duration-300 hover:bg-white/5">
+                    <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <MousePointerClick className="h-8 w-8 sm:h-12 sm:w-12 text-fuchsia-500/10" />
+                    </div>
+
+                    <div className="space-y-0.5 sm:space-y-1">
+                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Clicks</h3>
+                        <p className="text-lg sm:text-3xl lg:text-3xl font-black text-white tracking-tight truncate">
+                            {(analytics.clickCount || 0).toLocaleString()}
                         </p>
-                        <div className="w-full h-1 sm:h-1.5 bg-white/5 rounded-full overflow-hidden mt-1 sm:mt-2">
-                            <div
-                                className="h-full bg-purple-500/50 rounded-full"
-                                style={{ width: `${Math.min((analytics.pendingDebtCount / 10) * 100, 100)}%` }}
-                            />
-                        </div>
+                    </div>
+
+                    <div className="mt-2 sm:mt-4">
+                        <span className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/20 text-fuchsia-300 text-[9px] sm:text-xs font-bold">
+                            <MousePointerClick className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                            Last 24h
+                        </span>
+                    </div>
+                </div>
+
+                {/* Metric 6: Wishlist */}
+                <div className="group relative p-3 sm:p-6 md:p-8 flex flex-col justify-between transition-all duration-300 hover:bg-white/5">
+                    <div className="absolute top-0 right-0 p-2 sm:p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <Heart className="h-8 w-8 sm:h-12 sm:w-12 text-rose-500/10" />
+                    </div>
+
+                    <div className="space-y-0.5 sm:space-y-1">
+                        <h3 className="text-gray-400 text-[10px] sm:text-sm font-medium uppercase tracking-wider truncate">Wishlist</h3>
+                        <p className="text-lg sm:text-3xl lg:text-3xl font-black text-white tracking-tight truncate">
+                            {(analytics.wishlistCount || 0).toLocaleString()}
+                        </p>
+                    </div>
+
+                    <div className="mt-2 sm:mt-4">
+                        <span className="inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-300 text-[9px] sm:text-xs font-bold">
+                            <Heart className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                            Saves
+                        </span>
                     </div>
                 </div>
 

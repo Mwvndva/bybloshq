@@ -824,10 +824,6 @@ export class PaymentService {
         throw new Error('Legacy downstream fulfillment is disabled. Use fulfillment queue from CorePaymentService.');
     }
 
-    async _handleDownstreamDebtAction() {
-        throw new Error('Legacy debt settlement is disabled. Use CorePaymentService.completeVerifiedPayment().');
-    }
-
     async checkPaymentStatus(identifier) {
         // Public/status polling identifiers are provider/order-facing references.
         // They must never resolve through payments.id because numeric provider refs

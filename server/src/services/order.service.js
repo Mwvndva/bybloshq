@@ -335,8 +335,6 @@ class OrderService {
         [OrderStatus.COLLECTION_PENDING]: [OrderStatus.PROCESSING, OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Buyer picks up -> Complete
         [OrderStatus.DELIVERY_COMPLETE]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
         [OrderStatus.CONFIRMED]: [OrderStatus.COMPLETED, OrderStatus.CANCELLED],
-        [OrderStatus.CLIENT_PAYMENT_PENDING]: [OrderStatus.PAID, OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Client orders can only complete or cancel
-        [OrderStatus.DEBT_PENDING]: [OrderStatus.PAID, OrderStatus.COMPLETED, OrderStatus.CANCELLED], // Debt orders can only complete or cancel
         [OrderStatus.EXPIRED]: [OrderStatus.RESERVED, OrderStatus.CANCELLED], // Can potentially be re-reserved if user retries
         [OrderStatus.COMPLETED]: [],
         [OrderStatus.CANCELLED]: [],
@@ -1413,123 +1411,6 @@ class OrderService {
       throw error;
     }
   }
-
-  /**
-   * Create a client order (seller-initiated)
-   * @param {number} sellerId - The seller creating the order
-   * @param {Object} data - Order data including client info and products
-   * @returns {Promise<Object>} Created order and payment reference
-   */
-  static async createClientOrder(sellerId, data) {
-    const client = await pool.connect();
-    try {
-      const {
-        clientName,
-        clientPhone,
-        paymentType,
-        items,
-        skipInventoryDecrement = false, // For debt payments where inventory already decremented
-        debtId = null // Link to debt record if this is a debt payment
-      } = data;
-
-      logger.info('[ClientOrder] Starting seller-initiated client order', { sellerId, clientPhone, paymentType, skipInventoryDecrement, debtId, fullData: JSON.stringify(data) });
-      await client.query('BEGIN');
-
-      // Prevent multiple STK pushes for the same debt
-      if (debtId) {
-        const { rows: existing } = await client.query(
-          "SELECT order_number, status FROM product_orders WHERE (metadata->>'debt_id')::int = $1 AND status != 'FAILED' AND status != 'CANCELLED'",
-          [debtId]
-        );
-        if (existing.length > 0) {
-          throw new Error(`A payment request for this debt is already active (Order #${existing[0].order_number}). Please wait or cancel the previous order.`);
-        }
-      }
-
-      // 1. Upsert Client
-      const ClientModel = (await import('../models/client.model.js')).default;
-      const clientRecord = await ClientModel.upsertClient(client, sellerId, clientName, clientPhone);
-      logger.info(`[ClientOrder] Client upserted: ID ${clientRecord.id}`);
-
-      // 2. Validate items
-      this._validateItems(items);
-
-      // 3. Calculate totals
-      const { totalAmount, platformFee, sellerPayout } = this._calculateTotals(items);
-      logger.info(`[ClientOrder] Calculated totals - Total: ${totalAmount}, Fee: ${platformFee}, Payout: ${sellerPayout}`);
-
-      // 4. Enrich items with product data
-      await this._enrichItemsWithProductData(client, items);
-
-      // 4b. INVENTORY CHECK: Verify stock availability for tracked products
-      // Only skip if explicitly requested (e.g. for debt payments)
-      if (!skipInventoryDecrement) {
-        this._checkInventory(items);
-      }
-
-      // Determine if this is a debt order
-      const isDebt = paymentType === 'debt';
-      const orderStatus = isDebt ? OrderStatus.DEBT_PENDING : OrderStatus.CLIENT_PAYMENT_PENDING;
-
-      // 5. Prepare Order Record (Only for non-debt)
-      let order;
-      if (!isDebt) {
-        const orderRecord = {
-          buyer_id: null,
-          seller_id: sellerId,
-          total_amount: totalAmount,
-          platform_fee_amount: platformFee,
-          seller_payout_amount: sellerPayout,
-          payment_method: 'mpesa',
-          buyer_name: clientName,
-          buyer_email: `client_${clientRecord.id}@byblos.local`,
-          buyer_mobile_payment: clientPhone,
-          buyer_whatsapp_number: clientPhone,
-          shipping_address: null,
-          notes: skipInventoryDecrement ? 'Debt payment order' : 'Seller-initiated client order',
-          metadata: JSON.stringify({
-            items,
-            client_id: clientRecord.id,
-            seller_initiated: true,
-            is_debt: false,
-            skip_inventory_decrement: skipInventoryDecrement,
-            debt_id: debtId
-          }),
-          status: OrderStatus.CLIENT_PAYMENT_PENDING,
-          payment_status: 'pending',
-          client_id: clientRecord.id,
-          is_seller_initiated: true,
-          is_debt: false
-        };
-
-        // 6. Insert Order
-        order = await Order.insert(client, orderRecord);
-        logger.info(`[ClientOrder] Order created: ID ${order.id}, Number ${order.order_number}`);
-
-        // 7. Insert Order Items
-        if (items.length > 0) {
-          await Order.insertItems(client, order.id, items);
-        }
-      }
-
-      // BRANCH: DEBT FLOW
-      if (isDebt) {
-        return await this._handleDebtFlow(client, sellerId, clientRecord, items, totalAmount);
-      }
-
-      // BRANCH: STK FLOW (Default)
-      return await this._handleStkPaymentFlow(client, sellerId, clientRecord, order, items, totalAmount, clientPhone, skipInventoryDecrement, debtId);
-
-
-    } catch (error) {
-      await client.query('ROLLBACK');
-      logger.error('[ClientOrder] Error creating client order:', error);
-      throw error;
-    } finally {
-      client.release();
-    }
-  }
-
   static async _decrementInventory(client, items, orderId = null, order = null) {
     if (order && order.metadata?.skip_inventory_decrement === true) {
       logger.info(`[INVENTORY] Skipping inventory decrement for order ${orderId}`);
@@ -1587,8 +1468,6 @@ class OrderService {
   }
 
   static _determineCompletionStatus(items, fulfillmentType, order, metadata) {
-    const isClientOrder = order.client_id !== null || order.is_seller_initiated === true;
-    if (isClientOrder) return OrderStatus.COMPLETED;
 
     // 1. DIGITAL FLOW
     if (fulfillmentType === FulfillmentType.DIGITAL ||
@@ -1677,9 +1556,7 @@ class OrderService {
       // 3. BUILD NORMALIZED PAYLOAD (Single Source of Truth)
       const normalizedOrder = this._prepareNormalizedNotificationPayload(fullOrder, items);
 
-      const isSellerInitiated = fullOrder.metadata?.seller_initiated === true ||
-        fullOrder.metadata?.is_seller_initiated === true ||
-        fullOrder.is_seller_initiated === true;
+      const isSellerInitiated = fullOrder.metadata?.seller_initiated === true;
 
       // Always notify Seller via Email
       if (fullOrder.seller_email) {
@@ -1690,7 +1567,7 @@ class OrderService {
         }).catch(e => logger.error('[ORDER] Seller notification email failed:', e));
       }
 
-      if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for seller-initiated order #${fullOrder.order_number}`);
+      if (isSellerInitiated) return logger.info(`[ORDER] Skipping buyer notifications for legacy seller-originated order #${fullOrder.order_number}`);
 
       // Persist buyer location for mobile service orders
       // FIX 7: Robust parsing of metadata if it arrives as string
@@ -1741,7 +1618,7 @@ class OrderService {
         logger.info(`[COURIER-NOTIFY] Logistics notification is handled by ORDER.FULFILLED for order #${fullOrder.order_number}`);
       }
 
-      // Notify Buyer via Email if not seller-initiated
+      // Notify Buyer via Email for buyer checkout orders.
       if (normalizedOrder.buyer.email) {
         sendProductOrderConfirmationEmail(normalizedOrder.buyer.email, {
           ...fullOrder,
@@ -1753,77 +1630,6 @@ class OrderService {
       logger.error('[ORDER] Error triggering completion notifications:', e);
     }
   }
-
-  static async _handleDebtFlow(client, sellerId, clientRecord, items, totalAmount) {
-    await this._decrementInventory(client, items);
-    for (const item of items) {
-      await client.query(
-        `INSERT INTO client_debts (seller_id, client_id, product_id, amount, quantity, is_paid)
-         VALUES ($1, $2, $3, $4, $5, false)`,
-        [sellerId, clientRecord.id, Number.parseInt(item.productId, 10), item.price * item.quantity, item.quantity]
-      );
-    }
-    await client.query('COMMIT');
-    logger.info(`[ORDER] Debt recorded for client ${clientRecord.id}`);
-    return {
-      success: true,
-      order: { id: `debt-${Date.now()}`, orderNumber: `DEBT-${Date.now()}`, totalAmount, status: OrderStatus.DEBT_PENDING },
-      message: 'Inventory updated. Debt recorded.'
-    };
-  }
-
-  static async _handleStkPaymentFlow(client, sellerId, clientRecord, order, items, totalAmount, clientPhone, skipInventoryDecrement, debtId) {
-    const paymentService = (await import('./payment.service.js')).default;
-    const paymentData = {
-      invoice_id: order.order_number, amount: totalAmount, currency: 'KES', status: 'pending', payment_method: 'mpesa',
-      mobile_payment: clientPhone, whatsapp_number: clientPhone, email: `client_${clientRecord.id}@byblos.local`,
-      metadata: { order_id: order.id, order_number: order.order_number, client_id: clientRecord.id, seller_initiated: true }
-    };
-
-    const paymentInsert = await client.query(
-      `INSERT INTO payments (invoice_id, email, mobile_payment, whatsapp_number, amount, status, payment_method, metadata)
-       VALUES ($1, $2, $3, $4, $5, 'pending', 'mpesa', $6) RETURNING *`,
-      [paymentData.invoice_id, paymentData.email, paymentData.mobile_payment, paymentData.whatsapp_number, paymentData.amount, JSON.stringify(paymentData.metadata)]
-    );
-    const payment = paymentInsert.rows[0];
-
-    try {
-      const stkResult = await paymentService.initiatePayment({
-        ...paymentData, phone: clientPhone, narrative: `Payment for Order ${order.order_number}`, billing_address: 'Kenya'
-      });
-
-      await client.query('UPDATE payments SET provider_reference = $1, api_ref = $1 WHERE id = $2', [stkResult.reference, payment.id]);
-
-      await client.query('COMMIT');
-      setImmediate(() => {
-        eventBus.emit(AppEvents.ORDER.CREATED, {
-          eventId: `order.created:${order.id}:seller-client`,
-          order: {
-            ...order,
-            order_number: order.order_number,
-            total_amount: totalAmount,
-            client_phone: clientPhone,
-            seller_id: sellerId
-          },
-          items
-        });
-      });
-      return {
-        success: true,
-        order: { id: order.id, orderNumber: order.order_number, totalAmount, status: OrderStatus.CLIENT_PAYMENT_PENDING },
-        payment: { id: payment.id, reference: stkResult.reference },
-        message: 'Payment prompt sent to client'
-      };
-    } catch (paymentError) {
-      await client.query('ROLLBACK');
-      logger.error('[ORDER] STK Push failed:', paymentError.message);
-
-      // IMPORTANT: Records created within the rolled-back transaction (Order/Payment)
-      // do not exist in the database after ROLLBACK. Attempting to update them is invalid.
-      throw new Error(`Failed to initiate payment: ${paymentError.message}`);
-    }
-  }
-
   static async _generateOrderNumber(client) {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude ambiguous characters like O, 0, I, 1
     let attempts = 0;

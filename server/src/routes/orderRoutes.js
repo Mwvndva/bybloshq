@@ -9,7 +9,6 @@ import {
   cancelOrder,
   sellerCancelOrder,
   downloadDigitalProduct,
-  createSellerClientOrder,
   locationPreview,
   getByReference
 } from '../controllers/order.controller.js';
@@ -120,17 +119,6 @@ router.patch(
 router.get(
   '/:orderId/download/:productId',
   downloadDigitalProduct
-);
-
-/**
- * @swagger
- * /api/orders/client-order:
- *   post:
- *     summary: Create a client order (seller-initiated)
- */
-router.post(
-  '/client-order',
-  createSellerClientOrder
 );
 
 router.post(

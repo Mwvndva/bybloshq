@@ -510,14 +510,6 @@ const CorePaymentService = {
                 }
             }
 
-            const paymentMeta = parseJson(paymentRow.metadata);
-            if (isSuccess && paymentMeta.type === 'debt' && paymentMeta.debt_id) {
-                await client.query(
-                    `UPDATE client_debts SET is_paid = true, updated_at = NOW() WHERE id = $1`,
-                    [Number.parseInt(paymentMeta.debt_id, 10)]
-                );
-            }
-
             const durableEvent = await eventBus.enqueueInTransaction(
                 client,
                 isSuccess ? AppEvents.PAYMENT.COMPLETED : AppEvents.PAYMENT.FAILED,

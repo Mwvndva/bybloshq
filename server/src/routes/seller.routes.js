@@ -84,9 +84,6 @@ router.post('/withdrawal-request', createWithdrawal);
 router.get('/withdrawal-requests', getWithdrawals);
 router.get('/withdrawal-requests/:id', getWithdrawalById);
 
-// Debt payment route
-router.post('/debts/:debtId/pay', sellerController.initiateDebtPayment);
-
 // Referral routes
 router.use('/referral', referralRoutes);
 

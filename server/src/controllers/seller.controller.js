@@ -828,64 +828,6 @@ export const getSellerById = async (req, res) => {
 
 // --- Withdrawal functions removed (centralized in withdrawal.controller.js) ---
 
-// @desc    Initiate debt payment (STK Push)
-// @route   POST /api/sellers/debts/:debtId/pay
-// @access  Private
-export const initiateDebtPayment = async (req, res) => {
-  const sellerId = req.user.sellerId;
-  const { debtId } = req.params;
-
-  try {
-    if (!sellerId) return res.status(401).json({ status: 'error', message: 'Authentication required' });
-
-    // 1. Fetch Debt & Client Details
-    const { rows: debts } = await pool.query(
-      `SELECT cd.*, c.phone as client_phone, c.full_name as client_name, p.name as product_name, p.id as product_id, p.price
-       FROM client_debts cd
-       JOIN clients c ON cd.client_id = c.id
-       JOIN products p ON cd.product_id = p.id
-       WHERE cd.id = $1 AND cd.seller_id = $2 AND cd.is_paid = false`,
-      [debtId, sellerId]
-    );
-
-    const debt = debts[0];
-    if (!debt) return res.status(404).json({ status: 'error', message: 'Debt record not found or already paid' });
-    if (!debt.client_phone) return res.status(400).json({ status: 'error', message: 'Client has no phone number associated' });
-
-    // 2. Create Client Order (reuse existing logic)
-    const { default: OrderService } = await import('../services/order.service.js');
-
-    const orderData = {
-      clientName: debt.client_name,
-      clientPhone: debt.client_phone,
-      paymentType: 'stk', // STK Push
-      items: [{
-        productId: debt.product_id.toString(),
-        name: debt.product_name,
-        quantity: parseInt(debt.quantity, 10),
-        price: parseFloat(debt.price) // Parse as number for validation
-      }],
-      skipInventoryDecrement: true, // Inventory already decremented when debt was created
-      debtId: parseInt(debtId, 10) // Link order to debt
-    };
-
-    const result = await OrderService.createClientOrder(sellerId, orderData);
-
-    res.status(200).json({
-      status: 'success',
-      message: 'STK Push initiated successfully',
-      data: result
-    });
-
-  } catch (error) {
-    logger.error(`Debt Payment Initiation Failed for debt ${debtId}:`, error);
-    res.status(500).json({
-      status: 'error',
-      message: error.message || 'Failed to initiate payment'
-    });
-  }
-};
-
 // @desc    Become a client of a seller
 // @route   POST /api/buyers/sellers/:sellerId/become-client
 // @access  Private (Buyer)

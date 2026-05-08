@@ -8,7 +8,7 @@ class AdminService {
       sellers: 'SELECT COUNT(*) FROM sellers',
       products: 'SELECT COUNT(*) FROM products',
       buyers: 'SELECT COUNT(*) FROM buyers WHERE user_id IS NOT NULL', // Registered buyers
-      clients: 'SELECT COUNT(*) FROM clients', // New stats
+      clients: 'SELECT 0::int AS count',
       orders: 'SELECT COUNT(*) FROM product_orders',
       wishlists: 'SELECT COUNT(*) FROM wishlists'
     };
@@ -31,11 +31,9 @@ class AdminService {
     let topShops = [];
     try {
       const topShopsRes = await pool.query(`
-                SELECT s.id, s.full_name as name, s.shop_name, COUNT(c.id) as client_count
+                SELECT s.id, s.full_name as name, s.shop_name, COALESCE(s.client_count, 0) as client_count
                 FROM sellers s
-                LEFT JOIN clients c ON s.id = c.seller_id
-                GROUP BY s.id
-                ORDER BY client_count DESC
+                ORDER BY COALESCE(s.client_count, 0) DESC
                 LIMIT 3
             `);
       topShops = topShopsRes.rows.map(row => ({
@@ -259,14 +257,7 @@ class AdminService {
   }
 
   async getAllClients() {
-    const query = `
-            SELECT c.*, s.full_name as seller_name, s.shop_name 
-            FROM clients c
-            LEFT JOIN sellers s ON c.seller_id = s.id
-            ORDER BY c.created_at DESC
-        `;
-    const { rows } = await pool.query(query);
-    return rows;
+    return [];
   }
 
   async deleteUser(userId) {
@@ -290,7 +281,6 @@ class AdminService {
 
           // Delete junction tables
           await client.query('DELETE FROM seller_clients WHERE seller_id = $1', [sellerId]);
-          await client.query('DELETE FROM clients WHERE seller_id = $1', [sellerId]);
 
           // Delete orders and products
           await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM product_orders WHERE seller_id = $1)', [sellerId]);
