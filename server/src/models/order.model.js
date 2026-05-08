@@ -594,8 +594,8 @@ class Order {
         payment_reference = COALESCE($3, payment_reference),
         updated_at = NOW(),
         paid_at = CASE WHEN $2::payment_status = 'completed'::payment_status AND paid_at IS NULL THEN NOW() ELSE paid_at END,
-        completed_at = CASE WHEN $1::text = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END,
-        cancelled_at = CASE WHEN $1::text = 'cancelled' AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END
+        completed_at = CASE WHEN $1::order_status = 'COMPLETED'::order_status AND completed_at IS NULL THEN NOW() ELSE completed_at END,
+        cancelled_at = CASE WHEN $1::order_status = 'CANCELLED'::order_status AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END
       WHERE id = $4
       RETURNING *
     `;
@@ -615,7 +615,7 @@ class Order {
           $2::jsonb,
           true
         ),
-        cancelled_at = CASE WHEN $1 = 'cancelled' THEN NOW() ELSE cancelled_at END,
+        cancelled_at = CASE WHEN $1::order_status = 'CANCELLED'::order_status AND cancelled_at IS NULL THEN NOW() ELSE cancelled_at END,
         updated_at = NOW()
       WHERE id = $3
       RETURNING *
