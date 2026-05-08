@@ -896,6 +896,11 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         onClose={() => setIsPhoneCheckModalOpen(false)}
         onPhoneSubmit={handlePhoneSubmit}
         isLoading={isCheckingPhone}
+        purchaseDetails={{
+          shopName: displaySellerName,
+          productName: product.name,
+          productPrice: Number(product.price || 0),
+        }}
       />
 
       <BuyerInfoModal
