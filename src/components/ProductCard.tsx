@@ -39,7 +39,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
   const navigate = useNavigate();
 
   const wishlistContext = useWishlist();
-  const { isAuthenticated, user: userData } = useBuyerAuth();
+  const { isAuthenticated } = useBuyerAuth();
 
   const addToWishlist = wishlistContext.addToWishlist;
   const isInWishlist = wishlistContext.isInWishlist;
@@ -216,34 +216,29 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     // 1. Service Product + Not Authenticated? -> Verification First Flow
     if (isService && !isAuthenticated) {
       setIsBookingFlowActive(true);
+      setBookingData(null);
+      setCurrentPhone('');
+      setBuyerId(null);
       setIsPhoneCheckModalOpen(true);
       return;
     }
 
     // 2. Service Product + Authenticated? -> Booking Flow
     if (isService) {
-      // For services, we always trigger the booking modal
+      setIsBookingFlowActive(true);
+      setBookingData(null);
+      setCurrentPhone('');
+      setBuyerId(null);
       setIsBookingModalOpen(true);
       return;
     }
 
-    // 3. Authenticated? -> Direct Payment
-    if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
-      await runWithLock(async () => {
-        // Prevents duplicate payment requests via synchronous lock (Task 14)
-        await executePayment({
-          fullName: userData.fullName,
-          email: userData.email,
-          mobilePayment: userData.mobilePayment,
-          city: userData.city,
-          location: userData.location
-        });
-      });
-    } else {
-      // 4. Not Authenticated? -> Phone Check
-      setIsBookingFlowActive(false);
-      setIsPhoneCheckModalOpen(true);
-    }
+    // 3. Always confirm the payment number before starting STK Push.
+    setIsBookingFlowActive(false);
+    setBookingData(null);
+    setCurrentPhone('');
+    setBuyerId(null);
+    setIsPhoneCheckModalOpen(true);
   };
 
   const handleBookingConfirm = async (data: {
@@ -257,18 +252,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
     setBookingData(data);
     setIsBookingModalOpen(false);
 
-    if (isAuthenticated && userData?.phone && userData?.fullName && userData?.email) {
-      await runWithLock(async () => {
-        // Prevents duplicate payment requests via synchronous lock (Task 14)
-        await executePayment({
-          fullName: userData.fullName,
-          email: userData.email,
-          mobilePayment: userData.mobilePayment,
-          city: userData.city,
-          location: userData.location
-        }, data);
-      });
-    } else if (currentPhone && buyerId) {
+    if (currentPhone && buyerId) {
       // CASE: Guest who just finished phone check (Task BUG-BOOK-04)
       await runWithLock(async () => {
         await executePayment({
@@ -280,6 +264,7 @@ export function ProductCard({ product, seller, hideWishlist = false, theme = 'de
         }, data, buyerId);
       });
     } else {
+      setIsBookingFlowActive(true);
       setIsPhoneCheckModalOpen(true);
     }
   };
