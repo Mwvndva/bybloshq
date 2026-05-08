@@ -15,6 +15,7 @@ router.get('/products/:id', publicController.getProduct);
 
 // Public seller info
 router.get('/sellers/active', publicController.getSellers);
+router.post('/sellers/:id/knock', publicController.knockSeller);
 router.get('/sellers/:id/public', publicController.getSellerPublicInfo);
 router.get('/services/:productId/availability', publicController.getServiceAvailability);
 router.get('/orders/:id/status', publicController.getOrderStatus);

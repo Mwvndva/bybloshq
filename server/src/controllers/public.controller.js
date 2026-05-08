@@ -266,12 +266,19 @@ export const getSellers = async (req, res) => {
         s.theme,
         s.client_count,
         s.created_at,
+        COALESCE(k.knock_count, 0) AS knock_count,
         COUNT(*) OVER() AS total_count,
         COUNT(w.id) as total_wishlist_count
       FROM sellers s
       LEFT JOIN products p ON s.id = p.seller_id
       LEFT JOIN wishlists w ON p.id = w.product_id
-      GROUP BY s.id
+      LEFT JOIN LATERAL (
+        SELECT COUNT(*)::int AS knock_count
+        FROM seller_knocks sk
+        WHERE sk.seller_id = s.id
+          AND sk.created_at >= NOW() - INTERVAL '24 hours'
+      ) k ON true
+      GROUP BY s.id, k.knock_count
       ORDER BY total_wishlist_count DESC, s.id ASC
       LIMIT $1 OFFSET $2
     `;
@@ -289,6 +296,8 @@ export const getSellers = async (req, res) => {
       theme: row.theme, // Mapped from theme
       clientCount: row.client_count || 0,
       totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
+      wishlistCount: parseInt(row.total_wishlist_count, 10) || 0,
+      knockCount: parseInt(row.knock_count, 10) || 0,
       createdAt: row.created_at
     }));
 
@@ -312,7 +321,7 @@ export const getSellers = async (req, res) => {
       }
     };
 
-    await cacheService.set(cacheKey, responseData, 300); // 5 mins cache
+    await cacheService.set(cacheKey, responseData, 30);
 
     res.status(200).json(responseData);
   } catch (error) {
@@ -320,6 +329,60 @@ export const getSellers = async (req, res) => {
     res.status(500).json({
       status: 'error',
       message: 'Failed to fetch sellers',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+export const knockSeller = async (req, res) => {
+  try {
+    const sellerId = Number.parseInt(req.params.id, 10);
+    if (!Number.isInteger(sellerId) || sellerId <= 0) {
+      return res.status(400).json({
+        status: 'error',
+        message: 'Valid seller ID is required'
+      });
+    }
+
+    const result = await pool.query(
+      `WITH target AS (
+         SELECT id FROM sellers WHERE id = $1
+       ),
+       inserted AS (
+         INSERT INTO seller_knocks (seller_id)
+         SELECT id FROM target
+         RETURNING seller_id
+       )
+       SELECT
+         EXISTS(SELECT 1 FROM target) AS seller_exists,
+         (
+           SELECT COUNT(*)::int
+           FROM seller_knocks
+           WHERE seller_id = $1
+             AND created_at >= NOW() - INTERVAL '24 hours'
+         ) AS knock_count`,
+      [sellerId]
+    );
+
+    if (!result.rows[0]?.seller_exists) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Seller not found'
+      });
+    }
+
+    return res.status(200).json({
+      status: 'success',
+      data: {
+        sellerId,
+        knockCount: Number.parseInt(result.rows[0].knock_count || '0', 10)
+      }
+    });
+  } catch (error) {
+    console.error('Error recording seller knock:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Failed to record knock',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

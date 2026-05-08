@@ -1,8 +1,8 @@
-import { memo } from 'react';
-import { Link } from 'react-router-dom';
-import { Heart, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Seller } from '@/api/publicApi';
+import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Heart, MousePointerClick, Users } from 'lucide-react';
+import { cn, getImageUrl } from '@/lib/utils';
+import { publicApiService, Seller } from '@/api/publicApi';
 
 interface SellerBrandCardProps {
     seller: Seller;
@@ -10,169 +10,120 @@ interface SellerBrandCardProps {
     isBuyer?: boolean;
 }
 
+const getInitials = (shopName?: string, fullName?: string) => {
+    const source = (shopName || fullName || 'Shop').trim();
+    const parts = source.split(/[\s._-]+/).filter(Boolean);
+    if (parts.length === 0) return 'S';
+    return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('');
+};
+
+const getNumber = (...values: unknown[]) => {
+    for (const value of values) {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+    }
+    return 0;
+};
+
 const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) => {
-    // Use a transparent placeholder if banner is missing to maintain layout
-    const bannerUrl = seller.bannerUrl || seller.banner_url;
-
-    // Theme color fallback
-    const themeColor = seller.theme || 'black';
-
-    // Theme color definition matching ThemeSelector
-    const getThemeColors = (theme: string) => {
-        const colors: Record<string, { bg: string, text: string, button: string, badge: string, icon: string }> = {
-            'default': { // White theme
-                bg: 'bg-white',
-                text: 'text-gray-900',
-                button: 'bg-black text-white border-black/10 hover:bg-gray-800',
-                badge: 'bg-gray-100/90 text-gray-900',
-                icon: 'text-gray-900'
-            },
-            'black': {
-                bg: 'bg-gray-900',
-                text: 'text-white',
-                button: 'bg-white/10 text-white border-white/20 hover:bg-white/20',
-                badge: 'bg-white/90 text-black',
-                icon: 'text-black'
-            },
-            'pink': {
-                bg: 'bg-pink-500',
-                text: 'text-pink-50',
-                button: 'bg-white/20 text-white border-white/30 hover:bg-white/30',
-                badge: 'bg-white/90 text-pink-600',
-                icon: 'text-pink-600'
-            },
-            'brown': {
-                bg: 'bg-amber-800',
-                text: 'text-amber-50',
-                button: 'bg-white/20 text-white border-white/30 hover:bg-white/30',
-                badge: 'bg-white/90 text-amber-800',
-                icon: 'text-amber-800'
-            },
-            'orange': {
-                bg: 'bg-orange-500',
-                text: 'text-orange-50',
-                button: 'bg-white/20 text-white border-white/30 hover:bg-white/30',
-                badge: 'bg-white/90 text-orange-600',
-                icon: 'text-orange-600'
-            },
-            'green': {
-                bg: 'bg-green-500',
-                text: 'text-green-50',
-                button: 'bg-white/20 text-white border-white/30 hover:bg-white/30',
-                badge: 'bg-white/90 text-green-700',
-                icon: 'text-green-700'
-            },
-            'red': {
-                bg: 'bg-red-500',
-                text: 'text-red-50',
-                button: 'bg-white/20 text-white border-white/30 hover:bg-white/30',
-                badge: 'bg-white/90 text-red-600',
-                icon: 'text-red-600'
-            },
-            'yellow': {
-                bg: 'bg-yellow-400',
-                text: 'text-yellow-900',
-                button: 'bg-black/10 text-yellow-900 border-black/10 hover:bg-black/20',
-                badge: 'bg-white/90 text-yellow-700',
-                icon: 'text-yellow-700'
-            }
-        };
-
-        return colors[theme] || colors['black'];
-    };
-
-    const styles = getThemeColors(themeColor);
-
-    // Helper to get gradient bundle based on theme
-    const getGradient = (theme: string) => {
-        const gradients: Record<string, string> = {
-            'default': 'from-gray-100 to-gray-300',
-            'black': 'from-gray-800 to-black',
-            'pink': 'from-pink-400 to-pink-500',
-            'brown': 'from-amber-700 to-amber-900',
-            'orange': 'from-orange-400 to-orange-600',
-            'green': 'from-green-400 to-green-600',
-            'red': 'from-red-400 to-red-600',
-            'yellow': 'from-yellow-300 to-yellow-500'
-        };
-        return gradients[theme] || gradients['black'];
-    };
-
-    const gradientClass = getGradient(themeColor);
-
-    const shopName = seller.shopName || seller.shop_name;
+    const navigate = useNavigate();
+    const shopName = seller.shopName || seller.shop_name || 'Shop';
     const shopLink = isBuyer
         ? `/buyer/shop/${encodeURIComponent(shopName)}`
         : `/shop/${encodeURIComponent(shopName)}`;
-    const clientCount = Number(seller.clientCount ?? seller.client_count ?? 0);
+    const avatarUrl = seller.avatarUrl || (seller as any).avatar_url;
+    const initials = useMemo(() => getInitials(shopName, seller.fullName), [shopName, seller.fullName]);
+    const [avatarFailed, setAvatarFailed] = useState(false);
+    const [knockCount, setKnockCount] = useState(getNumber(seller.knockCount, seller.knock_count));
+
+    const clientCount = getNumber(seller.clientCount, seller.client_count);
+    const wishlistCount = getNumber(seller.wishlistCount, seller.totalWishlistCount, (seller as any).wishlist_count, (seller as any).total_wishlist_count);
+    const hasAvatar = Boolean(avatarUrl && !avatarFailed);
+
+    useEffect(() => {
+        setKnockCount(getNumber(seller.knockCount, seller.knock_count));
+    }, [seller.knockCount, seller.knock_count]);
+
+    const handleKnock = useCallback(() => {
+        const optimisticCount = knockCount + 1;
+        setKnockCount(optimisticCount);
+
+        void publicApiService.knockSeller(seller.id).catch((error) => {
+            console.error('Failed to record seller knock:', error);
+        });
+
+        navigate(shopLink);
+    }, [knockCount, navigate, seller.id, shopLink]);
 
     return (
-        <div className={cn("group relative aspect-square overflow-hidden rounded-2xl bg-gray-900", className)}>
-            {/* Background/Banner Image */}
-            {bannerUrl ? (
-                <img
-                    src={bannerUrl}
-                    alt={`${seller.shopName || seller.shop_name} banner`}
-                    className="h-full w-full object-cover"
-                />
-            ) : (
-                // Fallback gradient if no banner
-                <div className={`h-full w-full bg-gradient-to-br ${gradientClass}`} />
-            )}
-
-            {/* Client Count Indicator - Top Left */}
-            <div className="absolute top-2 left-2 z-10">
-                <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm", styles.badge)}>
-                    <Users className={cn("h-2.5 w-2.5", styles.icon)} />
-                    <span className={cn("text-[9px] font-bold", styles.icon)}>
-                        {clientCount}
-                    </span>
+        <article className={cn(
+            "group relative overflow-hidden rounded-2xl border border-white/10 bg-[#111111] p-3 shadow-sm transition-colors duration-200 hover:border-white/20 hover:bg-[#151515]",
+            className
+        )}>
+            <div className="flex items-start gap-3">
+                <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-yellow-300 to-yellow-500 text-black shadow-inner">
+                    {hasAvatar ? (
+                        <img
+                            src={getImageUrl(avatarUrl)}
+                            alt={`${shopName} business photo`}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            onError={() => setAvatarFailed(true)}
+                        />
+                    ) : (
+                        <div className="flex h-full w-full items-center justify-center text-base font-black">
+                            {initials}
+                        </div>
+                    )}
                 </div>
-            </div>
 
-            {/* Wishlist Indicator - Top Right */}
-            <div className="absolute top-2 right-2 z-10 flex flex-col items-end gap-1.5">
-                <div className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm", styles.badge)}>
-                    <Heart className={cn("h-2.5 w-2.5 fill-current", styles.icon)} />
-                    <span className={cn("text-[9px] font-bold", styles.icon)}>
-                        {seller.totalWishlistCount || 0}
-                    </span>
-                </div>
-                {/* Shop Type Tag */}
-                <div className={cn(
-                    "rounded-full px-2 py-0.5 shadow-sm backdrop-blur-sm border",
-                    (seller.physicalAddress || (seller.latitude && seller.latitude !== 0))
-                        ? "bg-emerald-500/90 text-white border-emerald-400"
-                        : "bg-zinc-800/90 text-zinc-300 border-zinc-700"
-                )}>
-                    <span className="text-[8px] font-black uppercase tracking-tight">
-                        {(seller.physicalAddress || (seller.latitude && seller.latitude !== 0)) ? 'Physical' : 'Online'}
-                    </span>
-                </div>
-            </div>
-
-            {/* Content Overlay - Bottom */}
-            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-10">
-                <div className="flex flex-col items-center text-center">
-
-                    {/* Shop Name */}
-                    <h3 className="mb-2 text-sm font-black tracking-tight text-white drop-shadow-lg">
-                        {seller.shopName || seller.shop_name}
+                <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-black tracking-tight text-white" title={shopName}>
+                        {shopName}
                     </h3>
-
-                    {/* Open Shop Button */}
-                    <Link
-                        to={shopLink} // Using shop name as slug/link
-                        className={cn(
-                            "rounded-full border px-2.5 py-0.5 text-[9px] font-bold backdrop-blur-md transition-colors",
-                            styles.button
-                        )}
-                    >
-                        Open Shop
-                    </Link>
+                    {seller.bio ? (
+                        <p className="mt-1 max-h-10 overflow-hidden text-[11px] leading-5 text-white/55">
+                            {seller.bio}
+                        </p>
+                    ) : (
+                        <p className="mt-1 text-[11px] leading-5 text-white/35">Business profile</p>
+                    )}
                 </div>
             </div>
-        </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-1.5">
+                <div className="rounded-xl bg-white/[0.04] px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/45">
+                        <Users className="h-3 w-3" />
+                        <span className="text-[9px] font-semibold uppercase tracking-wide">Clients</span>
+                    </div>
+                    <p className="text-sm font-black tabular-nums text-white">{clientCount}</p>
+                </div>
+                <div className="rounded-xl bg-white/[0.04] px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/45">
+                        <Heart className="h-3 w-3" />
+                        <span className="text-[9px] font-semibold uppercase tracking-wide">Saved</span>
+                    </div>
+                    <p className="text-sm font-black tabular-nums text-white">{wishlistCount}</p>
+                </div>
+                <div className="rounded-xl bg-white/[0.04] px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/45">
+                        <MousePointerClick className="h-3 w-3" />
+                        <span className="text-[9px] font-semibold uppercase tracking-wide">Knocks</span>
+                    </div>
+                    <p className="text-sm font-black tabular-nums text-white">{knockCount}</p>
+                </div>
+            </div>
+
+            <button
+                type="button"
+                onClick={handleKnock}
+                className="mt-3 h-9 w-full rounded-xl border border-yellow-300/20 bg-yellow-300 text-xs font-black text-black transition-colors hover:bg-yellow-200 active:bg-yellow-400"
+                aria-label={`Knock on ${shopName}`}
+            >
+                Knock
+            </button>
+        </article>
     );
 };
 

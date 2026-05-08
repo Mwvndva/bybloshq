@@ -188,8 +188,11 @@ export interface Seller {
   latitude?: number;
   longitude?: number;
   totalWishlistCount?: number;
+  wishlistCount?: number;
   clientCount?: number;
   client_count?: number;
+  knockCount?: number;
+  knock_count?: number;
 }
 
 // Helper function to transform product data from API
@@ -261,7 +264,13 @@ export function transformSeller(seller: any): Seller | null {
     ...(seller.longitude && { longitude: seller.longitude }),
     // Metrics
     ...(seller.clientCount !== undefined && { clientCount: Number(seller.clientCount) }),
-    ...(seller.client_count !== undefined && { clientCount: Number(seller.client_count) })
+    ...(seller.client_count !== undefined && { clientCount: Number(seller.client_count) }),
+    ...(seller.totalWishlistCount !== undefined && { totalWishlistCount: Number(seller.totalWishlistCount) }),
+    ...(seller.total_wishlist_count !== undefined && { totalWishlistCount: Number(seller.total_wishlist_count) }),
+    ...(seller.wishlistCount !== undefined && { wishlistCount: Number(seller.wishlistCount) }),
+    ...(seller.wishlist_count !== undefined && { wishlistCount: Number(seller.wishlist_count) }),
+    ...(seller.knockCount !== undefined && { knockCount: Number(seller.knockCount) }),
+    ...(seller.knock_count !== undefined && { knockCount: Number(seller.knock_count) })
   };
 }
 
@@ -338,7 +347,9 @@ export const publicApiService = {
           // For now, let's just return the seller object as is, assuming the component will cast it or we update type.
           return {
             ...seller,
-            totalWishlistCount: Number(item.totalWishlistCount || item.total_wishlist_count || 0)
+            totalWishlistCount: Number(item.totalWishlistCount || item.total_wishlist_count || 0),
+            wishlistCount: Number(item.wishlistCount || item.wishlist_count || item.totalWishlistCount || item.total_wishlist_count || 0),
+            knockCount: Number(item.knockCount || item.knock_count || 0)
           } as Seller;
         }
         return null;
@@ -370,6 +381,11 @@ export const publicApiService = {
   getSellers: async (): Promise<Seller[]> => {
     const page = await publicApiService.getSellersPage({ page: 1, limit: 24 });
     return page.sellers;
+  },
+
+  knockSeller: async (sellerId: string | number): Promise<{ sellerId: number; knockCount: number }> => {
+    const response = await publicApi.post(`public/sellers/${sellerId}/knock`);
+    return response.data?.data || { sellerId: Number(sellerId), knockCount: 0 };
   },
 
   getProductsPage: async (filters: { city?: string; location?: string; aesthetic?: string; page?: number; limit?: number } = {}): Promise<ProductListResponse> => {

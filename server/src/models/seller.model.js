@@ -431,10 +431,25 @@ export const findSellersByUserId = async (userId, options = {}) => {
       s.theme,
       s.instagram_link AS "instagramLink",
       s.client_count AS "clientCount",
+      COALESCE(w.total_wishlist_count, 0) AS "totalWishlistCount",
+      COALESCE(w.total_wishlist_count, 0) AS "wishlistCount",
+      COALESCE(k.knock_count, 0) AS "knockCount",
       s.created_at AS "createdAt",
       COUNT(*) OVER() AS "totalCount"
      FROM sellers s
      JOIN seller_clients sc ON s.id = sc.seller_id
+     LEFT JOIN LATERAL (
+       SELECT COUNT(wl.id)::int AS total_wishlist_count
+       FROM products p
+       LEFT JOIN wishlists wl ON p.id = wl.product_id
+       WHERE p.seller_id = s.id
+     ) w ON true
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS knock_count
+       FROM seller_knocks sk
+       WHERE sk.seller_id = s.id
+         AND sk.created_at >= NOW() - INTERVAL '24 hours'
+     ) k ON true
      WHERE sc.user_id = $1
      ORDER BY sc.created_at DESC, s.id ASC
      LIMIT $2 OFFSET $3`,
