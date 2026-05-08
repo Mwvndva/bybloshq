@@ -25,6 +25,7 @@ export interface BaseDashboardLayoutProps {
     backButtonPath?: string;
     backButtonLabel?: string;
     showSidebar?: boolean;
+    showHeader?: boolean;
     sidebarHeader?: ReactNode;
     headerActions?: ReactNode;
     children?: ReactNode;
@@ -43,6 +44,7 @@ export function BaseDashboardLayout({
     backButtonPath = '/',
     backButtonLabel = 'Back to Home',
     showSidebar = false,
+    showHeader = true,
     sidebarHeader,
     headerActions,
     children,
@@ -177,70 +179,71 @@ export function BaseDashboardLayout({
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0">
-                {/* Header */}
-                <header
-                    className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30"
-                    role="banner"
-                >
-                    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="relative flex items-center justify-between h-20">
-                            {/* Left: Menu/Back Button */}
-                            <div className="flex-1 flex items-center gap-2">
-                                {showSidebar && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => setSidebarOpen(true)}
-                                        className="lg:hidden text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 -ml-3"
-                                        aria-label="Open sidebar"
-                                    >
-                                        <Menu className="h-5 w-5" />
-                                    </Button>
-                                )}
-                                {showBackButton && (
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={handleBack}
-                                        className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
-                                        aria-label={backButtonLabel}
-                                    >
-                                        <ArrowLeft className="h-4 w-4 mr-2" />
-                                        <span className="hidden sm:inline">{backButtonLabel}</span>
-                                        <span className="sm:hidden">Back</span>
-                                    </Button>
-                                )}
-                            </div>
+                {showHeader && (
+                    <header
+                        className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30"
+                        role="banner"
+                    >
+                        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+                            <div className="relative flex items-center justify-between h-20">
+                                {/* Left: Menu/Back Button */}
+                                <div className="flex-1 flex items-center gap-2">
+                                    {showSidebar && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setSidebarOpen(true)}
+                                            className="lg:hidden text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 -ml-3"
+                                            aria-label="Open sidebar"
+                                        >
+                                            <Menu className="h-5 w-5" />
+                                        </Button>
+                                    )}
+                                    {showBackButton && (
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={handleBack}
+                                            className="text-slate-500 hover:text-slate-950 hover:bg-slate-100 transition-all duration-200 rounded-xl px-3 py-2 text-sm -ml-3"
+                                            aria-label={backButtonLabel}
+                                        >
+                                            <ArrowLeft className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">{backButtonLabel}</span>
+                                            <span className="sm:hidden">Back</span>
+                                        </Button>
+                                    )}
+                                </div>
 
-                            {/* Center: Title */}
-                            <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%]">
-                                <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
-                                    {title}
-                                </h1>
-                                {subtitle && (
-                                    <p className="hidden sm:block text-xs sm:text-sm text-slate-500 font-medium truncate">
-                                        {subtitle}
-                                    </p>
-                                )}
-                            </div>
+                                {/* Center: Title */}
+                                <div className="absolute left-1/2 -translate-x-1/2 text-center min-w-0 max-w-[50%]">
+                                    <h1 className="text-xl sm:text-2xl font-black text-slate-950 tracking-tight truncate">
+                                        {title}
+                                    </h1>
+                                    {subtitle && (
+                                        <p className="hidden sm:block text-xs sm:text-sm text-slate-500 font-medium truncate">
+                                            {subtitle}
+                                        </p>
+                                    )}
+                                </div>
 
-                            {/* Right: Actions/Logout */}
-                            <div className="flex-1 flex items-center justify-end gap-2">
-                                {headerActions}
-                                {!showSidebar && shouldShowLogout && (
-                                    <Button
-                                        variant="outline"
-                                        onClick={handleLogout}
-                                        className="inline-flex items-center gap-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-xl h-9 sm:h-10 px-3 sm:px-4 -mr-3"
-                                    >
-                                        <LogOut className="h-4 w-4" />
-                                        <span className="hidden sm:inline">Log out</span>
-                                    </Button>
-                                )}
+                                {/* Right: Actions/Logout */}
+                                <div className="flex-1 flex items-center justify-end gap-2">
+                                    {headerActions}
+                                    {!showSidebar && shouldShowLogout && (
+                                        <Button
+                                            variant="outline"
+                                            onClick={handleLogout}
+                                            className="inline-flex items-center gap-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-xl h-9 sm:h-10 px-3 sm:px-4 -mr-3"
+                                        >
+                                            <LogOut className="h-4 w-4" />
+                                            <span className="hidden sm:inline">Log out</span>
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </header>
+                    </header>
+                )}
 
                 {/* Main Content */}
                 <main

@@ -838,11 +838,12 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleLogout}
+              onClick={() => navigate('/')}
               className="justify-self-start text-white hover:text-black hover:bg-yellow-400 border border-white/10 rounded-xl px-3 py-2 text-xs sm:text-sm"
             >
-              <LogOut className="h-4 w-4 mr-2" />
-              Logout
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Back to Home</span>
+              <span className="sm:hidden">Home</span>
             </Button>
 
             <h1 className="min-w-0 text-center text-sm sm:text-lg font-medium text-white tracking-tight truncate">
@@ -852,12 +853,11 @@ export default function SellerDashboard({ children }: SellerDashboardProps) {
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => navigate('/')}
+              onClick={handleLogout}
               className="justify-self-end text-white hover:text-black hover:bg-yellow-400 border border-white/10 rounded-xl px-3 py-2 text-xs sm:text-sm"
             >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Back to Home</span>
-              <span className="sm:hidden">Home</span>
+              <LogOut className="h-4 w-4 mr-2" />
+              Logout
             </Button>
           </div>
         </div>
