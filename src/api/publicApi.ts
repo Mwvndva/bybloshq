@@ -184,7 +184,9 @@ export interface Seller {
   updated_at?: string;
   // Physical shop fields
   hasPhysicalShop?: boolean;
+  has_physical_shop?: boolean;
   physicalAddress?: string;
+  physical_address?: string;
   latitude?: number;
   longitude?: number;
   totalWishlistCount?: number;
@@ -257,7 +259,7 @@ export function transformSeller(seller: any): Seller | null {
     ...(seller.social_media && { socialMedia: seller.social_media }),
     ...(seller.socialMedia && { socialMedia: seller.socialMedia }), // Handle both cases
     // Physical shop fields
-    hasPhysicalShop: seller.hasPhysicalShop || !!seller.physicalAddress || !!seller.physical_address,
+    hasPhysicalShop: seller.hasPhysicalShop || seller.has_physical_shop || !!seller.physicalAddress || !!seller.physical_address,
     ...(seller.physicalAddress && { physicalAddress: seller.physicalAddress }),
     ...(seller.physical_address && { physicalAddress: seller.physical_address }), // Handle both cases
     ...(seller.latitude && { latitude: seller.latitude }),

@@ -1,6 +1,6 @@
 ﻿import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
-import { memo, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
@@ -12,9 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
-  ChevronLeft, ChevronRight, LogOut,
+  ChevronLeft, LogOut,
   Search, Home, Heart, ShoppingCart, User,
-  Users, Store, Package, ShoppingBag, Info, X
+  Users, Store, Package, Info, X
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import buyerApi from '@/api/buyerApi';
@@ -29,19 +29,7 @@ import { format } from 'date-fns';
 
 import RefundCard from './RefundCard';
 import SellersGrid from '@/components/SellersGrid';
-import { publicApiService } from '@/api/publicApi';
-import { getImageUrl } from '@/lib/utils';
-
-const SHOP_COLORS = [
-  '#8B5CF6', '#EC4899', '#10B981', '#3B82F6',
-  '#F59E0B', '#EF4444', '#06B6D4', '#F97316',
-];
-
-function shopColor(name) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xFFFFFFFF;
-  return SHOP_COLORS[Math.abs(h) % SHOP_COLORS.length];
-}
+import SellerBrandCard from '@/components/SellerBrandCard';
 
 const getShopId = (shop) => String(shop.id || shop.sellerId || shop.seller_id || '');
 
@@ -51,239 +39,31 @@ const updateSellerClientCount = (seller, clientCount) => ({
   client_count: clientCount
 });
 
-const updateSellerKnockCount = (seller, knockCount) => ({
+const updateSellerClickCount = (seller, clickCount) => ({
   ...seller,
-  knockCount,
-  knock_count: knockCount
+  knockCount: clickCount,
+  knock_count: clickCount
 });
 
-const getShopInitials = (shop) => {
-  const source = String(shop.shopName || shop.name || 'Shop').trim();
-  const parts = source.split(/[\s._-]+/).filter(Boolean);
-  return (parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'S');
-};
-
-const getShopMetric = (shop, ...keys) => {
-  for (const key of keys) {
-    const value = Number(shop?.[key]);
-    if (Number.isFinite(value)) return value;
-  }
-  return 0;
-};
-
-const ShopCard = memo(function ShopCard({ shop, onOpen, onUnfollow, isUnfollowing }) {
-  const color = shopColor(shop.shopName || shop.name || '');
-  const initials = getShopInitials(shop);
-  const avatarUrl = shop.avatarUrl || shop.avatar_url;
-  const clientCount = getShopMetric(shop, 'clientCount', 'client_count');
-  const wishlistCount = getShopMetric(shop, 'wishlistCount', 'totalWishlistCount', 'wishlist_count', 'total_wishlist_count');
-  const knockCount = getShopMetric(shop, 'knockCount', 'knock_count');
-
+function SellerBrandCardSkeleton() {
   return (
-    <div
-      style={{
-        background: '#141414',
-        borderRadius: 14,
-        overflow: 'hidden',
-        cursor: 'pointer',
-        transition: 'transform 0.15s ease, background 0.15s ease',
-        willChange: 'transform',
-      }}
-      onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
-      onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.97)'}
-      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
-    >
-      <div style={{
-        minHeight: 94,
-        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 12,
-      }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 16, overflow: 'hidden',
-          background: `${color}20`,
-          border: `1.5px solid ${color}40`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 14, fontWeight: 800, color,
-        }}>
-          {avatarUrl ? (
-            <img src={getImageUrl(avatarUrl)} alt={`${shop.shopName || shop.name} business photo`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : initials}
+    <div style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 16, padding: 12, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.08)' }} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ height: 12, width: '62%', borderRadius: 999, background: 'rgba(255,255,255,0.1)', marginBottom: 8 }} />
+          <div style={{ height: 10, width: '86%', borderRadius: 999, background: 'rgba(255,255,255,0.06)', marginBottom: 6 }} />
+          <div style={{ height: 10, width: '54%', borderRadius: 999, background: 'rgba(255,255,255,0.05)' }} />
         </div>
       </div>
-
-      {/* Card body */}
-      <div style={{ padding: 10 }}>
-        <div style={{
-          fontSize: 12, fontWeight: 600, color: '#fff',
-          marginBottom: 5, overflow: 'hidden',
-          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>
-          {shop.shopName || shop.name}
-        </div>
-        {shop.bio && (
-          <div style={{
-            color: 'rgba(255,255,255,0.45)', fontSize: 10.5, lineHeight: '15px',
-            height: 30, overflow: 'hidden', marginBottom: 8,
-          }}>
-            {shop.bio}
-          </div>
-        )}
-
-        <div style={{
-          display: 'flex', alignItems: 'center',
-          justifyContent: 'space-between', marginBottom: 8,
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-            <Users size={10} /> {clientCount}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-            <Heart size={10} /> {wishlistCount}
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10, color: 'rgba(255,255,255,0.45)' }}>
-            <ShoppingBag size={10} /> {knockCount}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpen(shop);
-            }}
-            style={{
-              height: 28, borderRadius: 7, border: 'none',
-              background: '#1C1C1C', color: '#fff',
-              fontSize: 11, fontWeight: 500, cursor: 'pointer',
-              transition: 'background 0.15s ease',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-            onMouseLeave={e => e.currentTarget.style.background = '#1C1C1C'}
-          >
-            Knock
-          </button>
-          <button
-            disabled={isUnfollowing}
-            onClick={(e) => {
-              e.stopPropagation();
-              onUnfollow(shop);
-            }}
-            style={{
-              height: 28, borderRadius: 7, border: '1px solid rgba(248,113,113,0.28)',
-              background: 'rgba(248,113,113,0.08)', color: '#FCA5A5',
-              fontSize: 11, fontWeight: 600, cursor: isUnfollowing ? 'wait' : 'pointer',
-              opacity: isUnfollowing ? 0.65 : 1,
-              transition: 'background 0.15s ease',
-            }}
-            onMouseEnter={e => {
-              if (!isUnfollowing) e.currentTarget.style.background = 'rgba(248,113,113,0.14)';
-            }}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(248,113,113,0.08)'}
-          >
-            {isUnfollowing ? '...' : 'Unfollow'}
-          </button>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginTop: 12 }}>
+        {[0, 1, 2].map(item => (
+          <div key={item} style={{ height: 46, borderRadius: 12, background: 'rgba(255,255,255,0.045)' }} />
+        ))}
       </div>
-    </div>
-  );
-});
-
-const FeaturedShopCard = memo(function FeaturedShopCard({ shop, onOpen, onUnfollow, isUnfollowing }) {
-  const color = shopColor(shop.shopName || shop.name || '');
-  const initials = getShopInitials(shop);
-  const avatarUrl = shop.avatarUrl || shop.avatar_url;
-  const clientCount = getShopMetric(shop, 'clientCount', 'client_count');
-  const wishlistCount = getShopMetric(shop, 'wishlistCount', 'totalWishlistCount', 'wishlist_count', 'total_wishlist_count');
-  const knockCount = getShopMetric(shop, 'knockCount', 'knock_count');
-
-  return (
-    <div
-      onClick={() => onOpen(shop)}
-      style={{
-        background: '#141414', borderRadius: 14,
-        display: 'flex', alignItems: 'stretch',
-        cursor: 'pointer', height: 64, overflow: 'hidden',
-        transition: 'transform 0.15s ease',
-        willChange: 'transform',
-      }}
-      onTouchStart={e => e.currentTarget.style.transform = 'scale(0.98)'}
-      onTouchEnd={e => e.currentTarget.style.transform = 'scale(1)'}
-    >
-      <div style={{
-        width: 64, flexShrink: 0,
-        background: `linear-gradient(145deg, ${color}22 0%, ${color}08 100%)`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <div style={{
-          width: 28, height: 28, borderRadius: '50%',
-          background: 'rgba(245,197,24,0.12)',
-          border: '1.5px solid rgba(245,197,24,0.4)',
-          overflow: 'hidden',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 700, color: '#F5C518',
-        }}>
-          {avatarUrl ? (
-            <img src={getImageUrl(avatarUrl)} alt={`${shop.shopName || shop.name} business photo`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-          ) : initials}
-        </div>
-      </div>
-
-      <div style={{ flex: 1, padding: '0 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#fff', marginBottom: 2 }}>
-          {shop.shopName || shop.name}
-        </div>
-        <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>
-          {clientCount} clients · {wishlistCount} saved · {knockCount} knocks
-        </div>
-      </div>
-
-      <div style={{ padding: '0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen(shop);
-          }}
-          style={{
-            height: 28, borderRadius: 999, border: '1px solid rgba(245,197,24,0.28)',
-            background: 'rgba(245,197,24,0.92)', color: '#000',
-            fontSize: 10, fontWeight: 800, padding: '0 10px',
-            cursor: 'pointer',
-          }}
-        >
-          Knock
-        </button>
-        <button
-          disabled={isUnfollowing}
-          onClick={(e) => {
-            e.stopPropagation();
-            onUnfollow(shop);
-          }}
-          style={{
-            height: 28, borderRadius: 999, border: '1px solid rgba(248,113,113,0.28)',
-            background: 'rgba(248,113,113,0.08)', color: '#FCA5A5',
-            fontSize: 10, fontWeight: 700, padding: '0 10px',
-            cursor: isUnfollowing ? 'wait' : 'pointer', opacity: isUnfollowing ? 0.65 : 1,
-          }}
-        >
-          {isUnfollowing ? '...' : 'Unfollow'}
-        </button>
-        <ChevronRight size={14} color="rgba(255,255,255,0.45)" />
-      </div>
-    </div>
-  );
-});
-
-function ShopCardSkeleton() {
-  return (
-    <div style={{ background: '#141414', borderRadius: 14, overflow: 'hidden' }}>
-      <div style={{
-        height: 68,
-        background: 'linear-gradient(145deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))',
-      }} />
-      <div style={{ padding: 10 }}>
-        <div style={{ height: 12, width: '70%', borderRadius: 6, background: 'rgba(255,255,255,0.08)', marginBottom: 10 }} />
-        <div style={{ height: 10, width: '48%', borderRadius: 6, background: 'rgba(255,255,255,0.06)', marginBottom: 10 }} />
-        <div style={{ height: 28, borderRadius: 7, background: 'rgba(255,255,255,0.06)' }} />
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, marginTop: 12 }}>
+        <div style={{ height: 40, borderRadius: 12, background: 'rgba(255,255,255,0.06)' }} />
+        <div style={{ width: 94, height: 40, borderRadius: 12, background: 'rgba(248,113,113,0.08)' }} />
       </div>
     </div>
   );
@@ -600,45 +380,24 @@ function BuyerDashboard() {
     });
   }, [shops, shopsSearchQuery]);
 
-  const handleOpenShop = useCallback((shop) => {
+  const handleShopClickCountChange = useCallback((shop, clickCount) => {
     const shopId = getShopId(shop);
-    const nextKnockCount = getShopMetric(shop, 'knockCount', 'knock_count') + 1;
+    if (!shopId) return;
 
-    if (shopId) {
-      queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
-        current.map(item => getShopId(item) === shopId ? updateSellerKnockCount(item, nextKnockCount) : item)
-      );
-      queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
-        if (!current?.sellers) return current;
-        return {
-          ...current,
-          sellers: current.sellers.map((seller) => (
-            getShopId(seller) === shopId ? updateSellerKnockCount(seller, nextKnockCount) : seller
-          ))
-        };
-      });
+    queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
+      current.map(item => getShopId(item) === shopId ? updateSellerClickCount(item, clickCount) : item)
+    );
+    queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
+      if (!current?.sellers) return current;
+      return {
+        ...current,
+        sellers: current.sellers.map((seller) => (
+          getShopId(seller) === shopId ? updateSellerClickCount(seller, clickCount) : seller
+        ))
+      };
+    });
+  }, [queryClient]);
 
-      void publicApiService.knockSeller(shopId).then((result) => {
-        if (typeof result.knockCount !== 'number') return;
-        queryClient.setQueryData<any[]>(['buyer-followed-shops'], (current = []) =>
-          current.map(item => getShopId(item) === shopId ? updateSellerKnockCount(item, result.knockCount) : item)
-        );
-        queryClient.setQueriesData({ queryKey: ['public-sellers'] }, (current: any) => {
-          if (!current?.sellers) return current;
-          return {
-            ...current,
-            sellers: current.sellers.map((seller) => (
-              getShopId(seller) === shopId ? updateSellerKnockCount(seller, result.knockCount) : seller
-            ))
-          };
-        });
-      }).catch((error) => {
-        console.error('Failed to record seller knock:', error);
-      });
-    }
-
-    navigate(`/buyer/shop/${encodeURIComponent(shop.shopName || shop.name)}`);
-  }, [navigate, queryClient]);
   const handleUnfollowShop = useCallback((shop) => {
     unfollowShopMutation.mutate(shop);
   }, [unfollowShopMutation]);
@@ -731,33 +490,22 @@ function BuyerDashboard() {
               <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)' }}>{filteredShops.length} shops</span>
             </div>
 
-            {/* Featured strip ΓÇö first shop only */}
-            {filteredShops.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <FeaturedShopCard
-                  shop={filteredShops[0]}
-                  onOpen={handleOpenShop}
-                  onUnfollow={handleUnfollowShop}
-                  isUnfollowing={unfollowingShopId === getShopId(filteredShops[0])}
-                />
-              </div>
-            )}
-
-            {/* Grid of remaining shops */}
             <div style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: 8,
+              gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+              gap: 10,
             }}>
               {isLoadingShops && shops.length === 0 && Array.from({ length: 6 }).map((_, index) => (
-                <ShopCardSkeleton key={index} />
+                <SellerBrandCardSkeleton key={index} />
               ))}
-              {filteredShops.slice(1).map(shop => (
-                <ShopCard
-                  key={shop.id}
-                  shop={shop}
-                  onOpen={handleOpenShop}
+              {filteredShops.map(shop => (
+                <SellerBrandCard
+                  key={getShopId(shop)}
+                  seller={shop}
+                  isBuyer
+                  showUnfollow
                   onUnfollow={handleUnfollowShop}
+                  onClickCountChange={handleShopClickCountChange}
                   isUnfollowing={unfollowingShopId === getShopId(shop)}
                 />
               ))}
