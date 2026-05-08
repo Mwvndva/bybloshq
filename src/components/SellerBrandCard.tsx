@@ -112,7 +112,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                 <img
                     src={bannerUrl}
                     alt={`${seller.shopName || seller.shop_name} banner`}
-                    className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    className="h-full w-full object-cover"
                 />
             ) : (
                 // Fallback gradient if no banner
@@ -163,7 +163,7 @@ const SellerBrandCard = ({ seller, className, isBuyer }: SellerBrandCardProps) =
                     <Link
                         to={shopLink} // Using shop name as slug/link
                         className={cn(
-                            "rounded-full border px-2.5 py-0.5 text-[9px] font-bold backdrop-blur-md transition-all hover:scale-105 active:scale-95",
+                            "rounded-full border px-2.5 py-0.5 text-[9px] font-bold backdrop-blur-md transition-colors",
                             styles.button
                         )}
                     >
