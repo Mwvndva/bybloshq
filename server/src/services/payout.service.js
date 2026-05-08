@@ -233,6 +233,9 @@ class PayoutService {
                 correlator_id: reference,
                 transaction_reference: reference,  // alias for backwards compat
                 status: data.status || 'processing',
+                amount: data.amount,
+                requested_amount: validatedAmount,
+                phone_number: data.phone_number || normalizedPhone,
                 message: data.message || 'Payout initiated',
                 original_response: data
             };

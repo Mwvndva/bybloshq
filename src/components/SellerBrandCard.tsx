@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowUpRight, Heart, MapPin, MousePointerClick, UserMinus, Users, Wifi } from 'lucide-react';
+import { ArrowUpRight, Heart, MapPin, MousePointerClick, Store, UserMinus, Users, Wifi } from 'lucide-react';
 import { cn, getImageUrl } from '@/lib/utils';
 import { publicApiService, Seller } from '@/api/publicApi';
 
@@ -13,13 +13,6 @@ interface SellerBrandCardProps {
     onUnfollow?: (seller: Seller) => void;
     onClickCountChange?: (seller: Seller, clickCount: number) => void;
 }
-
-const getInitials = (shopName?: string, fullName?: string) => {
-    const source = (shopName || fullName || 'Shop').trim();
-    const parts = source.split(/[\s._-]+/).filter(Boolean);
-    if (parts.length === 0) return 'S';
-    return parts.slice(0, 2).map(part => part[0]?.toUpperCase()).join('');
-};
 
 const getNumber = (...values: unknown[]) => {
     for (const value of values) {
@@ -105,7 +98,6 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
         ? `/buyer/shop/${encodeURIComponent(shopName)}`
         : `/shop/${encodeURIComponent(shopName)}`;
     const avatarUrl = seller.avatarUrl || (seller as any).avatar_url;
-    const initials = useMemo(() => getInitials(shopName, seller.fullName), [shopName, seller.fullName]);
     const [avatarFailed, setAvatarFailed] = useState(false);
     const [knockCount, setKnockCount] = useState(getNumber(seller.knockCount, seller.knock_count));
     const palette = useMemo(() => getThemePalette(seller.theme), [seller.theme]);
@@ -120,14 +112,14 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
             label: 'Physical',
             border: 'rgba(248,113,113,0.44)',
             background: 'rgba(248,113,113,0.14)',
-            color: '#FCA5A5',
+            color: '#B91C1C',
             shadow: 'rgba(248,113,113,0.18)'
         }
         : {
             label: 'Online',
             border: 'rgba(52,211,153,0.44)',
             background: 'rgba(52,211,153,0.14)',
-            color: '#86EFAC',
+            color: '#047857',
             shadow: 'rgba(52,211,153,0.18)'
         };
 
@@ -187,8 +179,8 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                             onError={() => setAvatarFailed(true)}
                         />
                     ) : (
-                        <div className="flex h-full w-full items-center justify-center text-base font-black">
-                            {initials}
+                        <div className="flex h-full w-full items-center justify-center">
+                            <Store className="h-6 w-6 text-slate-950" strokeWidth={1.8} />
                         </div>
                     )}
                 </div>
@@ -226,23 +218,23 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
                     <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
                         <Users className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide">Clients</span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-950">Followers</span>
                     </div>
-                    <p className="text-sm font-black tabular-nums" style={{ color: palette.accent }}>{clientCount}</p>
+                    <p className="text-sm font-black tabular-nums text-slate-950">{clientCount}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
                     <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
                         <Heart className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide">Saved</span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-950">Saved</span>
                     </div>
-                    <p className="text-sm font-black tabular-nums" style={{ color: palette.accent }}>{wishlistCount}</p>
+                    <p className="text-sm font-black tabular-nums text-slate-950">{wishlistCount}</p>
                 </div>
                 <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
                     <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
                         <MousePointerClick className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide">Clicks</span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-950">Clicks</span>
                     </div>
-                    <p className="text-sm font-black tabular-nums" style={{ color: palette.accent }}>{knockCount}</p>
+                    <p className="text-sm font-black tabular-nums text-slate-950">{knockCount}</p>
                 </div>
             </div>
 
@@ -250,12 +242,12 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 <button
                     type="button"
                     onClick={handleKnock}
-                    className="group/open relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-white shadow-sm backdrop-blur transition duration-200 hover:brightness-110 active:brightness-95"
+                    className="group/open relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-slate-950 shadow-sm backdrop-blur transition duration-200 hover:brightness-105 active:brightness-95"
                     style={{
                         background: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, ${palette.accentSoft} 46%, rgba(255,255,255,0.06) 100%)`,
                         borderColor: palette.border,
                         boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 30px ${palette.accentSoft}, 0 0 0 1px ${palette.border}`,
-                        color: '#FFFFFF'
+                        color: '#111827'
                     }}
                     aria-label={`Open ${shopName}`}
                 >
@@ -284,7 +276,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                         type="button"
                         disabled={isUnfollowing}
                         onClick={handleUnfollow}
-                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-300/25 bg-red-400/10 px-3 text-[11px] font-black text-red-200 transition duration-200 hover:bg-red-400/16 active:bg-red-400/20 disabled:cursor-wait disabled:opacity-60"
+                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 transition duration-200 hover:bg-red-100 active:bg-red-100 disabled:cursor-wait disabled:opacity-60"
                         aria-label={`Unfollow ${shopName}`}
                     >
                         <UserMinus className="h-3.5 w-3.5" />

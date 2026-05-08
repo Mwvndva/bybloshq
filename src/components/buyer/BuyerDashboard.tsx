@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { AestheticWithNone } from '@/types/components';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 // Lazy load the OrdersSection component
 const OrdersSection = lazy(() => import('@/components/orders/OrdersSection'));
@@ -12,9 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
-  ChevronLeft, LogOut,
+  ChevronLeft,
   Search, Heart, User,
-  Users, Store, Package, Info, X
+  Users, Store, Package, LogOut
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import buyerApi from '@/api/buyerApi';
@@ -100,7 +101,7 @@ function BuyerDashboard() {
     if (pathname.includes('/buyer/orders')) return 'orders';
     if (pathname.includes('/buyer/shops')) return 'shops';
     if (pathname.includes('/buyer/wishlist')) return 'wishlist';
-    if (pathname.includes('/buyer/profile')) return 'profile';
+    if (pathname.includes('/buyer/profile')) return 'shop';
 
     // Priority 2: Navigation state
     const stateSection = (location.state as any)?.activeSection;
@@ -109,29 +110,38 @@ function BuyerDashboard() {
     // Priority 3: Query parameters (legacy support)
     const queryParams = new URLSearchParams(location.search);
     const querySection = queryParams.get('section') || queryParams.get('tab');
-    if (querySection && ['shop', 'shops', 'wishlist', 'orders', 'profile'].includes(querySection)) {
+    if (querySection === 'profile') return 'shop';
+    if (querySection && ['shop', 'shops', 'wishlist', 'orders'].includes(querySection)) {
       return querySection as any;
     }
 
     return 'shop';
   });
+  const [isProfileSidebarOpen, setIsProfileSidebarOpen] = useState(false);
 
   // Sync active section with URL changes
   useEffect(() => {
     const pathname = location.pathname;
+    const queryParams = new URLSearchParams(location.search);
     const pathMapping: Record<string, typeof activeSection> = {
       '/buyer/orders': 'orders',
       '/buyer/shops': 'shops',
       '/buyer/wishlist': 'wishlist',
-      '/buyer/profile': 'profile',
+      '/buyer/profile': 'shop',
       '/buyer/dashboard': 'shop'
     };
 
     const targetSection = pathMapping[pathname];
+    if (pathname === '/buyer/profile') {
+      setIsProfileSidebarOpen(true);
+    }
+    if (queryParams.get('section') === 'profile' || queryParams.get('tab') === 'profile') {
+      setIsProfileSidebarOpen(true);
+    }
     if (targetSection && targetSection !== activeSection) {
       setActiveSection(targetSection);
     }
-  }, [location.pathname, activeSection]);
+  }, [location.pathname, location.search, activeSection]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCity, setFilterCity] = useState<string>(''); // Default to empty (all cities)
   const [filterArea, setFilterArea] = useState<string>('');
@@ -348,7 +358,7 @@ function BuyerDashboard() {
     };
   }, []);
 
-  const handleBack = () => navigate(-1);
+  const handleBack = () => navigate('/');
 
 
   const navItems = [
@@ -357,11 +367,11 @@ function BuyerDashboard() {
     { key: 'wishlist', label: 'Wishlist', Icon: Heart, path: '/buyer/wishlist' },
     { key: 'orders', label: 'Orders', Icon: Package, path: '/buyer/orders', badge: hasUnreadOrders },
     { key: 'profile', label: 'Profile', Icon: User, path: '/buyer/profile' },
-  ];
+  ] as const;
 
-  const activeNav = activeSection === 'shop' ? 'shop' : activeSection;
+  const activeNav = isProfileSidebarOpen ? 'profile' : (activeSection === 'shop' ? 'shop' : activeSection);
 
-  const setActiveTab = (key) => {
+  const setActiveTab = (key: 'shop' | 'shops' | 'wishlist' | 'orders' | 'profile') => {
     const pathMap = {
       shop: 'dashboard',
       shops: 'shops',
@@ -369,6 +379,11 @@ function BuyerDashboard() {
       wishlist: 'wishlist',
       profile: 'profile'
     };
+    if (key === 'profile') {
+      setIsProfileSidebarOpen(true);
+      return;
+    }
+    setIsProfileSidebarOpen(false);
     navigate(`/buyer/${pathMap[key]}`);
     if (key === 'orders') {
       const now = new Date().toISOString();
@@ -451,16 +466,7 @@ function BuyerDashboard() {
         <span style={{ fontSize: 15, fontWeight: 700, color: '#111827', letterSpacing: '-0.2px' }}>
           Trusted Businesses
         </span>
-        <div
-          onClick={handleLogout}
-          style={{
-            width: 30, height: 30, borderRadius: '50%',
-            background: '#FFFFFF', border: '1px solid rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer',
-          }}
-        >
-          <LogOut size={13} color="rgba(15,23,42,0.62)" />
-        </div>
+        <div style={{ width: 30, height: 30 }} />
       </div>
 
 
@@ -586,7 +592,6 @@ function BuyerDashboard() {
 
         {activeSection === 'orders' && (
           <div className="space-y-4">
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>Your Orders</span>
             <Suspense fallback={<div style={{ color: '#111827' }}>Loading orders...</div>}>
               <OrdersSection />
             </Suspense>
@@ -651,6 +656,91 @@ function BuyerDashboard() {
         )}
       </div>
 
+      <Sheet open={isProfileSidebarOpen} onOpenChange={setIsProfileSidebarOpen}>
+        <SheetContent side="right" className="w-full max-w-sm overflow-y-auto bg-white text-slate-950 border-l border-slate-200">
+          <SheetHeader className="text-left">
+            <SheetTitle className="text-slate-950">Buyer Profile</SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-6 flex flex-col gap-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Full Name</div>
+              <div className="mt-1 text-base font-semibold text-slate-950">{user?.fullName || 'Not set'}</div>
+              <div className="mt-4 text-xs font-semibold uppercase tracking-wide text-slate-500">Email Address</div>
+              <div className="mt-1 text-sm font-semibold text-slate-950 break-words">{user?.email || 'Not set'}</div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">City</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.city || 'Not set'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Area</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.location || 'Not set'}</div>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-3">
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mobile Payment</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.mobilePayment || 'Not set'}</div>
+                </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">WhatsApp</div>
+                  <div className="mt-1 text-sm font-semibold text-slate-950">{user?.whatsappNumber || 'Not set'}</div>
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsEditingProfile(!isEditingProfile)}
+              className="h-10 rounded-xl border border-slate-200 bg-slate-50 text-sm font-semibold text-slate-950"
+            >
+              {isEditingProfile ? 'Cancel Editing' : 'Edit Profile'}
+            </button>
+
+            {isEditingProfile && (
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-3">
+                <Input value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Full Name" className="bg-white border border-slate-200 text-slate-950 h-10" />
+                <Select value={city} onValueChange={(value) => {
+                  setCity(value);
+                  setLocationArea('');
+                }}>
+                  <SelectTrigger className="bg-white border border-slate-200 text-slate-950 h-10">
+                    <SelectValue placeholder="Select City" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.keys(locationData).map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Select value={locationArea} onValueChange={setLocationArea} disabled={!city}>
+                  <SelectTrigger className="bg-white border border-slate-200 text-slate-950 h-10">
+                    <SelectValue placeholder="Select Area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(locationData[city] || []).map(area => <SelectItem key={area} value={area}>{area}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Input value={mobilePayment} onChange={e => setMobilePayment(e.target.value)} placeholder="Mobile Payment Number" className="bg-white border border-slate-200 text-slate-950 h-10" />
+                <Input value={whatsappNumber} onChange={e => setWhatsappNumber(e.target.value)} placeholder="WhatsApp Number" className="bg-white border border-slate-200 text-slate-950 h-10" />
+                <Button onClick={handleSaveProfile} disabled={isSavingProfile} className="w-full bg-[#F5C518] text-black h-10 font-bold">
+                  {isSavingProfile ? 'Saving...' : 'Save Profile'}
+                </Button>
+              </div>
+            )}
+
+            <RefundCard refundAmount={user?.refunds || 0} />
+
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="h-10 w-full justify-center gap-2 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Bottom navigation bar */}
       <div style={{
         height: 56,
@@ -663,7 +753,7 @@ function BuyerDashboard() {
         {navItems.map(item => (
           <button
             key={item.key}
-            onClick={() => navigate(item.path)}
+            onClick={() => setActiveTab(item.key)}
             style={{
               flex: 1,
               display: 'flex', flexDirection: 'column',

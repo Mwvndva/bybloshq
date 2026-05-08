@@ -11,6 +11,32 @@ const AMBIGUOUS_PAYOUT_ERROR_CODES = new Set([
     PaydErrorCodes.UNKNOWN_ERROR
 ]);
 
+const PAYOUT_SUCCESS_STATUSES = new Set(['0', 'success', 'successful', 'completed', 'complete', 'paid', 'sent', 'delivered']);
+const PAYOUT_FAILURE_STATUSES = new Set(['failed', 'failure', 'cancelled', 'canceled', 'rejected', 'reversed', 'error']);
+
+function normalizePayoutStatus(value) {
+    return String(value ?? '').trim().toLowerCase().replace(/\s+/g, '_');
+}
+
+function providerPayloadIndicatesSuccess(data = {}) {
+    const normalizedStatus = normalizePayoutStatus(data.status || data.state || data.result || data.transaction_status);
+    const resultCode = data.result_code ?? data.resultCode ?? data.code;
+    return Number.parseInt(resultCode, 10) === 0
+        || PAYOUT_SUCCESS_STATUSES.has(normalizedStatus)
+        || data.success === true
+        || String(data.success).toLowerCase() === 'true';
+}
+
+function providerPayloadIndicatesFailure(data = {}) {
+    const normalizedStatus = normalizePayoutStatus(data.status || data.state || data.result || data.transaction_status);
+    const resultCode = data.result_code ?? data.resultCode ?? data.code;
+    const parsedResultCode = Number.parseInt(resultCode, 10);
+    return (Number.isFinite(parsedResultCode) && parsedResultCode !== 0)
+        || PAYOUT_FAILURE_STATUSES.has(normalizedStatus)
+        || data.success === false
+        || String(data.success).toLowerCase() === 'false';
+}
+
 function isAmbiguousPayoutProviderError(error) {
     const status = error?.statusCode || error?.response?.status;
     if (AMBIGUOUS_PAYOUT_ERROR_CODES.has(error?.code)) return true;
@@ -384,12 +410,8 @@ class WithdrawalService {
         const data = providerPayload?.data || providerPayload || {};
         const transactionReference = data.transaction_reference || data.correlator_id || data.provider_reference || null;
         const clientReference = data.client_reference || data.idempotency_key || null;
-        const resultCodeNum = Number.parseInt(data.result_code, 10);
-        const isSuccess = resultCodeNum === 0
-            || data.status === 'success'
-            || data.status === 'completed'
-            || data.success === true
-            || data.success === 'true';
+        const isSuccess = providerPayloadIndicatesSuccess(data);
+        const isFailure = providerPayloadIndicatesFailure(data);
         const finalStatus = isSuccess ? 'completed' : 'failed';
         const providerAmount = Number.parseFloat(data.amount);
         const mpesaReceipt = data.third_party_trans_id || data.mpesa_receipt || null;
@@ -469,6 +491,17 @@ class WithdrawalService {
 
             withdrawalId = request.id;
             const dbAmount = Number.parseFloat(request.amount || 0);
+
+            if (!isSuccess && !isFailure) {
+                await this.markPayoutCallbackRejected(client, request, 'unknown_provider_status', {
+                    provider_reference: transactionReference,
+                    client_reference: clientReference,
+                    replay_event_id: context.replayEventId,
+                    payload: data
+                });
+                await client.query('COMMIT');
+                return { status: 'rejected_unknown_status', withdrawalId };
+            }
 
             if (isSuccess && (Number.isNaN(providerAmount) || providerAmount <= 0)) {
                 await this.markPayoutCallbackRejected(client, request, 'missing_valid_amount', {
@@ -1230,7 +1263,49 @@ class WithdrawalService {
                     continue;
                 }
 
-                // Mark for manual review — Payd v2 has no status-check endpoint documented
+                // Try provider reconciliation first; only flag for manual review when Payd cannot confirm a terminal state.
+                try {
+                    const statusCheck = await payoutService.checkPayoutStatus(request.provider_reference);
+                    const statusPayload = statusCheck?.raw_response || statusCheck || {};
+                    const providerAmount = Number.parseFloat(statusPayload.amount ?? statusCheck?.amount);
+                    const expectedAmount = Number.parseFloat(request.amount || 0);
+
+                    if (statusCheck?.success && providerPayloadIndicatesSuccess(statusPayload)) {
+                        if (!Number.isNaN(providerAmount) && Math.abs(providerAmount - expectedAmount) > 0.01) {
+                            await pool.query(
+                                `UPDATE withdrawal_requests
+                                 SET metadata = COALESCE(metadata, '{}'::jsonb) || $1::jsonb,
+                                     updated_at = NOW()
+                                 WHERE id = $2`,
+                                [JSON.stringify({
+                                    reconciliation_flag: 'provider_success_amount_mismatch',
+                                    expected_amount: expectedAmount,
+                                    provider_amount: providerAmount,
+                                    needs_manual_review: true
+                                }), request.id]
+                            );
+                            continue;
+                        }
+
+                        await this.updateStatusWithSideEffects(request.id, 'completed', {
+                            provider_reference: request.provider_reference,
+                            mpesa_receipt: statusPayload.third_party_trans_id || statusPayload.mpesa_receipt || null,
+                            remarks: 'Payout confirmed by provider status reconciliation'
+                        });
+                        continue;
+                    }
+
+                    if (statusCheck?.success && providerPayloadIndicatesFailure(statusPayload)) {
+                        await this.updateStatusWithSideEffects(request.id, 'failed', {
+                            provider_reference: request.provider_reference,
+                            remarks: statusPayload.message || 'Payout failed by provider status reconciliation'
+                        });
+                        continue;
+                    }
+                } catch (statusError) {
+                    logger.warn(`[WithdrawalService] Status reconciliation unavailable for request ${request.id}: ${statusError.message}`);
+                }
+
                 await pool.query(
                     `UPDATE withdrawal_requests 
                      SET metadata = jsonb_set(
@@ -1278,16 +1353,21 @@ class WithdrawalService {
                wr.provider_reference,
                wr.created_at,
                wr.processed_at,
+               wr.processed_by,
+               wr.updated_at,
                CASE
                  WHEN wr.status = 'failed'
                  THEN COALESCE(wr.metadata->>'api_error', wr.metadata->'payd_callback'->>'remarks', 'Unknown error')
                  ELSE NULL
                END AS failure_reason,
-               CASE
-                 WHEN wr.status = 'completed'
-                 THEN wr.metadata->'payd_callback'->>'third_party_trans_id'
-                 ELSE NULL
-               END AS mpesa_receipt
+               COALESCE(
+                 wr.mpesa_receipt,
+                 CASE
+                   WHEN wr.status = 'completed'
+                   THEN wr.metadata->'payd_callback'->>'third_party_trans_id'
+                   ELSE NULL
+                 END
+               ) AS mpesa_receipt
              FROM withdrawal_requests wr
              WHERE ${where}
              ORDER BY wr.created_at DESC
@@ -1316,8 +1396,8 @@ class WithdrawalService {
         const { rows } = await pool.query(
             `SELECT
            wr.id, wr.amount, wr.mpesa_number, wr.mpesa_name,
-           wr.status, wr.provider_reference, wr.created_at,
-           wr.processed_at, wr.metadata
+            wr.status, wr.provider_reference, wr.created_at,
+            wr.processed_at, wr.processed_by, wr.mpesa_receipt, wr.updated_at, wr.metadata
          FROM withdrawal_requests wr
          WHERE wr.id = $1 AND wr.seller_id = $2`,
             [requestId, sellerId],

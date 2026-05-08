@@ -67,7 +67,7 @@ export const ThemeSelector = ({ currentTheme = 'black', onThemeChange }: ThemeSe
         </div>
         <div>
           <h3 className="text-lg sm:text-xl font-bold text-gray-900">Shop Theme</h3>
-          <p className="text-xs sm:text-sm text-gray-300 mt-0.5">Choose a color theme for your shop page</p>
+          <p className="text-xs sm:text-sm text-gray-900 mt-0.5">Choose a color theme for your shop page</p>
         </div>
       </div>
 
@@ -88,9 +88,7 @@ export const ThemeSelector = ({ currentTheme = 'black', onThemeChange }: ThemeSe
                   <Check className="h-4 w-4 text-green-600" />
                 </div>
               )}
-              <span
-                className={`${theme.value === 'default' ? 'text-gray-900' : 'text-white'} font-bold text-xs sm:text-sm ${theme.value === 'default' ? '' : 'drop-shadow-md'}`}
-              >
+              <span className="font-bold text-xs sm:text-sm text-black bg-white/70 px-2 py-0.5 rounded-full">
                 {theme.name}
               </span>
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />

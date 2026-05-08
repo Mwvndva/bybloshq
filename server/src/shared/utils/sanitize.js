@@ -230,8 +230,13 @@ export const sanitizeWithdrawalRequest = (request) => {
         mpesaNumber: reqObj.mpesaNumber || reqObj.mpesa_number, // User's own number
         mpesaName: reqObj.mpesaName || reqObj.mpesa_name,       // User's own name
         createdAt: reqObj.createdAt || reqObj.created_at,
+        updatedAt: reqObj.updatedAt || reqObj.updated_at || null,
+        processedAt: reqObj.processedAt || reqObj.processed_at || null,
+        processedBy: reqObj.processedBy || reqObj.processed_by || null,
+        providerReference: reqObj.providerReference || reqObj.provider_reference || null,
+        mpesaReceipt: reqObj.mpesaReceipt || reqObj.mpesa_receipt || reqObj.metadata?.mpesa_receipt || null,
         failureReason: reqObj.failureReason || reqObj.failure_reason, // Helpful for user
         message: reqObj.message // Helper message if we added one
-        // Removed: updatedAt, provider_reference, raw_response, internal IDs
+        // Removed: raw_response, internal IDs
     };
 };
