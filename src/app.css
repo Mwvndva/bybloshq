@@ -442,6 +442,11 @@ body.dashboard-active .seller-tab-selected * {
     color: #000000 !important;
 }
 
+body.dashboard-active .withdrawal-minimum-note,
+body.dashboard-active .withdrawal-minimum-note * {
+    color: #000000 !important;
+}
+
 .product-modal-light,
 .product-modal-light * {
     color: #FFFFFF !important;
