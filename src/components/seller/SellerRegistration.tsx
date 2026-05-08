@@ -62,13 +62,13 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
   const [isResending, setIsResending] = useState(false);
   const { toast } = useToast();
 
-  // Keep the standalone auth route aligned with the white app shell.
+  // Keep the standalone auth route aligned with the black app shell.
   useEffect(() => {
     const originalBodyStyle = document.body.style.cssText;
     const originalHtmlStyle = document.documentElement.style.cssText;
 
-    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
-    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #ffffff; overflow-x: hidden;';
+    document.body.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
+    document.documentElement.style.cssText = 'margin: 0; padding: 0; background-color: #000000; overflow-x: hidden;';
 
     return () => {
       document.body.style.cssText = originalBodyStyle;
@@ -310,14 +310,14 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
 
 
   return (
-    <div className="auth-page min-h-screen w-full bg-white flex flex-col relative"
+    <div className="auth-page min-h-screen w-full bg-black flex flex-col relative"
       style={{
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        backgroundColor: '#ffffff',
+        backgroundColor: '#000000',
       }}
     >
       {/* Header */}
-      <header className="bg-white/90 backdrop-blur-md border-b border-slate-200 sticky top-0 z-30">
+      <header className="bg-black/90 backdrop-blur-md border-b border-white/15 sticky top-0 z-30">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="relative flex items-center justify-between h-20">
             {/* Left: Back Button */}
@@ -358,7 +358,7 @@ const SellerRegistration = ({ onSuccess }: SellerRegistrationProps) => {
         <div className="w-full max-w-[420px]">
           {/* Register Card */}
           <div
-            className="rounded-2xl border border-slate-200 shadow-xl p-5 sm:p-6 bg-white/95 backdrop-blur-md"
+            className="rounded-2xl border border-white/15 shadow-xl p-5 sm:p-6 bg-white/5 backdrop-blur-md"
           >
             <div className="text-center mb-6">
               <div className="mx-auto mb-4 flex items-center justify-center">

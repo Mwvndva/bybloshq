@@ -228,7 +228,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
         <h2 className="text-xl font-bold text-white">Let's start with the basics</h2>
-        <p className="text-gray-400 text-sm">What are you selling today?</p>
+        <p className="text-white text-sm">What are you selling today?</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -245,10 +245,10 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
               "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all duration-300 text-center group",
               formData.product_type === type.id
                 ? "bg-yellow-400/10 border-yellow-400 text-white shadow-[0_0_20px_rgba(250,204,21,0.1)]"
-                : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20 hover:bg-white/10"
+                : "bg-white/5 border-white/10 text-white hover:border-white/20 hover:bg-white/10"
             )}
           >
-            <type.icon className={cn("h-8 w-8 mb-2 group-hover:scale-110 transition-transform", formData.product_type === type.id ? "text-yellow-400" : "text-gray-500")} />
+            <type.icon className={cn("h-8 w-8 mb-2 group-hover:scale-110 transition-transform", formData.product_type === type.id ? "text-white" : "text-white")} />
             <span className="font-bold text-sm">{type.label}</span>
             <span className="text-[10px] opacity-60 mt-1">{type.desc}</span>
           </button>
@@ -257,7 +257,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
 
       <div className="space-y-4 pt-4">
         <div className="space-y-2">
-          <Label className="text-xs font-bold text-gray-400 uppercase">Product Name</Label>
+          <Label className="text-xs font-bold text-white uppercase">Product Name</Label>
           <Input
             name="name"
             value={formData.name}
@@ -267,7 +267,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs font-bold text-gray-400 uppercase">Category</Label>
+          <Label className="text-xs font-bold text-white uppercase">Category</Label>
           <Select value={formData.aesthetic} onValueChange={v => setFormData(p => ({ ...p, aesthetic: v }))}>
             <SelectTrigger className="h-12 bg-white/5 border-white/10 text-white rounded-xl">
               <SelectValue />
@@ -285,7 +285,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
         <h2 className="text-xl font-bold text-white">Visuals & Story</h2>
-        <p className="text-gray-400 text-sm">Make your product stand out with photos.</p>
+        <p className="text-white text-sm">Make your product stand out with photos.</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -309,8 +309,8 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
                   isDisabled ? "opacity-30 cursor-not-allowed border-white/5" : "border-white/10 hover:border-yellow-400/50 hover:bg-white/5"
                 )}>
                   {!isDisabled && <input type="file" className="hidden" onChange={e => handleImageChange(e, slot)} accept="image/*" />}
-                  <ImagePlus className="h-6 w-6 text-gray-500 mb-1" />
-                  <span className="text-[10px] text-gray-500">{slot === 0 ? "Main" : "Extra"}</span>
+                  <ImagePlus className="h-6 w-6 text-white mb-1" />
+                  <span className="text-[10px] text-white">{slot === 0 ? "Main" : "Extra"}</span>
                 </label>
               )}
             </div>
@@ -321,8 +321,8 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
       <div className="space-y-4">
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <Label className="text-xs font-bold text-gray-400 uppercase">Description</Label>
-            <span className="text-[10px] text-gray-500">{formData.description.length}/300</span>
+            <Label className="text-xs font-bold text-white uppercase">Description</Label>
+            <span className="text-[10px] text-white">{formData.description.length}/300</span>
           </div>
           <Textarea
             name="description"
@@ -340,12 +340,12 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
         <h2 className="text-xl font-bold text-white">{formData.product_type.charAt(0).toUpperCase() + formData.product_type.slice(1)} Details</h2>
-        <p className="text-gray-400 text-sm">Specific information for this type of product.</p>
+        <p className="text-white text-sm">Specific information for this type of product.</p>
       </div>
 
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label className="text-xs font-bold text-gray-400 uppercase">Price (KES)</Label>
+          <Label className="text-xs font-bold text-white uppercase">Price (KES)</Label>
           <Input
             type="number"
             name="price"
@@ -381,11 +381,11 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           <div className="space-y-4 p-4 bg-white/5 border border-white/10 rounded-2xl">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-gray-400 uppercase">Start Time</Label>
+                <Label className="text-[10px] font-bold text-white uppercase">Start Time</Label>
                 <Input type="time" value={formData.service_options.start_time} onChange={e => setFormData(p => ({ ...p, service_options: { ...p.service_options, start_time: e.target.value } }))} className="bg-white/5 border-white/10 text-white rounded-xl" />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-gray-400 uppercase">End Time</Label>
+                <Label className="text-[10px] font-bold text-white uppercase">End Time</Label>
                 <Input type="time" value={formData.service_options.end_time} onChange={e => setFormData(p => ({ ...p, service_options: { ...p.service_options, end_time: e.target.value } }))} className="bg-white/5 border-white/10 text-white rounded-xl" />
               </div>
             </div>
@@ -401,7 +401,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
                   }}
                   className={cn(
                     "px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-                    formData.service_options.availability_days.includes(day) ? "bg-yellow-400 text-black" : "bg-white/5 text-gray-400 border border-white/10"
+                    formData.service_options.availability_days.includes(day) ? "bg-white/15 text-white border border-white/20" : "bg-white/5 text-white border border-white/10"
                   )}
                 >
                   {day}
@@ -427,7 +427,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2 text-center sm:text-left">
         <h2 className="text-xl font-bold text-white">Review & Publish</h2>
-        <p className="text-gray-400 text-sm">Everything look correct?</p>
+        <p className="text-white text-sm">Everything look correct?</p>
       </div>
 
       <div className="bg-white/5 border border-white/10 rounded-[2rem] overflow-hidden">
@@ -442,8 +442,8 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
             <h3 className="text-xl font-bold text-white">{formData.name}</h3>
             <span className="text-xl font-black text-yellow-400">KES {formData.price}</span>
           </div>
-          <p className="text-sm text-gray-400 line-clamp-2">{formData.description}</p>
-          <div className="flex items-center gap-2 pt-2 text-[10px] text-gray-500 uppercase font-bold">
+          <p className="text-sm text-white line-clamp-2">{formData.description}</p>
+          <div className="flex items-center gap-2 pt-2 text-[10px] text-white uppercase font-bold">
             <MapPin className="h-3 w-3" />
             <span>{sellerProfile?.city || 'Your Shop'}</span>
             <span>•</span>
@@ -465,7 +465,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           </div>
           {onClose && (
             <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors">
-              <X className="h-5 w-5 text-gray-400" />
+              <X className="h-5 w-5 text-white" />
             </button>
           )}
         </div>
@@ -505,7 +505,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
         {step < 4 ? (
           <Button
             onClick={nextStep}
-            className="flex-[2] h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold rounded-xl shadow-lg shadow-yellow-500/20"
+            className="flex-[2] h-12 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl border border-white/15"
           >
             Continue
             <ArrowRight className="h-4 w-4 ml-2" />
@@ -514,7 +514,7 @@ export const AddProductForm = ({ onSuccess, onClose }: { onSuccess: () => void; 
           <Button
             onClick={handleSubmit}
             disabled={isLoading}
-            className="flex-[2] h-12 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold rounded-xl shadow-lg shadow-yellow-500/20"
+            className="flex-[2] h-12 bg-white/10 hover:bg-white/15 text-white font-bold rounded-xl border border-white/15"
           >
             {isLoading ? "Launching..." : "Launch Product"}
             <Sparkles className="h-4 w-4 ml-2 fill-current" />

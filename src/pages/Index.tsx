@@ -7,7 +7,7 @@ const IndexPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950 flex flex-col selection:bg-yellow-300 selection:text-black">
+    <div className="min-h-screen bg-black text-white flex flex-col selection:bg-yellow-300 selection:text-white">
       <main className="flex-grow">
         <HeroSection
           onExploreClick={handleExploreClick}

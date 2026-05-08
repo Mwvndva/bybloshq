@@ -186,11 +186,11 @@ export function BuyerInfoModal({
   };
 
   const themeClasses = {
-    bg: 'bg-white border border-slate-200',
-    text: 'text-slate-950',
-    input: 'bg-white border-slate-200 text-slate-950 placeholder:text-slate-400 focus-visible:ring-yellow-400',
-    label: 'text-slate-500',
-    button: 'bg-yellow-400 hover:bg-yellow-500 text-black',
+    bg: 'bg-black border border-white/15',
+    text: 'text-white',
+    input: 'bg-white/5 border-white/15 text-white placeholder:text-white/60 focus-visible:ring-yellow-400',
+    label: 'text-white',
+    button: 'bg-yellow-400 hover:bg-yellow-500 text-white',
     error: 'text-red-500'
   };
 
@@ -203,8 +203,8 @@ export function BuyerInfoModal({
               <User className="h-7 w-7 text-yellow-400" />
             </div>
             <div className="space-y-2">
-              <DialogTitle className="text-2xl font-black text-center text-slate-950">PAYMENT DETAILS</DialogTitle>
-              <p className="text-[11px] text-center font-bold text-slate-500 uppercase tracking-wider opacity-80 leading-relaxed px-4">
+              <DialogTitle className="text-2xl font-black text-center text-white">PAYMENT DETAILS</DialogTitle>
+              <p className="text-[11px] text-center font-bold text-white uppercase tracking-wider opacity-80 leading-relaxed px-4">
                 Your payment details are safe and are only collected once
               </p>
             </div>
@@ -355,14 +355,14 @@ export function BuyerInfoModal({
                     <SelectTrigger className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}>
                       <SelectValue placeholder="Select city" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-950">
-                      <SelectItem value="Nairobi" className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
+                    <SelectContent className="bg-black border-white/15 text-white">
+                      <SelectItem value="Nairobi" className="text-white hover:bg-white/10 focus:bg-white/10">
                         Nairobi
                       </SelectItem>
-                      <SelectItem value="Mombasa" className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
+                      <SelectItem value="Mombasa" className="text-white hover:bg-white/10 focus:bg-white/10">
                         Mombasa
                       </SelectItem>
-                      <SelectItem value="Kisumu" className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
+                      <SelectItem value="Kisumu" className="text-white hover:bg-white/10 focus:bg-white/10">
                         Kisumu
                       </SelectItem>
                     </SelectContent>
@@ -390,11 +390,11 @@ export function BuyerInfoModal({
                     <SelectTrigger className={`!pl-12 h-11 text-sm rounded-xl ${themeClasses.input}`}>
                       <SelectValue placeholder={buyerInfo.city ? "Select area" : "City first"} />
                     </SelectTrigger>
-                    <SelectContent className="bg-white border-slate-200 text-slate-950">
+                    <SelectContent className="bg-black border-white/15 text-white">
                       {buyerInfo.city && [...(locationData[buyerInfo.city] || [])]
                         .sort((a, b) => a.localeCompare(b))
                         .map((area) => (
-                          <SelectItem key={area} value={area} className="text-slate-950 hover:bg-slate-50 focus:bg-slate-100">
+                          <SelectItem key={area} value={area} className="text-white hover:bg-white/10 focus:bg-white/10">
                             {area}
                           </SelectItem>
                         ))}
@@ -425,7 +425,7 @@ export function BuyerInfoModal({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-950 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors"
                 >
                   {showPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -437,7 +437,7 @@ export function BuyerInfoModal({
 
               {/* Password Strength Checklist */}
               {buyerInfo.password && (
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <div className="p-3 bg-white/5 rounded-xl border border-white/15">
                   <div className="grid grid-cols-2 gap-2">
                     {[
                       { label: "8+ chars", met: checkPasswordStrength(buyerInfo.password).minLength },
@@ -484,7 +484,7 @@ export function BuyerInfoModal({
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-950 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/70 hover:text-white transition-colors"
                 >
                   {showConfirmPassword ? (
                     <EyeOff className="w-5 h-5" />
@@ -507,12 +507,12 @@ export function BuyerInfoModal({
                 onChange={(e) => setTermsAccepted(e.target.checked)}
                 className="mt-1 h-4 w-4 rounded border-slate-200 bg-slate-50 text-yellow-400 focus:ring-yellow-400 accent-yellow-400"
               />
-              <label htmlFor="termsAccepted" className="text-sm text-slate-500 cursor-pointer leading-relaxed">
+              <label htmlFor="termsAccepted" className="text-sm text-white cursor-pointer leading-relaxed">
                 I agree to the{' '}
                 <button
                   type="button"
                   onClick={() => setIsTermsModalOpen(true)}
-                  className="text-slate-950 underline font-medium hover:text-yellow-400 transition-colors"
+                  className="text-white underline font-medium hover:text-yellow-400 transition-colors"
                 >
                   Terms and Conditions
                 </button>
@@ -524,7 +524,7 @@ export function BuyerInfoModal({
             )}
           </div>
 
-          <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-slate-100 shrink-0 bg-slate-50/70 backdrop-blur-sm">
+          <div className="p-4 sm:p-6 lg:p-8 pt-4 space-y-3 mt-auto border-t border-white/15 shrink-0 bg-white/5 backdrop-blur-sm">
             <Button
               type="submit"
               disabled={isLoading || !termsAccepted}
@@ -546,7 +546,7 @@ export function BuyerInfoModal({
               variant="ghost"
               onClick={handleClose}
               disabled={isLoading}
-              className="w-full h-10 text-sm font-bold text-slate-500 hover:text-slate-950 hover:bg-slate-50"
+              className="w-full h-10 text-sm font-bold text-white hover:text-white hover:bg-white/10"
             >
               Cancel
             </Button>

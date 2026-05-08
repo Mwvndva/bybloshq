@@ -154,12 +154,12 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
 
     return (
         <article className={cn(
-            "group relative overflow-hidden rounded-2xl border bg-white p-3 shadow-sm transition-colors duration-200 hover:bg-slate-50",
+            "group relative overflow-hidden rounded-2xl border bg-black p-3 shadow-sm transition-colors duration-200 hover:bg-zinc-950",
             className
         )}
             style={{
                 borderColor: palette.border,
-                boxShadow: `0 16px 40px rgba(15,23,42,0.06), 0 0 24px ${palette.accentSoft}`
+                boxShadow: `0 16px 40px rgba(0,0,0,0.45), 0 0 24px ${palette.accentSoft}`
             }}
         >
             <div className="flex items-start gap-3">
@@ -180,14 +180,14 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                         />
                     ) : (
                         <div className="flex h-full w-full items-center justify-center">
-                            <Store className="h-6 w-6 text-slate-950" strokeWidth={1.8} />
+                            <Store className="h-6 w-6 text-white" strokeWidth={1.8} />
                         </div>
                     )}
                 </div>
 
                 <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
-                        <h3 className="truncate text-sm font-black tracking-tight text-slate-950" title={shopName}>
+                        <h3 className="truncate text-sm font-black tracking-tight text-white" title={shopName}>
                             {shopName}
                         </h3>
                         <span
@@ -205,36 +205,36 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                         </span>
                     </div>
                     {seller.bio ? (
-                        <p className="mt-1 max-h-10 overflow-hidden text-[11px] leading-5 text-slate-600">
+                        <p className="mt-1 max-h-10 overflow-hidden text-[11px] leading-5 text-white/80">
                             {seller.bio}
                         </p>
                     ) : (
-                        <p className="mt-1 text-[11px] leading-5 text-slate-400">Business profile</p>
+                        <p className="mt-1 text-[11px] leading-5 text-white/70">Business profile</p>
                     )}
                 </div>
             </div>
 
             <div className="mt-3 grid grid-cols-3 gap-1.5">
-                <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
+                <div className="rounded-xl bg-white/10 px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
                         <Users className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-950">Followers</span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Followers</span>
                     </div>
-                    <p className="text-sm font-black tabular-nums text-slate-950">{clientCount}</p>
+                    <p className="text-sm font-black tabular-nums text-white">{clientCount}</p>
                 </div>
-                <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
+                <div className="rounded-xl bg-white/10 px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
                         <Heart className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-950">Saved</span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Saved</span>
                     </div>
-                    <p className="text-sm font-black tabular-nums text-slate-950">{wishlistCount}</p>
+                    <p className="text-sm font-black tabular-nums text-white">{wishlistCount}</p>
                 </div>
-                <div className="rounded-xl bg-slate-50 px-2 py-2 text-center">
-                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-slate-500">
+                <div className="rounded-xl bg-white/10 px-2 py-2 text-center">
+                    <div className="mx-auto mb-0.5 flex items-center justify-center gap-1 text-white/70">
                         <MousePointerClick className="h-3 w-3" />
-                        <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-950">Clicks</span>
+                        <span className="text-[9px] font-semibold uppercase tracking-wide text-white">Clicks</span>
                     </div>
-                    <p className="text-sm font-black tabular-nums text-slate-950">{knockCount}</p>
+                    <p className="text-sm font-black tabular-nums text-white">{knockCount}</p>
                 </div>
             </div>
 
@@ -242,12 +242,12 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                 <button
                     type="button"
                     onClick={handleKnock}
-                    className="group/open relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-slate-950 shadow-sm backdrop-blur transition duration-200 hover:brightness-105 active:brightness-95"
+                    className="group/open relative flex h-10 w-full items-center justify-center gap-2 overflow-hidden rounded-xl border text-xs font-black text-white shadow-sm backdrop-blur transition duration-200 hover:brightness-110 active:brightness-95"
                     style={{
-                        background: `linear-gradient(135deg, rgba(255,255,255,0.15) 0%, ${palette.accentSoft} 46%, rgba(255,255,255,0.06) 100%)`,
+                        background: `linear-gradient(135deg, rgba(255,255,255,0.08) 0%, ${palette.accentSoft} 46%, rgba(0,0,0,0.6) 100%)`,
                         borderColor: palette.border,
                         boxShadow: `inset 0 1px 0 rgba(255,255,255,0.28), 0 12px 30px ${palette.accentSoft}, 0 0 0 1px ${palette.border}`,
-                        color: '#111827'
+                        color: '#FFFFFF'
                     }}
                     aria-label={`Open ${shopName}`}
                 >
@@ -276,7 +276,7 @@ const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isU
                         type="button"
                         disabled={isUnfollowing}
                         onClick={handleUnfollow}
-                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 text-[11px] font-black text-red-700 transition duration-200 hover:bg-red-100 active:bg-red-100 disabled:cursor-wait disabled:opacity-60"
+                        className="flex h-10 items-center justify-center gap-1.5 rounded-xl border border-red-400/35 bg-red-500/15 px-3 text-[11px] font-black text-white transition duration-200 hover:bg-red-500/25 active:bg-red-500/30 disabled:cursor-wait disabled:opacity-60"
                         aria-label={`Unfollow ${shopName}`}
                     >
                         <UserMinus className="h-3.5 w-3.5" />
