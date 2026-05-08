@@ -40,6 +40,8 @@ export const findSellerByUserId = async (userId) => {
       city,
       location,
       banner_image AS "bannerImage",
+      bio,
+      avatar_url AS "avatarUrl",
       theme,
       total_sales AS "totalSales",
       net_revenue AS "netRevenue",
@@ -75,6 +77,8 @@ export const findSellerByShopName = async (shopName) => {
       latitude,
       longitude,
       banner_image AS "bannerImage",
+      bio,
+      avatar_url AS "avatarUrl",
       theme,
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
@@ -121,6 +125,8 @@ export const findSellerById = async (id) => {
       latitude,
       longitude,
       banner_image AS "bannerImage",
+      bio,
+      avatar_url AS "avatarUrl",
       theme, 
       instagram_link AS "instagramLink",
       tiktok_link AS "tiktokLink",
@@ -241,9 +247,10 @@ export const updateSeller = async (id, updates) => {
   }
 
   if (updates.avatarUrl !== undefined || updates.avatar_url !== undefined) {
+    const avatarUrlToUpdate = updates.avatarUrl !== undefined ? updates.avatarUrl : updates.avatar_url;
     paramCount++;
     updatesList.push(`avatar_url = $${paramCount}`);
-    values.push(updates.avatarUrl || updates.avatar_url);
+    values.push(avatarUrlToUpdate || null);
   }
 
   // Handle physical shop fields. If no physical address, coordinates MUST be null (not Nairobi sentinel)
@@ -419,6 +426,8 @@ export const findSellersByUserId = async (userId, options = {}) => {
       s.city, 
       s.location, 
       s.banner_image AS "bannerImage",
+      s.bio,
+      s.avatar_url AS "avatarUrl",
       s.theme,
       s.instagram_link AS "instagramLink",
       s.client_count AS "clientCount",

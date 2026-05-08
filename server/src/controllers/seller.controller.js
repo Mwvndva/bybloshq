@@ -303,6 +303,29 @@ export const updateProfile = async (req, res) => {
       return res.status(403).json({ status: 'error', message: 'Only sellers can update seller profiles' });
     }
 
+    if (req.body.bio !== undefined) {
+      const bio = String(req.body.bio || '').trim();
+      if (bio.length > 500) {
+        return res.status(400).json({ status: 'error', message: 'Bio must be at most 500 characters' });
+      }
+      req.body.bio = bio;
+    }
+
+    if (req.body.avatarUrl !== undefined || req.body.avatar_url !== undefined) {
+      const avatarUrl = String(req.body.avatarUrl ?? req.body.avatar_url ?? '').trim();
+      const isAllowedAvatar =
+        avatarUrl === '' ||
+        avatarUrl.startsWith('/') ||
+        /^https?:\/\//i.test(avatarUrl);
+
+      if (!isAllowedAvatar) {
+        return res.status(400).json({ status: 'error', message: 'Avatar must be a valid image URL' });
+      }
+
+      req.body.avatarUrl = avatarUrl || null;
+      delete req.body.avatar_url;
+    }
+
     if (req.body.shopName) {
       const shopNameRegex = /^[a-zA-Z0-9._-]+$/;
       const shopName = req.body.shopName;

@@ -24,6 +24,9 @@ export interface Seller {
   longitude?: number;
   bannerImage?: string;
   banner_image?: string;
+  bio?: string;
+  avatarUrl?: string;
+  avatar_url?: string;
   theme?: Theme;
   balance?: number;
   total_sales?: number;
@@ -185,6 +188,8 @@ const transformSeller = (data: any): Seller => {
     latitude: seller.latitude,
     longitude: seller.longitude,
     bannerImage: seller.bannerImage || seller.banner_image || null,
+    bio: seller.bio || '',
+    avatarUrl: seller.avatarUrl || seller.avatar_url || '',
     theme: seller.theme || 'black',
     instagramLink: seller.instagramLink || seller.instagram_link || '',
     tiktokLink: seller.tiktokLink || seller.tiktok_link || '',
@@ -577,7 +582,7 @@ export const sellerApi = {
   },
 
   // Update seller profile
-  updateProfile: async (data: { city?: string; location?: string; theme?: Theme; physicalAddress?: string; latitude?: number; longitude?: number; instagramLink?: string; tiktokLink?: string; facebookLink?: string }): Promise<Seller> => {
+  updateProfile: async (data: { fullName?: string; shopName?: string; whatsappNumber?: string; city?: string; location?: string; theme?: Theme; physicalAddress?: string; latitude?: number | null; longitude?: number | null; instagramLink?: string; tiktokLink?: string; facebookLink?: string; bio?: string; avatarUrl?: string | null }): Promise<Seller> => {
     try {
       const response = await sellerApiInstance.patch<{ data: Seller }>('/sellers/profile', data);
       return transformSeller(response.data.data);

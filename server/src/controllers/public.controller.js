@@ -261,6 +261,8 @@ export const getSellers = async (req, res) => {
         s.full_name, 
         s.shop_name, 
         s.banner_image,
+        s.avatar_url,
+        s.bio,
         s.theme,
         s.client_count,
         s.created_at,
@@ -282,7 +284,8 @@ export const getSellers = async (req, res) => {
       shopName: row.shop_name,
       shopLink: row.shop_name, // Use shop_name as the link slug
       bannerUrl: row.banner_image, // Mapped from banner_image
-      avatarUrl: null, // avatar_url not available in sellers table
+      avatarUrl: row.avatar_url,
+      bio: row.bio,
       theme: row.theme, // Mapped from theme
       clientCount: row.client_count || 0,
       totalWishlistCount: parseInt(row.total_wishlist_count, 10) || 0,

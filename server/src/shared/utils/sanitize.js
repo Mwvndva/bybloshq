@@ -54,6 +54,8 @@ export const sanitizeSeller = (seller) => {
         latitude: s.latitude ? Number.parseFloat(s.latitude) : null,
         longitude: s.longitude ? Number.parseFloat(s.longitude) : null,
         bannerImage: s.bannerImage || s.banner_image,
+        avatarUrl: s.avatarUrl || s.avatar_url || null,
+        bio: s.bio || '',
         theme: s.theme,
         instagramLink: s.instagramLink || s.instagram_link,
         tiktokLink: s.tiktokLink || s.tiktok_link,
