@@ -248,7 +248,7 @@ export function transformSeller(seller: any): Seller | null {
     // Timestamps
     createdAt: seller.created_at || seller.createdAt || new Date().toISOString(),
     updatedAt: seller.updated_at || seller.updatedAt || new Date().toISOString(),
-    theme: seller.theme || 'black',
+    theme: seller.theme || 'default',
     // Optional fields
     ...(seller.bio && { bio: seller.bio }),
     ...(seller.avatar_url && { avatarUrl: seller.avatar_url }),

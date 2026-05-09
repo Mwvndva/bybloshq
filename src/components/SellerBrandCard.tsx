@@ -88,7 +88,7 @@ const getThemePalette = (theme?: string) => {
         }
     };
 
-    return palettes[theme || 'black'] || palettes.black;
+    return palettes[theme || 'default'] || palettes.default;
 };
 
 const SellerBrandCard = ({ seller, className, isBuyer, showUnfollow = false, isUnfollowing = false, onUnfollow, onClickCountChange }: SellerBrandCardProps) => {

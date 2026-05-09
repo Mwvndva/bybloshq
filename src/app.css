@@ -547,57 +547,8 @@ body.byblos-dark-ui #root {
 }
 
 body.byblos-dark-ui .page-enter,
-body.byblos-dark-ui .min-h-screen {
+body.byblos-dark-ui .app-dark-surface {
     background-color: #000000 !important;
-}
-
-body.byblos-dark-ui [class*="bg-white"],
-body.byblos-dark-ui [class*="bg-gray-"],
-body.byblos-dark-ui [class*="bg-slate-"],
-body.byblos-dark-ui [class*="bg-zinc-"],
-body.byblos-dark-ui [class*="bg-neutral-"],
-body.byblos-dark-ui [class*="bg-stone-"] {
-    background-color: #050505 !important;
-}
-
-body.byblos-dark-ui [class*="bg-white/"],
-body.byblos-dark-ui [class*="bg-gray-800/"],
-body.byblos-dark-ui [class*="bg-gray-900/"],
-body.byblos-dark-ui [class*="bg-slate-800/"],
-body.byblos-dark-ui [class*="bg-slate-900/"],
-body.byblos-dark-ui [class*="bg-zinc-800/"],
-body.byblos-dark-ui [class*="bg-zinc-900/"] {
-    background-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-body.byblos-dark-ui [class*="text-black"],
-body.byblos-dark-ui [class*="text-gray-"],
-body.byblos-dark-ui [class*="text-slate-"],
-body.byblos-dark-ui [class*="text-zinc-"],
-body.byblos-dark-ui [class*="text-neutral-"],
-body.byblos-dark-ui [class*="text-stone-"] {
-    color: #FFFFFF !important;
-}
-
-body.byblos-dark-ui [class*="border-slate"],
-body.byblos-dark-ui [class*="border-gray"],
-body.byblos-dark-ui [class*="border-zinc"],
-body.byblos-dark-ui [class*="border-white"] {
-    border-color: rgba(255, 255, 255, 0.16) !important;
-}
-
-body.byblos-dark-ui input,
-body.byblos-dark-ui textarea,
-body.byblos-dark-ui select,
-body.byblos-dark-ui button[role="combobox"] {
-    background-color: #080808 !important;
-    border-color: rgba(255, 255, 255, 0.18) !important;
-    color: #FFFFFF !important;
-}
-
-body.byblos-dark-ui input::placeholder,
-body.byblos-dark-ui textarea::placeholder {
-    color: rgba(255, 255, 255, 0.72) !important;
 }
 
 body.byblos-dark-ui [data-radix-popper-content-wrapper] [role="listbox"],

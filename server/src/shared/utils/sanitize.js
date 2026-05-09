@@ -144,7 +144,7 @@ export const sanitizePublicSeller = (seller) => {
         bannerImage: sellerObj.bannerImage || sellerObj.banner_image,
         avatarUrl: sellerObj.avatarUrl || sellerObj.avatar_url,
         bio: sellerObj.bio,
-        theme: sellerObj.theme || 'black',
+        theme: sellerObj.theme || 'default',
         physicalAddress: sellerObj.physicalAddress || sellerObj.physical_address || null,
         latitude: sellerObj.latitude ? Number.parseFloat(sellerObj.latitude) : null,
         longitude: sellerObj.longitude ? Number.parseFloat(sellerObj.longitude) : null,
