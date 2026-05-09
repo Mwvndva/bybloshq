@@ -179,8 +179,8 @@ const THEME_DEFINITIONS: Record<Theme, ThemeDefinition> = {
     }
 };
 
-export function useShopTheme(themeName: Theme = 'black') {
-    const config = useMemo(() => THEME_DEFINITIONS[themeName] || THEME_DEFINITIONS.black, [themeName]);
+export function useShopTheme(themeName: Theme = 'default') {
+    const config = useMemo(() => THEME_DEFINITIONS[themeName] || THEME_DEFINITIONS.default, [themeName]);
 
     useEffect(() => {
         const root = document.documentElement;

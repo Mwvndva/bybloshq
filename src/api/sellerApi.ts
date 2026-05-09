@@ -185,7 +185,7 @@ const transformSeller = (data: any): Seller => {
     bannerImage: seller.bannerImage || seller.banner_image || null,
     bio: seller.bio || '',
     avatarUrl: seller.avatarUrl || seller.avatar_url || '',
-    theme: seller.theme || 'black',
+    theme: seller.theme || 'default',
     instagramLink: seller.instagramLink || seller.instagram_link || '',
     tiktokLink: seller.tiktokLink || seller.tiktok_link || '',
     facebookLink: seller.facebookLink || seller.facebook_link || '',

@@ -5,14 +5,14 @@ import { sellerApi, Theme } from '@/api/sellerApi';
 import { useToast } from '@/components/ui/use-toast';
 
 const themeColors = [
-  { name: 'White', value: 'default', bg: 'bg-white' },
-  { name: 'Black', value: 'black', bg: 'bg-gradient-to-br from-gray-800 to-gray-900' },
-  { name: 'Pink', value: 'pink', bg: 'bg-gradient-to-br from-pink-400 to-pink-500' },
-  { name: 'Brown', value: 'brown', bg: 'bg-gradient-to-br from-amber-700 to-amber-800' },
-  { name: 'Orange', value: 'orange', bg: 'bg-gradient-to-br from-orange-400 to-orange-500' },
-  { name: 'Green', value: 'green', bg: 'bg-gradient-to-br from-green-400 to-green-500' },
-  { name: 'Red', value: 'red', bg: 'bg-gradient-to-br from-red-400 to-red-500' },
-  { name: 'Yellow', value: 'yellow', bg: 'bg-gradient-to-br from-yellow-300 to-yellow-400' },
+  { name: 'White', value: 'default', preview: '#ffffff', labelColor: '#111827', labelBg: 'rgba(17, 24, 39, 0.10)' },
+  { name: 'Black', value: 'black', preview: 'linear-gradient(135deg, #1f2937 0%, #030712 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.16)' },
+  { name: 'Pink', value: 'pink', preview: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.24)' },
+  { name: 'Brown', value: 'brown', preview: 'linear-gradient(135deg, #b45309 0%, #7c2d12 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
+  { name: 'Orange', value: 'orange', preview: 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
+  { name: 'Green', value: 'green', preview: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
+  { name: 'Red', value: 'red', preview: 'linear-gradient(135deg, #f87171 0%, #ef4444 100%)', labelColor: '#ffffff', labelBg: 'rgba(255, 255, 255, 0.20)' },
+  { name: 'Yellow', value: 'yellow', preview: 'linear-gradient(135deg, #fde047 0%, #facc15 100%)', labelColor: '#111827', labelBg: 'rgba(17, 24, 39, 0.10)' },
 ];
 
 interface ThemeSelectorProps {
@@ -20,7 +20,7 @@ interface ThemeSelectorProps {
   onThemeChange?: (theme: Theme) => void;
 }
 
-export const ThemeSelector = ({ currentTheme = 'black', onThemeChange }: ThemeSelectorProps) => {
+export const ThemeSelector = ({ currentTheme = 'default', onThemeChange }: ThemeSelectorProps) => {
   const [selectedTheme, setSelectedTheme] = useState<Theme>(currentTheme);
   const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
@@ -82,13 +82,22 @@ export const ThemeSelector = ({ currentTheme = 'black', onThemeChange }: ThemeSe
               : 'border-gray-200 hover:border-gray-300 hover:scale-105'
               }`}
           >
-            <div className={`w-full h-full ${theme.bg} flex flex-col items-center justify-center relative`}>
+            <div
+              className="w-full h-full flex flex-col items-center justify-center relative"
+              style={{ background: theme.preview }}
+            >
               {selectedTheme === theme.value && (
-                <div className="absolute top-2 right-2 bg-white rounded-full p-1 shadow-lg animate-in zoom-in duration-200">
+                <div
+                  className="absolute top-2 right-2 rounded-full p-1 shadow-lg animate-in zoom-in duration-200"
+                  style={{ background: '#ffffff' }}
+                >
                   <Check className="h-4 w-4 text-green-600" />
                 </div>
               )}
-              <span className="font-bold text-xs sm:text-sm text-black bg-white/70 px-2 py-0.5 rounded-full">
+              <span
+                className="font-bold text-xs sm:text-sm px-2 py-0.5 rounded-full"
+                style={{ color: theme.labelColor, background: theme.labelBg }}
+              >
                 {theme.name}
               </span>
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
